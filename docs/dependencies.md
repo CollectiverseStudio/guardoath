@@ -68,3 +68,9 @@ configured literal-term and bounded decoding orchestration are local Valinator
 code. The new GitHub fine-grained rule is explicitly a prefix-based candidate,
 not a documented full-token validator; GitHub's prefix reference is
 https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github.
+
+The Privacy group batch adds no dependencies and makes no new upstream-version
+claim: installed Presidio remains the optional email/card/SSN adapter; local
+Valinator field heuristics reuse the pinned regex package and Python calendar
+validation. No NLP model, phone numbering-plan database, patient/insurance/bank
+lookup or external service is introduced.

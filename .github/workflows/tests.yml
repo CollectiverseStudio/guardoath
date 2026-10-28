@@ -30,6 +30,8 @@ jobs:
           cache: pip
       - run: python -m pip install -e '.[test,pii]'
       - run: pytest -q
+      - name: Privacy group - 100 expectations
+        run: python -m valinator.evaluate --pii --cases evals/privacy.json --policies policies/privacy-batch.json
   dashboard:
     runs-on: ubuntu-latest
     steps:

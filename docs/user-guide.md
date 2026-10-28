@@ -1,7 +1,7 @@
 # Valinator user guide
 
 This guide grows with the product. It describes user-facing validation checks,
-examples, expected results, configuration, and boundaries. Version: 0.16.0.
+examples, expected results, configuration, and boundaries. Version: 0.17.0.
 
 A **check** examines an input or proposed AI answer. A **regression case** tests
 whether that check behaves as expected on a saved example. Passing a regression
@@ -135,7 +135,7 @@ redacted text; your fixture files themselves contain their saved input examples.
 
 | Group | Current checks | Use case / boundary |
 | --- | --- | --- |
-| Regulated and sensitive data | Supported email, card and U.S. SSN candidates; optional revalidated redaction | Remove supported identifiers before downstream processing; not general PHI or full anonymization |
+| Regulated and sensitive data | Supported email, card and U.S. SSN candidates; opt-in labeled phone, birth date, medical-record, health-plan and bank-account fields; revalidated redaction | Remove supported identifiers before downstream processing; not general PHI or full anonymization |
 | Secrets and confidential information | Selected provider credentials, JWT/private-key markers, embedded URL credentials; optional assignments, encoded inspection and confidential phrases | Catch credential/configuration leaks and customer-defined phrases; full chapter below |
 | Prompt injection and manipulation | Selected hidden/control characters, explicit encodings; optional Azure input-attack analysis | Review obfuscated text; local text signals do not classify malicious intent |
 | Harmful content and abuse | Safety simulator only | Real hate, violence, self-harm, sexual-content and abuse detection remains pending |
@@ -410,21 +410,89 @@ they do not constitute independent detector accuracy calibration.
 
 ## Regulated and sensitive data checks
 
-Select `pii-v1` for local checks or `redaction-v1` for supported redaction.
+The normal conversation profile now enables the expanded local privacy checks on
+both stages. In Advanced, `pii-extended-v1` focuses on this group;
+`redaction-v1` demonstrates supported replacements after rechecking. The older
+`pii-v1` keeps its original email/card/SSN scope.
 
-| Check / finding | Example or use case | Expected behavior |
+| Check / finding | Example or use case | What is checked / expected result |
 | --- | --- | --- |
-| `pii.email_address` | `Contact jane@example.com.` in a support answer | Candidate finding; no mailbox/ownership verification |
-| `pii.credit_card` | Synthetic Luhn-valid card `4111 1111 1111 1111` | Candidate finding; no card/account verification |
-| `pii.us_ssn` | Synthetic-format `Example SSN: 219-09-9999` | Selected U.S. SSN candidate; identifier not verified |
-| SSN context/invalid lookalikes | `Order 219099999` or `SSN: 000-09-9999` | No supported SSN finding under current rules |
-| PII redaction | Contact email under `redaction-v1` | Separate masked preview after selected checks rerun |
-| No supported identifier | Clean text under redaction policy | `not_needed`; no transformed text returned |
-| Unsafe/invalid transformed content | Redaction would violate a selected schema/check | Redaction withheld; original answer remains held |
+| `pii.email_address` | `Contact jane@example.com.` in a support answer | Presidio pattern and bundled domain-suffix check; finding, no mailbox verification |
+| `pii.credit_card` | Synthetic card `4111 1111 1111 1111` | Presidio candidate pattern and Luhn checksum; finding, no account verification |
+| `pii.us_ssn` | Synthetic-format `SSN: 219-09-9999` | Selected U.S. SSN candidate; context and invalid-value exclusions, no issuance verification |
+| `pii.phone_number` | `Phone: 202-555-0147` in a support form | Explicit label plus bounded ASCII phone syntax; finding, no ownership/reachability lookup |
+| `pii.date_of_birth` | `DOB: 1980-02-29` in intake data | Explicit label plus real calendar date in supported format; finding, no identity or actual-birth check |
+| `pii.medical_record_number` | `MRN: A1234` in a clinical export | Explicit medical-record label plus identifier shape; finding, no medical-system lookup |
+| `pii.health_plan_id` | `insurance_member_id: M000123` | Explicit member/health-plan label plus identifier shape; finding, no membership verification |
+| `pii.bank_account` | `bank_account_number: 76543210` | Explicit account label plus 6–17 ASCII digits; finding, no bank/account verification |
+| Invalid/lookalike values | `DOB: 2025-02-29`, `MRN: ABC`, `Order reference 202-555-0147` | No new-field finding; not a declaration of privacy or schema validity |
+| Supported redaction | `Phone: 202-555-0147` under `redaction-v1` | Separate `Phone: [REDACTED_PHONE_NUMBER]` preview after selected checks rerun |
+| No supported identifier | Clean text under a redaction policy | `not_needed`; no transformed text returned |
+| Sensitive JSON key / invalid transformed content | A sensitive value in a key, or numeric replacement violates schema | Redaction withheld; no original/transformed text released |
+| Field scan limit | 65 recognized labeled fields or one value over 128 characters | `pii_field_limit`; required check incomplete, never a partial pass |
 
-No general PHI, names, addresses, consent, location-law, biometric, or compliance
-assessment is implemented. JSON field/key handling and stage actions matter; see
-the detailed README for supported redaction types and limitations.
+### Configure labeled fields
+
+Set `detect_labeled_sensitive_data: true` in a trusted policy containing a `pii`
+rule. It is strict Boolean, defaults off, and cannot be enabled without that rule.
+The installed Presidio email/card/SSN adapter is still required; the extension
+adds bounded local field heuristics, no model, dependency or network call.
+
+Supported labels are case-insensitive; spaces and hyphens normalize to underscores:
+
+| Type | Exact supported label names | Value shape |
+| --- | --- | --- |
+| Phone | `phone`, `phone_number`, `telephone` | Unprefixed: 10 ASCII digits, first and fourth digits 2–9. Leading `+`: 8–15 digits, first digit nonzero. Spaces, dots, parentheses and hyphens allowed, at most 32 characters; no numbering-plan validation or extensions |
+| Birth date | `dob`, `date_of_birth`, `birth_date` | Exactly `YYYY-MM-DD` or U.S. `MM/DD/YYYY`, valid calendar date, year 1900–2099; future dates in that interval also flag as candidates |
+| Medical record | `mrn`, `medical_record_number` | 4–32 ASCII alphanumeric/hyphen characters, starts alphanumeric and contains at least one digit |
+| Health plan | `member_id`, `health_plan_id`, `insurance_member_id` | Same identifier shape, 5–32 characters; generic `member_id` can produce false alarms outside healthcare |
+| Bank account | `bank_account`, `bank_account_number`, `account_number` | 6–17 ASCII digits; generic `account_number` can be an unrelated application ID |
+
+Plain text requires **one complete labeled value per line**, with `:` or `=`.
+Indentation, surrounding spaces and one pair of matching single/double quotes
+are supported. Arbitrary prose, comma/semicolon-separated fields, code syntax,
+JSON-looking text sent as text, Unicode digits, unsupported aliases, encoded
+values, Markdown labels and other date/identifier formats can be missed.
+This detection is distinct from validating whether a form field is valid: a
+non-matching date or number can still be sensitive and may require your schema.
+
+In JSON mode, exact decoded keys label string and integer values, including
+scalar lists under the key. Nested dictionaries use their own keys; a parent
+`phone` object does not automatically label all descendants. Booleans and floats
+are not treated as identifiers. Large integer formats can lose leading zeros;
+send identifiers as strings. Keys are scanned but never renamed, to avoid
+collisions. Recognized labeled-field attempts share a **64-field budget across
+the document**, including empty/invalid candidates. A trimmed value longer than
+128 characters fails before inspection completes. These bounds share the PII
+adapter's 0.2-second local deadline and normal policy deadline.
+
+Neither `request_context` nor files/images are scanned. Names, postal addresses,
+diagnoses, free-text medical narratives, other identifiers, consent and legal
+compliance remain outside this batch. Identifying a field does not establish its
+PHI status or provide complete anonymization. Unrelated content remains visible
+in a redacted preview; review what your application permits downstream.
+
+### Run the entire privacy group
+
+```powershell
+py -3.13 start_dashboard.py --evaluate --suite privacy
+```
+
+This runs **100 expectations** covering input/output, positive candidates,
+benign lookalikes, explicitly unsupported formats, nested/escaped/numeric JSON,
+observe/enforce behavior, revalidated redaction and failure limits. **12 cases
+intentionally expect incomplete checks** (malformed JSON or exceeded scan limits).
+A matched expectation does not turn an incomplete check into a privacy pass.
+Results are offline and not an independently measured accuracy/recall benchmark.
+
+See [all 100 cases and their examples](privacy-coverage.md). Fixtures are in
+`evals/privacy.json`; profiles in `policies/privacy-batch.json`. Separate API,
+engine and browser tests cover sensitive-key withholding, schema-breaking
+redaction, external-call gating, no-network behavior and value-free reports.
+The dashboard adds Phone number, Birth date, Medical record ID, Insurance member
+ID and Bank account examples. Medical record ID demonstrates the input gate;
+the other four demonstrate output findings. Redaction preview covers all eight
+supported types. No paid/provider call is made.
 
 ## Prompt injection and manipulation checks
 

@@ -7,6 +7,7 @@ import sys
 from time import monotonic
 
 from valinator.json_data import parse_json
+from valinator.sensitive_fields import SensitiveFieldLimit, field_spans
 from valinator.models import Action, CheckerResult, Finding, Stage
 
 
@@ -32,11 +33,12 @@ def build_pii_checker():
     patterns = tuple((recognizer, regex.compile(pattern.regex, recognizer.global_regex_flags))
                      for recognizer in recognizers for pattern in recognizer.patterns)
     context_pattern = regex.compile(r"(?i)\b(?:ssns?|social[\s_-]*security(?:[\s_-]*number)?)\b")
-    checker_version = f"presidio-{package_version}/valinator-patterns-2"
+    checker_version = f"presidio-{package_version}/valinator-patterns-3"
 
-    def scan(request, redact):
+    def scan(request, redact, labeled):
         deadline = monotonic() + 0.2
         entities = set()
+        field_budget = [0]
         sensitive_key = False
 
         def process_text(text, hint=""):
@@ -62,6 +64,10 @@ def build_pii_checker():
                         continue
                     entities.add(entity)
                     spans.append((match.start(), match.end(), entity))
+            if labeled:
+                extra = field_spans(text, hint, deadline, field_budget)
+                entities.update(entity for _, _, entity in extra)
+                spans.extend(extra)
             if not redact or not spans:
                 return text, bool(spans)
             # Merge overlapping spans to avoid preserving a fragment of a value.
@@ -106,11 +112,19 @@ def build_pii_checker():
         rule = next((r for r in policy.rules if r.checker_id == "pii" and stage in r.stages), None)
         action = ((rule.on_input_finding if stage == Stage.INPUT else rule.on_output_finding) or rule.on_finding) if rule else None
         try:
-            entities, transformed = await asyncio.to_thread(scan, request, action == Action.REDACT)
+            entities, transformed = await asyncio.to_thread(scan, request, action == Action.REDACT, policy.detect_labeled_sensitive_data)
+        except SensitiveFieldLimit:
+            return CheckerResult(checker_id="pii", checker_version=checker_version,
+                                 status="error", error_code="pii_field_limit")
         except (ValueError, RecursionError):
             return CheckerResult(checker_id="pii", checker_version=checker_version,
                                  status="error", error_code="invalid_json_for_pii")
         explanations = {
+            "PHONE_NUMBER": "Potential phone number in an explicitly labeled field; syntax only, ownership and reachability not verified.",
+            "DATE_OF_BIRTH": "Potential birth date in an explicitly labeled field; calendar syntax only, identity and actual birth not verified.",
+            "MEDICAL_RECORD_NUMBER": "Potential medical record identifier in an explicitly labeled field; not verified with any healthcare system.",
+            "HEALTH_PLAN_ID": "Potential health-plan member identifier in an explicitly labeled field; membership and PHI status not verified.",
+            "BANK_ACCOUNT": "Potential bank account number in an explicitly labeled field; account existence and ownership not verified.",
             "CREDIT_CARD": "Potential credit-card number detected by local pattern and checksum checks.",
             "EMAIL_ADDRESS": "Potential email address detected by local pattern and domain checks.",
             "US_SSN": "Potential U.S. Social Security number detected by pattern, context, and invalid-value checks; issuance was not verified.",

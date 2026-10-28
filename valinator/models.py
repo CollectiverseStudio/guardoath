@@ -119,6 +119,7 @@ class Policy(Contract):
     external_checks: Literal["disabled", "after_local_pass"] = "disabled"
     comparisons: tuple[FieldComparison, ...] = Field(default=(), max_length=50)
     required_sections: tuple[RequiredSection, ...] = Field(default=(), max_length=50)
+    detect_labeled_sensitive_data: bool = Field(default=False, strict=True)
     detect_secret_assignments: bool = Field(default=False,strict=True)
     inspect_encoded_secrets: bool = Field(default=False,strict=True)
     confidential_terms: tuple[ConfidentialTerm, ...] = Field(default=(),max_length=50)

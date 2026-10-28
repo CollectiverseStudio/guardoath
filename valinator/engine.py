@@ -38,6 +38,8 @@ class Engine:
                     raise ValueError("Duplicate completeness label")
             if policy.required_sections and "completeness" not in ids:
                 raise ValueError("Required sections require a completeness checker rule")
+            if policy.detect_labeled_sensitive_data and "pii" not in ids:
+                raise ValueError("Labeled sensitive-data checks require a pii checker rule")
             if policy.confidential_terms or policy.detect_secret_assignments or policy.inspect_encoded_secrets:
                 if 'secrets' not in ids:
                     raise ValueError('Secret options require a secrets checker rule')

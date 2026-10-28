@@ -41,7 +41,8 @@
             "output"
           ]
         }
-      ]
+      ],
+      "detect_labeled_sensitive_data": true
     },
     {
       "application_id": "demo",
@@ -157,7 +158,8 @@
           "required": true,
           "on_finding": "redact"
         }
-      ]
+      ],
+      "detect_labeled_sensitive_data": true
     },
     {
       "application_id": "demo",
@@ -248,6 +250,20 @@
           "stages": [
             "output"
           ]
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "pii-extended-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "detect_labeled_sensitive_data": true,
+      "rules": [
+        {
+          "checker_id": "pii",
+          "required": true,
+          "on_finding": "flag"
         }
       ]
     }

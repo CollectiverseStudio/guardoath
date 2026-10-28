@@ -1,0 +1,2246 @@
+{
+  "format_version": "1",
+  "suite_id": "privacy-v1",
+  "cases": [
+    {
+      "case_id": "email.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Email jane@example.com",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.email_address"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "email.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Email jane@example.com",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.email_address"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "card.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Card 4111 1111 1111 1111",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.credit_card"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "card.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Card 4111 1111 1111 1111",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.credit_card"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "ssn.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "SSN: 219-09-9999",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.us_ssn"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "ssn.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "SSN: 219-09-9999",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.us_ssn"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "phone_number0.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Phone: 202-555-0147",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "phone_number0.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Phone: 202-555-0147",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "phone_number1.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "telephone = +44 20 7946 0958",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "phone_number1.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "telephone = +44 20 7946 0958",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "phone_number2.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-enforce-v1",
+        "content": "phone_number: \"(202) 555-0147\"",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "phone_number2.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-enforce-v1",
+        "content": "phone_number: \"(202) 555-0147\"",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "date_of_birth0.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "DOB: 1980-02-29",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.date_of_birth"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "date_of_birth0.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "DOB: 1980-02-29",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.date_of_birth"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "date_of_birth1.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "date of birth = 12/31/1990",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.date_of_birth"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "date_of_birth1.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "date of birth = 12/31/1990",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.date_of_birth"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "date_of_birth2.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-enforce-v1",
+        "content": "birth-date: \"2000-01-01\"",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.date_of_birth"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "date_of_birth2.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-enforce-v1",
+        "content": "birth-date: \"2000-01-01\"",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.date_of_birth"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "medical_record_number0.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "MRN: MRN-001234",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.medical_record_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "medical_record_number0.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "MRN: MRN-001234",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.medical_record_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "medical_record_number1.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "medical record number = A1234",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.medical_record_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "medical_record_number1.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "medical record number = A1234",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.medical_record_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "medical_record_number2.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-enforce-v1",
+        "content": "mrn: \"987654\"",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.medical_record_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "medical_record_number2.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-enforce-v1",
+        "content": "mrn: \"987654\"",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.medical_record_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "health_plan_id0.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "member_id: PLAN-12345",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.health_plan_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "health_plan_id0.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "member_id: PLAN-12345",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.health_plan_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "health_plan_id1.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "health plan id = ABC1234",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.health_plan_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "health_plan_id1.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "health plan id = ABC1234",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.health_plan_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "health_plan_id2.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-enforce-v1",
+        "content": "insurance-member-id: \"M000123\"",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.health_plan_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "health_plan_id2.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-enforce-v1",
+        "content": "insurance-member-id: \"M000123\"",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.health_plan_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "bank_account0.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "bank account: 12345678",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.bank_account"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "bank_account0.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "bank account: 12345678",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.bank_account"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "bank_account1.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "bank_account_number = 123456789012",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.bank_account"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "bank_account1.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "bank_account_number = 123456789012",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.bank_account"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "bank_account2.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-enforce-v1",
+        "content": "account-number: \"76543210\"",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.bank_account"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "bank_account2.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-enforce-v1",
+        "content": "account-number: \"76543210\"",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.bank_account"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike0.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Order reference 202-555-0147",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike0.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Order reference 202-555-0147",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike1.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Calendar date 1980-02-29",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike1.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Calendar date 1980-02-29",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike2.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Inventory MRN-001234",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike2.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Inventory MRN-001234",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike3.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Plan ABC1234",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike3.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Plan ABC1234",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike4.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Reference 76543210",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike4.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Reference 76543210",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike5.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Phone: 123",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike5.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Phone: 123",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike6.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "DOB: 2025-02-29",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike6.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "DOB: 2025-02-29",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike7.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "MRN: ABC",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike7.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "MRN: ABC",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike8.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "member_id: ABCD",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike8.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "member_id: ABCD",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike9.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "bank account: ABC12345",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike9.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "bank account: ABC12345",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike10.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "customer_phone_typo: 202-555-0147",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike10.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "customer_phone_typo: 202-555-0147",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike11.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Please explain what an MRN means.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike11.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "Please explain what an MRN means.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike12.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "DOB: [REDACTED_DATE_OF_BIRTH]",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike12.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "DOB: [REDACTED_DATE_OF_BIRTH]",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike13.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "MRN:",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike13.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "MRN:",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike14.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "name: Synthetic Person",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike14.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "name: Synthetic Person",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike15.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "address: 123 Example Street",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "lookalike15.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "address: 123 Example Street",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.phone_number.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "{\"phone_number\":[\"202-555-0147\"]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.phone_number.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "{\"phone_number\":[\"202-555-0147\"]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.date_of_birth.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "{\"nested\":{\"date_of_birth\":\"1980\\u002d02-29\"}}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.date_of_birth"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.date_of_birth.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "{\"nested\":{\"date_of_birth\":\"1980\\u002d02-29\"}}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.date_of_birth"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.medical_record_number.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "{\"MRN\":987654}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.medical_record_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.medical_record_number.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "{\"MRN\":987654}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.medical_record_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.health_plan_id.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "{\"insurance_member_id\":\"M000123\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.health_plan_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.health_plan_id.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "{\"insurance_member_id\":\"M000123\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.health_plan_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.bank_account.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "{\"bank_account_number\":76543210}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.bank_account"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.bank_account.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "{\"bank_account_number\":76543210}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.bank_account"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "redact.observe.text.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-redact-v1",
+        "content": "Phone: 202-555-0147\nDOB: 1980-02-29\nMRN: MRN-001234\nmember_id: PLAN-12345\nbank account: 12345678",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "redact",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number",
+          "pii.date_of_birth",
+          "pii.medical_record_number",
+          "pii.health_plan_id",
+          "pii.bank_account"
+        ],
+        "redaction_status": "preview"
+      }
+    },
+    {
+      "case_id": "redact.observe.text.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-redact-v1",
+        "content": "Phone: 202-555-0147\nDOB: 1980-02-29\nMRN: MRN-001234\nmember_id: PLAN-12345\nbank account: 12345678",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "redact",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number",
+          "pii.date_of_birth",
+          "pii.medical_record_number",
+          "pii.health_plan_id",
+          "pii.bank_account"
+        ],
+        "redaction_status": "preview"
+      }
+    },
+    {
+      "case_id": "redact.observe.json.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-redact-v1",
+        "content": "{\"phone_number\": 2025550147, \"DOB\": \"1980-02-29\", \"MRN\": \"A1234\", \"member_id\": \"M000123\", \"bank_account_number\": 76543210}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "redact",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number",
+          "pii.date_of_birth",
+          "pii.medical_record_number",
+          "pii.health_plan_id",
+          "pii.bank_account"
+        ],
+        "redaction_status": "preview"
+      }
+    },
+    {
+      "case_id": "redact.observe.json.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-redact-v1",
+        "content": "{\"phone_number\": 2025550147, \"DOB\": \"1980-02-29\", \"MRN\": \"A1234\", \"member_id\": \"M000123\", \"bank_account_number\": 76543210}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "redact",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number",
+          "pii.date_of_birth",
+          "pii.medical_record_number",
+          "pii.health_plan_id",
+          "pii.bank_account"
+        ],
+        "redaction_status": "preview"
+      }
+    },
+    {
+      "case_id": "redact.enforce.text.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-redact-enforce-v1",
+        "content": "Phone: 202-555-0147\nDOB: 1980-02-29\nMRN: MRN-001234\nmember_id: PLAN-12345\nbank account: 12345678",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "redact",
+        "effective_action": "redact",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number",
+          "pii.date_of_birth",
+          "pii.medical_record_number",
+          "pii.health_plan_id",
+          "pii.bank_account"
+        ],
+        "redaction_status": "ready"
+      }
+    },
+    {
+      "case_id": "redact.enforce.text.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-redact-enforce-v1",
+        "content": "Phone: 202-555-0147\nDOB: 1980-02-29\nMRN: MRN-001234\nmember_id: PLAN-12345\nbank account: 12345678",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "redact",
+        "effective_action": "redact",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number",
+          "pii.date_of_birth",
+          "pii.medical_record_number",
+          "pii.health_plan_id",
+          "pii.bank_account"
+        ],
+        "redaction_status": "ready"
+      }
+    },
+    {
+      "case_id": "redact.enforce.json.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-redact-enforce-v1",
+        "content": "{\"phone_number\": 2025550147, \"DOB\": \"1980-02-29\", \"MRN\": \"A1234\", \"member_id\": \"M000123\", \"bank_account_number\": 76543210}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "redact",
+        "effective_action": "redact",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number",
+          "pii.date_of_birth",
+          "pii.medical_record_number",
+          "pii.health_plan_id",
+          "pii.bank_account"
+        ],
+        "redaction_status": "ready"
+      }
+    },
+    {
+      "case_id": "redact.enforce.json.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-redact-enforce-v1",
+        "content": "{\"phone_number\": 2025550147, \"DOB\": \"1980-02-29\", \"MRN\": \"A1234\", \"member_id\": \"M000123\", \"bank_account_number\": 76543210}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "redact",
+        "effective_action": "redact",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number",
+          "pii.date_of_birth",
+          "pii.medical_record_number",
+          "pii.health_plan_id",
+          "pii.bank_account"
+        ],
+        "redaction_status": "ready"
+      }
+    },
+    {
+      "case_id": "invalid0.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "not json",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "invalid0.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "not json",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "invalid1.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "{\"x\":1,\"x\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "invalid1.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "{\"x\":1,\"x\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "invalid2.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "{\"x\":NaN}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "invalid2.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "{\"x\":NaN}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "invalid3.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "{\"x\":1e400}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "invalid3.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "{\"x\":1e400}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "field.length.limit.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "MRN: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "field.length.limit.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "MRN: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "field.count.limit.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "MRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "field.count.limit.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-extended-v1",
+        "content": "MRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234\nMRN: A1234",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "disabled.by.default.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-v1",
+        "content": "Phone: 202-555-0147",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "disabled.by.default.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-v1",
+        "content": "Phone: 202-555-0147",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    }
+  ]
+}

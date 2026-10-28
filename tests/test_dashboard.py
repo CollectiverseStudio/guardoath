@@ -71,3 +71,12 @@ def test_conversation_profile_runs_combined_checks_on_both_stages():
             else:
                 assert all(c['status'] == 'passed' for c in checks.values())
                 assert result['recommended_action'] == 'allow'
+
+
+def test_labeled_sensitive_data_setting_is_strict_and_requires_a_pii_rule():
+    import pytest
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        Policy(application_id='demo',version='v1',rules=(),detect_labeled_sensitive_data='true')
+    with pytest.raises(ValueError,match='require a pii'):
+        Engine([Policy(application_id='demo',version='v1',rules=(),detect_labeled_sensitive_data=True)],{})

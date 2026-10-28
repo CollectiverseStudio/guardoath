@@ -18,7 +18,8 @@
 - [x] Define a versioned policy file format and load validated configuration.
 - [x] Add an optional local Presidio adapter for email and credit-card patterns, without NLP model downloads.
 - [x] Add context-aware U.S. SSN candidates and policy-controlled, revalidated redaction of supported identifiers.
-- [ ] Extend coverage to other identifiers and customer-specific privacy requirements.
+- [x] Complete the supported privacy-field batch: labeled phone, birth-date, medical-record, health-plan and bank-account candidates; revalidated redaction; 100 regression expectations, API/gate/browser coverage and guide.
+- [ ] Extend privacy coverage to names, addresses, medical narratives, additional identifiers and customer-specific requirements with reviewed accuracy data.
 - [x] Add bounded offline secret-pattern checks and real dashboard coverage for selected credentials/private-key markers.
 - [x] Complete the supported Secrets group batch: additional provider patterns, opt-in quoted assignments, encoded inspection, literal confidential terms, 100 regression cases, API/gate/browser coverage and user guide.
 - [ ] Evaluate semantic confidential-document classification, additional provider formats and password/obfuscation handling beyond the documented heuristics.

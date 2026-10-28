@@ -350,3 +350,39 @@ test("failed input never requests output",async({page})=>{
   page.on("request",r=>{if(r.url().endsWith("/v1/checks/output")) outputCalls++;});
   await run(page); expect(outputCalls).toBe(0); await expect(page.locator("#run-output")).toBeDisabled();
 });
+
+for (const [id,rule] of [["phone","phone number"],["birth-date","birth date"],["insurance-id","health-plan member"],["bank-account","bank account"]]) {
+  test("combined privacy output example " + id,async({page})=>{
+    await connect(page); await page.locator('#'+id+'-sample').click(); await run(page);
+    await expect(page.locator('#policy')).toHaveValue('conversation-v1');
+    await expect(page.locator('#output-results [data-group="sensitive_data"] summary')).toContainText('Findings');
+    await expect(page.locator('#output-results')).toContainText(rule);
+    await expect(page.locator('#answer')).toBeHidden();
+  });
+}
+test("medical record example holds the input before output",async({page})=>{
+  await connect(page); await page.locator('#medical-id-sample').click(); await run(page);
+  await expect(page.locator('#input-results')).toContainText('medical record identifier');
+  await expect(page.locator('#input-results')).not.toContainText('A1234');
+  await expect(page.locator('#run-output')).toBeDisabled();
+  await expect(page.locator('#output-results')).toContainText('Waiting for');
+});
+test("extended privacy redaction shows only rechecked replacements",async({page})=>{
+  await connect(page); await page.locator('#redaction-sample').click(); await run(page);
+  const result=page.locator('#output-results .redacted-content');
+  for(const entity of ['PHONE_NUMBER','DATE_OF_BIRTH','MEDICAL_RECORD_NUMBER','HEALTH_PLAN_ID','BANK_ACCOUNT'])
+    await expect(result).toContainText('[REDACTED_'+entity+']');
+  for(const value of ['202-555-0147','1980-02-29','A1234','M000123','76543210'])
+    await expect(result).not.toContainText(value);
+  await expect(page.locator('#output-results .redaction-box')).toContainText('Rechecked: pii · passed');
+});
+test("privacy batch report distinguishes incomplete cases from matched expectations",async({page},testInfo)=>{
+  const {execFileSync}=require('node:child_process'); const {pathToFileURL}=require('node:url');
+  const path=testInfo.outputPath('privacy.html');
+  execFileSync('python',['-m','valinator.evaluate','--pii','--cases','evals/privacy.json','--policies','policies/privacy-batch.json','--html',path],{stdio:'pipe'});
+  await page.goto(pathToFileURL(path).href);
+  await expect(page.locator('body')).toContainText('100 of 100 expectations matched');
+  await expect(page.locator('body')).toContainText('Incomplete evaluations: 12');
+  await expect(page.locator('tbody tr')).toHaveCount(100);
+  for(const value of ['jane@example.com','1980-02-29','A1234']) await expect(page.locator('body')).not.toContainText(value);
+});

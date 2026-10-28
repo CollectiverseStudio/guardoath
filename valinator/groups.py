@@ -3,7 +3,7 @@
 from valinator.models import GroupResult
 
 GROUPS = (
-    ("sensitive_data", "Regulated and sensitive data", ("pii",), "Email, credit-card, and selected U.S. SSN candidates only. Redaction is policy-controlled. PHI, names, addresses, and other identifiers are not assessed."),
+    ("sensitive_data", "Regulated and sensitive data", ("pii",), "Email, credit-card and selected U.S. SSN candidates. Opt-in explicitly labeled phone, birth date, medical-record, health-plan and bank-account fields. Redaction is policy-controlled. Not comprehensive PHI detection, compliance assessment, names/address recognition or identity verification."),
     ("secrets", "Secrets and confidential information", ("secrets",), "Selected provider credentials, JWTs, private-key markers and embedded URL credentials. Optional quoted assignments, labeled encoding inspection and configured confidential terms. No credential verification, secret redaction, general password detection or proprietary-document classification."),
     ("prompt_security", "Prompt injection and manipulation", ("text_security", "azure_prompt_shields"), "Local text_security checks selected controls/encodings only. Optional Azure Prompt Shields analyzes user-prompt attacks externally on input only. No document, multi-turn, output-attack, or malicious-intent guarantee; inspect selected checkers. Content is not sanitized."),
     ("harmful_content", "Harmful content and abuse", ("safety",), "Safety checks are synthetic test doubles, not content detectors."),
@@ -39,6 +39,8 @@ def group_results(policy, results, stage):
             status = "partial"
         else:
             status = "passed"
+        if group_id == 'sensitive_data' and configured:
+            limitations += f" Labeled sensitive-data fields: {'enabled' if policy.detect_labeled_sensitive_data else 'disabled'}."
         if group_id == 'secrets' and configured:
             count=sum(stage in r.stages for r in policy.confidential_terms)
             limitations += f" Quoted assignments: {'enabled' if policy.detect_secret_assignments else 'disabled'}; encoded inspection: {'enabled' if policy.inspect_encoded_secrets else 'disabled'}; active confidential-term rules: {count}."

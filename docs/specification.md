@@ -383,3 +383,21 @@ execution. Unknown names and ambiguous/non-placeholder requests fail suite load.
 No arbitrary imports, eval, file/network lookups or real credential creation is
 supported. This mechanism is exclusive to offline regression input, not API
 requests. Report output continues to omit constructed values.
+
+
+## Supported privacy-field batch (0.17.0)
+
+`detect_labeled_sensitive_data` is a strict optional policy Boolean, default false,
+requiring a pii rule. It enables bounded explicit-field heuristics for phone,
+birth date, medical-record, health-plan and bank-account candidates. It shares
+PII deadlines, transformations, sanitized findings and required-error handling.
+Field attempts share a 64-field document budget; values over 128 characters
+produce `pii_field_limit`, never partial success. JSON keys label scalar values
+and scalar lists; plain text uses complete colon/equals labeled lines.
+
+Combined conversation and redaction playground profiles enable it; legacy pii-v1
+retains its original scope. Privacy evaluation has 100 cases (12 intentional
+incomplete cases), offline, without accuracy/PHI/compliance certification.
+Eight supported types can be replaced, then all configured checks rerun; sensitive
+keys or schema-invalid replacements withhold content. Exact supported labels,
+examples and limitations are maintained in the user guide and privacy coverage.

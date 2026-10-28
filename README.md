@@ -230,8 +230,11 @@ the safety/bias simulators; the overall response remains `simulated: true`.
 - JSON scanning decodes strings, keys, lists, and integer values. Escaped email
   characters cannot bypass checks by using a separate payload representation.
 - Responses contain entity types and generic explanations, never detected values.
-- Names, postal addresses, phone numbers, other government identifiers,
-  obfuscated text, and arbitrary encodings are not covered.
+- Opt-in `detect_labeled_sensitive_data` adds explicitly labeled phone, birth-date,
+  medical-record, health-plan and bank-account candidates. The combined conversation
+  and redaction profiles enable it. Names, postal addresses, unlabelled medical
+  narratives, other government identifiers and arbitrary encodings remain outside
+  this scope. See the [user guide](docs/user-guide.md#regulated-and-sensitive-data-checks).
 - Supported patterns are driven directly with an internal scan deadline so a
   regex timeout becomes a failed check instead of silently skipping a pattern.
   Work runs in a thread; API timeout does not instantly terminate that thread.
@@ -247,7 +250,8 @@ Select `redaction-v1` from the combined playground policy or load
 Only an administrator-controlled `pii` rule with `on_finding: "redact"` (or a
 stage-specific override) enables transformations; request bodies cannot enable it.
 
-Detected email, card, and SSN values are replaced with labelled placeholders.
+Detected email, card and SSN values, plus enabled labeled-field candidates, are
+replaced with labelled placeholders.
 The response's separate `redaction` object reports:
 
 | Status | Meaning |
@@ -718,3 +722,18 @@ confidential-document classification are not implemented. Read the
 scan budgets, and the 100-case catalog; the [batch scope](docs/secrets-coverage.md)
 records acceptance boundaries. Future work is completed in coherent group batches
 on `main`, with guide and runnable examples updated together.
+
+
+## Regulated and sensitive data group batch
+
+```powershell
+py -3.13 start_dashboard.py --evaluate --suite privacy
+```
+
+Runs 100 offline input/output expectations; 12 intentionally assert incomplete
+results for invalid JSON or scan limits. The report omits content and keeps
+matched assertions separate from completed checks. The default conversation
+profile now adds opt-in labeled phone, birth-date, medical-record, health-plan
+and bank-account checks. See [the guide](docs/user-guide.md#regulated-and-sensitive-data-checks)
+and [all examples](docs/privacy-coverage.md) for syntax, redaction and limits.
+This is not comprehensive PHI detection or a compliance assessment.

@@ -98,7 +98,7 @@ def main():
     parser.add_argument('--no-browser', action='store_true', help='Print the URL without opening a browser')
     parser.add_argument('--reinstall', action='store_true', help='Reinstall the dashboard dependencies')
     parser.add_argument('--evaluate', action='store_true', help='Run the bundled local regression cases and open their report')
-    parser.add_argument('--suite', choices=['local','secrets'], default='local', help='Choose the local examples or full secrets batch')
+    parser.add_argument('--suite', choices=['local','secrets','privacy'], default='local', help='Choose starter examples, Secrets or Privacy group batch')
     parser.add_argument('--baseline', help='Compare an evaluation against this saved report')
     parser.add_argument('--no-compare', action='store_true', help='Skip automatic comparison with a previous evaluation')
     parser.add_argument('--serve', action='store_true', help=argparse.SUPPRESS)
@@ -120,7 +120,7 @@ def main():
         interpreter = prepare_environment(args.reinstall)
         if args.evaluate:
             cases_path = ROOT / 'evals' / (args.suite + '.json')
-            policies_path = ROOT / 'policies' / ('secrets-batch.json' if args.suite == 'secrets' else 'playground.json')
+            policies_path = ROOT / 'policies' / ({'secrets':'secrets-batch.json','privacy':'privacy-batch.json'}.get(args.suite,'playground.json'))
             baseline = Path(args.baseline).resolve() if args.baseline else None
             if not baseline and not args.no_compare:
                 previous = sorted((ROOT / '.valinator-reports').glob('*/report.json'),
