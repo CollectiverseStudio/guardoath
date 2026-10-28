@@ -18,6 +18,61 @@ An optional **real local detector** checks email addresses, credit-card candidat
 and selected U.S. SSN candidates using Presidio's patterns and validation routines. It is separate
 from the simulated safety/bias adapters; see setup below.
 
+## Open the dashboard with one command
+
+Install Git and Python 3.12 (or 3.11–3.14), then download this repository:
+
+```bash
+git clone https://github.com/CollectiverseStudio/valinator.git
+cd valinator
+```
+
+On **Windows PowerShell**:
+
+```powershell
+py -3.12 start_dashboard.py
+```
+
+On **Mac/Linux**:
+
+```bash
+python3.12 start_dashboard.py
+```
+
+The first launch installs the dashboard dependencies in its own ignored
+`.dashboard-venv` directory and needs internet access; allow several minutes.
+Later launches reuse that environment unless `pyproject.toml` or the launcher
+Python changes. No shell activation or manually configured environment is needed.
+The launcher selects all playground policies and the real local PII detector.
+Python 3.15 still supports the core API, but not this complete PII-enabled profile.
+
+The launcher prints a fresh **Application API key**, then opens
+[the dashboard](http://127.0.0.1:8000/dashboard). Copy the key from the terminal,
+paste it into **Application API key**, and click **Connect**. Keep the terminal
+open. Stop with **Ctrl+C**. Restarting generates a different key; reconnect with
+that new key. The key is never put in a URL or saved to a file.
+
+If the browser does not open, visit the printed URL yourself. To use another port,
+append `--port 8001`. Use `--no-browser` to skip automatic opening and `--reinstall`
+to repair the environment. These options work on both systems. The server binds
+only to `127.0.0.1`; this does not publish a website. Existing resource-limit
+environment overrides remain effective. No paid models or API calls are used.
+
+After **Connect**, click a sample and **Run input and output checks**:
+
+| Sample | Expected behavior |
+| --- | --- |
+| Clean text | Preview appears after local PII checks |
+| Email address | Email finding; answer held |
+| Redaction preview | Separate preview with supported identifiers masked |
+| Missing information | Empty Next steps section flagged; fill it and rerun |
+| Hidden characters | Input finding; answer held |
+| Encoded text | Review signal; no decoded content returned |
+| Credential pattern | Supported credential pattern flagged |
+
+You supply both the message and proposed answer. The dashboard validates them;
+it does not generate the answer. Passed checks cover only their stated scope.
+
 ## Run locally
 
 Requires Python 3.11 or newer. From the repository directory:

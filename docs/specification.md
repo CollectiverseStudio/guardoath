@@ -189,3 +189,27 @@ thread-contention test without timing sleeps.
 Scope: process-local state resets on restart; uniform settings apply separately
 to each application. No shared worker/replica quota, per-plan overrides, hard
 background-thread/CPU limit, connection protection, or model-cost cap is claimed.
+
+## Local dashboard launcher
+
+`start_dashboard.py` supplies an optional cross-platform first-run path. Python
+3.11–3.14 is required for the complete PII-enabled playground. It creates an
+ignored `.dashboard-venv` with pip, installs the existing `.[pii]` dependency set,
+and records a successful setup fingerprint after `pip check`. Interrupted setup
+is retried. Project/Python changes invalidate the marker; `--reinstall` explicitly
+repairs dependencies. Installation may access package registries on first use.
+
+The child server uses an absolute playground policy path and a fresh random
+in-memory API key. Old API-key/PII/policy environment values are overridden;
+resource-limit settings remain effective. No key file, URL credential, shell
+activation, or paid model service is involved. The launcher binds a loopback
+socket before printing the key or opening the browser, so an occupied port cannot
+open an unrelated server as if it were the new instance. The browser opens only
+after local readiness, without routing readiness traffic through a proxy.
+
+The console explains connection and shutdown; `--port`, `--no-browser`, and
+`--reinstall` are documented. The full manual API setup remains available.
+Subprocess smoke tests verify all policies, fresh-key authorization, startup from
+a different working directory, and occupied-port failure. CI includes the Windows
+launcher path alongside Linux Python and browser checks. There is no hosted URL
+or production deployment in this change.
