@@ -55,7 +55,7 @@ class Engine:
     def describe_policies(self, application_id: str) -> list[dict]:
         """Expose only safe, application-scoped configuration for the dashboard."""
         return [{
-            "version": policy.version, "mode": policy.mode,
+            "version": policy.version, "mode": policy.mode, "external_checks": policy.external_checks,
             "checks": [{"id": rule.checker_id, "required": rule.required,
                         "available": rule.checker_id in self._checkers,
                         "simulated": bool(getattr(self._checkers.get(rule.checker_id), "simulated", False)),
@@ -101,7 +101,25 @@ class Engine:
                                        status="error", error_code="checker_failure", simulated=simulated, external=external)
             return result.model_copy(update={"latency_ms": round((perf_counter() - tick) * 1000, 3)})
 
-        results = await asyncio.gather(*(execute(r.checker_id) for r in rules))
+        async def run_rules(content_request):
+            local_rules = [r for r in rules if not bool(getattr(self._checkers.get(r.checker_id), "external", False))]
+            external_rules = [r for r in rules if bool(getattr(self._checkers.get(r.checker_id), "external", False))]
+            local_results = await asyncio.gather(*(execute(r.checker_id, content_request) for r in local_rules))
+            gate_error = None
+            if policy.external_checks != "after_local_pass":
+                gate_error = "external_policy_disabled"
+            elif not local_results or any(c.status != "passed" or c.simulated for c in local_results):
+                gate_error = "external_local_gate"
+            if gate_error:
+                external_results = [CheckerResult(checker_id=r.checker_id,
+                    checker_version=getattr(self._checkers[r.checker_id], "checker_version", "unknown"),
+                    status="skipped", external=True, error_code=gate_error) for r in external_rules]
+            else:
+                external_results = await asyncio.gather(*(execute(r.checker_id, content_request) for r in external_rules))
+            indexed = {c.checker_id: c for c in (*local_results, *external_results)}
+            return tuple(indexed[r.checker_id] for r in rules)
+
+        results = await run_rules(request)
         actions = [Action.ALLOW]
         incomplete = False
         for rule, result in zip(rules, results):
@@ -127,7 +145,7 @@ class Engine:
                     transformed_request = CheckRequest.model_validate({
                         **request.model_dump(), "content": original.transformed_content,
                     })
-                    rechecks = tuple(await asyncio.gather(*(execute(r.checker_id, transformed_request) for r in rules)))
+                    rechecks = await run_rules(transformed_request)
                 except Exception:
                     rechecks = ()
                 if rechecks and all(c.status == "passed" and not c.simulated for c in rechecks):

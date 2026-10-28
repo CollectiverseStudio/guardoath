@@ -26,7 +26,8 @@
 - [x] Add bounded hidden/control-character and explicit Base64/hex review signals with dashboard examples.
 - [x] Implement an opt-in Azure Prompt Shields input adapter, external-routing disclosure, unknown-cost reporting, and offline provider-contract tests.
 - [ ] Activate and calibrate semantic prompt-attack detection against live approved fixtures; evaluate encoded PII/secrets and additional Unicode coverage.
-- [ ] Add explicit local privacy gates before external checks; current checker execution is parallel.
+- [x] Gate registered external checks behind explicit policy permission and all configured real local passes, including redaction rechecks.
+- [ ] Expand privacy-gate coverage beyond supported PII/secrets; improve combined required-external/redaction workflows.
 - [x] Add per-application token-bucket and concurrent-check limits plus process-level check/ingress budgets and retry guidance.
 - [ ] Add shared multi-worker/multi-server quotas, application-specific plans, and worker CPU/job budgets.
 - [x] Add a cross-platform dashboard launcher with isolated setup, fresh keys, and browser opening.

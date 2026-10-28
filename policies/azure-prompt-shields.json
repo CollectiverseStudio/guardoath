@@ -18,8 +18,17 @@
             "input"
           ],
           "on_finding": "flag"
+        },
+        {
+          "checker_id": "secrets",
+          "on_finding": "flag"
+        },
+        {
+          "checker_id": "pii",
+          "on_finding": "flag"
         }
-      ]
+      ],
+      "external_checks": "after_local_pass"
     }
   ]
 }

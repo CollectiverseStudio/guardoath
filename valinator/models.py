@@ -103,6 +103,7 @@ class Policy(Contract):
     input_schema: dict[str, Any] | None = None
     output_schema: dict[str, Any] | None = None
     allow_simulated_enforcement: bool = False
+    external_checks: Literal["disabled", "after_local_pass"] = "disabled"
     comparisons: tuple[FieldComparison, ...] = Field(default=(), max_length=50)
     required_sections: tuple[RequiredSection, ...] = Field(default=(), max_length=50)
 

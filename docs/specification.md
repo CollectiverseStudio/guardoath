@@ -245,7 +245,42 @@ model weights/version.
 
 All provider tests use local HTTP fixtures. No live activation, calibration,
 region/retention guarantee, paid call, or resource provisioning has occurred.
-Local checks currently run in parallel and do not form a pre-provider privacy
-gate; source content may leave even if a local check flags it. Separate privacy
-gates and live calibration remain explicit backlog items. See
+The local-first policy gate described below now holds provider calls until all
+configured local checks pass. Live calibration remains an explicit backlog item. See
 `docs/provider-decisions.md` and the README activation/data-handling contract.
+
+
+## Local-first external gate
+
+Policy `external_checks` defaults to `disabled`. Selecting an external adapter
+alone does not permit data transfer. Explicit `after_local_pass` permission runs
+all selected local adapters first, then permits registered external adapters only
+when at least one local adapter ran and every local result is real and passed.
+The policy/action/required flags cannot turn a local finding, optional error,
+skip, missing adapter, or simulated pass into outbound permission. Observe mode
+also holds egress. Gate failures return skipped external results with
+`external_policy_disabled` or `external_local_gate`, retaining external/version
+metadata. Required skips remain incomplete under existing failure semantics.
+
+Execution preserves configured result order even if external rules are listed
+first. Local checks can run concurrently with each other, then external checks
+can run concurrently with each other. `timeout_ms` remains per checker; total
+latency can include both phases. Request admission budgets cover the full call.
+Cancellation during the local phase never starts the external phase. Custom
+external adapters must truthfully declare the `external` registration attribute.
+This is an engine policy gate, not a network firewall for arbitrary custom code.
+
+Redaction revalidation uses exactly the same phased executor. Original content
+that triggered a local finding is withheld. With required external skips, the
+original evaluation is incomplete and same-call redaction stays withheld; use a
+separate local-only redaction call for that workflow. With optional external
+rules, a transformed request can reach the provider only after all transformed
+local checks pass; bad transformed content cannot bypass the gate.
+
+The Azure sample now requires actual local PII, secret, and text-security
+adapters. The optional `pii` extra and enable flag are necessary for that sample;
+missing PII support holds egress. The dashboard explains permission/gating before
+execution and gives a specific withheld reason afterward. Cost stays conservatively
+provider_unpriced for selected external checks, even when withheld; it is not a
+receipt of a billable request. Detector limits still apply: passing configured
+checks does not establish complete privacy, lack of PHI, or safe model behavior.
