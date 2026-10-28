@@ -133,7 +133,7 @@ def test_launcher_second_run_compares_with_previous_without_overwriting_it(tmp_p
 
 
 @pytest.mark.skipif(not PII_AVAILABLE, reason='Launcher preparation uses the complete optional environment')
-@pytest.mark.parametrize("suite",["secrets","privacy","structure","business"])
+@pytest.mark.parametrize("suite",["secrets","privacy","structure","business","text-security"])
 def test_launcher_runs_the_entire_group(tmp_path,monkeypatch,suite):
     import start_dashboard
     (tmp_path/'evals').mkdir(); (tmp_path/'policies').mkdir()

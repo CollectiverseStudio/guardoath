@@ -21,6 +21,8 @@ jobs:
         run: python -m valinator.evaluate --cases evals/structure.json --policies policies/structure-batch.json
       - name: Business group - 100 expectations
         run: python -m valinator.evaluate --cases evals/business.json --policies policies/business-batch.json
+      - name: Local text security - 100 expectations
+        run: python -m valinator.evaluate --cases evals/text-security.json --policies policies/text-security-batch.json
   local-pii:
     runs-on: ubuntu-latest
     strategy:

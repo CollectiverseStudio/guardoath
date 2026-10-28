@@ -89,3 +89,10 @@ explicit exponent bound (absolute encoded exponent at most 1,000,000). It retain
 for comparisons only, without changing schema or transformation numeric parsing.
 Unrepresentable exponents are rejected. Python reference:
 https://docs.python.org/3/library/json.html (parse_float).
+
+The supported local text-security batch adds no dependencies or detection models.
+It reuses Python standard-library base64 (validate=True), hex byte decoding and
+UTF-8 decoding with the existing bounded JSON parser. Fixed diagnostic classes
+are Valinator logic; no NLP/Unicode database/model or provider is consulted.
+No canonical Base64 padding-bit enforcement is claimed. Python reference:
+https://docs.python.org/3/library/base64.html. Upstream pins remain unchanged.

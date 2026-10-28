@@ -1,0 +1,27 @@
+{
+  "format_version": "1",
+  "policies": [
+    {
+      "application_id": "demo",
+      "version": "text-security-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "text_security",
+          "on_finding": "flag"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "text-security-enforce-v1",
+      "mode": "enforce",
+      "rules": [
+        {
+          "checker_id": "text_security",
+          "on_finding": "block"
+        }
+      ]
+    }
+  ]
+}

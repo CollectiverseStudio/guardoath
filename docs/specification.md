@@ -453,3 +453,22 @@ business truth, semantic adequacy or financial/clinical/legal approval is implie
 Comparison float tokens additionally reject encoded exponents with absolute value
 above 1,000,000 before Decimal construction, making extreme-input decisions
 consistent across supported Python runtimes. Existing strict JSON limits remain.
+
+
+## Supported local text-security batch (0.20.0)
+
+Text-security checker version 2 preserves four finding IDs and selected-control,
+explicit-encoding, single-layer scope. It adds fixed control classes and invalid
+encoding reasons, without payloads, positions, code points or decoded text. No
+semantic attack detector, Unicode normalization or new detection model is added.
+The existing shared budgets are 16 labels, 4,096 characters/token and 8,192 in
+total across JSON keys/values. Exceeded budgets and invalid JSON remain errors,
+not partial successful assessments. Request context/files are not inspected.
+
+The batch has 100 cases, 14 intentional incomplete outcomes and explicit semantic
+and legitimate-Unicode gaps. --suite text-security selects it; core CI runs it
+without PII. Ten independent examples per stage bring catalogs to 46 input / 49
+output. The focused profile visibly states attack intent is not assessed.
+Normal conversation policies and optional Azure activation remain unchanged.
+No provider call, dependency addition, live calibration or complete injection
+protection is implied; supported scope and examples are in the user guide.

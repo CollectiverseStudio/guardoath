@@ -396,7 +396,7 @@ for (const stage of ["input","output"]) {
   test(stage + " examples change only their own data and format",async({page})=>{
     await connect(page); const other=stage==='input'?'output':'input'; const seen=new Set(); let checks=0;
     page.on('request',r=>{if(r.url().includes('/v1/checks/')) checks++;});
-    for(const version of ['conversation-v1','redaction-v1','business-v1','completeness-v1','structure-v1','business-number-le-v1']) {
+    for(const version of ['conversation-v1','redaction-v1','business-v1','completeness-v1','structure-v1','business-number-le-v1','text-security-v1']) {
       await page.locator('#policy').selectOption(version);
       const ids=await page.locator('#'+stage+'-samples button:enabled').evaluateAll(nodes=>nodes.map(n=>n.id));
       for(const id of ids) {
@@ -412,7 +412,7 @@ for (const stage of ["input","output"]) {
         await expect(page.locator('#policy')).toHaveValue(version);
       }
     }
-    expect(seen.size).toBe(stage==='input'?36:39);
+    expect(seen.size).toBe(stage==='input'?46:49);
     expect(checks).toBe(0);
   });
 }
@@ -565,4 +565,43 @@ test('examples remain hidden until an application profile is loaded',async({page
   await page.getByRole('button',{name:'Connect',exact:true}).click();
   await expect(page.locator('#input-clean-sample')).toBeVisible();
   await expect(page.locator('#output-clean-sample')).toBeVisible();
+});
+
+
+for(const [id,signal] of [['unicode-bidi','bidirectional formatting'],['unicode-invisible','invisible formatting'],['ascii-controls','control characters'],['encoded-controls','found inside a labeled encoded payload'],['invalid-base64','malformed Base64'],['invalid-hex','malformed hex'],['non-utf8','non-UTF-8 bytes']]) {
+  test('local text-security output example '+id,async({page})=>{
+    await connect(page); await profile(page,'text-security-v1');
+    await page.locator('#run-input').click(); await expect(page.locator('#run-output')).toBeEnabled();
+    await page.locator('#output-'+id+'-sample').click(); await page.locator('#run-output').click();
+    await expect(page.locator('#output-results [data-group="prompt_security"] summary')).toContainText('Findings');
+    await expect(page.locator('#output-results')).toContainText(signal);
+    await expect(page.locator('#answer')).toBeHidden();
+  });
+}
+test('inspection budget exhaustion holds input and never submits output',async({page})=>{
+  await connect(page); await profile(page,'text-security-v1'); let output=0;
+  page.on('request',r=>{if(r.url().endsWith('/v1/checks/output')) output++;});
+  await page.locator('#input-encoding-limit-sample').click(); await run(page);
+  await expect(page.locator('#input-results')).toContainText('text_inspection_budget_exceeded');
+  await expect(page.locator('#result-status')).toHaveText('Incomplete');
+  await expect(page.locator('#run-output')).toBeDisabled(); expect(output).toBe(0);
+});
+for(const id of ['plain-intent','joiner-safe']) {
+  test('local text-security coverage limit example '+id,async({page})=>{
+    await connect(page); await profile(page,'text-security-v1');
+    await page.locator('#input-'+id+'-sample').click(); await page.locator('#output-'+id+'-sample').click();
+    await run(page); await expect(page.locator('#result-status')).toHaveText('No findings');
+    await expect(page.locator('#profile-status')).toContainText('Plain-language attacks, indirect instructions and multi-turn manipulation are not assessed');
+    await expect(page.locator('#answer')).toBeVisible();
+  });
+}
+test('local text-security batch keeps incomplete evaluations separate from matched cases',async({page},testInfo)=>{
+  const {execFileSync}=require('node:child_process'); const {pathToFileURL}=require('node:url');
+  const path=testInfo.outputPath('text-security.html');
+  execFileSync('python',['-m','valinator.evaluate','--cases','evals/text-security.json','--policies','policies/text-security-batch.json','--html',path],{stdio:'pipe'});
+  await page.goto(pathToFileURL(path).href);
+  await expect(page.locator('body')).toContainText('100 of 100 expectations matched');
+  await expect(page.locator('body')).toContainText('Incomplete evaluations: 14');
+  await expect(page.locator('tbody tr')).toHaveCount(100);
+  await expect(page.locator('body')).not.toContainText('private-marker');
 });

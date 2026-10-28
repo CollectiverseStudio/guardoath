@@ -36,6 +36,7 @@
 - [x] Add stage-specific actions and ten shared input/output coverage groups.
 - [x] Add configurable labeled-text completeness rules, stage-specific findings, and dashboard examples.
 - [x] Add bounded hidden/control-character and explicit Base64/hex review signals with dashboard examples.
+- [x] Complete the supported local text-security batch: fixed signal/reason diagnostics, 100 cases, Unicode/encoding/JSON/shared-budget boundaries, explicit semantic gaps, independent examples and guide/launcher/CI coverage.
 - [x] Implement an opt-in Azure Prompt Shields input adapter, external-routing disclosure, unknown-cost reporting, and offline provider-contract tests.
 - [ ] Activate and calibrate semantic prompt-attack detection against live approved fixtures; evaluate encoded PII/secrets and additional Unicode coverage.
 - [x] Gate registered external checks behind explicit policy permission and all configured real local passes, including redaction rechecks.

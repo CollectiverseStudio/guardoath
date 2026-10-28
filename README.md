@@ -780,3 +780,21 @@ or missing values from failed relationships; completeness distinguishes missing,
 repeated and short sections. This is not authoritative business truth or external
 financial/medical/legal verification. See the [guide](docs/user-guide.md#business-rules-and-commitments-checks)
 and [case list](docs/business-coverage.md). No new dependency or paid call.
+
+
+## Supported local text-security batch
+
+```powershell
+py -3.13 start_dashboard.py --evaluate --suite text-security
+```
+
+Runs 100 expectations, including 14 intentional incomplete results. Under
+Advanced select `text-security-v1` to try independent input/output formatting,
+encoding and budget examples. Version 2 adds fixed control-class and invalid
+encoding reasons without returning payloads or decoded text. Legitimate joiners
+and an explicitly undetected plain-language attack example demonstrate limits.
+
+This is local obfuscation review, not semantic prompt-injection detection. Azure
+remains optional, off and not live-calibrated by this batch. See the
+[guide](docs/user-guide.md#prompt-injection-and-manipulation-checks) and
+[case list](docs/text-security-coverage.md). No dependency/model/paid call added.
