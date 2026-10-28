@@ -42,6 +42,8 @@ class Engine:
             if checker is None:
                 return CheckerResult(checker_id=checker_id, checker_version="unknown",
                                      status="unsupported", error_code="checker_unavailable")
+            simulated = bool(getattr(checker, "simulated", False))
+            version = getattr(checker, "checker_version", "unknown")
             try:
                 result = await asyncio.wait_for(
                     checker(request, policy, stage), timeout=policy.timeout_ms / 1000,
@@ -50,18 +52,19 @@ class Engine:
                     raise ValueError("Adapter returned wrong identity")
                 if (result.status == "flagged") != bool(result.findings):
                     raise ValueError("Adapter returned inconsistent findings")
+                result = result.model_copy(update={"simulated": simulated or result.simulated})
                 if (result.simulated and policy.mode == "enforce"
                         and not policy.allow_simulated_enforcement):
                     result = result.model_copy(update={
                         "status": "error", "findings": (), "error_code": "simulator_not_enforceable",
                     })
             except TimeoutError:
-                result = CheckerResult(checker_id=checker_id, checker_version="unknown",
-                                       status="error", error_code="checker_timeout")
+                result = CheckerResult(checker_id=checker_id, checker_version=version,
+                                       status="error", error_code="checker_timeout", simulated=simulated)
             except Exception:
                 # Exception text can contain customer content or credentials.
-                result = CheckerResult(checker_id=checker_id, checker_version="unknown",
-                                       status="error", error_code="checker_failure")
+                result = CheckerResult(checker_id=checker_id, checker_version=version,
+                                       status="error", error_code="checker_failure", simulated=simulated)
             return result.model_copy(update={"latency_ms": round((perf_counter() - tick) * 1000, 3)})
 
         results = await asyncio.gather(*(execute(r.checker_id) for r in policy.rules))

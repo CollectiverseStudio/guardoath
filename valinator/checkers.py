@@ -41,6 +41,9 @@ def simulated_checker(kind: str) -> Checker:
                 explanation="Synthetic test finding; no real content assessment was performed.",
             ),) if flagged else (),
         )
+    # Registration metadata survives an adapter raising before it can return.
+    setattr(run, "simulated", True)
+    setattr(run, "checker_version", "simulator-1")
     return run
 
 

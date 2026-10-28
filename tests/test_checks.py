@@ -169,3 +169,15 @@ def test_policy_snapshot_cannot_be_changed_by_original_owner():
     schema["type"] = "string"
     request = CheckRequest(application_id="demo", policy_version="v1", content="hello", payload=7)
     assert asyncio.run(engine.check(request, Stage.INPUT)).effective_action == "allow"
+
+
+@pytest.mark.parametrize("failure", ["ERROR", "TIMEOUT"])
+def test_simulation_metadata_survives_a_failed_adapter(failure):
+    policy = Policy(application_id="demo", version="v1", timeout_ms=10,
+                    rules=(Rule(checker_id="safety"),))
+    request = CheckRequest(application_id="demo", policy_version="v1",
+                           content=f"[SIMULATE:safety:{failure}]")
+    result = asyncio.run(Engine([policy], default_checkers()).check(request, Stage.INPUT))
+    assert result.simulated is True
+    assert result.checker_results[0].simulated is True
+    assert result.checker_results[0].checker_version == "simulator-1"
