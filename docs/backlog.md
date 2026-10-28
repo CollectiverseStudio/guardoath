@@ -16,7 +16,10 @@
 - [x] Add an optional local Presidio adapter for email and credit-card patterns, without NLP model downloads.
 - [ ] Extend sensitive-data entity coverage and add approved redaction policies.
 - [x] Use a single canonical content value with explicit text/JSON format to prevent mismatched payloads.
-- [ ] Add ingress byte limits, explicit request deadlines, and per-application rate limits.
+- [x] Add ingress byte limits, body-read deadline, and bounded JSON parsing.
+- [x] Enforce supported schema formats and declarative numeric/date comparisons.
+- [x] Add stage-specific actions and ten shared input/output coverage groups.
+- [ ] Add per-application rate limits and deployment-wide request/concurrency budgets.
 - [x] Build a local playground with input/output findings, held answer previews, and prominent simulation labels.
 
 ## Milestone 3 — first live integration

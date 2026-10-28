@@ -3,7 +3,7 @@
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class Contract(BaseModel):
@@ -53,6 +53,26 @@ class Rule(Contract):
     checker_id: str
     required: bool = True
     on_finding: Action = Action.FLAG
+    stages: tuple[Stage, ...] = Field(default=(Stage.INPUT, Stage.OUTPUT), min_length=1)
+    on_input_finding: Action | None = None
+    on_output_finding: Action | None = None
+
+
+class FieldComparison(Contract):
+    rule_id: str = Field(pattern=r"^[a-zA-Z0-9_.-]{1,80}$")
+    left: str = Field(min_length=1, max_length=200)
+    right: str = Field(min_length=1, max_length=200)
+    operator: Literal["lt", "le", "eq", "ge", "gt", "ne"]
+    value_type: Literal["number", "date"] = "number"
+    stages: tuple[Stage, ...] = Field(default=(Stage.INPUT, Stage.OUTPUT), min_length=1)
+
+    @field_validator("left", "right")
+    @classmethod
+    def pointer(cls, value):
+        import re
+        if not value.startswith("/") or re.search(r"~(?![01])", value):
+            raise ValueError("Expected an absolute JSON Pointer")
+        return value
 
 
 class Policy(Contract):
@@ -65,6 +85,15 @@ class Policy(Contract):
     input_schema: dict[str, Any] | None = None
     output_schema: dict[str, Any] | None = None
     allow_simulated_enforcement: bool = False
+    comparisons: tuple[FieldComparison, ...] = Field(default=(), max_length=50)
+
+
+class GroupResult(Contract):
+    group_id: str
+    name: str
+    status: Literal["passed", "findings", "incomplete", "simulated", "partial", "disabled", "not_applicable", "not_implemented"]
+    checker_ids: tuple[str, ...] = ()
+    limitations: str
 
 
 class CheckResponse(Contract):
@@ -82,3 +111,4 @@ class CheckResponse(Contract):
     cost_usd: float = 0
     cost_basis: Literal["local_only"] = "local_only"
     simulated: bool
+    groups: tuple[GroupResult, ...] = ()

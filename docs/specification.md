@@ -73,6 +73,26 @@ same content when content_format is json. A separate payload field is rejected.
 
 ## Acceptance and delivery
 
+Version 0.4 adds pre-parser envelope size and nesting controls, supported format
+assertions, declarative cross-field comparisons, stage-specific checker actions,
+and a ten-group coverage catalogue shared by input/output APIs and the dashboard.
+Unsupported, disabled, partial, and simulated coverage must remain distinct from
+passed checks. The example business policy compares submitted dates and amounts;
+independent verification of business facts requires trusted context integration.
+
+The foundation changes were informed by OWASP's Input Validation Cheat Sheet,
+Nightfall's model input validation overview, Splunk's validation lifecycle article,
+and review of the tools in Galileo's comparison. Use vendor primary documentation
+for integrations: the comparison's Bedrock-only limitation is incorrect and its
+linked Galileo Protect solution is deprecated in favor of Agent Control.
+
+Additional references:
+- https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html
+- https://www.nightfall.ai/ai-security-101/model-input-validation
+- https://www.splunk.com/en_us/blog/learn/ai-model-validation-ml.html
+- https://galileo.ai/blog/best-llm-input-output-validation-tools
+- https://python-jsonschema.readthedocs.io/en/stable/validate/
+
 Test decision semantics, application isolation, timeouts, error privacy, and
 schema boundaries before a live adapter. Before a pilot, add reviewed cases with
 real violations and benign lookalikes; report precision, recall, false alarms,

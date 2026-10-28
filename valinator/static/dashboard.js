@@ -2,6 +2,7 @@
 const $ = id => document.getElementById(id);
 let key = "", application = null, revision = 0, busy = false;
 const currentPolicy = () => application?.policies.find(p => p.version === $("policy").value);
+const groupLabels = {passed:"Passed", findings:"Findings", incomplete:"Incomplete", simulated:"Simulated", partial:"Partial coverage", disabled:"Disabled", not_applicable:"Not applicable", not_implemented:"Not implemented"};
 function reset() {
   revision++;
   $("answer").hidden = true; $("answer").textContent = "";
@@ -23,9 +24,13 @@ async function api(path, body, token = key) {
 }
 function coverage() {
   $("coverage").replaceChildren(); const policy = currentPolicy();
-  for (const check of policy?.checks || []) { const tag = document.createElement("span");
-    tag.textContent = check.id + (check.simulated ? " · simulated" : check.available ? " · local" : " · unavailable"); $("coverage").append(tag); }
+  for (const group of application?.groups || []) {
+    const checks = (policy?.checks || []).filter(c => group.checker_ids.includes(c.id));
+    const state = !group.checker_ids.length ? "not implemented" : !checks.length ? "disabled" : checks.some(c => !c.available) ? "unavailable" : checks.some(c => c.simulated) ? "simulated" : "enabled";
+    const tag = document.createElement("span"); tag.textContent = group.name + " · " + state; tag.title = group.limitations; $("coverage").append(tag);
+  }
   $("schema-sample").disabled = !policy?.checks.some(c => c.id === "schema");
+  $("business-sample").disabled = !policy?.checks.some(c => c.id === "cross_field");
 }
 $("connect").addEventListener("click", async () => {
   const token = $("api-key").value.trim(); if (!token || busy) return;
@@ -52,18 +57,29 @@ for (const button of document.querySelectorAll("[data-sample]")) button.addEvent
   $("input-content").value = "Can you explain your return policy?";
   const examples = {clean: "You can return an unused item within 30 days. Please check the store’s policy for details.", email: "Your contact email is jane@example.com.", card: "The test card number is 4111 1111 1111 1111."};
   if (button.dataset.sample === "schema") { $("input-format").value = "json"; $("output-format").value = "json"; $("input-content").value = '{"message":"Can I return this?"}'; $("output-content").value = '{"unexpected_field":"This does not match the output schema."}'; }
+  else if (button.dataset.sample === "business") { $("input-format").value = "json"; $("output-format").value = "json"; $("input-content").value = JSON.stringify({start_date:"2026-10-01",end_date:"2026-10-03",purchase_amount:100,refund_amount:25},null,2); $("output-content").value = JSON.stringify({start_date:"2026-10-03",end_date:"2026-10-01",purchase_amount:100,refund_amount:150},null,2); }
   else $("output-content").value = examples[button.dataset.sample];
 });
 function render(stage, result) {
   const box = $(stage + "-results"); box.replaceChildren(); const title = document.createElement("h3"); title.textContent = stage === "input" ? "Input checks" : "Output checks"; box.append(title);
   const summary = document.createElement("p"); summary.textContent = "Recommended: " + result.recommended_action + " · Effective: " + result.effective_action + " · " + result.total_latency_ms.toFixed(1) + " ms"; box.append(summary);
-  for (const check of result.checker_results) { const row = document.createElement("div"); row.className = "checker";
+  function checkerRow(check) { const row = document.createElement("div"); row.className = "checker";
     const heading = document.createElement("div"), name = document.createElement("span"), status = document.createElement("span");
     name.textContent = check.checker_id; status.className = "pill" + (check.simulated ? " warn" : check.status === "passed" ? " good" : check.status === "flagged" ? " bad" : " warn");
     status.textContent = (check.simulated ? "SIMULATED · " : "") + check.status; heading.append(name, status); row.append(heading);
     if (check.error_code) { const error = document.createElement("p"); error.textContent = "Check unavailable: " + check.error_code; row.append(error); }
     for (const finding of check.findings) { const detail = document.createElement("p"); detail.className = "finding"; detail.textContent = finding.explanation; row.append(detail); }
-    box.append(row);
+    return row;
+  }
+  for (const group of result.groups || []) {
+    const details = document.createElement("details"); details.className = "check-group"; details.dataset.group = group.group_id;
+    details.open = ["findings", "incomplete", "simulated"].includes(group.status);
+    const heading = document.createElement("summary"), name = document.createElement("span"), status = document.createElement("span");
+    name.textContent = group.name; status.className = "pill" + (group.status === "passed" ? " good" : group.status === "findings" ? " bad" : " warn");
+    status.textContent = groupLabels[group.status] || group.status; heading.append(name,status); details.append(heading);
+    const limitations = document.createElement("p"); limitations.className = "group-limitations"; limitations.textContent = group.limitations; details.append(limitations);
+    for (const check of result.checker_results.filter(c => group.checker_ids.includes(c.checker_id))) details.append(checkerRow(check));
+    box.append(details);
   }
 }
 $("run").addEventListener("click", async () => {

@@ -12,6 +12,8 @@ so upgrades are deliberate and tested.
 | jsonschema | 4.26.0 | https://pypi.org/pypi/jsonschema/json |
 | HTTPX2 | 2.16.0 | https://pypi.org/pypi/httpx2/json |
 | Starlette | 1.10.0 | https://pypi.org/pypi/starlette/json |
+| email-validator | 2.3.0 | https://pypi.org/pypi/email-validator/json |
+| rfc3339-validator | 0.1.4 | https://pypi.org/pypi/rfc3339-validator/json |
 | pytest | 9.2.0 | https://pypi.org/pypi/pytest/json |
 | actions/checkout | v7.0.1 | https://github.com/actions/checkout/releases |
 | actions/setup-python | v7.1.0 | https://github.com/actions/setup-python/releases |

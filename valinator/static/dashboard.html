@@ -13,7 +13,7 @@
 <section class="workspace" aria-label="Playground">
 <div class="editor panel"><div class="section-top"><h2>Test a conversation</h2><span class="pill">No model calls</span></div>
 <label for="policy">Policy</label><select id="policy" disabled><option>Connect to load policies</option></select><div id="coverage" class="coverage"></div>
-<div class="samples"><span>Try an example</span><button data-sample="clean" class="chip">Clean text</button><button data-sample="email" class="chip">Email address</button><button data-sample="card" class="chip">Card number</button><button data-sample="schema" class="chip" id="schema-sample" disabled>Schema error</button></div>
+<div class="samples"><span>Try an example</span><button data-sample="clean" class="chip">Clean text</button><button data-sample="email" class="chip">Email address</button><button data-sample="card" class="chip">Card number</button><button data-sample="schema" class="chip" id="schema-sample" disabled>Schema error</button><button data-sample="business" class="chip" id="business-sample" disabled>Business rule error</button></div>
 <div class="field-title"><label for="input-content"><span class="step">1</span> User message</label><select id="input-format" aria-label="User message format"><option value="text">Text</option><option value="json">JSON</option></select></div>
 <textarea id="input-content" rows="5" maxlength="32000" spellcheck="false">Can you explain your return policy?</textarea>
 <div class="field-title"><label for="output-content"><span class="step">2</span> Proposed AI answer</label><select id="output-format" aria-label="Proposed answer format"><option value="text">Text</option><option value="json">JSON</option></select></div>
