@@ -1,0 +1,11 @@
+{
+  "format_version": "1",
+  "policies": [{
+    "application_id": "demo",
+    "version": "pii-v1",
+    "mode": "observe",
+    "timeout_ms": 500,
+    "failure_action": "block",
+    "rules": [{"checker_id": "pii", "required": true, "on_finding": "flag"}]
+  }]
+}

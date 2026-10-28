@@ -13,6 +13,10 @@ simulated `passed` result has **not** received a safety or bias assessment.
 The prototype does not store prompt or response content and has no database,
 dashboard, live provider integration, or production deployment yet.
 
+An optional **real local detector** now checks email addresses and credit-card
+candidates using Presidio's patterns and validation routines. It is separate
+from the simulated safety/bias adapters; see setup below.
+
 ## Run locally
 
 Requires Python 3.11 or newer. From the repository directory:
@@ -76,6 +80,53 @@ pytest -q
 
 Tests cover application scope, schema checks, observation versus enforcement,
 failure handling, skipped required checks, response privacy, and simulator limits.
+
+## Real local sensitive-data checks
+
+Use Python 3.11–3.14; Presidio currently does not support 3.15. Install the optional
+extra, enable the detector, and select the PII-only example policy before starting:
+
+```bash
+pip install -e '.[test,pii]'
+export VALINATOR_ENABLE_PII=1
+export VALINATOR_POLICY_FILE=policies/pii-only.json
+```
+
+In PowerShell:
+
+```powershell
+pip install -e '.[test,pii]'
+$env:VALINATOR_ENABLE_PII = '1'
+$env:VALINATOR_POLICY_FILE = 'policies/pii-only.json'
+```
+
+Submit `policy_version: "pii-v1"` with text such as `Contact jane@example.com`.
+The response reports a real `pii.email_address` finding and `simulated: false`.
+The example remains observe-only: it recommends flagging without blocking.
+Input and output endpoints use the same detector. If the required detector is
+disabled or unavailable, the result is incomplete, not a successful privacy check.
+
+If PII is enabled without a custom policy, the demo policy also runs it alongside
+the safety/bias simulators; the overall response remains `simulated: true`.
+
+### Supported scope and limits
+
+- Email patterns use a bundled domain suffix snapshot. Snapshot updates arrive
+  with dependency updates; no domain-list download occurs during startup or scans.
+- Credit-card candidates require a matching Presidio pattern and valid Luhn
+  checksum. A match does not prove that an account exists or belongs to a person.
+- JSON scanning decodes strings, keys, lists, and integer values. Escaped email
+  characters cannot bypass checks by using a separate payload representation.
+- Responses contain entity types and generic explanations, never detected values.
+- Names, postal addresses, phone numbers, government identifiers, obfuscated text,
+  and arbitrary encodings are not covered. There is no automatic redaction yet.
+- Supported patterns are driven directly with an internal scan deadline so a
+  regex timeout becomes a failed check instead of silently skipping a pattern.
+  Work runs in a thread; API timeout does not instantly terminate that thread.
+
+No NLP models are downloaded, and no model or cloud endpoint is called. Presidio
+still installs its normal package dependencies, including spaCy. Review the
+supported subset and false alarms on application examples before enforcement.
 
 ## Configuration and boundaries
 

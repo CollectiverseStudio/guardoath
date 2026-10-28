@@ -1,12 +1,12 @@
 """Local validation and explicit test doubles. No external model calls."""
 
 import asyncio
-import json
 from collections.abc import Awaitable, Callable
 
 from jsonschema import Draft202012Validator
 
 from valinator.models import CheckerResult, CheckRequest, Finding, Policy, Stage
+from valinator.json_data import parse_json
 
 Checker = Callable[[CheckRequest, Policy, Stage], Awaitable[CheckerResult]]
 
@@ -15,20 +15,8 @@ async def schema_check(request: CheckRequest, policy: Policy, stage: Stage) -> C
     schema = policy.input_schema if stage == Stage.INPUT else policy.output_schema
     if schema is None or request.content_format != "json":
         return CheckerResult(checker_id="schema", checker_version="1", status="skipped")
-    def object_pairs(pairs):
-        result = {}
-        for key, value in pairs:
-            if key in result:
-                raise ValueError("Duplicate JSON key")
-            result[key] = value
-        return result
-
-    def reject_constant(_value):
-        raise ValueError("Nonfinite JSON number")
-
     try:
-        payload = json.loads(request.content, object_pairs_hook=object_pairs,
-                             parse_constant=reject_constant)
+        payload = parse_json(request.content)
     except (ValueError, RecursionError):
         return CheckerResult(checker_id="schema", checker_version="1", status="flagged",
                              findings=(Finding(rule_id="schema.invalid_json", category="structure",
@@ -66,6 +54,10 @@ def simulated_checker(kind: str) -> Checker:
     return run
 
 
-def default_checkers() -> dict[str, Checker]:
-    return {"schema": schema_check, "safety": simulated_checker("safety"),
-            "bias": simulated_checker("bias")}
+def default_checkers(enable_pii: bool = False) -> dict[str, Checker]:
+    checkers = {"schema": schema_check, "safety": simulated_checker("safety"),
+                "bias": simulated_checker("bias")}
+    if enable_pii:
+        from valinator.pii import build_pii_checker
+        checkers["pii"] = build_pii_checker()
+    return checkers
