@@ -173,7 +173,7 @@ for (const stage of ["input","output"]) {
   const title = document.createElement("span"); title.textContent = "Try an " + stage + " example"; $(stage+"-samples").append(title);
   for (const sample of samples.filter(s => !s.stages || s.stages.includes(stage))) {
     const button = document.createElement("button"); button.className = "chip"; button.id = stage+"-"+sample.id+"-sample";
-    button.dataset.sample = sample.id; button.dataset.stage = stage; button.textContent = stage === "output" ? (sample.outputLabel || sample.label) : sample.label; button.disabled = true;
+    button.dataset.sample = sample.id; button.dataset.stage = stage; button.textContent = stage === "output" ? (sample.outputLabel || sample.label) : sample.label; button.disabled = true; button.hidden = true;
     button.addEventListener("click", () => {
       if (busy || !sampleAvailable(sample,stage)) return;
       const example = sample.content ? sample.content(stage) : {text:sample[stage]};

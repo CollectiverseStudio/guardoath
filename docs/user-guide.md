@@ -726,8 +726,9 @@ is added. Integers remain exact, numeric strings and booleans are rejected, and
 comparison does not round to the ambient Decimal arithmetic precision.
 
 The original JSON limits still apply, including overflow rejection by the strict
-parser. A decimal exponent outside the runtime's representable range also flags
-invalid JSON for this checker. This is comparison, not arithmetic: no totals,
+parser. An explicitly encoded decimal exponent with absolute value above 1,000,000
+also flags invalid JSON for this checker, consistently across Python versions.
+An unrepresentable decimal is rejected too. This is comparison, not arithmetic: no totals,
 rounding policy, currency conversions or external account/price lookup is done.
 Schema parsing and JSON transformations retain their existing numeric handling;
 this change does not promise exact decimal handling throughout every component.

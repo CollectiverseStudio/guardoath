@@ -555,3 +555,14 @@ for(const [id,rule] of [['refund-exceeds','refund_limit'],['date-reversed','date
     await expect(page.locator('#answer')).toBeHidden();
   });
 }
+
+
+test('examples remain hidden until an application profile is loaded',async({page})=>{
+  await page.goto('/dashboard');
+  await expect(page.locator('#input-samples button:visible')).toHaveCount(0);
+  await expect(page.locator('#output-samples button:visible')).toHaveCount(0);
+  await page.getByLabel('Application API key').fill('playwright-test-key');
+  await page.getByRole('button',{name:'Connect',exact:true}).click();
+  await expect(page.locator('#input-clean-sample')).toBeVisible();
+  await expect(page.locator('#output-clean-sample')).toBeVisible();
+});

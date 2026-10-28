@@ -84,7 +84,8 @@ This batch makes no new claim about upstream release freshness.
 
 Business batch: no dependencies or version pins added. After the existing strict
 JSON validation guard, the comparison checker decodes the same canonical text
-with standard-library json.loads(parse_float=Decimal). It retains token precision
+with a standard-library JSON parse_float callback that returns Decimal after an
+explicit exponent bound (absolute encoded exponent at most 1,000,000). It retains token precision
 for comparisons only, without changing schema or transformation numeric parsing.
 Unrepresentable exponents are rejected. Python reference:
 https://docs.python.org/3/library/json.html (parse_float).

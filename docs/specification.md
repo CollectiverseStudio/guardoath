@@ -449,3 +449,7 @@ profile are visible. Totals are 36 input / 39 output across all profiles. The
 normal conversation profile is unchanged. No new dependency or provider call.
 Both operands remain submitted data, not trusted server-side limits; no general
 business truth, semantic adequacy or financial/clinical/legal approval is implied.
+
+Comparison float tokens additionally reject encoded exponents with absolute value
+above 1,000,000 before Decimal construction, making extreme-input decisions
+consistent across supported Python runtimes. Existing strict JSON limits remain.

@@ -103,3 +103,12 @@ def test_full_batch_uses_no_network(monkeypatch):
     monkeypatch.setattr(socket.socket,'connect',deny)
     engine=Engine(load_policies(ROOT/'policies/business-batch.json'),default_checkers())
     assert asyncio.run(evaluate(load_suite(ROOT/'evals/business.json'),engine))['summary']['matched']==100
+
+
+@pytest.mark.parametrize('exponent,accepted',[(-1_000_000,True),(-1_000_001,False)])
+def test_comparison_exponent_boundary_is_explicit_and_never_rounds_tiny_numbers(engine,exponent,accepted):
+    result=check(engine,'{"left":1e'+str(exponent)+',"right":0}','gt')
+    if accepted:
+        assert not result.findings  # A positive decimal must compare greater than zero.
+    else:
+        assert {f.rule_id for f in result.findings}=={'business.invalid_json'}

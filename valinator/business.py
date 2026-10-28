@@ -16,6 +16,17 @@ RELATION_LABELS = {"lt":"less than", "le":"less than or equal to", "eq":"equal t
                    "ge":"greater than or equal to", "gt":"greater than", "ne":"different from"}
 
 
+# Stable across supported Python/Decimal runtimes. No exponent arithmetic is run.
+MAX_COMPARISON_EXPONENT = 1_000_000
+
+
+def exact_number(token):
+    exponent = token.lower().partition("e")[2]
+    if exponent and abs(int(exponent)) > MAX_COMPARISON_EXPONENT:
+        raise ValueError("Comparison exponent limit")
+    return Decimal(token)
+
+
 def resolve(value, pointer):
     for segment in pointer[1:].split("/"):
         name = segment.replace("~1", "/").replace("~0", "~")
@@ -49,7 +60,7 @@ async def cross_field_check(request, policy, stage):
         # Preserve the strict parser's duplicate/size/depth/finite-number guards,
         # then decode the same canonical text with exact decimal float tokens.
         parse_json(request.content)
-        payload = json.loads(request.content, parse_float=Decimal)
+        payload = json.loads(request.content, parse_float=exact_number)
     except (ValueError, RecursionError, DecimalException):
         return CheckerResult(checker_id="cross_field", checker_version="2", status="flagged", findings=(
             Finding(rule_id="business.invalid_json", category="business", severity="high",
