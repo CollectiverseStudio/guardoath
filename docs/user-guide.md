@@ -1,7 +1,7 @@
 # Valinator user guide
 
 This guide grows with the product. It describes user-facing validation checks,
-examples, expected results, configuration, and boundaries. Version: 0.18.0.
+examples, expected results, configuration, and boundaries. Version: 0.19.0.
 
 A **check** examines an input or proposed AI answer. A **regression case** tests
 whether that check behaves as expected on a saved example. Passing a regression
@@ -91,8 +91,8 @@ stages' old results because the conversation input changed. An output button
 changes only the proposed answer and its format, preserves the user message and
 completed input test, and clears the old output result/preview. Neither set
 switches the profile, calls an API or generates a model response. Buttons are
-unavailable while checking, before connection, or when their required profile
-is not active. The button hint names any required profile.
+unavailable while checking or before connection. Examples requiring another
+profile are hidden; select that profile under Advanced to show them.
 
 | Examples | Input use case | Output use case / expected result |
 | --- | --- | --- |
@@ -109,6 +109,8 @@ is not active. The button hint names any required profile.
 | Redaction preview | Synthetic intake values, under `redaction-v1` | Draft reply with synthetic identifiers; separate rechecked redaction preview |
 | Schema error | Invalid structured request, under `business-v1` or `structure-v1` | Invalid structured answer; schema finding |
 | Missing field, Wrong data type, Unexpected field, Invalid date, Invalid email, Too many items, Malformed JSON | Broken structured request under `structure-v1` | Broken structured answer; finding and held preview |
+| Exceeds numeric limit, Missing comparison value, Invalid number, Decimal over/within limit | Numeric request under `business-number-le-v1` | Different numeric answer; comparison result without coercion/rounding |
+| Duplicate/Empty/Multiline sections | Labeled request under `completeness-v1` | Labeled answer; Short next steps also tests the output-only minimum |
 | Business rule error | Request with reversed dates/excess refund, under `business-v1` | Different invalid refund/date values; business findings |
 | Missing information | Required summary absent, under `completeness-v1` | Required next steps empty; completeness finding |
 
@@ -570,8 +572,8 @@ disabled. The normal free-text conversation profile is unchanged.
 
 The same error examples are available for input. Each button changes only its
 own editor and format; it never changes the other editor or the profile. There
-are now 26 input / 28 output examples across all groups. Buttons for another
-profile are dimmed and name their required profile in the hint.
+are now 36 input / 39 output examples across all groups. Only examples for the active profile are shown; select another profile under Advanced
+to explore other groups.
 
 ### Sample contract and checks
 
@@ -658,29 +660,136 @@ Schema patterns are trusted application configuration and use the installed
 validator's regex implementation. API deadlines are not hard CPU isolation for
 synchronous validation; keep patterns simple. JSON numbers use Python number
 handling, not exact decimal currency arithmetic. Integer `multipleOf` examples
-do not establish decimal `multipleOf` accuracy; use domain-specific decimal logic
-for money. This suite is not exhaustive JSON Schema conformance testing, factual
+do not establish decimal `multipleOf` accuracy. The comparison checker separately
+preserves decimal tokens; schema arithmetic remains distinct. Use domain-specific
+decimal logic for money. This suite is not exhaustive JSON Schema conformance testing, factual
 verification, semantic business review, privacy filtering, repair/retry logic or
 prompt-injection detection. A valid email intentionally remains data in this
 schema-only profile; add privacy rules separately when your application needs them.
 
 ## Business rules and commitments checks
 
-| Check | Example or use case | Expected behavior |
-| --- | --- | --- |
-| Numeric comparison | Refund 150 exceeds submitted purchase 100 | `business.refund_limit`; output recommends block in sample policy |
-| Date comparison | End date precedes start date | `business.date_order` |
-| Missing/invalid comparison values | Absent or wrongly typed JSON Pointer field | Comparison finding, not silent success |
-| Input summary presence | `Summary: Return request.` | Completeness passes for the input sample |
-| Required next steps | `Summary: Ready.` followed by empty `Next steps:` | `completeness.next_steps` |
-| Duplicate required label | Two `Summary:` sections | Completeness finding for ambiguous repetition |
-| Complete labeled answer | Nonempty `Summary:` and sufficiently long `Next steps:` | Structural completeness passes |
+This group checks submitted numbers/dates and required labeled sections against
+your configuration. It does not verify business truth, legal promises, clinical
+adequacy, source evidence or whether a commitment is permitted by your systems.
+Both comparison operands come from the submitted content: an attacker can invent
+a purchase amount or limit. Your application must obtain authoritative limits
+from a trusted source and prevent untrusted overrides. These are consistency
+checks, not a fraud detector or an authoritative spending control.
 
-Comparisons support lt/le/eq/ge/gt/ne for numbers/ISO dates, without expressions
-or eval. Submitted purchase amounts are not checked against an authoritative
-business system. Completeness recognizes explicit line-start `Label:` text only;
-Markdown headings, semantic adequacy, legal clauses, medical sufficiency and truth
-are not assessed. False text can satisfy a presence rule.
+### Choose a focused demo
+
+| Profile | What runs | How to try it |
+| --- | --- | --- |
+| `business-v1` | JSON Schema plus date ordering and refund amount comparison | Choose Clean question and run input, then Refund too large, Reversed dates or Business rule error in output |
+| `business-number-le-v1` | Numeric left <= right comparison only | Choose Clean question and run input, then numeric/decimal examples in output |
+| `completeness-v1` | Required input Summary; required output Summary and Next steps | Choose Clean question and run input, then missing, empty, duplicate, short or multiline output examples |
+
+Use **Advanced** to select a profile explicitly. Example buttons never switch it
+or overwrite the opposite editor. Output examples preserve a completed input
+check. Only examples applicable to the active profile are shown, to keep the
+expanding catalogs manageable. There are 36 input / 39 output examples across
+all groups. No AI answer is generated or provider called.
+
+### Submitted-field comparisons
+
+| Check / use case | Example | Expected behavior |
+| --- | --- | --- |
+| Less than (`lt`) | start_date 2026-10-01 vs end_date 2026-10-03 | Pass; equal dates fail this strict comparison |
+| Less than or equal (`le`) | refund_amount 100 vs purchase_amount 100 | Pass; refund 150 vs purchase 100 flags `business.refund_limit` in the refund profile |
+| Equal (`eq`) | left 2 vs right 2 | Pass; unequal numbers/dates flag |
+| Greater than or equal (`ge`) | left 2 vs right 1 | Pass; equality also passes |
+| Greater than (`gt`) | left 2 vs right 1 | Pass; equality fails |
+| Different from (`ne`) | left 1 vs right 2 | Pass; equality fails; numeric -0 and 0 compare equal |
+| Exact decimal comparison | left 1.0000000000000001 vs right 1.0 under `le` | Finding; the extra fraction must not disappear through float rounding |
+| Tiny decimal | 1e-400 vs 0 under `eq` | Finding; nonzero token is not rounded to zero before comparison |
+| Wrong type / missing value | left is true, null, numeric string, array/object, or a required path is absent | Finding; no string coercion or default-zero value |
+| ISO calendar date | 2024-02-29 before 2024-03-01 | Pass; invalid day, datetime, non-ISO date or null flags |
+| JSON Pointer | `/orders/0/a~1b` vs `/c~0d` | Resolve array index 0, key `a/b` and key `c~d`; missing/out-of-range/noncanonical array indices flag |
+| Invalid bounded JSON | Duplicate decoded key, NaN, overflow or truncated input | `business.invalid_json`; check completed and found invalid input |
+| Wrong content format / no active comparisons | Plain text selected for a required comparison rule | Skipped and incomplete, not passed |
+
+Rules configure `rule_id`, left/right JSON Pointers, one of the six operators,
+`value_type: number` or `date`, and optional stages. Paths are data traversal,
+not code, formulas, attributes, URLs or expressions. `business.<rule_id>` identifies
+the failed rule. A missing/invalid operand is now distinguished from a failed
+relationship in the explanation. Actual operands and paths are never copied into
+findings. Rule IDs are public configuration metadata; do not put secrets in them.
+
+**Precision correction in 0.19.0:** comparison checker version 2 first validates
+the canonical text with the existing strict JSON guards, then decodes those same
+number tokens using Python Decimal. This prevents binary-float rounding before
+comparison, including near-equality and tiny-exponent examples. If your client
+already rounded a number before serializing it, the server cannot recover the
+lost digits; send the intended numeric text. No dependency
+is added. Integers remain exact, numeric strings and booleans are rejected, and
+comparison does not round to the ambient Decimal arithmetic precision.
+
+The original JSON limits still apply, including overflow rejection by the strict
+parser. A decimal exponent outside the runtime's representable range also flags
+invalid JSON for this checker. This is comparison, not arithmetic: no totals,
+rounding policy, currency conversions or external account/price lookup is done.
+Schema parsing and JSON transformations retain their existing numeric handling;
+this change does not promise exact decimal handling throughout every component.
+The numeric-only profile allows negative numbers and extra fields if the
+relationship passes; add a schema when your application requires nonnegative
+amounts, field lists or other constraints.
+
+### Required information / completeness
+
+| Check / use case | Example | Expected behavior |
+| --- | --- | --- |
+| Missing section | Input has Details but no Summary | `completeness.request_summary`; explanation says missing |
+| Empty section | `Summary:` followed only by whitespace | Too short finding, not a missing-label finding |
+| Repeated section | `Summary: First` and `SUMMARY: Second` | Repeated finding; no convenient occurrence is selected |
+| Output length threshold | `Next steps: Hi` | `completeness.next_steps`; fewer than five non-whitespace characters |
+| Multiline body | `Summary:` followed by a body on later lines | Counts until the next recognized label |
+| Unknown label boundary | Empty Summary followed by `Other: text` | Other text does not satisfy the empty Summary |
+| Stage-specific requirements | Input `Summary: Hi` | Passes its one-character minimum; output still requires Next steps and its five-character minimum |
+| Wrong format / no active sections | JSON submitted to a required text completeness rule | Skipped and incomplete, not assessed or passed |
+
+Rules configure a public `rule_id`, ASCII label, minimum non-whitespace character
+count and stages. Labels start at the beginning of a line, are case-insensitive,
+and use a colon. Required labels must occur exactly once. Plain/multiline bodies
+are supported; every recognized label, even an unknown one, ends the previous
+body. Markdown headings, indentation, arbitrary prose and semantic adequacy are
+not recognized. Meaningless text can satisfy length; invisible non-whitespace
+characters can count too. Add other checks as needed. This is not a model-based
+assessment of whether a section is useful, complete in meaning or correct.
+Completeness checker version 2 now explains missing, repeated and too-short
+conditions separately without copying the body.
+
+### Decisions, examples and the full batch
+
+Observe profiles recommend flag on input and block on output, while effective
+action remains allow. The enforce regression profile applies that recommendation.
+The dashboard holds findings regardless of observe mode. Required skip/error
+follows failure_action (block by default). Passing only this group does not mean
+privacy, prompt security, factual correctness or fairness was assessed.
+
+New stage-specific examples include Exceeds numeric limit, Missing comparison
+value, Invalid number, Decimal over limit, Decimal within limit, Refund too
+large, Reversed dates, Duplicate section, Empty section and Multiline sections.
+Short next steps is output-only. Precision examples remain raw text in the
+browser so JavaScript does not round them before the API receives them.
+
+```powershell
+py -3.13 start_dashboard.py --evaluate --suite business
+```
+
+Runs **100 expectations**, 50 scenarios on both stages: all six operators,
+precision/underflow boundaries, type/missing data, dates, pointers, invalid JSON,
+observe/enforce actions and required labeled sections. **Six intentionally expect
+incomplete evaluations** from required checks being skipped. A matched expected
+skip is not a completed business assessment. [All 100 cases](business-coverage.md)
+show each use case and expected result. Fixtures and profiles live in
+`evals/business.json` and `policies/business-batch.json`. Reports omit content and
+support comparison with a previous report of the same suite ID. No PII extra is
+needed for direct CLI use:
+
+```bash
+python -m valinator.evaluate --cases evals/business.json --policies policies/business-batch.json
+```
 
 ## Harmful content, bias and planned checks
 

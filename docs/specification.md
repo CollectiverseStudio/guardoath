@@ -429,3 +429,23 @@ and two optional skips). Core CI runs it without PII. Seven independent examples
 are added per stage, bringing totals to 26 input / 28 output examples. Default
 conversation rules are unchanged. No paid call, new dependency, exact-decimal
 precision guarantee or hard CPU isolation is introduced. See the user guide.
+
+
+## Business group batch (0.19.0)
+
+Cross-field checker version 2 retains strict bounded JSON validation, then decodes
+that canonical text with Decimal float tokens. Raw-number comparison no longer
+rounds through a binary float; no arithmetic/rounding/conversion engine is added.
+All six operators and ISO calendar dates remain supported. Missing/invalid
+operands have a distinct safe explanation from a failed relationship; values and
+paths are not returned. Public rule IDs remain in finding IDs/explanations.
+Completeness version 2 distinguishes missing, repeated and short sections.
+
+Business evaluation has 100 cases, six intentional incomplete skips and no
+simulators. The launcher supports --suite business; core CI runs it without PII.
+Focused numeric/date/refund/section samples keep editors independent and preserve
+raw decimal strings through the browser. Only examples applicable to the active
+profile are visible. Totals are 36 input / 39 output across all profiles. The
+normal conversation profile is unchanged. No new dependency or provider call.
+Both operands remain submitted data, not trusted server-side limits; no general
+business truth, semantic adequacy or financial/clinical/legal approval is implied.

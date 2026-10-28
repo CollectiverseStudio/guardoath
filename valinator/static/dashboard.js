@@ -97,8 +97,30 @@ function structureExample(stage,kind) {
   if (kind === "too-many-items") value.items=["ABC-123","DEF-456","GHI-789","JKL-012"].map(sku=>({sku,quantity:2}));
   return {format:"json",text:kind === "malformed-json" ? '{"'+field+'":' : JSON.stringify(value,null,2)};
 }
+function numericExample(stage,kind) {
+  let text;
+  if (kind === "decimal-over") text = stage === "input" ? '{"left":1.0000000000000001,"right":1.0}' : '{"left":1.0000000000000002,"right":1.0}';
+  else if (kind === "decimal-within") text = stage === "input" ? '{"left":1.0,"right":1.0000000000000001}' : '{"left":1.0000000000000001,"right":1.0000000000000002}';
+  else {
+    const value={left:stage === "input" ? 20 : 15,right:100};
+    if (kind === "numeric-exceeds") value.left=stage === "input" ? 125 : 150;
+    if (kind === "comparison-missing") delete value.right;
+    if (kind === "number-invalid") value.left=String(value.left);
+    text=JSON.stringify(value,null,2);
+  }
+  // Keep precision examples as literal text: JSON.parse/stringify in the browser
+  // would round their values before the API ever received them.
+  return {format:"json",text};
+}
+function refundExample(stage,kind) {
+  const value=JSON.parse(businessData(false,stage));
+  if (kind === "refund-exceeds") value.refund_amount=stage === "input" ? 125 : 150;
+  else {value.start_date="2026-10-03";value.end_date="2026-10-01";}
+  return {format:"json",text:JSON.stringify(value,null,2)};
+}
 const samples = [
   {id:"clean", label:"Clean question", outputLabel:"Safe reply", content:stage => {
+    if (currentPolicy()?.version === "business-number-le-v1") return numericExample(stage,"clean");
     if (currentPolicy()?.version === "structure-v1") return structureExample(stage,"clean");
     if (currentPolicy()?.version === "business-v1") return {format:"json", text:businessData(false,stage)};
     if (currentPolicy()?.version === "completeness-v1") return {text:stage === "input" ? "Summary: Customer requests return instructions." : "Summary: Return instructions are available.\nNext steps: Contact the store for instructions."};
@@ -123,6 +145,12 @@ const samples = [
   {id:"schema", label:"Schema error", profiles:["business-v1","structure-v1"], content:stage => ({format:"json", text:stage === "input" ? '{"unexpected_input":"Missing required request fields."}' : '{"unexpected_field":"This does not match the output schema."}'})},
   {id:"business", label:"Business rule error", profiles:["business-v1"], content:stage => ({format:"json", text:businessData(true,stage)})},
   ...[["missing-field","Missing field"],["wrong-type","Wrong data type"],["extra-field","Unexpected field"],["invalid-date","Invalid date"],["invalid-email","Invalid email"],["too-many-items","Too many items"],["malformed-json","Malformed JSON"]].map(([id,label])=>({id,label,profiles:["structure-v1"],content:stage=>structureExample(stage,id)})),
+  ...[["numeric-exceeds","Exceeds numeric limit"],["comparison-missing","Missing comparison value"],["number-invalid","Invalid number"],["decimal-over","Decimal over limit"],["decimal-within","Decimal within limit"]].map(([id,label])=>({id,label,profiles:["business-number-le-v1"],content:stage=>numericExample(stage,id)})),
+  ...[["refund-exceeds","Refund too large"],["date-reversed","Reversed dates"]].map(([id,label])=>({id,label,profiles:["business-v1"],content:stage=>refundExample(stage,id)})),
+  {id:"section-duplicate",label:"Duplicate section",profiles:["completeness-v1"],input:"Summary: First request.\nSUMMARY: Second request.",output:"Summary: Instructions available.\nNext steps: Contact the store.\nNEXT STEPS: Open a ticket."},
+  {id:"section-empty",label:"Empty section",profiles:["completeness-v1"],input:"Summary:   ",output:"Summary: Instructions available.\nNext steps:   "},
+  {id:"section-multiline",label:"Multiline sections",profiles:["completeness-v1"],input:"Summary:\nCustomer requests return instructions.",output:"Summary:\nInstructions are available.\nNext steps:\nContact the store for details."},
+  {id:"section-short",label:"Short next steps",stages:["output"],profiles:["completeness-v1"],output:"Summary: Instructions available.\nNext steps: Hi"},
   {id:"output-confidential", label:"Output-only confidential term", stages:["output"], profiles:["conversation-v1","secrets-extended-v1"], output:"The draft reply reveals our unreleased pricing plan."},
   {id:"multiple", label:"Multiple issues", stages:["output"], profiles:["conversation-v1"], content:() => ({text:'Your contact email is jane@example.com.\npassword = "synthetic-example!42"\nThe reply also includes hidden\u200btext.'})},
 ];
@@ -135,7 +163,9 @@ function sampleAvailable(sample, stage) {
 function updateSampleButtons() {
   for (const stage of ["input","output"]) for (const sample of samples) {
     const button = $(stage+"-"+sample.id+"-sample"); if (!button) continue;
-    button.disabled = busy || !sampleAvailable(sample,stage);
+    const available=sampleAvailable(sample,stage);
+    button.disabled = busy || !available;
+    button.hidden = !available;
     button.title = sample.profiles ? "Requires profile: " + sample.profiles.join(", ") + ". Changes only " + stage + " data." : "Changes only " + stage + " data.";
   }
 }

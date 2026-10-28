@@ -10,7 +10,8 @@
 - [x] Strict input and output contracts.
 - [x] Real deterministic JSON Schema validation.
 - [x] Structure group batch: dedicated contracts, safe first-problem explanations, timezone-aware time correction, seven new examples per stage, 100 regression cases and guide/launcher/CI coverage.
-- [ ] Exact decimal schema arithmetic, exhaustive conformance coverage and hard CPU isolation for schemas.
+- [x] Preserve raw decimal tokens in comparison checks; do not round through binary floats.
+- [ ] Exact decimal schema arithmetic and JSON transformation preservation, exhaustive conformance coverage and hard CPU isolation for schemas.
 - [x] Versioned startup policy snapshots.
 - [x] Observe/enforce decisions and required-check failure handling.
 - [x] Application-scoped API credentials and sanitized validation errors.
@@ -30,6 +31,8 @@
 - [x] Use a single canonical content value with explicit text/JSON format to prevent mismatched payloads.
 - [x] Add ingress byte limits, body-read deadline, and bounded JSON parsing.
 - [x] Enforce supported schema formats and declarative numeric/date comparisons.
+- [x] Business group batch: raw-decimal comparisons, explicit failure reasons, all six operators, date/pointer/section cases, 100 regression expectations, independent examples and guide/launcher/CI coverage.
+- [ ] Trusted server-side reference limits, customer-specific business semantics and reviewed adequacy checks beyond submitted-value consistency.
 - [x] Add stage-specific actions and ten shared input/output coverage groups.
 - [x] Add configurable labeled-text completeness rules, stage-specific findings, and dashboard examples.
 - [x] Add bounded hidden/control-character and explicit Base64/hex review signals with dashboard examples.

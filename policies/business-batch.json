@@ -1,0 +1,308 @@
+{
+  "format_version": "1",
+  "policies": [
+    {
+      "application_id": "demo",
+      "version": "business-number-lt-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "rules": [
+        {
+          "checker_id": "cross_field",
+          "required": true,
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "comparisons": [
+        {
+          "rule_id": "limit",
+          "left": "/left",
+          "right": "/right",
+          "operator": "lt",
+          "value_type": "number"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "business-number-le-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "rules": [
+        {
+          "checker_id": "cross_field",
+          "required": true,
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "comparisons": [
+        {
+          "rule_id": "limit",
+          "left": "/left",
+          "right": "/right",
+          "operator": "le",
+          "value_type": "number"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "business-number-eq-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "rules": [
+        {
+          "checker_id": "cross_field",
+          "required": true,
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "comparisons": [
+        {
+          "rule_id": "limit",
+          "left": "/left",
+          "right": "/right",
+          "operator": "eq",
+          "value_type": "number"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "business-number-ge-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "rules": [
+        {
+          "checker_id": "cross_field",
+          "required": true,
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "comparisons": [
+        {
+          "rule_id": "limit",
+          "left": "/left",
+          "right": "/right",
+          "operator": "ge",
+          "value_type": "number"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "business-number-gt-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "rules": [
+        {
+          "checker_id": "cross_field",
+          "required": true,
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "comparisons": [
+        {
+          "rule_id": "limit",
+          "left": "/left",
+          "right": "/right",
+          "operator": "gt",
+          "value_type": "number"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "business-number-ne-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "rules": [
+        {
+          "checker_id": "cross_field",
+          "required": true,
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "comparisons": [
+        {
+          "rule_id": "limit",
+          "left": "/left",
+          "right": "/right",
+          "operator": "ne",
+          "value_type": "number"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "business-number-enforce-v1",
+      "mode": "enforce",
+      "timeout_ms": 500,
+      "rules": [
+        {
+          "checker_id": "cross_field",
+          "required": true,
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "comparisons": [
+        {
+          "rule_id": "limit",
+          "left": "/left",
+          "right": "/right",
+          "operator": "le",
+          "value_type": "number"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "business-date-lt-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "rules": [
+        {
+          "checker_id": "cross_field",
+          "required": true,
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "comparisons": [
+        {
+          "rule_id": "limit",
+          "left": "/left",
+          "right": "/right",
+          "operator": "lt",
+          "value_type": "date"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "business-date-le-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "rules": [
+        {
+          "checker_id": "cross_field",
+          "required": true,
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "comparisons": [
+        {
+          "rule_id": "limit",
+          "left": "/left",
+          "right": "/right",
+          "operator": "le",
+          "value_type": "date"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "business-pointer-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "rules": [
+        {
+          "checker_id": "cross_field",
+          "required": true,
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "comparisons": [
+        {
+          "rule_id": "limit",
+          "left": "/orders/0/a~1b",
+          "right": "/c~0d",
+          "operator": "le",
+          "value_type": "number"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "business-index-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "rules": [
+        {
+          "checker_id": "cross_field",
+          "required": true,
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "comparisons": [
+        {
+          "rule_id": "limit",
+          "left": "/orders/00/a~1b",
+          "right": "/c~0d",
+          "operator": "le",
+          "value_type": "number"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "business-empty-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "rules": [
+        {
+          "checker_id": "cross_field",
+          "required": true,
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "completeness-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "completeness",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "required_sections": [
+        {
+          "rule_id": "request_summary",
+          "label": "Summary",
+          "stages": [
+            "input"
+          ]
+        },
+        {
+          "rule_id": "response_summary",
+          "label": "Summary",
+          "stages": [
+            "output"
+          ]
+        },
+        {
+          "rule_id": "next_steps",
+          "label": "Next steps",
+          "min_characters": 5,
+          "stages": [
+            "output"
+          ]
+        }
+      ]
+    }
+  ]
+}

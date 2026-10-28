@@ -523,6 +523,29 @@
           }
         }
       }
+    },
+    {
+      "application_id": "demo",
+      "version": "business-number-le-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "rules": [
+        {
+          "checker_id": "cross_field",
+          "required": true,
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "comparisons": [
+        {
+          "rule_id": "limit",
+          "left": "/left",
+          "right": "/right",
+          "operator": "le",
+          "value_type": "number"
+        }
+      ]
     }
   ]
 }

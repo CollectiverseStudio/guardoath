@@ -396,7 +396,7 @@ for (const stage of ["input","output"]) {
   test(stage + " examples change only their own data and format",async({page})=>{
     await connect(page); const other=stage==='input'?'output':'input'; const seen=new Set(); let checks=0;
     page.on('request',r=>{if(r.url().includes('/v1/checks/')) checks++;});
-    for(const version of ['conversation-v1','redaction-v1','business-v1','completeness-v1','structure-v1']) {
+    for(const version of ['conversation-v1','redaction-v1','business-v1','completeness-v1','structure-v1','business-number-le-v1']) {
       await page.locator('#policy').selectOption(version);
       const ids=await page.locator('#'+stage+'-samples button:enabled').evaluateAll(nodes=>nodes.map(n=>n.id));
       for(const id of ids) {
@@ -412,7 +412,7 @@ for (const stage of ["input","output"]) {
         await expect(page.locator('#policy')).toHaveValue(version);
       }
     }
-    expect(seen.size).toBe(stage==='input'?26:28);
+    expect(seen.size).toBe(stage==='input'?36:39);
     expect(checks).toBe(0);
   });
 }
@@ -493,3 +493,65 @@ test('structure group report keeps required and optional skips explicit',async({
   await expect(page.locator('tbody tr')).toHaveCount(100);
   await expect(page.locator('body')).not.toContainText('builder@example.com');
 });
+
+
+for(const [id,reason] of [['numeric-exceeds','less than or equal to'],['comparison-missing','missing or invalid number'],['number-invalid','missing or invalid number'],['decimal-over','less than or equal to']]) {
+  test('numeric output example '+id,async({page})=>{
+    await connect(page); await profile(page,'business-number-le-v1');
+    await page.locator('#run-input').click(); await expect(page.locator('#run-output')).toBeEnabled();
+    await page.locator('#output-'+id+'-sample').click(); await page.locator('#run-output').click();
+    await expect(page.locator('#output-results [data-group="business"] summary')).toContainText('Findings');
+    await expect(page.locator('#output-results')).toContainText(reason);
+    await expect(page.locator('#answer')).toBeHidden();
+  });
+}
+test('decimal examples reach the API as exact text and corrected output releases preview',async({page})=>{
+  await connect(page); await profile(page,'business-number-le-v1');
+  await page.locator('#run-input').click(); await expect(page.locator('#run-output')).toBeEnabled();
+  await page.locator('#output-decimal-over-sample').click();
+  const request=page.waitForRequest(r=>r.url().endsWith('/v1/checks/output'));
+  await page.locator('#run-output').click();
+  expect((await request).postDataJSON().content).toContain('1.0000000000000002');
+  await expect(page.locator('#answer')).toBeHidden();
+  await page.locator('#output-decimal-within-sample').click(); await page.locator('#run-output').click();
+  await expect(page.locator('#answer')).toBeVisible();
+  await expect(page.locator('#answer')).toContainText('1.0000000000000001');
+});
+for(const [id,reason] of [['section-duplicate','is repeated'],['section-empty','is too short'],['section-short','is too short']]) {
+  test('required information example '+id,async({page})=>{
+    await connect(page); await profile(page,'completeness-v1');
+    await page.locator('#output-'+id+'-sample').click(); await run(page);
+    await expect(page.locator('#output-results')).toContainText(reason);
+    await expect(page.locator('#answer')).toBeHidden();
+    await page.locator('#output-section-multiline-sample').click(); await page.locator('#run-output').click();
+    await expect(page.locator('#answer')).toBeVisible();
+  });
+}
+test('only examples applicable to the active profile are shown',async({page})=>{
+  await connect(page); await expect(page.locator('#input-email-sample')).toBeVisible();
+  await expect(page.locator('#input-decimal-over-sample')).toBeHidden();
+  await profile(page,'business-number-le-v1');
+  await expect(page.locator('#input-email-sample')).toBeHidden();
+  await expect(page.locator('#input-decimal-over-sample')).toBeVisible();
+});
+test('business batch report keeps skipped requirements visible',async({page},testInfo)=>{
+  const {execFileSync}=require('node:child_process'); const {pathToFileURL}=require('node:url');
+  const path=testInfo.outputPath('business.html');
+  execFileSync('python',['-m','valinator.evaluate','--cases','evals/business.json','--policies','policies/business-batch.json','--html',path],{stdio:'pipe'});
+  await page.goto(pathToFileURL(path).href);
+  await expect(page.locator('body')).toContainText('100 of 100 expectations matched');
+  await expect(page.locator('body')).toContainText('Incomplete evaluations: 6');
+  await expect(page.locator('tbody tr')).toHaveCount(100);
+  await expect(page.locator('body')).not.toContainText('1.0000000000000001');
+});
+
+for(const [id,rule] of [['refund-exceeds','refund_limit'],['date-reversed','date_order']]) {
+  test('isolated business relation example '+id,async({page})=>{
+    await connect(page); await profile(page,'business-v1');
+    await page.locator('#output-'+id+'-sample').click(); await run(page);
+    await expect(page.locator('#output-results [data-group="business"] summary')).toContainText('Findings');
+    await expect(page.locator('#output-results')).toContainText(rule);
+    await expect(page.locator('#output-results [data-group="structure"] summary')).toContainText('Passed');
+    await expect(page.locator('#answer')).toBeHidden();
+  });
+}

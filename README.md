@@ -761,3 +761,22 @@ Schema errors now explain the first problem without values, names or schema text
 now fails. Time/date-time reject trailing whitespace; leap seconds are unsupported.
 See the [guide](docs/user-guide.md#structure-and-data-validity-checks) and
 [100 examples](docs/structure-coverage.md). No new dependency or paid call.
+
+
+## Business rules and commitments batch
+
+```powershell
+py -3.13 start_dashboard.py --evaluate --suite business
+```
+
+Runs 100 expectations with six intentional incomplete cases. Try `business-v1`
+for refund/date examples, `business-number-le-v1` for numeric/decimal comparisons,
+and `completeness-v1` for missing/repeated/short section examples. Each profile
+has its own independent input/output examples; only applicable buttons are shown.
+
+Comparison checker version 2 preserves original JSON decimal tokens, preventing
+near-limit and tiny-number rounding before comparison. Failures distinguish bad
+or missing values from failed relationships; completeness distinguishes missing,
+repeated and short sections. This is not authoritative business truth or external
+financial/medical/legal verification. See the [guide](docs/user-guide.md#business-rules-and-commitments-checks)
+and [case list](docs/business-coverage.md). No new dependency or paid call.

@@ -1,7 +1,8 @@
 """Declarative comparisons of submitted fields. No expressions or eval."""
 
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, DecimalException
+import json
 import operator
 import re
 
@@ -10,6 +11,9 @@ from valinator.models import CheckerResult, Finding
 
 OPERATORS = {"lt": operator.lt, "le": operator.le, "eq": operator.eq,
              "ge": operator.ge, "gt": operator.gt, "ne": operator.ne}
+
+RELATION_LABELS = {"lt":"less than", "le":"less than or equal to", "eq":"equal to",
+                   "ge":"greater than or equal to", "gt":"greater than", "ne":"different from"}
 
 
 def resolve(value, pointer):
@@ -26,7 +30,7 @@ def resolve(value, pointer):
 
 def typed(value, kind):
     if kind == "number":
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
+        if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
             raise ValueError("Comparison requires a number")
         result = Decimal(str(value))
         if not result.is_finite():
@@ -40,11 +44,14 @@ def typed(value, kind):
 async def cross_field_check(request, policy, stage):
     comparisons = [rule for rule in policy.comparisons if stage in rule.stages]
     if not comparisons or request.content_format != "json":
-        return CheckerResult(checker_id="cross_field", checker_version="1", status="skipped")
+        return CheckerResult(checker_id="cross_field", checker_version="2", status="skipped")
     try:
-        payload = parse_json(request.content)
-    except (ValueError, RecursionError):
-        return CheckerResult(checker_id="cross_field", checker_version="1", status="flagged", findings=(
+        # Preserve the strict parser's duplicate/size/depth/finite-number guards,
+        # then decode the same canonical text with exact decimal float tokens.
+        parse_json(request.content)
+        payload = json.loads(request.content, parse_float=Decimal)
+    except (ValueError, RecursionError, DecimalException):
+        return CheckerResult(checker_id="cross_field", checker_version="2", status="flagged", findings=(
             Finding(rule_id="business.invalid_json", category="business", severity="high",
                     explanation="Field comparison requires valid bounded JSON."),))
     findings = []
@@ -52,10 +59,16 @@ async def cross_field_check(request, policy, stage):
         try:
             left, right = (typed(resolve(payload, path), rule.value_type) for path in (rule.left, rule.right))
             valid = OPERATORS[rule.operator](left, right)
-        except (ValueError, KeyError, IndexError, TypeError, OverflowError):
+        except (ValueError, KeyError, IndexError, TypeError, OverflowError, DecimalException):
             valid = False
+            reason = f"Configured comparison '{rule.rule_id}' has a missing or invalid {rule.value_type} value."
+        else:
+            reason = f"Configured {rule.value_type} comparison '{rule.rule_id}' requires the left value to be {RELATION_LABELS[rule.operator]} the right value."
         if not valid:
             findings.append(Finding(rule_id=f"business.{rule.rule_id}", category="business", severity="medium",
-                                    explanation=f"Configured field comparison '{rule.rule_id}' failed or required values are missing or invalid."))
-    return CheckerResult(checker_id="cross_field", checker_version="1", status="flagged" if findings else "passed",
+                                    explanation=reason))
+    return CheckerResult(checker_id="cross_field", checker_version="2", status="flagged" if findings else "passed",
                          findings=tuple(findings))
+
+
+cross_field_check.checker_version = "2"

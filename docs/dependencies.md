@@ -81,3 +81,10 @@ predicates replace the generic draft-3 time fallback, enforce offsets and reject
 whitespace. Leap seconds remain unsupported. Primary format contract:
 https://json-schema.org/draft/2020-12/json-schema-validation, section 7.3.1.
 This batch makes no new claim about upstream release freshness.
+
+Business batch: no dependencies or version pins added. After the existing strict
+JSON validation guard, the comparison checker decodes the same canonical text
+with standard-library json.loads(parse_float=Decimal). It retains token precision
+for comparisons only, without changing schema or transformation numeric parsing.
+Unrepresentable exponents are rejected. Python reference:
+https://docs.python.org/3/library/json.html (parse_float).

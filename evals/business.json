@@ -1,0 +1,2128 @@
+{
+  "format_version": "1",
+  "suite_id": "business-v1",
+  "cases": [
+    {
+      "case_id": "operator.lt.0.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-lt-v1",
+        "content": "{\"left\": 1, \"right\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "operator.lt.0.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-lt-v1",
+        "content": "{\"left\": 1, \"right\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "operator.lt.1.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-lt-v1",
+        "content": "{\"left\": 2, \"right\": 1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "operator.lt.1.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-lt-v1",
+        "content": "{\"left\": 2, \"right\": 1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "operator.lt.2.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-lt-v1",
+        "content": "{\"left\": 1, \"right\": 1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "operator.lt.2.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-lt-v1",
+        "content": "{\"left\": 1, \"right\": 1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "operator.le.0.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\": 1, \"right\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "operator.le.0.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\": 1, \"right\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "operator.le.1.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\": 2, \"right\": 1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "operator.le.1.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\": 2, \"right\": 1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "operator.le.2.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\": 1, \"right\": 1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "operator.le.2.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\": 1, \"right\": 1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "operator.eq.0.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-eq-v1",
+        "content": "{\"left\": 2, \"right\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "operator.eq.0.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-eq-v1",
+        "content": "{\"left\": 2, \"right\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "operator.eq.1.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-eq-v1",
+        "content": "{\"left\": 1, \"right\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "operator.eq.1.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-eq-v1",
+        "content": "{\"left\": 1, \"right\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "operator.eq.2.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-eq-v1",
+        "content": "{\"left\": 0, \"right\": 0}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "operator.eq.2.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-eq-v1",
+        "content": "{\"left\": 0, \"right\": 0}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "operator.ge.0.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-ge-v1",
+        "content": "{\"left\": 2, \"right\": 1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "operator.ge.0.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-ge-v1",
+        "content": "{\"left\": 2, \"right\": 1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "operator.ge.1.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-ge-v1",
+        "content": "{\"left\": 1, \"right\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "operator.ge.1.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-ge-v1",
+        "content": "{\"left\": 1, \"right\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "operator.ge.2.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-ge-v1",
+        "content": "{\"left\": 1, \"right\": 1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "operator.ge.2.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-ge-v1",
+        "content": "{\"left\": 1, \"right\": 1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "operator.gt.0.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-gt-v1",
+        "content": "{\"left\": 2, \"right\": 1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "operator.gt.0.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-gt-v1",
+        "content": "{\"left\": 2, \"right\": 1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "operator.gt.1.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-gt-v1",
+        "content": "{\"left\": 1, \"right\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "operator.gt.1.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-gt-v1",
+        "content": "{\"left\": 1, \"right\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "operator.gt.2.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-gt-v1",
+        "content": "{\"left\": 1, \"right\": 1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "operator.gt.2.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-gt-v1",
+        "content": "{\"left\": 1, \"right\": 1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "operator.ne.0.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-ne-v1",
+        "content": "{\"left\": 1, \"right\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "operator.ne.0.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-ne-v1",
+        "content": "{\"left\": 1, \"right\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "operator.ne.1.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-ne-v1",
+        "content": "{\"left\": 2, \"right\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "operator.ne.1.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-ne-v1",
+        "content": "{\"left\": 2, \"right\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "operator.ne.2.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-ne-v1",
+        "content": "{\"left\": 0, \"right\": 0}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "operator.ne.2.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-ne-v1",
+        "content": "{\"left\": 0, \"right\": 0}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "decimal.overshoot.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-enforce-v1",
+        "content": "{\"left\":1.0000000000000001,\"right\":1.0}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "flag",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "decimal.overshoot.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-enforce-v1",
+        "content": "{\"left\":1.0000000000000001,\"right\":1.0}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "decimal.below_limit.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\":1.0,\"right\":1.0000000000000001}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "decimal.below_limit.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\":1.0,\"right\":1.0000000000000001}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "decimal.underflow.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-eq-v1",
+        "content": "{\"left\":1e-400,\"right\":0}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "decimal.underflow.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-eq-v1",
+        "content": "{\"left\":1e-400,\"right\":0}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "decimal.near_equal.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-eq-v1",
+        "content": "{\"left\":0.10000000000000001,\"right\":0.1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "decimal.near_equal.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-eq-v1",
+        "content": "{\"left\":0.10000000000000001,\"right\":0.1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "number.large_integer.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\":9007199254740992,\"right\":9007199254740993}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "number.large_integer.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\":9007199254740992,\"right\":9007199254740993}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "type.string.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\":\"1\",\"right\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "type.string.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\":\"1\",\"right\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "type.boolean.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\":true,\"right\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "type.boolean.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\":true,\"right\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "missing.value.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"right\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "missing.value.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"right\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "date.leap_day.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-date-lt-v1",
+        "content": "{\"left\": \"2024-02-29\", \"right\": \"2024-03-01\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "date.leap_day.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-date-lt-v1",
+        "content": "{\"left\": \"2024-02-29\", \"right\": \"2024-03-01\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "date.equal_strict.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-date-lt-v1",
+        "content": "{\"left\": \"2026-10-28\", \"right\": \"2026-10-28\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "date.equal_strict.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-date-lt-v1",
+        "content": "{\"left\": \"2026-10-28\", \"right\": \"2026-10-28\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "date.invalid_day.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-date-lt-v1",
+        "content": "{\"left\": \"2026-02-30\", \"right\": \"2026-03-01\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "date.invalid_day.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-date-lt-v1",
+        "content": "{\"left\": \"2026-02-30\", \"right\": \"2026-03-01\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "date.non_iso.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-date-lt-v1",
+        "content": "{\"left\": \"10/28/2026\", \"right\": \"2026-10-29\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "date.non_iso.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-date-lt-v1",
+        "content": "{\"left\": \"10/28/2026\", \"right\": \"2026-10-29\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "date.null.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-date-lt-v1",
+        "content": "{\"left\": null, \"right\": \"2026-10-29\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "date.null.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-date-lt-v1",
+        "content": "{\"left\": null, \"right\": \"2026-10-29\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "date.equal_inclusive.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-date-le-v1",
+        "content": "{\"left\": \"2026-10-28\", \"right\": \"2026-10-28\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "date.equal_inclusive.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-date-le-v1",
+        "content": "{\"left\": \"2026-10-28\", \"right\": \"2026-10-28\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "pointer.escaped_valid.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-pointer-v1",
+        "content": "{\"orders\": [{\"a/b\": 1}], \"c~d\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "pointer.escaped_valid.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-pointer-v1",
+        "content": "{\"orders\": [{\"a/b\": 1}], \"c~d\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "pointer.escaped_exceeds.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-pointer-v1",
+        "content": "{\"orders\": [{\"a/b\": 3}], \"c~d\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "pointer.escaped_exceeds.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-pointer-v1",
+        "content": "{\"orders\": [{\"a/b\": 3}], \"c~d\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "pointer.missing_index.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-pointer-v1",
+        "content": "{\"orders\": [], \"c~d\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "pointer.missing_index.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-pointer-v1",
+        "content": "{\"orders\": [], \"c~d\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "pointer.leading_zero_index.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-index-v1",
+        "content": "{\"orders\": [{\"a/b\": 1}], \"c~d\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "pointer.leading_zero_index.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-index-v1",
+        "content": "{\"orders\": [{\"a/b\": 1}], \"c~d\": 2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.limit"
+        ]
+      }
+    },
+    {
+      "case_id": "json.duplicate.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\":1,\"left\":2,\"right\":3}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.duplicate.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\":1,\"left\":2,\"right\":3}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.nonfinite.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\":NaN,\"right\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.nonfinite.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\":NaN,\"right\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.overflow.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\":1e400,\"right\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.overflow.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\":1e400,\"right\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.truncated.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\":",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.truncated.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "{\"left\":",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "format.text.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "left: 1\nright: 2",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "format.text.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-number-le-v1",
+        "content": "left: 1\nright: 2",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "rules.absent.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-empty-v1",
+        "content": "{\"left\":1,\"right\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "rules.absent.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-empty-v1",
+        "content": "{\"left\":1,\"right\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "cross_field": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "sections.valid.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "Summary: Customer requests return instructions.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "sections.valid.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "Summary: Return instructions are available.\nNext steps: Contact the store.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "sections.missing.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "Details: Required summary absent.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "flagged"
+        },
+        "finding_rule_ids": [
+          "completeness.request_summary"
+        ]
+      }
+    },
+    {
+      "case_id": "sections.missing.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "Summary: Instructions available.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "flagged"
+        },
+        "finding_rule_ids": [
+          "completeness.next_steps"
+        ]
+      }
+    },
+    {
+      "case_id": "sections.empty.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "Summary:   ",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "flagged"
+        },
+        "finding_rule_ids": [
+          "completeness.request_summary"
+        ]
+      }
+    },
+    {
+      "case_id": "sections.empty.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "Summary:   \nNext steps: Contact the store.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "flagged"
+        },
+        "finding_rule_ids": [
+          "completeness.response_summary"
+        ]
+      }
+    },
+    {
+      "case_id": "sections.duplicate.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "Summary: First summary.\nSUMMARY: Second summary.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "flagged"
+        },
+        "finding_rule_ids": [
+          "completeness.request_summary"
+        ]
+      }
+    },
+    {
+      "case_id": "sections.duplicate.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "Summary: Instructions available.\nNext steps: Contact store.\nNext steps: Open ticket.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "flagged"
+        },
+        "finding_rule_ids": [
+          "completeness.next_steps"
+        ]
+      }
+    },
+    {
+      "case_id": "sections.short.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "Summary: Hi",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "sections.short.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "Summary: Instructions available.\nNext steps: Hi",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "flagged"
+        },
+        "finding_rule_ids": [
+          "completeness.next_steps"
+        ]
+      }
+    },
+    {
+      "case_id": "sections.unknown_boundary.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "Summary:\nOther: Not the summary.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "flagged"
+        },
+        "finding_rule_ids": [
+          "completeness.request_summary"
+        ]
+      }
+    },
+    {
+      "case_id": "sections.unknown_boundary.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "Summary: Instructions available.\nNext steps:\nOther: Not the next step.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "flagged"
+        },
+        "finding_rule_ids": [
+          "completeness.next_steps"
+        ]
+      }
+    },
+    {
+      "case_id": "sections.multiline.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "Summary:\nCustomer requests instructions.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "sections.multiline.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "Summary:\nInstructions are available.\nNext steps:\nContact the store.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "sections.json.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "{\"Summary\":\"This is JSON, not labeled text.\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "sections.json.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "{\"Summary\":\"This is JSON, not labeled text.\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    }
+  ]
+}
