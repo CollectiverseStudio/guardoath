@@ -1,0 +1,790 @@
+{
+  "format_version": "1",
+  "policies": [
+    {
+      "application_id": "demo",
+      "version": "structure-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "failure_action": "block",
+      "rules": [
+        {
+          "checker_id": "schema",
+          "required": true,
+          "on_finding": "block"
+        }
+      ],
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": [
+          "request_id",
+          "message",
+          "priority",
+          "contact",
+          "items",
+          "metadata",
+          "sequence"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "contact": {
+            "type": "object",
+            "required": [
+              "email"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email"
+              }
+            }
+          }
+        },
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 500
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "low",
+              "normal",
+              "high"
+            ]
+          },
+          "contact": {
+            "$ref": "#/$defs/contact"
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 3,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "required": [
+                "sku",
+                "quantity"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "sku": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}-[0-9]{3}$"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10
+                }
+              }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "required": [
+              "created_at",
+              "due_date",
+              "notify_at",
+              "ip_v4",
+              "ip_v6"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "due_date": {
+                "type": "string",
+                "format": "date"
+              },
+              "notify_at": {
+                "type": "string",
+                "format": "time"
+              },
+              "ip_v4": {
+                "type": "string",
+                "format": "ipv4"
+              },
+              "ip_v6": {
+                "type": "string",
+                "format": "ipv6"
+              }
+            }
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "multipleOf": 5
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 40
+          }
+        }
+      },
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": [
+          "request_id",
+          "answer",
+          "status",
+          "contact",
+          "items",
+          "metadata",
+          "sequence"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "contact": {
+            "type": "object",
+            "required": [
+              "email"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email"
+              }
+            }
+          }
+        },
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "answer": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 500
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "review"
+            ]
+          },
+          "contact": {
+            "$ref": "#/$defs/contact"
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 3,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "required": [
+                "sku",
+                "quantity"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "sku": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}-[0-9]{3}$"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10
+                }
+              }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "required": [
+              "created_at",
+              "due_date",
+              "notify_at",
+              "ip_v4",
+              "ip_v6"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "due_date": {
+                "type": "string",
+                "format": "date"
+              },
+              "notify_at": {
+                "type": "string",
+                "format": "time"
+              },
+              "ip_v4": {
+                "type": "string",
+                "format": "ipv4"
+              },
+              "ip_v6": {
+                "type": "string",
+                "format": "ipv6"
+              }
+            }
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "multipleOf": 5
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 40
+          }
+        }
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "structure-enforce-v1",
+      "mode": "enforce",
+      "timeout_ms": 500,
+      "failure_action": "block",
+      "rules": [
+        {
+          "checker_id": "schema",
+          "required": true,
+          "on_finding": "block"
+        }
+      ],
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": [
+          "request_id",
+          "message",
+          "priority",
+          "contact",
+          "items",
+          "metadata",
+          "sequence"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "contact": {
+            "type": "object",
+            "required": [
+              "email"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email"
+              }
+            }
+          }
+        },
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 500
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "low",
+              "normal",
+              "high"
+            ]
+          },
+          "contact": {
+            "$ref": "#/$defs/contact"
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 3,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "required": [
+                "sku",
+                "quantity"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "sku": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}-[0-9]{3}$"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10
+                }
+              }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "required": [
+              "created_at",
+              "due_date",
+              "notify_at",
+              "ip_v4",
+              "ip_v6"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "due_date": {
+                "type": "string",
+                "format": "date"
+              },
+              "notify_at": {
+                "type": "string",
+                "format": "time"
+              },
+              "ip_v4": {
+                "type": "string",
+                "format": "ipv4"
+              },
+              "ip_v6": {
+                "type": "string",
+                "format": "ipv6"
+              }
+            }
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "multipleOf": 5
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 40
+          }
+        }
+      },
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": [
+          "request_id",
+          "answer",
+          "status",
+          "contact",
+          "items",
+          "metadata",
+          "sequence"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "contact": {
+            "type": "object",
+            "required": [
+              "email"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email"
+              }
+            }
+          }
+        },
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "answer": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 500
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "review"
+            ]
+          },
+          "contact": {
+            "$ref": "#/$defs/contact"
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 3,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "required": [
+                "sku",
+                "quantity"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "sku": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}-[0-9]{3}$"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10
+                }
+              }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "required": [
+              "created_at",
+              "due_date",
+              "notify_at",
+              "ip_v4",
+              "ip_v6"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "due_date": {
+                "type": "string",
+                "format": "date"
+              },
+              "notify_at": {
+                "type": "string",
+                "format": "time"
+              },
+              "ip_v4": {
+                "type": "string",
+                "format": "ipv4"
+              },
+              "ip_v6": {
+                "type": "string",
+                "format": "ipv6"
+              }
+            }
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "multipleOf": 5
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 40
+          }
+        }
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "structure-optional-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "failure_action": "block",
+      "rules": [
+        {
+          "checker_id": "schema",
+          "required": false,
+          "on_finding": "block"
+        }
+      ],
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": [
+          "request_id",
+          "message",
+          "priority",
+          "contact",
+          "items",
+          "metadata",
+          "sequence"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "contact": {
+            "type": "object",
+            "required": [
+              "email"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email"
+              }
+            }
+          }
+        },
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 500
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "low",
+              "normal",
+              "high"
+            ]
+          },
+          "contact": {
+            "$ref": "#/$defs/contact"
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 3,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "required": [
+                "sku",
+                "quantity"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "sku": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}-[0-9]{3}$"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10
+                }
+              }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "required": [
+              "created_at",
+              "due_date",
+              "notify_at",
+              "ip_v4",
+              "ip_v6"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "due_date": {
+                "type": "string",
+                "format": "date"
+              },
+              "notify_at": {
+                "type": "string",
+                "format": "time"
+              },
+              "ip_v4": {
+                "type": "string",
+                "format": "ipv4"
+              },
+              "ip_v6": {
+                "type": "string",
+                "format": "ipv6"
+              }
+            }
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "multipleOf": 5
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 40
+          }
+        }
+      },
+      "output_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": [
+          "request_id",
+          "answer",
+          "status",
+          "contact",
+          "items",
+          "metadata",
+          "sequence"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "contact": {
+            "type": "object",
+            "required": [
+              "email"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email"
+              }
+            }
+          }
+        },
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "answer": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 500
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "review"
+            ]
+          },
+          "contact": {
+            "$ref": "#/$defs/contact"
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 3,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "required": [
+                "sku",
+                "quantity"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "sku": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}-[0-9]{3}$"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10
+                }
+              }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "required": [
+              "created_at",
+              "due_date",
+              "notify_at",
+              "ip_v4",
+              "ip_v6"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "due_date": {
+                "type": "string",
+                "format": "date"
+              },
+              "notify_at": {
+                "type": "string",
+                "format": "time"
+              },
+              "ip_v4": {
+                "type": "string",
+                "format": "ipv4"
+              },
+              "ip_v6": {
+                "type": "string",
+                "format": "ipv6"
+              }
+            }
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "multipleOf": 5
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 40
+          }
+        }
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "structure-unconfigured-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "failure_action": "block",
+      "rules": [
+        {
+          "checker_id": "schema",
+          "required": true,
+          "on_finding": "block"
+        }
+      ]
+    }
+  ]
+}

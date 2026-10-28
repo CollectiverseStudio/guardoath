@@ -17,6 +17,8 @@ jobs:
       - run: pytest -q
       - name: Secrets group - 100 expectations
         run: python -m valinator.evaluate --cases evals/secrets.json --policies policies/secrets-batch.json
+      - name: Structure group - 100 expectations
+        run: python -m valinator.evaluate --cases evals/structure.json --policies policies/structure-batch.json
   local-pii:
     runs-on: ubuntu-latest
     strategy:

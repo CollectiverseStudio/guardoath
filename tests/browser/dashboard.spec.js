@@ -396,7 +396,7 @@ for (const stage of ["input","output"]) {
   test(stage + " examples change only their own data and format",async({page})=>{
     await connect(page); const other=stage==='input'?'output':'input'; const seen=new Set(); let checks=0;
     page.on('request',r=>{if(r.url().includes('/v1/checks/')) checks++;});
-    for(const version of ['conversation-v1','redaction-v1','business-v1','completeness-v1']) {
+    for(const version of ['conversation-v1','redaction-v1','business-v1','completeness-v1','structure-v1']) {
       await page.locator('#policy').selectOption(version);
       const ids=await page.locator('#'+stage+'-samples button:enabled').evaluateAll(nodes=>nodes.map(n=>n.id));
       for(const id of ids) {
@@ -412,7 +412,7 @@ for (const stage of ["input","output"]) {
         await expect(page.locator('#policy')).toHaveValue(version);
       }
     }
-    expect(seen.size).toBe(stage==='input'?19:21);
+    expect(seen.size).toBe(stage==='input'?26:28);
     expect(checks).toBe(0);
   });
 }
@@ -456,4 +456,40 @@ test("multiple-issue answer exercises all three real local groups",async({page})
   for(const group of ['sensitive_data','secrets','prompt_security'])
     await expect(page.locator('#output-results [data-group="'+group+'"] summary')).toContainText('Findings');
   await expect(page.locator('#answer')).toBeHidden();
+});
+
+
+for(const [kind,message] of [['missing-field','A required field is missing.'],['wrong-type','A value has the wrong data type.'],['extra-field','An unexpected field is present.'],['invalid-date','A value does not match a supported format.'],['invalid-email','A value does not match a supported format.'],['too-many-items','An array has too many items.'],['malformed-json','malformed JSON']]) {
+  test('structured output example '+kind,async({page})=>{
+    await connect(page); await profile(page,'structure-v1');
+    await page.locator('#run-input').click(); await expect(page.locator('#run-output')).toBeEnabled();
+    const input=await page.locator('#input-content').inputValue();
+    await page.locator('#output-'+kind+'-sample').click();
+    await expect(page.locator('#input-content')).toHaveValue(input);
+    await page.locator('#run-output').click();
+    await expect(page.locator('#output-results [data-group="structure"] summary')).toContainText('Findings');
+    await expect(page.locator('#output-results')).toContainText(message);
+    await expect(page.locator('#output-results')).not.toContainText('builder@example.com');
+    await expect(page.locator('#answer')).toBeHidden();
+  });
+}
+test('correcting a structured answer preserves input and releases the preview',async({page})=>{
+  await connect(page); await profile(page,'structure-v1');
+  await page.locator('#run-input').click(); await expect(page.locator('#run-output')).toBeEnabled();
+  await page.locator('#output-missing-field-sample').click(); await page.locator('#run-output').click();
+  await expect(page.locator('#answer')).toBeHidden();
+  await page.locator('#output-clean-sample').click(); await page.locator('#run-output').click();
+  await expect(page.locator('#answer')).toBeVisible();
+  await expect(page.locator('#answer')).toContainText('The example request has been reviewed.');
+  await expect(page.locator('#output-results [data-group="sensitive_data"] summary')).toContainText('Disabled');
+});
+test('structure group report keeps required and optional skips explicit',async({page},testInfo)=>{
+  const {execFileSync}=require('node:child_process'); const {pathToFileURL}=require('node:url');
+  const path=testInfo.outputPath('structure.html');
+  execFileSync('python',['-m','valinator.evaluate','--cases','evals/structure.json','--policies','policies/structure-batch.json','--html',path],{stdio:'pipe'});
+  await page.goto(pathToFileURL(path).href);
+  await expect(page.locator('body')).toContainText('100 of 100 expectations matched');
+  await expect(page.locator('body')).toContainText('Incomplete evaluations: 4');
+  await expect(page.locator('tbody tr')).toHaveCount(100);
+  await expect(page.locator('body')).not.toContainText('builder@example.com');
 });

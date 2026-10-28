@@ -74,3 +74,10 @@ claim: installed Presidio remains the optional email/card/SSN adapter; local
 Valinator field heuristics reuse the pinned regex package and Python calendar
 validation. No NLP model, phone numbering-plan database, patient/insurance/bank
 lookup or external service is introduced.
+
+Structure batch: no dependency/version additions. The existing jsonschema 4.26.0,
+email-validator 2.3.0 and rfc3339-validator 0.1.4 are reused. Explicit time/date-time
+predicates replace the generic draft-3 time fallback, enforce offsets and reject
+whitespace. Leap seconds remain unsupported. Primary format contract:
+https://json-schema.org/draft/2020-12/json-schema-validation, section 7.3.1.
+This batch makes no new claim about upstream release freshness.

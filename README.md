@@ -742,3 +742,22 @@ profile now adds opt-in labeled phone, birth-date, medical-record, health-plan
 and bank-account checks. See [the guide](docs/user-guide.md#regulated-and-sensitive-data-checks)
 and [all examples](docs/privacy-coverage.md) for syntax, redaction and limits.
 This is not comprehensive PHI detection or a compliance assessment.
+
+
+## Structure and data validity batch
+
+```powershell
+py -3.13 start_dashboard.py --evaluate --suite structure
+```
+
+Runs 100 expectations, including four intentional incomplete cases and two
+optional skips. In the dashboard choose `structure-v1` under Advanced, use Clean
+question and run input, then try the independent output examples: Missing field,
+Wrong data type, Unexpected field, Invalid date, Invalid email, Too many items
+and Malformed JSON. Safe reply restores a valid answer without rerunning input.
+
+Schema errors now explain the first problem without values, names or schema text.
+**Compatibility:** time requires a timezone, e.g. `12:30:00Z`; bare `12:30:00`
+now fails. Time/date-time reject trailing whitespace; leap seconds are unsupported.
+See the [guide](docs/user-guide.md#structure-and-data-validity-checks) and
+[100 examples](docs/structure-coverage.md). No new dependency or paid call.

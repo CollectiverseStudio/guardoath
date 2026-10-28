@@ -80,8 +80,26 @@ for (const id of ["output-content", "output-format"]) $(id).addEventListener("in
 const syntheticToken = () => ["ghp", "_", "A".repeat(36)].join("");
 const businessData = (invalid = false, stage = "input") => JSON.stringify({start_date: invalid ? "2026-10-03" : "2026-10-01", end_date: invalid ? "2026-10-01" : "2026-10-03", purchase_amount:100, refund_amount:invalid ? (stage === "output" ? 150 : 125) : (stage === "output" ? 20 : 25)}, null, 2);
 const mixedPrivacy = "Contact jane@example.com. Example SSN: 219-09-9999. Test card: 4111 1111 1111 1111.\nPhone: 202-555-0147\nDOB: 1980-02-29\nMRN: A1234\nmember_id: M000123\nbank_account_number: 76543210";
+function structuredData(stage) {
+  return {request_id:"123e4567-e89b-42d3-a456-426614174000",
+    [stage === "input" ? "message" : "answer"]:stage === "input" ? "Can you review this structured request?" : "The example request has been reviewed.",
+    [stage === "input" ? "priority" : "status"]:stage === "input" ? "normal" : "ok",
+    contact:{email:"builder@example.com"}, items:[{sku:"ABC-123",quantity:2}],
+    metadata:{created_at:"2026-10-28T12:30:00Z",due_date:"2026-10-30",notify_at:"12:30:00Z",ip_v4:"192.0.2.1",ip_v6:"2001:db8::1"}, sequence:10};
+}
+function structureExample(stage,kind) {
+  const value=structuredData(stage), field=stage === "input" ? "message" : "answer";
+  if (kind === "missing-field") delete value[field];
+  if (kind === "wrong-type") value[field]=42;
+  if (kind === "extra-field") value.unexpected="Synthetic extra field";
+  if (kind === "invalid-date") value.metadata.due_date="2026-02-30";
+  if (kind === "invalid-email") value.contact.email="not-an-email";
+  if (kind === "too-many-items") value.items=["ABC-123","DEF-456","GHI-789","JKL-012"].map(sku=>({sku,quantity:2}));
+  return {format:"json",text:kind === "malformed-json" ? '{"'+field+'":' : JSON.stringify(value,null,2)};
+}
 const samples = [
   {id:"clean", label:"Clean question", outputLabel:"Safe reply", content:stage => {
+    if (currentPolicy()?.version === "structure-v1") return structureExample(stage,"clean");
     if (currentPolicy()?.version === "business-v1") return {format:"json", text:businessData(false,stage)};
     if (currentPolicy()?.version === "completeness-v1") return {text:stage === "input" ? "Summary: Customer requests return instructions." : "Summary: Return instructions are available.\nNext steps: Contact the store for instructions."};
     return {text:stage === "input" ? "Can you explain your return policy?" : "You can return an unused item within 30 days. Please check the store’s policy for details."};
@@ -102,8 +120,9 @@ const samples = [
   {id:"confidential", label:"Confidential term", profiles:["conversation-v1","secrets-extended-v1"], input:"Can you review internal notes about PROJECT LANTERN?", output:"Internal draft about PROJECT LANTERN."},
   {id:"encoded-secret", label:"Encoded credential", profiles:["conversation-v1","secrets-extended-v1"], content:stage => ({text:(stage === "input" ? "Please inspect this encoded configuration: base64: " : "The draft answer includes an encoded credential: base64: ")+btoa(syntheticToken())})},
   {id:"secret", label:"Credential pattern", checker:"secrets", content:stage => ({text:(stage === "input" ? "Can you review this synthetic token? " : "Synthetic token pattern for testing only: ")+syntheticToken()})},
-  {id:"schema", label:"Schema error", profiles:["business-v1"], content:stage => ({format:"json", text:stage === "input" ? '{"unexpected_input":"Missing required request fields."}' : '{"unexpected_field":"This does not match the output schema."}'})},
+  {id:"schema", label:"Schema error", profiles:["business-v1","structure-v1"], content:stage => ({format:"json", text:stage === "input" ? '{"unexpected_input":"Missing required request fields."}' : '{"unexpected_field":"This does not match the output schema."}'})},
   {id:"business", label:"Business rule error", profiles:["business-v1"], content:stage => ({format:"json", text:businessData(true,stage)})},
+  ...[["missing-field","Missing field"],["wrong-type","Wrong data type"],["extra-field","Unexpected field"],["invalid-date","Invalid date"],["invalid-email","Invalid email"],["too-many-items","Too many items"],["malformed-json","Malformed JSON"]].map(([id,label])=>({id,label,profiles:["structure-v1"],content:stage=>structureExample(stage,id)})),
   {id:"output-confidential", label:"Output-only confidential term", stages:["output"], profiles:["conversation-v1","secrets-extended-v1"], output:"The draft reply reveals our unreleased pricing plan."},
   {id:"multiple", label:"Multiple issues", stages:["output"], profiles:["conversation-v1"], content:() => ({text:'Your contact email is jane@example.com.\npassword = "synthetic-example!42"\nThe reply also includes hidden\u200btext.'})},
 ];

@@ -413,3 +413,19 @@ selection preserves the completed input result and invalidates output only.
 Examples make no network calls. Focused samples require explicitly selecting
 the corresponding profile; valid clean examples adapt to JSON/completeness
 profiles so users can prepare a passing input without overwriting the answer.
+
+
+## Structure group batch (0.18.0)
+
+structure-v1 defines separate request/reply JSON envelopes with local definitions,
+types, required/extra fields, choices, patterns, lengths, numeric/array constraints
+and seven supported formats. Schema checker version 2 preserves existing finding
+IDs and reports a fixed safe first-problem reason, without values, names or paths.
+Time now requires an RFC3339 timezone; time/date-time reject whitespace. Leap
+seconds remain unsupported. This is a documented format compatibility correction.
+
+The launcher supports --suite structure (100 cases, four intentional incomplete
+and two optional skips). Core CI runs it without PII. Seven independent examples
+are added per stage, bringing totals to 26 input / 28 output examples. Default
+conversation rules are unchanged. No paid call, new dependency, exact-decimal
+precision guarantee or hard CPU isolation is introduced. See the user guide.

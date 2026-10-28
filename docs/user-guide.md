@@ -1,7 +1,7 @@
 # Valinator user guide
 
 This guide grows with the product. It describes user-facing validation checks,
-examples, expected results, configuration, and boundaries. Version: 0.17.1.
+examples, expected results, configuration, and boundaries. Version: 0.18.0.
 
 A **check** examines an input or proposed AI answer. A **regression case** tests
 whether that check behaves as expected on a saved example. Passing a regression
@@ -107,7 +107,8 @@ is not active. The button hint names any required profile.
 | Output-only confidential term | No input button; a stage-specific example | Reply mentions the fictional unreleased pricing plan; output-stage term finding |
 | Multiple issues | No input button | Reply includes an email, quoted password and hidden text; findings across all three real local groups |
 | Redaction preview | Synthetic intake values, under `redaction-v1` | Draft reply with synthetic identifiers; separate rechecked redaction preview |
-| Schema error | Invalid structured request, under `business-v1` | Invalid structured answer; schema finding |
+| Schema error | Invalid structured request, under `business-v1` or `structure-v1` | Invalid structured answer; schema finding |
+| Missing field, Wrong data type, Unexpected field, Invalid date, Invalid email, Too many items, Malformed JSON | Broken structured request under `structure-v1` | Broken structured answer; finding and held preview |
 | Business rule error | Request with reversed dates/excess refund, under `business-v1` | Different invalid refund/date values; business findings |
 | Missing information | Required summary absent, under `completeness-v1` | Required next steps empty; completeness finding |
 
@@ -552,20 +553,116 @@ README for provider credentials, charges, region/retention review and failures.
 
 ## Structure and data validity checks
 
-| Check | Example or use case | Expected behavior |
-| --- | --- | --- |
-| Strict bounded JSON | Duplicate keys, NaN or malformed JSON | Invalid JSON finding/error as appropriate; not accepted silently |
-| Required fields/types | A business object missing `purchase_amount` | `schema.invalid` |
-| Date format | `2026-02-30` in a date field | `schema.invalid` |
-| Date-time/time | A configured field violates supported RFC-style format | Schema finding |
-| Email format | A configured email field has invalid syntax | Schema finding; no DNS/mailbox lookup |
-| IPv4/IPv6/UUID | Malformed value in a configured format field | Schema finding |
-| Unknown schema format | Policy requests an unsupported format | Policy startup fails |
-| Wrong content format | Required schema check receives text | Skipped/incomplete; not a validated structure |
+This group checks whether data follows your application's contract. It does not
+establish truth, privacy, safety or fairness. The dedicated **`structure-v1`**
+profile contains only the real local schema checker; other groups remain visibly
+disabled. The normal free-text conversation profile is unchanged.
 
-Schemas define the boundaries. Passing JSON structure does not verify the facts,
-URLs, financial/legal correctness, or safety of the content. Remote schema
-references are unsupported.
+### Try the structured demo
+
+1. Under **Advanced**, select `structure-v1`.
+2. In Step 1 choose **Clean question**, which loads a valid JSON request, then
+   **Run input checks**.
+3. In Step 3 choose **Missing field**, **Wrong data type**, **Unexpected field**,
+   **Invalid date**, **Invalid email**, **Too many items** or **Malformed JSON**.
+4. Run output checks. The finding holds the answer. Choose **Safe reply** and
+   rerun output to see the passing case without repeating input.
+
+The same error examples are available for input. Each button changes only its
+own editor and format; it never changes the other editor or the profile. There
+are now 26 input / 28 output examples across all groups. Buttons for another
+profile are dimmed and name their required profile in the hint.
+
+### Sample contract and checks
+
+These sample requirements are educational. Applications provide their own trusted
+`input_schema` and `output_schema` in a policy with a `schema` rule.
+
+| Check | Example / use case | Expected behavior |
+| --- | --- | --- |
+| Root type and extra fields | A root array/null, or unexpected property | `schema.invalid`; the sample requires an object with no extras |
+| Required fields | Missing input `message` or output `answer` | Finding; request and reply use distinct contracts |
+| String type and length | Numeric content, `Hi`, or 501 characters | Finding; content must be a string of 5–500 characters |
+| UUID | `request_id: "not-a-uuid"` | Finding; valid UUID syntax is not identity/ownership verification |
+| Allowed choices | Input priority outside low/normal/high; output status outside ok/review | Finding |
+| Local references and nested objects | Contact missing email or containing an extra property | Finding through local `$defs`; no remote reference download |
+| Email syntax | `contact.email: "not-an-email"` | Finding; no DNS/mailbox/ownership lookup |
+| Array size and uniqueness | Empty items, four items, or duplicate SKU/quantity objects | Finding; 1–3 unique objects required |
+| Item shape | SKU `abc-123`, missing quantity, Boolean quantity | Finding; SKU uses `ABC-123` shape and quantity must be an integer |
+| Numeric bounds | Quantity 0 or 11 | Finding; permitted range is 1–10 |
+| Integer multiples | Sequence 7 | Finding; sequence must be 0–100 and a multiple of 5 |
+| Date-time | `metadata.created_at: "2026-10-28T12:30:00Z"` | Passes this format check; event occurrence is not verified |
+| Date | `metadata.due_date: "2026-02-30"` | Finding; valid example `2026-10-30` |
+| Time | `metadata.notify_at: "12:30:00Z"` | Passes this format check; bare `12:30:00` now fails |
+| IPv4 / IPv6 | `999.1.2.3` / `not-an-ipv6` | Finding; valid examples `192.0.2.1` / `2001:db8::1`; no network/ownership check |
+| Explicit nullability | Optional note is null or a string of at most 40 characters | Passes; missing required fields still fail |
+| Strict JSON | Truncation, comments, trailing comma, single quotes, duplicate decoded keys, NaN/Infinity, overflow or unpaired surrogate | `schema.invalid_json`; no parser exception text returned |
+| Parser budgets | 33 nested containers, 1,001 entries or a 129-character numeric token | `schema.invalid_json`; exceeds supported strict-JSON limits |
+| Required schema skipped | Text mode selected, or stage schema missing | Skipped and incomplete; not assessed or passed |
+| Optional schema skipped | Text mode under an optional schema rule | Engine can report complete/allow, but checker is skipped and dashboard holds input; not assessed or passed |
+
+The sample also requires `request_id`, priority/status, contact, items, metadata
+and sequence on both stages. Metadata requires created_at, due_date, notify_at,
+ip_v4 and ip_v6 with no extras. Items require sku/quantity with no extras. The
+profiles and full schemas are in `policies/structure-batch.json`.
+
+### Explanations and format compatibility
+
+Schema checker version **2** preserves `schema.invalid` and `schema.invalid_json`.
+The first schema problem gets a fixed generic reason, such as “A required field
+is missing” or “A value has the wrong data type.” Other keywords can use a generic
+fallback. This is not an exhaustive error list. Submitted values, field names,
+JSON paths, expected values, schema text and library exception messages are never
+included; consult your configured schema to locate the problem.
+
+**Compatibility change in 0.18.0:** time now uses the RFC3339 full-time format of
+JSON Schema 2020-12, requiring `Z` or an explicit numeric offset. The prior generic
+checker accidentally selected the older timezone-free rule. Send `12:30:00Z` or
+`12:30:00-04:00` instead of bare `12:30:00`. Valinator does not guess a timezone.
+Fractional seconds and lowercase `z` are accepted. Time and date-time reject
+leading/trailing whitespace, including a terminal newline. The existing RFC3339
+helper does not support leap seconds; `23:59:60Z` is outside the supported subset.
+Primary format reference: [JSON Schema 2020-12, section 7.3.1](https://json-schema.org/draft/2020-12/json-schema-validation).
+
+Only date, date-time, time, email, IPv4, IPv6 and UUID format names are supported;
+unknown configured formats fail startup. No new dependency, model or provider
+call is introduced. Schemas may reference local definitions, not remote URLs.
+
+### Run the entire structure group
+
+```powershell
+py -3.13 start_dashboard.py --evaluate --suite structure
+```
+
+This runs **100 expectations**: 50 scenarios on both stages, covering valid
+boundaries, all seven formats, nested/local-reference constraints, strict JSON,
+observe/enforce decisions and required/optional skips. **Four cases deliberately
+expect incomplete evaluations**, and **two expect optional skips**. Matching
+those expectations does not make them completed data assessments. Reports omit
+content and can compare to a previous report of the same suite ID. See [all 100
+cases and examples](structure-coverage.md). Direct CLI use needs no PII extra:
+
+```bash
+python -m valinator.evaluate --cases evals/structure.json --policies policies/structure-batch.json
+```
+
+### Limits
+
+Canonical content is at most 32,000 characters. The shared parser additionally
+caps UTF-8 size at 256 KiB, nesting at 32 containers, object/array entries at 1,000
+per container, and numeric tokens at 128 characters. Strings containing escaped
+quotes/braces are handled as string data. Duplicate decoded keys and nonfinite
+numbers are rejected.
+
+Schema patterns are trusted application configuration and use the installed
+validator's regex implementation. API deadlines are not hard CPU isolation for
+synchronous validation; keep patterns simple. JSON numbers use Python number
+handling, not exact decimal currency arithmetic. Integer `multipleOf` examples
+do not establish decimal `multipleOf` accuracy; use domain-specific decimal logic
+for money. This suite is not exhaustive JSON Schema conformance testing, factual
+verification, semantic business review, privacy filtering, repair/retry logic or
+prompt-injection detection. A valid email intentionally remains data in this
+schema-only profile; add privacy rules separately when your application needs them.
 
 ## Business rules and commitments checks
 

@@ -9,6 +9,8 @@
 
 - [x] Strict input and output contracts.
 - [x] Real deterministic JSON Schema validation.
+- [x] Structure group batch: dedicated contracts, safe first-problem explanations, timezone-aware time correction, seven new examples per stage, 100 regression cases and guide/launcher/CI coverage.
+- [ ] Exact decimal schema arithmetic, exhaustive conformance coverage and hard CPU isolation for schemas.
 - [x] Versioned startup policy snapshots.
 - [x] Observe/enforce decisions and required-check failure handling.
 - [x] Application-scoped API credentials and sanitized validation errors.

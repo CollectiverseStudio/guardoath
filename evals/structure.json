@@ -1,0 +1,2162 @@
+{
+  "format_version": "1",
+  "suite_id": "structure-v1",
+  "cases": [
+    {
+      "case_id": "valid.base.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.base.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.three_items.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}, {\"sku\": \"DEF-456\", \"quantity\": 2}, {\"sku\": \"GHI-789\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.three_items.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}, {\"sku\": \"DEF-456\", \"quantity\": 2}, {\"sku\": \"GHI-789\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.minimum.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Hello\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 1}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 0}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.minimum.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"Hello\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 1}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 0}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.maximum.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 10}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 100}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.maximum.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 10}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 100}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.null_note.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10, \"note\": null}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.null_note.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10, \"note\": null}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.string_note.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10, \"note\": \"Synthetic note\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.string_note.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10, \"note\": \"Synthetic note\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.unicode.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"A multilingual message: Bonjour, \u4e16\u754c.\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.unicode.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"A multilingual message: Bonjour, \u4e16\u754c.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.escaped_string.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-enforce-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Quotes \\\" and newline\\nare data, not JSON syntax.\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.escaped_string.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-enforce-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"Quotes \\\" and newline\\nare data, not JSON syntax.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "root.null.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "null",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "root.null.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "null",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "root.array.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "[]",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "root.array.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "[]",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "root.string.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "\"A plain string\"",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "root.string.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "\"A plain string\"",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "missing.content.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "missing.content.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "extra.root.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10, \"unexpected\": \"Synthetic extra\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "extra.root.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10, \"unexpected\": \"Synthetic extra\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "type.content.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-enforce-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": 12, \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "type.content.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-enforce-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": 12, \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "type.boolean_integer.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": true}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "type.boolean_integer.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": true}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "format.uuid.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"not-a-uuid\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "format.uuid.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"not-a-uuid\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "format.email.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"not-an-email\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "format.email.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"not-an-email\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "format.date_time.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28 12:30:00\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "format.date_time.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28 12:30:00\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "format.date.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-02-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "format.date.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-02-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "format.time.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"25:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "format.time.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"25:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "format.ipv4.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"999.1.2.3\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "format.ipv4.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"999.1.2.3\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "format.ipv6.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"not-an-ipv6\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "format.ipv6.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"not-an-ipv6\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "enum.choice.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"unexpected\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "enum.choice.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"unexpected\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "array.empty.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "array.empty.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "array.too_many.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}, {\"sku\": \"DEF-456\", \"quantity\": 2}, {\"sku\": \"GHI-789\", \"quantity\": 2}, {\"sku\": \"JKL-012\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "array.too_many.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}, {\"sku\": \"DEF-456\", \"quantity\": 2}, {\"sku\": \"GHI-789\", \"quantity\": 2}, {\"sku\": \"JKL-012\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "array.duplicate.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}, {\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "array.duplicate.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}, {\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "missing.nested.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "missing.nested.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "extra.nested.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\", \"extra\": \"Synthetic extra\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "extra.nested.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\", \"extra\": \"Synthetic extra\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "pattern.sku.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"abc-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "pattern.sku.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"abc-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "range.minimum.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 0}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "range.minimum.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 0}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "range.maximum.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 11}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "range.maximum.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 11}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "number.multiple.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 7}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "number.multiple.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 7}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "length.short.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Hi\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "length.short.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"Hi\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "length.long.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "length.long.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid"
+        ]
+      }
+    },
+    {
+      "case_id": "json.truncated.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\":",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.truncated.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"request_id\":",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.comment.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{/*comment*/\"x\":1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.comment.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{/*comment*/\"x\":1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.trailing_comma.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"x\":1,}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.trailing_comma.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"x\":1,}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.single_quote.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{'x':1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.single_quote.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{'x':1}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.nan.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"x\":NaN}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.nan.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"x\":NaN}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.infinity.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"x\":Infinity}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.infinity.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"x\":Infinity}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.overflow.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"x\":1e400}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.overflow.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"x\":1e400}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.duplicate.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"x\":1,\"x\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.duplicate.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"x\":1,\"x\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.escaped_duplicate.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"x\":1,\"\\u0078\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.escaped_duplicate.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"x\":1,\"\\u0078\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.surrogate.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"x\":\"\\ud800\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.surrogate.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"x\":\"\\ud800\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.number_limit.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"x\":111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.number_limit.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "{\"x\":111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.depth_limit.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[0]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.depth_limit.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[0]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.container_limit.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "json.container_limit.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json"
+        ]
+      }
+    },
+    {
+      "case_id": "text.required.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "This is text, not a selected JSON document.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "text.required.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-v1",
+        "content": "This is text, not a selected JSON document.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "text.optional.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-optional-v1",
+        "content": "No schema assessment was performed for this text.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "text.optional.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-optional-v1",
+        "content": "No schema assessment was performed for this text.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "schema.unconfigured.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-unconfigured-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"message\": \"Can you review this structured request?\", \"priority\": \"normal\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "schema.unconfigured.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "structure-unconfigured-v1",
+        "content": "{\"request_id\": \"123e4567-e89b-42d3-a456-426614174000\", \"answer\": \"The example request has been reviewed.\", \"status\": \"ok\", \"contact\": {\"email\": \"builder@example.com\"}, \"items\": [{\"sku\": \"ABC-123\", \"quantity\": 2}], \"metadata\": {\"created_at\": \"2026-10-28T12:30:00Z\", \"due_date\": \"2026-10-30\", \"notify_at\": \"12:30:00Z\", \"ip_v4\": \"192.0.2.1\", \"ip_v6\": \"2001:db8::1\"}, \"sequence\": 10}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    }
+  ]
+}

@@ -16,24 +16,51 @@ from valinator.secrets_check import build_secret_checker
 Checker = Callable[[CheckRequest, Policy, Stage], Awaitable[CheckerResult]]
 
 
+SCHEMA_MESSAGES = {
+    "required": "A required field is missing.",
+    "type": "A value has the wrong data type.",
+    "additionalProperties": "An unexpected field is present.",
+    "enum": "A value is outside the allowed choices.",
+    "const": "A value does not match the required constant.",
+    "format": "A value does not match a supported format.",
+    "pattern": "A string does not match its configured pattern.",
+    "minLength": "A string is shorter than the configured minimum.",
+    "maxLength": "A string exceeds the configured maximum length.",
+    "minimum": "A number is below the configured minimum.",
+    "maximum": "A number exceeds the configured maximum.",
+    "exclusiveMinimum": "A number is not above the configured lower bound.",
+    "exclusiveMaximum": "A number is not below the configured upper bound.",
+    "multipleOf": "A number is not a configured multiple.",
+    "minItems": "An array has fewer items than required.",
+    "maxItems": "An array has too many items.",
+    "uniqueItems": "An array contains duplicate items.",
+}
+
+
 async def schema_check(request: CheckRequest, policy: Policy, stage: Stage) -> CheckerResult:
     schema = policy.input_schema if stage == Stage.INPUT else policy.output_schema
     if schema is None or request.content_format != "json":
-        return CheckerResult(checker_id="schema", checker_version="1", status="skipped")
+        return CheckerResult(checker_id="schema", checker_version="2", status="skipped")
     try:
         payload = parse_json(request.content)
     except (ValueError, RecursionError):
-        return CheckerResult(checker_id="schema", checker_version="1", status="flagged",
+        return CheckerResult(checker_id="schema", checker_version="2", status="flagged",
                              findings=(Finding(rule_id="schema.invalid_json", category="structure",
-                                               severity="high", explanation="Content is not valid strict JSON."),))
-    valid = Draft202012Validator(schema, format_checker=FORMAT_CHECKER).is_valid(payload)
+                                               severity="high", explanation="Content is malformed JSON or exceeds supported strict-JSON limits."),))
+    error = next(Draft202012Validator(schema, format_checker=FORMAT_CHECKER).iter_errors(payload), None)
+    valid = error is None
+    # Never use ValidationError.message, paths, values, schema text or field names.
+    reason = SCHEMA_MESSAGES.get(error.validator, "The structured payload does not satisfy the configured schema.") if error else ""
     return CheckerResult(
-        checker_id="schema", checker_version="1", status="passed" if valid else "flagged",
+        checker_id="schema", checker_version="2", status="passed" if valid else "flagged",
         findings=() if valid else (Finding(
             rule_id="schema.invalid", category="structure", severity="high",
-            explanation="The structured payload does not satisfy the configured schema.",
+            explanation=reason,
         ),),
     )
+
+
+schema_check.checker_version = "2"
 
 
 def simulated_checker(kind: str) -> Checker:

@@ -24,7 +24,7 @@ def evaluate(policy, content, stage=Stage.INPUT):
     ("date", "not-a-date", "2026-10-27"),
     ("date", "2026-02-30", "2026-02-28"),
     ("date-time", "2026-10-27", "2026-10-27T12:30:00Z"),
-    ("time", "25:90:00", "12:30:00"),
+    ("time", "25:90:00Z", "12:30:00Z"),
     ("email", "a@@example.com", "jane@example.com"),
     ("ipv4", "999.2.3.4", "192.0.2.1"),
     ("ipv6", "not-ipv6", "2001:db8::1"),

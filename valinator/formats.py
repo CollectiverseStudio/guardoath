@@ -2,6 +2,7 @@
 
 from email_validator import EmailNotValidError, validate_email
 from jsonschema import FormatChecker
+from rfc3339_validator import validate_rfc3339
 
 SUPPORTED_FORMATS = {"date", "date-time", "time", "ipv4", "ipv6", "uuid", "email"}
 FORMAT_CHECKER = FormatChecker(formats=sorted(SUPPORTED_FORMATS))
@@ -13,6 +14,23 @@ def email_format(value):
         return True
     validate_email(value, check_deliverability=False)
     return True
+
+
+@FORMAT_CHECKER.checks("time")
+def time_format(value):
+    if not isinstance(value, str):
+        return True
+    # Generic FormatChecker otherwise installs the older draft-3 HH:MM:SS rule.
+    # Draft 2020-12 uses RFC3339 full-time, including a timezone offset.
+    return value == value.strip() and validate_rfc3339("2000-01-01T" + value.upper())
+
+
+@FORMAT_CHECKER.checks("date-time")
+def date_time_format(value):
+    if not isinstance(value, str):
+        return True
+    # The dependency's end anchor accepts a final LF unless we exclude padding.
+    return value == value.strip() and validate_rfc3339(value.upper())
 
 
 def validate_schema_formats(schema):
