@@ -2,11 +2,14 @@
 
 import hmac
 import os
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from valinator.checkers import default_checkers
@@ -47,6 +50,19 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         raise ValueError("Credentials and application identifiers must be nonempty")
     api = FastAPI(title="Valinator", version="0.3.0")
     bearer = HTTPBearer(auto_error=False)
+    static_dir = Path(__file__).parent / "static"
+    api.mount("/assets", StaticFiles(directory=static_dir), name="assets")
+
+    @api.get("/", include_in_schema=False)
+    async def index():
+        return RedirectResponse("/dashboard")
+
+    @api.get("/dashboard", include_in_schema=False)
+    async def dashboard():
+        return FileResponse(static_dir / "dashboard.html", headers={
+            "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+            "Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
+        })
 
     @api.exception_handler(RequestValidationError)
     async def validation_error(_request, _exc):
@@ -74,6 +90,10 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     @api.get("/healthz")
     async def health():
         return {"status": "ok", "profile": "local-prototype"}
+
+    @api.get("/v1/applications/current")
+    async def current_application(app_id: Annotated[str, Depends(authenticate)]):
+        return {"application_id": app_id, "policies": service.describe_policies(app_id)}
 
     @api.post("/v1/checks/input", response_model=CheckResponse)
     async def check_input(request: CheckRequest, app_id: Annotated[str, Depends(authenticate)]):

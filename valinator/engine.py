@@ -34,6 +34,16 @@ class Engine:
     def has_policy(self, application_id: str, version: str) -> bool:
         return (application_id, version) in self._policies
 
+    def describe_policies(self, application_id: str) -> list[dict]:
+        """Expose only safe, application-scoped configuration for the dashboard."""
+        return [{
+            "version": policy.version, "mode": policy.mode,
+            "checks": [{"id": rule.checker_id, "required": rule.required,
+                        "available": rule.checker_id in self._checkers,
+                        "simulated": bool(getattr(self._checkers.get(rule.checker_id), "simulated", False))}
+                       for rule in policy.rules],
+        } for (owner, _), policy in self._policies.items() if owner == application_id]
+
     async def check(self, request: CheckRequest, stage: Stage) -> CheckResponse:
         policy = self._policies[(request.application_id, request.policy_version)]
         started = perf_counter()

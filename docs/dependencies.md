@@ -15,6 +15,8 @@ so upgrades are deliberate and tested.
 | pytest | 9.2.0 | https://pypi.org/pypi/pytest/json |
 | actions/checkout | v7.0.1 | https://github.com/actions/checkout/releases |
 | actions/setup-python | v7.1.0 | https://github.com/actions/setup-python/releases |
+| actions/setup-node | v7.1.0 | https://github.com/actions/setup-node/releases |
+| @playwright/test | 1.64.1 | https://registry.npmjs.org/@playwright/test/latest |
 
 Local validation uses the available Python 3.12 runtime. Hosted CI covers Python
 3.11, 3.12, 3.14, and the latest stable 3.15 line. Python 3.15.2 was the latest

@@ -19,6 +19,9 @@ pii = ["presidio-analyzer==2.2.366; python_version < '3.15'"]
 [tool.setuptools.packages.find]
 include = ["valinator*"]
 
+[tool.setuptools.package-data]
+valinator = ["static/*.html", "static/*.css", "static/*.js"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

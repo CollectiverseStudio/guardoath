@@ -39,6 +39,16 @@ Open http://127.0.0.1:8000/docs to use the API explorer. Click **Authorize** and
 enter the generated key. `GET /healthz` is public; checking endpoints require it.
 Without a configured key the checking endpoints return 503.
 
+Open **http://127.0.0.1:8000/dashboard** for the visual playground. Enter your API
+key, select a loaded policy, and supply the user message and proposed AI answer.
+The dashboard calls the same authenticated APIs as an integrating application.
+It holds the preview for findings or incomplete checks and labels simulated or
+skipped coverage. It never generates an AI answer or claims that no findings
+guarantees safety. Changing content clears earlier results.
+
+Your key is held only in tab memory, not browser storage. Check content is not
+saved as history. The dashboard is for local testing and is not a hosted service.
+
 Input example (run in a second shell with the same key configured):
 
 ```bash
@@ -77,6 +87,19 @@ Simulators are rejected in enforce mode unless explicitly enabled for testing.
 ```bash
 pytest -q
 ```
+
+Browser interaction tests use the current stable Playwright release:
+
+```bash
+npm ci
+npx playwright install chromium
+npm run test:browser
+```
+
+Activate the Python environment first. Browser tests start their own local server
+with the PII-only policy, so install `.[test,pii]` on Python 3.11–3.14. To use an
+installed Chrome instead of downloading Chromium, set `PLAYWRIGHT_CHANNEL=chrome`.
+The GitHub dashboard job uses the runner's installed Chrome.
 
 Tests cover application scope, schema checks, observation versus enforcement,
 failure handling, skipped required checks, response privacy, and simulator limits.
