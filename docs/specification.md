@@ -401,3 +401,15 @@ incomplete cases), offline, without accuracy/PHI/compliance certification.
 Eight supported types can be replaced, then all configured checks rerun; sensitive
 keys or schema-invalid replacements withhold content. Exact supported labels,
 examples and limitations are maintained in the user guide and privacy coverage.
+
+
+## Independent dashboard examples (0.17.1)
+
+Input and output editors have separate example catalogs: 19 input and 21 output
+examples, including output-only confidential disclosure and multiple-issue replies.
+Loading an example changes only that stage's content/format, never the other
+stage or shared profile. Input selection invalidates both results; output
+selection preserves the completed input result and invalidates output only.
+Examples make no network calls. Focused samples require explicitly selecting
+the corresponding profile; valid clean examples adapt to JSON/completeness
+profiles so users can prepare a passing input without overwriting the answer.

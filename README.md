@@ -69,11 +69,16 @@ only to `127.0.0.1`; this does not publish a website. Existing resource-limit
 environment overrides remain effective. The launcher explicitly disables the Azure connector, including inherited enable settings.
 No paid models or API calls are used.
 
-After **Connect**, click a sample and **Run input and output checks**:
+After **Connect**, use **Try an input example** in Step 1, then **Run input checks**.
+Use **Try an output example** in Step 3, then **Run output checks**. The two sets
+change only their own data and format; output examples preserve a completed
+input test. Examples never switch the profile. Advanced profiles are required for
+redaction, JSON/business and required-section examples. Use Clean question first
+to prepare a valid input for a focused profile. Example outcomes include:
 
 | Sample | Expected behavior |
 | --- | --- |
-| Clean text | Preview appears after local PII checks |
+| Clean question / Safe reply | Preview appears after the configured local checks pass |
 | Email address | Email finding; answer held |
 | Redaction preview | Separate preview with supported identifiers masked |
 | Missing information | Empty Next steps section flagged; fill it and rerun |
@@ -377,7 +382,7 @@ and [verified dependency versions](docs/dependencies.md).
 
 The local `completeness` checker uses `required_sections` in a trusted policy.
 See `policies/completeness.json`, or select **Missing information** in the
-playground. The example requires an input `Summary:` and output `Summary:` plus
+playground under the explicitly selected `completeness-v1` profile. The example requires an input `Summary:` and output `Summary:` plus
 `Next steps:`. Input findings recommend flagging; output findings recommend
 blocking. Observe mode still allows the request.
 

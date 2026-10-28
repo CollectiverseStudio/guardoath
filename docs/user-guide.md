@@ -1,7 +1,7 @@
 # Valinator user guide
 
 This guide grows with the product. It describes user-facing validation checks,
-examples, expected results, configuration, and boundaries. Version: 0.17.0.
+examples, expected results, configuration, and boundaries. Version: 0.17.1.
 
 A **check** examines an input or proposed AI answer. A **regression case** tests
 whether that check behaves as expected on a saved example. Passing a regression
@@ -69,8 +69,8 @@ responsible for enforcing their decisions and ordering model calls.
 A **policy** is the application's saved bundle of checks, thresholds and actions.
 It remains part of each API request so different applications can have different
 requirements. The selector now lives under **Advanced: application rules and
-focused examples**. General text examples retain the combined profile; redaction,
-required-section and business/schema examples select explicitly focused profiles.
+focused examples**. Example buttons never switch your profile. Select a focused
+profile explicitly for redaction, required-section or business/schema examples.
 The active profile and its coverage remain visible outside the advanced panel.
 
 “All checks” means all implemented checks applicable to that application and
@@ -82,6 +82,41 @@ and accuracy, scope and action-safety checks are not implemented. They are not
 included in the normal profile or represented as passing. Sensitive identifier
 coverage is limited, not comprehensive PHI detection; text-security patterns are
 not a complete prompt-injection detector. Expand each result group for limits.
+
+### Input and output examples are independent
+
+Step 1 has **Try an input example**; Step 3 has **Try an output example**.
+An input button changes only the user message and its format. It clears both
+stages' old results because the conversation input changed. An output button
+changes only the proposed answer and its format, preserves the user message and
+completed input test, and clears the old output result/preview. Neither set
+switches the profile, calls an API or generates a model response. Buttons are
+unavailable while checking, before connection, or when their required profile
+is not active. The button hint names any required profile.
+
+| Examples | Input use case | Output use case / expected result |
+| --- | --- | --- |
+| Clean question / Safe reply | Ordinary question, or a valid request for the active structured/section profile | Safe draft reply; configured checks should complete without findings |
+| Email address, Card number, SSN candidate | Question containing a supported synthetic identifier | Reply exposing a supported synthetic identifier; privacy finding |
+| Phone number, Birth date, Medical record ID, Insurance member ID, Bank account | Question plus an explicitly labeled synthetic form field | Different draft reply with a labeled field; privacy finding |
+| Hidden characters | Question with a zero-width character | Reply with hidden text; text-security finding |
+| Encoded text | Question containing an explicit Base64 note | Reply containing a different Base64 note; encoding review finding even if decoded text is benign |
+| Credential pattern | Question including an inert generated token pattern | Reply including an inert token pattern; secret finding, no credential verification |
+| Quoted password | Configuration-review request with a synthetic literal | Draft answer accidentally includes a different synthetic password literal; secret finding |
+| Confidential term | Request mentioning the fictional PROJECT LANTERN | Draft reply mentioning the same configured confidential project; term finding |
+| Output-only confidential term | No input button; a stage-specific example | Reply mentions the fictional unreleased pricing plan; output-stage term finding |
+| Multiple issues | No input button | Reply includes an email, quoted password and hidden text; findings across all three real local groups |
+| Redaction preview | Synthetic intake values, under `redaction-v1` | Draft reply with synthetic identifiers; separate rechecked redaction preview |
+| Schema error | Invalid structured request, under `business-v1` | Invalid structured answer; schema finding |
+| Business rule error | Request with reversed dates/excess refund, under `business-v1` | Different invalid refund/date values; business findings |
+| Missing information | Required summary absent, under `completeness-v1` | Required next steps empty; completeness finding |
+
+To test several output examples efficiently: choose **Clean question**, run input
+checks once, then choose an output example and run output checks. Choose **Safe
+reply** and rerun output to compare the clean case; the input test need not be
+repeated. For focused JSON/completeness profiles, select the profile first, then
+**Clean question** to prepare a valid input without touching the proposed answer.
+For redaction, explicitly select `redaction-v1` before the Redaction preview button.
 
 ## How an application uses the API
 
@@ -156,10 +191,11 @@ redacted text; your fixture files themselves contain their saved input examples.
 | `secrets-extended-v1` | Same patterns plus quoted assignments, labeled encoding inspection and two fictional confidential-term rules | Same observe behavior; available in the dashboard |
 | `secrets-extended-enforce-v1` | Extended checks | Enforces input flag / output block; included in the batch policy file |
 
-`policies/secrets-batch.json` contains all three. The dashboard's **Quoted
-password**, **Confidential term**, and **Encoded credential** examples select the
-extended observe policy automatically. **Credential pattern** selects the base
-policy. Edit the content and rerun to see findings disappear when corrected.
+`policies/secrets-batch.json` contains all three. The dashboard provides separate
+input/output **Quoted password**, **Confidential term**, **Encoded credential**
+and **Credential pattern** examples. These never change the profile. The normal
+combined conversation profile enables the extended checks; Advanced can select a
+focused profile. Edit the content and rerun to see findings disappear when corrected.
 The group shows whether optional assignment/encoding checks are enabled and how
 many confidential-term rules are active for the current stage.
 
@@ -489,10 +525,11 @@ See [all 100 cases and their examples](privacy-coverage.md). Fixtures are in
 `evals/privacy.json`; profiles in `policies/privacy-batch.json`. Separate API,
 engine and browser tests cover sensitive-key withholding, schema-breaking
 redaction, external-call gating, no-network behavior and value-free reports.
-The dashboard adds Phone number, Birth date, Medical record ID, Insurance member
-ID and Bank account examples. Medical record ID demonstrates the input gate;
-the other four demonstrate output findings. Redaction preview covers all eight
-supported types. No paid/provider call is made.
+The dashboard offers Phone number, Birth date, Medical record ID, Insurance member
+ID and Bank account in both example sets. Input examples demonstrate the input
+gate; output examples demonstrate answer findings. Under `redaction-v1`,
+Redaction preview covers all eight supported types on either stage. No
+paid/provider call is made.
 
 ## Prompt injection and manipulation checks
 

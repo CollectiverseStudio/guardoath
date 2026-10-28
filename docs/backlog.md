@@ -3,6 +3,8 @@
 - [x] Sequential conversation demo: combined general text profile, input gate, separate stage buttons, invalidation tests and guide.
 - [ ] Connect an explicitly configured model provider between the input and output stages.
 
+- [x] Separate input and output example sets: only their own editor/format changes, no implicit profile changes, output examples preserve input results, varied reply fixtures and browser coverage.
+
 ## Milestone 1 — local checking foundation
 
 - [x] Strict input and output contracts.

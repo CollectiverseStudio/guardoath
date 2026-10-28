@@ -5,6 +5,7 @@ const canProceed = r => r && r.evaluation_status === "complete" && !r.simulated 
 function buttons() {
   $("run").disabled = $("run-input").disabled = busy || !application?.policies.length;
   $("run-output").disabled = busy || !application || !canProceed(inputResult);
+  updateSampleButtons();
 }
 function waiting(stage) { const box = $(stage + "-results"); box.replaceChildren();
   const title = document.createElement("h3"); title.textContent = stage === "input" ? "Input checks" : "Output checks";
@@ -48,14 +49,7 @@ function coverage() {
     const tag = document.createElement("span"); tag.textContent = group.name + " · " + state; tag.title = group.limitations; $("coverage").append(tag);
   }
   $("profile-status").textContent = policy ? (policy.version === "conversation-v1" ? "Combined conversation checks are active on both stages." : "Focused example profile: " + policy.version + ". Only its configured checks run.") : "Connect to load the combined conversation profile.";
-  $("schema-sample").disabled = !application?.policies.some(p => p.checks.some(c => c.id === "schema"));
-  $("business-sample").disabled = !application?.policies.some(p => p.version === "business-v1");
-  for (const id of ["phone","birth-date","medical-id","insurance-id","bank-account"]) $(id+"-sample").disabled = !application?.policies.some(p => p.version === "conversation-v1");
-  $("redaction-sample").disabled = !application?.policies.some(p => p.version === "redaction-v1");
-  for (const id of ["hidden-sample", "encoded-sample"]) $(id).disabled = !application?.policies.some(p => p.version === "text-security-v1");
-  $("completeness-sample").disabled = !application?.policies.some(p => p.version === "completeness-v1");
-  for (const id of ["password-sample","confidential-sample","encoded-secret-sample"]) $(id).disabled = !application?.policies.some(p => p.version === "secrets-extended-v1");
-  $("secret-sample").disabled = !application?.policies.some(p => p.version === "secrets-v1");
+  updateSampleButtons();
 }
 $("connect").addEventListener("click", async () => {
   const token = $("api-key").value.trim(); if (!token || busy) return;
@@ -82,26 +76,65 @@ $("disconnect").addEventListener("click", () => {
 $("policy").addEventListener("change", () => { reset(); coverage(); });
 for (const id of ["input-content", "input-format", "api-key"]) $(id).addEventListener("input", () => reset());
 for (const id of ["output-content", "output-format"]) $(id).addEventListener("input", () => reset(true));
-for (const button of document.querySelectorAll("[data-sample]")) button.addEventListener("click", () => {
-  reset();
-  if (["phone","birth-date","medical-id","insurance-id","bank-account","clean","email","card","ssn","secret","password","confidential","encoded-secret","hidden","encoded"].includes(button.dataset.sample) && application?.policies.some(p => p.version === "conversation-v1")) { $("policy").value = "conversation-v1"; coverage(); }
-  $("input-format").value = "text"; $("output-format").value = "text";
-  $("input-content").value = "Can you explain your return policy?";
-  const examples = {clean: "You can return an unused item within 30 days. Please check the store’s policy for details.", email: "Your contact email is jane@example.com.", card: "The test card number is 4111 1111 1111 1111.", ssn:"The example SSN candidate is 219-09-9999."};
-  if (["phone","birth-date","medical-id","insurance-id","bank-account"].includes(button.dataset.sample)) {
-    const values = {phone:"Phone: 202-555-0147", "birth-date":"DOB: 1980-02-29", "medical-id":"MRN: A1234", "insurance-id":"insurance_member_id: M000123", "bank-account":"bank_account_number: 76543210"};
-    if (button.dataset.sample === "medical-id") { $("input-content").value = values[button.dataset.sample]; $("output-content").value = "Input must be reviewed before generating an answer."; }
-    else $("output-content").value = values[button.dataset.sample];
+// Each example owns exactly one editor. Profiles are never switched implicitly.
+const syntheticToken = () => ["ghp", "_", "A".repeat(36)].join("");
+const businessData = (invalid = false, stage = "input") => JSON.stringify({start_date: invalid ? "2026-10-03" : "2026-10-01", end_date: invalid ? "2026-10-01" : "2026-10-03", purchase_amount:100, refund_amount:invalid ? (stage === "output" ? 150 : 125) : (stage === "output" ? 20 : 25)}, null, 2);
+const mixedPrivacy = "Contact jane@example.com. Example SSN: 219-09-9999. Test card: 4111 1111 1111 1111.\nPhone: 202-555-0147\nDOB: 1980-02-29\nMRN: A1234\nmember_id: M000123\nbank_account_number: 76543210";
+const samples = [
+  {id:"clean", label:"Clean question", outputLabel:"Safe reply", content:stage => {
+    if (currentPolicy()?.version === "business-v1") return {format:"json", text:businessData(false,stage)};
+    if (currentPolicy()?.version === "completeness-v1") return {text:stage === "input" ? "Summary: Customer requests return instructions." : "Summary: Return instructions are available.\nNext steps: Contact the store for instructions."};
+    return {text:stage === "input" ? "Can you explain your return policy?" : "You can return an unused item within 30 days. Please check the store’s policy for details."};
+  }},
+  {id:"email", label:"Email address", checker:"pii", input:"Can you help me update my contact email? jane@example.com", output:"Your contact email is jane@example.com."},
+  {id:"card", label:"Card number", checker:"pii", input:"Can you check this synthetic payment example? Card 4111 1111 1111 1111", output:"The test card number is 4111 1111 1111 1111."},
+  {id:"ssn", label:"SSN candidate", checker:"pii", input:"Please review this synthetic support form.\nSSN: 219-09-9999", output:"The example SSN candidate is 219-09-9999."},
+  {id:"phone", label:"Phone number", profiles:["conversation-v1","pii-extended-v1","redaction-v1"], input:"Can you update my contact details?\nPhone: 202-555-0147", output:"Here are the requested contact details.\nPhone: 202-555-0186"},
+  {id:"birth-date", label:"Birth date", profiles:["conversation-v1","pii-extended-v1","redaction-v1"], input:"Please review this synthetic intake form.\nDOB: 1980-02-29", output:"The example profile contains the following birth date.\nDOB: 1990-12-31"},
+  {id:"medical-id", label:"Medical record ID", profiles:["conversation-v1","pii-extended-v1","redaction-v1"], input:"Can you help with this synthetic record?\nMRN: A1234", output:"Here is the medical record identifier from the example.\nMRN: B5678"},
+  {id:"insurance-id", label:"Insurance member ID", profiles:["conversation-v1","pii-extended-v1","redaction-v1"], input:"Please review my synthetic insurance form.\ninsurance_member_id: M000123", output:"The example insurance details include this member ID.\ninsurance_member_id: M000456"},
+  {id:"bank-account", label:"Bank account", profiles:["conversation-v1","pii-extended-v1","redaction-v1"], input:"Can you review this synthetic payment form?\nbank_account_number: 76543210", output:"The example payment details include this account.\nbank_account_number: 87654321"},
+  {id:"redaction", label:"Redaction preview", profiles:["redaction-v1"], input:"Please review these synthetic form values.\n"+mixedPrivacy, output:"The draft answer includes these synthetic identifiers.\n"+mixedPrivacy},
+  {id:"hidden", label:"Hidden characters", checker:"text_security", input:"Please explain this hidden\u200bcharacter.", output:"The requested answer contains a hidden\u200bcharacter."},
+  {id:"encoded", label:"Encoded text", checker:"text_security", input:"Please review this labeled text: base64: SGVsbG8=", output:"The answer includes an encoded note: base64: V29ybGQ="},
+  {id:"completeness", label:"Missing information", profiles:["completeness-v1"], input:"Details: Customer needs help, but the required summary is missing.", output:"Summary: Return instructions are available.\nNext steps:"},
+  {id:"password", label:"Quoted password", profiles:["conversation-v1","secrets-extended-v1"], input:'Can you review this synthetic configuration?\npassword = "synthetic-input!42"', output:'The draft reply accidentally includes a configuration literal.\npassword = "synthetic-example!42"'},
+  {id:"confidential", label:"Confidential term", profiles:["conversation-v1","secrets-extended-v1"], input:"Can you review internal notes about PROJECT LANTERN?", output:"Internal draft about PROJECT LANTERN."},
+  {id:"encoded-secret", label:"Encoded credential", profiles:["conversation-v1","secrets-extended-v1"], content:stage => ({text:(stage === "input" ? "Please inspect this encoded configuration: base64: " : "The draft answer includes an encoded credential: base64: ")+btoa(syntheticToken())})},
+  {id:"secret", label:"Credential pattern", checker:"secrets", content:stage => ({text:(stage === "input" ? "Can you review this synthetic token? " : "Synthetic token pattern for testing only: ")+syntheticToken()})},
+  {id:"schema", label:"Schema error", profiles:["business-v1"], content:stage => ({format:"json", text:stage === "input" ? '{"unexpected_input":"Missing required request fields."}' : '{"unexpected_field":"This does not match the output schema."}'})},
+  {id:"business", label:"Business rule error", profiles:["business-v1"], content:stage => ({format:"json", text:businessData(true,stage)})},
+  {id:"output-confidential", label:"Output-only confidential term", stages:["output"], profiles:["conversation-v1","secrets-extended-v1"], output:"The draft reply reveals our unreleased pricing plan."},
+  {id:"multiple", label:"Multiple issues", stages:["output"], profiles:["conversation-v1"], content:() => ({text:'Your contact email is jane@example.com.\npassword = "synthetic-example!42"\nThe reply also includes hidden\u200btext.'})},
+];
+function sampleAvailable(sample, stage) {
+  const policy = currentPolicy();
+  if (!policy) return false;
+  if (sample.profiles && !sample.profiles.includes(policy.version)) return false;
+  return !sample.checker || policy.checks.some(c => c.id === sample.checker && c.stages.includes(stage));
+}
+function updateSampleButtons() {
+  for (const stage of ["input","output"]) for (const sample of samples) {
+    const button = $(stage+"-"+sample.id+"-sample"); if (!button) continue;
+    button.disabled = busy || !sampleAvailable(sample,stage);
+    button.title = sample.profiles ? "Requires profile: " + sample.profiles.join(", ") + ". Changes only " + stage + " data." : "Changes only " + stage + " data.";
   }
-  else if (button.dataset.sample === "schema") { $("policy").value = application.policies.find(p => p.checks.some(c => c.id === "schema")).version; coverage(); $("input-format").value = "json"; $("output-format").value = "json"; $("input-content").value = JSON.stringify({start_date:'2026-10-01',end_date:'2026-10-03',purchase_amount:100,refund_amount:25}); $("output-content").value = '{"unexpected_field":"This does not match the output schema."}'; }
-  else if (button.dataset.sample === "business") { $("policy").value = "business-v1"; coverage(); $("input-format").value = "json"; $("output-format").value = "json"; $("input-content").value = JSON.stringify({start_date:"2026-10-01",end_date:"2026-10-03",purchase_amount:100,refund_amount:25},null,2); $("output-content").value = JSON.stringify({start_date:"2026-10-03",end_date:"2026-10-01",purchase_amount:100,refund_amount:150},null,2); }
-  else if (button.dataset.sample === "redaction") { $("policy").value = "redaction-v1"; coverage(); $("output-content").value = "Contact jane@example.com. Example SSN: 219-09-9999. Test card: 4111 1111 1111 1111.\nPhone: 202-555-0147\nDOB: 1980-02-29\nMRN: A1234\nmember_id: M000123\nbank_account_number: 76543210"; }
-  else if (["hidden", "encoded"].includes(button.dataset.sample)) { $("policy").value = application?.policies.some(p => p.version === "conversation-v1") ? "conversation-v1" : "text-security-v1"; coverage(); $("input-content").value = button.dataset.sample === "hidden" ? "Please explain this hidden\u200bcharacter." : "Please review this labeled text: base64: SGVsbG8="; $("output-content").value = "This example requires review before processing."; }
-  else if (button.dataset.sample === "completeness") { $("policy").value = "completeness-v1"; coverage(); $("input-content").value = "Summary: Customer requests return instructions."; $("output-content").value = "Summary: Return instructions are available.\nNext steps:"; }
-  else if (["password","confidential","encoded-secret"].includes(button.dataset.sample)) { $("policy").value = application?.policies.some(p => p.version === "conversation-v1") ? "conversation-v1" : "secrets-extended-v1"; coverage(); const token = ["ghp","_","A".repeat(36)].join(""); $("output-content").value = button.dataset.sample === "password" ? 'password = "synthetic-example!42"' : button.dataset.sample === "confidential" ? "Internal draft about PROJECT LANTERN." : "base64: " + btoa(token); }
-  else if (button.dataset.sample === "secret") { $("policy").value = application?.policies.some(p => p.version === "conversation-v1") ? "conversation-v1" : "secrets-v1"; coverage(); $("output-content").value = "Synthetic token pattern for testing only: " + ["ghp", "_", "A".repeat(36)].join(""); }
-  else $("output-content").value = examples[button.dataset.sample];
-});
+}
+for (const stage of ["input","output"]) {
+  const title = document.createElement("span"); title.textContent = "Try an " + stage + " example"; $(stage+"-samples").append(title);
+  for (const sample of samples.filter(s => !s.stages || s.stages.includes(stage))) {
+    const button = document.createElement("button"); button.className = "chip"; button.id = stage+"-"+sample.id+"-sample";
+    button.dataset.sample = sample.id; button.dataset.stage = stage; button.textContent = stage === "output" ? (sample.outputLabel || sample.label) : sample.label; button.disabled = true;
+    button.addEventListener("click", () => {
+      if (busy || !sampleAvailable(sample,stage)) return;
+      const example = sample.content ? sample.content(stage) : {text:sample[stage]};
+      reset(stage === "output");
+      $(stage+"-format").value = example.format || "text";
+      $(stage+"-content").value = example.text;
+    });
+    $(stage+"-samples").append(button);
+  }
+}
 function render(stage, result) {
   const box = $(stage + "-results"); box.replaceChildren(); const title = document.createElement("h3"); title.textContent = stage === "input" ? "Input checks" : "Output checks"; box.append(title);
   const summary = document.createElement("p"); summary.textContent = "Recommended: " + result.recommended_action + " · Effective: " + result.effective_action + " · " + result.total_latency_ms.toFixed(1) + " ms" + (result.cost_basis === "provider_unpriced" ? " · Provider cost not estimated" : ""); box.append(summary);

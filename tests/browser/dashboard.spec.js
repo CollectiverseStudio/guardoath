@@ -7,6 +7,11 @@ async function connect(page) {
   await page.locator("#advanced > summary").click();
   await page.locator(".batch-run > summary").click();
 }
+async function profile(page, version) {
+  await page.locator("#policy").selectOption(version);
+  await page.locator("#input-clean-sample").click();
+  await page.locator("#output-clean-sample").click();
+}
 async function run(page) {
   await page.locator("#run").click();
   await expect(page.locator("#result-status")).not.toHaveText("Checking…");
@@ -18,7 +23,7 @@ test("clean content shows the answer after real local checks", async ({ page }) 
   await expect(page.locator("#answer")).toContainText("unused item");
 });
 test("output email finding holds the answer", async ({ page }) => {
-  await connect(page); await page.getByRole("button", {name:"Email address", exact:true}).click(); await run(page);
+  await connect(page); await page.locator("#output-email-sample").click(); await run(page);
   await expect(page.locator("#output-results")).toContainText("Potential email address");
   await expect(page.locator("#answer")).toBeHidden();
   await expect(page.locator("#answer-status")).toHaveText("Held for review");
@@ -82,8 +87,8 @@ test("grouped coverage does not mark planned checks as passed", async ({ page })
 });
 
 test("business policy reports cross-field failures and holds the preview", async ({ page }) => {
-  await connect(page); await page.locator("#policy").selectOption("business-v1");
-  await page.getByRole("button", {name:"Business rule error", exact:true}).click(); await run(page);
+  await connect(page); await profile(page,"business-v1");
+  await page.locator("#output-business-sample").click(); await run(page);
   await expect(page.locator('#input-results [data-group="business"] summary')).toContainText("Passed");
   await expect(page.locator('#output-results [data-group="business"] summary')).toContainText("Findings");
   await expect(page.locator("#output-results")).toContainText("date_order");
@@ -92,8 +97,8 @@ test("business policy reports cross-field failures and holds the preview", async
 });
 
 test("invalid date formats appear in structural findings", async ({ page }) => {
-  await connect(page); await page.locator("#policy").selectOption("business-v1");
-  await page.getByRole("button", {name:"Business rule error", exact:true}).click();
+  await connect(page); await profile(page,"business-v1");
+  await page.locator("#output-business-sample").click();
   await page.locator("#output-content").fill(JSON.stringify({start_date:"2026-02-30",end_date:"2026-10-03",purchase_amount:100,refund_amount:25}));
   await run(page);
   await expect(page.locator('#output-results [data-group="structure"] summary')).toContainText("Findings");
@@ -101,13 +106,13 @@ test("invalid date formats appear in structural findings", async ({ page }) => {
 });
 
 test("SSN candidates appear under sensitive data", async ({ page }) => {
-  await connect(page); await page.getByRole("button", {name:"SSN candidate",exact:true}).click(); await run(page);
+  await connect(page); await page.locator("#output-ssn-sample").click(); await run(page);
   await expect(page.locator('#output-results [data-group="sensitive_data"]')).toContainText("Social Security number");
   await expect(page.locator("#answer")).toBeHidden();
 });
 
 test("redaction shows a rechecked preview without returning detected values", async ({ page }) => {
-  await connect(page); await page.getByRole("button", {name:"Redaction preview",exact:true}).click(); await run(page);
+  await connect(page); await profile(page,"redaction-v1"); await page.locator("#output-redaction-sample").click(); await run(page);
   const preview = page.locator('#output-results .redacted-content');
   await expect(preview).toBeVisible();
   await expect(preview).toContainText("[REDACTED_EMAIL_ADDRESS]");
@@ -119,7 +124,7 @@ test("redaction shows a rechecked preview without returning detected values", as
 });
 
 test("redacted preview uses safe text rendering", async ({ page }) => {
-  await connect(page); await page.getByRole("button", {name:"Redaction preview",exact:true}).click();
+  await connect(page); await profile(page,"redaction-v1"); await page.locator("#output-redaction-sample").click();
   await page.locator("#output-content").fill('<img src=x onerror="window.injected=true"> jane@example.com'); await run(page);
   await expect(page.locator('#output-results .redacted-content')).toContainText("<img");
   await expect(page.locator('#output-results .redacted-content img')).toHaveCount(0);
@@ -127,7 +132,7 @@ test("redacted preview uses safe text rendering", async ({ page }) => {
 });
 
 test("credential example shows a real secret finding and holds the answer", async ({ page }) => {
-  await connect(page); await page.getByRole("button", {name:"Credential pattern",exact:true}).click(); await run(page);
+  await connect(page); await page.locator("#output-secret-sample").click(); await run(page);
   await expect(page.locator('#output-results [data-group="secrets"] summary')).toContainText("Findings");
   await expect(page.locator('#output-results [data-group="secrets"]')).toContainText("GitHub token pattern");
   await expect(page.locator("#output-results")).toContainText("Recommended: block");
@@ -142,14 +147,14 @@ test("clean text passes the selected secret patterns only", async ({ page }) => 
 });
 
 test("missing required output information holds the answer", async ({ page }) => {
-  await connect(page); await page.locator("#completeness-sample").click(); await run(page);
+  await connect(page); await profile(page,"completeness-v1"); await page.locator("#output-completeness-sample").click(); await run(page);
   await expect(page.locator('#input-results [data-group="business"] summary')).toContainText("Passed");
   await expect(page.locator('#output-results [data-group="business"] summary')).toContainText("Findings");
   await expect(page.locator("#output-results")).toContainText("next_steps");
   await expect(page.locator("#answer")).toBeHidden();
 });
 test("adding the required information releases the preview", async ({ page }) => {
-  await connect(page); await page.locator("#completeness-sample").click();
+  await connect(page); await profile(page,"completeness-v1"); await page.locator("#output-completeness-sample").click();
   await page.locator("#output-content").fill("Summary: Return instructions are available.\nNext steps: Contact the store for instructions.");
   await run(page);
   await expect(page.locator("#result-status")).toHaveText("No findings");
@@ -158,7 +163,7 @@ test("adding the required information releases the preview", async ({ page }) =>
 });
 
 test("hidden characters hold the sequence before output", async ({ page }) => {
-  await connect(page); await page.locator("#hidden-sample").click(); await run(page);
+  await connect(page); await page.locator("#input-hidden-sample").click(); await run(page);
   await expect(page.locator('#input-results [data-group="prompt_security"] summary')).toContainText("Findings");
   await expect(page.locator("#output-results")).toContainText("Waiting for");
   await expect(page.locator("#run-output")).toBeDisabled();
@@ -166,7 +171,7 @@ test("hidden characters hold the sequence before output", async ({ page }) => {
   await expect(page.locator("#answer")).toBeHidden();
 });
 test("labeled encoded text is held for review without exposing decoded text", async ({ page }) => {
-  await connect(page); await page.locator("#encoded-sample").click(); await run(page);
+  await connect(page); await page.locator("#input-encoded-sample").click(); await run(page);
   await expect(page.locator("#input-results")).toContainText("One layer was decoded locally");
   await expect(page.locator("#input-results")).not.toContainText("Hello");
   await expect(page.locator("#answer")).toBeHidden();
@@ -266,7 +271,7 @@ test("baseline comparison appears in the offline evaluation report", async ({ pa
   expect(requests).toEqual([]);
 });
 
-for (const [id,rule] of [["password-sample","quoted credential assignment"],["confidential-sample","configured confidential-term rule"],["encoded-secret-sample","GitHub token pattern"]]) {
+for (const [id,rule] of [["output-password-sample","quoted credential assignment"],["output-confidential-sample","configured confidential-term rule"],["output-encoded-secret-sample","GitHub token pattern"]]) {
   test("secrets extended example " + id + " holds the output", async ({ page }) => {
     await connect(page); await page.locator("#"+id).click(); await run(page);
     await expect(page.locator("#policy")).toHaveValue("conversation-v1");
@@ -278,7 +283,7 @@ for (const [id,rule] of [["password-sample","quoted credential assignment"],["co
   });
 }
 test("correcting an extended secret example releases the preview", async ({ page }) => {
-  await connect(page); await page.locator("#password-sample").click();
+  await connect(page); await page.locator("#output-password-sample").click();
   await page.locator("#output-content").fill("No credentials are included."); await run(page);
   await expect(page.locator("#answer")).toBeVisible();
   await expect(page.locator('#output-results [data-group="secrets"]')).toContainText("Quoted assignments: enabled");
@@ -353,7 +358,7 @@ test("failed input never requests output",async({page})=>{
 
 for (const [id,rule] of [["phone","phone number"],["birth-date","birth date"],["insurance-id","health-plan member"],["bank-account","bank account"]]) {
   test("combined privacy output example " + id,async({page})=>{
-    await connect(page); await page.locator('#'+id+'-sample').click(); await run(page);
+    await connect(page); await page.locator('#output-'+id+'-sample').click(); await run(page);
     await expect(page.locator('#policy')).toHaveValue('conversation-v1');
     await expect(page.locator('#output-results [data-group="sensitive_data"] summary')).toContainText('Findings');
     await expect(page.locator('#output-results')).toContainText(rule);
@@ -361,14 +366,14 @@ for (const [id,rule] of [["phone","phone number"],["birth-date","birth date"],["
   });
 }
 test("medical record example holds the input before output",async({page})=>{
-  await connect(page); await page.locator('#medical-id-sample').click(); await run(page);
+  await connect(page); await page.locator('#input-medical-id-sample').click(); await run(page);
   await expect(page.locator('#input-results')).toContainText('medical record identifier');
   await expect(page.locator('#input-results')).not.toContainText('A1234');
   await expect(page.locator('#run-output')).toBeDisabled();
   await expect(page.locator('#output-results')).toContainText('Waiting for');
 });
 test("extended privacy redaction shows only rechecked replacements",async({page})=>{
-  await connect(page); await page.locator('#redaction-sample').click(); await run(page);
+  await connect(page); await profile(page,'redaction-v1'); await page.locator('#output-redaction-sample').click(); await run(page);
   const result=page.locator('#output-results .redacted-content');
   for(const entity of ['PHONE_NUMBER','DATE_OF_BIRTH','MEDICAL_RECORD_NUMBER','HEALTH_PLAN_ID','BANK_ACCOUNT'])
     await expect(result).toContainText('[REDACTED_'+entity+']');
@@ -385,4 +390,70 @@ test("privacy batch report distinguishes incomplete cases from matched expectati
   await expect(page.locator('body')).toContainText('Incomplete evaluations: 12');
   await expect(page.locator('tbody tr')).toHaveCount(100);
   for(const value of ['jane@example.com','1980-02-29','A1234']) await expect(page.locator('body')).not.toContainText(value);
+});
+
+for (const stage of ["input","output"]) {
+  test(stage + " examples change only their own data and format",async({page})=>{
+    await connect(page); const other=stage==='input'?'output':'input'; const seen=new Set(); let checks=0;
+    page.on('request',r=>{if(r.url().includes('/v1/checks/')) checks++;});
+    for(const version of ['conversation-v1','redaction-v1','business-v1','completeness-v1']) {
+      await page.locator('#policy').selectOption(version);
+      const ids=await page.locator('#'+stage+'-samples button:enabled').evaluateAll(nodes=>nodes.map(n=>n.id));
+      for(const id of ids) {
+        if(seen.has(id)) continue; seen.add(id);
+        await page.locator('#'+other+'-content').fill('{"untouched":"'+id+'"}');
+        await page.locator('#'+other+'-format').selectOption('json');
+        const untouched=await page.locator('#'+other+'-content').inputValue();
+        await page.locator('#'+stage+'-content').fill('Replace this '+stage+' value.');
+        await page.locator('#'+id).click();
+        await expect(page.locator('#'+stage+'-content')).not.toHaveValue('Replace this '+stage+' value.');
+        await expect(page.locator('#'+other+'-content')).toHaveValue(untouched);
+        await expect(page.locator('#'+other+'-format')).toHaveValue('json');
+        await expect(page.locator('#policy')).toHaveValue(version);
+      }
+    }
+    expect(seen.size).toBe(stage==='input'?19:21);
+    expect(checks).toBe(0);
+  });
+}
+test("output examples preserve the input pass and can be checked independently",async({page})=>{
+  await connect(page); const calls=[];
+  page.on('request',r=>{if(r.url().includes('/v1/checks/')) calls.push(r.url().split('/').pop());});
+  await page.locator('#run-input').click(); await expect(page.locator('#run-output')).toBeEnabled();
+  const input=await page.locator('#input-content').inputValue();
+  const findings=await page.locator('#input-results').textContent();
+  await page.locator('#output-email-sample').click();
+  await expect(page.locator('#input-content')).toHaveValue(input);
+  await expect(page.locator('#input-results')).toHaveText(findings);
+  await expect(page.locator('#run-output')).toBeEnabled();
+  await page.locator('#run-output').click(); await expect(page.locator('#answer-status')).toHaveText('Held for review');
+  await page.locator('#output-clean-sample').click();
+  await expect(page.locator('#output-results')).toContainText('Waiting for');
+  await expect(page.locator('#run-output')).toBeEnabled();
+  await page.locator('#run-output').click(); await expect(page.locator('#answer')).toBeVisible();
+  expect(calls).toEqual(['input','output','output']);
+});
+test("input examples invalidate both test results while preserving the proposed answer",async({page})=>{
+  await connect(page); await run(page); const answer=await page.locator('#output-content').inputValue();
+  await page.locator('#input-email-sample').click();
+  await expect(page.locator('#input-content')).toHaveValue(/Can you help.*jane@example.com/);
+  await expect(page.locator('#output-content')).toHaveValue(answer);
+  await expect(page.locator('#input-results')).toContainText('Waiting for');
+  await expect(page.locator('#output-results')).toContainText('Waiting for');
+  await expect(page.locator('#run-output')).toBeDisabled(); await expect(page.locator('#answer')).toBeHidden();
+});
+test("output-only confidential example flags the answer after the same phrase passes input",async({page})=>{
+  await connect(page);
+  await page.locator('#input-content').fill('Can you explain the unreleased pricing plan?');
+  await page.locator('#run-input').click(); await expect(page.locator('#run-output')).toBeEnabled();
+  await page.locator('#output-output-confidential-sample').click();
+  await page.locator('#run-output').click();
+  await expect(page.locator('#output-results [data-group="secrets"] summary')).toContainText('Findings');
+  await expect(page.locator('#answer')).toBeHidden();
+});
+test("multiple-issue answer exercises all three real local groups",async({page})=>{
+  await connect(page); await page.locator('#output-multiple-sample').click(); await run(page);
+  for(const group of ['sensitive_data','secrets','prompt_security'])
+    await expect(page.locator('#output-results [data-group="'+group+'"] summary')).toContainText('Findings');
+  await expect(page.locator('#answer')).toBeHidden();
 });
