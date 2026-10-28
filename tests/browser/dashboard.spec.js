@@ -229,3 +229,19 @@ test("a withheld external check explains its local gate", async ({ page }) => {
   await expect(page.locator("#input-results")).toContainText("External check withheld: configured local checks must all pass");
   await expect(page.locator("#answer")).toBeHidden();
 });
+
+test("standalone regression report shows assertions separately from evaluations", async ({ page }, testInfo) => {
+  const { execFileSync } = require("node:child_process");
+  const { pathToFileURL } = require("node:url");
+  const reportPath = testInfo.outputPath("regression-report.html");
+  execFileSync("python", ["-m","valinator.evaluate","--pii","--html",reportPath], {stdio:"pipe"});
+  const networkRequests = [];
+  page.on("request", request => { if (/^https?:/.test(request.url())) networkRequests.push(request.url()); });
+  await page.goto(pathToFileURL(reportPath).href);
+  await expect(page.getByRole("heading",{name:"Valinator regression report"})).toBeVisible();
+  await expect(page.locator("body")).toContainText("30 of 30 expectations matched");
+  await expect(page.locator("body")).toContainText("Incomplete evaluations: 2");
+  await expect(page.locator("body")).not.toContainText("jane@example.com");
+  await expect(page.locator("tbody tr")).toHaveCount(30);
+  expect(networkRequests).toEqual([]);
+});
