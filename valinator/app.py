@@ -18,6 +18,7 @@ from valinator.engine import Engine
 from valinator.models import Action, CheckRequest, CheckResponse, Policy, Rule, Stage
 from valinator.ingress import JsonIngressLimits
 from valinator.groups import GROUPS
+from valinator.budgets import ResourceLimits, RequestBudgets, RequestCapacity
 
 
 def demo_engine(enable_pii: bool = False) -> Engine:
@@ -34,7 +35,8 @@ def demo_engine(enable_pii: bool = False) -> Engine:
     )], default_checkers(enable_pii=enable_pii))
 
 
-def create_app(engine: Engine | None = None, credentials: dict[str, str] | None = None) -> FastAPI:
+def create_app(engine: Engine | None = None, credentials: dict[str, str] | None = None,
+               limits: ResourceLimits | None = None) -> FastAPI:
     policy_file = os.getenv("VALINATOR_POLICY_FILE")
     if engine is not None:
         service = engine
@@ -50,8 +52,11 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     bindings = dict(credentials) if credentials is not None else ({key: "demo"} if key else {})
     if any(not token or not app_id for token, app_id in bindings.items()):
         raise ValueError("Credentials and application identifiers must be nonempty")
-    api = FastAPI(title="Valinator", version="0.8.0")
+    resource_limits = limits if limits is not None else ResourceLimits.from_environment()
+    budgets = RequestBudgets(resource_limits, set(bindings.values()))
+    api = FastAPI(title="Valinator", version="0.9.0")
     api.add_middleware(JsonIngressLimits)
+    api.add_middleware(RequestCapacity, budgets=budgets)
     bearer = HTTPBearer(auto_error=False)
     static_dir = Path(__file__).parent / "static"
     api.mount("/assets", StaticFiles(directory=static_dir), name="assets")
@@ -88,7 +93,8 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             raise HTTPException(403, "Credential does not authorize this application")
         if not service.has_policy(application_id, request.policy_version):
             raise HTTPException(404, "Policy version not found")
-        return await service.check(request, stage)
+        with budgets.check(application_id):
+            return await service.check(request, stage)
 
     @api.get("/healthz")
     async def health():
@@ -97,6 +103,7 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     @api.get("/v1/applications/current")
     async def current_application(app_id: Annotated[str, Depends(authenticate)]):
         return {"application_id": app_id, "policies": service.describe_policies(app_id),
+                "resource_limits": {"scope": "server_process", **resource_limits.model_dump()},
                 "groups": [{"group_id": gid, "name": name, "checker_ids": ids, "limitations": limits}
                            for gid, name, ids, limits in GROUPS]}
 

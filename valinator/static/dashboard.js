@@ -19,6 +19,10 @@ async function api(path, body, token = key) {
   const response = await fetch(path, {method: body ? "POST" : "GET", cache: "no-store",
     headers: {"Authorization": "Bearer " + token, ...(body ? {"Content-Type": "application/json"} : {})},
     ...(body ? {body: JSON.stringify(body)} : {})});
+  if (!response.ok && [429, 503].includes(response.status) && response.headers.has("Retry-After")) {
+    const seconds = Number(response.headers.get("Retry-After"));
+    throw new Error((response.status === 429 ? "Application limit reached." : "Service capacity reached.") + (Number.isSafeInteger(seconds) && seconds > 0 ? " Retry in " + seconds + (seconds === 1 ? " second." : " seconds.") : " Try again shortly."));
+  }
   if (!response.ok) throw new Error(response.status === 401 ? "The API key was not accepted." : response.status === 422 ? "Check the required fields, content length, and selected format." : "The check could not be completed (HTTP " + response.status + ").");
   return response.json();
 }
@@ -40,17 +44,19 @@ $("connect").addEventListener("click", async () => {
   const token = $("api-key").value.trim(); if (!token || busy) return;
   reset(); const attempt = revision; $("connect").disabled = true;
   key = ""; application = null; $("run").disabled = true; $("policy").disabled = true;
-  $("coverage").replaceChildren(); $("disconnect").disabled = true;
+  $("coverage").replaceChildren(); $("resource-limits").textContent = ""; $("disconnect").disabled = true;
   try { const data = await api("/v1/applications/current", null, token); if (attempt !== revision) return;
     key = token; application = data; $("api-key").value = ""; $("policy").replaceChildren();
     for (const policy of data.policies) { const option = document.createElement("option"); option.value = policy.version; option.textContent = policy.version + " · " + policy.mode + " mode"; $("policy").append(option); }
     $("connection-status").textContent = "Connected to " + data.application_id + ". " + data.policies.length + " policy available.";
+    const limits = data.resource_limits;
+    $("resource-limits").textContent = limits ? "Per server process: " + limits.checks_per_minute + " checks/minute per application · burst " + limits.burst + " · " + limits.application_concurrency + " concurrent checks per application. Each playground run uses two checks." : "";
     $("policy").disabled = false; $("disconnect").disabled = false; $("run").disabled = !data.policies.length; coverage();
   } catch (error) { if (attempt === revision) $("connection-status").textContent = error.message || "Connection failed."; }
   finally { $("connect").disabled = false; }
 });
 $("disconnect").addEventListener("click", () => {
-  key = ""; application = null; $("api-key").value = ""; reset(); $("coverage").replaceChildren();
+  key = ""; application = null; $("api-key").value = ""; $("resource-limits").textContent = ""; reset(); $("coverage").replaceChildren();
   $("policy").replaceChildren(); $("policy").disabled = true; $("run").disabled = true; $("disconnect").disabled = true;
   $("connection-status").textContent = "Disconnected. Key removed from this tab’s memory.";
 });

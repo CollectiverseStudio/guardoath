@@ -25,7 +25,8 @@
 - [x] Add configurable labeled-text completeness rules, stage-specific findings, and dashboard examples.
 - [x] Add bounded hidden/control-character and explicit Base64/hex review signals with dashboard examples.
 - [ ] Integrate and calibrate a real semantic prompt-injection detector; evaluate encoded PII/secrets and additional Unicode coverage.
-- [ ] Add per-application rate limits and deployment-wide request/concurrency budgets.
+- [x] Add per-application token-bucket and concurrent-check limits plus process-level check/ingress budgets and retry guidance.
+- [ ] Add shared multi-worker/multi-server quotas, application-specific plans, and worker CPU/job budgets.
 - [x] Build a local playground with input/output findings, held answer previews, and prominent simulation labels.
 
 ## Milestone 3 — first live integration

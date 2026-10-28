@@ -6,6 +6,6 @@ module.exports = defineConfig({
   webServer: {
     command: "python -m uvicorn valinator.app:app --host 127.0.0.1 --port 8777 --no-access-log",
     url: "http://127.0.0.1:8777/healthz", timeout: 60000,
-    env: { VALINATOR_API_KEY: "playwright-test-key", VALINATOR_ENABLE_PII: "1", VALINATOR_POLICY_FILE: "policies/playground.json" },
+    env: { VALINATOR_CHECKS_PER_MINUTE: "60000", VALINATOR_BURST: "1000", VALINATOR_API_KEY: "playwright-test-key", VALINATOR_ENABLE_PII: "1", VALINATOR_POLICY_FILE: "policies/playground.json" },
   },
 });
