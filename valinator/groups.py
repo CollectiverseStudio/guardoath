@@ -5,7 +5,7 @@ from valinator.models import GroupResult
 GROUPS = (
     ("sensitive_data", "Regulated and sensitive data", ("pii",), "Email, credit-card, and selected U.S. SSN candidates only. Redaction is policy-controlled. PHI, names, addresses, and other identifiers are not assessed."),
     ("secrets", "Secrets and confidential information", ("secrets",), "Selected AWS, GitHub, OpenAI, Stripe, JWT, and private-key patterns only. Credentials are not verified. Generic passwords and proprietary documents are not classified or redacted."),
-    ("prompt_security", "Prompt injection and manipulation", (), "No real prompt-injection detector is implemented."),
+    ("prompt_security", "Prompt injection and manipulation", ("text_security",), "Selected hidden/control characters and explicitly labeled Base64/hex text only. No semantic prompt-injection, jailbreak, multi-turn, or malicious-intent detector is implemented. Content is not sanitized."),
     ("harmful_content", "Harmful content and abuse", ("safety",), "Safety checks are synthetic test doubles, not content detectors."),
     ("structure", "Structure and data validity", ("schema",), "Configured JSON Schema and supported formats only; no guarantee of factual correctness."),
     ("scope", "Scope and intent", (), "Task scope and relevance are not assessed."),

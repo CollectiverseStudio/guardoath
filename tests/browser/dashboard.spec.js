@@ -154,3 +154,19 @@ test("adding the required information releases the preview", async ({ page }) =>
   await expect(page.locator("#answer")).toBeVisible();
   await expect(page.locator('#output-results [data-group="business"]')).toContainText("No assessment of truth");
 });
+
+test("hidden characters flag the input while output passes", async ({ page }) => {
+  await connect(page); await page.locator("#hidden-sample").click(); await run(page);
+  await expect(page.locator('#input-results [data-group="prompt_security"] summary')).toContainText("Findings");
+  await expect(page.locator('#output-results [data-group="prompt_security"] summary')).toContainText("Passed");
+  await expect(page.locator("#input-results")).toContainText("invisible, bidirectional");
+  await expect(page.locator("#answer")).toBeHidden();
+});
+test("labeled encoded text is held for review without exposing decoded text", async ({ page }) => {
+  await connect(page); await page.locator("#encoded-sample").click(); await run(page);
+  await expect(page.locator("#input-results")).toContainText("One layer was decoded locally");
+  await expect(page.locator("#input-results")).not.toContainText("Hello");
+  await expect(page.locator("#answer")).toBeHidden();
+  await page.locator("#input-content").fill("Explain your return instructions."); await run(page);
+  await expect(page.locator("#answer")).toBeVisible();
+});

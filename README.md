@@ -320,3 +320,35 @@ labels can satisfy it. It does not assess legal clauses, symptoms, accuracy,
 intent, bias, or semantic completeness. Combine it with other checks and trusted
 review where those judgments matter. No external service or new dependency is
 used.
+
+### Hidden characters and labeled encodings
+
+The opt-in local `text_security` checker flags selected invisible, bidirectional,
+and control characters, plus explicit `base64: TOKEN` or `hex: TOKEN` markers.
+See `policies/text-security.json`, or try **Hidden characters** and **Encoded
+text** in the dashboard. Both input and output recommend flagging in the example
+policy. These are review signals, including for benign encoded text, not proof of
+an attack. Regular prose, unlabeled Base64-looking strings, normal newlines/tabs,
+and zero-width joiners/non-joiners are not flagged by themselves.
+
+Encoding markers are case-insensitive and tokens end at whitespace. Base64 must
+use the standard alphabet and valid padding; hex must contain complete byte
+pairs. Exactly one layer is decoded as UTF-8 and inspected for the same selected
+controls. Malformed, empty, URL-safe-only, or non-UTF-8 payloads are flagged for
+review. Decoded text is never returned or substituted for the canonical content.
+Other checkers still inspect the original content: this feature does not detect
+encoded secrets/PII, semantic instructions, arbitrary encodings, homoglyphs,
+Unicode tags, multi-turn attacks, or all invisible Unicode characters. Legitimate
+bidirectional controls and soft hyphens can produce review findings.
+
+The scan accepts at most 16 labeled tokens, 4,096 characters in one token, and
+8,192 token characters across the request. Exceeding any budget returns an error
+and a required check becomes incomplete, applying the policy's failure action.
+For JSON, bounded parsing happens first; decoded string values and keys share the
+same budgets. `request_context` is not scanned. Findings contain categories only,
+with no raw or decoded content. No network, model, dependency, or sanitization is
+introduced.
+
+Design reference: [OWASP LLM Prompt Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html).
+A passed result means only that these narrow signals were not found; it does not
+establish that a prompt is safe. A semantic injection detector remains planned.

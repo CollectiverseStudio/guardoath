@@ -23,6 +23,8 @@
 - [x] Enforce supported schema formats and declarative numeric/date comparisons.
 - [x] Add stage-specific actions and ten shared input/output coverage groups.
 - [x] Add configurable labeled-text completeness rules, stage-specific findings, and dashboard examples.
+- [x] Add bounded hidden/control-character and explicit Base64/hex review signals with dashboard examples.
+- [ ] Integrate and calibrate a real semantic prompt-injection detector; evaluate encoded PII/secrets and additional Unicode coverage.
 - [ ] Add per-application rate limits and deployment-wide request/concurrency budgets.
 - [x] Build a local playground with input/output findings, held answer previews, and prominent simulation labels.
 
