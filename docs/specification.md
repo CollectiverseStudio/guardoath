@@ -138,3 +138,25 @@ Markdown, files, claims, consent, or medical/legal sufficiency. Labels within
 quoted text are still literal labels. API findings contain rule identifiers and
 generic explanations only. The local dashboard includes failing and editable
 passing examples through the production check endpoints.
+
+## Bounded text obfuscation signals (implemented)
+
+The opt-in `text_security` adapter is the first limited checker in the Prompt
+injection and manipulation group. It identifies selected hidden/control code
+points in plain text and parsed JSON keys/string values. It excludes ZWJ/ZWNJ to
+preserve common script/emoji usage. It also parses explicit case-insensitive
+`base64:`/`hex:` whitespace-delimited tokens; standard Base64 or byte-pair hex
+must decode as UTF-8. It flags encoded content even when benign and separately
+notes selected controls inside decoded text. It never interprets, returns,
+sanitizes, or recursively decodes that text, nor sends it to other adapters.
+
+Per-request budgets: 16 tokens, 4,096 characters per token, 8,192 total encoded
+token characters. Limits apply across all JSON units. Budget exhaustion or invalid
+canonical JSON returns error, not passed. The required-check failure contract and
+stage-specific policy actions apply normally. Findings are generic categories
+without submitted or decoded values; `request_context` is outside coverage.
+
+No semantic injection/jailbreak, encoded PII/secrets, arbitrary encodings,
+homoglyph, Unicode-tag, image, or multi-turn detection is claimed. Signals can be
+legitimate. The group limitations and dashboard examples expose this explicitly.
+The implementation uses only existing Python standard-library functionality.

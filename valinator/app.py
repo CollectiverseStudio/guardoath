@@ -50,7 +50,7 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     bindings = dict(credentials) if credentials is not None else ({key: "demo"} if key else {})
     if any(not token or not app_id for token, app_id in bindings.items()):
         raise ValueError("Credentials and application identifiers must be nonempty")
-    api = FastAPI(title="Valinator", version="0.7.0")
+    api = FastAPI(title="Valinator", version="0.8.0")
     api.add_middleware(JsonIngressLimits)
     bearer = HTTPBearer(auto_error=False)
     static_dir = Path(__file__).parent / "static"
