@@ -12,9 +12,9 @@
 
 ## Milestone 2 — usable policy configuration and local detectors
 
-- [ ] Define a versioned policy file format and load validated configuration.
+- [x] Define a versioned policy file format and load validated configuration.
 - [ ] Add a local personal information adapter; review dependencies and model licenses.
-- [ ] Separate text-only and structured-content contracts to prevent mismatched payloads.
+- [x] Use a single canonical content value with explicit text/JSON format to prevent mismatched payloads.
 - [ ] Add ingress byte limits, explicit request deadlines, and per-application rate limits.
 - [ ] Build a small local review/playground interface with prominent simulation labels.
 

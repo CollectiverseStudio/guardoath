@@ -41,13 +41,18 @@ Input example (run in a second shell with the same key configured):
 curl http://127.0.0.1:8000/v1/checks/input \
   -H "Authorization: Bearer $VALINATOR_API_KEY" \
   -H 'Content-Type: application/json' \
-  -d '{"application_id":"demo","policy_version":"support-v1","content":"Hello","payload":{"message":"Hello"}}'
+  -d '{"application_id":"demo","policy_version":"support-v1","content":"{\"message\":\"Hello\"}","content_format":"json"}'
 ```
 
-For `/v1/checks/output`, use `payload: {"answer": "Your response"}`. `content`
-is the text for contextual checks; `payload` is the parsed structured data for
-schema validation. The caller is responsible for supplying corresponding values;
-this prototype does not establish that they describe the same response.
+Use `content_format: "json"` to validate JSON encoded in `content`. Every checker
+receives that same content; a separate `payload` field is rejected. For output,
+the example policy expects the JSON object `{"answer": "Your response"}`.
+Duplicate object keys, malformed JSON, and nonfinite numbers are flagged.
+
+For plain text, use `content_format: "text"` (the default). The example policy
+reports its schema check as skipped because it is optional. A policy requiring
+schema validation reports an incomplete assessment if submitted content is text.
+This is a breaking contract change from the initial prototype.
 
 Try these exact content values to exercise the simulators:
 
@@ -74,7 +79,19 @@ failure handling, skipped required checks, response privacy, and simulator limit
 
 ## Configuration and boundaries
 
-The initial policy is an immutable startup snapshot in `demo_engine()`.
+The initial policy is an immutable startup snapshot in `demo_engine()`. To use
+the included example policy file instead, set this before starting the server:
+
+```bash
+export VALINATOR_POLICY_FILE=policies/support.json
+```
+
+The JSON file requires `format_version: "1"` and one or more policies. Files are
+limited to 1 MiB, schemas are validated at startup, and references outside the
+local schema are rejected. Duplicate application/version pairs fail startup.
+Policy files are administrator-controlled and are not accepted from API callers.
+The environment API key still binds to `demo`; custom application credentials
+are supplied through `create_app()` until a credential store is implemented.
 Requests cannot change enforcement mode, supply a policy, or bypass required
 checks. `create_app()` accepts an injected engine and credential-to-application
 map for tests and future integrations. There is no policy management endpoint yet.
@@ -89,4 +106,5 @@ No raw content is deliberately logged or persisted; your hosting/access logging
 configuration must preserve this property. Policies are trusted server-side
 configuration; untrusted remote JSON Schema references are not supported.
 
-See [the specification](docs/specification.md) and [implementation backlog](docs/backlog.md).
+See [the specification](docs/specification.md), [implementation backlog](docs/backlog.md),
+and [verified dependency versions](docs/dependencies.md).

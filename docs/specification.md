@@ -59,8 +59,11 @@ checker replaces authorization at tool and data boundaries.
 Select checks using trusted application configuration and approved request
 context. Never allow user text to change policy or silently relax required checks.
 Future policy changes are drafts until an administrator publishes a version.
-The prototype selects policy by application and version, and schema by stage;
-request-type routing and policy management are later milestones.
+The prototype selects policy by application and version, and schema by stage.
+Versioned JSON policy files load at startup through VALINATOR_POLICY_FILE.
+Request-type routing and live policy management remain later milestones.
+All adapters receive one canonical content field; JSON schema checks parse that
+same content when content_format is json. A separate payload field is rejected.
 
 ## Acceptance and delivery
 

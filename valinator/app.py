@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from valinator.checkers import default_checkers
+from valinator.config import load_policies
 from valinator.engine import Engine
 from valinator.models import Action, CheckRequest, CheckResponse, Policy, Rule, Stage
 
@@ -17,7 +18,7 @@ from valinator.models import Action, CheckRequest, CheckResponse, Policy, Rule, 
 def demo_engine() -> Engine:
     return Engine([Policy(
         application_id="demo", version="support-v1", timeout_ms=100,
-        rules=(Rule(checker_id="schema", on_finding=Action.BLOCK),
+        rules=(Rule(checker_id="schema", required=False, on_finding=Action.BLOCK),
                Rule(checker_id="safety", on_finding=Action.BLOCK),
                Rule(checker_id="bias", on_finding=Action.FLAG)),
         input_schema={"type": "object", "properties": {"message": {"type": "string"}},
@@ -28,13 +29,15 @@ def demo_engine() -> Engine:
 
 
 def create_app(engine: Engine | None = None, credentials: dict[str, str] | None = None) -> FastAPI:
-    service = engine or demo_engine()
+    policy_file = os.getenv("VALINATOR_POLICY_FILE")
+    service = engine or (Engine(load_policies(policy_file), default_checkers())
+                         if policy_file else demo_engine())
     # No embedded credential. Without configuration, checks fail closed with 503.
     key = os.getenv("VALINATOR_API_KEY", "")
     bindings = dict(credentials) if credentials is not None else ({key: "demo"} if key else {})
     if any(not token or not app_id for token, app_id in bindings.items()):
         raise ValueError("Credentials and application identifiers must be nonempty")
-    api = FastAPI(title="Valinator", version="0.1.0")
+    api = FastAPI(title="Valinator", version="0.2.0")
     bearer = HTTPBearer(auto_error=False)
 
     @api.exception_handler(RequestValidationError)
