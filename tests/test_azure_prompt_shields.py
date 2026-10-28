@@ -28,6 +28,8 @@ def checker(handler):
 
 def evaluate(adapter, *, content='private-source-value', content_format='text', stage=Stage.INPUT, configured=None):
     selected = configured or policy()
+    # Protocol fixtures run core local guards; full optional PII gating is tested separately.
+    selected = selected.model_copy(update={"rules":tuple(r for r in selected.rules if r.checker_id != "pii")})
     engine = Engine([selected],{**default_checkers(),'azure_prompt_shields':adapter})
     return asyncio.run(engine.check(CheckRequest(application_id='demo',policy_version=selected.version,
         content=content,content_format=content_format,request_context='do-not-send-context'),stage))
@@ -125,7 +127,7 @@ def test_local_rejection_makes_no_request(format,content,code):
 def test_output_is_not_sent_to_prompt_api():
     def handler(request): raise AssertionError('No output call expected')
     result = evaluate(checker(handler),stage=Stage.OUTPUT)
-    assert [r.checker_id for r in result.checker_results] == ['text_security']
+    assert [r.checker_id for r in result.checker_results] == ['text_security', 'secrets']
     assert result.cost_usd == 0 and result.cost_basis == 'local_only'
     raw = asyncio.run(checker(handler)(CheckRequest(application_id='demo',policy_version='v1',content='answer'),policy(),Stage.OUTPUT))
     assert raw.status == 'unsupported'

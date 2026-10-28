@@ -29,8 +29,8 @@ async function api(path, body, token = key) {
 function coverage() {
   $("coverage").replaceChildren(); const policy = currentPolicy();
   const external = policy?.checks.some(c => c.external);
-  $("execution-mode").textContent = external ? "External provider enabled" : "Local checks";
-  $("data-routing").textContent = external ? "Selected external checks send input content to the configured Azure service and may incur charges. Local checks do not redact or block this transfer. Provider cost is not estimated. Request context is not sent by this connector." : "Selected checks run locally. No provider content transfer is configured.";
+  $("execution-mode").textContent = external ? (policy.external_checks === "after_local_pass" ? "External provider gated" : "External checks disabled") : "Local checks";
+  $("data-routing").textContent = external ? (policy.external_checks === "after_local_pass" ? "Input is sent to the configured Azure service and may incur charges only after all configured local checks pass without simulation. This does not guarantee that all sensitive data was detected. Provider cost is not estimated. Request context is not sent by this connector." : "This policy disables external checks. No input is sent to the provider.") : "Selected checks run locally. No provider content transfer is configured.";
   for (const group of application?.groups || []) {
     const checks = (policy?.checks || []).filter(c => group.checker_ids.includes(c.id));
     const state = !group.checker_ids.length ? "not implemented" : !checks.length ? "disabled" : checks.some(c => !c.available) ? "unavailable" : checks.some(c => c.simulated) ? "simulated" : "enabled";
@@ -93,7 +93,7 @@ function render(stage, result) {
     const heading = document.createElement("div"), name = document.createElement("span"), status = document.createElement("span");
     name.textContent = check.checker_id + (check.external ? " · external provider" : ""); status.className = "pill" + (check.simulated ? " warn" : check.status === "passed" ? " good" : check.status === "flagged" ? " bad" : " warn");
     status.textContent = (check.simulated ? "SIMULATED · " : "") + check.status; heading.append(name, status); row.append(heading);
-    if (check.error_code) { const error = document.createElement("p"); error.textContent = "Check unavailable: " + check.error_code; row.append(error); }
+    if (check.error_code) { const error = document.createElement("p"); const gateMessages = {external_local_gate:"External check withheld: configured local checks must all pass without simulation.", external_policy_disabled:"External check withheld: this policy disables provider calls."}; error.textContent = gateMessages[check.error_code] || "Check unavailable: " + check.error_code; row.append(error); }
     for (const finding of check.findings) { const detail = document.createElement("p"); detail.className = "finding"; detail.textContent = finding.explanation; row.append(detail); }
     return row;
   }

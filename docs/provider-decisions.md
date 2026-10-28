@@ -22,7 +22,9 @@ Implementation is not provider activation or calibration. Before live use, choos
 an Azure resource/region, review provider terms and allowed data classes, define a
 test budget, and evaluate benign lookalikes and attack fixtures. Default local
 startup remains offline with respect to check-content egress. The connector sends
-original text; local checks are parallel and are not an outbound privacy barrier.
+original text only after explicit policy permission and all configured real local
+checks pass. The sample gates on PII, secret and text-security checks. This is
+limited detector coverage, not proof of complete anonymization or safety.
 
 No superiority/accuracy claims, guaranteed residency/retention, or automatic
 fallback routing are inferred from vendor materials. No resource was provisioned,

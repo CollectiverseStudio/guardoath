@@ -199,7 +199,7 @@ test("external-provider routing and unknown cost are visible before and after ch
   // Local response fixtures exercise disclosure; this test never contacts Azure.
   await page.route("**/v1/applications/current", async route => {
     const response = await route.fetch(); const data = await response.json();
-    data.policies[0].checks[0].external = true;
+    data.policies[0].checks[0].external = true; data.policies[0].external_checks = "after_local_pass";
     await route.fulfill({response,json:data});
   });
   await page.route("**/v1/checks/input", async route => {
@@ -208,11 +208,24 @@ test("external-provider routing and unknown cost are visible before and after ch
     await route.fulfill({response,json:data});
   });
   await connect(page);
-  await expect(page.locator("#execution-mode")).toHaveText("External provider enabled");
-  await expect(page.locator("#data-routing")).toContainText("configured Azure service and may incur charges");
+  await expect(page.locator("#execution-mode")).toHaveText("External provider gated");
+  await expect(page.locator("#data-routing")).toContainText("only after all configured local checks pass");
   await run(page);
   await expect(page.locator("#input-results")).toContainText("Provider cost not estimated");
   await expect(page.locator("#input-results")).toContainText("external provider");
   await page.getByRole("button",{name:"Disconnect",exact:true}).click();
   await expect(page.locator("#data-routing")).toBeEmpty();
+});
+
+test("a withheld external check explains its local gate", async ({ page }) => {
+  await page.route("**/v1/checks/input", async route => {
+    const response = await route.fetch(); const data = await response.json();
+    data.checker_results[0].status = "skipped"; data.checker_results[0].external = true;
+    data.checker_results[0].error_code = "external_local_gate";
+    data.evaluation_status = "incomplete"; data.cost_usd = null; data.cost_basis = "provider_unpriced";
+    await route.fulfill({response,json:data});
+  });
+  await connect(page); await run(page);
+  await expect(page.locator("#input-results")).toContainText("External check withheld: configured local checks must all pass");
+  await expect(page.locator("#answer")).toBeHidden();
 });

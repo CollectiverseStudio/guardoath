@@ -465,12 +465,13 @@ version is managed by Azure; `checker_version` records the API version, not a
 pinned model checkpoint. Provider findings can be wrong and need context review.
 
 Activation requires an Azure Content Safety resource and deliberate server-side
-configuration. Install `pip install -e '.[azure]'`, configure these variables in
+configuration. Install `pip install -e '.[azure,pii]'` on Python 3.11–3.14, configure these variables in
 your environment/secret-management system, and use the manual uvicorn start path:
 
 | Variable | Value |
 | --- | --- |
 | `VALINATOR_ENABLE_AZURE_PROMPT_SHIELDS` | `1` |
+| `VALINATOR_ENABLE_PII` | `1` (required by the sample privacy gate) |
 | `VALINATOR_AZURE_CONTENT_SAFETY_ENDPOINT` | Your `https://RESOURCE.cognitiveservices.azure.com` resource origin |
 | `VALINATOR_AZURE_CONTENT_SAFETY_KEY` | Your Azure subscription key, never a browser/platform key |
 | `VALINATOR_POLICY_FILE` | `policies/azure-prompt-shields.json` |
@@ -479,10 +480,13 @@ your environment/secret-management system, and use the manual uvicorn start path
 Use your resource's exact endpoint. Only public-Azure custom resource origins on
 HTTPS port 443 are supported; sovereign clouds and arbitrary/private origins are
 outside this adapter's configuration surface. Endpoint/key settings alone do
-nothing unless the enable flag is `1` and a selected rule uses the adapter. A bad
+nothing unless the enable flag is `1`, a selected rule uses the adapter, and the
+policy sets `external_checks: "after_local_pass"`. The policy default is
+`external_checks: "disabled"`, which withholds registered external checks. A bad
 enable flag or incomplete enabled configuration fails startup. The sample policy
-uses observe mode, a 2-second check deadline, Azure on input only, and local
-text-security checks on both sides. The one-command launcher always forces Azure
+uses observe mode, a 2-second per-checker deadline, Azure on input only, and
+required local text-security, secret, and PII checks on both sides. Its policy
+explicitly permits gated external checks; a missing PII adapter prevents egress. The one-command launcher always forces Azure
 off to preserve its local-only behavior; use manual server startup to enable it.
 
 **Data handling:** the original `content` is sent to the configured Azure
@@ -493,13 +497,30 @@ sent by this connector. Inputs must be plain text of at most 4,000 characters
 There is no truncation, splitting, document scanning, or output-attack assessment.
 The dashboard discloses routing before a run and labels external checker results.
 
-Checks execute in parallel. A local PII/secret finding does **not** prevent Azure
-receiving original input, and redaction is **not** a pre-provider privacy gate.
-Redaction revalidation can also call active external checks again. Enable only
-for data permitted to leave your environment. Choose your Azure region and review
-its current data handling/retention terms yourself; Valinator does not infer or
-verify residency or promise provider retention behavior. Shared quotas/region
-controls and an ordered local privacy gate remain deployment work.
+**Local-first gate:** configured local checks run first. An external check is
+withheld unless at least one local check ran and every selected local check
+passed without simulation. Findings (even with an allow action), optional
+skips/errors, missing adapters, timeouts, and simulated passes all hold egress.
+The gate applies in observe and enforce modes, and repeats on transformed-content
+revalidation. A skipped required external check makes the evaluation incomplete;
+the dashboard explains why it was withheld. Original input is not sent when the
+local gate fails. The gate controls Valinator's registered external checks, not
+model calls made independently by your application.
+
+This is limited to configured detector coverage. A local pass does not guarantee
+that all PII, PHI, trade secrets, or malicious content was detected. Enabled
+external checks still send original content after those checks pass. With a
+required external check, an original local finding prevents same-call redaction
+from proceeding because the full evaluation is incomplete; use a separate local
+redaction policy first if you need an approved transformed request. Optional
+external checks can defer to transformed-content rechecks, which must pass the
+same local gate before any external call. Rechecks may incur additional charges.
+Custom adapters must declare `external=True` for the gate to recognize them.
+
+Enable only for data permitted to leave your environment. Choose your Azure
+region and review its current data handling/retention terms yourself; Valinator
+does not infer or verify residency or promise provider retention behavior.
+Shared quotas/region controls remain deployment work.
 
 **Reliability and cost:** no redirects, inherited proxies, retries, fallback
 provider, or synthetic-success substitution. Transport errors, timeouts, provider
