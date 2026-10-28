@@ -160,3 +160,32 @@ No semantic injection/jailbreak, encoded PII/secrets, arbitrary encodings,
 homoglyph, Unicode-tag, image, or multi-turn detection is claimed. Signals can be
 legitimate. The group limitations and dashboard examples expose this explicitly.
 The implementation uses only existing Python standard-library functionality.
+
+## API admission budgets (implemented per server process)
+
+A bounded startup `ResourceLimits` contract configures sustained checks/minute,
+application burst, application active checks, process active checks, and active
+POST `/v1/` requests. Defaults are 120/minute, burst 20, and concurrency 4/16/32.
+Environment configuration uses `VALINATOR_` plus each upper-case field name;
+invalid settings fail startup. Constructor injection overrides environment limits.
+No remote service or new dependency is required.
+
+A thread-safe token bucket uses a monotonic clock and trusted credential-bound
+application identifiers; multiple keys and stages share application state. After
+request/auth/application/policy validation, check admission tests application and
+process concurrency before consuming a token and acquiring a slot. Rejections
+are immediate: application limits 429, process limits 503, sanitized detail,
+`Retry-After` and `Cache-Control: no-store`. Tokens are not refunded after an
+admitted failure or cancellation. Slots are always released in `finally`.
+
+An outer ASGI gate rejects excess POST ingress before JSON buffering/validation,
+including unauthenticated traffic. GET endpoints stay available. Authenticated
+application metadata exposes configuration and `scope: server_process`, not
+usage or other applications. The dashboard explains two checks per run and holds
+previews with retry guidance on 429/503. Browser tests use explicitly higher
+allowances; actual admission is covered by real concurrent ASGI tests and a
+thread-contention test without timing sleeps.
+
+Scope: process-local state resets on restart; uniform settings apply separately
+to each application. No shared worker/replica quota, per-plan overrides, hard
+background-thread/CPU limit, connection protection, or model-cost cap is claimed.

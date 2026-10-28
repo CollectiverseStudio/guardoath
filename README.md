@@ -10,8 +10,9 @@ timeouts, errors, and review flags without calling any paid API. Every successfu
 simulator result is labelled `simulated: true`. An ordinary prompt receiving a
 simulated `passed` result has **not** received a safety or bias assessment.
 
-The prototype does not store prompt or response content and has no database,
-dashboard, live provider integration, or production deployment yet.
+The prototype includes a local API-backed dashboard. It does not store prompt or
+response content and has no database, live provider integration, or production
+deployment yet.
 
 An optional **real local detector** checks email addresses, credit-card candidates,
 and selected U.S. SSN candidates using Presidio's patterns and validation routines. It is separate
@@ -259,7 +260,7 @@ Requests cannot change enforcement mode, supply a policy, or bypass required
 checks. `create_app()` accepts an injected engine and credential-to-application
 map for tests and future integrations. There is no policy management endpoint yet.
 
-Do not expose this prototype publicly. Production work still includes rate limits,
+Do not expose this prototype publicly. Production work still includes shared multi-worker rate limits,
 production identity and credential
 rotation, tenant-aware persistence, audit metadata, deployment hardening, provider
 data-routing controls, calibrated detectors, dependency security review, and
@@ -352,3 +353,48 @@ introduced.
 Design reference: [OWASP LLM Prompt Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html).
 A passed result means only that these narrow signals were not found; it does not
 establish that a prompt is safe. A semantic injection detector remains planned.
+
+### Request rate and concurrent work
+
+The API now has startup-configurable admission limits. The defaults below apply
+independently in **each server process**, with the same configuration for every
+application:
+
+| Environment variable | Default | Meaning |
+| --- | ---: | --- |
+| `VALINATOR_CHECKS_PER_MINUTE` | 120 | Sustained token refill rate per application |
+| `VALINATOR_BURST` | 20 | Initial and maximum tokens per application |
+| `VALINATOR_APPLICATION_CONCURRENCY` | 4 | Active checks per application |
+| `VALINATOR_PROCESS_CONCURRENCY` | 16 | Active checks across applications |
+| `VALINATOR_INGRESS_CONCURRENCY` | 32 | Active POST requests under `/v1/`, before body reading |
+
+Use positive integer environment values and restart to change them. Rate is
+bounded at 100,000, burst at 10,000, and each concurrency setting at 1,024.
+Invalid values fail startup; zero does not disable protection. Python integrations
+can pass `limits=ResourceLimits(...)` to `create_app()` instead. The dashboard
+shows application limits from authenticated metadata.
+
+All keys bound to an application and both input/output endpoints share its bucket
+and check-concurrency count. Each admitted check spends one token, including a
+check that later fails or is cancelled; a playground run submits two checks.
+Tokens refill continuously at the sustained rate up to the burst capacity. This
+is not a fixed-window ceiling: a fresh bucket permits a burst in addition to
+ongoing refill. Invalid envelopes, failed authentication, application mismatch,
+unknown policies, and concurrency rejections do not spend check tokens. A fresh
+process/restart gets a fresh bucket; only trusted credential bindings create state.
+
+Application rate/concurrency rejection returns **429**. Process check/ingress
+capacity rejection returns **503**. Both include `Retry-After` in whole seconds
+and `Cache-Control: no-store`, without submitted values or credentials. Rate
+retry time is calculated from refill; concurrency retries use a one-second hint
+and are not a reservation. There is no waiting queue, automatic retry, model call,
+or successful validation decision for a rejected request. Slots release on
+completion, exceptions, and cancellation. Health, metadata, dashboard, and static
+GET requests are outside these limits; metadata remains authenticated.
+
+The outer ingress gate includes unauthenticated POSTs, but is not a substitute
+for upstream connection/DDoS controls. Check slots cover active API evaluations,
+not hard CPU/thread budgets: background threads already running after a timeout
+cannot be forcibly stopped. Multiple workers/replicas multiply local allowances;
+shared quotas and worker/job isolation remain backlog work. These limits are not
+billing or model-token spending caps.

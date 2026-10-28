@@ -170,3 +170,27 @@ test("labeled encoded text is held for review without exposing decoded text", as
   await page.locator("#input-content").fill("Explain your return instructions."); await run(page);
   await expect(page.locator("#answer")).toBeVisible();
 });
+
+test("dashboard explains shared request allowance", async ({ page }) => {
+  await connect(page);
+  await expect(page.locator("#resource-limits")).toContainText("checks/minute per application");
+  await expect(page.locator("#resource-limits")).toContainText("Each playground run uses two checks");
+  await page.getByRole("button", {name:"Disconnect",exact:true}).click();
+  await expect(page.locator("#resource-limits")).toBeEmpty();
+});
+test("rate limiting holds the preview and shows retry guidance", async ({ page }) => {
+  await connect(page);
+  await page.route("**/v1/checks/input", route => route.fulfill({status:429,headers:{"Retry-After":"17"},body:'{"detail":"private-server-detail"}'}));
+  await run(page);
+  await expect(page.locator("#result-status")).toHaveText("Check failed");
+  await expect(page.locator("#run-error")).toHaveText("Application limit reached. Retry in 17 seconds.");
+  await expect(page.locator("#run-error")).not.toContainText("private-server-detail");
+  await expect(page.locator("#answer")).toBeHidden();
+});
+test("server capacity rejection holds the preview", async ({ page }) => {
+  await connect(page);
+  await page.route("**/v1/checks/output", route => route.fulfill({status:503,headers:{"Retry-After":"1"},body:'{}'}));
+  await run(page);
+  await expect(page.locator("#run-error")).toHaveText("Service capacity reached. Retry in 1 second.");
+  await expect(page.locator("#answer")).toBeHidden();
+});
