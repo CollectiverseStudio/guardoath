@@ -1,16 +1,13 @@
-"""Bounded local pattern checks using Presidio patterns and validators.
-
-No AnalyzerEngine, NLP model downloads, outbound requests, or source-text findings.
-This deliberately supports only email addresses and credit-card candidates.
-"""
+"""Offline Presidio patterns with bounded scanning and opt-in transformations."""
 
 import asyncio
 from importlib.metadata import version
+import json
 import sys
 from time import monotonic
 
 from valinator.json_data import parse_json
-from valinator.models import CheckerResult, Finding
+from valinator.models import Action, CheckerResult, Finding, Stage
 
 
 def build_pii_checker():
@@ -19,69 +16,111 @@ def build_pii_checker():
     try:
         import regex
         import tldextract
-        from presidio_analyzer.predefined_recognizers import EmailRecognizer, CreditCardRecognizer
+        from presidio_analyzer.predefined_recognizers import EmailRecognizer, CreditCardRecognizer, UsSsnRecognizer
     except ImportError:
         raise ValueError("Install valinator[pii] to enable local sensitive-data checks") from None
 
     package_version = version("presidio-analyzer")
     extractor = tldextract.TLDExtract(suffix_list_urls=(), cache_dir=None)
-    # Load the bundled suffix snapshot at startup, outside the request deadline.
     extractor("example.com")
 
     class OfflineEmailRecognizer(EmailRecognizer):
         def validate_result(self, pattern_text):
             return extractor(pattern_text).fqdn != ""
 
-    recognizers = (OfflineEmailRecognizer(), CreditCardRecognizer())
+    recognizers = (OfflineEmailRecognizer(), CreditCardRecognizer(), UsSsnRecognizer())
     patterns = tuple((recognizer, regex.compile(pattern.regex, recognizer.global_regex_flags))
                      for recognizer in recognizers for pattern in recognizer.patterns)
-    checker_version = f"presidio-{package_version}/valinator-patterns-1"
+    context_pattern = regex.compile(r"(?i)\b(?:ssns?|social[\s_-]*security(?:[\s_-]*number)?)\b")
+    checker_version = f"presidio-{package_version}/valinator-patterns-2"
 
-    def segments(value):
-        if isinstance(value, str):
-            yield value
-        elif isinstance(value, dict):
-            for key, item in value.items():
-                yield key
-                yield from segments(item)
-        elif isinstance(value, list):
-            for item in value:
-                yield from segments(item)
-        elif isinstance(value, int) and not isinstance(value, bool):
-            yield str(value)
-
-    def scan(request):
+    def scan(request, redact):
         deadline = monotonic() + 0.2
-        texts = (request.content,) if request.content_format == "text" else segments(parse_json(request.content))
         entities = set()
-        for text in texts:
+        sensitive_key = False
+
+        def process_text(text, hint=""):
+            spans = []
             for recognizer, pattern in patterns:
                 remaining = deadline - monotonic()
                 if remaining <= 0:
                     raise TimeoutError("Local scan deadline")
-                # Presidio's general analyze path skips patterns on regex timeout.
-                # Drive its patterns directly so timeout is a failed check, not a pass.
                 for match in pattern.finditer(text, timeout=remaining):
                     if monotonic() >= deadline:
                         raise TimeoutError("Local scan deadline")
-                    if recognizer.validate_result(match.group()) is True:
-                        entities.add(recognizer.supported_entities[0])
-        return entities
+                    entity = recognizer.supported_entities[0]
+                    candidate = match.group()
+                    if entity == "US_SSN":
+                        digits = "".join(c for c in candidate if c.isdigit())
+                        if len(digits) != 9 or int(digits[:3]) >= 900 or recognizer.invalidate_result(candidate):
+                            continue
+                        standard = regex.fullmatch(r"[0-9]{3}-[0-9]{2}-[0-9]{4}", candidate)
+                        nearby = hint + " " + text[max(0, match.start()-40):match.start()] + " " + text[match.end():match.end()+40]
+                        if not standard and not context_pattern.search(nearby, timeout=.01):
+                            continue
+                    elif recognizer.validate_result(candidate) is not True:
+                        continue
+                    entities.add(entity)
+                    spans.append((match.start(), match.end(), entity))
+            if not redact or not spans:
+                return text, bool(spans)
+            # Merge overlapping spans to avoid preserving a fragment of a value.
+            merged = []
+            for start, end, entity in sorted(set(spans)):
+                if merged and start < merged[-1][1]:
+                    old_start, old_end, old_entity = merged.pop()
+                    merged.append((old_start, max(old_end, end), old_entity if old_entity == entity else "SENSITIVE"))
+                else:
+                    merged.append((start, end, entity))
+            for start, end, entity in reversed(merged):
+                text = text[:start] + f"[REDACTED_{entity}]" + text[end:]
+            return text, True
+
+        def transform(value, hint=""):
+            nonlocal sensitive_key
+            if isinstance(value, str):
+                return process_text(value, hint)[0]
+            if isinstance(value, dict):
+                result = {}
+                for key, item in value.items():
+                    _, detected = process_text(key)
+                    sensitive_key = sensitive_key or detected
+                    result[key] = transform(item, key)
+                return result
+            if isinstance(value, list):
+                return [transform(item, hint) for item in value]
+            if isinstance(value, int) and not isinstance(value, bool):
+                text, detected = process_text(str(value), hint)
+                return text if redact and detected else value
+            return value
+
+        if request.content_format == "text":
+            transformed, _ = process_text(request.content)
+        else:
+            transformed = json.dumps(transform(parse_json(request.content)), ensure_ascii=False, separators=(",", ":"))
+        # Renaming JSON keys can cause collisions or change schema meaning.
+        # Do not release content containing a sensitive key.
+        return entities, transformed if redact and entities and not sensitive_key else None
 
     async def run(request, policy, stage):
+        rule = next((r for r in policy.rules if r.checker_id == "pii" and stage in r.stages), None)
+        action = ((rule.on_input_finding if stage == Stage.INPUT else rule.on_output_finding) or rule.on_finding) if rule else None
         try:
-            entities = await asyncio.to_thread(scan, request)
+            entities, transformed = await asyncio.to_thread(scan, request, action == Action.REDACT)
         except (ValueError, RecursionError):
             return CheckerResult(checker_id="pii", checker_version=checker_version,
                                  status="error", error_code="invalid_json_for_pii")
-        findings = tuple(Finding(
-            rule_id=f"pii.{entity.lower()}", category="privacy",
-            severity="high" if entity == "CREDIT_CARD" else "medium",
-            explanation=("Potential credit-card number detected by local pattern and checksum checks."
-                         if entity == "CREDIT_CARD" else "Potential email address detected by local pattern and domain checks."),
-        ) for entity in sorted(entities))
+        explanations = {
+            "CREDIT_CARD": "Potential credit-card number detected by local pattern and checksum checks.",
+            "EMAIL_ADDRESS": "Potential email address detected by local pattern and domain checks.",
+            "US_SSN": "Potential U.S. Social Security number detected by pattern, context, and invalid-value checks; issuance was not verified.",
+        }
+        findings = tuple(Finding(rule_id=f"pii.{entity.lower()}", category="privacy",
+                                severity="medium" if entity == "EMAIL_ADDRESS" else "high",
+                                explanation=explanations[entity]) for entity in sorted(entities))
         return CheckerResult(checker_id="pii", checker_version=checker_version,
-                             status="flagged" if findings else "passed", findings=findings)
+                             status="flagged" if findings else "passed", findings=findings,
+                             transformed_content=transformed)
 
     setattr(run, "checker_version", checker_version)
     return run

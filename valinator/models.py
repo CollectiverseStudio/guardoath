@@ -13,6 +13,7 @@ class Contract(BaseModel):
 class Action(StrEnum):
     ALLOW = "allow"
     FLAG = "flag"
+    REDACT = "redact"
     BLOCK = "block"
 
 
@@ -47,6 +48,8 @@ class CheckerResult(Contract):
     latency_ms: float = 0
     error_code: str | None = None
     simulated: bool = False
+    # Private intermediate value: never serialized as a checker finding/result.
+    transformed_content: str | None = Field(default=None, exclude=True)
 
 
 class Rule(Contract):
@@ -96,6 +99,13 @@ class GroupResult(Contract):
     limitations: str
 
 
+class RedactionResult(Contract):
+    status: Literal["not_requested", "not_needed", "preview", "ready", "withheld"] = "not_requested"
+    content: str | None = None
+    explanation: str = "No redaction was requested by the policy."
+    validation_results: tuple[CheckerResult, ...] = ()
+
+
 class CheckResponse(Contract):
     check_id: str
     application_id: str
@@ -112,3 +122,4 @@ class CheckResponse(Contract):
     cost_basis: Literal["local_only"] = "local_only"
     simulated: bool
     groups: tuple[GroupResult, ...] = ()
+    redaction: RedactionResult = Field(default_factory=RedactionResult)

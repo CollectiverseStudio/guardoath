@@ -13,8 +13,8 @@ simulated `passed` result has **not** received a safety or bias assessment.
 The prototype does not store prompt or response content and has no database,
 dashboard, live provider integration, or production deployment yet.
 
-An optional **real local detector** now checks email addresses and credit-card
-candidates using Presidio's patterns and validation routines. It is separate
+An optional **real local detector** checks email addresses, credit-card candidates,
+and selected U.S. SSN candidates using Presidio's patterns and validation routines. It is separate
 from the simulated safety/bias adapters; see setup below.
 
 ## Run locally
@@ -61,7 +61,7 @@ Input and output results share ten groups: regulated/sensitive data, secrets,
 prompt manipulation, harmful content, structure, scope, accuracy, bias, business
 rules, and code/action safety. Groups show passed, findings, incomplete, simulated,
 partial coverage, disabled, not applicable, or not implemented. Expand a group
-for checker results and its limitations. A passed email/card check is not PHI
+for checker results and its limitations. A passed identifier check is not PHI
 detection, and unimplemented groups never count as passed.
 
 Input example (run in a second shell with the same key configured):
@@ -153,11 +153,17 @@ the safety/bias simulators; the overall response remains `simulated: true`.
   with dependency updates; no domain-list download occurs during startup or scans.
 - Credit-card candidates require a matching Presidio pattern and valid Luhn
   checksum. A match does not prove that an account exists or belongs to a person.
+- SSN candidates use Presidio patterns and invalid-value exclusions, plus the
+  SSA exclusion of area numbers 900–999. Standard hyphenated values may be
+  flagged without context; unformatted, space/dot-delimited, and unusual formats
+  require nearby SSN wording or a corresponding JSON key. Known example values
+  and invalid combinations are excluded. These heuristics can miss identifiers
+  or flag lookalikes; they do not verify issuance, identity, or ownership.
 - JSON scanning decodes strings, keys, lists, and integer values. Escaped email
   characters cannot bypass checks by using a separate payload representation.
 - Responses contain entity types and generic explanations, never detected values.
-- Names, postal addresses, phone numbers, government identifiers, obfuscated text,
-  and arbitrary encodings are not covered. There is no automatic redaction yet.
+- Names, postal addresses, phone numbers, other government identifiers,
+  obfuscated text, and arbitrary encodings are not covered.
 - Supported patterns are driven directly with an internal scan deadline so a
   regex timeout becomes a failed check instead of silently skipping a pattern.
   Work runs in a thread; API timeout does not instantly terminate that thread.
@@ -165,6 +171,43 @@ the safety/bias simulators; the overall response remains `simulated: true`.
 No NLP models are downloaded, and no model or cloud endpoint is called. Presidio
 still installs its normal package dependencies, including spaCy. Review the
 supported subset and false alarms on application examples before enforcement.
+
+### Optional redaction
+
+Select `redaction-v1` from the combined playground policy or load
+`policies/redaction.json` directly. Click **Redaction preview** for an example.
+Only an administrator-controlled `pii` rule with `on_finding: "redact"` (or a
+stage-specific override) enables transformations; request bodies cannot enable it.
+
+Detected email, card, and SSN values are replaced with labelled placeholders.
+The response's separate `redaction` object reports:
+
+| Status | Meaning |
+| --- | --- |
+| not_requested | The policy did not request transformation; no content is returned |
+| not_needed | No supported identifier was detected; no content is returned |
+| preview | Observe-mode transformed content passed rechecks; preview only |
+| ready | Enforce-mode transformed content passed rechecks; caller may apply the recommended action |
+| withheld | Transformation or revalidation failed; no transformed content is returned |
+
+All selected active checks are rerun against transformed content. Any non-pass
+or simulated check withholds the transformation. Masking can change JSON types
+or break formats; those results are also withheld. JSON keys containing detected
+identifiers cause withholding rather than automatic renaming and possible key
+collisions. Text outside matched spans is preserved; JSON values are reserialized.
+
+Original findings remain visible. Observe mode still has `effective_action: allow`
+and never silently forwards or replaces content. In enforcement mode, a validated
+transformation recommends `redact`; an unavailable transformation recommends
+`block`. The integrating application must use the returned transformed content,
+not assume the check API itself modified a downstream model call.
+
+Returned redacted content may still contain unsupported sensitive information.
+This is limited pattern-based redaction, not full anonymization or a compliance
+determination. Findings and checker results do not contain detected values;
+only the explicitly enabled transformation field returns modified content.
+Redaction applies only to `content`; the optional `request_context` field is not
+scrubbed by this adapter. Integrators must assess every field they send onward.
 
 ## Configuration and boundaries
 

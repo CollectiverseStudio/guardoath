@@ -3,7 +3,7 @@
 from valinator.models import GroupResult
 
 GROUPS = (
-    ("sensitive_data", "Regulated and sensitive data", ("pii",), "Email and credit-card candidates only. PHI, names, addresses, and other identifiers are not assessed."),
+    ("sensitive_data", "Regulated and sensitive data", ("pii",), "Email, credit-card, and selected U.S. SSN candidates only. Redaction is policy-controlled. PHI, names, addresses, and other identifiers are not assessed."),
     ("secrets", "Secrets and confidential information", (), "No secret or confidential-document detector is implemented."),
     ("prompt_security", "Prompt injection and manipulation", (), "No real prompt-injection detector is implemented."),
     ("harmful_content", "Harmful content and abuse", ("safety",), "Safety checks are synthetic test doubles, not content detectors."),

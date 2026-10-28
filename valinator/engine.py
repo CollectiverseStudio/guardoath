@@ -11,9 +11,9 @@ from valinator.checkers import Checker
 from valinator.config import validate_local_schema
 from valinator.formats import validate_schema_formats
 from valinator.groups import GROUPS, group_results
-from valinator.models import Action, CheckerResult, CheckRequest, CheckResponse, Policy, Stage
+from valinator.models import Action, CheckerResult, CheckRequest, CheckResponse, Policy, Stage, RedactionResult
 
-PRIORITY = {Action.ALLOW: 0, Action.FLAG: 1, Action.BLOCK: 2}
+PRIORITY = {Action.ALLOW: 0, Action.FLAG: 1, Action.REDACT: 2, Action.BLOCK: 3}
 
 
 class Engine:
@@ -30,6 +30,9 @@ class Engine:
                 raise ValueError("Duplicate field comparison")
             if policy.comparisons and "cross_field" not in ids:
                 raise ValueError("Field comparisons require a cross_field checker rule")
+            for rule in policy.rules:
+                if rule.checker_id != "pii" and Action.REDACT in {rule.on_finding, rule.on_input_finding, rule.on_output_finding}:
+                    raise ValueError("Redaction actions are supported only by the pii checker")
             for schema in (policy.input_schema, policy.output_schema):
                 if schema is not None:
                     validate_local_schema(schema)
@@ -57,7 +60,7 @@ class Engine:
         rules = [rule for rule in policy.rules if stage in rule.stages]
         started = perf_counter()
 
-        async def execute(checker_id: str) -> CheckerResult:
+        async def execute(checker_id: str, content_request: CheckRequest = request) -> CheckerResult:
             tick = perf_counter()
             checker = self._checkers.get(checker_id)
             if checker is None:
@@ -67,7 +70,7 @@ class Engine:
             version = getattr(checker, "checker_version", "unknown")
             try:
                 result = await asyncio.wait_for(
-                    checker(request, policy, stage), timeout=policy.timeout_ms / 1000,
+                    checker(content_request, policy, stage), timeout=policy.timeout_ms / 1000,
                 )
                 if result.checker_id != checker_id:
                     raise ValueError("Adapter returned wrong identity")
@@ -98,6 +101,35 @@ class Engine:
             elif rule.required and result.status != "passed":
                 incomplete = True
                 actions.append(Action(policy.failure_action))
+        redact_rule = next((r for r in rules if r.checker_id == "pii" and (
+            (r.on_input_finding if stage == Stage.INPUT else r.on_output_finding) or r.on_finding
+        ) == Action.REDACT), None)
+        redaction = RedactionResult()
+        if redact_rule:
+            original = next(r for r in results if r.checker_id == "pii")
+            if original.status == "passed":
+                redaction = RedactionResult(status="not_needed", explanation="No supported identifier was detected; no content is returned.")
+            elif original.status != "flagged" or original.transformed_content is None or incomplete:
+                redaction = RedactionResult(status="withheld", explanation="A complete, valid transformation is unavailable; no transformed content is returned.")
+                actions.append(Action.BLOCK)
+            else:
+                try:
+                    transformed_request = CheckRequest.model_validate({
+                        **request.model_dump(), "content": original.transformed_content,
+                    })
+                    rechecks = tuple(await asyncio.gather(*(execute(r.checker_id, transformed_request) for r in rules)))
+                except Exception:
+                    rechecks = ()
+                if rechecks and all(c.status == "passed" and not c.simulated for c in rechecks):
+                    redaction = RedactionResult(status="preview" if policy.mode == "observe" else "ready",
+                        content=original.transformed_content,
+                        explanation="Detected supported identifiers were replaced and selected checks rerun. Other sensitive information may remain.",
+                        validation_results=rechecks)
+                else:
+                    redaction = RedactionResult(status="withheld", explanation="Transformed content did not pass all selected real checks; no content is returned.", validation_results=rechecks)
+                    if not rechecks or any(c.status not in {"passed", "flagged"} for c in rechecks):
+                        incomplete = True
+                    actions.append(Action.BLOCK)
         recommended = max(actions, key=PRIORITY.__getitem__)
         return CheckResponse(
             check_id=str(uuid4()), application_id=request.application_id,
@@ -109,4 +141,5 @@ class Engine:
             checker_results=tuple(results), simulated=any(r.simulated for r in results),
             total_latency_ms=round((perf_counter() - started) * 1000, 3),
             groups=group_results(policy, results, stage),
+            redaction=redaction,
         )

@@ -97,3 +97,29 @@ test("invalid date formats appear in structural findings", async ({ page }) => {
   await expect(page.locator('#output-results [data-group="structure"] summary')).toContainText("Findings");
   await expect(page.locator("#answer")).toBeHidden();
 });
+
+test("SSN candidates appear under sensitive data", async ({ page }) => {
+  await connect(page); await page.getByRole("button", {name:"SSN candidate",exact:true}).click(); await run(page);
+  await expect(page.locator('#output-results [data-group="sensitive_data"]')).toContainText("Social Security number");
+  await expect(page.locator("#answer")).toBeHidden();
+});
+
+test("redaction shows a rechecked preview without returning detected values", async ({ page }) => {
+  await connect(page); await page.getByRole("button", {name:"Redaction preview",exact:true}).click(); await run(page);
+  const preview = page.locator('#output-results .redacted-content');
+  await expect(preview).toBeVisible();
+  await expect(preview).toContainText("[REDACTED_EMAIL_ADDRESS]");
+  await expect(preview).toContainText("[REDACTED_US_SSN]");
+  await expect(preview).toContainText("[REDACTED_CREDIT_CARD]");
+  await expect(preview).not.toContainText("jane@example.com");
+  await expect(page.locator('#output-results .redaction-box')).toContainText("observe mode");
+  await expect(page.locator("#answer")).toBeHidden();
+});
+
+test("redacted preview uses safe text rendering", async ({ page }) => {
+  await connect(page); await page.getByRole("button", {name:"Redaction preview",exact:true}).click();
+  await page.locator("#output-content").fill('<img src=x onerror="window.injected=true"> jane@example.com'); await run(page);
+  await expect(page.locator('#output-results .redacted-content')).toContainText("<img");
+  await expect(page.locator('#output-results .redacted-content img')).toHaveCount(0);
+  expect(await page.evaluate(() => window.injected)).toBeUndefined();
+});

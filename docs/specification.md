@@ -41,11 +41,16 @@ justify them. LLM Guard was archived when checked; do not make it the main
 dependency without a maintenance plan. Check licenses of packages and model
 weights separately before adoption.
 
-The optional local PII adapter now reuses Presidio's email and credit-card patterns
+The optional local PII adapter reuses Presidio's email, credit-card, and U.S. SSN patterns
 and validators without invoking its NLP engine. It scans decoded JSON as well as
 text, uses an offline domain snapshot, and returns generic entity findings without
 source values. The current scope excludes names, addresses, phone numbers, and
-automatic redaction. Missing required adapters remain incomplete assessments.
+full PHI classification. Missing required adapters remain incomplete assessments.
+Version 0.5 adds policy-controlled redaction, a separate transformation result,
+and full active-check revalidation before returning transformed content. Observe
+mode returns a preview only; enforcement can recommend using rechecked content.
+Schema failures, sensitive JSON keys, and uncompleted or simulated rechecks
+withhold transformed content. Redaction does not establish full anonymization.
 
 ## Bias evaluation
 

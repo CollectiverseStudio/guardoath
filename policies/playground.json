@@ -102,6 +102,20 @@
           "value_type": "number"
         }
       ]
+    },
+    {
+      "application_id": "demo",
+      "version": "redaction-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "failure_action": "block",
+      "rules": [
+        {
+          "checker_id": "pii",
+          "required": true,
+          "on_finding": "redact"
+        }
+      ]
     }
   ]
 }
