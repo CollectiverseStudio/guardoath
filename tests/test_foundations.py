@@ -157,3 +157,17 @@ def test_slow_body_has_a_deadline():
              "headers":[(b"content-type",b"application/json")]}
     asyncio.run(JsonIngressLimits(app,read_timeout=.001)(scope,receive,send))
     assert sent[0]["status"] == 408
+
+
+def test_redaction_actions_require_a_transforming_checker():
+    policy = Policy(application_id="demo", version="v1", rules=(Rule(checker_id="schema",on_finding=Action.REDACT),))
+    with pytest.raises(ValueError, match="only by the pii checker"):
+        Engine([policy], default_checkers())
+
+
+def test_missing_redaction_adapter_withholds_content():
+    policy = Policy(application_id="demo", version="v1", mode="enforce", rules=(Rule(checker_id="pii",on_finding=Action.REDACT),))
+    result = evaluate(policy, '"private content"')
+    assert result.redaction.status == "withheld"
+    assert result.redaction.content is None
+    assert result.effective_action == "block"

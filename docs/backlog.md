@@ -14,7 +14,8 @@
 
 - [x] Define a versioned policy file format and load validated configuration.
 - [x] Add an optional local Presidio adapter for email and credit-card patterns, without NLP model downloads.
-- [ ] Extend sensitive-data entity coverage and add approved redaction policies.
+- [x] Add context-aware U.S. SSN candidates and policy-controlled, revalidated redaction of supported identifiers.
+- [ ] Extend coverage to other identifiers and customer-specific privacy requirements.
 - [x] Use a single canonical content value with explicit text/JSON format to prevent mismatched payloads.
 - [x] Add ingress byte limits, body-read deadline, and bounded JSON parsing.
 - [x] Enforce supported schema formats and declarative numeric/date comparisons.

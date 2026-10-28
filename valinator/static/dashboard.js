@@ -31,6 +31,7 @@ function coverage() {
   }
   $("schema-sample").disabled = !policy?.checks.some(c => c.id === "schema");
   $("business-sample").disabled = !policy?.checks.some(c => c.id === "cross_field");
+  $("redaction-sample").disabled = !application?.policies.some(p => p.version === "redaction-v1");
 }
 $("connect").addEventListener("click", async () => {
   const token = $("api-key").value.trim(); if (!token || busy) return;
@@ -55,14 +56,23 @@ for (const id of ["input-content", "output-content", "input-format", "output-for
 for (const button of document.querySelectorAll("[data-sample]")) button.addEventListener("click", () => {
   reset(); $("input-format").value = "text"; $("output-format").value = "text";
   $("input-content").value = "Can you explain your return policy?";
-  const examples = {clean: "You can return an unused item within 30 days. Please check the store’s policy for details.", email: "Your contact email is jane@example.com.", card: "The test card number is 4111 1111 1111 1111."};
+  const examples = {clean: "You can return an unused item within 30 days. Please check the store’s policy for details.", email: "Your contact email is jane@example.com.", card: "The test card number is 4111 1111 1111 1111.", ssn:"The example SSN candidate is 219-09-9999."};
   if (button.dataset.sample === "schema") { $("input-format").value = "json"; $("output-format").value = "json"; $("input-content").value = '{"message":"Can I return this?"}'; $("output-content").value = '{"unexpected_field":"This does not match the output schema."}'; }
   else if (button.dataset.sample === "business") { $("input-format").value = "json"; $("output-format").value = "json"; $("input-content").value = JSON.stringify({start_date:"2026-10-01",end_date:"2026-10-03",purchase_amount:100,refund_amount:25},null,2); $("output-content").value = JSON.stringify({start_date:"2026-10-03",end_date:"2026-10-01",purchase_amount:100,refund_amount:150},null,2); }
+  else if (button.dataset.sample === "redaction") { $("policy").value = "redaction-v1"; coverage(); $("output-content").value = "Contact jane@example.com. Example SSN: 219-09-9999. Test card: 4111 1111 1111 1111."; }
   else $("output-content").value = examples[button.dataset.sample];
 });
 function render(stage, result) {
   const box = $(stage + "-results"); box.replaceChildren(); const title = document.createElement("h3"); title.textContent = stage === "input" ? "Input checks" : "Output checks"; box.append(title);
   const summary = document.createElement("p"); summary.textContent = "Recommended: " + result.recommended_action + " · Effective: " + result.effective_action + " · " + result.total_latency_ms.toFixed(1) + " ms"; box.append(summary);
+  if (result.redaction && !["not_requested", "not_needed"].includes(result.redaction.status)) {
+    const section = document.createElement("section"); section.className = "redaction-box";
+    const heading = document.createElement("h3"); heading.textContent = result.redaction.status === "preview" ? "Redacted preview — observe mode" : result.redaction.status === "ready" ? "Redacted content — rechecked" : "Redaction withheld";
+    const note = document.createElement("p"); note.textContent = result.redaction.explanation; section.append(heading,note);
+    if (result.redaction.validation_results.length) { const rechecks = document.createElement("p"); rechecks.textContent = "Rechecked: " + result.redaction.validation_results.map(c => c.checker_id + " · " + c.status + (c.simulated ? " (simulated)" : "")).join(", "); section.append(rechecks); }
+    if (result.redaction.content !== null) { const content = document.createElement("pre"); content.className = "redacted-content"; content.textContent = result.redaction.content; section.append(content); }
+    box.append(section);
+  }
   function checkerRow(check) { const row = document.createElement("div"); row.className = "checker";
     const heading = document.createElement("div"), name = document.createElement("span"), status = document.createElement("span");
     name.textContent = check.checker_id; status.className = "pill" + (check.simulated ? " warn" : check.status === "passed" ? " good" : check.status === "flagged" ? " bad" : " warn");

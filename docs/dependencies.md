@@ -28,7 +28,9 @@ Presidio analyzer 2.2.366 is integrated as an optional `pii` extra. Its publishe
 Python constraint is >=3.11,<3.15, so the core service still tests Python 3.15
 while the optional adapter has separate 3.12 and 3.14 CI jobs. Enabling PII on
 3.15 fails explicitly at startup. No NLP model weights are downloaded or bundled.
-Presidio anonymizer 2.2.366 was checked but is not integrated; redaction is deferred.
+Presidio anonymizer 2.2.366 was checked but is not integrated. Valinator applies
+bounded span replacements from its local recognizers and reruns active checks;
+this avoids adding another dependency for the current limited transformation.
 
 Presidio analyzer source and license: https://github.com/data-privacy-stack/presidio
 The analyzer package declares the MIT license. Its dependencies retain their own
