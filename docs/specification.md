@@ -316,3 +316,31 @@ creates a unique ignored `.valinator-reports/` run directory, then optionally op
 the HTML file. It starts no API server and creates no platform/provider key.
 The full manual CLI supports custom file paths/group filters. See README for
 commands, limits, report privacy, and the distinction from detector evaluation.
+
+## Regression baseline comparison
+
+`valinator.compare` validates source-free format-1 local reports (256 KiB max,
+100 unique cases each), typed statuses/decisions, finite nonnegative timings,
+consistent assertion metadata and recomputed summaries. Reports with unknown
+source fields or different suite IDs are rejected. Comparisons align case IDs and
+show added/removed cases, changed group/stage identities, new/resolved mismatches,
+changed outcomes, and changed mismatch details. Finding/difference identifier
+ordering is normalized. Latency deltas are separate observations, not outcome or
+accuracy gates. Comparison unions contain at most 200 cases.
+
+Inputs/expected definitions are absent from reports, so equality of those
+artifacts is not verified. Suite-ID discipline and stable case IDs are required;
+updated expectations cannot hide an actual outcome change in the comparison.
+No complete provenance/accuracy claim is made. Standalone JSON/HTML comparison
+outputs preserve input-alias and overwrite protection, escape rendered metadata,
+and have no active script/network dependencies. Exit codes are 0/1/2 for no
+current mismatches/current mismatch/invalid configuration; --fail-on-change also
+flags non-timing changes, including additions/removals.
+
+The evaluator optionally compares before writing its ordinary format-1 report,
+embeds a comparison section in HTML, and can save separate comparison JSON.
+Source baseline paths are protected from overwrite. The launcher automatically
+selects the newest bounded candidate matching the suite ID, validates it fully in
+the prepared interpreter, and preserves all prior run directories. --baseline
+selects a reference explicitly; --no-compare opts out. The default local-only and
+no-source-in-reports guarantees remain unchanged.

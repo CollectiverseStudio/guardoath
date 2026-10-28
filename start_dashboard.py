@@ -2,6 +2,7 @@
 
 import argparse
 import hashlib
+import json
 import os
 from pathlib import Path
 import secrets
@@ -97,8 +98,14 @@ def main():
     parser.add_argument('--no-browser', action='store_true', help='Print the URL without opening a browser')
     parser.add_argument('--reinstall', action='store_true', help='Reinstall the dashboard dependencies')
     parser.add_argument('--evaluate', action='store_true', help='Run the bundled local regression cases and open their report')
+    parser.add_argument('--baseline', help='Compare an evaluation against this saved report')
+    parser.add_argument('--no-compare', action='store_true', help='Skip automatic comparison with a previous evaluation')
     parser.add_argument('--serve', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args()
+    if (args.baseline or args.no_compare) and not args.evaluate:
+        parser.error('--baseline and --no-compare require --evaluate')
+    if args.baseline and args.no_compare:
+        parser.error('Choose --baseline or --no-compare')
     if args.evaluate and args.serve:
         parser.error('--evaluate cannot be combined with internal server mode')
     if not (3, 11) <= sys.version_info[:2] < (3, 15):
@@ -109,6 +116,22 @@ def main():
             return serve(args.port, not args.no_browser)
         interpreter = prepare_environment(args.reinstall)
         if args.evaluate:
+            baseline = Path(args.baseline).resolve() if args.baseline else None
+            if not baseline and not args.no_compare:
+                previous = sorted((ROOT / '.valinator-reports').glob('*/report.json'),
+                                  key=lambda p:p.stat().st_mtime_ns,reverse=True)
+                # Candidate selection uses only bounded metadata; the child validates
+                # the chosen report fully before running cases or producing output.
+                suite_id = json.loads((ROOT / 'evals/local.json').read_text(encoding='utf-8'))['suite_id']
+                for candidate in previous:
+                    try:
+                        with candidate.open('rb') as stream:
+                            raw = stream.read(262145)
+                        if len(raw) <= 262144 and json.loads(raw.decode('utf-8')).get('suite_id') == suite_id:
+                            baseline = candidate
+                            break
+                    except (OSError,ValueError,AttributeError,RecursionError):
+                        continue
             run_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ-') + secrets.token_hex(4)
             directory = ROOT / '.valinator-reports' / run_id
             directory.mkdir(parents=True)
@@ -117,6 +140,11 @@ def main():
                        '--cases', str(ROOT / 'evals/local.json'),
                        '--policies', str(ROOT / 'policies/playground.json'),
                        '--report', str(directory / 'report.json'), '--html', str(html_path)]
+            if baseline:
+                command.extend(['--baseline',str(baseline),'--comparison-report',str(directory / 'comparison.json')])
+                print(f'Comparing with: {baseline}',flush=True)
+            elif not args.no_compare:
+                print('No previous matching report. This run can be used as a baseline.',flush=True)
             completed = subprocess.run(command, cwd=ROOT)
             if completed.returncode in {0, 1} and html_path.is_file():
                 print(f'Regression report: {html_path}', flush=True)

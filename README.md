@@ -613,3 +613,61 @@ Exit codes: **0** all expectations matched, **1** one or more mismatches, **2**
 configuration/report failure. Errors and mismatch descriptions do not echo input
 text. See `tests/test_evaluate.py` for the contract and `evals/local.json` for the
 editable starter suite.
+
+### Compare regression runs
+
+The evaluation launcher now automatically compares a new run with the most
+recent saved launcher report carrying the same `suite_id`. On your Windows
+installation, use:
+
+```powershell
+git pull --ff-only
+py -3.13 start_dashboard.py --evaluate
+```
+
+The first run creates a reference report. Later runs add **Changes from baseline**
+to the HTML and save a separate `comparison.json`. Previous reports are preserved.
+Use `--evaluate --no-compare` to run without a baseline, or
+`--evaluate --baseline "PATH\TO\report.json"` to choose one explicitly. These
+options work with the same Mac/Linux launcher commands too. A chosen malformed
+baseline fails validation rather than producing a misleading comparison.
+
+The comparison distinguishes unchanged outcomes, new mismatches, resolved
+mismatches, changed outcomes, changed mismatch details, changed group/stage
+identity, and added/removed cases. Changes remain visible when someone also
+updates expectations to match them. Timing deltas are shown separately and never
+turn an otherwise unchanged outcome into a regression. Removed examples remain
+visible as coverage changes rather than being counted as passes.
+
+This compares saved result metadata, **not source inputs or expectation
+contents**. Matching case IDs do not prove those definitions stayed unchanged.
+Keep case IDs stable; change `suite_id` when changing fixture definitions. Keep
+the same suite ID when comparing detector/policy changes against fixed examples.
+An outcome change alone is not evidence of better or worse detector accuracy.
+
+For two saved JSON reports, use the prepared environment directly:
+
+```powershell
+.dashboard-venv\Scripts\python.exe -m valinator.compare --baseline before.json --current after.json --report comparison.json --html comparison.html
+```
+
+On Mac/Linux use `.dashboard-venv/bin/python`. Both inputs must be validated local
+format-1 reports, at most 256 KiB each, with unique case IDs, matching suite IDs,
+consistent summaries, and no source-content fields. The standalone comparison
+opens without scripts or network dependencies. Output paths cannot overwrite
+inputs, including aliases; existing outputs require `--overwrite`.
+
+Comparison exit codes are 0 for no current mismatches, 1 when current mismatches
+exist, and 2 for invalid reports/configuration. Add `--fail-on-change` to also
+return 1 for any outcome, assertion, identity, or case-set change (timing alone
+is excluded). Without that flag, added/removed/changed-but-matched cases are shown
+for review but do not change the exit status. The evaluation CLI also accepts
+`--baseline` and `--comparison-report`; its usual mismatch exit status is retained.
+
+### Repository workflow
+
+Development now happens directly on `main`, as requested. Completed feature
+branches through PR #14 were audited: their heads match the merged pull requests,
+and all merge commits are in `main` history. There is no outstanding work on
+those branches. Historical branch names may remain visible. Future changes use
+`main` without new feature branches; `AGENTS.md` records this workflow.

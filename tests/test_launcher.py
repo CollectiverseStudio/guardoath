@@ -110,3 +110,23 @@ def test_launcher_evaluation_creates_a_report_without_starting_server(tmp_path,m
     assert len(reports) == 1
     assert json.loads(reports[0].read_text())['summary']['matched'] == 30
     assert reports[0].with_name('report.html').is_file()
+
+
+@pytest.mark.skipif(not PII_AVAILABLE, reason='Complete evaluation requires optional PII dependencies')
+def test_launcher_second_run_compares_with_previous_without_overwriting_it(tmp_path,monkeypatch):
+    import start_dashboard
+    (tmp_path/'evals').mkdir()
+    (tmp_path/'policies').mkdir()
+    (tmp_path/'evals/local.json').write_text((ROOT/'evals/local.json').read_text(encoding='utf-8'),encoding='utf-8')
+    (tmp_path/'policies/playground.json').write_text((ROOT/'policies/playground.json').read_text(encoding='utf-8'),encoding='utf-8')
+    monkeypatch.setattr(start_dashboard,'ROOT',tmp_path)
+    monkeypatch.setattr(start_dashboard,'prepare_environment',lambda reinstall=False: Path(sys.executable))
+    monkeypatch.setattr(sys,'argv',['start_dashboard.py','--evaluate','--no-browser'])
+    assert start_dashboard.main()==0
+    first=next((tmp_path/'.valinator-reports').glob('*/report.json'))
+    original=first.read_bytes()
+    assert start_dashboard.main()==0
+    comparisons=list((tmp_path/'.valinator-reports').glob('*/comparison.json'))
+    assert len(comparisons)==1
+    assert json.loads(comparisons[0].read_text())['summary']['unchanged']==30
+    assert first.read_bytes()==original

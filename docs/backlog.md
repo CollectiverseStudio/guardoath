@@ -32,7 +32,8 @@
 - [ ] Add shared multi-worker/multi-server quotas, application-specific plans, and worker CPU/job budgets.
 - [x] Add a cross-platform dashboard launcher with isolated setup, fresh keys, and browser opening.
 - [x] Add bounded local regression suites, source-free JSON/HTML reports, group filtering, and an easy launcher option.
-- [ ] Add independently reviewed accuracy/calibration datasets and versioned baseline comparisons.
+- [x] Compare saved local regression baselines with changed outcomes, mismatches, case-set changes, and separate timing observations.
+- [ ] Add independently reviewed accuracy/calibration datasets and stronger fixture/provenance versioning.
 - [x] Build a local playground with input/output findings, held answer previews, and prominent simulation labels.
 
 ## Milestone 3 — first live integration

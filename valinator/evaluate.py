@@ -13,6 +13,7 @@ from pydantic import Field
 from valinator.checkers import default_checkers
 from valinator.config import load_policies
 from valinator.engine import Engine
+from valinator.compare import load_report, compare_reports, render_section, validate_destinations, write_outputs
 from valinator.json_data import MAX_JSON_BYTES, parse_json
 from valinator.models import Action, CheckRequest, Contract, Stage
 
@@ -95,7 +96,7 @@ async def evaluate(suite, engine, groups=None):
             'created_at':datetime.now(timezone.utc).isoformat(), 'summary':summary,'cases':rows}
 
 
-def render_html(report):
+def render_html(report, comparison=None):
     summary = report['summary']
     rows = []
     for row in report['cases']:
@@ -117,7 +118,7 @@ table{border-collapse:collapse;min-width:100%;font-size:13px}th,td{padding:12px;
 </style><h1>Valinator regression report</h1><p>Suite: '''+escape(report['suite_id'])+'''</p><p><strong>'''+str(summary['matched'])+' of '+str(summary['total'])+''' expectations matched.</strong>
 Incomplete evaluations: '''+str(summary['incomplete'])+' · Simulated cases: '+str(summary['simulated'])+'''.</p>
 <p>This checks expected behavior on selected examples. A matched expectation can intentionally include a finding or incomplete evaluation. This is not detector accuracy, privacy certification, or a completed safety/bias assessment. Only local engine adapters ran; API authentication, ingress, request limits, and live providers are outside this report. Submitted and redacted text are omitted.</p>
-<div class="table"><table><thead><tr>'''+''.join('<th>'+escape(title)+'</th>' for title in titles)+'''</tr></thead><tbody>'''+''.join(rows)+'''</tbody></table></div></html>'''
+<div class="table"><table><thead><tr>'''+''.join('<th>'+escape(title)+'</th>' for title in titles)+'''</tr></thead><tbody>'''+''.join(rows)+'''</tbody></table></div>'''+(render_section(comparison) if comparison else '')+'</html>'
 
 
 def main(argv=None):
@@ -128,29 +129,30 @@ def main(argv=None):
     parser.add_argument('--group',action='append',help='Select a group; repeat for multiple groups')
     parser.add_argument('--report',help='Write a JSON report without submitted content')
     parser.add_argument('--html',help='Write a standalone HTML report without submitted content')
+    parser.add_argument('--baseline',help='Compare outcomes with a saved local report of the same suite')
+    parser.add_argument('--comparison-report',help='Save the baseline comparison as separate JSON')
     parser.add_argument('--overwrite',action='store_true',help='Replace existing report files (never source inputs)')
     args = parser.parse_args(argv)
     try:
-        sources = {Path(args.cases).resolve(),Path(args.policies).resolve()}
-        targets = [Path(path).resolve() for path in [args.report,args.html] if path]
-        source_alias = any(p in sources or (p.exists() and any(s.exists() and p.samefile(s) for s in sources)) for p in targets)
-        target_alias = any(a.exists() and b.exists() and a.samefile(b) for i,a in enumerate(targets) for b in targets[i+1:])
-        if len(targets) != len(set(targets)) or source_alias or target_alias:
-            raise ValueError('Reports must use distinct paths separate from input files')
-        if not args.overwrite and any(p.exists() for p in targets):
-            raise ValueError('A report already exists; choose a new path or use --overwrite')
+        if args.comparison_report and not args.baseline:
+            raise ValueError('A baseline is required for comparison output')
+        validate_destinations([args.cases,args.policies,args.baseline],
+                              [args.report,args.html,args.comparison_report],args.overwrite)
         suite = load_suite(args.cases)
+        baseline = load_report(args.baseline) if args.baseline else None
+        if baseline and baseline.suite_id != suite.suite_id:
+            raise ValueError('Baseline suite does not match')
         # Deliberately ignore Azure environment settings and never register providers.
         engine = Engine(load_policies(args.policies),default_checkers(enable_pii=args.pii))
         report = asyncio.run(evaluate(suite,engine,set(args.group or [])))
-        for name, content in [(args.report,json.dumps(report,indent=2)),(args.html,render_html(report))]:
-            if name:
-                destination = Path(name)
-                destination.parent.mkdir(parents=True,exist_ok=True)
-                with destination.open('w' if args.overwrite else 'x',encoding='utf-8') as stream:
-                    stream.write(content+'\n')
+        comparison = compare_reports(baseline,report) if baseline else None
+        write_outputs([(args.report,json.dumps(report,indent=2)),(args.html,render_html(report,comparison)),
+                       (args.comparison_report,json.dumps(comparison,indent=2))],args.overwrite)
         summary = report['summary']
         print(f"{summary['matched']}/{summary['total']} expectations matched; {summary['mismatched']} mismatched; {summary['incomplete']} incomplete evaluations; {summary['simulated']} simulated cases.")
+        if comparison:
+            delta = comparison['summary']
+            print(f"Baseline: {delta['total'] - delta['unchanged']} changed cases; {delta['new_mismatch']} new mismatches; {delta['removed']} removed cases.")
         for row in report['cases']:
             if not row['matched']:
                 print(row['case_id']+': '+', '.join(row['differences']))

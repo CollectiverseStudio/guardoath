@@ -245,3 +245,20 @@ test("standalone regression report shows assertions separately from evaluations"
   await expect(page.locator("tbody tr")).toHaveCount(30);
   expect(networkRequests).toEqual([]);
 });
+
+test("baseline comparison appears in the offline evaluation report", async ({ page }, testInfo) => {
+  const { execFileSync } = require("node:child_process");
+  const { pathToFileURL } = require("node:url");
+  const baseline = testInfo.outputPath("baseline.json");
+  const output = testInfo.outputPath("compared.html");
+  execFileSync("python", ["-m","valinator.evaluate","--group","secrets","--report",baseline], {stdio:"pipe"});
+  execFileSync("python", ["-m","valinator.evaluate","--group","secrets","--baseline",baseline,"--html",output], {stdio:"pipe"});
+  const requests = [];
+  page.on("request", request => { if (/^https?:/.test(request.url())) requests.push(request.url()); });
+  await page.goto(pathToFileURL(output).href);
+  await expect(page.locator("#baseline-comparison h2")).toHaveText("Changes from baseline");
+  await expect(page.locator("#baseline-comparison")).toContainText("Unchanged: 5");
+  await expect(page.locator("#baseline-comparison tbody tr")).toHaveCount(5);
+  await expect(page.locator("#baseline-comparison")).toContainText("their equality is not verified");
+  expect(requests).toEqual([]);
+});
