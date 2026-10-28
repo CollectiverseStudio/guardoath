@@ -1,5 +1,8 @@
 # Implementation backlog
 
+- [x] Sequential conversation demo: combined general text profile, input gate, separate stage buttons, invalidation tests and guide.
+- [ ] Connect an explicitly configured model provider between the input and output stages.
+
 ## Milestone 1 — local checking foundation
 
 - [x] Strict input and output contracts.

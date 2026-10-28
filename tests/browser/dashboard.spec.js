@@ -4,6 +4,8 @@ async function connect(page) {
   await page.getByLabel("Application API key").fill("playwright-test-key");
   await page.getByRole("button", { name: "Connect", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo");
+  await page.locator("#advanced > summary").click();
+  await page.locator(".batch-run > summary").click();
 }
 async function run(page) {
   await page.locator("#run").click();
@@ -155,10 +157,11 @@ test("adding the required information releases the preview", async ({ page }) =>
   await expect(page.locator('#output-results [data-group="business"]')).toContainText("No assessment of truth");
 });
 
-test("hidden characters flag the input while output passes", async ({ page }) => {
+test("hidden characters hold the sequence before output", async ({ page }) => {
   await connect(page); await page.locator("#hidden-sample").click(); await run(page);
   await expect(page.locator('#input-results [data-group="prompt_security"] summary')).toContainText("Findings");
-  await expect(page.locator('#output-results [data-group="prompt_security"] summary')).toContainText("Passed");
+  await expect(page.locator("#output-results")).toContainText("Waiting for");
+  await expect(page.locator("#run-output")).toBeDisabled();
   await expect(page.locator("#input-results")).toContainText("invisible, bidirectional");
   await expect(page.locator("#answer")).toBeHidden();
 });
@@ -174,7 +177,7 @@ test("labeled encoded text is held for review without exposing decoded text", as
 test("dashboard explains shared request allowance", async ({ page }) => {
   await connect(page);
   await expect(page.locator("#resource-limits")).toContainText("checks/minute per application");
-  await expect(page.locator("#resource-limits")).toContainText("Each playground run uses two checks");
+  await expect(page.locator("#resource-limits")).toContainText("a full sequence uses two checks");
   await page.getByRole("button", {name:"Disconnect",exact:true}).click();
   await expect(page.locator("#resource-limits")).toBeEmpty();
 });
@@ -266,7 +269,7 @@ test("baseline comparison appears in the offline evaluation report", async ({ pa
 for (const [id,rule] of [["password-sample","quoted credential assignment"],["confidential-sample","configured confidential-term rule"],["encoded-secret-sample","GitHub token pattern"]]) {
   test("secrets extended example " + id + " holds the output", async ({ page }) => {
     await connect(page); await page.locator("#"+id).click(); await run(page);
-    await expect(page.locator("#policy")).toHaveValue("secrets-extended-v1");
+    await expect(page.locator("#policy")).toHaveValue("conversation-v1");
     await expect(page.locator('#output-results [data-group="secrets"] summary')).toContainText("Findings");
     await expect(page.locator("#output-results")).toContainText(rule);
     await expect(page.locator("#output-results")).not.toContainText("PROJECT LANTERN");
@@ -295,4 +298,55 @@ test("secrets group batch report keeps expected incomplete cases visible", async
 test("dashboard links to the maintained user guide", async ({ page }) => {
   await page.goto("/dashboard");
   await expect(page.getByRole("link",{name:"User guide"})).toHaveAttribute("href","https://github.com/CollectiverseStudio/valinator/blob/main/docs/user-guide.md");
+});
+
+
+test("normal conversation needs no profile selection and follows four stages", async ({page}) => {
+  await page.goto("/dashboard");
+  await page.getByLabel("Application API key").fill("playwright-test-key");
+  await page.getByRole("button",{name:"Connect",exact:true}).click();
+  await expect(page.locator("#run-input")).toBeEnabled();
+  await expect(page.locator("#advanced")).not.toHaveAttribute("open", "");
+  await expect(page.locator("#policy")).toHaveValue("conversation-v1");
+  await expect(page.locator("#run-output")).toBeDisabled();
+  const calls=[]; page.on("request",r=>{if(r.url().includes("/v1/checks/")) calls.push(r.url().split("/").pop());});
+  await page.locator("#run-input").click();
+  await expect(page.locator("#run-output")).toBeEnabled();
+  expect(calls).toEqual(["input"]);
+  for(const group of ["sensitive_data","secrets","prompt_security"])
+    await expect(page.locator(`#input-results [data-group="${group}"] summary`)).toContainText("Passed");
+  await expect(page.locator("#answer")).toBeHidden();
+  await page.locator("#output-content").fill("Please contact the store for return instructions.");
+  await expect(page.locator("#run-output")).toBeEnabled();
+  await page.locator("#run-output").click();
+  await expect(page.locator("#answer")).toBeVisible(); expect(calls).toEqual(["input","output"]);
+  for(const group of ["sensitive_data","secrets","prompt_security"])
+    await expect(page.locator(`#output-results [data-group="${group}"] summary`)).toContainText("Passed");
+  const positions=await page.locator(".flow-step").evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().top));
+  expect(positions).toEqual([...positions].sort((a,b)=>a-b));
+  await page.locator("#input-content").fill("Changed input");
+  await expect(page.locator("#run-output")).toBeDisabled(); await expect(page.locator("#answer")).toBeHidden();
+});
+test("input findings prevent output requests even in observe mode", async ({page}) => {
+  await connect(page); const calls=[];
+  page.on("request",r=>{if(r.url().includes("/v1/checks/")) calls.push(r.url().split("/").pop());});
+  await page.locator("#input-content").fill('password = "synthetic-example!42"'); await run(page);
+  await expect(page.locator("#input-results")).toContainText("quoted credential assignment");
+  await expect(page.locator("#input-gate")).toContainText("Input held");
+  expect(calls).toEqual(["input"]); await expect(page.locator("#run-output")).toBeDisabled();
+});
+test("an input edit during a pending check cannot unlock output", async ({page}) => {
+  await connect(page); let release; const gate=new Promise(resolve=>release=resolve);
+  await page.route("**/v1/checks/input",async route=>{const response=await route.fetch(); await gate; await route.fulfill({response});});
+  await page.locator("#run-input").click();
+  await expect(page.locator("#result-status")).toHaveText("Checking…");
+  await page.locator("#input-content").fill("A new question that has not been checked."); release();
+  await expect(page.locator("#run-input")).toBeEnabled();
+  await expect(page.locator("#run-output")).toBeDisabled(); await expect(page.locator("#answer")).toBeHidden();
+});
+test("failed input never requests output",async({page})=>{
+  await connect(page); let outputCalls=0;
+  await page.route("**/v1/checks/input",route=>route.fulfill({status:503,body:'{}'}));
+  page.on("request",r=>{if(r.url().endsWith("/v1/checks/output")) outputCalls++;});
+  await run(page); expect(outputCalls).toBe(0); await expect(page.locator("#run-output")).toBeDisabled();
 });

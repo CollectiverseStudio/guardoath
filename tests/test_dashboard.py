@@ -27,3 +27,47 @@ def test_dashboard_metadata_requires_auth_and_is_application_scoped():
     assert "private-v1" not in response.text
     assert response.json()["policies"][0]["checks"][0]["simulated"] is True
     assert "test-key" not in response.text
+
+
+def conversation_client(enable_pii):
+    from pathlib import Path
+    from valinator.config import load_policies
+    engine = Engine(load_policies(Path(__file__).resolve().parents[1] / 'policies/playground.json'),
+                    default_checkers(enable_pii=enable_pii))
+    return TestClient(create_app(engine=engine, credentials={'test-key': 'demo'}))
+
+
+def test_conversation_profile_cannot_pass_without_its_required_pii_adapter():
+    client = conversation_client(False)
+    response = client.post('/v1/checks/input', headers={'Authorization': 'Bearer test-key'},
+                           json={'application_id': 'demo', 'policy_version': 'conversation-v1',
+                                 'content': 'Explain returns.'})
+    result = response.json()
+    assert response.status_code == 200
+    assert result['evaluation_status'] == 'incomplete'
+    assert {c['checker_id'] for c in result['checker_results']} == {'pii', 'secrets', 'text_security'}
+
+
+def test_conversation_profile_runs_combined_checks_on_both_stages():
+    import pytest
+    pytest.importorskip('presidio_analyzer')
+    client = conversation_client(True)
+    for stage in ['input', 'output']:
+        for content, flagged in [('Explain returns.', None), ('Email jane@example.com', 'pii'),
+                                 ('password = "synthetic-example!42"', 'secrets'),
+                                 ('Hidden\u200bcharacter', 'text_security')]:
+            response = client.post('/v1/checks/' + stage, headers={'Authorization': 'Bearer test-key'},
+                                   json={'application_id': 'demo', 'policy_version': 'conversation-v1',
+                                         'content': content})
+            result = response.json()
+            assert response.status_code == 200
+            assert result['evaluation_status'] == 'complete'
+            checks = {c['checker_id']: c for c in result['checker_results']}
+            assert set(checks) == {'pii', 'secrets', 'text_security'}
+            assert all(not c['simulated'] and not c['external'] for c in checks.values())
+            if flagged:
+                assert checks[flagged]['status'] == 'flagged'
+                assert result['recommended_action'] == ('flag' if stage == 'input' else 'block')
+            else:
+                assert all(c['status'] == 'passed' for c in checks.values())
+                assert result['recommended_action'] == 'allow'

@@ -22,6 +22,12 @@ An optional **real local detector** checks email addresses, credit-card candidat
 and selected U.S. SSN candidates using Presidio's patterns and validation routines. It is separate
 from the simulated safety/bias adapters; see setup below.
 
+The demo follows **Input data → Input test → Output (AI) data → Output test**.
+Its default conversation profile combines the implemented general text checks on
+both stages; focused policies are under Advanced. Input findings hold the flow.
+You paste the proposed answer; no AI model is called. See the user guide for
+application-specific rules and groups that are not implemented.
+
 ## Open the dashboard with one command
 
 Install Git and Python 3.12 (or 3.11–3.14), then download this repository:
@@ -101,7 +107,8 @@ enter the generated key. `GET /healthz` is public; checking endpoints require it
 Without a configured key the checking endpoints return 503.
 
 Open **http://127.0.0.1:8000/dashboard** for the visual playground. Enter your API
-key, select a loaded policy, and supply the user message and proposed AI answer.
+key and follow the four numbered stages. The launcher selects the combined
+conversation profile automatically; advanced settings contain focused policies.
 The dashboard calls the same authenticated APIs as an integrating application.
 It holds the preview for findings or incomplete checks and labels simulated or
 skipped coverage. It never generates an AI answer or claims that no findings

@@ -1,18 +1,29 @@
 "use strict";
 const $ = id => document.getElementById(id);
-let key = "", application = null, revision = 0, busy = false;
+let key = "", application = null, revision = 0, busy = false, inputResult = null;
+const canProceed = r => r && r.evaluation_status === "complete" && !r.simulated && !r.findings.length && r.recommended_action === "allow" && r.effective_action === "allow" && r.checker_results.length > 0 && r.checker_results.every(c => c.status === "passed" && !c.simulated);
+function buttons() {
+  $("run").disabled = $("run-input").disabled = busy || !application?.policies.length;
+  $("run-output").disabled = busy || !application || !canProceed(inputResult);
+}
+function waiting(stage) { const box = $(stage + "-results"); box.replaceChildren();
+  const title = document.createElement("h3"); title.textContent = stage === "input" ? "Input checks" : "Output checks";
+  const note = document.createElement("p"); note.textContent = stage === "input" ? "Waiting for a check." : "Waiting for the input test or proposed answer check."; note.className = "muted"; box.append(title, note);
+}
 const currentPolicy = () => application?.policies.find(p => p.version === $("policy").value);
 const groupLabels = {passed:"Passed", findings:"Findings", incomplete:"Incomplete", simulated:"Simulated", partial:"Partial coverage", disabled:"Disabled", not_applicable:"Not applicable", not_implemented:"Not implemented"};
-function reset() {
+function reset(keepInput = false) {
   revision++;
+  if (!keepInput) inputResult = null;
+  $("input-gate").textContent = canProceed(inputResult) ? "Input checks passed. Paste your AI’s answer, then run output checks." : "Complete the input test first.";
+  buttons();
   $("answer").hidden = true; $("answer").textContent = "";
   $("answer-status").textContent = "Not checked"; $("answer-status").className = "pill";
   $("answer-note").textContent = "An answer appears here when the selected checks complete without findings.";
   $("result-status").textContent = "Ready to test"; $("result-status").className = "pill";
   $("result-summary").textContent = "Run the checks to inspect this conversation.";
-  for (const stage of ["input", "output"]) { const box = $(stage + "-results"); box.replaceChildren();
-    const title = document.createElement("h3"); title.textContent = stage === "input" ? "Input checks" : "Output checks";
-    const note = document.createElement("p"); note.textContent = "Waiting for a check."; note.className = "muted"; box.append(title, note); }
+  if (!keepInput) waiting("input");
+  waiting("output");
   $("run-error").textContent = "";
 }
 async function api(path, body, token = key) {
@@ -36,8 +47,9 @@ function coverage() {
     const state = !group.checker_ids.length ? "not implemented" : !checks.length ? "disabled" : checks.some(c => !c.available) ? "unavailable" : checks.some(c => c.simulated) ? "simulated" : "enabled";
     const tag = document.createElement("span"); tag.textContent = group.name + " · " + state; tag.title = group.limitations; $("coverage").append(tag);
   }
-  $("schema-sample").disabled = !policy?.checks.some(c => c.id === "schema");
-  $("business-sample").disabled = !policy?.checks.some(c => c.id === "cross_field");
+  $("profile-status").textContent = policy ? (policy.version === "conversation-v1" ? "Combined conversation checks are active on both stages." : "Focused example profile: " + policy.version + ". Only its configured checks run.") : "Connect to load the combined conversation profile.";
+  $("schema-sample").disabled = !application?.policies.some(p => p.checks.some(c => c.id === "schema"));
+  $("business-sample").disabled = !application?.policies.some(p => p.version === "business-v1");
   $("redaction-sample").disabled = !application?.policies.some(p => p.version === "redaction-v1");
   for (const id of ["hidden-sample", "encoded-sample"]) $(id).disabled = !application?.policies.some(p => p.version === "text-security-v1");
   $("completeness-sample").disabled = !application?.policies.some(p => p.version === "completeness-v1");
@@ -47,37 +59,41 @@ function coverage() {
 $("connect").addEventListener("click", async () => {
   const token = $("api-key").value.trim(); if (!token || busy) return;
   reset(); const attempt = revision; $("connect").disabled = true;
-  key = ""; application = null; $("run").disabled = true; $("policy").disabled = true;
+  key = ""; application = null; buttons(); $("run").disabled = true; $("policy").disabled = true;
   $("coverage").replaceChildren(); $("execution-mode").textContent = "Local checks"; $("data-routing").textContent = ""; $("resource-limits").textContent = ""; $("disconnect").disabled = true;
   try { const data = await api("/v1/applications/current", null, token); if (attempt !== revision) return;
     key = token; application = data; $("api-key").value = ""; $("policy").replaceChildren();
-    for (const policy of data.policies) { const option = document.createElement("option"); option.value = policy.version; option.textContent = policy.version + " · " + policy.mode + " mode"; $("policy").append(option); }
+    for (const policy of data.policies) { const option = document.createElement("option"); option.value = policy.version; option.textContent = (policy.version === "conversation-v1" ? "Conversation — combined general text checks" : policy.version) + " · " + policy.mode + " mode"; $("policy").append(option); }
+    if (data.policies.some(p => p.version === "conversation-v1")) $("policy").value = "conversation-v1";
     $("connection-status").textContent = "Connected to " + data.application_id + ". " + data.policies.length + " policy available.";
     const limits = data.resource_limits;
-    $("resource-limits").textContent = limits ? "Per server process: " + limits.checks_per_minute + " checks/minute per application · burst " + limits.burst + " · " + limits.application_concurrency + " concurrent checks per application. Each playground run uses two checks." : "";
-    $("policy").disabled = false; $("disconnect").disabled = false; $("run").disabled = !data.policies.length; coverage();
+    $("resource-limits").textContent = limits ? "Per server process: " + limits.checks_per_minute + " checks/minute per application · burst " + limits.burst + " · " + limits.application_concurrency + " concurrent checks per application. Each stage uses one API check; a full sequence uses two checks." : "";
+    $("policy").disabled = false; $("disconnect").disabled = false; buttons(); coverage();
   } catch (error) { if (attempt === revision) $("connection-status").textContent = error.message || "Connection failed."; }
   finally { $("connect").disabled = false; }
 });
 $("disconnect").addEventListener("click", () => {
-  key = ""; application = null; $("api-key").value = ""; $("resource-limits").textContent = ""; reset(); $("coverage").replaceChildren();
+  key = ""; application = null; $("api-key").value = ""; $("resource-limits").textContent = ""; reset(); $("coverage").replaceChildren(); $("profile-status").textContent = "Connect to load the combined conversation profile.";
   $("execution-mode").textContent = "Local checks"; $("data-routing").textContent = "";
   $("policy").replaceChildren(); $("policy").disabled = true; $("run").disabled = true; $("disconnect").disabled = true;
   $("connection-status").textContent = "Disconnected. Key removed from this tab’s memory.";
 });
 $("policy").addEventListener("change", () => { reset(); coverage(); });
-for (const id of ["input-content", "output-content", "input-format", "output-format", "api-key"]) $(id).addEventListener("input", reset);
+for (const id of ["input-content", "input-format", "api-key"]) $(id).addEventListener("input", () => reset());
+for (const id of ["output-content", "output-format"]) $(id).addEventListener("input", () => reset(true));
 for (const button of document.querySelectorAll("[data-sample]")) button.addEventListener("click", () => {
-  reset(); $("input-format").value = "text"; $("output-format").value = "text";
+  reset();
+  if (["clean","email","card","ssn","secret","password","confidential","encoded-secret","hidden","encoded"].includes(button.dataset.sample) && application?.policies.some(p => p.version === "conversation-v1")) { $("policy").value = "conversation-v1"; coverage(); }
+  $("input-format").value = "text"; $("output-format").value = "text";
   $("input-content").value = "Can you explain your return policy?";
   const examples = {clean: "You can return an unused item within 30 days. Please check the store’s policy for details.", email: "Your contact email is jane@example.com.", card: "The test card number is 4111 1111 1111 1111.", ssn:"The example SSN candidate is 219-09-9999."};
-  if (button.dataset.sample === "schema") { $("input-format").value = "json"; $("output-format").value = "json"; $("input-content").value = '{"message":"Can I return this?"}'; $("output-content").value = '{"unexpected_field":"This does not match the output schema."}'; }
-  else if (button.dataset.sample === "business") { $("input-format").value = "json"; $("output-format").value = "json"; $("input-content").value = JSON.stringify({start_date:"2026-10-01",end_date:"2026-10-03",purchase_amount:100,refund_amount:25},null,2); $("output-content").value = JSON.stringify({start_date:"2026-10-03",end_date:"2026-10-01",purchase_amount:100,refund_amount:150},null,2); }
+  if (button.dataset.sample === "schema") { $("policy").value = application.policies.find(p => p.checks.some(c => c.id === "schema")).version; coverage(); $("input-format").value = "json"; $("output-format").value = "json"; $("input-content").value = JSON.stringify({start_date:'2026-10-01',end_date:'2026-10-03',purchase_amount:100,refund_amount:25}); $("output-content").value = '{"unexpected_field":"This does not match the output schema."}'; }
+  else if (button.dataset.sample === "business") { $("policy").value = "business-v1"; coverage(); $("input-format").value = "json"; $("output-format").value = "json"; $("input-content").value = JSON.stringify({start_date:"2026-10-01",end_date:"2026-10-03",purchase_amount:100,refund_amount:25},null,2); $("output-content").value = JSON.stringify({start_date:"2026-10-03",end_date:"2026-10-01",purchase_amount:100,refund_amount:150},null,2); }
   else if (button.dataset.sample === "redaction") { $("policy").value = "redaction-v1"; coverage(); $("output-content").value = "Contact jane@example.com. Example SSN: 219-09-9999. Test card: 4111 1111 1111 1111."; }
-  else if (["hidden", "encoded"].includes(button.dataset.sample)) { $("policy").value = "text-security-v1"; coverage(); $("input-content").value = button.dataset.sample === "hidden" ? "Please explain this hidden\u200bcharacter." : "Please review this labeled text: base64: SGVsbG8="; $("output-content").value = "This example requires review before processing."; }
+  else if (["hidden", "encoded"].includes(button.dataset.sample)) { $("policy").value = application?.policies.some(p => p.version === "conversation-v1") ? "conversation-v1" : "text-security-v1"; coverage(); $("input-content").value = button.dataset.sample === "hidden" ? "Please explain this hidden\u200bcharacter." : "Please review this labeled text: base64: SGVsbG8="; $("output-content").value = "This example requires review before processing."; }
   else if (button.dataset.sample === "completeness") { $("policy").value = "completeness-v1"; coverage(); $("input-content").value = "Summary: Customer requests return instructions."; $("output-content").value = "Summary: Return instructions are available.\nNext steps:"; }
-  else if (["password","confidential","encoded-secret"].includes(button.dataset.sample)) { $("policy").value = "secrets-extended-v1"; coverage(); const token = ["ghp","_","A".repeat(36)].join(""); $("output-content").value = button.dataset.sample === "password" ? 'password = "synthetic-example!42"' : button.dataset.sample === "confidential" ? "Internal draft about PROJECT LANTERN." : "base64: " + btoa(token); }
-  else if (button.dataset.sample === "secret") { $("policy").value = "secrets-v1"; coverage(); $("output-content").value = "Synthetic token pattern for testing only: " + ["ghp", "_", "A".repeat(36)].join(""); }
+  else if (["password","confidential","encoded-secret"].includes(button.dataset.sample)) { $("policy").value = application?.policies.some(p => p.version === "conversation-v1") ? "conversation-v1" : "secrets-extended-v1"; coverage(); const token = ["ghp","_","A".repeat(36)].join(""); $("output-content").value = button.dataset.sample === "password" ? 'password = "synthetic-example!42"' : button.dataset.sample === "confidential" ? "Internal draft about PROJECT LANTERN." : "base64: " + btoa(token); }
+  else if (button.dataset.sample === "secret") { $("policy").value = application?.policies.some(p => p.version === "conversation-v1") ? "conversation-v1" : "secrets-v1"; coverage(); $("output-content").value = "Synthetic token pattern for testing only: " + ["ghp", "_", "A".repeat(36)].join(""); }
   else $("output-content").value = examples[button.dataset.sample];
 });
 function render(stage, result) {
@@ -110,25 +126,49 @@ function render(stage, result) {
     box.append(details);
   }
 }
-$("run").addEventListener("click", async () => {
-  if (!application || busy) return;
-  reset(); const attempt = revision, policy = $("policy").value, app = application.application_id, token = key;
-  const proposed = $("output-content").value; busy = true; $("run").disabled = true; $("result-status").textContent = "Checking…";
+async function execute(target) {
+  if (!application || busy || (target === "output" && !canProceed(inputResult))) return;
+  reset(target === "output"); const attempt = revision, policy = $("policy").value, app = application.application_id, token = key;
+  const proposed = $("output-content").value; busy = true; buttons(); $("result-status").textContent = "Checking…";
   try {
-    const results = await Promise.all(["input", "output"].map(stage => api("/v1/checks/" + stage, {application_id: app, policy_version: policy, content: $(stage + "-content").value, content_format: $(stage + "-format").value}, token)));
-    if (attempt !== revision) return;
-    results.forEach((result, i) => render(i ? "output" : "input", result));
+    const assess = stage => api("/v1/checks/" + stage, {application_id: app, policy_version: policy, content: $(stage + "-content").value, content_format: $(stage + "-format").value}, token);
+    if (target !== "output") {
+      const checked = await assess("input");
+      if (attempt !== revision) return;
+      inputResult = checked; render("input", checked);
+      $("input-gate").textContent = canProceed(checked) ? "Input checks passed. Paste your AI’s answer, then run output checks." : "Input held. Review findings or incomplete checks and correct the message before continuing.";
+    }
+    const results = [inputResult];
+    if (target !== "input" && canProceed(inputResult)) {
+      const checked = await assess("output");
+      if (attempt !== revision) return;
+      results.push(checked); render("output", checked);
+    }
     const noChecks = results.some(r => !r.checker_results.some(c => ["passed", "flagged"].includes(c.status)));
     const incomplete = noChecks || results.some(r => r.evaluation_status !== "complete"), findings = results.some(r => r.findings.length > 0), simulated = results.some(r => r.simulated), skipped = results.some(r => r.checker_results.some(c => ["error", "unsupported", "skipped"].includes(c.status)));
     const status = $("result-status"), answerStatus = $("answer-status");
     if (incomplete) { status.textContent = "Incomplete"; status.className = "pill warn"; $("result-summary").textContent = noChecks ? "No checks completed for at least one side. This result is not a pass." : "A required check did not complete. This result is not a pass."; $("answer-note").textContent = "Preview held because check coverage is incomplete."; answerStatus.textContent = "Held"; }
     else if (findings) { status.textContent = "Findings to review"; status.className = "pill bad"; $("result-summary").textContent = "Review the input and output findings below. Observe mode may still report an effective action of allow."; $("answer-note").textContent = "Preview held for review because checks reported findings."; answerStatus.textContent = "Held for review"; }
+    else if (results.length === 1 && canProceed(inputResult)) {
+      status.textContent = "Input checks passed"; status.className = "pill good";
+      $("result-summary").textContent = "Input test complete. Continue to the proposed AI answer and output test.";
+      $("answer-note").textContent = "Waiting for output checks. No answer has been released.";
+    }
+    else if (results.length === 1 && !canProceed(inputResult) && !simulated) {
+      status.textContent = "Input held"; status.className = "pill warn";
+      $("result-summary").textContent = "Input did not pass every configured check. Review its results before continuing.";
+      $("answer-note").textContent = "Preview held at the input test.";
+    }
     else { status.textContent = simulated ? "Simulated coverage" : "No findings"; status.className = simulated || skipped ? "pill warn" : "pill good";
       $("result-summary").textContent = simulated ? "No findings, but some checks are simulated. This is not a completed safety or bias assessment." : "No findings from the selected completed checks. This is not a guarantee of correctness or safety.";
       $("answer-note").textContent = simulated || skipped ? "Preview only. Some checks were simulated or skipped; see coverage above." : "The selected checks completed without findings. Only their defined coverage was assessed.";
       answerStatus.textContent = simulated || skipped ? "Unverified preview" : "Selected checks passed"; answerStatus.className = status.className;
-      $("answer").textContent = proposed; $("answer").hidden = false;
+      if (results.length === 2 && canProceed(results[1])) { $("answer").textContent = proposed; $("answer").hidden = false; }
+      else { $("answer-note").textContent = "Preview held because every configured check must pass without simulation or skipped checks."; }
     }
   } catch (error) { if (attempt === revision) { $("run-error").textContent = error.message || "Checks failed. No pass was recorded."; $("result-status").textContent = "Check failed"; $("answer-note").textContent = "Preview held because checks failed."; } }
-  finally { busy = false; $("run").disabled = !application?.policies.length; }
-});
+  finally { busy = false; buttons(); }
+}
+$("run").addEventListener("click", () => execute("both"));
+$("run-input").addEventListener("click", () => execute("input"));
+$("run-output").addEventListener("click", () => execute("output"));

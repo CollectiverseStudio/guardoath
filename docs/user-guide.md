@@ -1,7 +1,7 @@
 # Valinator user guide
 
 This guide grows with the product. It describes user-facing validation checks,
-examples, expected results, configuration, and boundaries. Version: 0.15.0.
+examples, expected results, configuration, and boundaries. Version: 0.16.0.
 
 A **check** examines an input or proposed AI answer. A **regression case** tests
 whether that check behaves as expected on a saved example. Passing a regression
@@ -39,6 +39,49 @@ provider account, or paid call is required. This is separate from the smaller
 30-case starter suite selected by `--evaluate` without `--suite secrets`.
 Use `--no-browser` to print the report location. Mac/Linux users can use
 `python3.12 start_dashboard.py` with the same options.
+
+## Test a conversation in four steps
+
+The normal demo selects **Conversation — combined general text checks** for you.
+You do not need to choose a policy before entering a question.
+
+1. **Input data:** enter the user's message.
+2. **Input test:** select **Run input checks**. The message runs through all three
+   implemented general text checkers: supported sensitive identifiers, secrets
+   (including quoted assignments, encoded scanning and example confidential
+   terms), and bounded text-security signals.
+3. **Output (AI) data:** once input passes, your real application would call its
+   AI model. In this local demo, paste the proposed answer or use a sample;
+   Valinator does not generate an answer or call Tokatlas here.
+4. **Output test:** select **Run output checks**. The proposed answer runs through
+   those same three checkers. A preview appears only after the sequence completes
+   without findings, required-check failures or simulation.
+
+Input findings hold the sequence **even in observe mode**. Correct the message
+and rerun input. Editing the input or profile invalidates both stages; editing
+only the proposed answer preserves the completed input test and clears output.
+Failed, incomplete, simulated or skipped input checks cannot unlock output.
+The prepared-example shortcut runs the same sequence, stopping before the output
+API request if input is held. This conservative demo gate is distinct from the
+API's observe-mode `effective_action: allow`: integrating applications remain
+responsible for enforcing their decisions and ordering model calls.
+
+A **policy** is the application's saved bundle of checks, thresholds and actions.
+It remains part of each API request so different applications can have different
+requirements. The selector now lives under **Advanced: application rules and
+focused examples**. General text examples retain the combined profile; redaction,
+required-section and business/schema examples select explicitly focused profiles.
+The active profile and its coverage remain visible outside the advanced panel.
+
+“All checks” means all implemented checks applicable to that application and
+content. Schema validation needs your expected JSON structure; business rules and
+required sections need your requirements. Running a refund schema on an ordinary
+question would be meaningless. These remain focused examples until configured
+for your application. Harmful-content and bias checkers are still simulators,
+and accuracy, scope and action-safety checks are not implemented. They are not
+included in the normal profile or represented as passing. Sensitive identifier
+coverage is limited, not comprehensive PHI detection; text-security patterns are
+not a complete prompt-injection detector. Expand each result group for limits.
 
 ## How an application uses the API
 
