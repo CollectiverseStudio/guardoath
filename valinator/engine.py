@@ -9,6 +9,8 @@ from jsonschema import Draft202012Validator
 
 from valinator.checkers import Checker
 from valinator.config import validate_local_schema
+from valinator.formats import validate_schema_formats
+from valinator.groups import GROUPS, group_results
 from valinator.models import Action, CheckerResult, CheckRequest, CheckResponse, Policy, Stage
 
 PRIORITY = {Action.ALLOW: 0, Action.FLAG: 1, Action.BLOCK: 2}
@@ -24,10 +26,15 @@ class Engine:
             ids = [r.checker_id for r in policy.rules]
             if len(ids) != len(set(ids)):
                 raise ValueError("Duplicate checker in policy")
+            if len({r.rule_id for r in policy.comparisons}) != len(policy.comparisons):
+                raise ValueError("Duplicate field comparison")
+            if policy.comparisons and "cross_field" not in ids:
+                raise ValueError("Field comparisons require a cross_field checker rule")
             for schema in (policy.input_schema, policy.output_schema):
                 if schema is not None:
                     validate_local_schema(schema)
                     Draft202012Validator.check_schema(schema)
+                    validate_schema_formats(schema)
             self._policies[key] = deepcopy(policy)
         self._checkers = dict(checkers)
 
@@ -40,12 +47,14 @@ class Engine:
             "version": policy.version, "mode": policy.mode,
             "checks": [{"id": rule.checker_id, "required": rule.required,
                         "available": rule.checker_id in self._checkers,
-                        "simulated": bool(getattr(self._checkers.get(rule.checker_id), "simulated", False))}
+                        "simulated": bool(getattr(self._checkers.get(rule.checker_id), "simulated", False)),
+                        "stages": list(rule.stages)}
                        for rule in policy.rules],
         } for (owner, _), policy in self._policies.items() if owner == application_id]
 
     async def check(self, request: CheckRequest, stage: Stage) -> CheckResponse:
         policy = self._policies[(request.application_id, request.policy_version)]
+        rules = [rule for rule in policy.rules if stage in rule.stages]
         started = perf_counter()
 
         async def execute(checker_id: str) -> CheckerResult:
@@ -79,12 +88,13 @@ class Engine:
                                        status="error", error_code="checker_failure", simulated=simulated)
             return result.model_copy(update={"latency_ms": round((perf_counter() - tick) * 1000, 3)})
 
-        results = await asyncio.gather(*(execute(r.checker_id) for r in policy.rules))
+        results = await asyncio.gather(*(execute(r.checker_id) for r in rules))
         actions = [Action.ALLOW]
         incomplete = False
-        for rule, result in zip(policy.rules, results):
+        for rule, result in zip(rules, results):
             if result.status == "flagged":
-                actions.append(rule.on_finding)
+                override = rule.on_input_finding if stage == Stage.INPUT else rule.on_output_finding
+                actions.append(override or rule.on_finding)
             elif rule.required and result.status != "passed":
                 incomplete = True
                 actions.append(Action(policy.failure_action))
@@ -98,4 +108,5 @@ class Engine:
             findings=tuple(f for r in results for f in r.findings),
             checker_results=tuple(results), simulated=any(r.simulated for r in results),
             total_latency_ms=round((perf_counter() - started) * 1000, 3),
+            groups=group_results(policy, results, stage),
         )

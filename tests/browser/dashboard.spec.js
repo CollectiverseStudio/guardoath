@@ -71,3 +71,29 @@ test("mobile layout fits the viewport", async ({ page }) => {
   await page.setViewportSize({width:390,height:844}); await connect(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+test("grouped coverage does not mark planned checks as passed", async ({ page }) => {
+  await connect(page); await run(page);
+  await expect(page.locator('#output-results [data-group="sensitive_data"] summary')).toContainText("Passed");
+  await expect(page.locator('#output-results [data-group="accuracy"] summary')).toContainText("Not implemented");
+  await expect(page.locator('#output-results [data-group="structure"] summary')).toContainText("Disabled");
+});
+
+test("business policy reports cross-field failures and holds the preview", async ({ page }) => {
+  await connect(page); await page.locator("#policy").selectOption("business-v1");
+  await page.getByRole("button", {name:"Business rule error", exact:true}).click(); await run(page);
+  await expect(page.locator('#input-results [data-group="business"] summary')).toContainText("Passed");
+  await expect(page.locator('#output-results [data-group="business"] summary')).toContainText("Findings");
+  await expect(page.locator("#output-results")).toContainText("date_order");
+  await expect(page.locator("#output-results")).toContainText("refund_limit");
+  await expect(page.locator("#answer")).toBeHidden();
+});
+
+test("invalid date formats appear in structural findings", async ({ page }) => {
+  await connect(page); await page.locator("#policy").selectOption("business-v1");
+  await page.getByRole("button", {name:"Business rule error", exact:true}).click();
+  await page.locator("#output-content").fill(JSON.stringify({start_date:"2026-02-30",end_date:"2026-10-03",purchase_amount:100,refund_amount:25}));
+  await run(page);
+  await expect(page.locator('#output-results [data-group="structure"] summary')).toContainText("Findings");
+  await expect(page.locator("#answer")).toBeHidden();
+});

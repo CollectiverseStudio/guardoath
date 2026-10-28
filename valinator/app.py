@@ -16,6 +16,8 @@ from valinator.checkers import default_checkers
 from valinator.config import load_policies
 from valinator.engine import Engine
 from valinator.models import Action, CheckRequest, CheckResponse, Policy, Rule, Stage
+from valinator.ingress import JsonIngressLimits
+from valinator.groups import GROUPS
 
 
 def demo_engine(enable_pii: bool = False) -> Engine:
@@ -48,7 +50,8 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     bindings = dict(credentials) if credentials is not None else ({key: "demo"} if key else {})
     if any(not token or not app_id for token, app_id in bindings.items()):
         raise ValueError("Credentials and application identifiers must be nonempty")
-    api = FastAPI(title="Valinator", version="0.3.0")
+    api = FastAPI(title="Valinator", version="0.4.0")
+    api.add_middleware(JsonIngressLimits)
     bearer = HTTPBearer(auto_error=False)
     static_dir = Path(__file__).parent / "static"
     api.mount("/assets", StaticFiles(directory=static_dir), name="assets")
@@ -93,7 +96,9 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
 
     @api.get("/v1/applications/current")
     async def current_application(app_id: Annotated[str, Depends(authenticate)]):
-        return {"application_id": app_id, "policies": service.describe_policies(app_id)}
+        return {"application_id": app_id, "policies": service.describe_policies(app_id),
+                "groups": [{"group_id": gid, "name": name, "checker_ids": ids, "limitations": limits}
+                           for gid, name, ids, limits in GROUPS]}
 
     @api.post("/v1/checks/input", response_model=CheckResponse)
     async def check_input(request: CheckRequest, app_id: Annotated[str, Depends(authenticate)]):

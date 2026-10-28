@@ -49,6 +49,21 @@ guarantees safety. Changing content clears earlier results.
 Your key is held only in tab memory, not browser storage. Check content is not
 saved as history. The dashboard is for local testing and is not a hosted service.
 
+To try both local sensitive-data checks and structured business rules, install
+`.[test,pii]`, enable `VALINATOR_ENABLE_PII=1`, and set
+`VALINATOR_POLICY_FILE=policies/playground.json`. Select `pii-v1` for text or
+`business-v1` for the JSON examples, then click **Business rule error** to see a
+date-order and refund-limit violation. No model is called.
+
+### Grouped coverage
+
+Input and output results share ten groups: regulated/sensitive data, secrets,
+prompt manipulation, harmful content, structure, scope, accuracy, bias, business
+rules, and code/action safety. Groups show passed, findings, incomplete, simulated,
+partial coverage, disabled, not applicable, or not implemented. Expand a group
+for checker results and its limitations. A passed email/card check is not PHI
+detection, and unimplemented groups never count as passed.
+
 Input example (run in a second shell with the same key configured):
 
 ```bash
@@ -97,7 +112,7 @@ npm run test:browser
 ```
 
 Activate the Python environment first. Browser tests start their own local server
-with the PII-only policy, so install `.[test,pii]` on Python 3.11–3.14. To use an
+with the combined playground policy, so install `.[test,pii]` on Python 3.11–3.14. To use an
 installed Chrome instead of downloading Chromium, set `PLAYWRIGHT_CHANNEL=chrome`.
 The GitHub dashboard job uses the runner's installed Chrome.
 
@@ -170,11 +185,34 @@ Requests cannot change enforcement mode, supply a policy, or bypass required
 checks. `create_app()` accepts an injected engine and credential-to-application
 map for tests and future integrations. There is no policy management endpoint yet.
 
-Do not expose this prototype publicly. Production work still includes bounded
-HTTP body handling at ingress, rate limits, production identity and credential
+Do not expose this prototype publicly. Production work still includes rate limits,
+production identity and credential
 rotation, tenant-aware persistence, audit metadata, deployment hardening, provider
 data-routing controls, calibrated detectors, dependency security review, and
-performance measurements. Request field limits apply after JSON parsing.
+performance measurements. Request envelopes are limited to 256 KiB before
+parsing, including streamed bodies, with a five-second read deadline. Only UTF-8
+JSON and uncompressed bodies are supported. JSON is limited to 32 nested
+containers, 1,000 entries per container, and 128 characters per numeric token.
+These limits also apply to canonical JSON content inside a check request.
+
+### Formats and cross-field rules
+
+Schema `format` is actively enforced for date, date-time, time, email, IPv4, IPv6,
+and UUID. Unknown formats fail policy startup instead of silently passing. Email
+format checking does not perform DNS or mailbox verification. Formats do not
+establish that a destination is safe or that an address belongs to a user.
+
+The `cross_field` checker supports declarative `lt`, `le`, `eq`, `ge`, `gt`, and
+`ne` comparisons of numeric values or ISO calendar dates, using absolute JSON
+Pointers for `left` and `right`. There is no expression evaluation. Missing,
+incorrectly typed, or invalid comparison values produce findings. The example
+compares submitted fields; it cannot prove the original purchase amount is true.
+Authoritative business data needs a separate trusted integration.
+
+Checker rules can select `stages: ["input"]` or `["output"]` and override
+`on_input_finding` and `on_output_finding`. The example business policy flags an
+input comparison failure but recommends blocking an output comparison failure.
+Observe mode still reports an effective action of allow.
 
 No raw content is deliberately logged or persisted; your hosting/access logging
 configuration must preserve this property. Policies are trusted server-side

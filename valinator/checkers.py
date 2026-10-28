@@ -7,6 +7,8 @@ from jsonschema import Draft202012Validator
 
 from valinator.models import CheckerResult, CheckRequest, Finding, Policy, Stage
 from valinator.json_data import parse_json
+from valinator.formats import FORMAT_CHECKER
+from valinator.business import cross_field_check
 
 Checker = Callable[[CheckRequest, Policy, Stage], Awaitable[CheckerResult]]
 
@@ -21,7 +23,7 @@ async def schema_check(request: CheckRequest, policy: Policy, stage: Stage) -> C
         return CheckerResult(checker_id="schema", checker_version="1", status="flagged",
                              findings=(Finding(rule_id="schema.invalid_json", category="structure",
                                                severity="high", explanation="Content is not valid strict JSON."),))
-    valid = Draft202012Validator(schema).is_valid(payload)
+    valid = Draft202012Validator(schema, format_checker=FORMAT_CHECKER).is_valid(payload)
     return CheckerResult(
         checker_id="schema", checker_version="1", status="passed" if valid else "flagged",
         findings=() if valid else (Finding(
@@ -56,7 +58,7 @@ def simulated_checker(kind: str) -> Checker:
 
 def default_checkers(enable_pii: bool = False) -> dict[str, Checker]:
     checkers = {"schema": schema_check, "safety": simulated_checker("safety"),
-                "bias": simulated_checker("bias")}
+                "bias": simulated_checker("bias"), "cross_field": cross_field_check}
     if enable_pii:
         from valinator.pii import build_pii_checker
         checkers["pii"] = build_pii_checker()
