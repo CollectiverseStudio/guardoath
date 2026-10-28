@@ -294,3 +294,29 @@ configuration; untrusted remote JSON Schema references are not supported.
 
 See [the specification](docs/specification.md), [implementation backlog](docs/backlog.md),
 and [verified dependency versions](docs/dependencies.md).
+
+### Required information in labeled text
+
+The local `completeness` checker uses `required_sections` in a trusted policy.
+See `policies/completeness.json`, or select **Missing information** in the
+playground. The example requires an input `Summary:` and output `Summary:` plus
+`Next steps:`. Input findings recommend flagging; output findings recommend
+blocking. Observe mode still allows the request.
+
+Each rule specifies a unique `rule_id`, an ASCII `label`, optional `stages`, and
+`min_characters` (default 1; maximum 8,000). Up to 50 rules are permitted. Labels
+must start at the beginning of a line and end with a colon; matching ignores
+ASCII letter case. Text can follow the colon or continue on subsequent lines
+until another label. Every syntactically valid label starts a new section, even
+if it is not required. Repeated required labels are flagged as ambiguous.
+Whitespace does not count toward the minimum length. Markdown headings, indented
+labels, uploaded documents, and JSON fields are not interpreted as sections.
+Use JSON Schema for structured required fields. A required completeness check on
+JSON, or on a stage with no applicable requirements, reports skipped/incomplete.
+
+Findings expose rule identifiers without submitted values. This is a literal
+presence/length check: placeholders, false statements, malicious text, or quoted
+labels can satisfy it. It does not assess legal clauses, symptoms, accuracy,
+intent, bias, or semantic completeness. Combine it with other checks and trusted
+review where those judgments matter. No external service or new dependency is
+used.

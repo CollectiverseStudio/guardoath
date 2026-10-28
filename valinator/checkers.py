@@ -9,6 +9,7 @@ from valinator.models import CheckerResult, CheckRequest, Finding, Policy, Stage
 from valinator.json_data import parse_json
 from valinator.formats import FORMAT_CHECKER
 from valinator.business import cross_field_check
+from valinator.completeness import completeness_check
 from valinator.secrets_check import build_secret_checker
 
 Checker = Callable[[CheckRequest, Policy, Stage], Awaitable[CheckerResult]]
@@ -60,7 +61,7 @@ def simulated_checker(kind: str) -> Checker:
 def default_checkers(enable_pii: bool = False) -> dict[str, Checker]:
     checkers = {"schema": schema_check, "safety": simulated_checker("safety"),
                 "bias": simulated_checker("bias"), "cross_field": cross_field_check,
-                "secrets": build_secret_checker()}
+                "secrets": build_secret_checker(), "completeness": completeness_check}
     if enable_pii:
         from valinator.pii import build_pii_checker
         checkers["pii"] = build_pii_checker()

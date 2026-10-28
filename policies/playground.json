@@ -131,6 +131,42 @@
           "on_output_finding": "block"
         }
       ]
+    },
+    {
+      "application_id": "demo",
+      "version": "completeness-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "completeness",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "required_sections": [
+        {
+          "rule_id": "request_summary",
+          "label": "Summary",
+          "stages": [
+            "input"
+          ]
+        },
+        {
+          "rule_id": "response_summary",
+          "label": "Summary",
+          "stages": [
+            "output"
+          ]
+        },
+        {
+          "rule_id": "next_steps",
+          "label": "Next steps",
+          "min_characters": 5,
+          "stages": [
+            "output"
+          ]
+        }
+      ]
     }
   ]
 }

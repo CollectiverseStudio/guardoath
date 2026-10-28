@@ -138,3 +138,19 @@ test("clean text passes the selected secret patterns only", async ({ page }) => 
   await expect(page.locator('#output-results [data-group="sensitive_data"] summary')).toContainText("Disabled");
   await expect(page.locator("#answer")).toBeVisible();
 });
+
+test("missing required output information holds the answer", async ({ page }) => {
+  await connect(page); await page.locator("#completeness-sample").click(); await run(page);
+  await expect(page.locator('#input-results [data-group="business"] summary')).toContainText("Passed");
+  await expect(page.locator('#output-results [data-group="business"] summary')).toContainText("Findings");
+  await expect(page.locator("#output-results")).toContainText("next_steps");
+  await expect(page.locator("#answer")).toBeHidden();
+});
+test("adding the required information releases the preview", async ({ page }) => {
+  await connect(page); await page.locator("#completeness-sample").click();
+  await page.locator("#output-content").fill("Summary: Return instructions are available.\nNext steps: Contact the store for instructions.");
+  await run(page);
+  await expect(page.locator("#result-status")).toHaveText("No findings");
+  await expect(page.locator("#answer")).toBeVisible();
+  await expect(page.locator('#output-results [data-group="business"]')).toContainText("No assessment of truth");
+});

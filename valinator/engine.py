@@ -30,6 +30,14 @@ class Engine:
                 raise ValueError("Duplicate field comparison")
             if policy.comparisons and "cross_field" not in ids:
                 raise ValueError("Field comparisons require a cross_field checker rule")
+            if len({r.rule_id for r in policy.required_sections}) != len(policy.required_sections):
+                raise ValueError("Duplicate completeness rule")
+            for stage in Stage:
+                labels = [r.label.lower() for r in policy.required_sections if stage in r.stages]
+                if len(set(labels)) != len(labels):
+                    raise ValueError("Duplicate completeness label")
+            if policy.required_sections and "completeness" not in ids:
+                raise ValueError("Required sections require a completeness checker rule")
             for rule in policy.rules:
                 if rule.checker_id != "pii" and Action.REDACT in {rule.on_finding, rule.on_input_finding, rule.on_output_finding}:
                     raise ValueError("Redaction actions are supported only by the pii checker")

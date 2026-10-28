@@ -11,7 +11,7 @@ GROUPS = (
     ("scope", "Scope and intent", (), "Task scope and relevance are not assessed."),
     ("accuracy", "Accuracy and supporting evidence", (), "No grounding or factual accuracy evaluator is implemented."),
     ("bias", "Bias and fairness", ("bias",), "Bias checks are synthetic test doubles, not fairness assessments."),
-    ("business", "Business rules and commitments", ("cross_field",), "Configured numeric and date comparisons only. Submitted fields are not independently verified facts."),
+    ("business", "Business rules and commitments", ("cross_field", "completeness"), "Configured numeric/date comparisons and labeled text section presence only. No assessment of truth, legal adequacy, medical sufficiency, or meaning."),
     ("actions", "Code and action safety", (), "No code or tool-action safety checker is implemented."),
 )
 

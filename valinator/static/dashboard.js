@@ -32,6 +32,7 @@ function coverage() {
   $("schema-sample").disabled = !policy?.checks.some(c => c.id === "schema");
   $("business-sample").disabled = !policy?.checks.some(c => c.id === "cross_field");
   $("redaction-sample").disabled = !application?.policies.some(p => p.version === "redaction-v1");
+  $("completeness-sample").disabled = !application?.policies.some(p => p.version === "completeness-v1");
   $("secret-sample").disabled = !application?.policies.some(p => p.version === "secrets-v1");
 }
 $("connect").addEventListener("click", async () => {
@@ -61,6 +62,7 @@ for (const button of document.querySelectorAll("[data-sample]")) button.addEvent
   if (button.dataset.sample === "schema") { $("input-format").value = "json"; $("output-format").value = "json"; $("input-content").value = '{"message":"Can I return this?"}'; $("output-content").value = '{"unexpected_field":"This does not match the output schema."}'; }
   else if (button.dataset.sample === "business") { $("input-format").value = "json"; $("output-format").value = "json"; $("input-content").value = JSON.stringify({start_date:"2026-10-01",end_date:"2026-10-03",purchase_amount:100,refund_amount:25},null,2); $("output-content").value = JSON.stringify({start_date:"2026-10-03",end_date:"2026-10-01",purchase_amount:100,refund_amount:150},null,2); }
   else if (button.dataset.sample === "redaction") { $("policy").value = "redaction-v1"; coverage(); $("output-content").value = "Contact jane@example.com. Example SSN: 219-09-9999. Test card: 4111 1111 1111 1111."; }
+  else if (button.dataset.sample === "completeness") { $("policy").value = "completeness-v1"; coverage(); $("input-content").value = "Summary: Customer requests return instructions."; $("output-content").value = "Summary: Return instructions are available.\nNext steps:"; }
   else if (button.dataset.sample === "secret") { $("policy").value = "secrets-v1"; coverage(); $("output-content").value = "Synthetic token pattern for testing only: " + ["ghp", "_", "A".repeat(36)].join(""); }
   else $("output-content").value = examples[button.dataset.sample];
 });
