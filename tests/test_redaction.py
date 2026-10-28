@@ -138,3 +138,13 @@ def test_recheck_error_is_an_incomplete_assessment(checkers):
     assert result.redaction.status == "withheld"
     assert result.evaluation_status == "incomplete"
     assert result.redaction.content is None
+
+
+def test_secret_finding_prevents_release_of_pii_redaction(checkers):
+    token = "ghp" + "_" + "A" * 36
+    rules = (Rule(checker_id="pii",on_finding=Action.REDACT),Rule(checker_id="secrets",on_finding=Action.BLOCK))
+    result = evaluate(checkers, "Email jane@example.com; token " + token, rules=rules)
+    assert result.redaction.status == "withheld"
+    assert result.redaction.content is None
+    assert result.recommended_action == "block"
+    assert token not in result.model_dump_json()

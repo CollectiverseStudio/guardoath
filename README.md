@@ -211,6 +211,37 @@ scrubbed by this adapter. Integrators must assess every field they send onward.
 
 ## Configuration and boundaries
 
+### Local secret patterns
+
+Load `policies/secrets.json` directly, or select `secrets-v1` from the combined
+playground policy and click **Credential pattern**. This adapter works without
+the optional Presidio installation. Input findings recommend flagging; output
+findings recommend blocking, while the example remains observe-only.
+
+It reuses selected patterns from the current stable detect-secrets 1.5.0 package:
+
+| Detector | Current scope |
+| --- | --- |
+| AWS | Selected access-key identifiers and quoted secret assignments with AWS context |
+| GitHub | ghp, gho, ghu, ghs, and ghr token patterns |
+| OpenAI | Supported sk-prefixed patterns containing the upstream marker; not all key formats |
+| Stripe | Supported live secret/restricted-key patterns |
+| JWT | Formally structured token candidates, without signature or claim verification |
+| Private key | Selected PEM, OpenSSH, PGP, and PuTTY private-key markers, including incomplete blocks |
+
+No provider verification endpoints are called. A pattern match does not establish
+that a key is active, secret, owned by the caller, or cryptographically valid.
+Public key blocks, ordinary references to passwords, and unrecognized formats
+are outside the detection scope. Generic passwords, fine-grained GitHub token
+formats not covered by upstream rules, proprietary documents, and obfuscated
+payloads require separate work. There is no automatic secret redaction.
+
+The scanner uses bounded regex execution and scans decoded JSON keys/values.
+Caller-supplied allow comments and scanner suppression directives cannot disable
+checks. Findings contain category names only, with no candidate values or hashes.
+Timeouts and malformed JSON produce incomplete checks. The latest library version
+does not imply exhaustive or continuously updated provider-format coverage.
+
 The initial policy is an immutable startup snapshot in `demo_engine()`. To use
 the included example policy file instead, set this before starting the server:
 
