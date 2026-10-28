@@ -194,3 +194,25 @@ test("server capacity rejection holds the preview", async ({ page }) => {
   await expect(page.locator("#run-error")).toHaveText("Service capacity reached. Retry in 1 second.");
   await expect(page.locator("#answer")).toBeHidden();
 });
+
+test("external-provider routing and unknown cost are visible before and after checks", async ({ page }) => {
+  // Local response fixtures exercise disclosure; this test never contacts Azure.
+  await page.route("**/v1/applications/current", async route => {
+    const response = await route.fetch(); const data = await response.json();
+    data.policies[0].checks[0].external = true;
+    await route.fulfill({response,json:data});
+  });
+  await page.route("**/v1/checks/input", async route => {
+    const response = await route.fetch(); const data = await response.json();
+    data.checker_results[0].external = true; data.cost_usd = null; data.cost_basis = "provider_unpriced";
+    await route.fulfill({response,json:data});
+  });
+  await connect(page);
+  await expect(page.locator("#execution-mode")).toHaveText("External provider enabled");
+  await expect(page.locator("#data-routing")).toContainText("configured Azure service and may incur charges");
+  await run(page);
+  await expect(page.locator("#input-results")).toContainText("Provider cost not estimated");
+  await expect(page.locator("#input-results")).toContainText("external provider");
+  await page.getByRole("button",{name:"Disconnect",exact:true}).click();
+  await expect(page.locator("#data-routing")).toBeEmpty();
+});

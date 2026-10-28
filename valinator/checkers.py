@@ -59,11 +59,14 @@ def simulated_checker(kind: str) -> Checker:
     return run
 
 
-def default_checkers(enable_pii: bool = False) -> dict[str, Checker]:
+def default_checkers(enable_pii: bool = False, enable_azure: bool = False) -> dict[str, Checker]:
     checkers = {"schema": schema_check, "safety": simulated_checker("safety"),
                 "bias": simulated_checker("bias"), "cross_field": cross_field_check,
                 "secrets": build_secret_checker(), "completeness": completeness_check, "text_security": text_security_check}
     if enable_pii:
         from valinator.pii import build_pii_checker
         checkers["pii"] = build_pii_checker()
+    if enable_azure:
+        from valinator.azure_prompt_shields import from_environment
+        checkers["azure_prompt_shields"] = from_environment()
     return checkers

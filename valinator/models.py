@@ -48,6 +48,7 @@ class CheckerResult(Contract):
     latency_ms: float = 0
     error_code: str | None = None
     simulated: bool = False
+    external: bool = False
     # Private intermediate value: never serialized as a checker finding/result.
     transformed_content: str | None = Field(default=None, exclude=True)
 
@@ -133,8 +134,8 @@ class CheckResponse(Contract):
     findings: tuple[Finding, ...]
     checker_results: tuple[CheckerResult, ...]
     total_latency_ms: float
-    cost_usd: float = 0
-    cost_basis: Literal["local_only"] = "local_only"
+    cost_usd: float | None = 0
+    cost_basis: Literal["local_only", "provider_unpriced"] = "local_only"
     simulated: bool
     groups: tuple[GroupResult, ...] = ()
     redaction: RedactionResult = Field(default_factory=RedactionResult)

@@ -24,13 +24,17 @@
 - [x] Add stage-specific actions and ten shared input/output coverage groups.
 - [x] Add configurable labeled-text completeness rules, stage-specific findings, and dashboard examples.
 - [x] Add bounded hidden/control-character and explicit Base64/hex review signals with dashboard examples.
-- [ ] Integrate and calibrate a real semantic prompt-injection detector; evaluate encoded PII/secrets and additional Unicode coverage.
+- [x] Implement an opt-in Azure Prompt Shields input adapter, external-routing disclosure, unknown-cost reporting, and offline provider-contract tests.
+- [ ] Activate and calibrate semantic prompt-attack detection against live approved fixtures; evaluate encoded PII/secrets and additional Unicode coverage.
+- [ ] Add explicit local privacy gates before external checks; current checker execution is parallel.
 - [x] Add per-application token-bucket and concurrent-check limits plus process-level check/ingress budgets and retry guidance.
 - [ ] Add shared multi-worker/multi-server quotas, application-specific plans, and worker CPU/job budgets.
 - [x] Add a cross-platform dashboard launcher with isolated setup, fresh keys, and browser opening.
 - [x] Build a local playground with input/output findings, held answer previews, and prominent simulation labels.
 
 ## Milestone 3 — first live integration
+
+- [ ] Configure an approved Azure resource, region, retention/data terms, and test budget; run a live Prompt Shields smoke/calibration suite.
 
 - [ ] Choose managed safety service, region, data routing rules, and test budget.
 - [ ] Add credentials through a secret manager or local environment, never source control.

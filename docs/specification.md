@@ -213,3 +213,39 @@ Subprocess smoke tests verify all policies, fresh-key authorization, startup fro
 a different working directory, and occupied-port failure. CI includes the Windows
 launcher path alongside Linux Python and browser checks. There is no hosted URL
 or production deployment in this change.
+
+## Optional external prompt-attack adapter
+
+`azure_prompt_shields` uses Azure Content Safety's stable `2024-09-01` API,
+input/plain-text only, with a conservative 4,000-character local cap. The adapter
+is registered only with explicit enablement, endpoint, and subscription key.
+Public-Azure custom resource origins over HTTPS/443 are accepted; origin
+credentials, paths, queries, redirects, proxies and arbitrary hosts are rejected
+or disabled. Outbound JSON contains only `userPrompt` and empty `documents`.
+No request context, platform credential, proposed answer, or policy/tenant ID is
+included. The default launcher explicitly disables this integration.
+
+One bounded asynchronous request is attempted with no retries or fallback, under
+the policy deadline. Responses are bounded to 16 KiB, parsed as strict JSON, and
+must contain an actual Boolean `userPromptAnalysis.attackDetected`. HTTP,
+transport, parsing, deadline and local-cap failures are sanitized error results;
+required failed checks are incomplete and apply the policy failure action.
+Provider bodies and submitted values do not appear in results. The sample policy
+is observe-only and keeps local text-security checks on input/output; output
+semantic prompt-attack analysis is not claimed.
+
+Checker metadata now includes `external`; registered adapters declare the same
+attribute so timeouts/errors preserve routing information. Any selected external
+result, including redaction rechecks, makes cost nullable/unpriced:
+`cost_usd: null`, `cost_basis: provider_unpriced`. Local-only behavior remains
+zero/local_only. This is conservative capability metadata, not a billing receipt.
+The dashboard discloses Azure routing before execution, flags external results,
+and never describes provider cost as zero. The API version does not pin Azure's
+model weights/version.
+
+All provider tests use local HTTP fixtures. No live activation, calibration,
+region/retention guarantee, paid call, or resource provisioning has occurred.
+Local checks currently run in parallel and do not form a pre-provider privacy
+gate; source content may leave even if a local check flags it. Separate privacy
+gates and live calibration remain explicit backlog items. See
+`docs/provider-decisions.md` and the README activation/data-handling contract.

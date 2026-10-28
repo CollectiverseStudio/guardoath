@@ -21,18 +21,19 @@ from valinator.groups import GROUPS
 from valinator.budgets import ResourceLimits, RequestBudgets, RequestCapacity
 
 
-def demo_engine(enable_pii: bool = False) -> Engine:
+def demo_engine(enable_pii: bool = False, enable_azure: bool = False) -> Engine:
     return Engine([Policy(
-        application_id="demo", version="support-v1", timeout_ms=100,
+        application_id="demo", version="support-v1", timeout_ms=2000 if enable_azure else 100,
         rules=(Rule(checker_id="schema", required=False, on_finding=Action.BLOCK),
                Rule(checker_id="safety", on_finding=Action.BLOCK),
                Rule(checker_id="bias", on_finding=Action.FLAG)) + (
-                   (Rule(checker_id="pii", on_finding=Action.FLAG),) if enable_pii else ()),
+                   (Rule(checker_id="pii", on_finding=Action.FLAG),) if enable_pii else ()) + (
+                   (Rule(checker_id="azure_prompt_shields", stages=(Stage.INPUT,), on_finding=Action.FLAG),) if enable_azure else ()),
         input_schema={"type": "object", "properties": {"message": {"type": "string"}},
                       "required": ["message"], "additionalProperties": False},
         output_schema={"type": "object", "properties": {"answer": {"type": "string"}},
                        "required": ["answer"], "additionalProperties": False},
-    )], default_checkers(enable_pii=enable_pii))
+    )], default_checkers(enable_pii=enable_pii, enable_azure=enable_azure))
 
 
 def create_app(engine: Engine | None = None, credentials: dict[str, str] | None = None,
@@ -45,8 +46,12 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         if pii_setting not in {"0", "1"}:
             raise ValueError("VALINATOR_ENABLE_PII must be 0 or 1")
         enable_pii = pii_setting == "1"
-        service = (Engine(load_policies(policy_file), default_checkers(enable_pii=enable_pii))
-                   if policy_file else demo_engine(enable_pii=enable_pii))
+        azure_setting = os.getenv("VALINATOR_ENABLE_AZURE_PROMPT_SHIELDS", "0")
+        if azure_setting not in {"0", "1"}:
+            raise ValueError("VALINATOR_ENABLE_AZURE_PROMPT_SHIELDS must be 0 or 1")
+        enable_azure = azure_setting == "1"
+        service = (Engine(load_policies(policy_file), default_checkers(enable_pii=enable_pii, enable_azure=enable_azure))
+                   if policy_file else demo_engine(enable_pii=enable_pii, enable_azure=enable_azure))
     # No embedded credential. Without configuration, checks fail closed with 503.
     key = os.getenv("VALINATOR_API_KEY", "")
     bindings = dict(credentials) if credentials is not None else ({key: "demo"} if key else {})
@@ -54,7 +59,7 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         raise ValueError("Credentials and application identifiers must be nonempty")
     resource_limits = limits if limits is not None else ResourceLimits.from_environment()
     budgets = RequestBudgets(resource_limits, set(bindings.values()))
-    api = FastAPI(title="Valinator", version="0.10.0")
+    api = FastAPI(title="Valinator", version="0.11.0")
     api.add_middleware(JsonIngressLimits)
     api.add_middleware(RequestCapacity, budgets=budgets)
     bearer = HTTPBearer(auto_error=False)

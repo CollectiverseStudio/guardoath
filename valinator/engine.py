@@ -59,6 +59,7 @@ class Engine:
             "checks": [{"id": rule.checker_id, "required": rule.required,
                         "available": rule.checker_id in self._checkers,
                         "simulated": bool(getattr(self._checkers.get(rule.checker_id), "simulated", False)),
+                        "external": bool(getattr(self._checkers.get(rule.checker_id), "external", False)),
                         "stages": list(rule.stages)}
                        for rule in policy.rules],
         } for (owner, _), policy in self._policies.items() if owner == application_id]
@@ -76,6 +77,7 @@ class Engine:
                                      status="unsupported", error_code="checker_unavailable")
             simulated = bool(getattr(checker, "simulated", False))
             version = getattr(checker, "checker_version", "unknown")
+            external = bool(getattr(checker, "external", False))
             try:
                 result = await asyncio.wait_for(
                     checker(content_request, policy, stage), timeout=policy.timeout_ms / 1000,
@@ -84,7 +86,7 @@ class Engine:
                     raise ValueError("Adapter returned wrong identity")
                 if (result.status == "flagged") != bool(result.findings):
                     raise ValueError("Adapter returned inconsistent findings")
-                result = result.model_copy(update={"simulated": simulated or result.simulated})
+                result = result.model_copy(update={"simulated": simulated or result.simulated, "external": external or result.external})
                 if (result.simulated and policy.mode == "enforce"
                         and not policy.allow_simulated_enforcement):
                     result = result.model_copy(update={
@@ -92,11 +94,11 @@ class Engine:
                     })
             except TimeoutError:
                 result = CheckerResult(checker_id=checker_id, checker_version=version,
-                                       status="error", error_code="checker_timeout", simulated=simulated)
+                                       status="error", error_code="checker_timeout", simulated=simulated, external=external)
             except Exception:
                 # Exception text can contain customer content or credentials.
                 result = CheckerResult(checker_id=checker_id, checker_version=version,
-                                       status="error", error_code="checker_failure", simulated=simulated)
+                                       status="error", error_code="checker_failure", simulated=simulated, external=external)
             return result.model_copy(update={"latency_ms": round((perf_counter() - tick) * 1000, 3)})
 
         results = await asyncio.gather(*(execute(r.checker_id) for r in rules))
@@ -139,6 +141,7 @@ class Engine:
                         incomplete = True
                     actions.append(Action.BLOCK)
         recommended = max(actions, key=PRIORITY.__getitem__)
+        external = any(c.external for c in (*results, *redaction.validation_results))
         return CheckResponse(
             check_id=str(uuid4()), application_id=request.application_id,
             policy_version=policy.version, stage=stage, mode=policy.mode,
@@ -150,4 +153,6 @@ class Engine:
             total_latency_ms=round((perf_counter() - started) * 1000, 3),
             groups=group_results(policy, results, stage),
             redaction=redaction,
+            cost_usd=None if external else 0,
+            cost_basis="provider_unpriced" if external else "local_only",
         )

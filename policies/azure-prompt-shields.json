@@ -1,0 +1,25 @@
+{
+  "format_version": "1",
+  "policies": [
+    {
+      "application_id": "demo",
+      "version": "azure-prompt-shields-v1",
+      "mode": "observe",
+      "timeout_ms": 2000,
+      "failure_action": "block",
+      "rules": [
+        {
+          "checker_id": "text_security",
+          "on_finding": "flag"
+        },
+        {
+          "checker_id": "azure_prompt_shields",
+          "stages": [
+            "input"
+          ],
+          "on_finding": "flag"
+        }
+      ]
+    }
+  ]
+}
