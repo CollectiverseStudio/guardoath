@@ -97,3 +97,25 @@ def test_required_schema_cannot_be_bypassed_with_text():
     response = api.post("/v1/checks/input", headers={"Authorization": "Bearer test-key"}, json={
         "application_id": "demo", "policy_version": "v1", "content": "hello"})
     assert response.json()["evaluation_status"] == "incomplete"
+
+
+def test_disabled_pii_is_incomplete_not_a_pass():
+    policy = Policy(application_id="demo", version="v1", rules=(Rule(checker_id="pii"),))
+    api = TestClient(create_app(engine=Engine([policy], default_checkers()), credentials={"test-key": "demo"}))
+    response = api.post("/v1/checks/input", headers={"Authorization": "Bearer test-key"}, json={
+        "application_id": "demo", "policy_version": "v1", "content": "hello"})
+    assert response.json()["evaluation_status"] == "incomplete"
+    assert response.json()["checker_results"][0]["status"] == "unsupported"
+
+
+def test_invalid_pii_setting_fails_startup(monkeypatch):
+    monkeypatch.setenv("VALINATOR_ENABLE_PII", "yes")
+    with pytest.raises(ValueError, match="must be 0 or 1"):
+        create_app(credentials={})
+
+
+def test_python_315_rejects_pii_explicitly(monkeypatch):
+    import valinator.pii
+    monkeypatch.setattr(valinator.pii.sys, "version_info", (3, 15))
+    with pytest.raises(ValueError, match="Python 3.11 through 3.14"):
+        valinator.pii.build_pii_checker()

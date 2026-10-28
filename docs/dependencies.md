@@ -20,10 +20,15 @@ Local validation uses the available Python 3.12 runtime. Hosted CI covers Python
 3.11, 3.12, 3.14, and the latest stable 3.15 line. Python 3.15.2 was the latest
 stable Python release when checked at https://www.python.org/downloads/.
 
-Presidio analyzer/anonymizer 2.2.366 were also checked but are not installed or
-integrated yet. Their published Python constraint is >=3.11,<3.15. Review that
-compatibility before adding them; do not claim every future adapter supports
-every interpreter in the core API matrix.
+Presidio analyzer 2.2.366 is integrated as an optional `pii` extra. Its published
+Python constraint is >=3.11,<3.15, so the core service still tests Python 3.15
+while the optional adapter has separate 3.12 and 3.14 CI jobs. Enabling PII on
+3.15 fails explicitly at startup. No NLP model weights are downloaded or bundled.
+Presidio anonymizer 2.2.366 was checked but is not integrated; redaction is deferred.
+
+Presidio analyzer source and license: https://github.com/data-privacy-stack/presidio
+The analyzer package declares the MIT license. Its dependencies retain their own
+licenses. This integration reuses installed packages rather than vendoring them.
 
 This register records verification at a point in time. It does not imply that
 versions stay current automatically. Supporting dependencies are resolved by pip;

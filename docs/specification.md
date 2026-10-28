@@ -41,6 +41,12 @@ justify them. LLM Guard was archived when checked; do not make it the main
 dependency without a maintenance plan. Check licenses of packages and model
 weights separately before adoption.
 
+The optional local PII adapter now reuses Presidio's email and credit-card patterns
+and validators without invoking its NLP engine. It scans decoded JSON as well as
+text, uses an offline domain snapshot, and returns generic entity findings without
+source values. The current scope excludes names, addresses, phone numbers, and
+automatic redaction. Missing required adapters remain incomplete assessments.
+
 ## Bias evaluation
 
 Define reviewed rubrics for stereotypes, unsupported demographic assumptions,

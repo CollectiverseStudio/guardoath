@@ -15,29 +15,37 @@ from valinator.engine import Engine
 from valinator.models import Action, CheckRequest, CheckResponse, Policy, Rule, Stage
 
 
-def demo_engine() -> Engine:
+def demo_engine(enable_pii: bool = False) -> Engine:
     return Engine([Policy(
         application_id="demo", version="support-v1", timeout_ms=100,
         rules=(Rule(checker_id="schema", required=False, on_finding=Action.BLOCK),
                Rule(checker_id="safety", on_finding=Action.BLOCK),
-               Rule(checker_id="bias", on_finding=Action.FLAG)),
+               Rule(checker_id="bias", on_finding=Action.FLAG)) + (
+                   (Rule(checker_id="pii", on_finding=Action.FLAG),) if enable_pii else ()),
         input_schema={"type": "object", "properties": {"message": {"type": "string"}},
                       "required": ["message"], "additionalProperties": False},
         output_schema={"type": "object", "properties": {"answer": {"type": "string"}},
                        "required": ["answer"], "additionalProperties": False},
-    )], default_checkers())
+    )], default_checkers(enable_pii=enable_pii))
 
 
 def create_app(engine: Engine | None = None, credentials: dict[str, str] | None = None) -> FastAPI:
     policy_file = os.getenv("VALINATOR_POLICY_FILE")
-    service = engine or (Engine(load_policies(policy_file), default_checkers())
-                         if policy_file else demo_engine())
+    if engine is not None:
+        service = engine
+    else:
+        pii_setting = os.getenv("VALINATOR_ENABLE_PII", "0")
+        if pii_setting not in {"0", "1"}:
+            raise ValueError("VALINATOR_ENABLE_PII must be 0 or 1")
+        enable_pii = pii_setting == "1"
+        service = (Engine(load_policies(policy_file), default_checkers(enable_pii=enable_pii))
+                   if policy_file else demo_engine(enable_pii=enable_pii))
     # No embedded credential. Without configuration, checks fail closed with 503.
     key = os.getenv("VALINATOR_API_KEY", "")
     bindings = dict(credentials) if credentials is not None else ({key: "demo"} if key else {})
     if any(not token or not app_id for token, app_id in bindings.items()):
         raise ValueError("Credentials and application identifiers must be nonempty")
-    api = FastAPI(title="Valinator", version="0.2.0")
+    api = FastAPI(title="Valinator", version="0.3.0")
     bearer = HTTPBearer(auto_error=False)
 
     @api.exception_handler(RequestValidationError)
