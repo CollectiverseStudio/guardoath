@@ -1,0 +1,43 @@
+# Implementation backlog
+
+## Milestone 1 — local checking foundation
+
+- [x] Strict input and output contracts.
+- [x] Real deterministic JSON Schema validation.
+- [x] Versioned startup policy snapshots.
+- [x] Observe/enforce decisions and required-check failure handling.
+- [x] Application-scoped API credentials and sanitized validation errors.
+- [x] Explicit safety/bias simulators and meaningful automated tests.
+- [x] Local setup instructions and CI test workflow.
+
+## Milestone 2 — usable policy configuration and local detectors
+
+- [ ] Define a versioned policy file format and load validated configuration.
+- [ ] Add a local personal information adapter; review dependencies and model licenses.
+- [ ] Separate text-only and structured-content contracts to prevent mismatched payloads.
+- [ ] Add ingress byte limits, explicit request deadlines, and per-application rate limits.
+- [ ] Build a small local review/playground interface with prominent simulation labels.
+
+## Milestone 3 — first live integration
+
+- [ ] Choose managed safety service, region, data routing rules, and test budget.
+- [ ] Add credentials through a secret manager or local environment, never source control.
+- [ ] Test provider errors and deadlines using recorded synthetic fixtures.
+- [ ] Add real provider cost metadata and approved fallback behavior.
+- [ ] Evaluate Tokatlas compatibility for optional contextual evaluator calls.
+
+## Milestone 4 — contextual bias evaluation
+
+- [ ] Approve initial bias rubrics and reviewed examples.
+- [ ] Implement contextual findings with uncertainty and policy references.
+- [ ] Add repeated matched-scenario tests and reviewer feedback.
+- [ ] Maintain separate tuning and evaluation cases.
+
+## Milestone 5 — hosted pilot
+
+- [ ] Tenant-aware PostgreSQL persistence and immutable published policies.
+- [ ] Administrator/reviewer/reader roles, credential rotation, and audit history.
+- [ ] Customer-controlled retention/deletion and redacted evidence storage.
+- [ ] Dashboard, evaluation worker, and regression reports.
+- [ ] Dependency review, load tests, and pilot accuracy/latency/cost gates.
+- [ ] Enable blocking only after customer review of observe-mode results.
