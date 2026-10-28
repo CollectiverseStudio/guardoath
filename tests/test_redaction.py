@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from valinator.app import create_app
 from valinator.checkers import default_checkers
 from valinator.engine import Engine
-from valinator.models import Action, CheckRequest, Policy, Rule, Stage
+from valinator.models import Action, CheckerResult, CheckRequest, Policy, Rule, Stage
 
 pytestmark = pytest.mark.skipif(sys.version_info >= (3, 15), reason="Presidio does not support Python 3.15")
 pytest.importorskip("presidio_analyzer")
@@ -127,3 +127,14 @@ def test_api_key_and_content_are_not_logged(checkers, caplog):
     assert response.json()["redaction"]["status"] == "preview"
     assert "jane@example.com" not in response.text + caplog.text
     assert "219-09-9999" not in response.text + caplog.text
+
+
+def test_recheck_error_is_an_incomplete_assessment(checkers):
+    async def guard(request, policy, stage):
+        return CheckerResult(checker_id="guard", checker_version="1",
+            status="error" if "[REDACTED_" in request.content else "passed")
+    rules = (Rule(checker_id="pii", on_finding=Action.REDACT), Rule(checker_id="guard"))
+    result = evaluate({**checkers, "guard": guard}, "Email jane@example.com", rules=rules)
+    assert result.redaction.status == "withheld"
+    assert result.evaluation_status == "incomplete"
+    assert result.redaction.content is None

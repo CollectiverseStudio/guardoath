@@ -206,6 +206,8 @@ Returned redacted content may still contain unsupported sensitive information.
 This is limited pattern-based redaction, not full anonymization or a compliance
 determination. Findings and checker results do not contain detected values;
 only the explicitly enabled transformation field returns modified content.
+Redaction applies only to `content`; the optional `request_context` field is not
+scrubbed by this adapter. Integrators must assess every field they send onward.
 
 ## Configuration and boundaries
 

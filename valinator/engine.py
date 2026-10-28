@@ -127,6 +127,8 @@ class Engine:
                         validation_results=rechecks)
                 else:
                     redaction = RedactionResult(status="withheld", explanation="Transformed content did not pass all selected real checks; no content is returned.", validation_results=rechecks)
+                    if not rechecks or any(c.status not in {"passed", "flagged"} for c in rechecks):
+                        incomplete = True
                     actions.append(Action.BLOCK)
         recommended = max(actions, key=PRIORITY.__getitem__)
         return CheckResponse(
