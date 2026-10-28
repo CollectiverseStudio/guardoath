@@ -1,0 +1,73 @@
+const { test, expect } = require("@playwright/test");
+async function connect(page) {
+  await page.goto("/dashboard");
+  await page.getByLabel("Application API key").fill("playwright-test-key");
+  await page.getByRole("button", { name: "Connect", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo");
+}
+async function run(page) {
+  await page.locator("#run").click();
+  await expect(page.locator("#result-status")).not.toHaveText("Checking…");
+}
+test("clean content shows the answer after real local checks", async ({ page }) => {
+  await connect(page); await run(page);
+  await expect(page.locator("#result-status")).toHaveText("No findings");
+  await expect(page.locator("#answer")).toBeVisible();
+  await expect(page.locator("#answer")).toContainText("unused item");
+});
+test("output email finding holds the answer", async ({ page }) => {
+  await connect(page); await page.getByRole("button", {name:"Email address", exact:true}).click(); await run(page);
+  await expect(page.locator("#output-results")).toContainText("Potential email address");
+  await expect(page.locator("#answer")).toBeHidden();
+  await expect(page.locator("#answer-status")).toHaveText("Held for review");
+});
+test("input card finding is shown separately", async ({ page }) => {
+  await connect(page); await page.locator("#input-content").fill("Card 4111 1111 1111 1111"); await run(page);
+  await expect(page.locator("#input-results")).toContainText("Potential credit-card");
+  await expect(page.locator("#answer")).toBeHidden();
+});
+test("editing content removes a previous result", async ({ page }) => {
+  await connect(page); await run(page); await expect(page.locator("#answer")).toBeVisible();
+  await page.locator("#output-content").fill("A different answer.");
+  await expect(page.locator("#answer")).toBeHidden();
+  await expect(page.locator("#answer-status")).toHaveText("Not checked");
+});
+test("answer markup is displayed as text", async ({ page }) => {
+  await connect(page); await page.locator("#output-content").fill('<img src=x onerror="window.injected=true">'); await run(page);
+  await expect(page.locator("#answer")).toContainText("<img");
+  await expect(page.locator("#answer img")).toHaveCount(0);
+  expect(await page.evaluate(() => window.injected)).toBeUndefined();
+});
+test("key is not stored and disconnect clears results", async ({ page }) => {
+  await connect(page); await run(page);
+  expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0,0]);
+  await expect(page.locator("#api-key")).toHaveValue("");
+  await page.getByRole("button", { name:"Disconnect", exact:true }).click();
+  await expect(page.locator("#run")).toBeDisabled(); await expect(page.locator("#answer")).toBeHidden();
+});
+test("an output API failure cannot show a passed answer", async ({ page }) => {
+  await connect(page); await page.route("**/v1/checks/output", route => route.fulfill({status:503,body:'{}'})); await run(page);
+  await expect(page.locator("#result-status")).toHaveText("Check failed"); await expect(page.locator("#answer")).toBeHidden();
+});
+test("incomplete checks hold the answer", async ({ page }) => {
+  await connect(page); await page.route("**/v1/checks/output", async route => {
+    const response = await route.fetch(); const result = await response.json();
+    result.evaluation_status = "incomplete"; result.recommended_action = "block";
+    result.checker_results[0].status = "error"; result.checker_results[0].error_code = "checker_timeout";
+    await route.fulfill({response,json:result});
+  }); await run(page);
+  await expect(page.locator("#result-status")).toHaveText("Incomplete"); await expect(page.locator("#answer")).toBeHidden();
+});
+test("simulated checks never look like verified coverage", async ({ page }) => {
+  await connect(page); await page.route("**/v1/checks/*", async route => {
+    const response = await route.fetch(); const result = await response.json();
+    result.simulated = true; result.checker_results[0].simulated = true;
+    await route.fulfill({response,json:result});
+  }); await run(page);
+  await expect(page.locator("#result-status")).toHaveText("Simulated coverage");
+  await expect(page.locator("#answer-status")).toHaveText("Unverified preview");
+});
+test("mobile layout fits the viewport", async ({ page }) => {
+  await page.setViewportSize({width:390,height:844}); await connect(page);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});

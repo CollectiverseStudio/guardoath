@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Valinator — Check playground</title><link rel="stylesheet" href="/assets/dashboard.css"><script src="/assets/dashboard.js" defer></script></head>
+<body>
+<header><div class="brand"><span class="logo">V</span> Valinator <span class="tag">LOCAL PREVIEW</span></div><a href="/docs">API reference ↗</a></header>
+<main>
+<div class="eyebrow">CHECK PLAYGROUND</div><h1>See what your AI checks catch.</h1>
+<p class="intro">Enter a user message and a proposed AI answer. Inspect each side before deciding what reaches your user.</p>
+<div class="notice"><strong>This playground checks content. It does not generate an AI answer.</strong> Results cover only the checks in your selected policy. Simulated checks are always labelled.</div>
+<section class="connection panel" aria-labelledby="connect-title"><div><h2 id="connect-title">Connect your application</h2><p>Your API key stays in this tab’s memory and is sent only to this server.</p></div>
+<div class="connect-fields"><label for="api-key">Application API key</label><div class="inline"><input id="api-key" type="password" autocomplete="off" placeholder="Enter your local API key"><button id="connect">Connect</button><button id="disconnect" class="secondary" disabled>Disconnect</button></div></div>
+<div id="connection-status" role="status">Not connected</div></section>
+<section class="workspace" aria-label="Playground">
+<div class="editor panel"><div class="section-top"><h2>Test a conversation</h2><span class="pill">No model calls</span></div>
+<label for="policy">Policy</label><select id="policy" disabled><option>Connect to load policies</option></select><div id="coverage" class="coverage"></div>
+<div class="samples"><span>Try an example</span><button data-sample="clean" class="chip">Clean text</button><button data-sample="email" class="chip">Email address</button><button data-sample="card" class="chip">Card number</button><button data-sample="schema" class="chip" id="schema-sample" disabled>Schema error</button></div>
+<div class="field-title"><label for="input-content"><span class="step">1</span> User message</label><select id="input-format" aria-label="User message format"><option value="text">Text</option><option value="json">JSON</option></select></div>
+<textarea id="input-content" rows="5" maxlength="32000" spellcheck="false">Can you explain your return policy?</textarea>
+<div class="field-title"><label for="output-content"><span class="step">2</span> Proposed AI answer</label><select id="output-format" aria-label="Proposed answer format"><option value="text">Text</option><option value="json">JSON</option></select></div>
+<textarea id="output-content" rows="6" maxlength="32000" spellcheck="false">You can return an unused item within 30 days. Please check the store’s policy for details.</textarea>
+<p class="hint">Paste an answer from your AI application, or use a sample. These examples do not establish that a refund policy is correct.</p>
+<button id="run" class="primary" disabled>Run input and output checks <span>→</span></button><p id="run-error" class="error" role="alert"></p>
+</div>
+<div class="results"><section class="panel" aria-labelledby="results-title"><div class="section-top"><h2 id="results-title">Check results</h2><span id="result-status" class="pill">Ready to test</span></div><p id="result-summary" aria-live="polite">Connect and run a sample to see findings here.</p>
+<div id="input-results" class="result-box"><h3>Input checks</h3><p class="muted">Waiting for a check.</p></div><div id="output-results" class="result-box"><h3>Output checks</h3><p class="muted">Waiting for a check.</p></div></section>
+<section class="panel answer-panel" aria-labelledby="answer-title"><div class="section-top"><h2 id="answer-title">Answer preview</h2><span id="answer-status" class="pill">Not checked</span></div><p id="answer-note">An answer appears here when the selected checks complete without findings.</p><pre id="answer" hidden></pre></section>
+<section class="how"><h3>How an application uses Valinator</h3><p>Check the user’s input → call your AI model → check its answer → apply your policy’s decision.</p><p>The same input and output API endpoints power this playground. There is no separate demo scoring system.</p></section></div>
+</section><footer>Local prototype · No check history is retained · A passed check is limited to that checker’s coverage</footer>
+</main></body></html>

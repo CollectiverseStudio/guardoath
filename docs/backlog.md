@@ -17,7 +17,7 @@
 - [ ] Extend sensitive-data entity coverage and add approved redaction policies.
 - [x] Use a single canonical content value with explicit text/JSON format to prevent mismatched payloads.
 - [ ] Add ingress byte limits, explicit request deadlines, and per-application rate limits.
-- [ ] Build a small local review/playground interface with prominent simulation labels.
+- [x] Build a local playground with input/output findings, held answer previews, and prominent simulation labels.
 
 ## Milestone 3 — first live integration
 
