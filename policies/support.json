@@ -1,0 +1,17 @@
+{
+  "format_version": "1",
+  "policies": [{
+    "application_id": "demo",
+    "version": "support-v1",
+    "mode": "observe",
+    "timeout_ms": 100,
+    "failure_action": "block",
+    "rules": [
+      {"checker_id": "schema", "required": false, "on_finding": "block"},
+      {"checker_id": "safety", "required": true, "on_finding": "block"},
+      {"checker_id": "bias", "required": true, "on_finding": "flag"}
+    ],
+    "input_schema": {"type": "object", "properties": {"message": {"type": "string"}}, "required": ["message"], "additionalProperties": false},
+    "output_schema": {"type": "object", "properties": {"answer": {"type": "string"}}, "required": ["answer"], "additionalProperties": false}
+  }]
+}

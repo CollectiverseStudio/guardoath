@@ -1,6 +1,7 @@
 """Local validation and explicit test doubles. No external model calls."""
 
 import asyncio
+import json
 from collections.abc import Awaitable, Callable
 
 from jsonschema import Draft202012Validator
@@ -12,9 +13,27 @@ Checker = Callable[[CheckRequest, Policy, Stage], Awaitable[CheckerResult]]
 
 async def schema_check(request: CheckRequest, policy: Policy, stage: Stage) -> CheckerResult:
     schema = policy.input_schema if stage == Stage.INPUT else policy.output_schema
-    if schema is None:
+    if schema is None or request.content_format != "json":
         return CheckerResult(checker_id="schema", checker_version="1", status="skipped")
-    valid = Draft202012Validator(schema).is_valid(request.payload)
+    def object_pairs(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("Duplicate JSON key")
+            result[key] = value
+        return result
+
+    def reject_constant(_value):
+        raise ValueError("Nonfinite JSON number")
+
+    try:
+        payload = json.loads(request.content, object_pairs_hook=object_pairs,
+                             parse_constant=reject_constant)
+    except (ValueError, RecursionError):
+        return CheckerResult(checker_id="schema", checker_version="1", status="flagged",
+                             findings=(Finding(rule_id="schema.invalid_json", category="structure",
+                                               severity="high", explanation="Content is not valid strict JSON."),))
+    valid = Draft202012Validator(schema).is_valid(payload)
     return CheckerResult(
         checker_id="schema", checker_version="1", status="passed" if valid else "flagged",
         findings=() if valid else (Finding(

@@ -8,6 +8,7 @@ from uuid import uuid4
 from jsonschema import Draft202012Validator
 
 from valinator.checkers import Checker
+from valinator.config import validate_local_schema
 from valinator.models import Action, CheckerResult, CheckRequest, CheckResponse, Policy, Stage
 
 PRIORITY = {Action.ALLOW: 0, Action.FLAG: 1, Action.BLOCK: 2}
@@ -25,6 +26,7 @@ class Engine:
                 raise ValueError("Duplicate checker in policy")
             for schema in (policy.input_schema, policy.output_schema):
                 if schema is not None:
+                    validate_local_schema(schema)
                     Draft202012Validator.check_schema(schema)
             self._policies[key] = deepcopy(policy)
         self._checkers = dict(checkers)

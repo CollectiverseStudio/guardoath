@@ -3,7 +3,7 @@
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Contract(BaseModel):
@@ -26,8 +26,8 @@ class CheckRequest(Contract):
     policy_version: str = Field(min_length=1, max_length=100)
     content: str = Field(min_length=1, max_length=32_000)
     language: Literal["en"] = "en"
-    # Structured payload is parsed content, not a policy supplied by the caller.
-    payload: JsonValue = None
+    # One canonical content value is used by every checker.
+    content_format: Literal["text", "json"] = "text"
     request_context: str | None = Field(default=None, max_length=8_000)
 
 
@@ -56,8 +56,8 @@ class Rule(Contract):
 
 
 class Policy(Contract):
-    application_id: str
-    version: str
+    application_id: str = Field(min_length=1, max_length=100)
+    version: str = Field(min_length=1, max_length=100)
     mode: Literal["observe", "enforce"] = "observe"
     rules: tuple[Rule, ...]
     timeout_ms: int = Field(default=250, ge=1, le=5_000)

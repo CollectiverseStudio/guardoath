@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import pytest
 from fastapi.testclient import TestClient
@@ -19,6 +20,10 @@ def client():
 def submit(client, stage="input", **overrides):
     body = dict(application_id="demo", policy_version="support-v1", content="Hello",
                 payload={"message": "Hello"} if stage == "input" else {"answer": "Hello"})
+    payload = overrides.pop("payload", body.pop("payload"))
+    body.update(content=json.dumps(payload), content_format="json")
+    if "content" in overrides:
+        body["content_format"] = "text"
     body.update(overrides)
     return client.post(f"/v1/checks/{stage}", json=body,
                        headers={"Authorization": f"Bearer {TOKEN}"})
@@ -89,7 +94,8 @@ def test_invalid_requests_do_not_echo_content(client, changes):
 
 
 def run_engine(policy, checkers=None, **overrides):
-    request = CheckRequest(application_id="demo", policy_version="v1", content="hello", **overrides)
+    payload = overrides.pop("payload", None)
+    request = CheckRequest(application_id="demo", policy_version="v1", content=json.dumps(payload), content_format="json", **overrides)
     return asyncio.run(Engine([policy], checkers or default_checkers()).check(request, Stage.INPUT))
 
 
@@ -167,7 +173,7 @@ def test_policy_snapshot_cannot_be_changed_by_original_owner():
                     rules=(Rule(checker_id="schema", on_finding=Action.BLOCK),), input_schema=schema)
     engine = Engine([policy], default_checkers())
     schema["type"] = "string"
-    request = CheckRequest(application_id="demo", policy_version="v1", content="hello", payload=7)
+    request = CheckRequest(application_id="demo", policy_version="v1", content="7", content_format="json")
     assert asyncio.run(engine.check(request, Stage.INPUT)).effective_action == "allow"
 
 
