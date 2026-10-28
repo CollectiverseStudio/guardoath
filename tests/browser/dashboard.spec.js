@@ -262,3 +262,37 @@ test("baseline comparison appears in the offline evaluation report", async ({ pa
   await expect(page.locator("#baseline-comparison")).toContainText("their equality is not verified");
   expect(requests).toEqual([]);
 });
+
+for (const [id,rule] of [["password-sample","quoted credential assignment"],["confidential-sample","configured confidential-term rule"],["encoded-secret-sample","GitHub token pattern"]]) {
+  test("secrets extended example " + id + " holds the output", async ({ page }) => {
+    await connect(page); await page.locator("#"+id).click(); await run(page);
+    await expect(page.locator("#policy")).toHaveValue("secrets-extended-v1");
+    await expect(page.locator('#output-results [data-group="secrets"] summary')).toContainText("Findings");
+    await expect(page.locator("#output-results")).toContainText(rule);
+    await expect(page.locator("#output-results")).not.toContainText("PROJECT LANTERN");
+    await expect(page.locator("#output-results")).not.toContainText("synthetic-example!42");
+    await expect(page.locator("#answer")).toBeHidden();
+  });
+}
+test("correcting an extended secret example releases the preview", async ({ page }) => {
+  await connect(page); await page.locator("#password-sample").click();
+  await page.locator("#output-content").fill("No credentials are included."); await run(page);
+  await expect(page.locator("#answer")).toBeVisible();
+  await expect(page.locator('#output-results [data-group="secrets"]')).toContainText("Quoted assignments: enabled");
+});
+test("secrets group batch report keeps expected incomplete cases visible", async ({ page }, testInfo) => {
+  const { execFileSync } = require("node:child_process");
+  const { pathToFileURL } = require("node:url");
+  const file = testInfo.outputPath("secrets-batch.html");
+  execFileSync("python",["-m","valinator.evaluate","--cases","evals/secrets.json","--policies","policies/secrets-batch.json","--html",file],{stdio:"pipe"});
+  await page.goto(pathToFileURL(file).href);
+  await expect(page.locator("body")).toContainText("100 of 100 expectations matched");
+  await expect(page.locator("body")).toContainText("Incomplete evaluations: 8");
+  await expect(page.locator("tbody tr")).toHaveCount(100);
+  await expect(page.locator("body")).not.toContainText("PROJECT LANTERN");
+});
+
+test("dashboard links to the maintained user guide", async ({ page }) => {
+  await page.goto("/dashboard");
+  await expect(page.getByRole("link",{name:"User guide"})).toHaveAttribute("href","https://github.com/CollectiverseStudio/valinator/blob/main/docs/user-guide.md");
+});

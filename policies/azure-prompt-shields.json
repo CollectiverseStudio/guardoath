@@ -28,7 +28,9 @@
           "on_finding": "flag"
         }
       ],
-      "external_checks": "after_local_pass"
+      "external_checks": "after_local_pass",
+      "detect_secret_assignments": true,
+      "inspect_encoded_secrets": true
     }
   ]
 }

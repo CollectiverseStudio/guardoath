@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from valinator.checkers import default_checkers
 from valinator.config import load_policies
@@ -16,6 +16,7 @@ from valinator.engine import Engine
 from valinator.compare import load_report, compare_reports, render_section, validate_destinations, write_outputs
 from valinator.json_data import MAX_JSON_BYTES, parse_json
 from valinator.models import Action, CheckRequest, Contract, Stage
+from valinator.synthetic_secrets import PLACEHOLDER, build_fixture
 
 Status = Literal['passed','flagged','error','skipped','unsupported']
 
@@ -36,6 +37,15 @@ class EvaluationCase(Contract):
     stage: Stage
     request: CheckRequest
     expected: Expected
+    synthetic_fixture: str | None = Field(default=None,pattern=r'^[a-zA-Z0-9_.-]{1,80}$')
+
+    @model_validator(mode='after')
+    def valid_fixture(self):
+        if self.synthetic_fixture:
+            if self.request.content != PLACEHOLDER or self.request.content_format != 'text':
+                raise ValueError('Synthetic examples need the explicit text placeholder')
+            build_fixture(self.synthetic_fixture)
+        return self
 
 
 class Suite(Contract):
@@ -72,7 +82,10 @@ async def evaluate(suite, engine, groups=None):
             raise ValueError('Regression runs only support local adapters')
     rows = []
     for case in cases:
-        result = await engine.check(case.request,case.stage)
+        content_request=case.request
+        if case.synthetic_fixture:
+            content_request=CheckRequest.model_validate({**case.request.model_dump(),'content':build_fixture(case.synthetic_fixture)})
+        result = await engine.check(content_request,case.stage)
         actual = {
             'evaluation_status':result.evaluation_status,
             'recommended_action':result.recommended_action.value,

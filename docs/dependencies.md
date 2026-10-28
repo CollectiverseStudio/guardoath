@@ -59,3 +59,12 @@ https://learn.microsoft.com/en-us/rest/api/contentsafety/text-operations/shield-
 API version pinning does not pin Azure's underlying model. Azure is optional,
 requires explicit activation and customer-controlled credentials, and may charge
 for requests. Offline test transports do not establish live service accuracy.
+
+The Secrets group batch reuses additional regex-based plugin expressions from
+installed detect-secrets 1.5.0 (GitLab, Slack, SendGrid, Twilio, npm, PyPI, Azure
+Storage, Basic Auth, Discord and Telegram). No plugin verification or network
+calls are invoked and no upstream source is vendored. Quoted-assignment,
+configured literal-term and bounded decoding orchestration are local Valinator
+code. The new GitHub fine-grained rule is explicitly a prefix-based candidate,
+not a documented full-token validator; GitHub's prefix reference is
+https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github.

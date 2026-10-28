@@ -17,7 +17,8 @@
 - [x] Add context-aware U.S. SSN candidates and policy-controlled, revalidated redaction of supported identifiers.
 - [ ] Extend coverage to other identifiers and customer-specific privacy requirements.
 - [x] Add bounded offline secret-pattern checks and real dashboard coverage for selected credentials/private-key markers.
-- [ ] Extend provider formats and evaluate context-aware password/confidential-document detection.
+- [x] Complete the supported Secrets group batch: additional provider patterns, opt-in quoted assignments, encoded inspection, literal confidential terms, 100 regression cases, API/gate/browser coverage and user guide.
+- [ ] Evaluate semantic confidential-document classification, additional provider formats and password/obfuscation handling beyond the documented heuristics.
 - [x] Use a single canonical content value with explicit text/JSON format to prevent mismatched payloads.
 - [x] Add ingress byte limits, body-read deadline, and bounded JSON parsing.
 - [x] Enforce supported schema formats and declarative numeric/date comparisons.

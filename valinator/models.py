@@ -93,6 +93,19 @@ class RequiredSection(Contract):
         return value
 
 
+class ConfidentialTerm(Contract):
+    rule_id: str = Field(pattern=r"^[a-zA-Z0-9_.-]{1,80}$")
+    term: str = Field(min_length=3,max_length=200)
+    stages: tuple[Stage, ...] = Field(default=(Stage.INPUT,Stage.OUTPUT),min_length=1)
+
+    @field_validator('term')
+    @classmethod
+    def meaningful(cls,value):
+        if value != value.strip() or len(value.strip()) < 3:
+            raise ValueError('Confidential terms require at least three non-padding characters')
+        return value
+
+
 class Policy(Contract):
     application_id: str = Field(min_length=1, max_length=100)
     version: str = Field(min_length=1, max_length=100)
@@ -106,6 +119,9 @@ class Policy(Contract):
     external_checks: Literal["disabled", "after_local_pass"] = "disabled"
     comparisons: tuple[FieldComparison, ...] = Field(default=(), max_length=50)
     required_sections: tuple[RequiredSection, ...] = Field(default=(), max_length=50)
+    detect_secret_assignments: bool = Field(default=False,strict=True)
+    inspect_encoded_secrets: bool = Field(default=False,strict=True)
+    confidential_terms: tuple[ConfidentialTerm, ...] = Field(default=(),max_length=50)
 
 
 class GroupResult(Contract):

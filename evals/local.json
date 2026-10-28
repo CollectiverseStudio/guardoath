@@ -239,7 +239,7 @@
       "request": {
         "application_id": "demo",
         "policy_version": "secrets-v1",
-        "content": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "content": "[SYNTHETIC FIXTURE]",
         "content_format": "text"
       },
       "expected": {
@@ -254,7 +254,8 @@
         ],
         "redaction_status": "not_requested",
         "simulated": false
-      }
+      },
+      "synthetic_fixture": "github_token"
     },
     {
       "case_id": "secrets.github-output",
@@ -263,7 +264,7 @@
       "request": {
         "application_id": "demo",
         "policy_version": "secrets-v1",
-        "content": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "content": "[SYNTHETIC FIXTURE]",
         "content_format": "text"
       },
       "expected": {
@@ -278,7 +279,8 @@
         ],
         "redaction_status": "not_requested",
         "simulated": false
-      }
+      },
+      "synthetic_fixture": "github_token"
     },
     {
       "case_id": "secrets.private-marker",
@@ -287,7 +289,7 @@
       "request": {
         "application_id": "demo",
         "policy_version": "secrets-v1",
-        "content": "-----BEGIN RSA PRIVATE KEY-----",
+        "content": "[SYNTHETIC FIXTURE]",
         "content_format": "text"
       },
       "expected": {
@@ -302,7 +304,8 @@
         ],
         "redaction_status": "not_requested",
         "simulated": false
-      }
+      },
+      "synthetic_fixture": "private_key"
     },
     {
       "case_id": "secrets.public-marker",

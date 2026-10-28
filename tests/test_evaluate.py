@@ -180,3 +180,11 @@ def test_report_cannot_overwrite_hardlinked_source(tmp_path):
     original = source.read_bytes()
     assert main(['--cases',str(source),'--report',str(linked),'--overwrite']) == 2
     assert source.read_bytes() == original
+
+
+def test_complete_secrets_group_suite_matches_without_optional_pii():
+    report=asyncio.run(evaluate(load_suite(ROOT/'evals/secrets.json'),Engine(load_policies(ROOT/'policies/secrets-batch.json'),default_checkers())))
+    assert report['summary']=={'total':100,'matched':100,'mismatched':0,'incomplete':8,'simulated':0}
+    for candidate in ['PROJECT LANTERN','synthetic-example!42','ghp'+'_'+'A'*36]:
+        assert candidate not in json.dumps(report)
+        assert candidate not in render_html(report)

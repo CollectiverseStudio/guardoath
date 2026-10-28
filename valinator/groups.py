@@ -4,7 +4,7 @@ from valinator.models import GroupResult
 
 GROUPS = (
     ("sensitive_data", "Regulated and sensitive data", ("pii",), "Email, credit-card, and selected U.S. SSN candidates only. Redaction is policy-controlled. PHI, names, addresses, and other identifiers are not assessed."),
-    ("secrets", "Secrets and confidential information", ("secrets",), "Selected AWS, GitHub, OpenAI, Stripe, JWT, and private-key patterns only. Credentials are not verified. Generic passwords and proprietary documents are not classified or redacted."),
+    ("secrets", "Secrets and confidential information", ("secrets",), "Selected provider credentials, JWTs, private-key markers and embedded URL credentials. Optional quoted assignments, labeled encoding inspection and configured confidential terms. No credential verification, secret redaction, general password detection or proprietary-document classification."),
     ("prompt_security", "Prompt injection and manipulation", ("text_security", "azure_prompt_shields"), "Local text_security checks selected controls/encodings only. Optional Azure Prompt Shields analyzes user-prompt attacks externally on input only. No document, multi-turn, output-attack, or malicious-intent guarantee; inspect selected checkers. Content is not sanitized."),
     ("harmful_content", "Harmful content and abuse", ("safety",), "Safety checks are synthetic test doubles, not content detectors."),
     ("structure", "Structure and data validity", ("schema",), "Configured JSON Schema and supported formats only; no guarantee of factual correctness."),
@@ -39,6 +39,9 @@ def group_results(policy, results, stage):
             status = "partial"
         else:
             status = "passed"
+        if group_id == 'secrets' and configured:
+            count=sum(stage in r.stages for r in policy.confidential_terms)
+            limitations += f" Quoted assignments: {'enabled' if policy.detect_secret_assignments else 'disabled'}; encoded inspection: {'enabled' if policy.inspect_encoded_secrets else 'disabled'}; active confidential-term rules: {count}."
         groups.append(GroupResult(group_id=group_id, name=name, checker_ids=tuple(r.checker_id for r in active),
                                   status=status, limitations=limitations))
     # Custom adapters must remain visible rather than disappear from grouped UI.

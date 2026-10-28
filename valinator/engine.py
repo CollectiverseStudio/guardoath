@@ -38,6 +38,20 @@ class Engine:
                     raise ValueError("Duplicate completeness label")
             if policy.required_sections and "completeness" not in ids:
                 raise ValueError("Required sections require a completeness checker rule")
+            if policy.confidential_terms or policy.detect_secret_assignments or policy.inspect_encoded_secrets:
+                if 'secrets' not in ids:
+                    raise ValueError('Secret options require a secrets checker rule')
+            if len({r.rule_id for r in policy.confidential_terms}) != len(policy.confidential_terms):
+                raise ValueError('Duplicate confidential-term rule identifier')
+            if policy.confidential_terms:
+                from valinator.secrets_check import normalize
+                secret_rule=next(r for r in policy.rules if r.checker_id=='secrets')
+                for stage in Stage:
+                    terms=[normalize(r.term) for r in policy.confidential_terms if stage in r.stages]
+                    if len(set(terms)) != len(terms):
+                        raise ValueError('Duplicate normalized confidential term')
+                    if terms and stage not in secret_rule.stages:
+                        raise ValueError('Confidential terms require an active secrets stage')
             for rule in policy.rules:
                 if rule.checker_id != "pii" and Action.REDACT in {rule.on_finding, rule.on_input_finding, rule.on_output_finding}:
                     raise ValueError("Redaction actions are supported only by the pii checker")

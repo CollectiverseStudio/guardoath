@@ -2,6 +2,9 @@
 
 Policy-driven input and output checks for AI applications.
 
+Start with the [user guide](docs/user-guide.md): each supported check has a purpose,
+example/use case, expected result, configuration and limitations.
+
 ## Current milestone
 
 This is a local API prototype. JSON Schema validation is real. Safety and bias
@@ -11,8 +14,9 @@ simulator result is labelled `simulated: true`. An ordinary prompt receiving a
 simulated `passed` result has **not** received a safety or bias assessment.
 
 The prototype includes a local API-backed dashboard. It does not store prompt or
-response content and has no database, live provider integration, or production
-deployment yet.
+response content and has no database or production deployment. The optional
+Azure connector is off by default and has not been live-calibrated; the launcher
+keeps check execution local.
 
 An optional **real local detector** checks email addresses, credit-card candidates,
 and selected U.S. SSN candidates using Presidio's patterns and validation routines. It is separate
@@ -275,12 +279,14 @@ playground policy and click **Credential pattern**. This adapter works without
 the optional Presidio installation. Input findings recommend flagging; output
 findings recommend blocking, while the example remains observe-only.
 
-It reuses selected patterns from the current stable detect-secrets 1.5.0 package:
+It reuses selected patterns from the pinned detect-secrets 1.5.0 package:
 
 | Detector | Current scope |
 | --- | --- |
 | AWS | Selected access-key identifiers and quoted secret assignments with AWS context |
-| GitHub | ghp, gho, ghu, ghs, and ghr token patterns |
+| GitHub | Classic ghp/gho/ghu/ghs/ghr patterns and fine-grained github_pat_ candidates |
+| Additional providers | Selected GitLab, Slack, SendGrid, Twilio, npm, PyPI/TestPyPI, Azure Storage, Discord and Telegram patterns |
+| URL credentials | Embedded user/password components in URLs; no destination request |
 | OpenAI | Supported sk-prefixed patterns containing the upstream marker; not all key formats |
 | Stripe | Supported live secret/restricted-key patterns |
 | JWT | Formally structured token candidates, without signature or claim verification |
@@ -289,9 +295,13 @@ It reuses selected patterns from the current stable detect-secrets 1.5.0 package
 No provider verification endpoints are called. A pattern match does not establish
 that a key is active, secret, owned by the caller, or cryptographically valid.
 Public key blocks, ordinary references to passwords, and unrecognized formats
-are outside the detection scope. Generic passwords, fine-grained GitHub token
-formats not covered by upstream rules, proprietary documents, and obfuscated
-payloads require separate work. There is no automatic secret redaction.
+are outside the detection scope. Expanded provider-pattern coverage applies to
+both base and extended policies. The extended profile additionally opts into
+quoted assignments, one-layer labeled encoding inspection and configured literal
+confidential terms. General password recognition and semantic
+proprietary-document classification remain outside the supported scope. See the
+[user guide](docs/user-guide.md#secrets-and-confidential-information--complete-supported-batch)
+for current coverage rather than treating a candidate pass as complete privacy.
 
 The scanner uses bounded regex execution and scans decoded JSON keys/values.
 Caller-supplied allow comments and scanner suppression directives cannot disable
@@ -671,3 +681,33 @@ branches through PR #14 were audited: their heads match the merged pull requests
 and all merge commits are in `main` history. There is no outstanding work on
 those branches. Historical branch names may remain visible. Future changes use
 `main` without new feature branches; `AGENTS.md` records this workflow.
+
+
+### Complete Secrets and confidential information batch
+
+Run the entire supported group rather than testing samples one at a time:
+
+```powershell
+py -3.13 start_dashboard.py --evaluate --suite secrets
+```
+
+This selects `evals/secrets.json` and `policies/secrets-batch.json`: 100 hand-written
+regression expectations, including 8 deliberately incomplete cases, and no
+simulated detectors/provider calls. The base profile preserves existing defaults;
+`secrets-extended-v1` opts into quoted credential assignments, labeled Base64/hex
+inspection, and fictional confidential phrases. An enforce profile exercises
+stage decisions. Baselines compare only against the same suite ID.
+
+For automation without optional PII:
+
+```bash
+python -m valinator.evaluate --cases evals/secrets.json --policies policies/secrets-batch.json --report secrets-report.json --html secrets-report.html
+```
+
+The dashboard includes Quoted password, Confidential term and Encoded credential
+examples. All reports/findings omit values; secret redaction and general
+confidential-document classification are not implemented. Read the
+[user guide](docs/user-guide.md) for all finding IDs, examples, configuration,
+scan budgets, and the 100-case catalog; the [batch scope](docs/secrets-coverage.md)
+records acceptance boundaries. Future work is completed in coherent group batches
+on `main`, with guide and runnable examples updated together.

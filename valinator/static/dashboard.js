@@ -41,6 +41,7 @@ function coverage() {
   $("redaction-sample").disabled = !application?.policies.some(p => p.version === "redaction-v1");
   for (const id of ["hidden-sample", "encoded-sample"]) $(id).disabled = !application?.policies.some(p => p.version === "text-security-v1");
   $("completeness-sample").disabled = !application?.policies.some(p => p.version === "completeness-v1");
+  for (const id of ["password-sample","confidential-sample","encoded-secret-sample"]) $(id).disabled = !application?.policies.some(p => p.version === "secrets-extended-v1");
   $("secret-sample").disabled = !application?.policies.some(p => p.version === "secrets-v1");
 }
 $("connect").addEventListener("click", async () => {
@@ -75,6 +76,7 @@ for (const button of document.querySelectorAll("[data-sample]")) button.addEvent
   else if (button.dataset.sample === "redaction") { $("policy").value = "redaction-v1"; coverage(); $("output-content").value = "Contact jane@example.com. Example SSN: 219-09-9999. Test card: 4111 1111 1111 1111."; }
   else if (["hidden", "encoded"].includes(button.dataset.sample)) { $("policy").value = "text-security-v1"; coverage(); $("input-content").value = button.dataset.sample === "hidden" ? "Please explain this hidden\u200bcharacter." : "Please review this labeled text: base64: SGVsbG8="; $("output-content").value = "This example requires review before processing."; }
   else if (button.dataset.sample === "completeness") { $("policy").value = "completeness-v1"; coverage(); $("input-content").value = "Summary: Customer requests return instructions."; $("output-content").value = "Summary: Return instructions are available.\nNext steps:"; }
+  else if (["password","confidential","encoded-secret"].includes(button.dataset.sample)) { $("policy").value = "secrets-extended-v1"; coverage(); const token = ["ghp","_","A".repeat(36)].join(""); $("output-content").value = button.dataset.sample === "password" ? 'password = "synthetic-example!42"' : button.dataset.sample === "confidential" ? "Internal draft about PROJECT LANTERN." : "base64: " + btoa(token); }
   else if (button.dataset.sample === "secret") { $("policy").value = "secrets-v1"; coverage(); $("output-content").value = "Synthetic token pattern for testing only: " + ["ghp", "_", "A".repeat(36)].join(""); }
   else $("output-content").value = examples[button.dataset.sample];
 });

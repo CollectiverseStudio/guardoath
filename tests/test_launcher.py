@@ -130,3 +130,17 @@ def test_launcher_second_run_compares_with_previous_without_overwriting_it(tmp_p
     assert len(comparisons)==1
     assert json.loads(comparisons[0].read_text())['summary']['unchanged']==30
     assert first.read_bytes()==original
+
+
+@pytest.mark.skipif(not PII_AVAILABLE, reason='Launcher preparation uses the complete optional environment')
+def test_launcher_runs_the_entire_secrets_group(tmp_path,monkeypatch):
+    import start_dashboard
+    (tmp_path/'evals').mkdir(); (tmp_path/'policies').mkdir()
+    for name in ['evals/secrets.json','policies/secrets-batch.json']:
+        (tmp_path/name).write_text((ROOT/name).read_text(encoding='utf-8'),encoding='utf-8')
+    monkeypatch.setattr(start_dashboard,'ROOT',tmp_path)
+    monkeypatch.setattr(start_dashboard,'prepare_environment',lambda reinstall=False: Path(sys.executable))
+    monkeypatch.setattr(sys,'argv',['start_dashboard.py','--evaluate','--suite','secrets','--no-browser'])
+    assert start_dashboard.main()==0
+    path=next((tmp_path/'.valinator-reports').glob('*/report.json'))
+    assert json.loads(path.read_text())['summary']['matched']==100

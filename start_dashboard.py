@@ -98,10 +98,13 @@ def main():
     parser.add_argument('--no-browser', action='store_true', help='Print the URL without opening a browser')
     parser.add_argument('--reinstall', action='store_true', help='Reinstall the dashboard dependencies')
     parser.add_argument('--evaluate', action='store_true', help='Run the bundled local regression cases and open their report')
+    parser.add_argument('--suite', choices=['local','secrets'], default='local', help='Choose the local examples or full secrets batch')
     parser.add_argument('--baseline', help='Compare an evaluation against this saved report')
     parser.add_argument('--no-compare', action='store_true', help='Skip automatic comparison with a previous evaluation')
     parser.add_argument('--serve', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args()
+    if args.suite != 'local' and not args.evaluate:
+        parser.error('--suite requires --evaluate')
     if (args.baseline or args.no_compare) and not args.evaluate:
         parser.error('--baseline and --no-compare require --evaluate')
     if args.baseline and args.no_compare:
@@ -116,13 +119,15 @@ def main():
             return serve(args.port, not args.no_browser)
         interpreter = prepare_environment(args.reinstall)
         if args.evaluate:
+            cases_path = ROOT / 'evals' / (args.suite + '.json')
+            policies_path = ROOT / 'policies' / ('secrets-batch.json' if args.suite == 'secrets' else 'playground.json')
             baseline = Path(args.baseline).resolve() if args.baseline else None
             if not baseline and not args.no_compare:
                 previous = sorted((ROOT / '.valinator-reports').glob('*/report.json'),
                                   key=lambda p:p.stat().st_mtime_ns,reverse=True)
                 # Candidate selection uses only bounded metadata; the child validates
                 # the chosen report fully before running cases or producing output.
-                suite_id = json.loads((ROOT / 'evals/local.json').read_text(encoding='utf-8'))['suite_id']
+                suite_id = json.loads(cases_path.read_text(encoding='utf-8'))['suite_id']
                 for candidate in previous:
                     try:
                         with candidate.open('rb') as stream:
@@ -137,8 +142,8 @@ def main():
             directory.mkdir(parents=True)
             html_path = directory / 'report.html'
             command = [str(interpreter), '-m', 'valinator.evaluate', '--pii',
-                       '--cases', str(ROOT / 'evals/local.json'),
-                       '--policies', str(ROOT / 'policies/playground.json'),
+                       '--cases', str(cases_path),
+                       '--policies', str(policies_path),
                        '--report', str(directory / 'report.json'), '--html', str(html_path)]
             if baseline:
                 command.extend(['--baseline',str(baseline),'--comparison-report',str(directory / 'comparison.json')])

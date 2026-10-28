@@ -344,3 +344,42 @@ selects the newest bounded candidate matching the suite ID, validates it fully i
 the prepared interpreter, and preserves all prior run directories. --baseline
 selects a reference explicitly; --no-compare opts out. The default local-only and
 no-source-in-reports guarantees remain unchanged.
+
+## Secrets group batch (0.15.0)
+
+The bounded offline adapter now imports selected upstream expressions for sixteen
+credential/identifier families plus a prefix-based fine-grained GitHub candidate
+rule. It does not call plugin verification, file/baseline scans or user-controlled
+suppression filters. Existing checker/finding IDs remain stable; version metadata
+uses valinator-patterns-2. Private-key/JWT/identifier results do not establish
+credential activity or cryptographic validity.
+
+Policy options default off: detect_secret_assignments inspects bounded quoted
+assignments and JSON string-field context for supported names, exempting selected
+reference/placeholder syntax; inspect_encoded_secrets scans exactly one explicit
+Base64/hex UTF-8 layer under shared 16 payload / 4096 token / 8192 total budgets.
+Invalid/over-budget requested inspection is incomplete. Supported literal
+assignments over 512 characters are incomplete. All work shares a local .2-second
+scan budget; timeouts never produce partial success. Canonical text is unchanged.
+
+confidential_terms has up to 50 typed rule IDs, 3–200-character literal terms and
+stage scopes. NFKC/casefold matching uses a scan copy. Duplicate IDs/normalized
+overlapping terms, invalid stages, and secret options without a secrets rule fail
+startup. Findings expose confidential.RULE_ID with no matched term/excerpt/hash.
+This is configurable literal matching, not document/IP/intent classification.
+
+An extended observe profile, enforce batch profile, 100-case group suite, three
+dashboard examples, whole-group launcher option and maintained user guide are
+included. Reports remain source-free; eight group cases intentionally expect
+incomplete results. Base options stay off for compatibility. The Azure sample
+explicitly enables assignment/encoding local screening before egress. See
+user-guide.md and secrets-coverage.md for examples, cases, failure behavior,
+privacy boundaries and remaining gaps. No new dependencies or external calls.
+
+Credential-positive examples may use an optional named synthetic_fixture with an
+explicit [SYNTHETIC FIXTURE] plain-text request. A fixed local registry constructs
+only inert example values, which are validated as canonical requests before
+execution. Unknown names and ambiguous/non-placeholder requests fail suite load.
+No arbitrary imports, eval, file/network lookups or real credential creation is
+supported. This mechanism is exclusive to offline regression input, not API
+requests. Report output continues to omit constructed values.
