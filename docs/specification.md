@@ -284,3 +284,35 @@ execution and gives a specific withheld reason afterward. Cost stays conservativ
 provider_unpriced for selected external checks, even when withheld; it is not a
 receipt of a billable request. Detector limits still apply: passing configured
 checks does not establish complete privacy, lack of PHI, or safe model behavior.
+
+## Local regression suites and reports
+
+`python -m valinator.evaluate` loads a strict bounded suite of up to 100 uniquely
+identified cases from at most 256 KiB of JSON. Each case contains group/stage,
+canonical CheckRequest, and explicit expectations for evaluation status,
+recommended/effective actions, exact checker-status mapping, exact finding-ID set,
+redaction status, and simulation. Cases are independent and sequential; expected
+results are hand-written, never generated from actual results. Unknown policy
+references are validated before execution. Group filters select subsets.
+
+Only local built-in adapters are registered by the CLI, independently of provider
+environment settings; injectable evaluation engines with registered external
+adapters are refused before execution. This is an engine regression report, not an
+API/auth/rate/ingress test or a live-provider calibration interface. The bundled
+30-case suite contains real local guards and two intentionally incomplete cases.
+Missing PII support does not silently remove tests.
+
+JSON and standalone HTML reports contain assertion outcome/differing field names,
+actual metadata (decisions, statuses, finding IDs, redaction status, simulation),
+and timing. No request/content/context/redacted content or provider bodies are
+copied. Expectation matches, underlying incomplete evaluations, and simulation
+are separately displayed; no accuracy/compliance/correctness claim is made.
+HTML escapes labels, has no script/network dependencies, and applies a restrictive
+CSP. Existing reports need --overwrite; source aliases and duplicate destinations
+are refused. Exit status is 0/1/2 for matched/mismatched/configuration failure.
+
+`start_dashboard.py --evaluate` reuses the isolated complete environment and
+creates a unique ignored `.valinator-reports/` run directory, then optionally opens
+the HTML file. It starts no API server and creates no platform/provider key.
+The full manual CLI supports custom file paths/group filters. See README for
+commands, limits, report privacy, and the distinction from detector evaluation.

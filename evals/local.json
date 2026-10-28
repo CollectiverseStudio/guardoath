@@ -1,0 +1,708 @@
+{
+  "format_version": "1",
+  "suite_id": "local-regression-v1",
+  "cases": [
+    {
+      "case_id": "privacy.clean",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-v1",
+        "content": "Explain the return instructions.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "privacy.email",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-v1",
+        "content": "Contact jane@example.com.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.email_address"
+        ],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "privacy.card",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-v1",
+        "content": "Test card: 4111 1111 1111 1111.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.credit_card"
+        ],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "privacy.ssn",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-v1",
+        "content": "Example SSN: 219-09-9999.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.us_ssn"
+        ],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "privacy.order-lookalike",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-v1",
+        "content": "Order 219099999 was delivered.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "privacy.invalid-ssn",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-v1",
+        "content": "SSN: 000-09-9999.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "privacy.json-email",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "pii-v1",
+        "content": "{\"contact\": \"jane@example.com\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.email_address"
+        ],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "redaction.email",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "redaction-v1",
+        "content": "Contact jane@example.com.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "redact",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.email_address"
+        ],
+        "redaction_status": "preview",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "redaction.clean",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "redaction-v1",
+        "content": "Contact the store.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_needed",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "secrets.clean",
+      "group": "secrets",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "secrets-v1",
+        "content": "Explain how to rotate API keys.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "secrets": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "secrets.github-input",
+      "group": "secrets",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "secrets-v1",
+        "content": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "secrets": "flagged"
+        },
+        "finding_rule_ids": [
+          "secrets.github_token"
+        ],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "secrets.github-output",
+      "group": "secrets",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "secrets-v1",
+        "content": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "secrets": "flagged"
+        },
+        "finding_rule_ids": [
+          "secrets.github_token"
+        ],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "secrets.private-marker",
+      "group": "secrets",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "secrets-v1",
+        "content": "-----BEGIN RSA PRIVATE KEY-----",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "secrets": "flagged"
+        },
+        "finding_rule_ids": [
+          "secrets.private_key"
+        ],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "secrets.public-marker",
+      "group": "secrets",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "secrets-v1",
+        "content": "-----BEGIN PUBLIC KEY-----",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "secrets": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "text.clean",
+      "group": "prompt_security",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "text-security-v1",
+        "content": "Normal text with 👩‍💻 emoji.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "text_security": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "text.hidden",
+      "group": "prompt_security",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "text-security-v1",
+        "content": "hidden​character",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "text_security": "flagged"
+        },
+        "finding_rule_ids": [
+          "text_security.hidden_controls"
+        ],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "text.encoded-benign",
+      "group": "prompt_security",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "text-security-v1",
+        "content": "base64: SGVsbG8=",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "text_security": "flagged"
+        },
+        "finding_rule_ids": [
+          "text_security.encoded_text"
+        ],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "text.invalid-encoding",
+      "group": "prompt_security",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "text-security-v1",
+        "content": "hex: zz",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "text_security": "flagged"
+        },
+        "finding_rule_ids": [
+          "text_security.invalid_encoding"
+        ],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "text.unlabeled-benign",
+      "group": "prompt_security",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "text-security-v1",
+        "content": "SGVsbG8=",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "text_security": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "text.budget",
+      "group": "prompt_security",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "text-security-v1",
+        "content": "hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "text_security": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "business.valid",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-v1",
+        "content": "{\"start_date\": \"2026-10-01\", \"end_date\": \"2026-10-03\", \"purchase_amount\": 100, \"refund_amount\": 25}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "passed",
+          "cross_field": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "business.refund-limit",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-v1",
+        "content": "{\"start_date\": \"2026-10-01\", \"end_date\": \"2026-10-03\", \"purchase_amount\": 100, \"refund_amount\": 150}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "passed",
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.refund_limit"
+        ],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "business.date-order",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-v1",
+        "content": "{\"start_date\": \"2026-10-01\", \"end_date\": \"2026-09-30\", \"purchase_amount\": 100, \"refund_amount\": 25}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "passed",
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.date_order"
+        ],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "structure.invalid-date",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-v1",
+        "content": "{\"start_date\": \"2026-02-30\", \"end_date\": \"2026-10-03\", \"purchase_amount\": 100, \"refund_amount\": 25}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged",
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid",
+          "business.date_order"
+        ],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "structure.duplicate-json",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-v1",
+        "content": "{\"x\":1,\"x\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "flagged",
+          "cross_field": "flagged"
+        },
+        "finding_rule_ids": [
+          "schema.invalid_json",
+          "business.invalid_json"
+        ],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "structure.wrong-format",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "business-v1",
+        "content": "Submitted as text.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "schema": "skipped",
+          "cross_field": "skipped"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "complete.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "Summary: Return request.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "complete.missing-next",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "Summary: Instructions available.\nNext steps:",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "flagged"
+        },
+        "finding_rule_ids": [
+          "completeness.next_steps"
+        ],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "complete.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "Summary: Instructions available.\nNext steps: Contact support.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    },
+    {
+      "case_id": "complete.duplicate",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "completeness-v1",
+        "content": "Summary: First.\nSummary: Second.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "completeness": "flagged"
+        },
+        "finding_rule_ids": [
+          "completeness.request_summary"
+        ],
+        "redaction_status": "not_requested",
+        "simulated": false
+      }
+    }
+  ]
+}

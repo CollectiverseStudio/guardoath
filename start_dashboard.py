@@ -9,6 +9,7 @@ import socket
 import subprocess
 import sys
 import threading
+from datetime import datetime, timezone
 import time
 import urllib.error
 import urllib.request
@@ -95,8 +96,11 @@ def main():
     parser.add_argument('--port', type=port_number, default=8000)
     parser.add_argument('--no-browser', action='store_true', help='Print the URL without opening a browser')
     parser.add_argument('--reinstall', action='store_true', help='Reinstall the dashboard dependencies')
+    parser.add_argument('--evaluate', action='store_true', help='Run the bundled local regression cases and open their report')
     parser.add_argument('--serve', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args()
+    if args.evaluate and args.serve:
+        parser.error('--evaluate cannot be combined with internal server mode')
     if not (3, 11) <= sys.version_info[:2] < (3, 15):
         print('The complete dashboard needs Python 3.11–3.14 for its PII detector. Use Python 3.12 or 3.14.', file=sys.stderr)
         return 1
@@ -104,6 +108,21 @@ def main():
         if args.serve:
             return serve(args.port, not args.no_browser)
         interpreter = prepare_environment(args.reinstall)
+        if args.evaluate:
+            run_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ-') + secrets.token_hex(4)
+            directory = ROOT / '.valinator-reports' / run_id
+            directory.mkdir(parents=True)
+            html_path = directory / 'report.html'
+            command = [str(interpreter), '-m', 'valinator.evaluate', '--pii',
+                       '--cases', str(ROOT / 'evals/local.json'),
+                       '--policies', str(ROOT / 'policies/playground.json'),
+                       '--report', str(directory / 'report.json'), '--html', str(html_path)]
+            completed = subprocess.run(command, cwd=ROOT)
+            if completed.returncode in {0, 1} and html_path.is_file():
+                print(f'Regression report: {html_path}', flush=True)
+                if not args.no_browser:
+                    webbrowser.open(html_path.as_uri())
+            return completed.returncode
         command = [str(interpreter), str(Path(__file__).resolve()), '--serve', '--port', str(args.port)]
         if args.no_browser:
             command.append('--no-browser')

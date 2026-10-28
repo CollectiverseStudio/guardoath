@@ -544,3 +544,72 @@ Provider references:
 - [Prompt Shields REST contract](https://learn.microsoft.com/en-us/rest/api/contentsafety/text-operations/shield-prompt?view=rest-contentsafety-2024-09-01)
 - [Official quickstart](https://learn.microsoft.com/en-us/azure/ai-services/content-safety/quickstart-jailbreak)
 - [Service/model update and pricing FAQ](https://learn.microsoft.com/en-us/azure/ai-services/content-safety/faq)
+
+## Run the local regression examples
+
+After downloading/updating the repository, use the launcher with `--evaluate`:
+
+```powershell
+# Windows with Python 3.12
+py -3.12 start_dashboard.py --evaluate
+```
+
+```bash
+# Mac/Linux with Python 3.12
+python3.12 start_dashboard.py --evaluate
+```
+
+It prepares/reuses the same isolated environment, runs 30 hand-written examples,
+and opens a standalone HTML report. No API key or running API server is needed.
+Use `--no-browser` to print the report path instead. Each run creates a new folder
+under ignored `.valinator-reports/`, containing `report.html` and `report.json`;
+previous reports are preserved. The command exits after generating the report.
+
+Examples cover supported PII and redaction, credential patterns and benign
+lookalikes, hidden/encoded text, scan-budget exhaustion, JSON structure/date
+formats, cross-field business rules, and required text sections. Expectations are
+stored in `evals/local.json`, separately from trusted `policies/playground.json`.
+Each case specifies a unique ID, group, stage, canonical request, and expected
+recommendation/effective action, exact checker-status map, exact finding-ID set,
+evaluation status, redaction status, and simulation flag. Review intentional
+policy/detector behavior changes before editing expectations; nothing updates
+them automatically.
+
+**An expectation match is not a safety pass.** Two bundled cases deliberately
+expect an incomplete evaluation. The report displays their actual incomplete
+status even when the expectation matches. Findings and observe-mode allow actions
+are also shown separately. These examples check regression behavior, not detector
+accuracy, precision/recall, fairness, compliance, or production readiness. They do
+not assert exact redacted strings or offsets. Latency is an observation on this
+machine, not a benchmark or enforced performance target.
+
+Reports contain case IDs, group/stage, checker statuses, finding IDs, decisions,
+redaction status, simulation flags, and timing. They omit submitted content,
+request context, redacted text, provider responses, and expected source values.
+Fixture files contain their input examples; keep committed examples synthetic.
+HTML is standalone, escapes labels, has no scripts or network dependencies, and
+can be opened directly in a browser.
+
+The runner uses only local built-in adapters, ignores Azure enable/credential
+settings, and refuses registered external adapters. It cannot perform paid/live
+provider calibration. It calls the engine directly: API authentication, ingress,
+rate limits, and actual external-transfer behavior are covered by the separate
+API test suite, not this report. Missing optional PII support produces mismatched
+expectations rather than silently dropping privacy cases.
+
+For custom cases or automation, use the prepared environment directly:
+
+```bash
+# Mac/Linux; use .dashboard-venv\Scripts\python.exe on Windows
+.dashboard-venv/bin/python -m valinator.evaluate --pii --cases evals/local.json --policies policies/playground.json --report results/report.json --html results/report.html
+```
+
+Repeat `--group` to select groups, for example `--group secrets --group structure`.
+Case files use strict bounded JSON (256 KiB, at most 100 cases, no duplicate IDs or
+JSON keys). Unknown policy references fail before any case executes. Reports use
+exclusive creation; `--overwrite` permits replacing reports, but input files,
+symlinks/hardlinks to inputs, and duplicate report destinations are rejected.
+Exit codes: **0** all expectations matched, **1** one or more mismatches, **2**
+configuration/report failure. Errors and mismatch descriptions do not echo input
+text. See `tests/test_evaluate.py` for the contract and `evals/local.json` for the
+editable starter suite.
