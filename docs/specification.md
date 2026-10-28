@@ -120,3 +120,21 @@ open decisions. No universal bias-free or prompt-injection-proof claims.
 - https://microsoft.github.io/presidio/
 - https://github.com/promptfoo/promptfoo
 - https://doi.org/10.6028/NIST.AI.600-1
+
+## Labeled text completeness (implemented)
+
+`completeness` belongs to the Business rules group alongside `cross_field`.
+Policies configure up to 50 `required_sections` with unique rule identifiers and
+case-insensitive unique ASCII labels, stage scope, and a minimum non-whitespace
+character count. Exact line-start `Label:` syntax is recognized, including
+multiline bodies; any other valid label ends the preceding body. Missing, short,
+or repeated required sections produce findings. Unsupported content format or
+no stage requirements produces skipped, and required skipped checks produce an
+incomplete evaluation. Existing stage actions, observe/enforce behavior, failure
+handling, and redaction rechecks apply unchanged.
+
+This is structural presence, not semantic/document adequacy. It does not interpret
+Markdown, files, claims, consent, or medical/legal sufficiency. Labels within
+quoted text are still literal labels. API findings contain rule identifiers and
+generic explanations only. The local dashboard includes failing and editable
+passing examples through the production check endpoints.

@@ -78,6 +78,20 @@ class FieldComparison(Contract):
         return value
 
 
+class RequiredSection(Contract):
+    rule_id: str = Field(pattern=r"^[a-zA-Z0-9_.-]{1,80}$")
+    label: str = Field(pattern=r"^[A-Za-z][A-Za-z0-9 _-]{0,79}$")
+    min_characters: int = Field(default=1, ge=1, le=8_000)
+    stages: tuple[Stage, ...] = Field(default=(Stage.INPUT, Stage.OUTPUT), min_length=1)
+
+    @field_validator("label")
+    @classmethod
+    def trimmed_label(cls, value):
+        if value != value.strip():
+            raise ValueError("Section labels must not have surrounding whitespace")
+        return value
+
+
 class Policy(Contract):
     application_id: str = Field(min_length=1, max_length=100)
     version: str = Field(min_length=1, max_length=100)
@@ -89,6 +103,7 @@ class Policy(Contract):
     output_schema: dict[str, Any] | None = None
     allow_simulated_enforcement: bool = False
     comparisons: tuple[FieldComparison, ...] = Field(default=(), max_length=50)
+    required_sections: tuple[RequiredSection, ...] = Field(default=(), max_length=50)
 
 
 class GroupResult(Contract):
