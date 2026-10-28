@@ -123,3 +123,18 @@ test("redacted preview uses safe text rendering", async ({ page }) => {
   await expect(page.locator('#output-results .redacted-content img')).toHaveCount(0);
   expect(await page.evaluate(() => window.injected)).toBeUndefined();
 });
+
+test("credential example shows a real secret finding and holds the answer", async ({ page }) => {
+  await connect(page); await page.getByRole("button", {name:"Credential pattern",exact:true}).click(); await run(page);
+  await expect(page.locator('#output-results [data-group="secrets"] summary')).toContainText("Findings");
+  await expect(page.locator('#output-results [data-group="secrets"]')).toContainText("GitHub token pattern");
+  await expect(page.locator("#output-results")).toContainText("Recommended: block");
+  await expect(page.locator("#answer")).toBeHidden();
+});
+
+test("clean text passes the selected secret patterns only", async ({ page }) => {
+  await connect(page); await page.locator("#policy").selectOption("secrets-v1"); await run(page);
+  await expect(page.locator('#output-results [data-group="secrets"] summary')).toContainText("Passed");
+  await expect(page.locator('#output-results [data-group="sensitive_data"] summary')).toContainText("Disabled");
+  await expect(page.locator("#answer")).toBeVisible();
+});

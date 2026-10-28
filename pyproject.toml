@@ -4,13 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "valinator"
-version = "0.5.0"
+version = "0.6.0"
 description = "Policy-driven input and output checks for AI applications"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi==0.162.0", "pydantic==2.14.1", "uvicorn==0.54.0",
   "jsonschema==4.26.0", "starlette==1.10.0",
   "email-validator==2.3.0", "rfc3339-validator==0.1.4",
+  "detect-secrets==1.5.0", "regex==2026.9.29",
 ]
 
 [project.optional-dependencies]

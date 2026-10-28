@@ -52,6 +52,13 @@ mode returns a preview only; enforcement can recommend using rechecked content.
 Schema failures, sensitive JSON keys, and uncompleted or simulated rechecks
 withhold transformed content. Redaction does not establish full anonymization.
 
+Version 0.6 adds a local secret checker using selected detect-secrets provider and
+private-key patterns under bounded regex execution. It inspects canonical text
+and decoded JSON without credential verification, baseline files, or caller
+suppression directives. Coverage is limited to supported patterns, not arbitrary
+passwords, proprietary documents, or every current provider key format. The
+example policy flags inputs and recommends blocking outputs in observe mode.
+
 ## Bias evaluation
 
 Define reviewed rubrics for stereotypes, unsupported demographic assumptions,

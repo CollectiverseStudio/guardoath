@@ -16,6 +16,8 @@
 - [x] Add an optional local Presidio adapter for email and credit-card patterns, without NLP model downloads.
 - [x] Add context-aware U.S. SSN candidates and policy-controlled, revalidated redaction of supported identifiers.
 - [ ] Extend coverage to other identifiers and customer-specific privacy requirements.
+- [x] Add bounded offline secret-pattern checks and real dashboard coverage for selected credentials/private-key markers.
+- [ ] Extend provider formats and evaluate context-aware password/confidential-document detection.
 - [x] Use a single canonical content value with explicit text/JSON format to prevent mismatched payloads.
 - [x] Add ingress byte limits, body-read deadline, and bounded JSON parsing.
 - [x] Enforce supported schema formats and declarative numeric/date comparisons.

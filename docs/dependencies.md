@@ -14,6 +14,8 @@ so upgrades are deliberate and tested.
 | Starlette | 1.10.0 | https://pypi.org/pypi/starlette/json |
 | email-validator | 2.3.0 | https://pypi.org/pypi/email-validator/json |
 | rfc3339-validator | 0.1.4 | https://pypi.org/pypi/rfc3339-validator/json |
+| detect-secrets | 1.5.0 | https://pypi.org/pypi/detect-secrets/json |
+| regex | 2026.9.29 | https://pypi.org/pypi/regex/json |
 | pytest | 9.2.0 | https://pypi.org/pypi/pytest/json |
 | actions/checkout | v7.0.1 | https://github.com/actions/checkout/releases |
 | actions/setup-python | v7.1.0 | https://github.com/actions/setup-python/releases |
@@ -42,3 +44,10 @@ a full reproducible lock and production vulnerability gate remain deployment wor
 
 Starlette 1.10.0 recommends HTTPX2 for its test client. The test dependency follows
 that supported path rather than retaining the deprecated HTTPX fallback.
+
+detect-secrets 1.5.0 and regex 2026.9.29 were checked as current stable releases
+before adding the local secret adapter. detect-secrets is Apache-2.0 licensed:
+https://github.com/Yelp/detect-secrets. The adapter reuses selected expressions
+and local JWT structure validation; it does not call verification, scan files,
+create baselines, or honor user-supplied suppressions. Installed package use does
+not vendor the upstream source into this repository.

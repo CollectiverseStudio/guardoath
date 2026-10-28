@@ -116,6 +116,21 @@
           "on_finding": "redact"
         }
       ]
+    },
+    {
+      "application_id": "demo",
+      "version": "secrets-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "failure_action": "block",
+      "rules": [
+        {
+          "checker_id": "secrets",
+          "required": true,
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ]
     }
   ]
 }
