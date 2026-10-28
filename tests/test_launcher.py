@@ -142,6 +142,25 @@ def test_launcher_runs_the_entire_group(tmp_path,monkeypatch,suite):
     monkeypatch.setattr(start_dashboard,'ROOT',tmp_path)
     monkeypatch.setattr(start_dashboard,'prepare_environment',lambda reinstall=False: Path(sys.executable))
     monkeypatch.setattr(sys,'argv',['start_dashboard.py','--evaluate','--suite',suite,'--no-browser'])
-    assert start_dashboard.main()==0
+    code=start_dashboard.main()
     path=next((tmp_path/'.valinator-reports').glob('*/report.json'))
-    assert json.loads(path.read_text())['summary']['matched']==100
+    report=json.loads(path.read_text())
+    diagnostics=[]
+    if code:
+        # Only sanitized checker results and timing; never print fixture content.
+        import asyncio
+        from valinator.checkers import default_checkers
+        from valinator.config import load_policies
+        from valinator.engine import Engine
+        from valinator.evaluate import load_suite
+        engine=Engine(load_policies(tmp_path/f'policies/{suite}-batch.json'),default_checkers(enable_pii=True))
+        cases={c.case_id:c for c in load_suite(tmp_path/f'evals/{suite}.json').cases}
+        for row in report['cases']:
+            if not row['matched']:
+                case=cases[row['case_id']]
+                checked=asyncio.run(engine.check(case.request,case.stage))
+                diagnostics.append({'report_case':row,'repeat_checkers':[
+                    {'id':c.checker_id,'status':c.status,'error':c.error_code,'latency_ms':c.latency_ms}
+                    for c in checked.checker_results]})
+    assert code==0, diagnostics
+    assert report['summary']['matched']==100
