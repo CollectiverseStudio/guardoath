@@ -38,7 +38,8 @@ def test_launcher_serves_dashboard_and_all_policies_with_fresh_key():
         allocation.bind(('127.0.0.1',0))
         port = allocation.getsockname()[1]
     environment = {**os.environ, 'VALINATOR_API_KEY':'old-key', 'VALINATOR_POLICY_FILE':'missing-old-policy',
-                   'VALINATOR_ENABLE_PII':'0'}
+                   'VALINATOR_ENABLE_PII':'0', 'VALINATOR_ENABLE_AZURE_PROMPT_SHIELDS':'1',
+                   'VALINATOR_AZURE_CONTENT_SAFETY_ENDPOINT':'invalid-old-endpoint'}
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     process = subprocess.Popen([sys.executable,str(SCRIPT),'--serve','--no-browser','--port',str(port)],
                                cwd=ROOT.parent,env=environment,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)

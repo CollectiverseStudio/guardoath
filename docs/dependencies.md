@@ -51,3 +51,11 @@ https://github.com/Yelp/detect-secrets. The adapter reuses selected expressions
 and local JWT structure validation; it does not call verification, scan files,
 create baselines, or honor user-supplied suppressions. Installed package use does
 not vendor the upstream source into this repository.
+
+The optional `azure` extra reuses the existing pinned HTTPX2 2.16.0 dependency;
+no provider SDK/model download is added. Its request contract was checked on
+October 28, 2026 against Microsoft's stable Prompt Shields API `2024-09-01`:
+https://learn.microsoft.com/en-us/rest/api/contentsafety/text-operations/shield-prompt?view=rest-contentsafety-2024-09-01.
+API version pinning does not pin Azure's underlying model. Azure is optional,
+requires explicit activation and customer-controlled credentials, and may charge
+for requests. Offline test transports do not establish live service accuracy.

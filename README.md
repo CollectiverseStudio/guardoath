@@ -56,7 +56,8 @@ If the browser does not open, visit the printed URL yourself. To use another por
 append `--port 8001`. Use `--no-browser` to skip automatic opening and `--reinstall`
 to repair the environment. These options work on both systems. The server binds
 only to `127.0.0.1`; this does not publish a website. Existing resource-limit
-environment overrides remain effective. No paid models or API calls are used.
+environment overrides remain effective. The launcher explicitly disables the Azure connector, including inherited enable settings.
+No paid models or API calls are used.
 
 After **Connect**, click a sample and **Run input and output checks**:
 
@@ -453,3 +454,72 @@ not hard CPU/thread budgets: background threads already running after a timeout
 cannot be forcibly stopped. Multiple workers/replicas multiply local allowances;
 shared quotas and worker/job isolation remain backlog work. These limits are not
 billing or model-token spending caps.
+
+### Optional Azure Prompt Shields connector
+
+The `azure_prompt_shields` adapter implements Microsoft's stable REST API
+`2024-09-01` for **user-input prompt-attack analysis**. It is off by default and
+separate from the safety/bias simulators. It has been tested with local HTTP
+fixtures, not a live Azure resource or a calibrated accuracy dataset. The model
+version is managed by Azure; `checker_version` records the API version, not a
+pinned model checkpoint. Provider findings can be wrong and need context review.
+
+Activation requires an Azure Content Safety resource and deliberate server-side
+configuration. Install `pip install -e '.[azure]'`, configure these variables in
+your environment/secret-management system, and use the manual uvicorn start path:
+
+| Variable | Value |
+| --- | --- |
+| `VALINATOR_ENABLE_AZURE_PROMPT_SHIELDS` | `1` |
+| `VALINATOR_AZURE_CONTENT_SAFETY_ENDPOINT` | Your `https://RESOURCE.cognitiveservices.azure.com` resource origin |
+| `VALINATOR_AZURE_CONTENT_SAFETY_KEY` | Your Azure subscription key, never a browser/platform key |
+| `VALINATOR_POLICY_FILE` | `policies/azure-prompt-shields.json` |
+| `VALINATOR_API_KEY` | A separate platform API key for connecting to Valinator |
+
+Use your resource's exact endpoint. Only public-Azure custom resource origins on
+HTTPS port 443 are supported; sovereign clouds and arbitrary/private origins are
+outside this adapter's configuration surface. Endpoint/key settings alone do
+nothing unless the enable flag is `1` and a selected rule uses the adapter. A bad
+enable flag or incomplete enabled configuration fails startup. The sample policy
+uses observe mode, a 2-second check deadline, Azure on input only, and local
+text-security checks on both sides. The one-command launcher always forces Azure
+off to preserve its local-only behavior; use manual server startup to enable it.
+
+**Data handling:** the original `content` is sent to the configured Azure
+resource as `userPrompt` with an empty `documents` array. Platform credentials,
+application/policy identifiers, `request_context`, and proposed output are not
+sent by this connector. Inputs must be plain text of at most 4,000 characters
+(a conservative local cap); unsupported/long input fails without a provider call.
+There is no truncation, splitting, document scanning, or output-attack assessment.
+The dashboard discloses routing before a run and labels external checker results.
+
+Checks execute in parallel. A local PII/secret finding does **not** prevent Azure
+receiving original input, and redaction is **not** a pre-provider privacy gate.
+Redaction revalidation can also call active external checks again. Enable only
+for data permitted to leave your environment. Choose your Azure region and review
+its current data handling/retention terms yourself; Valinator does not infer or
+verify residency or promise provider retention behavior. Shared quotas/region
+controls and an ordered local privacy gate remain deployment work.
+
+**Reliability and cost:** no redirects, inherited proxies, retries, fallback
+provider, or synthetic-success substitution. Transport errors, timeouts, provider
+429/authorization failures, malformed responses, and oversized responses become
+sanitized error results. A required failed check is incomplete, applies the
+policy's failure recommendation, and holds the dashboard preview. Observe mode
+still reports an effective action of allow; integrating apps must apply their
+chosen enforcement policy. Provider error bodies and source values are not
+returned. The response is bounded to 16 KiB and must contain a strict Boolean
+`userPromptAnalysis.attackDetected`.
+
+External checks report `cost_usd: null` and `cost_basis: "provider_unpriced"`,
+including failures and locally rejected external checks, because Valinator has no
+billing receipt or pricing calculation. This is not evidence that a billable
+request was made. Local-only checks retain zero / `local_only`. Each registered
+external adapter must declare `external=True` so routing/cost metadata survives
+engine timeouts. The change makes `cost_usd` nullable; API clients must support it.
+No live Azure calls or resources were created during development.
+
+Provider references:
+- [Prompt Shields REST contract](https://learn.microsoft.com/en-us/rest/api/contentsafety/text-operations/shield-prompt?view=rest-contentsafety-2024-09-01)
+- [Official quickstart](https://learn.microsoft.com/en-us/azure/ai-services/content-safety/quickstart-jailbreak)
+- [Service/model update and pricing FAQ](https://learn.microsoft.com/en-us/azure/ai-services/content-safety/faq)

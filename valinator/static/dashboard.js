@@ -28,6 +28,9 @@ async function api(path, body, token = key) {
 }
 function coverage() {
   $("coverage").replaceChildren(); const policy = currentPolicy();
+  const external = policy?.checks.some(c => c.external);
+  $("execution-mode").textContent = external ? "External provider enabled" : "Local checks";
+  $("data-routing").textContent = external ? "Selected external checks send input content to the configured Azure service and may incur charges. Local checks do not redact or block this transfer. Provider cost is not estimated. Request context is not sent by this connector." : "Selected checks run locally. No provider content transfer is configured.";
   for (const group of application?.groups || []) {
     const checks = (policy?.checks || []).filter(c => group.checker_ids.includes(c.id));
     const state = !group.checker_ids.length ? "not implemented" : !checks.length ? "disabled" : checks.some(c => !c.available) ? "unavailable" : checks.some(c => c.simulated) ? "simulated" : "enabled";
@@ -44,7 +47,7 @@ $("connect").addEventListener("click", async () => {
   const token = $("api-key").value.trim(); if (!token || busy) return;
   reset(); const attempt = revision; $("connect").disabled = true;
   key = ""; application = null; $("run").disabled = true; $("policy").disabled = true;
-  $("coverage").replaceChildren(); $("resource-limits").textContent = ""; $("disconnect").disabled = true;
+  $("coverage").replaceChildren(); $("execution-mode").textContent = "Local checks"; $("data-routing").textContent = ""; $("resource-limits").textContent = ""; $("disconnect").disabled = true;
   try { const data = await api("/v1/applications/current", null, token); if (attempt !== revision) return;
     key = token; application = data; $("api-key").value = ""; $("policy").replaceChildren();
     for (const policy of data.policies) { const option = document.createElement("option"); option.value = policy.version; option.textContent = policy.version + " · " + policy.mode + " mode"; $("policy").append(option); }
@@ -57,6 +60,7 @@ $("connect").addEventListener("click", async () => {
 });
 $("disconnect").addEventListener("click", () => {
   key = ""; application = null; $("api-key").value = ""; $("resource-limits").textContent = ""; reset(); $("coverage").replaceChildren();
+  $("execution-mode").textContent = "Local checks"; $("data-routing").textContent = "";
   $("policy").replaceChildren(); $("policy").disabled = true; $("run").disabled = true; $("disconnect").disabled = true;
   $("connection-status").textContent = "Disconnected. Key removed from this tab’s memory.";
 });
@@ -76,7 +80,7 @@ for (const button of document.querySelectorAll("[data-sample]")) button.addEvent
 });
 function render(stage, result) {
   const box = $(stage + "-results"); box.replaceChildren(); const title = document.createElement("h3"); title.textContent = stage === "input" ? "Input checks" : "Output checks"; box.append(title);
-  const summary = document.createElement("p"); summary.textContent = "Recommended: " + result.recommended_action + " · Effective: " + result.effective_action + " · " + result.total_latency_ms.toFixed(1) + " ms"; box.append(summary);
+  const summary = document.createElement("p"); summary.textContent = "Recommended: " + result.recommended_action + " · Effective: " + result.effective_action + " · " + result.total_latency_ms.toFixed(1) + " ms" + (result.cost_basis === "provider_unpriced" ? " · Provider cost not estimated" : ""); box.append(summary);
   if (result.redaction && !["not_requested", "not_needed"].includes(result.redaction.status)) {
     const section = document.createElement("section"); section.className = "redaction-box";
     const heading = document.createElement("h3"); heading.textContent = result.redaction.status === "preview" ? "Redacted preview — observe mode" : result.redaction.status === "ready" ? "Redacted content — rechecked" : "Redaction withheld";
@@ -87,7 +91,7 @@ function render(stage, result) {
   }
   function checkerRow(check) { const row = document.createElement("div"); row.className = "checker";
     const heading = document.createElement("div"), name = document.createElement("span"), status = document.createElement("span");
-    name.textContent = check.checker_id; status.className = "pill" + (check.simulated ? " warn" : check.status === "passed" ? " good" : check.status === "flagged" ? " bad" : " warn");
+    name.textContent = check.checker_id + (check.external ? " · external provider" : ""); status.className = "pill" + (check.simulated ? " warn" : check.status === "passed" ? " good" : check.status === "flagged" ? " bad" : " warn");
     status.textContent = (check.simulated ? "SIMULATED · " : "") + check.status; heading.append(name, status); row.append(heading);
     if (check.error_code) { const error = document.createElement("p"); error.textContent = "Check unavailable: " + check.error_code; row.append(error); }
     for (const finding of check.findings) { const detail = document.createElement("p"); detail.className = "finding"; detail.textContent = finding.explanation; row.append(detail); }
