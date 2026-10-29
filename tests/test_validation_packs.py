@@ -95,3 +95,32 @@ def test_api_rejects_unconfigured_pack_without_implicit_fallback():
               "content": "hello", "validation_codes": ["LOG"]})
     assert result.status_code == 422
     assert "hello" not in result.text
+
+
+def test_api_activates_pack_and_preserves_baseline():
+    from fastapi.testclient import TestClient
+    from valinator.app import create_app
+    from valinator.engine import Engine
+    from valinator.models import Policy, Rule
+    from valinator.checkers import default_checkers
+    registry = PackRegistry({"demo": (Pack("LOG", "1", ("schema",)),)})
+    policy = Policy(application_id="demo", version="v1", rules=(
+        Rule(checker_id="text_security"),
+        Rule(checker_id="schema", required=False),
+    ))
+    client = TestClient(create_app(
+        engine=Engine([policy], default_checkers(), pack_registry=registry),
+        credentials={"test-key": "demo"},
+    ))
+    headers = {"Authorization": "Bearer test-key"}
+    payload = {"application_id": "demo", "policy_version": "v1", "content": "hello"}
+    baseline = client.post("/v1/checks/input", headers=headers, json=payload)
+    selected = client.post("/v1/checks/input", headers=headers,
+                           json={**payload, "validation_codes": ["LOG"]})
+    assert baseline.status_code == selected.status_code == 200
+    assert [r["checker_id"] for r in baseline.json()["checker_results"]] == ["text_security"]
+    assert [r["checker_id"] for r in selected.json()["checker_results"]] == ["text_security", "schema"]
+    unauthorized = client.post("/v1/checks/input", headers=headers,
+                               json={**payload, "validation_codes": ["AGENT"]})
+    assert unauthorized.status_code == 422
+    assert "hello" not in unauthorized.text
