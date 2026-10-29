@@ -1,6 +1,8 @@
 """Trusted, tenant-scoped validation pack selection (no tool authorization)."""
 
 from dataclasses import dataclass
+import json
+from pathlib import Path
 import re
 
 _CODE = re.compile(r"[A-Z][A-Z0-9_]{1,31}\Z")
@@ -55,3 +57,37 @@ class PackRegistry:
     def checker_union(core: tuple[str, ...], packs: tuple[Pack, ...]) -> tuple[str, ...]:
         # CORE is always included; ordering is stable and overlaps execute once.
         return tuple(dict.fromkeys((*core, *(checker for pack in packs for checker in pack.checker_ids))))
+
+
+def load_pack_registry(path: str | Path) -> PackRegistry:
+    """Load a bounded, strict, locally published registry at startup."""
+    try:
+        with Path(path).open("rb") as stream:
+            raw = stream.read(262_145)
+        if len(raw) > 262_144:
+            raise ValueError("Pack registry too large")
+        data = json.loads(raw)
+        if not isinstance(data, dict) or set(data) != {"format_version", "applications"}:
+            raise ValueError("Invalid registry envelope")
+        if data["format_version"] != "1" or not isinstance(data["applications"], dict):
+            raise ValueError("Invalid registry version")
+        if len(data["applications"]) > 100:
+            raise ValueError("Too many applications")
+        published = {}
+        for app, rows in data["applications"].items():
+            if not isinstance(app, str) or not isinstance(rows, list) or len(rows) > 30:
+                raise ValueError("Invalid application packs")
+            packs = []
+            for row in rows:
+                if not isinstance(row, dict) or set(row) != {"code", "version", "checker_ids"}:
+                    raise ValueError("Invalid pack definition")
+                ids = row["checker_ids"]
+                if (not isinstance(ids, list) or not 1 <= len(ids) <= 30
+                        or not all(isinstance(x, str) and re.fullmatch(r"[a-z][a-z0-9_]{0,49}", x) for x in ids)
+                        or not isinstance(row["code"], str) or not isinstance(row["version"], str)):
+                    raise ValueError("Invalid pack identifiers")
+                packs.append(Pack(row["code"], row["version"], tuple(ids)))
+            published[app] = tuple(packs)
+        return PackRegistry(published)
+    except Exception:
+        raise ValueError("Unable to load validation pack configuration") from None
