@@ -21,7 +21,6 @@ from guardoath.groups import GROUPS
 from guardoath.budgets import ResourceLimits, RequestBudgets, RequestCapacity
 from guardoath.validation_packs import PackSelectionError, load_pack_registry
 from guardoath.tenants import TenantRegistry
-from guardoath.legacy_env import reject_legacy_environment
 
 
 def demo_engine(enable_pii: bool = False, enable_azure: bool = False, content_safety_provider: str = "none") -> Engine:
@@ -42,7 +41,6 @@ def demo_engine(enable_pii: bool = False, enable_azure: bool = False, content_sa
 def create_app(engine: Engine | None = None, credentials: dict[str, str] | None = None,
                limits: ResourceLimits | None = None,
                tenant_registry: TenantRegistry | None = None) -> FastAPI:
-    reject_legacy_environment()
     policy_file = os.getenv("GUARDOATH_POLICY_FILE")
     pack_file = os.getenv("GUARDOATH_PACK_FILE")
     if engine is not None:

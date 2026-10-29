@@ -1,10 +1,8 @@
 # GuardOath
 
-GuardOath was previously developed as "Valinator" and briefly branded "Valisentry".
+GuardOath — policy-driven input and output checks for AI applications.
 
-GuardOath (formerly GuardOath) — policy-driven input and output checks for AI applications.
-
-**Brand transition:** GuardOath is the product name. The Python package, API identifiers, environment variables, and GitHub repository remain `guardoath` temporarily to preserve existing installations and tests. Do not interpret the name change as a released API migration. See [migration plan](docs/guardoath-migration.md) and [validation packs](docs/validation-packs.md).
+See [validation packs](docs/validation-packs.md) for packaged check bundles.
 
 Start with the [user guide](docs/user-guide.md): each supported check has a purpose,
 example/use case, expected result, configuration and limitations. The [200-use-case catalog](docs/use-case-coverage.md) spans [UC001–050](docs/use-case-coverage.md), [UC051–100](docs/additional-use-cases.md), and [UC101–200](docs/use-cases-101-200.md), distinguishing supported, partial and proposed coverage.
