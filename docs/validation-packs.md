@@ -45,3 +45,9 @@ Set `VALINATOR_POLICY_FILE` to a trusted existing policy bundle and `VALINATOR_P
 **Important:** The example pack file is illustrative and must be paired with a policy bundle containing the referenced configured checkers and their required contracts. It is not a turnkey activation of LOG or AGENT validators. Until an explicit CORE membership field and enforcement invariant are implemented, baseline checks are inferred as policy rules not listed in any optional pack. Administrators must not assign mandatory universal checks to optional packs. This constraint needs a fail-closed startup invariant before customer release.
 
 The API documentation title is now Valisentry. Python import names, environment variables, and GitHub repository remain valinator for compatibility. Tests have been committed but CI has not been verified.
+
+## CORE partition hardening
+
+Published pack-registry JSON now requires each application's `core_checker_ids` and `packs`. At startup the engine checks that the configured policy's checker IDs are exactly partitioned between mandatory CORE and optional pack membership, with no overlap; invalid configurations stop startup. In-memory registries without explicit CORE remain supported for older tests and development only. The sample registry uses `text_security` as illustrative CORE, with optional `timestamps` and `tool_calls`. The sample is **not** a complete production baseline, nor does it constitute a complete standalone policy bundle.
+
+This change is committed but full CI execution remains unverified. Future hardening: pin required baseline identifiers independently of pack configuration, provide versioned per-policy registries, and reject duplicate JSON keys and conflicting rule semantics before production deployment.
