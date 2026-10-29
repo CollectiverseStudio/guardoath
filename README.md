@@ -11,6 +11,10 @@ example/use case, expected result, configuration and limitations. The [200-use-c
 
 The [machine-readable catalog](docs/use-case-manifest.json) enumerates **UC001–UC200** with stable IDs and source-document links. The corresponding [inventory integrity test](tests/test_use_case_manifest.py) verifies all IDs are present and unique. This test **does not** demonstrate that 200 validators exist or that their behavior is correct. Entries remain `review_required` or `proposed` until audited against real implementation, regression evidence, and domain-specific accuracy review. The first working [CORE/LOG/AGENT demo policy](policies/validation-packs-demo.json) exercises only narrow existing text, timestamp, and proposed-tool-call checks.
 
+## Inspect actual use-case completion
+
+Run `python -m valinator.coverage_report` to count documented use cases by evidence status. A row may be marked `verified` only with an implementation commit and test references, followed by review of actual test results. The report currently lists all 200 entries as unverified (including existing partial checks) because a per-case implementation audit has not been completed. This is deliberately conservative: **200 catalog entries do not mean 200 implemented validators**.
+
 ## Current milestone
 
 This is a portable API prototype with local checks, optional provider adapters,
