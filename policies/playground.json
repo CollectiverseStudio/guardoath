@@ -776,6 +776,72 @@
           "on_output_finding": "block"
         }
       ]
+    },
+    {
+      "application_id": "demo",
+      "version": "ledger-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "ledger",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "ledger": {
+        "currency": "USD",
+        "decimal_places": 2,
+        "max_entries": 100
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "timestamps-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "timestamps",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "timestamps": {
+        "allow_equal": false,
+        "max_samples": 200
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "graph-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "graph",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "graph": {
+        "max_nodes": 100,
+        "max_edges": 500
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "integrity-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "integrity",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "integrity": {
+        "sha256": "29b6c5956aa2ee231eb923e85b2ce8abc069c12e1a12c9bfb2efa4fd71a9b83a",
+        "encoding": "utf8",
+        "max_bytes": 16384
+      }
     }
   ]
 }

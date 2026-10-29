@@ -1,0 +1,107 @@
+{
+  "format_version": "1",
+  "policies": [
+    {
+      "application_id": "demo",
+      "version": "integrity-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "integrity",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "integrity": {
+        "sha256": "29b6c5956aa2ee231eb923e85b2ce8abc069c12e1a12c9bfb2efa4fd71a9b83a",
+        "encoding": "utf8",
+        "max_bytes": 16384
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "integrity-enforce-v1",
+      "mode": "enforce",
+      "rules": [
+        {
+          "checker_id": "integrity",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "integrity": {
+        "sha256": "29b6c5956aa2ee231eb923e85b2ce8abc069c12e1a12c9bfb2efa4fd71a9b83a",
+        "encoding": "utf8",
+        "max_bytes": 16384
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "integrity-base64-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "integrity",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "integrity": {
+        "encoding": "base64",
+        "sha256": "29b6c5956aa2ee231eb923e85b2ce8abc069c12e1a12c9bfb2efa4fd71a9b83a",
+        "max_bytes": 16384
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "integrity-tiny-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "integrity",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "integrity": {
+        "encoding": "utf8",
+        "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+        "max_bytes": 3
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "integrity-unicode-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "integrity",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "integrity": {
+        "encoding": "utf8",
+        "sha256": "8cba3282fe37fa6054ce64531ce17410a1404e2bc4afbf113824097037b1e498",
+        "max_bytes": 4
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "integrity-binary-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "integrity",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "integrity": {
+        "encoding": "base64",
+        "sha256": "f742b965f156c10374bc23aea96e3a8aff8facd6fc079defeaa30219ad86f211",
+        "max_bytes": 3
+      }
+    }
+  ]
+}

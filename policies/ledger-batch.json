@@ -1,0 +1,73 @@
+{
+  "format_version": "1",
+  "policies": [
+    {
+      "application_id": "demo",
+      "version": "ledger-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "ledger",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "ledger": {
+        "currency": "USD",
+        "decimal_places": 2,
+        "max_entries": 100
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "ledger-enforce-v1",
+      "mode": "enforce",
+      "rules": [
+        {
+          "checker_id": "ledger",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "ledger": {
+        "currency": "USD",
+        "decimal_places": 2,
+        "max_entries": 100
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "ledger-scale-0-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "ledger",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "ledger": {
+        "currency": "USD",
+        "decimal_places": 0,
+        "max_entries": 100
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "ledger-scale-4-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "ledger",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "ledger": {
+        "currency": "USD",
+        "decimal_places": 4,
+        "max_entries": 100
+      }
+    }
+  ]
+}

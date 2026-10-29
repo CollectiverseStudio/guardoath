@@ -102,8 +102,8 @@ it does not generate the answer. Passed checks cover only their stated scope.
 py -3.13 start_dashboard.py --evaluate --suite all
 ```
 
-This runs all ten local suites, then opens one index with per-group report links:
-930 expectations, including 188 intentionally incomplete assessments. Matching an
+This runs all 14 local suites, then opens one index with per-group report links:
+1,330 expectations, including 396 intentionally incomplete assessments. Matching an
 expected error/finding is not a clean-content or model-accuracy claim. No provider
 calls run. Python unit/API tests, browser tests, managed-provider contract fixtures
 and unimplemented capabilities are separate. Each run preserves earlier reports;
@@ -891,7 +891,7 @@ py -3.13 start_dashboard.py --evaluate --suite encoded-privacy
 ```
 
 This adds 100 regression expectations, including 28 intentional incomplete cases.
-The all-suite command now runs ten local suites / 930 expectations. No new model,
+The all-suite command now runs 14 local suites / 1,330 expectations. No new model,
 dependency, cloud deployment or paid provider call is introduced. See
 [the guide](docs/user-guide.md#sensitive-identifiers-inside-labeled-encodings) and
 [coverage/limits](docs/encoded-privacy-coverage.md).
@@ -900,8 +900,8 @@ dependency, cloud deployment or paid provider call is introduced. See
 ## Additional acceptance cases 51–100
 
 The [extended requirements/test catalog](docs/additional-use-cases.md) includes
-all 50 new examples with concrete acceptance criteria. Seventeen have scoped or
-partial existing controls, backed by 77 new unit/API/engine tests; 33 require new
+all 50 new examples with concrete acceptance criteria. Twenty-one now have scoped or
+partial existing controls, backed by 77 new unit/API/engine tests; 29 require new
 components and reviewed data. They are not claimed as implemented detectors.
 
 ```powershell
@@ -909,5 +909,9 @@ py -3.13 -m pytest tests/test_additional_use_cases.py -q
 ```
 
 Install the test extra first in a prepared development environment. These tests
-are separate from the 930 saved local engine expectations and run in normal CI.
+are separate from the 1,330 saved local engine expectations and run in normal CI.
 No new dependency, paid provider, deployment or product rename is introduced.
+
+## Local data-quality checks (0.24.0)
+
+Exact ledger line-item sums, explicit-offset timestamp sequence order, bounded directed graph structure and trusted SHA-256 matching now have focused demo profiles and 100 regression cases each. See [data-quality contracts, examples and limits](docs/data-quality-coverage.md). No cloud or paid provider is required.

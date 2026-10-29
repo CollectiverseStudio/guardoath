@@ -1,0 +1,2118 @@
+{
+  "format_version": "1",
+  "suite_id": "integrity-v1",
+  "cases": [
+    {
+      "case_id": "valid.exact-utf8.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "demo dataset\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.exact-utf8.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "demo dataset\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.exact-base64.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "ZGVtbyBkYXRhc2V0Cg==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.exact-base64.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "ZGVtbyBkYXRhc2V0Cg==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.tiny-boundary.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "abc",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.tiny-boundary.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "abc",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.unicode-byte-boundary.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-unicode-v1",
+        "content": "\ud83c\udf0d",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.unicode-byte-boundary.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-unicode-v1",
+        "content": "\ud83c\udf0d",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.binary-bytes.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-binary-v1",
+        "content": "AP+A",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.binary-bytes.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-binary-v1",
+        "content": "AP+A",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "mismatch.missing-lf.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "demo dataset",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.missing-lf.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "demo dataset",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.crlf.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "demo dataset\r\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.crlf.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "demo dataset\r\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.case.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "Demo dataset\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.case.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "Demo dataset\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.space.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "demo dataset \n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.space.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "demo dataset \n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.prefix.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "xdemo dataset\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.prefix.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "xdemo dataset\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.suffix.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "demo dataset\nx",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.suffix.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "demo dataset\nx",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.different.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "other dataset\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.different.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "other dataset\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.unicode-prefix.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "\ud83c\udf0ddemo dataset\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.unicode-prefix.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "\ud83c\udf0ddemo dataset\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.nul.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "demo dataset\n\u0000",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.nul.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "demo dataset\n\u0000",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.tab.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "demo\tdataset\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.tab.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "demo\tdataset\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.tiny-change.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "abd",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.tiny-change.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "abd",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.tiny-short.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "ab",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.tiny-short.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "ab",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.tiny-zero.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "a",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.tiny-zero.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "a",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "limit.tiny-bytes.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "abcd",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "limit.tiny-bytes.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "abcd",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "limit.unicode-bytes.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-unicode-v1",
+        "content": "\ud83c\udf0dx",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "limit.unicode-bytes.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-unicode-v1",
+        "content": "\ud83c\udf0dx",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "mismatch.unicode.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-unicode-v1",
+        "content": "\ud83c\udf0e",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.unicode.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-unicode-v1",
+        "content": "\ud83c\udf0e",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "invalid.base64-1.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "@bad",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.base64-1.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "@bad",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.base64-2.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "ZGVtbw",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.base64-2.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "ZGVtbw",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.base64-3.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "ZGVt bw==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.base64-3.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "ZGVt bw==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.base64-4.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "/w==\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.base64-4.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "/w==\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.base64-5.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "\u00e9",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.base64-5.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "\u00e9",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.base64-6.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "a",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.base64-6.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "a",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.base64-7.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "====",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.base64-7.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "====",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.base64-8.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "Zg===",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.base64-8.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "Zg===",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "limit.binary-decoded.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-binary-v1",
+        "content": "MTIzNA==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "limit.binary-decoded.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-binary-v1",
+        "content": "MTIzNA==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "mismatch.binary.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-binary-v1",
+        "content": "AP+B",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.binary.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-binary-v1",
+        "content": "AP+B",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.base64-text.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "b3RoZXI=",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.base64-text.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "b3RoZXI=",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.not-a-label.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "base64: ZGVtbyBkYXRhc2V0Cg==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.not-a-label.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "base64: ZGVtbyBkYXRhc2V0Cg==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "invalid.label-for-base64.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "base64: ZGVtbyBkYXRhc2V0Cg==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.label-for-base64.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "base64: ZGVtbyBkYXRhc2V0Cg==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "scope.self-supplied-digest-json.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "{\"data\": \"other\", \"sha256\": \"d9298a10d1b0735837dc4bd85dac641b0f3cef27a47e5d53a54f2f3f5b2fcffa\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "scope.self-supplied-digest-json.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "{\"data\": \"other\", \"sha256\": \"d9298a10d1b0735837dc4bd85dac641b0f3cef27a47e5d53a54f2f3f5b2fcffa\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "scope.integrity-does-not-parse-json.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "demo dataset\n",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "scope.integrity-does-not-parse-json.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "demo dataset\n",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "enforce.match.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-enforce-v1",
+        "content": "demo dataset\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "enforce.match.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-enforce-v1",
+        "content": "demo dataset\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "enforce.mismatch.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-enforce-v1",
+        "content": "different",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "flag",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "enforce.mismatch.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-enforce-v1",
+        "content": "different",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "base64.trailing-data.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "ZGVtbyBkYXRhc2V0Cg==AAAA",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "base64.trailing-data.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "ZGVtbyBkYXRhc2V0Cg==AAAA",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "tiny.mismatch-1.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "0",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "tiny.mismatch-1.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "0",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "tiny.mismatch-2.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "1",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "tiny.mismatch-2.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "1",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "tiny.mismatch-3.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "ab\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "tiny.mismatch-3.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "ab\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "tiny.mismatch-4.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": " ab",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "tiny.mismatch-4.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": " ab",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "tiny.mismatch-5.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "ABC",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "tiny.mismatch-5.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "ABC",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "tiny.mismatch-6.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "a\tc",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "tiny.mismatch-6.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "a\tc",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "tiny.mismatch-7.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "a\nc",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "tiny.mismatch-7.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "a\nc",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "limit.tiny-tab.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "a\tbc",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "limit.tiny-tab.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-tiny-v1",
+        "content": "a\tbc",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "scope.literal-b64-bytes.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "ZGVtbyBkYXRhc2V0Cg==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "scope.literal-b64-bytes.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "ZGVtbyBkYXRhc2V0Cg==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "valid.base64-json-format.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "ZGVtbyBkYXRhc2V0Cg==",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.base64-json-format.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-base64-v1",
+        "content": "ZGVtbyBkYXRhc2V0Cg==",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "mismatch.bom.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "\ufeffdemo dataset\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "mismatch.bom.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "integrity-v1",
+        "content": "\ufeffdemo dataset\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "integrity": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.integrity_digest_mismatch"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "format_version": "1",
+  "policies": [
+    {
+      "application_id": "demo",
+      "version": "timestamps-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "timestamps",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "timestamps": {
+        "allow_equal": false,
+        "max_samples": 200
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "timestamps-enforce-v1",
+      "mode": "enforce",
+      "rules": [
+        {
+          "checker_id": "timestamps",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "timestamps": {
+        "allow_equal": false,
+        "max_samples": 200
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "timestamps-equal-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "timestamps",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "timestamps": {
+        "allow_equal": true,
+        "max_samples": 200
+      }
+    }
+  ]
+}

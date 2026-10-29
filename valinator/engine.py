@@ -24,6 +24,9 @@ class Engine:
             if key in self._policies:
                 raise ValueError("Duplicate policy version")
             ids = [r.checker_id for r in policy.rules]
+            for checker_id in ("ledger", "timestamps", "graph", "integrity"):
+                if (getattr(policy, checker_id) is not None) != (checker_id in ids):
+                    raise ValueError("Data-quality checks require their configuration and checker rule")
             if (policy.tool_calls is not None) != ("tool_calls" in ids):
                 raise ValueError("Tool-call checks require their configuration and checker rule")
             if (policy.evidence is not None) != ("evidence" in ids):

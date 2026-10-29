@@ -394,9 +394,10 @@ test("privacy batch report distinguishes incomplete cases from matched expectati
 
 for (const stage of ["input","output"]) {
   test(stage + " examples change only their own data and format",async({page})=>{
+    test.setTimeout(60000);
     await connect(page); const other=stage==='input'?'output':'input'; const seen=new Set(); let checks=0;
     page.on('request',r=>{if(r.url().includes('/v1/checks/')) checks++;});
-    for(const version of ['conversation-v1','redaction-v1','business-v1','completeness-v1','structure-v1','business-number-le-v1','text-security-v1','content-safety-v1','bias-matched-string-v1','bias-matched-boolean-v1','bias-matched-number-v1','evidence-v1','tool-calls-v1','privacy-encoded-v1','privacy-encoded-redact-v1']) {
+    for(const version of ['conversation-v1','redaction-v1','business-v1','completeness-v1','structure-v1','business-number-le-v1','text-security-v1','content-safety-v1','bias-matched-string-v1','bias-matched-boolean-v1','bias-matched-number-v1','evidence-v1','tool-calls-v1','privacy-encoded-v1','privacy-encoded-redact-v1','ledger-v1','timestamps-v1','graph-v1','integrity-v1']) {
       await page.locator('#policy').selectOption(version);
       const ids=await page.locator('#'+stage+'-samples button:enabled').evaluateAll(nodes=>nodes.map(n=>n.id));
       for(const id of ids) {
@@ -412,7 +413,7 @@ for (const stage of ["input","output"]) {
         await expect(page.locator('#policy')).toHaveValue(version);
       }
     }
-    expect(seen.size).toBe(stage==='input'?86:89);
+    expect(seen.size).toBe(stage==='input'?118:121);
     expect(checks).toBe(0);
   });
 }
@@ -792,7 +793,7 @@ test('all local regression suites have one index with working group report links
   const {execFileSync}=require('node:child_process');const {pathToFileURL}=require('node:url');const path=testInfo.outputPath('all-local');
   execFileSync('python',['-m','valinator.evaluate_all','--pii','--output',path],{stdio:'pipe'});
   await page.goto(pathToFileURL(require('node:path').join(path,'index.html')).href);
-  await expect(page.locator('body')).toContainText('930 of 930 expectations matched');await expect(page.locator('tbody tr')).toHaveCount(10);
+  await expect(page.locator('body')).toContainText('1330 of 1330 expectations matched');await expect(page.locator('tbody tr')).toHaveCount(14);
   await page.getByRole('link',{name:'bias',exact:true}).click();
   await expect(page.locator('body')).toContainText('100 of 100 expectations matched');await expect(page.locator('tbody tr')).toHaveCount(100);
 });
@@ -825,3 +826,28 @@ test('encoded privacy report preserves incomplete cases without decoded content'
   await page.goto(pathToFileURL(path).href);await expect(page.locator('body')).toContainText('100 of 100 expectations matched');await expect(page.locator('body')).toContainText('Incomplete evaluations: 28');
   await expect(page.locator('body')).not.toContainText('jane@example.com');await expect(page.locator('tbody tr')).toHaveCount(100);
 });
+
+for(const name of ['ledger','timestamps','graph','integrity']) {
+  test(name+' clean sequence releases the proposed data',async({page})=>{
+    await connect(page);await profile(page,name+'-v1');await run(page);
+    await expect(page.locator('#result-status')).toHaveText('No findings');
+    await expect(page.locator('#answer')).toBeVisible();
+  });
+  for(const stage of ['input','output']) test(name+' '+stage+' finding holds the answer',async({page})=>{
+    await connect(page);await profile(page,name+'-v1');await page.locator('#'+stage+'-'+name+'-1-sample').click();await run(page);
+    await expect(page.locator('#'+stage+'-results')).toContainText('Findings');
+    await expect(page.locator('#answer')).toBeHidden();
+  });
+}
+
+for(const [name,sample,code] of [['ledger','4','ledger_invalid_document'],['timestamps','4','timestamps_invalid_document'],['graph','6','graph_duplicate_node'],['integrity','limit','integrity_byte_limit']]) {
+  test(name+' malformed or over-limit input stays incomplete',async({page})=>{
+    await connect(page);await profile(page,name+'-v1');
+    if(sample==='limit') await page.locator('#input-content').fill('x'.repeat(16385));
+    else await page.locator('#input-'+name+'-'+sample+'-sample').click();
+    const response=page.waitForResponse(r=>r.url().endsWith('/v1/checks/input'));
+    await run(page);const data=await(await response).json();
+    expect(data.evaluation_status).toBe('incomplete');expect(data.checker_results[0].error_code).toBe(code);
+    await expect(page.locator('#run-output')).toBeDisabled();await expect(page.locator('#answer')).toBeHidden();
+  });
+}

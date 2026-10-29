@@ -29,6 +29,14 @@ jobs:
         run: python -m valinator.evaluate --cases evals/evidence.json --policies policies/evidence-batch.json
       - name: Proposed tool-call checks - 100 expectations
         run: python -m valinator.evaluate --cases evals/actions.json --policies policies/actions-batch.json
+      - name: Ledger checks - 100 expectations
+        run: python -m valinator.evaluate --cases evals/ledger.json --policies policies/ledger-batch.json
+      - name: Timestamps checks - 100 expectations
+        run: python -m valinator.evaluate --cases evals/timestamps.json --policies policies/timestamps-batch.json
+      - name: Graph checks - 100 expectations
+        run: python -m valinator.evaluate --cases evals/graph.json --policies policies/graph-batch.json
+      - name: Integrity checks - 100 expectations
+        run: python -m valinator.evaluate --cases evals/integrity.json --policies policies/integrity-batch.json
   local-pii:
     runs-on: ubuntu-latest
     strategy:

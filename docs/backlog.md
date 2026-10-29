@@ -51,7 +51,7 @@
 - [ ] Add shared multi-worker/multi-server quotas, application-specific plans, and worker CPU/job budgets.
 - [x] Add a cross-platform dashboard launcher with isolated setup, fresh keys, and browser opening.
 - [x] Add bounded local regression suites, source-free JSON/HTML reports, group filtering, and an easy launcher option.
-- [x] One-command collection of all ten bundled local regression suites, source-free index/per-group reports, nonzero mismatch exits and preserved prior outputs.
+- [x] One-command collection of all 14 bundled local regression suites, source-free index/per-group reports, nonzero mismatch exits and preserved prior outputs.
 - [x] Compare saved local regression baselines with changed outcomes, mismatches, case-set changes, and separate timing observations.
 - [ ] Add independently reviewed accuracy/calibration datasets and stronger fixture/provenance versioning.
 - [x] Build a local playground with input/output findings, held answer previews, and prominent simulation labels.
@@ -104,3 +104,8 @@
 - [ ] Specialized medical/CAD/code/bio/audio/geospatial/ledger/telematics pipelines: UC081–090 beyond scalar/box/submitted-total checks, with approved fixtures and domain review.
 - [ ] URL reputation, orchestration graphs, dataset checksums, regulated-entity resolution, tokenizer contracts and proof verification: UC091–100 beyond existing over-posting/UTF-8/phrase/cap controls.
 - [ ] Live publication/normalization/repair behaviors need explicit contracts and preservation/revalidation tests; no automatic sanitization or silent truncation is enabled.
+
+## Data-quality batch (0.24.0)
+
+- [x] Exact ledger line-item arithmetic/currency, timestamp sequence order, directed-graph structure and trusted SHA-256 matching: bounded contracts, 400 regressions, API/gate/privacy tests, independent dashboard examples, launcher/CI and guide.
+- [ ] Ledger accounting/fraud semantics, cross-request telemetry order/freshness, graph relationship legality/package compatibility and checksum provenance/streaming uploads remain separate requirements.

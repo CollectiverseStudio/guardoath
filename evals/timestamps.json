@@ -1,0 +1,2030 @@
+{
+  "format_version": "1",
+  "suite_id": "timestamps-v1",
+  "cases": [
+    {
+      "case_id": "valid.ascending.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.ascending.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.fraction.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00.000001Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00.000002Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.fraction.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00.000001Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00.000002Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.offset-order.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T01:00:00+02:00\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.offset-order.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T01:00:00+02:00\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.mixed-offset.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T01:00:00+01:00\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.mixed-offset.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T01:00:00+01:00\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.lowercase.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01t00:00:00z\", \"value\": 0}, {\"timestamp\": \"2026-01-01t00:00:01z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.lowercase.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01t00:00:00z\", \"value\": 0}, {\"timestamp\": \"2026-01-01t00:00:01z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.leap-date.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2024-02-29T23:59:59Z\", \"value\": 0}, {\"timestamp\": \"2024-03-01T00:00:00Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.leap-date.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2024-02-29T23:59:59Z\", \"value\": 0}, {\"timestamp\": \"2024-03-01T00:00:00Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.year-change.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2025-12-31T23:59:59Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.year-change.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2025-12-31T23:59:59Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.stale-but-ordered.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2000-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2000-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.stale-but-ordered.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2000-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2000-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.equal-allowed.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-equal-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.equal-allowed.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-equal-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.equal-offsets-allowed.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-equal-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T01:00:00+01:00\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.equal-offsets-allowed.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-equal-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T01:00:00+01:00\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "order.reversed.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.timestamp_order"
+        ]
+      }
+    },
+    {
+      "case_id": "order.reversed.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.timestamp_order"
+        ]
+      }
+    },
+    {
+      "case_id": "order.equal.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.timestamp_order"
+        ]
+      }
+    },
+    {
+      "case_id": "order.equal.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.timestamp_order"
+        ]
+      }
+    },
+    {
+      "case_id": "order.offset-equal.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T01:00:00+01:00\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.timestamp_order"
+        ]
+      }
+    },
+    {
+      "case_id": "order.offset-equal.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T01:00:00+01:00\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.timestamp_order"
+        ]
+      }
+    },
+    {
+      "case_id": "order.middle-reversal.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 2}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.timestamp_order"
+        ]
+      }
+    },
+    {
+      "case_id": "order.middle-reversal.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 2}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.timestamp_order"
+        ]
+      }
+    },
+    {
+      "case_id": "order.allowed-equal-not-reverse.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-equal-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.timestamp_order"
+        ]
+      }
+    },
+    {
+      "case_id": "order.allowed-equal-not-reverse.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-equal-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.timestamp_order"
+        ]
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-1.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-1.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-2.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00-00:00\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-2.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00-00:00\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-3.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:60Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-3.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:60Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-4.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-02-29T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-4.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-02-29T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-5.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-13-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-5.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-13-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-6.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-32T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-6.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-32T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-7.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T24:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-7.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T24:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-8.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:60:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-8.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:60:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-9.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00+24:00\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-9.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00+24:00\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-10.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00.1234567Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-10.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00.1234567Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-11.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01 00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-11.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01 00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-12.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\\n\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-12.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\\n\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-13.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \" 2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-13.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \" 2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-14.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-14.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-15.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"0000-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-15.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"0000-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-16.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"0001-01-01T00:00:00+23:00\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.timestamp-16.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"0001-01-01T00:00:00+23:00\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.value-boolean.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": true}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.value-boolean.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": true}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.value-null.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": null}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.value-null.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": null}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.value-string.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": \"1\"}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.value-string.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": \"1\"}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.value-object.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": {}}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.value-object.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": {}}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.sample-extra.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0, \"extra\": \"x\"}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.sample-extra.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0, \"extra\": \"x\"}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.missing-timestamp.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.missing-timestamp.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.missing-value.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\"}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.missing-value.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\"}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.one-sample.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.one-sample.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.no-samples.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.no-samples.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.budget.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.budget.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.malformed.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{bad",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.malformed.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{bad",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.duplicate.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\":[],\"samples\":[]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.duplicate.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\":[],\"samples\":[]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.extra-envelope.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}], \"other\": \"x\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.extra-envelope.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}], \"other\": \"x\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "format.text.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "Not a sample packet.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "format.text.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "Not a sample packet.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "enforce.ordered.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-enforce-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "enforce.ordered.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-enforce-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "enforce.reversed.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-enforce-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "flag",
+        "checker_statuses": {
+          "timestamps": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.timestamp_order"
+        ]
+      }
+    },
+    {
+      "case_id": "enforce.reversed.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-enforce-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "timestamps": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.timestamp_order"
+        ]
+      }
+    },
+    {
+      "case_id": "valid.large-integer-value.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.large-integer-value.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.negative-value-not-an-outlier-check.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": -1.5}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.negative-value-not-an-outlier-check.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00Z\", \"value\": -1.5}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.positive-zero-offset.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00+00:00\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.positive-zero-offset.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "timestamps-v1",
+        "content": "{\"samples\": [{\"timestamp\": \"2026-01-01T00:00:00+00:00\", \"value\": 0}, {\"timestamp\": \"2026-01-01T00:00:01Z\", \"value\": 1}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "timestamps": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    }
+  ]
+}

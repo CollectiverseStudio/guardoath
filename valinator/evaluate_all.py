@@ -11,7 +11,7 @@ from valinator.config import load_policies
 from valinator.engine import Engine
 from valinator.evaluate import evaluate, load_suite, render_html, write_outputs
 
-SUITES = ('local', 'secrets', 'privacy', 'structure', 'business', 'text-security', 'bias', 'evidence', 'actions', 'encoded-privacy')
+SUITES = ('local', 'secrets', 'privacy', 'structure', 'business', 'text-security', 'bias', 'evidence', 'actions', 'encoded-privacy', 'ledger', 'timestamps', 'graph', 'integrity')
 
 
 def render_index(collection):

@@ -15,6 +15,7 @@ from valinator.secrets_check import build_secret_checker
 from valinator.matched_outcomes import matched_outcomes_check
 from valinator.evidence import evidence_check
 from valinator.tool_calls import tool_calls_check
+from valinator.data_quality import ledger_check, timestamps_check, graph_check, integrity_check
 
 Checker = Callable[[CheckRequest, Policy, Stage], Awaitable[CheckerResult]]
 
@@ -92,7 +93,7 @@ def simulated_checker(kind: str) -> Checker:
 def default_checkers(enable_pii: bool = False, enable_azure: bool = False, content_safety_provider: str = "none") -> dict[str, Checker]:
     checkers = {"schema": schema_check, "safety": simulated_checker("safety"),
                 "bias": simulated_checker("bias"), "cross_field": cross_field_check,
-                "secrets": build_secret_checker(), "completeness": completeness_check, "text_security": text_security_check, "matched_outcomes": matched_outcomes_check, "evidence": evidence_check, "tool_calls": tool_calls_check}
+                "secrets": build_secret_checker(), "completeness": completeness_check, "text_security": text_security_check, "matched_outcomes": matched_outcomes_check, "evidence": evidence_check, "tool_calls": tool_calls_check, "ledger": ledger_check, "timestamps": timestamps_check, "graph": graph_check, "integrity": integrity_check}
     if enable_pii:
         from valinator.pii import build_pii_checker
         checkers["pii"] = build_pii_checker()

@@ -1,0 +1,53 @@
+{
+  "format_version": "1",
+  "policies": [
+    {
+      "application_id": "demo",
+      "version": "graph-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "graph",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "graph": {
+        "max_nodes": 100,
+        "max_edges": 500
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "graph-enforce-v1",
+      "mode": "enforce",
+      "rules": [
+        {
+          "checker_id": "graph",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "graph": {
+        "max_nodes": 100,
+        "max_edges": 500
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "graph-small-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "graph",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "graph": {
+        "max_nodes": 3,
+        "max_edges": 3
+      }
+    }
+  ]
+}

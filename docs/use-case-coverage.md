@@ -88,3 +88,5 @@ positive and failure cases. That verifies those implementations and contracts;
 it does not convert the planned rows above into working detectors. Independent
 accuracy datasets, approved live services and specialized data/model pipelines
 are separate acceptance requirements. Deployment is handled separately by Greg.
+
+The [0.24.0 data-quality batch](data-quality-coverage.md) adds exact row-based ledger sums (UC088), timestamp ordering (UC076), directed graph contracts (UC075/UC093) and trusted bounded-byte SHA-256 checks (UC095), with explicit remaining scope limits.

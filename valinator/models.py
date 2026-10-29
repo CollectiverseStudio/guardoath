@@ -158,6 +158,33 @@ class ToolPolicy(Contract):
         return value
 
 
+class LedgerPolicy(Contract):
+    currency: str = Field(pattern=r"^[A-Z]{3}$", min_length=3, max_length=3, strict=True)
+    decimal_places: int = Field(default=2, ge=0, le=4, strict=True)
+    max_entries: int = Field(default=100, ge=2, le=200, strict=True)
+
+
+class TimestampPolicy(Contract):
+    allow_equal: bool = Field(default=False, strict=True)
+    max_samples: int = Field(default=200, ge=2, le=500, strict=True)
+
+
+class GraphPolicy(Contract):
+    max_nodes: int = Field(default=100, ge=1, le=200, strict=True)
+    max_edges: int = Field(default=500, ge=1, le=1_000, strict=True)
+
+
+class IntegrityPolicy(Contract):
+    sha256: str = Field(pattern=r"^[0-9a-fA-F]{64}$", min_length=64, max_length=64, strict=True)
+    encoding: Literal["utf8", "base64"] = "utf8"
+    max_bytes: int = Field(default=16_384, ge=1, le=262_144, strict=True)
+
+    @field_validator("sha256")
+    @classmethod
+    def normalized_digest(cls, value):
+        return value.lower()
+
+
 class Policy(Contract):
     application_id: str = Field(min_length=1, max_length=100)
     version: str = Field(min_length=1, max_length=100)
@@ -178,6 +205,10 @@ class Policy(Contract):
     matched_outcomes: MatchedOutcomes | None = None
     evidence: EvidencePolicy | None = None
     tool_calls: ToolPolicy | None = None
+    ledger: LedgerPolicy | None = None
+    timestamps: TimestampPolicy | None = None
+    graph: GraphPolicy | None = None
+    integrity: IntegrityPolicy | None = None
 
 
 class GroupResult(Contract):

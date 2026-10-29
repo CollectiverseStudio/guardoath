@@ -1,7 +1,7 @@
 # Valinator user guide
 
 This guide grows with the product. It describes user-facing validation checks,
-examples, expected results, configuration, and boundaries. Version: 0.23.0.
+examples, expected results, configuration, and boundaries. Version: 0.24.0.
 
 A **check** examines an input or proposed AI answer. A **regression case** tests
 whether that check behaves as expected on a saved example. Passing a regression
@@ -125,17 +125,18 @@ For redaction, explicitly select `redaction-v1` before the Redaction preview but
 
 ## Run every bundled local regression suite
 
-On your Windows computer, one command runs all ten bundled local suites and
+On your Windows computer, one command runs all 14 bundled local suites and
 opens an index linking to each detailed report:
 
 ```powershell
 py -3.13 start_dashboard.py --evaluate --suite all
 ```
 
-The current collection has **930 saved expectations**, including **188 deliberate
+The current collection has **1,330 saved expectations**, including **396 deliberate
 incomplete assessments**. It covers starter examples, secrets, privacy, structure,
 business, local text security, matched decisions, citation evidence, proposed
-tool calls and encoded sensitive data. Matching an expected finding/error is not a clean-content or detector
+tool calls, encoded sensitive data, ledger sums, timestamp ordering, directed graphs
+and trusted SHA-256 equality. Matching an expected finding/error is not a clean-content or detector
 accuracy claim. These are local engine regressions, separate from the Python
 unit/API tests, browser tests and synthetic provider-contract tests in CI.
 
@@ -621,7 +622,7 @@ py -3.13 start_dashboard.py --evaluate --suite encoded-privacy
 ```
 
 This runs 100 expectations with 28 deliberately incomplete cases. The all-suite
-collection now has ten local suites and 930 expectations. See
+collection now has 14 local suites and 1,330 expectations. See
 [encoded privacy coverage](encoded-privacy-coverage.md) for exact contracts,
 redaction/gating behavior and known gaps. No provider call or new dependency is used.
 
@@ -1417,6 +1418,26 @@ not a semantic language-safety judgment.
 
 Run the new tests with `python -m pytest tests/test_additional_use_cases.py -q`
 in a development environment with the test extra installed. These are distinct
-from the 930 saved engine-regression expectations in the all-suite HTML index.
+from the 1,330 saved engine-regression expectations in the all-suite HTML index.
 No statistical, medical, biometric, threat-intel, audio/image, session or
 cryptographic capability is implied by their appearance in the requirements list.
+
+## Local data-quality checks (0.24.0)
+
+See [the data-quality guide](data-quality-coverage.md) for ledger, timestamps, graph and integrity purpose, complete packet examples, policy configuration, machine-readable findings/error codes, API behavior and limits. These optional profiles are in Advanced settings; general conversation checks stay active in their default profile. Each new checker has 100 saved input/output expectations and eight independent demo examples per stage.
+
+
+| Focused profile | Purpose and example | Configuration | Important boundary |
+|---|---|---|---|
+| `ledger-v1` | Add debit rows `"0.10"` + `"0.20"` and compare with credit `"0.30"`; flag a one-cent difference. | `ledger`: currency, decimal_places, max_entries | Exact arithmetic only; no fraud or accounting correctness assessment. |
+| `timestamps-v1` | Flag an earlier timestamp after a later one; compare offsets as instants. | `timestamps`: allow_equal, max_samples | No sorting, freshness, smoothing or cross-request memory. |
+| `graph-v1` | Flag `A → B → A`, self-loops, duplicate edges or unknown endpoints. | `graph`: max_nodes, max_edges | Declared directed structure only; no relationship truth, legality or execution. |
+| `integrity-v1` | Flag a changed byte, newline or case against approved bytes' SHA-256. | `integrity`: sha256, encoding, max_bytes | Trusted server reference required; matching bytes do not prove safe content or authentic provenance. |
+
+The first three expect their documented JSON envelopes. Integrity hashes the
+exact submitted text's UTF-8 bytes or strict Base64-decoded bytes. Unsupported
+format, invalid records and exhausted limits remain incomplete rather than
+passing. Both stages use the same authenticated check endpoints. See the linked
+data-quality guide for complete requests and error codes. The integrity demo's
+clean buttons intentionally supply identical bytes on both stages to match the
+single configured digest; the other examples can use distinct stage data.

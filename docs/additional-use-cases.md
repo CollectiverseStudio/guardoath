@@ -3,10 +3,12 @@
 Greg's second list is preserved below, numbered 51–100 to keep the first list's
 IDs stable. A use case is a product requirement, not proof that a detector exists.
 
-**Current acceptance coverage:** 17 examples have scoped/partial controls with
-runnable tests; 33 require new components and reviewed fixtures. The 77 new tests
+**Current acceptance coverage:** 21 examples have scoped/partial controls with
+runnable tests; 29 require new components and reviewed fixtures. The initial 77 tests
 in [test_additional_use_cases.py](../tests/test_additional_use_cases.py) exercise
-those existing controls through actual API/engine calls. They do not claim to
+the previously supported controls through actual API/engine calls. The subsequent
+433 tests in [test_data_quality.py](../tests/test_data_quality.py) cover the four
+new local data contracts and their API/configuration boundaries. These do not claim to
 implement the missing semantic, behavioral, industrial or cryptographic services.
 No skipped placeholder test is presented as a passing detector. All planned rows
 below specify an invalid/attack case, a legitimate control, and an edge/failure
@@ -57,8 +59,8 @@ human behavior and caller-supplied hashes are not automatically trusted evidence
 | UC072 | Dynamic JSON Schema alignment | Scoped: versioned schemas, `uc072` | Current: v1/v2 enforce different contracts and preserve active snapshots; good/bad documents are checked on both stages. Bounded parsing precedes schema validation. Live authoring/publication, remote schemas and before-tokenization semantic safety are not implemented. |
 | UC073 | Statistical data-drift fencing | Planned; no baseline/distribution evaluator | Test reviewed in/out-of-distribution samples, seasonality and benign population changes; reject missing/version-mismatched baselines and inadequate sample sizes; define reviewed thresholds and uncertainty. |
 | UC074 | Missing-feature quotas | Scoped: declared null quota, `uc074` | Current: fixed-length feature arrays allow zero/one null and reject two/four under a supplied schema, without modifying values. Future application work: choosing the quota, repair workflow and validated imputation; no imputation is performed. |
-| UC075 | Graph-edge validation | Planned; no graph schema/algorithm or legal rules | Test allowed edges, forbidden cycles and duplicate/self-links under a defined graph contract; handle dangling nodes and size bounds. Graph structure cannot establish legal validity of a relationship. |
-| UC076 | Timestamp sequence alignment | Planned sequence-order check; existing schema checks formats only | Test increasing/equal/out-of-order timestamps under an explicit tie/time-zone policy; malformed, missing and cross-batch timestamps; define sorting versus rejection without silently changing chronology. |
+| UC075 | Graph-edge validation | Partial: declared directed graph structure, `graph` | Checks cycles, self-links, duplicate edges, unknown endpoints and bounds. Relationship legal validity remains unassessed. |
+| UC076 | Timestamp sequence alignment | Partial: within-packet timestamp order, `timestamps` | Checks explicit-offset instants, ties policy, malformed values and caps; no cross-request state, freshness, sorting or repair. |
 | UC077 | SQL parameter injection defense | Partial: proposed-tool allowlist, `uc077` | Current: execute_sql is rejected because it is not allowed, regardless of query content. This is not SQL sanitization. Future integration tests require the actual parameterized query builder/driver, identifier allowlists, least privilege and legitimate punctuation controls; do not treat prompt stripping/escaping as sufficient. |
 | UC078 | Cross-field logical consistency | Partial: declared numeric comparisons, `uc078` | Current: years of experience is compared with submitted age. Birth-year/current-date derivation, chronology, missing/contradictory age claims and authoritative context are not verified. Add reviewed derivations before claiming the original DOB example is fully checked. |
 | UC079 | Categorical outlier quarantine | Scoped: exact taxonomy codes, `uc079` | Current: allowlisted category codes pass; other/case-variant/empty codes fail. This does not semantically classify arbitrary prose or infer an industry taxonomy. Future quarantine/reviewer routing needs separate integration. |
@@ -75,7 +77,7 @@ human behavior and caller-supplied hashes are not automatically trusted evidence
 | UC085 | Sensor extremum filtering | Partial: declared scalar bounds, `uc085` | Current: illustrative 0–120 F bounds accept endpoints and reject 500, negative and Boolean readings. These are application limits, not a universal physical model. Temporal spikes, calibrated sensor faults and smoothing are not assessed or modified. |
 | UC086 | Patent claim structure | Planned filing-specific validator; existing schemas enforce generic fields only | Define the selected filing format/version and reviewed structural rules; test valid/invalid claims, dependencies, missing sections and unsupported versions. Generic JSON validity is not regulatory acceptance or legal adequacy. |
 | UC087 | Geospatial boundaries | Partial: coordinate bounding box, `uc087` | Current: inclusive illustrative lat/lon bounds are tested. Polygon holes/edges, CRS, antimeridian, altitude, timestamps and navigation authorization are not implemented. Test those explicitly with approved geometry before autonomous use. |
-| UC088 | Financial ledger balancing | Partial: supplied aggregate comparison, `uc088` | Current: supplied debit/credit totals are compared; rows are not summed. Full tests need exact decimal/currency/scale rules, line-item sums, rounding policy, overflow and contradictory totals. No fraud/accounting correctness claim is made. |
+| UC088 | Financial ledger balancing | Partial: exact line-item sums and declared currency, `ledger` | Sums bounded amount strings in integer minor units with explicit scale/currency; aggregate comparison remains available. No accounting correctness or fraud claim. |
 | UC089 | Telematics smoothing | Planned; no time-series filter | Test approved speed spikes, legitimate rapid changes and missing/out-of-order telemetry; measure distortion and bounded latency; never substitute smoothing success for driver-risk or sensor-truth validation. |
 | UC090 | Audio rate/format alignment | Planned; no audio decoder/resampler | Test supported mono/rate/container inputs, valid conversions and malformed/oversized/unsupported media; verify sample counts, duration and meaning/quality preservation. No automatic 16 kHz conversion is present. |
 
@@ -85,9 +87,9 @@ human behavior and caller-supplied hashes are not automatically trusted evidence
 | --- | --- | --- | --- |
 | UC091 | URL threat-intelligence lookup | Planned; no URL extraction/reputation service | Test approved malicious/benign fixtures, redirects, unavailable/stale intel and private/network-local destinations. Define an SSRF-safe lookup design, privacy, cost and permitted egress; never fetch arbitrary submitted URLs by default. |
 | UC092 | API over-posting | Scoped: extra-field rejection, `uc092` | Current: attempted mode/rule/schema/failure-action/egress overrides receive sanitized 422 responses and leave the active policy unchanged. Credentials still bind applications. Nested application fields need their own additionalProperties rules; tenant/role authorization is separate. |
-| UC093 | Prompt dependency graphs | Planned; no dependency graph builder | Test approved acyclic/cyclic graphs, missing/version-incompatible dependencies and bounded depth/nodes; distinguish quoted plans from executable orchestration and do not execute code to infer a graph. |
+| UC093 | Prompt dependency graphs | Partial: supplied directed graph, `graph` | Checks declared graph cycles/references/bounds; no extraction from prose, package version resolution or execution. |
 | UC094 | Hallucination-prone ambiguity | Planned; no reviewed ambiguity/clarification evaluator | Test reviewed ambiguous prompts, adequately specified controls and cases requiring extra context; define uncertainty and clarification behavior. Do not promise that wording statistically predicts hallucination without independent evidence. |
-| UC095 | Trusted SHA-256 verification | Planned; no dataset upload/checksum contract | Test exact match, one-byte alteration, wrong/malformed/absent trusted digest, algorithm/encoding mismatch and large/streamed input. A matching hash is meaningful only with a trusted reference and does not prove the dataset itself is safe or unpoisoned. |
+| UC095 | Trusted SHA-256 verification | Partial: bounded submitted bytes and policy SHA-256, `integrity` | Checks exact UTF-8 or decoded Base64 bytes against trusted server digest. No uploads/streaming, provenance or poisoning assurance. |
 | UC096 | Sanctions/PEP matching | Planned; no regulated-entity list or entity resolver | Use approved reference versions and synthetic names; test matches, legitimate namesakes, transliteration, incomplete/stale lists and uncertain identities. Name similarity is not proof of identity, legal restriction or clearance. |
 | UC097 | Prompt redundancy stripping | Partial: hard limits, `uc054_and_uc097` | Current: inputs are preserved within bounds and rejected over limits; no silent rewriting. Future normalization tests need idempotence, preserved code/quotes/meaning, adversarial nesting and bounded output; no stripping/truncation is currently performed. |
 | UC098 | Token-to-byte mismatches | Partial: UTF-8 envelope rejection, `uc098` | Current: malformed UTF-8 is rejected before a checker. No model tokenizer is installed and no token/byte correspondence is verified. Future tests must pin a tokenizer, cover multibyte/combining text and reject invalid/unsupported encodings without claiming universal crash prevention. |
@@ -104,8 +106,8 @@ py -3.13 -m pytest tests/test_additional_use_cases.py -q
 ```
 
 These **77 unit/API/engine assertions** are collected by the normal CI pytest
-jobs. They are separate from the ten saved local regression suites (930
-expectations) opened by `start_dashboard.py --evaluate --suite all`; no 33 planned
+jobs. They are separate from the 14 saved local regression suites (1,330
+expectations) opened by `start_dashboard.py --evaluate --suite all`; no 29 planned
 features have been added to that index as fake passes. Existing broader tests
 remain relevant: ingress/quotas, schema contracts, business comparisons, secret
 terms, proposed tools, privacy and provider-gate tests.
@@ -127,3 +129,5 @@ These inform test boundaries, not a certification claim or an implemented scanne
 - https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html
 - https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
 - https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html
+
+The subsequent [data-quality batch](data-quality-coverage.md) adds four local checkers, 400 saved regressions and API/browser coverage. See that document for precise contracts and remaining gaps.

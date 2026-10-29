@@ -1,0 +1,2032 @@
+{
+  "format_version": "1",
+  "suite_id": "ledger-v1",
+  "cases": [
+    {
+      "case_id": "valid.equal.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.equal.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.zero.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"0.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"0.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.zero.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"0.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"0.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.cent.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"0.01\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"0.01\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.cent.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"0.01\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"0.01\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.large.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.large.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.exact-cent-sum.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"0.10\"}, {\"entry_id\": \"d2\", \"side\": \"debit\", \"amount\": \"0.20\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"0.30\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.exact-cent-sum.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"0.10\"}, {\"entry_id\": \"d2\", \"side\": \"debit\", \"amount\": \"0.20\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"0.30\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.hundred-large-entries.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"0\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"1\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"2\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"3\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"4\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"5\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"6\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"7\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"8\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"9\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"10\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"11\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"12\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"13\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"14\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"15\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"16\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"17\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"18\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"19\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"20\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"21\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"22\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"23\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"24\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"25\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"26\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"27\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"28\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"29\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"30\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"31\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"32\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"33\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"34\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"35\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"36\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"37\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"38\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"39\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"40\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"41\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"42\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"43\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"44\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"45\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"46\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"47\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"48\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"49\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"50\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"51\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"52\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"53\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"54\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"55\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"56\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"57\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"58\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"59\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"60\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"61\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"62\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"63\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"64\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"65\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"66\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"67\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"68\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"69\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"70\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"71\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"72\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"73\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"74\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"75\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"76\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"77\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"78\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"79\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"80\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"81\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"82\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"83\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"84\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"85\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"86\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"87\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"88\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"89\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"90\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"91\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"92\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"93\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"94\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"95\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"96\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"97\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"98\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"99\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.hundred-large-entries.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"0\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"1\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"2\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"3\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"4\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"5\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"6\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"7\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"8\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"9\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"10\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"11\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"12\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"13\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"14\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"15\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"16\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"17\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"18\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"19\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"20\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"21\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"22\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"23\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"24\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"25\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"26\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"27\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"28\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"29\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"30\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"31\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"32\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"33\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"34\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"35\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"36\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"37\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"38\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"39\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"40\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"41\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"42\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"43\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"44\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"45\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"46\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"47\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"48\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"49\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"50\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"51\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"52\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"53\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"54\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"55\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"56\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"57\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"58\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"59\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"60\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"61\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"62\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"63\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"64\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"65\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"66\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"67\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"68\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"69\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"70\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"71\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"72\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"73\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"74\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"75\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"76\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"77\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"78\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"79\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"80\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"81\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"82\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"83\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"84\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"85\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"86\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"87\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"88\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"89\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"90\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"91\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"92\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"93\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"94\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"95\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"96\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"97\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"98\", \"side\": \"credit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"99\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.entry-order.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}, {\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.entry-order.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}, {\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.zero-scale.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-scale-0-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.zero-scale.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-scale-0-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.four-scale.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-scale-4-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"0.0001\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"0.0001\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.four-scale.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-scale-4-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"0.0001\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"0.0001\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "unbalanced.cent-difference.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.01\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.ledger_unbalanced"
+        ]
+      }
+    },
+    {
+      "case_id": "unbalanced.cent-difference.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.01\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.ledger_unbalanced"
+        ]
+      }
+    },
+    {
+      "case_id": "unbalanced.zero-vs-cent.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"0.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"0.01\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.ledger_unbalanced"
+        ]
+      }
+    },
+    {
+      "case_id": "unbalanced.zero-vs-cent.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"0.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"0.01\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.ledger_unbalanced"
+        ]
+      }
+    },
+    {
+      "case_id": "unbalanced.large-difference.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"999999999999.98\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.ledger_unbalanced"
+        ]
+      }
+    },
+    {
+      "case_id": "unbalanced.large-difference.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"999999999999.99\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"999999999999.98\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.ledger_unbalanced"
+        ]
+      }
+    },
+    {
+      "case_id": "currency.mismatch.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"EUR\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.ledger_currency"
+        ]
+      }
+    },
+    {
+      "case_id": "currency.mismatch.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"EUR\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.ledger_currency"
+        ]
+      }
+    },
+    {
+      "case_id": "currency.and-balance.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"EUR\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"2.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.ledger_currency",
+          "business.ledger_unbalanced"
+        ]
+      }
+    },
+    {
+      "case_id": "currency.and-balance.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"EUR\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"2.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.ledger_currency",
+          "business.ledger_unbalanced"
+        ]
+      }
+    },
+    {
+      "case_id": "invalid.amount-number.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": 10}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-number.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": 10}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-boolean.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": true}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-boolean.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": true}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-null.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": null}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-null.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": null}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-missing-decimal.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-missing-decimal.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-short-scale.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"1.0\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-short-scale.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"1.0\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-extra-scale.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"1.001\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-extra-scale.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"1.001\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-negative.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"-1.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-negative.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"-1.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-plus.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"+1.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-plus.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"+1.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-exponent.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"1e2\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-exponent.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"1e2\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-comma.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"1,000.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-comma.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"1,000.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-space.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \" 1.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-space.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \" 1.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-newline.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"1.00\\n\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-newline.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"1.00\\n\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-leading-zero.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"01.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-leading-zero.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"01.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-too-many-digits.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"1000000000000.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-too-many-digits.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"1000000000000.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-not-number.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"NaN\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.amount-not-number.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"NaN\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.duplicate-id.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}, {\"entry_id\": \"d\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.duplicate-id.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}, {\"entry_id\": \"d\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.missing-side.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}, {\"entry_id\": \"c\", \"side\": \"debit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.missing-side.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}, {\"entry_id\": \"c\", \"side\": \"debit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.side-label.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"DEBIT\", \"amount\": \"10.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.side-label.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"DEBIT\", \"amount\": \"10.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.missing-amount.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.missing-amount.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.entry-extra.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\", \"other\": \"private\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.entry-extra.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\", \"other\": \"private\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.envelope-extra.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}], \"other\": \"private\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.envelope-extra.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}], \"other\": \"private\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.one-entry.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.one-entry.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.entry-budget.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"0\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"1\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"2\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"3\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"4\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"5\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"6\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"7\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"8\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"9\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"10\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"11\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"12\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"13\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"14\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"15\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"16\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"17\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"18\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"19\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"20\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"21\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"22\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"23\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"24\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"25\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"26\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"27\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"28\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"29\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"30\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"31\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"32\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"33\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"34\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"35\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"36\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"37\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"38\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"39\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"40\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"41\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"42\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"43\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"44\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"45\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"46\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"47\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"48\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"49\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"50\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"51\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"52\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"53\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"54\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"55\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"56\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"57\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"58\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"59\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"60\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"61\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"62\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"63\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"64\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"65\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"66\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"67\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"68\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"69\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"70\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"71\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"72\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"73\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"74\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"75\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"76\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"77\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"78\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"79\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"80\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"81\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"82\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"83\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"84\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"85\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"86\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"87\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"88\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"89\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"90\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"91\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"92\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"93\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"94\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"95\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"96\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"97\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"98\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"99\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"100\", \"side\": \"credit\", \"amount\": \"1.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.entry-budget.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"0\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"1\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"2\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"3\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"4\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"5\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"6\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"7\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"8\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"9\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"10\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"11\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"12\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"13\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"14\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"15\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"16\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"17\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"18\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"19\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"20\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"21\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"22\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"23\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"24\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"25\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"26\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"27\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"28\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"29\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"30\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"31\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"32\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"33\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"34\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"35\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"36\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"37\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"38\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"39\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"40\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"41\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"42\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"43\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"44\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"45\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"46\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"47\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"48\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"49\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"50\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"51\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"52\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"53\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"54\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"55\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"56\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"57\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"58\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"59\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"60\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"61\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"62\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"63\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"64\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"65\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"66\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"67\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"68\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"69\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"70\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"71\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"72\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"73\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"74\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"75\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"76\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"77\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"78\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"79\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"80\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"81\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"82\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"83\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"84\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"85\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"86\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"87\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"88\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"89\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"90\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"91\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"92\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"93\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"94\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"95\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"96\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"97\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"98\", \"side\": \"credit\", \"amount\": \"1.00\"}, {\"entry_id\": \"99\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"100\", \"side\": \"credit\", \"amount\": \"1.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.currency-case.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"usd\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.currency-case.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"usd\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.malformed-json.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{bad",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.malformed-json.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{bad",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.duplicate-json.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\":\"USD\",\"currency\":\"EUR\",\"entries\":[]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.duplicate-json.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\":\"USD\",\"currency\":\"EUR\",\"entries\":[]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.array.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "[]",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.array.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "[]",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.no-entries.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.no-entries.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.empty.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.empty.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "format.text.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "This is not a ledger packet.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "format.text.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "This is not a ledger packet.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "enforce.equal.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-enforce-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "enforce.equal.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-enforce-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "enforce.difference.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-enforce-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"2.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "flag",
+        "checker_statuses": {
+          "ledger": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.ledger_unbalanced"
+        ]
+      }
+    },
+    {
+      "case_id": "enforce.difference.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-enforce-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"2.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "ledger": "flagged"
+        },
+        "finding_rule_ids": [
+          "business.ledger_unbalanced"
+        ]
+      }
+    },
+    {
+      "case_id": "invalid.zero-scale-fraction.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-scale-0-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.0\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.zero-scale-fraction.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-scale-0-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.0\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.four-scale-short.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-scale-4-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"1.0000\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.four-scale-short.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-scale-4-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"1.0000\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.empty-id.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"1.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.empty-id.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\", \"entries\": [{\"entry_id\": \"\", \"side\": \"debit\", \"amount\": \"1.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"1.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.currency-newline.input",
+      "group": "business",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\\n\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.currency-newline.output",
+      "group": "business",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "ledger-v1",
+        "content": "{\"currency\": \"USD\\n\", \"entries\": [{\"entry_id\": \"d\", \"side\": \"debit\", \"amount\": \"10.00\"}, {\"entry_id\": \"c\", \"side\": \"credit\", \"amount\": \"10.00\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "ledger": "error"
+        },
+        "finding_rule_ids": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,2054 @@
+{
+  "format_version": "1",
+  "suite_id": "graph-v1",
+  "cases": [
+    {
+      "case_id": "valid.chain.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\"], [\"b\", \"c\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.chain.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\"], [\"b\", \"c\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.empty.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.empty.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.isolated.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.isolated.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.disconnected.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\", \"d\"], \"edges\": [[\"a\", \"b\"], [\"c\", \"d\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.disconnected.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\", \"d\"], \"edges\": [[\"a\", \"b\"], [\"c\", \"d\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.diamond.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\", \"d\"], \"edges\": [[\"a\", \"b\"], [\"a\", \"c\"], [\"b\", \"d\"], [\"c\", \"d\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.diamond.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\", \"d\"], \"edges\": [[\"a\", \"b\"], [\"a\", \"c\"], [\"b\", \"d\"], [\"c\", \"d\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.reverse-label-order.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"c\", \"b\", \"a\"], \"edges\": [[\"c\", \"b\"], [\"b\", \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.reverse-label-order.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"c\", \"b\", \"a\"], \"edges\": [[\"c\", \"b\"], [\"b\", \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.no-edges.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.no-edges.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.opaque-node-meaning.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"read\", \"execute\"], \"edges\": [[\"read\", \"execute\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.opaque-node-meaning.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"read\", \"execute\"], \"edges\": [[\"read\", \"execute\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "cycle.self.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_cycle"
+        ]
+      }
+    },
+    {
+      "case_id": "cycle.self.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_cycle"
+        ]
+      }
+    },
+    {
+      "case_id": "cycle.two.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\"], [\"b\", \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_cycle"
+        ]
+      }
+    },
+    {
+      "case_id": "cycle.two.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\"], [\"b\", \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_cycle"
+        ]
+      }
+    },
+    {
+      "case_id": "cycle.three.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\"], [\"b\", \"c\"], [\"c\", \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_cycle"
+        ]
+      }
+    },
+    {
+      "case_id": "cycle.three.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\"], [\"b\", \"c\"], [\"c\", \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_cycle"
+        ]
+      }
+    },
+    {
+      "case_id": "cycle.cycle-and-isolated.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\"], [\"b\", \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_cycle"
+        ]
+      }
+    },
+    {
+      "case_id": "cycle.cycle-and-isolated.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\"], [\"b\", \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_cycle"
+        ]
+      }
+    },
+    {
+      "case_id": "edge.unknown-destination.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"missing\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_unknown_node"
+        ]
+      }
+    },
+    {
+      "case_id": "edge.unknown-destination.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"missing\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_unknown_node"
+        ]
+      }
+    },
+    {
+      "case_id": "edge.unknown-origin.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"missing\", \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_unknown_node"
+        ]
+      }
+    },
+    {
+      "case_id": "edge.unknown-origin.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"missing\", \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_unknown_node"
+        ]
+      }
+    },
+    {
+      "case_id": "edge.duplicate.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\"], [\"a\", \"b\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_duplicate_edge"
+        ]
+      }
+    },
+    {
+      "case_id": "edge.duplicate.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\"], [\"a\", \"b\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_duplicate_edge"
+        ]
+      }
+    },
+    {
+      "case_id": "edge.duplicate-cycle.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"a\"], [\"a\", \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_duplicate_edge",
+          "structure.graph_cycle"
+        ]
+      }
+    },
+    {
+      "case_id": "edge.duplicate-cycle.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"a\"], [\"a\", \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_duplicate_edge",
+          "structure.graph_cycle"
+        ]
+      }
+    },
+    {
+      "case_id": "edge.duplicate-unknown.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"x\"], [\"a\", \"x\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_duplicate_edge",
+          "structure.graph_unknown_node"
+        ]
+      }
+    },
+    {
+      "case_id": "edge.duplicate-unknown.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"x\"], [\"a\", \"x\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_duplicate_edge",
+          "structure.graph_unknown_node"
+        ]
+      }
+    },
+    {
+      "case_id": "valid.maximum-nodes.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\", \"9\", \"10\", \"11\", \"12\", \"13\", \"14\", \"15\", \"16\", \"17\", \"18\", \"19\", \"20\", \"21\", \"22\", \"23\", \"24\", \"25\", \"26\", \"27\", \"28\", \"29\", \"30\", \"31\", \"32\", \"33\", \"34\", \"35\", \"36\", \"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\", \"47\", \"48\", \"49\", \"50\", \"51\", \"52\", \"53\", \"54\", \"55\", \"56\", \"57\", \"58\", \"59\", \"60\", \"61\", \"62\", \"63\", \"64\", \"65\", \"66\", \"67\", \"68\", \"69\", \"70\", \"71\", \"72\", \"73\", \"74\", \"75\", \"76\", \"77\", \"78\", \"79\", \"80\", \"81\", \"82\", \"83\", \"84\", \"85\", \"86\", \"87\", \"88\", \"89\", \"90\", \"91\", \"92\", \"93\", \"94\", \"95\", \"96\", \"97\", \"98\", \"99\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.maximum-nodes.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\", \"9\", \"10\", \"11\", \"12\", \"13\", \"14\", \"15\", \"16\", \"17\", \"18\", \"19\", \"20\", \"21\", \"22\", \"23\", \"24\", \"25\", \"26\", \"27\", \"28\", \"29\", \"30\", \"31\", \"32\", \"33\", \"34\", \"35\", \"36\", \"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\", \"47\", \"48\", \"49\", \"50\", \"51\", \"52\", \"53\", \"54\", \"55\", \"56\", \"57\", \"58\", \"59\", \"60\", \"61\", \"62\", \"63\", \"64\", \"65\", \"66\", \"67\", \"68\", \"69\", \"70\", \"71\", \"72\", \"73\", \"74\", \"75\", \"76\", \"77\", \"78\", \"79\", \"80\", \"81\", \"82\", \"83\", \"84\", \"85\", \"86\", \"87\", \"88\", \"89\", \"90\", \"91\", \"92\", \"93\", \"94\", \"95\", \"96\", \"97\", \"98\", \"99\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.node-budget.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\", \"9\", \"10\", \"11\", \"12\", \"13\", \"14\", \"15\", \"16\", \"17\", \"18\", \"19\", \"20\", \"21\", \"22\", \"23\", \"24\", \"25\", \"26\", \"27\", \"28\", \"29\", \"30\", \"31\", \"32\", \"33\", \"34\", \"35\", \"36\", \"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\", \"47\", \"48\", \"49\", \"50\", \"51\", \"52\", \"53\", \"54\", \"55\", \"56\", \"57\", \"58\", \"59\", \"60\", \"61\", \"62\", \"63\", \"64\", \"65\", \"66\", \"67\", \"68\", \"69\", \"70\", \"71\", \"72\", \"73\", \"74\", \"75\", \"76\", \"77\", \"78\", \"79\", \"80\", \"81\", \"82\", \"83\", \"84\", \"85\", \"86\", \"87\", \"88\", \"89\", \"90\", \"91\", \"92\", \"93\", \"94\", \"95\", \"96\", \"97\", \"98\", \"99\", \"100\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.node-budget.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\", \"9\", \"10\", \"11\", \"12\", \"13\", \"14\", \"15\", \"16\", \"17\", \"18\", \"19\", \"20\", \"21\", \"22\", \"23\", \"24\", \"25\", \"26\", \"27\", \"28\", \"29\", \"30\", \"31\", \"32\", \"33\", \"34\", \"35\", \"36\", \"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\", \"47\", \"48\", \"49\", \"50\", \"51\", \"52\", \"53\", \"54\", \"55\", \"56\", \"57\", \"58\", \"59\", \"60\", \"61\", \"62\", \"63\", \"64\", \"65\", \"66\", \"67\", \"68\", \"69\", \"70\", \"71\", \"72\", \"73\", \"74\", \"75\", \"76\", \"77\", \"78\", \"79\", \"80\", \"81\", \"82\", \"83\", \"84\", \"85\", \"86\", \"87\", \"88\", \"89\", \"90\", \"91\", \"92\", \"93\", \"94\", \"95\", \"96\", \"97\", \"98\", \"99\", \"100\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.small-boundary.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-small-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\"], [\"b\", \"c\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.small-boundary.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-small-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\"], [\"b\", \"c\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.small-nodes.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-small-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\", \"d\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.small-nodes.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-small-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\", \"d\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.small-edges.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-small-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\"], [\"a\", \"c\"], [\"b\", \"c\"], [\"c\", \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.small-edges.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-small-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\"], [\"a\", \"c\"], [\"b\", \"c\"], [\"c\", \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.nodes-duplicate.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"a\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.nodes-duplicate.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"a\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.nodes-number.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [1], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.nodes-number.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [1], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.nodes-boolean.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [true], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.nodes-boolean.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [true], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.nodes-null.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [null], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.nodes-null.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [null], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.nodes-empty-id.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.nodes-empty-id.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.nodes-space-id.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a b\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.nodes-space-id.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a b\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.nodes-unicode-id.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"\\u4f8b\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.nodes-unicode-id.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"\\u4f8b\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.nodes-long-id.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.nodes-long-id.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.nodes-newline-id.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\\n\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.nodes-newline-id.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\\n\"], \"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.edges-one-endpoint.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.edges-one-endpoint.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.edges-three-endpoints.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\", \"c\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.edges-three-endpoints.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\", \"c\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.edges-numeric-endpoint.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[1, \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.edges-numeric-endpoint.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[1, \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.edges-string-edge.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [\"ab\"]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.edges-string-edge.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [\"ab\"]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.edges-object-edge.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [{\"a\": \"b\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.edges-object-edge.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [{\"a\": \"b\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.edges-null-edge.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [null]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.edges-null-edge.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [null]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.edges-invalid-id.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b c\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.edges-invalid-id.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b c\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.missing-nodes.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.missing-nodes.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"edges\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.missing-edges.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.missing-edges.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.extra-envelope.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\"], [\"b\", \"c\"]], \"other\": \"x\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.extra-envelope.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\"], [\"b\", \"c\"]], \"other\": \"x\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.malformed.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{bad",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.malformed.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{bad",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.duplicate-json.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\":[],\"nodes\":[],\"edges\":[]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.duplicate-json.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\":[],\"nodes\":[],\"edges\":[]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.array.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "[]",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.array.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "[]",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "format.text.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "a depends on b",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "format.text.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "a depends on b",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "enforce.acyclic.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-enforce-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\"], [\"b\", \"c\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "enforce.acyclic.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-enforce-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"b\"], [\"b\", \"c\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "enforce.cycle.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-enforce-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "flag",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_cycle"
+        ]
+      }
+    },
+    {
+      "case_id": "enforce.cycle.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-enforce-v1",
+        "content": "{\"nodes\": [\"a\", \"b\", \"c\"], \"edges\": [[\"a\", \"a\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_cycle"
+        ]
+      }
+    },
+    {
+      "case_id": "valid.case-distinct-ids.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"A\"], \"edges\": [[\"a\", \"A\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.case-distinct-ids.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a\", \"A\"], \"edges\": [[\"a\", \"A\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.punctuation-ids.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a.1\", \"b_2\", \"c-3\"], \"edges\": [[\"a.1\", \"b_2\"], [\"b_2\", \"c-3\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.punctuation-ids.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [\"a.1\", \"b_2\", \"c-3\"], \"edges\": [[\"a.1\", \"b_2\"], [\"b_2\", \"c-3\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "invalid.empty-nodes-with-edge.input",
+      "group": "structure",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [], \"edges\": [[\"a\", \"b\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_unknown_node"
+        ]
+      }
+    },
+    {
+      "case_id": "invalid.empty-nodes-with-edge.output",
+      "group": "structure",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "graph-v1",
+        "content": "{\"nodes\": [], \"edges\": [[\"a\", \"b\"]]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "graph": "flagged"
+        },
+        "finding_rule_ids": [
+          "structure.graph_unknown_node"
+        ]
+      }
+    }
+  ]
+}
