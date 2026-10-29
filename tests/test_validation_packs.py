@@ -118,6 +118,8 @@ def test_api_activates_pack_and_preserves_baseline():
     selected = client.post("/v1/checks/input", headers=headers,
                            json={**payload, "validation_codes": ["LOG"]})
     assert baseline.status_code == selected.status_code == 200
+    assert baseline.json()["applied_validation_packs"] == ["CORE"]
+    assert selected.json()["applied_validation_packs"] == ["CORE", "LOG@1"]
     assert [r["checker_id"] for r in baseline.json()["checker_results"]] == ["text_security"]
     assert [r["checker_id"] for r in selected.json()["checker_results"]] == ["text_security", "schema"]
     unauthorized = client.post("/v1/checks/input", headers=headers,
