@@ -78,6 +78,15 @@ class Engine:
             self._policies[key] = deepcopy(policy)
         self._checkers = dict(checkers)
         self._pack_registry = pack_registry
+        if pack_registry is not None:
+            for (app, _version), policy in self._policies.items():
+                core = pack_registry.core_checker_ids(app)
+                if core is not None:
+                    available = {rule.checker_id for rule in policy.rules}
+                    optional = pack_registry.optional_checker_ids(app)
+                    if (not set(core) <= available or not optional <= available
+                            or available != set(core) | optional):
+                        raise ValueError("Pack registry must partition policy checks into CORE and optional packs")
 
     def has_policy(self, application_id: str, version: str) -> bool:
         return (application_id, version) in self._policies
@@ -109,7 +118,8 @@ class Engine:
             optional = self._pack_registry.optional_checker_ids(request.application_id)
             if not optional <= available:
                 raise PackSelectionError("Validation pack configuration is unavailable")
-            selected_ids = (available - optional) | set(PackRegistry.checker_union((), packs))
+            core = self._pack_registry.core_checker_ids(request.application_id)
+            selected_ids = (set(core) if core is not None else available - optional) | set(PackRegistry.checker_union((), packs))
         rules = [rule for rule in policy.rules if stage in rule.stages and rule.checker_id in selected_ids]
         started = perf_counter()
 
