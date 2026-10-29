@@ -330,3 +330,28 @@ def test_api_rejects_stage_inapplicable_pack_with_sanitized_error():
               "content": "private-customer-content", "validation_codes": ["LOG"]})
     assert result.status_code == 422
     assert "private-customer-content" not in result.text
+
+
+def test_group_results_only_report_selected_checks():
+    import asyncio
+    from valinator.engine import Engine
+    from valinator.checkers import default_checkers
+    from valinator.models import CheckRequest, Policy, Rule, Stage
+    policy = Policy(application_id="demo", version="v1", rules=(
+        Rule(checker_id="text_security"),
+        Rule(checker_id="schema", required=False),
+    ))
+    registry = PackRegistry({"demo": (Pack("LOG", "1", ("schema",)),)},
+                            core={"demo": ("text_security",)})
+    engine = Engine([policy], default_checkers(), pack_registry=registry)
+    def check(codes):
+        return asyncio.run(engine.check(CheckRequest(
+            application_id="demo", policy_version="v1",
+            content="hello", validation_codes=codes,
+        ), Stage.INPUT))
+    core = check(())
+    assert all("schema" not in group.checker_ids for group in core.groups)
+    assert next(g for g in core.groups if g.group_id == "structure").status == "disabled"
+    selected = check(("LOG",))
+    assert "schema" in next(g for g in selected.groups if g.group_id == "structure").checker_ids
+    assert any(result.checker_id == "schema" for result in selected.checker_results)
