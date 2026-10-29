@@ -122,6 +122,11 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 "groups": [{"group_id": gid, "name": name, "checker_ids": ids, "limitations": limits}
                            for gid, name, ids, limits in GROUPS]}
 
+    @api.get("/v1/validation-packs")
+    async def validation_packs(app_id: Annotated[str, Depends(authenticate)]):
+        return {"application_id": app_id, "mandatory": "CORE",
+                "available_packs": service.describe_validation_packs(app_id)}
+
     @api.post("/v1/checks/input", response_model=CheckResponse)
     async def check_input(request: CheckRequest, app_id: Annotated[str, Depends(authenticate)]):
         return await assess(request, app_id, Stage.INPUT)
