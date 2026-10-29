@@ -231,6 +231,7 @@ class CheckResponse(Contract):
     check_id: str
     application_id: str
     policy_version: str
+    applied_validation_packs: tuple[str, ...] = ()
     stage: Stage
     mode: str
     evaluation_status: Literal["complete", "incomplete"]
