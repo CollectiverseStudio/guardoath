@@ -9,10 +9,10 @@ GROUPS = (
     ("harmful_content", "Harmful content and abuse", ("safety", "content_safety"), "Optional provider-backed text assessment under the content_safety interface; coverage depends on the selected adapter. Initial Bedrock adapter covers hate, insults, sexual content, violence and misconduct. Disabled in the local launcher; live accuracy is uncalibrated. No dedicated self-harm, general bias, image or emergency-response coverage. The safety checker remains a synthetic test double."),
     ("structure", "Structure and data validity", ("schema",), "Configured JSON Schema and supported formats only; no guarantee of factual correctness."),
     ("scope", "Scope and intent", (), "Task scope and relevance are not assessed."),
-    ("accuracy", "Accuracy and supporting evidence", (), "No grounding or factual accuracy evaluator is implemented."),
-    ("bias", "Bias and fairness", ("bias",), "Bias checks are synthetic test doubles, not fairness assessments."),
+    ("accuracy", "Accuracy and supporting evidence", ("evidence",), "Local citation markers and quotations are checked against a configured source catalog only. No factual truth, source authenticity/freshness, entailment, claim coverage, live URL/reference verification or general grounding evaluator."),
+    ("bias", "Bias and fairness", ("bias", "matched_outcomes"), "Local matched_outcomes compares submitted structured decisions with identical declared factors and different configured attributes. No free-text bias classifier, causal/statistical fairness guarantee or truth verification. The bias checker remains a synthetic test double."),
     ("business", "Business rules and commitments", ("cross_field", "completeness"), "Configured numeric/date comparisons and labeled text section presence only. No assessment of truth, legal adequacy, medical sufficiency, or meaning."),
-    ("actions", "Code and action safety", (), "No code or tool-action safety checker is implemented."),
+    ("actions", "Code and action safety", ("tool_calls",), "Local proposed tool-name allowlist and per-tool argument schemas only. No execution, authorization, side-effect validation, sandbox, code/malware/URL safety assessment or guarantee that an allowed action is appropriate."),
 )
 
 

@@ -1,7 +1,7 @@
 """Strict contracts shared by the API, policy engine, and adapters."""
 
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -106,6 +106,58 @@ class ConfidentialTerm(Contract):
         return value
 
 
+class MatchedOutcomes(Contract):
+    attributes: tuple[Annotated[str, Field(pattern=r"^[A-Za-z][A-Za-z0-9_]{0,49}$", strict=True)], ...] = Field(min_length=1, max_length=8)
+    outcome_type: Literal["string", "boolean", "number"] = "string"
+
+    @field_validator("attributes")
+    @classmethod
+    def unique_attributes(cls, value):
+        if len({name.casefold() for name in value}) != len(value):
+            raise ValueError("Matched attributes must be distinct")
+        return value
+
+
+class EvidenceSource(Contract):
+    source_id: str = Field(pattern=r"^[A-Za-z0-9_.-]{1,80}$", strict=True)
+    text: str = Field(min_length=1, max_length=8_000, strict=True)
+
+    @field_validator("text")
+    @classmethod
+    def nonblank(cls, value):
+        if not value.strip():
+            raise ValueError("A configured evidence source must not be blank")
+        return value
+
+
+class EvidencePolicy(Contract):
+    sources: tuple[EvidenceSource, ...] = Field(min_length=1, max_length=20)
+    min_quote_characters: int = Field(default=20, ge=1, le=1_000, strict=True)
+
+    @field_validator("sources")
+    @classmethod
+    def unique_sources(cls, value):
+        if len({source.source_id for source in value}) != len(value):
+            raise ValueError("Evidence source identifiers must be distinct")
+        return value
+
+
+class ToolDefinition(Contract):
+    name: str = Field(pattern=r"^[A-Za-z][A-Za-z0-9_]{0,49}$", strict=True)
+    arguments_schema: dict[str, Any]
+
+
+class ToolPolicy(Contract):
+    tools: tuple[ToolDefinition, ...] = Field(min_length=1, max_length=20)
+
+    @field_validator("tools")
+    @classmethod
+    def unique_tools(cls, value):
+        if len({tool.name for tool in value}) != len(value):
+            raise ValueError("Configured tool names must be distinct")
+        return value
+
+
 class Policy(Contract):
     application_id: str = Field(min_length=1, max_length=100)
     version: str = Field(min_length=1, max_length=100)
@@ -123,6 +175,9 @@ class Policy(Contract):
     detect_secret_assignments: bool = Field(default=False,strict=True)
     inspect_encoded_secrets: bool = Field(default=False,strict=True)
     confidential_terms: tuple[ConfidentialTerm, ...] = Field(default=(),max_length=50)
+    matched_outcomes: MatchedOutcomes | None = None
+    evidence: EvidencePolicy | None = None
+    tool_calls: ToolPolicy | None = None
 
 
 class GroupResult(Contract):

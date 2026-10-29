@@ -88,7 +88,8 @@ def test_planned_disabled_and_simulated_groups_are_not_passed():
     groups = {g.group_id: g for g in evaluate(policy, '"hello"').groups}
     assert len(groups) == 10
     assert groups["bias"].status == "simulated"
-    assert groups["accuracy"].status == "not_implemented"
+    assert groups["accuracy"].status == "disabled"
+    assert groups["scope"].status == "not_implemented"
     assert groups["sensitive_data"].status == "disabled"
 
 

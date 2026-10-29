@@ -1,7 +1,7 @@
 # Valinator user guide
 
 This guide grows with the product. It describes user-facing validation checks,
-examples, expected results, configuration, and boundaries. Version: 0.21.0.
+examples, expected results, configuration, and boundaries. Version: 0.22.0.
 
 A **check** examines an input or proposed AI answer. A **regression case** tests
 whether that check behaves as expected on a saved example. Passing a regression
@@ -123,6 +123,41 @@ repeated. For focused JSON/completeness profiles, select the profile first, then
 **Clean question** to prepare a valid input without touching the proposed answer.
 For redaction, explicitly select `redaction-v1` before the Redaction preview button.
 
+## Run every bundled local regression suite
+
+On your Windows computer, one command runs all nine bundled local suites and
+opens an index linking to each detailed report:
+
+```powershell
+py -3.13 start_dashboard.py --evaluate --suite all
+```
+
+The current collection has **830 saved expectations**, including **160 deliberate
+incomplete assessments**. It covers starter examples, secrets, privacy, structure,
+business, local text security, matched decisions, citation evidence and proposed
+tool calls. Matching an expected finding/error is not a clean-content or detector
+accuracy claim. These are local engine regressions, separate from the Python
+unit/API tests, browser tests and synthetic provider-contract tests in CI.
+
+The index and per-suite reports omit submitted, quoted and transformed text and
+make no provider calls. Each run uses a new report directory and preserves earlier
+collections. Open a group link to inspect its finding IDs, decisions and gaps.
+An existing output directory is never overwritten. Incomplete collection output
+has no completed index and must not be treated as a successful full run.
+
+All-suite collections keep their groups separate and do not perform automatic
+baseline comparison. Use an individual --suite with --baseline to compare that
+suite's saved report. For a manually prepared environment, the equivalent CLI is:
+
+```bash
+python -m valinator.evaluate_all --pii --output .valinator-reports/all-local-new
+```
+
+Use a new output folder for each manual run. A mismatch returns exit code 1;
+configuration/report failure returns 2. A green combined index does not mean all
+planned use cases, live services, free-text bias, factual truth or tool execution
+safety have been implemented or verified.
+
 ## How an application uses the API
 
 1. Send the user's message to `POST /v1/checks/input`.
@@ -184,10 +219,10 @@ example to actual coverage or its remaining gap.
 | Harmful content and abuse | Optional provider-neutral content_safety; initial Bedrock adapter covers hate, insults, sexual content, violence and misconduct | Off by default; live accuracy uncalibrated; safety remains a separate simulator; no dedicated self-harm coverage |
 | Structure and data validity | Strict bounded JSON, JSON Schema and supported formats | Reject malformed data and schema/format violations; not factual verification |
 | Scope and intent | Not implemented | A shopping bot receiving an unrelated question is not currently classified as off-topic |
-| Accuracy and supporting evidence | Not implemented | A fabricated citation is not currently checked against evidence/databases |
-| Bias and fairness | Bias simulator only | Real contextual fairness assessment and reviewed rubrics remain pending |
+| Accuracy and supporting evidence | Local citation markers and exact quotations against a configured source catalog | No factual truth, claim entailment/coverage, source authenticity or live reference verification |
+| Bias and fairness | Local matched-decision consistency plus a separate simulator | Structured submitted comparisons only; no general free-text bias classifier or fairness guarantee |
 | Business rules and commitments | Numeric/date comparisons and labeled section completeness | Check submitted refund amounts/date order or required labels; not authoritative business truth or semantic/legal adequacy |
-| Code and action safety | Not implemented | Shell/code/tool-call safety is not currently evaluated or sandboxed by this product |
+| Code and action safety | Local proposed-tool allowlist and per-tool argument schemas | No tool execution/authorization, source-code analysis or sandbox safety guarantee |
 
 ## Secrets and confidential information — complete supported batch
 
@@ -552,7 +587,7 @@ result means only that the configured local signals were not found.
 Select **`text-security-v1` under Advanced**, choose Clean question and run input,
 then choose an output example and run output. The profile notice explains that
 attack intent is not assessed. Buttons change only their own editor/format.
-The total catalogs now have 52 input / 55 output examples across profiles;
+The total catalogs now have 78 input / 81 output examples across profiles;
 only examples applicable to the active profile are shown.
 
 | Check / example | Use case | Expected behavior |
@@ -681,7 +716,7 @@ disabled. The normal free-text conversation profile is unchanged.
 
 The same error examples are available for input. Each button changes only its
 own editor and format; it never changes the other editor or the profile. There
-are now 52 input / 55 output examples across all groups. Only examples for the active profile are shown; select another profile under Advanced
+are now 78 input / 81 output examples across all groups. Only examples for the active profile are shown; select another profile under Advanced
 to explore other groups.
 
 ### Sample contract and checks
@@ -797,7 +832,7 @@ checks, not a fraud detector or an authoritative spending control.
 Use **Advanced** to select a profile explicitly. Example buttons never switch it
 or overwrite the opposite editor. Output examples preserve a completed input
 check. Only examples applicable to the active profile are shown, to keep the
-expanding catalogs manageable. There are 52 input / 55 output examples across
+expanding catalogs manageable. There are 78 input / 81 output examples across
 all groups. No AI answer is generated or provider called.
 
 ### Submitted-field comparisons
@@ -1050,6 +1085,222 @@ remain the same. Hosting implementation is handled separately; see
 [portability boundaries](cloud-portability.md).
 
 
+## Accuracy and evidence: citation consistency
+
+The local `evidence` check verifies inline source references and quotations against
+an application-owned source catalog saved in the policy. It does not judge the
+truth of an answer or whether a quote supports every claim. Under Advanced, choose
+`evidence-v1`, then load Clean question / Safe reply to see the structured format.
+
+```json
+{
+  "answer": "Return details [[returns]].",
+  "citations": [{
+    "source_id": "returns",
+    "quote": "Unused items may be returned within 30 days."
+  }]
+}
+```
+
+The sample catalog contains synthetic return/shipping policies. In your own
+application, the policy owner supplies reviewed source IDs and source text through
+`evidence.sources`. Request text cannot replace that catalog. Nothing is fetched
+from URLs or academic databases, and source bodies are not returned in metadata.
+
+| Example / rule | What is checked | Expected result |
+| --- | --- | --- |
+| Unknown source / evidence.unknown_source | Referenced ID must exist in the policy catalog | Finding |
+| Missing citation entry / evidence.missing_reference | Every inline marker needs a citation entry | Finding; missing all entries also produces evidence.missing_citation |
+| Altered quotation / evidence.quote_mismatch | Quotation must be an exact substring of the configured source | Finding; case and whitespace matter |
+| Quotation too short / evidence.quote_too_short | Trimmed quotation must meet configured minimum | Finding; padding does not count |
+| Unused citation / evidence.unused_citation | Citation entries need inline markers | Finding |
+| Duplicate citation / evidence.duplicate_citation | One quotation entry per source in this contract | Finding; repeated inline markers may reuse the entry |
+| Invalid marker / evidence.invalid_marker | Marker syntax must be [[source_id]] | Finding |
+| Caller-supplied source catalog | Request cannot add trusted source content | Incomplete: evidence_invalid_document |
+| Unrelated claim (not assessed) | Valid citation/quote attached to a claim about another subject | No consistency finding; explicit truth/entailment coverage gap |
+
+Both input and output profiles accept JSON documents, not ordinary text. Answer
+length is at most 8,000 characters; up to 20 citation entries and 20 inline markers
+are allowed. Quotes must be nonblank and at most 2,000 characters. The default
+trimmed minimum is 20 characters, configured with evidence.min_quote_characters.
+Exceeding the marker budget produces evidence_reference_limit; malformed or
+out-of-shape documents produce evidence_invalid_document. A required skip/error
+is incomplete. There is no silent success on missing structured evidence.
+
+The sample observes input flag/output block recommendations. The dashboard holds
+findings and incomplete results. Enforce variants apply the recommendations.
+Messages and reports omit answer/quote text, source IDs and source bodies. A clean
+result does not prove source accuracy, freshness, academic reference existence,
+factual grounding, plagiarism status or claim support.
+
+```powershell
+py -3.13 start_dashboard.py --evaluate --suite evidence
+```
+
+This runs 100 saved expectations on both stages, with 36 intentionally incomplete.
+See [evidence coverage](evidence-coverage.md) for the exact contract and test scope.
+
+## Code and actions: proposed tool calls
+
+The local `tool_calls` check compares proposed tool names to a trusted allowlist
+and validates their arguments with that tool's JSON Schema. It does not execute
+or authorize anything. Under Advanced choose `tool-calls-v1` and load the clean
+examples. Your application can submit proposed calls before dispatch or review
+calls suggested in an AI answer through the same input/output endpoints.
+
+```json
+{
+  "tool_calls": [{
+    "name": "lookup_order",
+    "arguments": {"order_id": "ORD-1234"}
+  }]
+}
+```
+
+Configure allowed definitions under tool_calls.tools in the trusted policy. Each
+has name and arguments_schema. Remote schema references and unsupported formats
+are rejected at startup. Existing local-reference and supported-format checks
+are reused. The submitted packet cannot add or replace the policy's allowlist.
+
+| Example | What is checked | Expected result |
+| --- | --- | --- |
+| Tool outside allowlist | Exact tool-name match, without aliases/prefixes/case relaxation | actions.unknown_tool |
+| Invalid tool arguments | Argument object must satisfy the named tool's schema | actions.invalid_arguments |
+| Unexpected command field | Sample schema rejects additional fields | actions.invalid_arguments; nothing executes |
+| Refund request over limit | Sample submitted amount exceeds its illustrative schema maximum | actions.invalid_arguments; not a real refund/financial decision |
+| Missing tool arguments | Required call shape incomplete | Incomplete: tool_calls_invalid_document |
+| Too many proposed calls | Maximum ten call records | Incomplete: tool_calls_invalid_document |
+| Caller-supplied tool catalog | Untrusted request cannot redefine allowed tools | Incomplete: tool_calls_invalid_document |
+| Ambiguous numeric argument | Raw float token would lose decimal information during decoding | Incomplete: tool_calls_invalid_document |
+| No proposed tool calls | Explicit empty list | Completed check with no declared calls; no execution-safety claim |
+
+A packet has exactly tool_calls; each record has exactly name and arguments.
+Names are case-sensitive ASCII identifiers of at most 50 characters, arguments
+are objects, and up to ten calls are allowed. Malformed or partly invalid records
+make the whole required assessment incomplete. Plain text returns skipped
+`tool_calls_json_required`, not a code-safety pass. Findings are deduplicated and
+never contain supplied names, argument values or raw schema-error text.
+
+The sample allows synthetic lookup_order and request_refund proposals only.
+Neither tool runs. The schema's amount/reason/currency/ID constraints are examples,
+not authoritative account limits or eligibility. An actual runner must still check
+permissions, ownership, destinations, current business state, idempotency and
+side effects. Source-code syntax, malware, arbitrary commands, URLs and sandbox
+escapes are not assessed by this tool-call contract.
+
+Lossy raw float tokens are rejected, but ordinary JSON Schema decimal arithmetic
+is not an exact money engine. See the numeric limitations in the detailed guide.
+Observe mode recommends input flag/output block; enforce variants apply actions.
+The dashboard holds findings/incomplete results; an allowed preview never runs
+the proposed action.
+
+```powershell
+py -3.13 start_dashboard.py --evaluate --suite actions
+```
+
+The suite runs 100 expectations, with 28 deliberate incomplete cases. Unit tests
+also prohibit network/subprocess use and validate safe responses and schema
+snapshots. See [action coverage](actions-coverage.md).
+
+## Bias and fairness: matched-decision checks
+
+This local check compares **submitted structured scenarios**, not the meaning of
+an ordinary chat message. For example, if declared qualifications are the same
+and only configured group attributes differ, different approval decisions create
+a review finding. Equal decisions produce no supported consistency finding, but
+do not certify fairness. Omitted context or inappropriate factors can invalidate
+the comparison. No AI model is called.
+
+### Profiles and examples
+
+Choose `bias-matched-string-v1`, `bias-matched-boolean-v1` or
+`bias-matched-number-v1` under Advanced. The clean examples contain two scenarios
+with equal factors, different groups and equal outcomes. They are JSON on both
+stages; use Clean question and Safe reply to load the appropriate format.
+
+| Example / use case | What is checked | Expected result |
+| --- | --- | --- |
+| Different matched outcomes | Same declared factors, different groups, different decisions | `bias.matched_outcome_difference`; review finding |
+| Neutral demographic mention | Different group labels, identical outcomes | No consistency finding; a mention is not automatically a problem |
+| Different decision factors | Submitted facts differ, so the records are not comparable | Incomplete; no fairness pass |
+| No attribute contrast | Group values are identical | Incomplete; no matched group comparison |
+| Missing decision | Required structured outcome is absent | Incomplete; fix the record |
+| Unmatched record | A third record has no comparable counterpart | Entire assessment incomplete; matched subset cannot hide it |
+| Attribute in decision factors | Configured attribute is also included among factors | Incomplete; resolve explicit overlap |
+| Exact score difference | `1.0000000000000001` versus `1.0` in the numeric profile | Difference preserved and flagged; no binary-float rounding |
+
+Each example changes only its own editor/format. Input findings or incomplete
+results hold the output stage. Output findings hold the proposed answer. Reports
+and displayed findings contain safe counts/explanations, not private attributes,
+factors or decisions. Ordinary text under these required JSON profiles is
+incomplete; it is not silently treated as a free-text bias pass.
+
+### Configure the comparison
+
+A trusted policy includes a `matched_outcomes` checker rule and matching options:
+
+```json
+"matched_outcomes": {
+  "attributes": ["group"],
+  "outcome_type": "string"
+}
+```
+
+Choose one to eight distinct attribute names and string, boolean or number
+outcomes. The sample uses synthetic group A/B values; it does not choose or infer
+protected classes. Each scenario must have exactly factors, attributes and
+decision. Attributes must match the configured keys exactly and contain nonblank
+strings. Factors need 1–20 immediate keys, without configured attribute names
+reappearing anywhere inside them. Two to twenty scenarios are allowed; every
+record must have a comparable record with different configured attributes.
+
+```json
+{
+  "scenarios": [
+    {"factors": {"qualification": "same"}, "attributes": {"group": "A"}, "decision": "approve"},
+    {"factors": {"qualification": "same"}, "attributes": {"group": "B"}, "decision": "deny"}
+  ]
+}
+```
+
+Objects compare without regard to key order. Array order and string spelling/case
+matter. Booleans are distinct from numbers; numeric values retain their raw
+precision. There is no outcome coercion or numeric tolerance. Multiple configured
+attributes may differ; the checker does not attribute a cause to any one of them.
+Request context is not used as hidden evidence or sent to a provider.
+
+### Decisions, errors and limits
+
+The sample observe profiles recommend flag on input differences and block on
+output differences; effective action remains allow in observe mode. Enforce
+variants are in `policies/bias-batch.json`. Required errors obey failure_action.
+The dashboard holds findings and incomplete results regardless of observe mode.
+
+| Code | Meaning |
+| --- | --- |
+| `bias.matched_outcome_difference` | Different submitted decisions in comparable pairs; review signal, not proof of discrimination |
+| `matched_outcomes_invalid_records` | Invalid JSON, missing/extra/type/size fields or explicit factor/attribute overlap |
+| `matched_outcomes_insufficient_comparisons` | At least one record lacks a comparable counterpart |
+| `matched_outcomes_json_required` | JSON structured evidence was not supplied; required check incomplete |
+
+This does not establish demographic parity, equalized odds, causation, statistical
+significance, fairness of the selected factors, authenticity of submitted records,
+or absence of stereotypes in prose. Repeated rows are not independent evidence.
+The integrating application collects the cases; Valinator does not generate
+matched model trials or extract decisions from arbitrary answers automatically.
+
+### Run the entire bias comparison batch
+
+```powershell
+py -3.13 start_dashboard.py --evaluate --suite bias
+```
+
+The suite has 100 expectations across both stages, including 50 deliberately
+incomplete evaluations. A green report means expected behavior matched, not that
+all content is fair. No provider calls or new dependencies are needed. The
+[detailed coverage document](bias-coverage.md) describes additional unit/API/gate
+checks and what still needs independently reviewed data and contextual rubrics.
+
 ## Harmful content, bias and planned checks
 
 The `safety` and `bias` adapters are explicitly simulated. For a manually loaded
@@ -1058,10 +1309,11 @@ support policy, `[SIMULATE:safety:FLAG]` exercises the safety finding path;
 failure handling. These markers do not classify real content. An ordinary text
 receiving a simulated pass has not received a safety or fairness assessment.
 
-Scope/intent, factual accuracy/evidence, and code/tool-action safety remain
-unimplemented. Image/document quality, CSAM/deepfake detection, malware sandboxing,
-legal/medical judgments and citation verification are not silently covered by
-another group. The dashboard labels unsupported groups rather than showing them
+Semantic scope/intent, general factual truth/entailment, free-text bias and
+source-code/sandbox execution safety remain unimplemented. The limited citation
+and tool-call contracts above are separate, explicit capabilities. Image/document quality, CSAM/deepfake detection, malware sandboxing,
+legal/medical judgments and live academic-reference verification are not silently
+covered by another group. The dashboard labels unsupported groups rather than showing them
 as passing. These require separate designs/providers and reviewed test data.
 
 ## Operating limits and test-report interpretation

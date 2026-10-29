@@ -60,7 +60,7 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         raise ValueError("Credentials and application identifiers must be nonempty")
     resource_limits = limits if limits is not None else ResourceLimits.from_environment()
     budgets = RequestBudgets(resource_limits, set(bindings.values()))
-    api = FastAPI(title="Valinator", version="0.21.0")
+    api = FastAPI(title="Valinator", version="0.22.0")
     api.add_middleware(JsonIngressLimits)
     api.add_middleware(RequestCapacity, budgets=budgets)
     bearer = HTTPBearer(auto_error=False)

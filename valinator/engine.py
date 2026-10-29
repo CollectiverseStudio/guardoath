@@ -24,6 +24,12 @@ class Engine:
             if key in self._policies:
                 raise ValueError("Duplicate policy version")
             ids = [r.checker_id for r in policy.rules]
+            if (policy.tool_calls is not None) != ("tool_calls" in ids):
+                raise ValueError("Tool-call checks require their configuration and checker rule")
+            if (policy.evidence is not None) != ("evidence" in ids):
+                raise ValueError("Evidence checks require their configuration and checker rule")
+            if (policy.matched_outcomes is not None) != ("matched_outcomes" in ids):
+                raise ValueError("Matched-outcome checks require their configuration and checker rule")
             if len(ids) != len(set(ids)):
                 raise ValueError("Duplicate checker in policy")
             if len({r.rule_id for r in policy.comparisons}) != len(policy.comparisons):
@@ -57,7 +63,10 @@ class Engine:
             for rule in policy.rules:
                 if rule.checker_id != "pii" and Action.REDACT in {rule.on_finding, rule.on_input_finding, rule.on_output_finding}:
                     raise ValueError("Redaction actions are supported only by the pii checker")
-            for schema in (policy.input_schema, policy.output_schema):
+            schemas = [policy.input_schema, policy.output_schema]
+            if policy.tool_calls is not None:
+                schemas.extend(tool.arguments_schema for tool in policy.tool_calls.tools)
+            for schema in schemas:
                 if schema is not None:
                     validate_local_schema(schema)
                     Draft202012Validator.check_schema(schema)

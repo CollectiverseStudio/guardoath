@@ -105,3 +105,20 @@ validation service, not a hosting requirement. The resolver selected botocore
 1.43.121, pinned for adapter compatibility tests. This is a point-in-time choice,
 not automatic updates. Primary reference: https://pypi.org/project/boto3/.
 No paid provider calls, deployment dependencies or infrastructure are added.
+
+
+Version 0.22 matched-outcome checks add no dependencies. They reuse the existing
+bounded JSON parser, exact decimal-token conversion, Pydantic policy contracts
+and engine. The algorithm is a limited Valinator consistency check, not an
+implementation or invocation of Fairlearn metrics. Fairlearn's primary fairness
+and construct-validity documentation informs the documented limitations:
+https://fairlearn.org/main/user_guide/fairness_in_machine_learning.html.
+No new upstream release or model-accuracy claim is made.
+
+
+The same version's evidence checker uses existing strict JSON/Pydantic contracts
+and standard-library regex/string matching, with a trusted local source catalog.
+The proposed-action checker reuses the existing jsonschema 4.26.0 validator and
+supported format predicates. It adds an explicit lossy numeric-token rejection
+before schema evaluation, not a new arithmetic engine. No new packages, model
+weights, executable tools, reference lookups or cloud services are introduced.

@@ -1,0 +1,2108 @@
+{
+  "format_version": "1",
+  "suite_id": "tool-calls-v1",
+  "cases": [
+    {
+      "case_id": "valid.lookup.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.lookup.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.order-zero.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-0000\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.order-zero.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-0000\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.order-last.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-9999\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.order-last.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-9999\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.refund-zero.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 0, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.refund-zero.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 0, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.refund-maximum.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 100, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.refund-maximum.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 100, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.refund-decimal-integer.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 25.0, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.refund-decimal-integer.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 25.0, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.no-calls.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.no-calls.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.ten-calls.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.ten-calls.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.mixed.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 25, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.mixed.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 25, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.repeated.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.repeated.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "arguments.missing-order.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "arguments.missing-order.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "order.number.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": 1234}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "order.number.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": 1234}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "order.boolean.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": true}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "order.boolean.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": true}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "order.pattern.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"XYZ-1234\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "order.pattern.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"XYZ-1234\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "order.short.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-123\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "order.short.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-123\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "order.long.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-12345\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "order.long.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-12345\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "order.newline.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\\n\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "order.newline.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\\n\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "order.lowercase.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ord-1234\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "order.lowercase.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ord-1234\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "arguments.unexpected-command.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\", \"command\": \"Never execute this synthetic command.\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "arguments.unexpected-command.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\", \"command\": \"Never execute this synthetic command.\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "refund.missing-amount.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "refund.missing-amount.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "amount.negative.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": -1, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "amount.negative.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": -1, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "amount.over-maximum.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 101, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "amount.over-maximum.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 101, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "amount.fraction.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 25.5, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "amount.fraction.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 25.5, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "amount.string.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": \"25\", \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "amount.string.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": \"25\", \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "amount.boolean.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": true, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "amount.boolean.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": true, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "refund.reason.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 25, \"reason\": \"other\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "refund.reason.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 25, \"reason\": \"other\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "refund.currency.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 25, \"reason\": \"damaged\", \"currency\": \"EUR\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "refund.currency.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 25, \"reason\": \"damaged\", \"currency\": \"EUR\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "refund.missing-order.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"amount\": 25, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "refund.missing-order.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"amount\": 25, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "allowlist.delete_all_files.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"delete_all_files\", \"arguments\": {}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.unknown_tool"
+        ]
+      }
+    },
+    {
+      "case_id": "allowlist.delete_all_files.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"delete_all_files\", \"arguments\": {}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.unknown_tool"
+        ]
+      }
+    },
+    {
+      "case_id": "allowlist.Lookup_order.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"Lookup_order\", \"arguments\": {}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.unknown_tool"
+        ]
+      }
+    },
+    {
+      "case_id": "allowlist.Lookup_order.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"Lookup_order\", \"arguments\": {}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.unknown_tool"
+        ]
+      }
+    },
+    {
+      "case_id": "allowlist.lookup_order_extra.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order_extra\", \"arguments\": {}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.unknown_tool"
+        ]
+      }
+    },
+    {
+      "case_id": "allowlist.lookup_order_extra.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order_extra\", \"arguments\": {}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.unknown_tool"
+        ]
+      }
+    },
+    {
+      "case_id": "allowlist.unknown.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"unknown\", \"arguments\": {}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.unknown_tool"
+        ]
+      }
+    },
+    {
+      "case_id": "allowlist.unknown.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"unknown\", \"arguments\": {}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.unknown_tool"
+        ]
+      }
+    },
+    {
+      "case_id": "allowlist.mixed-invalid.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"unknown\", \"arguments\": {}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"wrong\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.unknown_tool",
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "allowlist.mixed-invalid.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"unknown\", \"arguments\": {}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"wrong\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.unknown_tool",
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "json.malformed.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{bad",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "json.malformed.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{bad",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "json.duplicate.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\":[],\"tool_calls\":[]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "json.duplicate.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\":[],\"tool_calls\":[]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "envelope.array.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "[]",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "envelope.array.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "[]",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "envelope.missing.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "envelope.missing.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "envelope.extra.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [], \"source\": \"private-extra\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "envelope.extra.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [], \"source\": \"private-extra\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "calls.null.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": null}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "calls.null.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": null}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "call.scalar.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [\"lookup_order\"]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "call.scalar.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [\"lookup_order\"]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "call.missing-name.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"arguments\": {\"order_id\": \"ORD-1234\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "call.missing-name.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"arguments\": {\"order_id\": \"ORD-1234\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "call.missing-arguments.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "call.missing-arguments.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "arguments.array.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": []}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "arguments.array.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": []}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "name.invalid-syntax.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order;other\", \"arguments\": {\"order_id\": \"ORD-1234\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "name.invalid-syntax.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order;other\", \"arguments\": {\"order_id\": \"ORD-1234\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "calls.limit-exceeded.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "calls.limit-exceeded.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}, {\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "format.text.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "Plain-language code is not a structured tool-call packet.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "format.text.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "Plain-language code is not a structured tool-call packet.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "enforce.unknown.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-enforce-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"unknown\", \"arguments\": {}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "flag",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.unknown_tool"
+        ]
+      }
+    },
+    {
+      "case_id": "enforce.unknown.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-enforce-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"unknown\", \"arguments\": {}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.unknown_tool"
+        ]
+      }
+    },
+    {
+      "case_id": "enforce.invalid-arguments.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-enforce-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 101, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "flag",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "enforce.invalid-arguments.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-enforce-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 101, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "tool_calls": "flagged"
+        },
+        "finding_rule_ids": [
+          "actions.invalid_arguments"
+        ]
+      }
+    },
+    {
+      "case_id": "enforce.valid.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-enforce-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "enforce.valid.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-enforce-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"lookup_order\", \"arguments\": {\"order_id\": \"ORD-1234\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "numeric.lossy-token.input",
+      "group": "actions",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 100.0000000000000001, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "numeric.lossy-token.output",
+      "group": "actions",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "tool-calls-v1",
+        "content": "{\"tool_calls\": [{\"name\": \"request_refund\", \"arguments\": {\"order_id\": \"ORD-1234\", \"amount\": 100.0000000000000001, \"reason\": \"damaged\", \"currency\": \"USD\"}}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "tool_calls": "error"
+        },
+        "finding_rule_ids": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "format_version": "1",
+  "policies": [
+    {
+      "application_id": "demo",
+      "version": "bias-matched-string-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "matched_outcomes",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "matched_outcomes": {
+        "attributes": [
+          "group"
+        ],
+        "outcome_type": "string"
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "bias-matched-string-enforce-v1",
+      "mode": "enforce",
+      "rules": [
+        {
+          "checker_id": "matched_outcomes",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "matched_outcomes": {
+        "attributes": [
+          "group"
+        ],
+        "outcome_type": "string"
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "bias-matched-boolean-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "matched_outcomes",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "matched_outcomes": {
+        "attributes": [
+          "group"
+        ],
+        "outcome_type": "boolean"
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "bias-matched-boolean-enforce-v1",
+      "mode": "enforce",
+      "rules": [
+        {
+          "checker_id": "matched_outcomes",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "matched_outcomes": {
+        "attributes": [
+          "group"
+        ],
+        "outcome_type": "boolean"
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "bias-matched-number-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "matched_outcomes",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "matched_outcomes": {
+        "attributes": [
+          "group"
+        ],
+        "outcome_type": "number"
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "bias-matched-number-enforce-v1",
+      "mode": "enforce",
+      "rules": [
+        {
+          "checker_id": "matched_outcomes",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "matched_outcomes": {
+        "attributes": [
+          "group"
+        ],
+        "outcome_type": "number"
+      }
+    }
+  ]
+}

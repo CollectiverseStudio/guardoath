@@ -54,6 +54,9 @@ function coverage() {
     const check = policy.checks.find(c => c.id === "content_safety");
     $("profile-status").textContent += " Provider: " + (check?.provider || "not configured") + ". Hosting does not choose the provider. Disabled in the local launcher. Examples have no predetermined classifications; live accuracy is uncalibrated.";
   }
+  if (policy?.version.startsWith("bias-matched-")) $("profile-status").textContent += " Local comparison of submitted matched decisions only. Every record needs a comparable counterpart. This does not classify free-text bias or establish fairness.";
+  if (policy?.version === "evidence-v1") $("profile-status").textContent += " Citation and quotation consistency against a configured source catalog only. Factual truth, source authenticity and support for each claim are not assessed.";
+  if (policy?.version === "tool-calls-v1") $("profile-status").textContent += " Proposed tool names and argument schemas only. No tool is executed or authorized; code, URLs and side effects are not assessed.";
   updateSampleButtons();
 }
 $("connect").addEventListener("click", async () => {
@@ -123,8 +126,58 @@ function refundExample(stage,kind) {
   else {value.start_date="2026-10-03";value.end_date="2026-10-01";}
   return {format:"json",text:JSON.stringify(value,null,2)};
 }
+function matchedExample(stage,kind) {
+  const version=currentPolicy()?.version || "";
+  const number=version.includes("-number-"), boolean=version.includes("-boolean-");
+  const decision=number?10:boolean?true:stage === "input"?"eligible":"approve";
+  const value={scenarios:["A","B"].map(group=>({factors:{qualification:"same",context:stage === "input"?"submitted decision":"proposed decision"},attributes:{group},decision}))};
+  if(kind === "matched-difference") value.scenarios[1].decision=number?11:boolean?false:"deny";
+  if(kind === "matched-factors") value.scenarios[1].factors.qualification="different";
+  if(kind === "matched-missing") delete value.scenarios[1].decision;
+  if(kind === "matched-no-contrast") value.scenarios[1].attributes.group="A";
+  if(kind === "matched-uncovered") value.scenarios.push({factors:{qualification:"unmatched"},attributes:{group:"C"},decision});
+  if(kind === "matched-overlap") value.scenarios[0].factors.group="A";
+  if(kind === "matched-mention") {value.scenarios[0].attributes.group="religion A";value.scenarios[1].attributes.group="religion B";}
+  if(kind === "matched-precision") {
+    value.scenarios[0].decision="RAW_PRECISE";value.scenarios[1].decision="RAW_BASE";
+    return {format:"json",text:JSON.stringify(value,null,2).replace('"RAW_PRECISE"','1.0000000000000001').replace('"RAW_BASE"','1.0')};
+  }
+  return {format:"json",text:JSON.stringify(value,null,2)};
+}
+function evidenceExample(stage,kind) {
+  const quote="Unused items may be returned within 30 days.";
+  const value={answer:(stage === "input"?"Submitted answer":"Proposed reply")+" [[returns]].",citations:[{source_id:"returns",quote}]};
+  if(kind === "evidence-unknown") {value.answer="Claim [[unknown]].";value.citations[0].source_id="unknown";}
+  if(kind === "evidence-missing") value.citations=[];
+  if(kind === "evidence-mismatch") value.citations[0].quote="Unused items may be returned within 90 days.";
+  if(kind === "evidence-short") value.citations[0].quote="Unused";
+  if(kind === "evidence-unused") value.citations.push({source_id:"shipping",quote:"Standard delivery usually takes three to five business days."});
+  if(kind === "evidence-duplicate") value.citations.push({...value.citations[0]});
+  if(kind === "evidence-marker") value.answer="Claim [[return policy]].";
+  if(kind === "evidence-unrelated") value.answer="The Moon is made of cheese [[returns]].";
+  if(kind === "evidence-catalog") value.sources=[{source_id:"returns",text:"This caller-supplied catalog is not trusted."}];
+  return {format:"json",text:JSON.stringify(value,null,2)};
+}
+function toolExample(stage,kind) {
+  const lookup={name:"lookup_order",arguments:{order_id:stage === "input"?"ORD-1234":"ORD-5678"}};
+  const value={tool_calls:[lookup]};
+  if(kind === "tool-unknown") lookup.name="delete_all_files";
+  if(kind === "tool-invalid") lookup.arguments.order_id="wrong";
+  if(kind === "tool-extra") lookup.arguments.command="review-only example";
+  if(kind === "tool-refund" || kind === "tool-lossy") value.tool_calls=[{name:"request_refund",arguments:{order_id:"ORD-1234",amount:kind === "tool-lossy"?"RAW_AMOUNT":101,reason:"damaged",currency:"USD"}}];
+  if(kind === "tool-missing") delete lookup.arguments;
+  if(kind === "tool-limit") value.tool_calls=Array.from({length:11},()=>({...lookup}));
+  if(kind === "tool-none") value.tool_calls=[];
+  if(kind === "tool-catalog") value.tools=[{name:"delete_all_files",arguments_schema:{}}];
+  let text=JSON.stringify(value,null,2);
+  if(kind === "tool-lossy") text=text.replace('"RAW_AMOUNT"','100.0000000000000001');
+  return {format:"json",text};
+}
 const samples = [
   {id:"clean", label:"Clean question", outputLabel:"Safe reply", content:stage => {
+    if (currentPolicy()?.version === "tool-calls-v1") return toolExample(stage,"clean");
+    if (currentPolicy()?.version === "evidence-v1") return evidenceExample(stage,"clean");
+    if (currentPolicy()?.version.startsWith("bias-matched-")) return matchedExample(stage,"clean");
     if (currentPolicy()?.version === "business-number-le-v1") return numericExample(stage,"clean");
     if (currentPolicy()?.version === "structure-v1") return structureExample(stage,"clean");
     if (currentPolicy()?.version === "business-v1") return {format:"json", text:businessData(false,stage)};
@@ -172,6 +225,10 @@ const samples = [
   {id:"harm-health",label:"Health education",profiles:["content-safety-v1"],input:"Can you explain what consent means in sexual health education?",output:"Consent is a freely given, informed agreement that can be withdrawn at any time."},
   {id:"harm-identity",label:"Neutral identity",profiles:["content-safety-v1"],input:"Help me write a respectful welcome for people of different religions.",output:"People of every religion are welcome in our community."},
   {id:"harm-history",label:"Historical violence",profiles:["content-safety-v1"],input:"Explain how a museum can discuss war without glorifying violence.",output:"Describe the historical context, civilian experiences and consequences of war with care."},
+  ...[["matched-difference","Different matched outcomes"],["matched-factors","Different decision factors"],["matched-missing","Missing decision"],["matched-no-contrast","No attribute contrast"],["matched-uncovered","Unmatched record"],["matched-overlap","Attribute in decision factors"],["matched-mention","Neutral demographic mention"]].map(([id,label])=>({id,label,profiles:["bias-matched-string-v1","bias-matched-boolean-v1","bias-matched-number-v1"],content:stage=>matchedExample(stage,id)})),
+  {id:"matched-precision",label:"Exact score difference",profiles:["bias-matched-number-v1"],content:stage=>matchedExample(stage,"matched-precision")},
+  ...[["evidence-unknown","Unknown source"],["evidence-missing","Missing citation entry"],["evidence-mismatch","Altered quotation"],["evidence-short","Quotation too short"],["evidence-unused","Unused citation"],["evidence-duplicate","Duplicate citation"],["evidence-marker","Invalid citation marker"],["evidence-unrelated","Unrelated claim (not assessed)"],["evidence-catalog","Caller-supplied source catalog"]].map(([id,label])=>({id,label,profiles:["evidence-v1"],content:stage=>evidenceExample(stage,id)})),
+  ...[["tool-unknown","Tool outside allowlist"],["tool-invalid","Invalid tool arguments"],["tool-extra","Unexpected command field"],["tool-refund","Refund request over limit"],["tool-missing","Missing tool arguments"],["tool-limit","Too many proposed calls"],["tool-none","No proposed tool calls"],["tool-catalog","Caller-supplied tool catalog"],["tool-lossy","Ambiguous numeric argument"]].map(([id,label])=>({id,label,profiles:["tool-calls-v1"],content:stage=>toolExample(stage,id)})),
   {id:"output-confidential", label:"Output-only confidential term", stages:["output"], profiles:["conversation-v1","secrets-extended-v1"], output:"The draft reply reveals our unreleased pricing plan."},
   {id:"multiple", label:"Multiple issues", stages:["output"], profiles:["conversation-v1"], content:() => ({text:'Your contact email is jane@example.com.\npassword = "synthetic-example!42"\nThe reply also includes hidden\u200btext.'})},
 ];

@@ -82,7 +82,7 @@ test("mobile layout fits the viewport", async ({ page }) => {
 test("grouped coverage does not mark planned checks as passed", async ({ page }) => {
   await connect(page); await run(page);
   await expect(page.locator('#output-results [data-group="sensitive_data"] summary')).toContainText("Passed");
-  await expect(page.locator('#output-results [data-group="accuracy"] summary')).toContainText("Not implemented");
+  await expect(page.locator('#output-results [data-group="scope"] summary')).toContainText("Not implemented");
   await expect(page.locator('#output-results [data-group="structure"] summary')).toContainText("Disabled");
 });
 
@@ -396,7 +396,7 @@ for (const stage of ["input","output"]) {
   test(stage + " examples change only their own data and format",async({page})=>{
     await connect(page); const other=stage==='input'?'output':'input'; const seen=new Set(); let checks=0;
     page.on('request',r=>{if(r.url().includes('/v1/checks/')) checks++;});
-    for(const version of ['conversation-v1','redaction-v1','business-v1','completeness-v1','structure-v1','business-number-le-v1','text-security-v1','content-safety-v1']) {
+    for(const version of ['conversation-v1','redaction-v1','business-v1','completeness-v1','structure-v1','business-number-le-v1','text-security-v1','content-safety-v1','bias-matched-string-v1','bias-matched-boolean-v1','bias-matched-number-v1','evidence-v1','tool-calls-v1']) {
       await page.locator('#policy').selectOption(version);
       const ids=await page.locator('#'+stage+'-samples button:enabled').evaluateAll(nodes=>nodes.map(n=>n.id));
       for(const id of ids) {
@@ -412,7 +412,7 @@ for (const stage of ["input","output"]) {
         await expect(page.locator('#policy')).toHaveValue(version);
       }
     }
-    expect(seen.size).toBe(stage==='input'?52:55);
+    expect(seen.size).toBe(stage==='input'?78:81);
     expect(checks).toBe(0);
   });
 }
@@ -665,4 +665,134 @@ test('content safety clean fixture can complete the full sequence',async({page})
   await contentSafetyFixtures(page,null); await connect(page); await profile(page,'content-safety-v1'); await run(page);
   await expect(page.locator('#result-status')).toHaveText('No findings');
   await expect(page.locator('#answer')).toBeVisible();
+});
+
+
+for(const type of ['string','boolean','number']) {
+  test('matched '+type+' decisions are checked locally on both stages',async({page})=>{
+    await connect(page); await profile(page,'bias-matched-'+type+'-v1'); await run(page);
+    await expect(page.locator('#input-results [data-group="bias"] summary')).toContainText('Passed');
+    await expect(page.locator('#output-results [data-group="bias"] summary')).toContainText('Passed');
+    await expect(page.locator('#result-status')).toHaveText('No findings');
+    await expect(page.locator('#answer')).toBeVisible();
+    await expect(page.locator('#profile-status')).toContainText('does not classify free-text bias');
+  });
+  for(const stage of ['input','output']) {
+    test('matched '+type+' difference is held at '+stage,async({page})=>{
+      await connect(page); await profile(page,'bias-matched-'+type+'-v1');
+      await page.locator('#'+stage+'-matched-difference-sample').click();
+      const response=page.waitForResponse(r=>r.url().endsWith('/v1/checks/'+stage)&&r.request().method()==='POST');
+      await run(page);
+      expect((await (await response).json()).findings.map(f=>f.rule_id)).toContain('bias.matched_outcome_difference');
+      await expect(page.locator('#'+stage+'-results [data-group="bias"] summary')).toContainText('Findings');
+      await expect(page.locator('#'+stage+'-results')).toContainText('Submitted outcomes differ');
+      await expect(page.locator('#answer')).toBeHidden();
+    });
+  }
+}
+for(const [sample,code] of [['matched-factors','matched_outcomes_insufficient_comparisons'],['matched-no-contrast','matched_outcomes_insufficient_comparisons'],['matched-uncovered','matched_outcomes_insufficient_comparisons'],['matched-missing','matched_outcomes_invalid_records'],['matched-overlap','matched_outcomes_invalid_records']]) {
+  test('matched evidence gaps hold '+sample,async({page})=>{
+    await connect(page); await profile(page,'bias-matched-string-v1');
+    await page.locator('#input-'+sample+'-sample').click();await run(page);
+    await expect(page.locator('#result-status')).toHaveText('Incomplete');
+    await expect(page.locator('#input-results')).toContainText(code);
+    await expect(page.locator('#run-output')).toBeDisabled();await expect(page.locator('#answer')).toBeHidden();
+  });
+}
+test('a neutral demographic mention alone is not a matched-outcome finding',async({page})=>{
+  await connect(page);await profile(page,'bias-matched-string-v1');
+  await page.locator('#input-matched-mention-sample').click();await page.locator('#output-matched-mention-sample').click();await run(page);
+  await expect(page.locator('#result-status')).toHaveText('No findings');await expect(page.locator('#answer')).toBeVisible();
+});
+test('exact matched scores are preserved and a small difference is reviewed',async({page})=>{
+  await connect(page);await profile(page,'bias-matched-number-v1');await page.locator('#output-matched-precision-sample').click();
+  await expect(page.locator('#output-content')).toHaveValue(/1\.0000000000000001/);await run(page);
+  await expect(page.locator('#output-results')).toContainText('Submitted outcomes differ');await expect(page.locator('#answer')).toBeHidden();
+});
+test('the entire matched-outcome report is readable without private scenario values',async({page})=>{
+  const {execFileSync}=require('node:child_process');const path=require('node:path').join(test.info().outputDir,'bias.html');
+  require('node:fs').mkdirSync(test.info().outputDir,{recursive:true});
+  execFileSync('python',['-m','valinator.evaluate','--cases','evals/bias.json','--policies','policies/bias-batch.json','--html',path],{stdio:'pipe'});
+  await page.goto('file://'+path);await expect(page.locator('body')).toContainText('100 of 100 expectations matched');
+  await expect(page.locator('body')).toContainText('Incomplete evaluations: 50');await expect(page.locator('tbody tr')).toHaveCount(100);
+  await expect(page.locator('body')).not.toContainText('qualification');
+});
+
+
+for(const [sample,rule] of [['evidence-unknown','unknown_source'],['evidence-missing','missing_reference'],['evidence-mismatch','quote_mismatch'],['evidence-short','quote_too_short'],['evidence-unused','unused_citation'],['evidence-duplicate','duplicate_citation'],['evidence-marker','invalid_marker']]) {
+  test('citation evidence holds '+sample,async({page})=>{
+    await connect(page);await profile(page,'evidence-v1');await page.locator('#output-'+sample+'-sample').click();
+    const response=page.waitForResponse(r=>r.url().endsWith('/v1/checks/output')&&r.request().method()==='POST');await run(page);
+    expect((await (await response).json()).findings.map(f=>f.rule_id)).toContain('evidence.'+rule);
+    await expect(page.locator('#output-results [data-group="accuracy"] summary')).toContainText('Findings');
+    await expect(page.locator('#answer')).toBeHidden();
+  });
+}
+test('citation evidence clean documents complete both local stages',async({page})=>{
+  await connect(page);await profile(page,'evidence-v1');await run(page);
+  await expect(page.locator('#input-results [data-group="accuracy"] summary')).toContainText('Passed');
+  await expect(page.locator('#output-results [data-group="accuracy"] summary')).toContainText('Passed');
+  await expect(page.locator('#answer')).toBeVisible();
+});
+test('citation consistency explicitly does not verify an unrelated claim',async({page})=>{
+  await connect(page);await profile(page,'evidence-v1');await page.locator('#output-evidence-unrelated-sample').click();await run(page);
+  await expect(page.locator('#result-status')).toHaveText('No findings');await expect(page.locator('#answer')).toBeVisible();
+  await expect(page.locator('#profile-status')).toContainText('support for each claim are not assessed');
+});
+test('caller-supplied sources cannot replace the configured evidence catalog',async({page})=>{
+  await connect(page);await profile(page,'evidence-v1');await page.locator('#input-evidence-catalog-sample').click();await run(page);
+  await expect(page.locator('#input-results')).toContainText('evidence_invalid_document');
+  await expect(page.locator('#result-status')).toHaveText('Incomplete');await expect(page.locator('#run-output')).toBeDisabled();
+});
+test('the full citation-evidence report omits quotations and preserves incomplete counts',async({page},testInfo)=>{
+  const {execFileSync}=require('node:child_process');const {pathToFileURL}=require('node:url');const path=testInfo.outputPath('evidence.html');
+  execFileSync('python',['-m','valinator.evaluate','--cases','evals/evidence.json','--policies','policies/evidence-batch.json','--html',path],{stdio:'pipe'});
+  await page.goto(pathToFileURL(path).href);await expect(page.locator('body')).toContainText('100 of 100 expectations matched');
+  await expect(page.locator('body')).toContainText('Incomplete evaluations: 36');await expect(page.locator('tbody tr')).toHaveCount(100);
+  await expect(page.locator('body')).not.toContainText('Unused items may be returned within 30 days.');
+});
+
+
+for(const [sample,rule] of [['tool-unknown','unknown_tool'],['tool-invalid','invalid_arguments'],['tool-extra','invalid_arguments'],['tool-refund','invalid_arguments']]) {
+  test('proposed tool validation holds '+sample,async({page})=>{
+    await connect(page);await profile(page,'tool-calls-v1');await page.locator('#output-'+sample+'-sample').click();
+    const response=page.waitForResponse(r=>r.url().endsWith('/v1/checks/output')&&r.request().method()==='POST');await run(page);
+    expect((await (await response).json()).findings.map(f=>f.rule_id)).toContain('actions.'+rule);
+    await expect(page.locator('#output-results [data-group="actions"] summary')).toContainText('Findings');
+    await expect(page.locator('#output-results')).toContainText('No tool was executed or authorized');await expect(page.locator('#answer')).toBeHidden();
+  });
+}
+for(const sample of ['tool-missing','tool-limit','tool-catalog','tool-lossy']) {
+  test('incomplete tool validation holds '+sample,async({page})=>{
+    await connect(page);await profile(page,'tool-calls-v1');await page.locator('#input-'+sample+'-sample').click();await run(page);
+    await expect(page.locator('#result-status')).toHaveText('Incomplete');await expect(page.locator('#input-results')).toContainText('tool_calls_invalid_document');
+    await expect(page.locator('#run-output')).toBeDisabled();await expect(page.locator('#answer')).toBeHidden();
+  });
+}
+test('clean proposed tool calls are locally checked without execution',async({page})=>{
+  await connect(page);await profile(page,'tool-calls-v1');await run(page);
+  await expect(page.locator('#input-results [data-group="actions"] summary')).toContainText('Passed');
+  await expect(page.locator('#output-results [data-group="actions"] summary')).toContainText('Passed');await expect(page.locator('#answer')).toBeVisible();
+  await expect(page.locator('#profile-status')).toContainText('No tool is executed or authorized');
+});
+test('an empty proposed-call list is handled explicitly',async({page})=>{
+  await connect(page);await profile(page,'tool-calls-v1');await page.locator('#input-tool-none-sample').click();await page.locator('#output-tool-none-sample').click();await run(page);
+  await expect(page.locator('#result-status')).toHaveText('No findings');await expect(page.locator('#answer')).toContainText('tool_calls');
+});
+test('proposed action report omits argument values',async({page},testInfo)=>{
+  const {execFileSync}=require('node:child_process');const {pathToFileURL}=require('node:url');const path=testInfo.outputPath('actions.html');
+  execFileSync('python',['-m','valinator.evaluate','--cases','evals/actions.json','--policies','policies/actions-batch.json','--html',path],{stdio:'pipe'});
+  await page.goto(pathToFileURL(path).href);await expect(page.locator('body')).toContainText('100 of 100 expectations matched');
+  await expect(page.locator('body')).toContainText('Incomplete evaluations: 28');await expect(page.locator('tbody tr')).toHaveCount(100);
+  await expect(page.locator('body')).not.toContainText('ORD-1234');
+});
+
+
+test('all local regression suites have one index with working group report links',async({page},testInfo)=>{
+  const {execFileSync}=require('node:child_process');const {pathToFileURL}=require('node:url');const path=testInfo.outputPath('all-local');
+  execFileSync('python',['-m','valinator.evaluate_all','--pii','--output',path],{stdio:'pipe'});
+  await page.goto(pathToFileURL(require('node:path').join(path,'index.html')).href);
+  await expect(page.locator('body')).toContainText('830 of 830 expectations matched');await expect(page.locator('tbody tr')).toHaveCount(9);
+  await page.getByRole('link',{name:'bias',exact:true}).click();
+  await expect(page.locator('body')).toContainText('100 of 100 expectations matched');await expect(page.locator('tbody tr')).toHaveCount(100);
 });

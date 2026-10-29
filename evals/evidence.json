@@ -1,0 +1,2118 @@
+{
+  "format_version": "1",
+  "suite_id": "evidence-v1",
+  "cases": [
+    {
+      "case_id": "valid.returns.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.returns.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.shipping.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Delivery [[shipping]].\", \"citations\": [{\"source_id\": \"shipping\", \"quote\": \"Standard delivery usually takes three to five business days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.shipping.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Delivery [[shipping]].\", \"citations\": [{\"source_id\": \"shipping\", \"quote\": \"Standard delivery usually takes three to five business days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.two-sources.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Returns [[returns]]; delivery [[shipping]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"shipping\", \"quote\": \"Standard delivery usually takes three to five business days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.two-sources.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Returns [[returns]]; delivery [[shipping]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"shipping\", \"quote\": \"Standard delivery usually takes three to five business days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.repeated-marker.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Returns [[returns]] and receipts [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.repeated-marker.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Returns [[returns]] and receipts [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.minimum-quote.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"nused items may be r\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.minimum-quote.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"nused items may be r\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.whole-source.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days. Keep the original receipt for a return.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.whole-source.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days. Keep the original receipt for a return.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.prefix-suffix.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Before: [[returns]] after.\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.prefix-suffix.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Before: [[returns]] after.\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.multilingual-answer.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Politique de retour [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.multilingual-answer.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Politique de retour [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "scope-gap.unrelated-claim.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"The Moon is made of cheese [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "scope-gap.unrelated-claim.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"The Moon is made of cheese [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.marker-newline.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return details:\\n[[returns]]\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "valid.marker-newline.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return details:\\n[[returns]]\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "citation.missing-all.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"No citations.\", \"citations\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.missing_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "citation.missing-all.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"No citations.\", \"citations\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.missing_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "citation.missing-entry.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.missing_citation",
+          "evidence.missing_reference"
+        ]
+      }
+    },
+    {
+      "case_id": "citation.missing-entry.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.missing_citation",
+          "evidence.missing_reference"
+        ]
+      }
+    },
+    {
+      "case_id": "citation.unused-entry.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"No markers.\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.missing_citation",
+          "evidence.unused_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "citation.unused-entry.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"No markers.\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.missing_citation",
+          "evidence.unused_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "source.unknown-both.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Claim [[unknown]].\", \"citations\": [{\"source_id\": \"unknown\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.unknown_source"
+        ]
+      }
+    },
+    {
+      "case_id": "source.unknown-both.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Claim [[unknown]].\", \"citations\": [{\"source_id\": \"unknown\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.unknown_source"
+        ]
+      }
+    },
+    {
+      "case_id": "source.unknown-marker.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Claim [[unknown]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.unknown_source",
+          "evidence.missing_reference",
+          "evidence.unused_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "source.unknown-marker.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Claim [[unknown]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.unknown_source",
+          "evidence.missing_reference",
+          "evidence.unused_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "source.unknown-entry.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"unknown\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.unknown_source",
+          "evidence.missing_reference",
+          "evidence.unused_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "source.unknown-entry.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"unknown\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.unknown_source",
+          "evidence.missing_reference",
+          "evidence.unused_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "quote.changed-fact.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 90 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.quote_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "quote.changed-fact.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 90 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.quote_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "quote.short.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.quote_too_short"
+        ]
+      }
+    },
+    {
+      "case_id": "quote.short.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.quote_too_short"
+        ]
+      }
+    },
+    {
+      "case_id": "quote.padding-not-evidence.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"                    Unused\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.quote_mismatch",
+          "evidence.quote_too_short"
+        ]
+      }
+    },
+    {
+      "case_id": "quote.padding-not-evidence.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"                    Unused\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.quote_mismatch",
+          "evidence.quote_too_short"
+        ]
+      }
+    },
+    {
+      "case_id": "citation.duplicate.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.duplicate_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "citation.duplicate.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.duplicate_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "citation.duplicate-different.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"This invented quotation is not in the source.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.quote_mismatch",
+          "evidence.duplicate_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "citation.duplicate-different.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"This invented quotation is not in the source.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.quote_mismatch",
+          "evidence.duplicate_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "marker.spaces.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Claim [[return policy]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.missing_citation",
+          "evidence.invalid_marker",
+          "evidence.unused_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "marker.spaces.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Claim [[return policy]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.missing_citation",
+          "evidence.invalid_marker",
+          "evidence.unused_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "marker.unclosed.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Claim [[returns.\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.missing_citation",
+          "evidence.invalid_marker",
+          "evidence.unused_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "marker.unclosed.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Claim [[returns.\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.missing_citation",
+          "evidence.invalid_marker",
+          "evidence.unused_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "marker.unopened.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Claim returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.missing_citation",
+          "evidence.invalid_marker",
+          "evidence.unused_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "marker.unopened.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Claim returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.missing_citation",
+          "evidence.invalid_marker",
+          "evidence.unused_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "citation.second-marker-missing.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Both [[returns]] [[shipping]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.missing_reference"
+        ]
+      }
+    },
+    {
+      "case_id": "citation.second-marker-missing.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Both [[returns]] [[shipping]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.missing_reference"
+        ]
+      }
+    },
+    {
+      "case_id": "citation.second-entry-unused.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"shipping\", \"quote\": \"Standard delivery usually takes three to five business days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.unused_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "citation.second-entry-unused.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"shipping\", \"quote\": \"Standard delivery usually takes three to five business days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.unused_citation"
+        ]
+      }
+    },
+    {
+      "case_id": "quote.case-mismatch.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"UNUSED ITEMS MAY BE RETURNED WITHIN 30 DAYS.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.quote_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "quote.case-mismatch.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"UNUSED ITEMS MAY BE RETURNED WITHIN 30 DAYS.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.quote_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "quote.whitespace-mismatch.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused\\nitems may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.quote_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "quote.whitespace-mismatch.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused\\nitems may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.quote_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "quote.short-number.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"30 days\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.quote_too_short"
+        ]
+      }
+    },
+    {
+      "case_id": "quote.short-number.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"30 days\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.quote_too_short"
+        ]
+      }
+    },
+    {
+      "case_id": "json.malformed.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{bad",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "json.malformed.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{bad",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "json.duplicate.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\":\"first\",\"answer\":\"second\",\"citations\":[]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "json.duplicate.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\":\"first\",\"answer\":\"second\",\"citations\":[]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "envelope.array.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "[]",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "envelope.array.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "[]",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "answer.missing.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"citations\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "answer.missing.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"citations\": []}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "citations.missing.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Claim [[returns]].\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "citations.missing.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Claim [[returns]].\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "catalog.client-substitution.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}], \"sources\": [{\"source_id\": \"returns\", \"text\": \"forged source\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "catalog.client-substitution.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}], \"sources\": [{\"source_id\": \"returns\", \"text\": \"forged source\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "answer.number.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": 10, \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "answer.number.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": 10, \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "answer.blank.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"   \", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "answer.blank.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"   \", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "citations.null.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": null}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "citations.null.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": null}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "quote.missing.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "quote.missing.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "source.url-disallowed.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"https://example.com\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "source.url-disallowed.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"https://example.com\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "quote.boolean.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": true}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "quote.boolean.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": true}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "quote.limit-exceeded.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "quote.limit-exceeded.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "answer.limit-exceeded.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "answer.limit-exceeded.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "citations.limit-exceeded.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "citations.limit-exceeded.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}, {\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "json.nonfinite.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\":NaN,\"citations\":[]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "json.nonfinite.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\":NaN,\"citations\":[]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "markers.limit-exceeded.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"[[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]]\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "markers.limit-exceeded.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"[[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]] [[returns]]\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "format.text.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "Plain text is not a citation evidence packet.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "format.text.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "Plain text is not a citation evidence packet.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "enforce.quote-mismatch.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-enforce-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"This quotation is invented and unsupported.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "flag",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.quote_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "enforce.quote-mismatch.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-enforce-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"This quotation is invented and unsupported.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.quote_mismatch"
+        ]
+      }
+    },
+    {
+      "case_id": "enforce.valid.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-enforce-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "enforce.valid.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-enforce-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"Unused items may be returned within 30 days.\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "boundary.quote-nineteen.input",
+      "group": "accuracy",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"used items may be r\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.quote_too_short"
+        ]
+      }
+    },
+    {
+      "case_id": "boundary.quote-nineteen.output",
+      "group": "accuracy",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "evidence-v1",
+        "content": "{\"answer\": \"Return window [[returns]].\", \"citations\": [{\"source_id\": \"returns\", \"quote\": \"used items may be r\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "evidence": "flagged"
+        },
+        "finding_rule_ids": [
+          "evidence.quote_too_short"
+        ]
+      }
+    }
+  ]
+}

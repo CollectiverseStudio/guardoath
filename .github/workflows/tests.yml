@@ -23,6 +23,12 @@ jobs:
         run: python -m valinator.evaluate --cases evals/business.json --policies policies/business-batch.json
       - name: Local text security - 100 expectations
         run: python -m valinator.evaluate --cases evals/text-security.json --policies policies/text-security-batch.json
+      - name: Matched-outcome bias checks - 100 expectations
+        run: python -m valinator.evaluate --cases evals/bias.json --policies policies/bias-batch.json
+      - name: Citation evidence checks - 100 expectations
+        run: python -m valinator.evaluate --cases evals/evidence.json --policies policies/evidence-batch.json
+      - name: Proposed tool-call checks - 100 expectations
+        run: python -m valinator.evaluate --cases evals/actions.json --policies policies/actions-batch.json
   local-pii:
     runs-on: ubuntu-latest
     strategy:

@@ -1,0 +1,155 @@
+{
+  "format_version": "1",
+  "policies": [
+    {
+      "application_id": "demo",
+      "version": "tool-calls-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "tool_calls",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "tool_calls": {
+        "tools": [
+          {
+            "name": "lookup_order",
+            "arguments_schema": {
+              "type": "object",
+              "properties": {
+                "order_id": {
+                  "type": "string",
+                  "pattern": "^ORD-[0-9]{4}$",
+                  "minLength": 8,
+                  "maxLength": 8
+                }
+              },
+              "required": [
+                "order_id"
+              ],
+              "additionalProperties": false
+            }
+          },
+          {
+            "name": "request_refund",
+            "arguments_schema": {
+              "type": "object",
+              "$defs": {
+                "orderId": {
+                  "type": "string",
+                  "pattern": "^ORD-[0-9]{4}$",
+                  "minLength": 8,
+                  "maxLength": 8
+                }
+              },
+              "properties": {
+                "order_id": {
+                  "$ref": "#/$defs/orderId"
+                },
+                "amount": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100,
+                  "multipleOf": 1
+                },
+                "reason": {
+                  "enum": [
+                    "damaged",
+                    "incorrect_item"
+                  ]
+                },
+                "currency": {
+                  "const": "USD"
+                }
+              },
+              "required": [
+                "order_id",
+                "amount",
+                "reason",
+                "currency"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "tool-calls-enforce-v1",
+      "mode": "enforce",
+      "rules": [
+        {
+          "checker_id": "tool_calls",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "tool_calls": {
+        "tools": [
+          {
+            "name": "lookup_order",
+            "arguments_schema": {
+              "type": "object",
+              "properties": {
+                "order_id": {
+                  "type": "string",
+                  "pattern": "^ORD-[0-9]{4}$",
+                  "minLength": 8,
+                  "maxLength": 8
+                }
+              },
+              "required": [
+                "order_id"
+              ],
+              "additionalProperties": false
+            }
+          },
+          {
+            "name": "request_refund",
+            "arguments_schema": {
+              "type": "object",
+              "$defs": {
+                "orderId": {
+                  "type": "string",
+                  "pattern": "^ORD-[0-9]{4}$",
+                  "minLength": 8,
+                  "maxLength": 8
+                }
+              },
+              "properties": {
+                "order_id": {
+                  "$ref": "#/$defs/orderId"
+                },
+                "amount": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100,
+                  "multipleOf": 1
+                },
+                "reason": {
+                  "enum": [
+                    "damaged",
+                    "incorrect_item"
+                  ]
+                },
+                "currency": {
+                  "const": "USD"
+                }
+              },
+              "required": [
+                "order_id",
+                "amount",
+                "reason",
+                "currency"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

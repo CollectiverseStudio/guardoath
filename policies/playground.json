@@ -579,6 +579,160 @@
       "detect_labeled_sensitive_data": true,
       "detect_secret_assignments": true,
       "inspect_encoded_secrets": true
+    },
+    {
+      "application_id": "demo",
+      "version": "bias-matched-string-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "matched_outcomes",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "matched_outcomes": {
+        "attributes": [
+          "group"
+        ],
+        "outcome_type": "string"
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "bias-matched-boolean-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "matched_outcomes",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "matched_outcomes": {
+        "attributes": [
+          "group"
+        ],
+        "outcome_type": "boolean"
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "bias-matched-number-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "matched_outcomes",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "matched_outcomes": {
+        "attributes": [
+          "group"
+        ],
+        "outcome_type": "number"
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "evidence-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "evidence",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "evidence": {
+        "min_quote_characters": 20,
+        "sources": [
+          {
+            "source_id": "returns",
+            "text": "Unused items may be returned within 30 days. Keep the original receipt for a return."
+          },
+          {
+            "source_id": "shipping",
+            "text": "Standard delivery usually takes three to five business days. Delivery dates are estimates."
+          }
+        ]
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "tool-calls-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "tool_calls",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "tool_calls": {
+        "tools": [
+          {
+            "name": "lookup_order",
+            "arguments_schema": {
+              "type": "object",
+              "properties": {
+                "order_id": {
+                  "type": "string",
+                  "pattern": "^ORD-[0-9]{4}$",
+                  "minLength": 8,
+                  "maxLength": 8
+                }
+              },
+              "required": [
+                "order_id"
+              ],
+              "additionalProperties": false
+            }
+          },
+          {
+            "name": "request_refund",
+            "arguments_schema": {
+              "type": "object",
+              "$defs": {
+                "orderId": {
+                  "type": "string",
+                  "pattern": "^ORD-[0-9]{4}$",
+                  "minLength": 8,
+                  "maxLength": 8
+                }
+              },
+              "properties": {
+                "order_id": {
+                  "$ref": "#/$defs/orderId"
+                },
+                "amount": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100,
+                  "multipleOf": 1
+                },
+                "reason": {
+                  "enum": [
+                    "damaged",
+                    "incorrect_item"
+                  ]
+                },
+                "currency": {
+                  "const": "USD"
+                }
+              },
+              "required": [
+                "order_id",
+                "amount",
+                "reason",
+                "currency"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      }
     }
   ]
 }

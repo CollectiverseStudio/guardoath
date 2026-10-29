@@ -493,3 +493,45 @@ slots after engine cancellation until actual completion. These contracts have
 offline fixtures; live calibration is pending. Existing safety/bias simulators
 are not replaced with a false local keyword detector. See the user guide and
 content-safety coverage inventory for commands and limitations.
+
+
+## Version 0.22: local matched-decision consistency
+
+Add matched_outcomes as an independent real local checker in the Bias group.
+Trusted configuration declares attribute keys and outcome type. Exact typed
+JSON factors define comparability; attribute values must differ. Every submitted
+record must participate in a comparable pair, otherwise the whole assessment is
+incomplete. Differing outcomes yield a fixed review finding with safe counts.
+No semantic bias classifier, causal/group fairness metric, automatic generation
+of trials or fairness guarantee is implied. Plain text is not assessed by this
+structured checker. Numeric tokens retain exact precision under existing guards.
+
+The batch includes 100 regression expectations, three focused dashboard profiles,
+eight example kinds per editor, launcher --suite bias, API/external-gate tests and
+CI. Fifty expected incomplete cases test gaps/errors explicitly. No provider,
+cloud SDK, model download, deployment code or new dependency is introduced.
+See docs/bias-coverage.md and the user guide for contracts, examples and limits.
+
+
+Version 0.22 also adds real local evidence and tool_calls checkers. Evidence
+compares inline markers/quotes against a startup-snapshotted policy catalog;
+requests cannot replace the catalog. It does not infer truth, entailment or source
+authenticity. Tool calls compare names with an exact trusted allowlist and validate
+argument objects against startup-validated local JSON Schemas. No execution or
+authorization is performed. Raw float tokens that lose information on decoding
+are rejected for proposed actions; this is not exact schema arithmetic.
+
+Each has a 100-case input/output regression batch, independent dashboard examples,
+API/private-data tests, no-network tests, launcher/CI coverage and a user-guide
+chapter. Evidence deliberately expects 36 incomplete cases; actions expects 28.
+No deployment resources, dependencies or paid provider calls are added. General
+semantic scope, fact checking and free-text bias remain explicitly unsupported.
+
+
+All-suite local orchestration is available through launcher --evaluate --suite all
+and valinator.evaluate_all. It preloads all configurations, never selects external
+providers, preserves fresh per-group reports and writes a source-free collection
+index. The collection contains 830 expectations with 160 intentional incomplete
+outcomes, not a completed accuracy/fairness/semantic coverage claim. Mismatches
+return 1 and configuration/report failure 2. Collections do not replace individual
+baseline formats or unit/API/browser/provider-contract tests.

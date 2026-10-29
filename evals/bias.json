@@ -1,0 +1,2054 @@
+{
+  "format_version": "1",
+  "suite_id": "bias-matched-v1",
+  "cases": [
+    {
+      "case_id": "string.equal.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "string.equal.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "string.different.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "string.different.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "string.three-equal.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"C\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "string.three-equal.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"C\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "string.three-different.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"C\"}, \"decision\": \"deny\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "string.three-different.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"C\"}, \"decision\": \"deny\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "string.cohorts-False.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"score\": 1}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"score\": 1}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"score\": 2}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"deny\"}, {\"factors\": {\"score\": 2}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "string.cohorts-False.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"score\": 1}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"score\": 1}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"score\": 2}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"deny\"}, {\"factors\": {\"score\": 2}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "string.cohorts-True.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"score\": 1}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"score\": 1}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"score\": 2}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"deny\"}, {\"factors\": {\"score\": 2}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "string.cohorts-True.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"score\": 1}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"score\": 1}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"score\": 2}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"deny\"}, {\"factors\": {\"score\": 2}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "factors.key-order.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"a\": 1, \"b\": 2}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"b\": 2, \"a\": 1}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "factors.key-order.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"a\": 1, \"b\": 2}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"b\": 2, \"a\": 1}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "factors.nested-order.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"detail\": {\"x\": 1, \"y\": [2, 3]}}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"detail\": {\"y\": [2, 3], \"x\": 1}}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "factors.nested-order.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"detail\": {\"x\": 1, \"y\": [2, 3]}}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"detail\": {\"y\": [2, 3], \"x\": 1}}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "string.case-sensitive.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"Approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "string.case-sensitive.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"Approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "attributes.unicode-benign.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"Résumé\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"履歴書\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "attributes.unicode-benign.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"Résumé\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"履歴書\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "boolean.equal.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-boolean-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": true}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": true}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "boolean.equal.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-boolean-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": true}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": true}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "boolean.different.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-boolean-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": true}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": false}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "boolean.different.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-boolean-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": true}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": false}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "boolean.false-equal.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-boolean-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": false}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": false}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "boolean.false-equal.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-boolean-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": false}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": false}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "boolean.repeated.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-boolean-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": true}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": false}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": true}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": false}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "boolean.repeated.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-boolean-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": true}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": false}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": true}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": false}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "boolean.no-numeric-coercion.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-boolean-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": true}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": 0}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "boolean.no-numeric-coercion.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-boolean-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": true}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": 0}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "boolean.no-string-coercion.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-boolean-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": true}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"true\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "boolean.no-string-coercion.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-boolean-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": true}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"true\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "number.equal.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-number-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": 10}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": 10}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "number.equal.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-number-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": 10}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": 10}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "number.different.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-number-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": 10}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": 11}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "number.different.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-number-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": 10}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": 11}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "number.raw-precision.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-number-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": 1.0000000000000001}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": 1.0}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "number.raw-precision.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-number-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": 1.0000000000000001}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": 1.0}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "number.integer-decimal.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-number-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": 10}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": 10.0}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "number.integer-decimal.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-number-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": 10}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": 10.0}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "number.signed-zero.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-number-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": 0}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": -0.0}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "number.signed-zero.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-number-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": 0}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": -0.0}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "number.no-underflow.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-number-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": 1e-400}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": 0}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "number.no-underflow.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-number-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": 1e-400}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": 0}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "number.negatives.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-number-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": -5}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": -6}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "number.negatives.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-number-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": -5}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": -6}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "number.no-string-coercion.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-number-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": 10}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"10\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "number.no-string-coercion.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-number-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": 10}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"10\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "json.malformed.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{bad-json",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "json.malformed.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{bad-json",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "json.duplicate.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\":\"approve\",\"decision\":\"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "json.duplicate.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\":\"approve\",\"decision\":\"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "envelope.array.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "[]",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "envelope.array.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "[]",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "envelope.missing.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "envelope.missing.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "rows.one.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "rows.one.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "rows.limit-exceeded.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"0\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"1\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"2\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"3\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"4\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"5\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"6\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"7\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"8\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"9\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"10\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"11\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"12\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"13\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"14\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"15\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"16\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"17\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"18\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"19\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"20\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "rows.limit-exceeded.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"0\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"1\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"2\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"3\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"4\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"5\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"6\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"7\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"8\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"9\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"10\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"11\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"12\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"13\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"14\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"15\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"16\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"17\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"18\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"19\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"20\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "record.missing-decision.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "record.missing-decision.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "attributes.missing.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "attributes.missing.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "attributes.extra.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\", \"extra\": \"other\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "attributes.extra.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\", \"extra\": \"other\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "attributes.empty.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"   \"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "attributes.empty.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"   \"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "attributes.number.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": 1}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "attributes.number.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": 1}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "factors.empty.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "factors.empty.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "factors.overlap.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\", \"group\": \"A\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "factors.overlap.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\", \"group\": \"A\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "factors.nested-overlap.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\", \"nested\": {\"GROUP\": \"A\"}}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "factors.nested-overlap.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\", \"nested\": {\"GROUP\": \"A\"}}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "envelope.extra.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}], \"unexpected\": \"private-value\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "envelope.extra.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}], \"unexpected\": \"private-value\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "factors.limit-exceeded.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"0\": 0, \"1\": 1, \"2\": 2, \"3\": 3, \"4\": 4, \"5\": 5, \"6\": 6, \"7\": 7, \"8\": 8, \"9\": 9, \"10\": 10, \"11\": 11, \"12\": 12, \"13\": 13, \"14\": 14, \"15\": 15, \"16\": 16, \"17\": 17, \"18\": 18, \"19\": 19, \"20\": 20}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"0\": 0, \"1\": 1, \"2\": 2, \"3\": 3, \"4\": 4, \"5\": 5, \"6\": 6, \"7\": 7, \"8\": 8, \"9\": 9, \"10\": 10, \"11\": 11, \"12\": 12, \"13\": 13, \"14\": 14, \"15\": 15, \"16\": 16, \"17\": 17, \"18\": 18, \"19\": 19, \"20\": 20}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "factors.limit-exceeded.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"0\": 0, \"1\": 1, \"2\": 2, \"3\": 3, \"4\": 4, \"5\": 5, \"6\": 6, \"7\": 7, \"8\": 8, \"9\": 9, \"10\": 10, \"11\": 11, \"12\": 12, \"13\": 13, \"14\": 14, \"15\": 15, \"16\": 16, \"17\": 17, \"18\": 18, \"19\": 19, \"20\": 20}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"0\": 0, \"1\": 1, \"2\": 2, \"3\": 3, \"4\": 4, \"5\": 5, \"6\": 6, \"7\": 7, \"8\": 8, \"9\": 9, \"10\": 10, \"11\": 11, \"12\": 12, \"13\": 13, \"14\": 14, \"15\": 15, \"16\": 16, \"17\": 17, \"18\": 18, \"19\": 19, \"20\": 20}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "comparison.different-factors.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"different\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "comparison.different-factors.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"different\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "comparison.no-attribute-contrast.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "comparison.no-attribute-contrast.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "comparison.uncovered-record.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"other\"}, \"attributes\": {\"group\": \"C\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "comparison.uncovered-record.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"other\"}, \"attributes\": {\"group\": \"C\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "comparison.factor-bool-vs-number.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"value\": true}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"value\": 1}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "comparison.factor-bool-vs-number.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"value\": true}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"value\": 1}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "comparison.factor-precision.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"value\": 1.0000000000000001}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"value\": 1.0}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "comparison.factor-precision.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"value\": 1.0000000000000001}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"value\": 1.0}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "format.text.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "A demographic mention is not automatically a bias finding.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "format.text.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "A demographic mention is not automatically a bias finding.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "skipped"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "boundary.twenty-equal.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "boundary.twenty-equal.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "boundary.twenty-different.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "boundary.twenty-different.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "enforce.difference.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-enforce-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "flag",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "enforce.difference.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-enforce-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"deny\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "matched_outcomes": "flagged"
+        },
+        "finding_rule_ids": [
+          "bias.matched_outcome_difference"
+        ]
+      }
+    },
+    {
+      "case_id": "enforce.equal.input",
+      "group": "bias",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-enforce-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "enforce.equal.output",
+      "group": "bias",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "bias-matched-string-enforce-v1",
+        "content": "{\"scenarios\": [{\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"A\"}, \"decision\": \"approve\"}, {\"factors\": {\"qualification\": \"same\"}, \"attributes\": {\"group\": \"B\"}, \"decision\": \"approve\"}]}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "matched_outcomes": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    }
+  ]
+}

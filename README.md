@@ -37,7 +37,7 @@ application-specific rules and groups that are not implemented.
 
 ## Open the dashboard with one command
 
-Install Git and Python 3.12 (or 3.11–3.14), then download this repository:
+Install Git and Python 3.13 (or another supported 3.11–3.14 version), then download this repository:
 
 ```bash
 git clone https://github.com/CollectiverseStudio/valinator.git
@@ -95,6 +95,19 @@ to prepare a valid input for a focused profile. Example outcomes include:
 
 You supply both the message and proposed answer. The dashboard validates them;
 it does not generate the answer. Passed checks cover only their stated scope.
+
+## Run all bundled local regression checks
+
+```powershell
+py -3.13 start_dashboard.py --evaluate --suite all
+```
+
+This runs all nine local suites, then opens one index with per-group report links:
+830 expectations, including 160 intentionally incomplete assessments. Matching an
+expected error/finding is not a clean-content or model-accuracy claim. No provider
+calls run. Python unit/API tests, browser tests, managed-provider contract fixtures
+and unimplemented capabilities are separate. Each run preserves earlier reports;
+individual suites retain their own baseline-comparison workflow.
 
 ## Run locally
 
@@ -824,3 +837,42 @@ python -m pytest tests/test_content_safety.py tests/test_bedrock_guardrails.py -
 
 See [the guide](docs/user-guide.md#harmful-content-and-abuse-optional-provider-assessment)
 for configuration, rule IDs, safe error responses and limitations.
+
+
+## Local matched-decision consistency checks
+
+The Bias group now includes a real local `matched_outcomes` checker for structured
+submitted scenarios. It compares identical declared factors across different
+configured attributes and flags different outcomes for review. Missing comparisons
+are incomplete, not a fairness pass. This is not a free-text bias detector or a
+fairness/causality guarantee; the older `bias` checker remains a simulator.
+
+```powershell
+py -3.13 start_dashboard.py --evaluate --suite bias
+```
+
+The batch contains 100 regression expectations, with 50 deliberately incomplete.
+Advanced dashboard profiles support string, Boolean and numeric decisions, with
+eight examples per stage across those profiles. No provider call or dependency
+is added. See [the guide](docs/user-guide.md#bias-and-fairness-matched-decision-checks)
+and [coverage/limits](docs/bias-coverage.md).
+
+
+## Local evidence and proposed-action checks
+
+Two additional focused profiles validate structured packets without provider calls:
+
+- `evidence-v1`: citation markers and exact quotations against a policy-owned
+  source catalog. A matching quote does not prove truth or claim support.
+- `tool-calls-v1`: allowed tool names and argument schemas. No tool is executed
+  or authorized, and sandbox/source-code safety is not assessed.
+
+```powershell
+py -3.13 start_dashboard.py --evaluate --suite evidence
+py -3.13 start_dashboard.py --evaluate --suite actions
+```
+
+Each suite contains 100 saved input/output expectations (36 and 28 deliberately
+incomplete, respectively). See the [user guide](docs/user-guide.md),
+[evidence limits](docs/evidence-coverage.md) and [action limits](docs/actions-coverage.md).
+These checks add no dependencies, model downloads, deployment code or paid calls.

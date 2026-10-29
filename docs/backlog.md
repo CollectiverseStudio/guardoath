@@ -7,6 +7,11 @@
 
 ## Milestone 1 — local checking foundation
 
+- [x] Citation-consistency batch: trusted local source catalog, exact quotations/markers, explicit truth/entailment gaps, 100 regression expectations and API/browser/launcher/guide coverage.
+- [x] Proposed-tool-call batch: trusted exact allowlist/per-tool schemas, no execution, lossy-token rejection, 100 regression expectations and API/browser/launcher/guide coverage.
+- [ ] General claim entailment/truth, live reference verification, source authenticity/freshness and authorization/sandbox execution controls remain separate requirements.
+
+
 - [x] Strict input and output contracts.
 - [x] Real deterministic JSON Schema validation.
 - [x] Structure group batch: dedicated contracts, safe first-problem explanations, timezone-aware time correction, seven new examples per stage, 100 regression cases and guide/launcher/CI coverage.
@@ -45,6 +50,7 @@
 - [ ] Add shared multi-worker/multi-server quotas, application-specific plans, and worker CPU/job budgets.
 - [x] Add a cross-platform dashboard launcher with isolated setup, fresh keys, and browser opening.
 - [x] Add bounded local regression suites, source-free JSON/HTML reports, group filtering, and an easy launcher option.
+- [x] One-command collection of all nine bundled local regression suites, source-free index/per-group reports, nonzero mismatch exits and preserved prior outputs.
 - [x] Compare saved local regression baselines with changed outcomes, mismatches, case-set changes, and separate timing observations.
 - [ ] Add independently reviewed accuracy/calibration datasets and stronger fixture/provenance versioning.
 - [x] Build a local playground with input/output findings, held answer previews, and prominent simulation labels.
@@ -67,6 +73,10 @@
 - [ ] Evaluate Tokatlas compatibility for optional contextual evaluator calls.
 
 ## Milestone 4 — contextual bias evaluation
+
+- [x] Local matched-decision consistency: strict structured evidence, exact numeric comparisons, all-record comparability, safe review findings, 100 regression expectations, independent examples and launcher/CI/guide coverage.
+- [ ] Add independently reviewed matched-model trials and validate decision factors/attribute choices; synthetic consistency fixtures are not fairness accuracy data.
+
 
 - [ ] Approve initial bias rubrics and reviewed examples.
 - [ ] Implement contextual findings with uncertainty and policy references.

@@ -98,7 +98,7 @@ def main():
     parser.add_argument('--no-browser', action='store_true', help='Print the URL without opening a browser')
     parser.add_argument('--reinstall', action='store_true', help='Reinstall the dashboard dependencies')
     parser.add_argument('--evaluate', action='store_true', help='Run the bundled local regression cases and open their report')
-    parser.add_argument('--suite', choices=['local','secrets','privacy','structure','business','text-security'], default='local', help='Choose starter examples or a complete group batch')
+    parser.add_argument('--suite', choices=['local','secrets','privacy','structure','business','text-security','bias','evidence','actions','all'], default='local', help='Choose starter examples or a complete group batch')
     parser.add_argument('--baseline', help='Compare an evaluation against this saved report')
     parser.add_argument('--no-compare', action='store_true', help='Skip automatic comparison with a previous evaluation')
     parser.add_argument('--serve', action='store_true', help=argparse.SUPPRESS)
@@ -107,6 +107,8 @@ def main():
         parser.error('--suite requires --evaluate')
     if (args.baseline or args.no_compare) and not args.evaluate:
         parser.error('--baseline and --no-compare require --evaluate')
+    if args.suite == 'all' and args.baseline:
+        parser.error('--baseline is for individual suites; all-suite collections preserve separate reports')
     if args.baseline and args.no_compare:
         parser.error('Choose --baseline or --no-compare')
     if args.evaluate and args.serve:
@@ -118,9 +120,19 @@ def main():
         if args.serve:
             return serve(args.port, not args.no_browser)
         interpreter = prepare_environment(args.reinstall)
+        if args.evaluate and args.suite == 'all':
+            run_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ-all-') + secrets.token_hex(4)
+            directory = ROOT / '.valinator-reports' / run_id
+            command = [str(interpreter), '-m', 'valinator.evaluate_all', '--pii', '--root', str(ROOT), '--output', str(directory)]
+            completed = subprocess.run(command, cwd=ROOT)
+            if completed.returncode in {0, 1} and (directory/'index.html').is_file():
+                print(f'All local regression reports: {directory / "index.html"}', flush=True)
+                if not args.no_browser:
+                    webbrowser.open((directory/'index.html').as_uri())
+            return completed.returncode
         if args.evaluate:
             cases_path = ROOT / 'evals' / (args.suite + '.json')
-            policies_path = ROOT / 'policies' / ({'secrets':'secrets-batch.json','privacy':'privacy-batch.json','structure':'structure-batch.json','business':'business-batch.json','text-security':'text-security-batch.json'}.get(args.suite,'playground.json'))
+            policies_path = ROOT / 'policies' / ({'secrets':'secrets-batch.json','privacy':'privacy-batch.json','structure':'structure-batch.json','business':'business-batch.json','text-security':'text-security-batch.json','bias':'bias-batch.json','evidence':'evidence-batch.json','actions':'actions-batch.json'}.get(args.suite,'playground.json'))
             baseline = Path(args.baseline).resolve() if args.baseline else None
             if not baseline and not args.no_compare:
                 previous = sorted((ROOT / '.valinator-reports').glob('*/report.json'),

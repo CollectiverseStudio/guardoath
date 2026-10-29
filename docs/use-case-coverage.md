@@ -57,18 +57,21 @@ checks; application-specific checks require their configured contracts.
 | 41 | E-commerce intent | Not implemented; schemas/required sections enforce form, not semantic shopping relevance. |
 | 42 | Legal contract completeness | Configured labeled text sections can detect missing/duplicate/short bodies. No assessment of clause meaning, adequacy or legal sufficiency. |
 | 43 | Symptom context | Schemas/sections can require submitted fields. No clinical interpretation, safe-triage or symptom-adequacy claim. |
-| 44 | Code syntax | Not implemented; JSON/tool-argument schema checking is distinct from source-code parsing/execution safety. |
+| 44 | Code syntax | Source-code syntax is not implemented. The new proposed-tool allowlist/argument-schema checker is distinct from parsing or executing source code; no sandbox claim. |
 | 45 | Real-estate photo rules | Not implemented; no image-type/advertisement/contact-detail vision review. |
 | 46 | Sentiment escalation | Not implemented; no calibrated anger/frustration classifier or human-routing integration. |
 | 47 | UI element layout | Valinator's own dashboard has mobile/browser layout tests. This is not a product endpoint for arbitrary screenshot/layout validation. |
 | 48 | Financial fraud patterns | Submitted numeric/date comparisons and structural contracts only. No recipient ownership, bank-routing validation or fraud database. |
 | 49 | Shipping barcode quality | Not implemented; no barcode/image inspection. |
-| 50 | Academic references | No reference/URL resolution against academic databases or factual citation verification. |
+| 50 | Academic references | Local citation IDs and exact quotations can now be checked against a policy-owned source catalog. No academic database/URL lookup, source authenticity or claim-truth/entailment verification. |
 
 ## Related original goal: bias and fairness
 
 The existing bias checker remains an explicitly labelled synthetic test double.
-No contextual bias or demographic fairness assessment is claimed. A real evaluator
+A separate real local matched_outcomes checker now compares structured submitted
+decisions under declared matching factors and attributes. Missing comparisons
+are incomplete; different outcomes create review findings. It does not classify
+free-text bias or establish demographic fairness. See [coverage](bias-coverage.md). A real evaluator
 needs an approved use-case rubric, contextual evidence, uncertainty, reviewed
 benign/positive examples and matched-scenario evaluation. A demographic mention,
 a moderation finding or a schema pass is not by itself a fairness result.

@@ -1,0 +1,55 @@
+{
+  "format_version": "1",
+  "policies": [
+    {
+      "application_id": "demo",
+      "version": "evidence-v1",
+      "mode": "observe",
+      "rules": [
+        {
+          "checker_id": "evidence",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "evidence": {
+        "min_quote_characters": 20,
+        "sources": [
+          {
+            "source_id": "returns",
+            "text": "Unused items may be returned within 30 days. Keep the original receipt for a return."
+          },
+          {
+            "source_id": "shipping",
+            "text": "Standard delivery usually takes three to five business days. Delivery dates are estimates."
+          }
+        ]
+      }
+    },
+    {
+      "application_id": "demo",
+      "version": "evidence-enforce-v1",
+      "mode": "enforce",
+      "rules": [
+        {
+          "checker_id": "evidence",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "evidence": {
+        "min_quote_characters": 20,
+        "sources": [
+          {
+            "source_id": "returns",
+            "text": "Unused items may be returned within 30 days. Keep the original receipt for a return."
+          },
+          {
+            "source_id": "shipping",
+            "text": "Standard delivery usually takes three to five business days. Delivery dates are estimates."
+          }
+        ]
+      }
+    }
+  ]
+}
