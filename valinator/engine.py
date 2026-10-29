@@ -88,6 +88,11 @@ class Engine:
                             or available != set(core) | optional):
                         raise ValueError("Pack registry must partition policy checks into CORE and optional packs")
 
+    def describe_validation_packs(self, application_id: str) -> list[dict]:
+        if self._pack_registry is None:
+            return []
+        return self._pack_registry.describe(application_id)
+
     def has_policy(self, application_id: str, version: str) -> bool:
         return (application_id, version) in self._policies
 
