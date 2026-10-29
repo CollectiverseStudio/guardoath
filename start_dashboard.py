@@ -68,7 +68,7 @@ def serve(port, browser=True):
     key = secrets.token_urlsafe(32)
     # Deliberately choose the complete local profile, independent of old setup.
     os.environ.update(VALINATOR_API_KEY=key, VALINATOR_ENABLE_PII='1',
-                      VALINATOR_ENABLE_AZURE_PROMPT_SHIELDS='0',
+                      VALINATOR_ENABLE_AZURE_PROMPT_SHIELDS='0', VALINATOR_CONTENT_SAFETY_PROVIDER='none',
                       VALINATOR_POLICY_FILE=str(ROOT / 'policies/playground.json'))
     try:
         import uvicorn

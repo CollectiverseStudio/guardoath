@@ -1,0 +1,38 @@
+{
+  "format_version": "1",
+  "policies": [
+    {
+      "application_id": "demo",
+      "version": "content-safety-v1",
+      "mode": "observe",
+      "timeout_ms": 2000,
+      "failure_action": "block",
+      "rules": [
+        {
+          "checker_id": "pii",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        },
+        {
+          "checker_id": "secrets",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        },
+        {
+          "checker_id": "text_security",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        },
+        {
+          "checker_id": "content_safety",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ],
+      "external_checks": "after_local_pass",
+      "detect_labeled_sensitive_data": true,
+      "detect_secret_assignments": true,
+      "inspect_encoded_secrets": true
+    }
+  ]
+}

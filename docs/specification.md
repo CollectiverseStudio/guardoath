@@ -472,3 +472,24 @@ output. The focused profile visibly states attack intent is not assessed.
 Normal conversation policies and optional Azure activation remain unchanged.
 No provider call, dependency addition, live calibration or complete injection
 protection is implied; supported scope and examples are in the user guide.
+
+
+## Version 0.21: provider-independent content-safety checks
+
+The core remains portable ASGI. CloudFront + Lambda is Greg's intended demo
+hosting path, implemented separately by Greg. No deployment resources, Lambda
+handler or hosting package are part of this validation-check batch. Hosting
+must never select a validation provider. content_safety is a stable checker ID;
+provider defaults to none, with an explicitly selected optional Bedrock adapter
+and a tested replacement-adapter contract. AWS dependencies are optional extras
+for this validation adapter, not requirements on hosting or the portable core.
+
+The initial adapter requires a dedicated published version and full assessments
+for five active text filters; detected=true is a finding even in provider detect
+mode. Missing/inactive/malformed assessment, unsupported additional policy,
+provider/credential/worker failure or timeout remains incomplete. No fallback,
+model generation or deployment is automatic. Two admitted SDK workers retain
+slots after engine cancellation until actual completion. These contracts have
+offline fixtures; live calibration is pending. Existing safety/bias simulators
+are not replaced with a false local keyword detector. See the user guide and
+content-safety coverage inventory for commands and limitations.

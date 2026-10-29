@@ -3,20 +3,27 @@
 Policy-driven input and output checks for AI applications.
 
 Start with the [user guide](docs/user-guide.md): each supported check has a purpose,
-example/use case, expected result, configuration and limitations.
+example/use case, expected result, configuration and limitations. The
+[50-use-case inventory](docs/use-case-coverage.md) records supported, partial and
+unimplemented coverage explicitly.
 
 ## Current milestone
 
-This is a local API prototype. JSON Schema validation is real. Safety and bias
-adapters are **simulators, not detectors**: they exercise policy decisions,
+This is a portable API prototype with local checks, optional provider adapters,
+and independent input/output assessment. JSON Schema validation is real. The legacy
+`safety` and `bias` adapters are **simulators, not detectors**: they exercise policy decisions,
 timeouts, errors, and review flags without calling any paid API. Every successful
 simulator result is labelled `simulated: true`. An ordinary prompt receiving a
 simulated `passed` result has **not** received a safety or bias assessment.
 
 The prototype includes a local API-backed dashboard. It does not store prompt or
 response content and has no database or production deployment. The optional
-Azure connector is off by default and has not been live-calibrated; the launcher
-keeps check execution local.
+Azure connector and the provider-neutral `content_safety` integration are off by
+default and have not been live-calibrated; the launcher keeps check execution
+local. The initial optional content-safety adapter uses Bedrock. Hosting does not
+select a validation provider. See [cloud portability](docs/cloud-portability.md),
+[content-safety coverage](docs/content-safety-coverage.md). Hosting implementation
+is handled separately by Greg; this batch contains no deployment resources.
 
 An optional **real local detector** checks email addresses, credit-card candidates,
 and selected U.S. SSN candidates using Presidio's patterns and validation routines. It is separate
@@ -40,7 +47,7 @@ cd valinator
 On **Windows PowerShell**:
 
 ```powershell
-py -3.12 start_dashboard.py
+py -3.13 start_dashboard.py
 ```
 
 On **Mac/Linux**:
@@ -66,7 +73,7 @@ If the browser does not open, visit the printed URL yourself. To use another por
 append `--port 8001`. Use `--no-browser` to skip automatic opening and `--reinstall`
 to repair the environment. These options work on both systems. The server binds
 only to `127.0.0.1`; this does not publish a website. Existing resource-limit
-environment overrides remain effective. The launcher explicitly disables the Azure connector, including inherited enable settings.
+environment overrides remain effective. The launcher explicitly disables external providers, including inherited selection settings.
 No paid models or API calls are used.
 
 After **Connect**, use **Try an input example** in Step 1, then **Run input checks**.
@@ -577,7 +584,7 @@ After downloading/updating the repository, use the launcher with `--evaluate`:
 
 ```powershell
 # Windows with Python 3.12
-py -3.12 start_dashboard.py --evaluate
+py -3.13 start_dashboard.py --evaluate
 ```
 
 ```bash
@@ -798,3 +805,22 @@ This is local obfuscation review, not semantic prompt-injection detection. Azure
 remains optional, off and not live-calibrated by this batch. See the
 [guide](docs/user-guide.md#prompt-injection-and-manipulation-checks) and
 [case list](docs/text-security-coverage.md). No dependency/model/paid call added.
+
+
+## Optional provider-independent content safety
+
+The stable `content_safety` interface is independent of hosting. The normal
+launcher sets its provider to none. `content-safety-v1` under Advanced therefore
+shows unavailable/incomplete until a provider is explicitly configured. Six
+examples per stage demonstrate contextual cases without predetermined labels.
+The initial optional Bedrock adapter has a 100-case offline contract matrix plus
+integration tests; it has not been live-calibrated. These are not model-accuracy
+measurements. No deployment implementation is included in this batch.
+
+```bash
+python -m pip install -e '.[test,pii,aws]'
+python -m pytest tests/test_content_safety.py tests/test_bedrock_guardrails.py -q
+```
+
+See [the guide](docs/user-guide.md#harmful-content-and-abuse-optional-provider-assessment)
+for configuration, rule IDs, safe error responses and limitations.

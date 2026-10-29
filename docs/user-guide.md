@@ -1,7 +1,7 @@
 # Valinator user guide
 
 This guide grows with the product. It describes user-facing validation checks,
-examples, expected results, configuration, and boundaries. Version: 0.20.0.
+examples, expected results, configuration, and boundaries. Version: 0.21.0.
 
 A **check** examines an input or proposed AI answer. A **regression case** tests
 whether that check behaves as expected on a saved example. Passing a regression
@@ -171,6 +171,9 @@ Redaction is a separate preview/result. A clean ordinary preview does not certif
 privacy, correctness, compliance, or absence of bias. Reports omit submitted and
 redacted text; your fixture files themselves contain their saved input examples.
 
+The [50-use-case coverage inventory](use-case-coverage.md) maps every submitted
+example to actual coverage or its remaining gap.
+
 ## Available validation groups
 
 | Group | Current checks | Use case / boundary |
@@ -178,7 +181,7 @@ redacted text; your fixture files themselves contain their saved input examples.
 | Regulated and sensitive data | Supported email, card and U.S. SSN candidates; opt-in labeled phone, birth date, medical-record, health-plan and bank-account fields; revalidated redaction | Remove supported identifiers before downstream processing; not general PHI or full anonymization |
 | Secrets and confidential information | Selected provider credentials, JWT/private-key markers, embedded URL credentials; optional assignments, encoded inspection and confidential phrases | Catch credential/configuration leaks and customer-defined phrases; full chapter below |
 | Prompt injection and manipulation | Selected hidden/control characters, explicit encodings; optional Azure input-attack analysis | Review obfuscated text; local text signals do not classify malicious intent |
-| Harmful content and abuse | Safety simulator only | Real hate, violence, self-harm, sexual-content and abuse detection remains pending |
+| Harmful content and abuse | Optional provider-neutral content_safety; initial Bedrock adapter covers hate, insults, sexual content, violence and misconduct | Off by default; live accuracy uncalibrated; safety remains a separate simulator; no dedicated self-harm coverage |
 | Structure and data validity | Strict bounded JSON, JSON Schema and supported formats | Reject malformed data and schema/format violations; not factual verification |
 | Scope and intent | Not implemented | A shopping bot receiving an unrelated question is not currently classified as off-topic |
 | Accuracy and supporting evidence | Not implemented | A fabricated citation is not currently checked against evidence/databases |
@@ -549,7 +552,7 @@ result means only that the configured local signals were not found.
 Select **`text-security-v1` under Advanced**, choose Clean question and run input,
 then choose an output example and run output. The profile notice explains that
 attack intent is not assessed. Buttons change only their own editor/format.
-The total catalogs now have 46 input / 49 output examples across profiles;
+The total catalogs now have 52 input / 55 output examples across profiles;
 only examples applicable to the active profile are shown.
 
 | Check / example | Use case | Expected behavior |
@@ -678,7 +681,7 @@ disabled. The normal free-text conversation profile is unchanged.
 
 The same error examples are available for input. Each button changes only its
 own editor and format; it never changes the other editor or the profile. There
-are now 46 input / 49 output examples across all groups. Only examples for the active profile are shown; select another profile under Advanced
+are now 52 input / 55 output examples across all groups. Only examples for the active profile are shown; select another profile under Advanced
 to explore other groups.
 
 ### Sample contract and checks
@@ -794,7 +797,7 @@ checks, not a fraud detector or an authoritative spending control.
 Use **Advanced** to select a profile explicitly. Example buttons never switch it
 or overwrite the opposite editor. Output examples preserve a completed input
 check. Only examples applicable to the active profile are shown, to keep the
-expanding catalogs manageable. There are 46 input / 49 output examples across
+expanding catalogs manageable. There are 52 input / 55 output examples across
 all groups. No AI answer is generated or provider called.
 
 ### Submitted-field comparisons
@@ -897,6 +900,155 @@ needed for direct CLI use:
 ```bash
 python -m valinator.evaluate --cases evals/business.json --policies policies/business-batch.json
 ```
+
+
+## Harmful content and abuse: optional provider assessment
+
+`content_safety` is the common checker interface, independent of where Valinator
+runs. It is disabled by default. Hosting on AWS does not select Bedrock; moving
+the API to another host does not change requests, policies or local checks.
+The initial optional adapter uses Bedrock. Other providers can implement the same
+contract; they are not all implemented or live-calibrated already.
+
+### What each supported check does
+
+| Rule ID | What it reviews under the published provider configuration | Example/use case | Handling |
+| --- | --- | --- | --- |
+| `harmful_content.bedrock_hate` | Hate content | Review a reported identity-based attack in a support conversation | Finding when the provider reports detected; quotation/context can matter |
+| `harmful_content.bedrock_insults` | Insulting or demeaning content | Review “You are an idiot” in a proposed customer reply | Finding when detected; not every criticism is an insult |
+| `harmful_content.bedrock_sexual` | Sexual content | Distinguish content for review from consent/health education | Provider determination; no automatic prediction from the example button |
+| `harmful_content.bedrock_violence` | Threats or violent content | Review “I will hurt you tomorrow” versus historical discussion | Provider signal needs contextual review |
+| `harmful_content.bedrock_misconduct` | Content involving wrongdoing | Review a request to help defraud someone | Not a legal determination or assessment of every harmful activity |
+
+Confidence and filter strength are provider labels, not calibrated probabilities
+or interchangeable severity scores. Detected findings use medium review severity.
+These five filters are not a dedicated self-harm classifier, a bias assessment,
+a fact checker or image analysis. A clean result applies only to selected checks.
+
+### Dashboard examples
+
+Under Advanced, select `content-safety-v1`. Six new examples per editor cover
+Threat review, Reported abuse, Insult review, Health education, Neutral identity
+and Historical violence. Each changes only its own editor. They have **no
+predetermined real classification**: none of these buttons runs a local keyword
+moderator, changes the provider, or calls a service.
+
+The normal launcher disables external providers, so this profile deliberately
+returns **Incomplete / checker_unavailable** and holds the output stage. That is
+expected, not a failed installation. The default conversation profile continues
+to run real local general-text checks. Do not show “all safety tests passed” when
+the provider is unavailable. Browser tests use labelled synthetic API fixtures
+for finding/error/clean UI paths, not live classifier accuracy.
+
+### Explicit configuration
+
+For a separately approved provider trial, install optional `aws` and `pii` extras,
+select the dedicated policy file, and configure server-side settings:
+
+```text
+VALINATOR_CONTENT_SAFETY_PROVIDER=bedrock
+VALINATOR_AWS_REGION=<reviewed commercial AWS region>
+VALINATOR_BEDROCK_GUARDRAIL_ID=<short guardrail ID>
+VALINATOR_BEDROCK_GUARDRAIL_VERSION=<published numeric version>
+VALINATOR_POLICY_FILE=policies/content-safety.json
+VALINATOR_ENABLE_PII=1
+```
+
+Use a workload role or normal server-side SDK credential configuration. Provider
+credentials do not belong in the dashboard. The dedicated guardrail must have all
+five text filters active on both stages. Its strengths/actions are controlled in
+the reviewed provider version. DRAFT is rejected. Additional policy assessment
+sections are intentionally unsupported by this first adapter. No default region,
+resource, provider fallback or live service activation is inferred.
+
+Local PII, secrets and formatting checks run first. Only after **every selected
+local check passes without simulation** and policy permission allows egress does
+the provider receive the current input or output text. This gate is limited by
+those detectors; it does not prove complete anonymization. Request context is not
+sent. JSON and text longer than 10,000 Unicode code points are rejected locally;
+content is never truncated or split. The output API does not require a previous
+input request; your application coordinates and enforces that sequence.
+
+The sample is observe mode: input findings recommend flag, output findings
+recommend block, effective action remains allow. The dashboard holds the answer
+on any findings or incomplete checks. An enforcing application must use an
+appropriate published enforce-mode policy and handle failures explicitly.
+
+### Errors and limitations
+
+| Code | Meaning | Expected handling |
+| --- | --- | --- |
+| `checker_unavailable` | No provider adapter selected/installed | Incomplete; do not claim safety assessment |
+| `external_policy_disabled` / `external_local_gate` | Provider call withheld by policy/local results | Incomplete for required provider; inspect local findings |
+| `bedrock_text_only` / `bedrock_input_limit` | Unsupported format or application size cap | Incomplete; correct the request, no outbound call |
+| `bedrock_invalid_response` | Missing/duplicate/inactive filters, malformed assessment or unsupported extra policy | Incomplete; investigate configuration/contract |
+| `bedrock_credentials_missing` / `bedrock_access_denied` | Missing role credentials or insufficient permission | Incomplete; operator fixes server configuration |
+| `bedrock_rate_limited` / `bedrock_busy` | Provider quota or occupied local worker slots | Incomplete; caller may retry later within its own limits |
+| `bedrock_timeout` / `checker_timeout` | SDK or engine deadline | Incomplete; no automatic fallback or pass |
+| `bedrock_resource_missing` / `bedrock_request_rejected` | Incorrect resource/version or provider rejection | Incomplete; operator reviews configuration |
+| `bedrock_connection_failed` / `bedrock_provider_error` / `bedrock_worker_failure` | Transport, provider or local worker failure | Incomplete; no private exception/provider-body text returned |
+
+In enforce mode, a required-check error uses the configured failure action
+(default block). In observe mode, effective action is still allow and Joe must
+inspect incomplete status/recommendation rather than treating HTTP 200 as clean.
+
+A provider detect-only response with detected=true **still produces a finding**,
+even when its action is NONE. We do not release the provider's replacement output,
+matched text or free-form reason. Cost is unknown, not zero. At most two SDK
+workers are admitted per adapter. An engine timeout cannot terminate an SDK
+thread; its slot remains occupied until it finishes. No retries, fallback calls
+or model generation are performed.
+
+The adapter also requires explicit text coverage counts matching the entire
+submitted string. Missing, partial, wrong-type or mismatched counts are
+incomplete, not a pass. Character-count behavior for non-ASCII real traffic must
+be confirmed during live calibration; conservative mismatches hold the request.
+
+### Run the complete offline contract batch
+
+```bash
+python -m pip install -e '.[test,pii,aws]'
+python -m pytest tests/test_content_safety.py tests/test_bedrock_guardrails.py -q
+```
+
+The 100-case contract matrix covers all five categories/confidence labels,
+detect true/false, both stages and malformed responses. Additional integration
+tests cover errors, gating, local privacy, SDK request validation and resource
+boundaries. These are **not live content-classification accuracy tests**. See
+[the detailed inventory](content-safety-coverage.md). Live reviewed calibration,
+provider routing/terms and budget remain necessary before relying on blocking.
+
+## How Joe receives and handles results
+
+The response returns synchronously to Joe's original HTTP call. `findings` contains
+stable rule IDs and safe explanations; `checker_results` has status and error_code
+for each checker. Multiple completed checks can return findings in one response.
+No email, webhook or separate notification is required.
+
+| Situation | HTTP status | Where Joe finds the explanation |
+| --- | --- | --- |
+| Assessment completes, including content findings | 200 | findings, recommended_action and effective_action |
+| Required checker fails/is unavailable | 200 | evaluation_status=incomplete and checker_results[].error_code |
+| Malformed JSON envelope | 400 | detail |
+| Invalid/missing application credential | 401 | detail |
+| Credential belongs to another application | 403 | detail |
+| Policy version not found | 404 | detail |
+| Body exceeds byte cap / wrong media type | 413 / 415 | detail |
+| Invalid request fields | 422 | detail, without echoed submitted values |
+| Application/process capacity exceeded | 429 / 503 | detail and Retry-After where applicable |
+
+Finding rule IDs and checker error codes are machine-readable. `detail` on HTTP
+errors is currently a safe message; the HTTP status supplies its machine-readable
+classification. HTTP 200 means the API returned an assessment, not that content
+passed. Incomplete, simulated or skipped checks are not a verified pass. Observe
+mode does not enforce the recommendation: Joe must decide what his application
+shows or does. For example, a supported SSN finding can become “Please remove the
+Social Security number and try again” in Joe's UI, without echoing the SSN.
+
+For the planned CloudFront/Lambda demo, the API response format and Bearer key
+remain the same. Hosting implementation is handled separately; see
+[portability boundaries](cloud-portability.md).
+
 
 ## Harmful content, bias and planned checks
 

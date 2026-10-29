@@ -75,7 +75,8 @@ class Engine:
             "checks": [{"id": rule.checker_id, "required": rule.required,
                         "available": rule.checker_id in self._checkers,
                         "simulated": bool(getattr(self._checkers.get(rule.checker_id), "simulated", False)),
-                        "external": bool(getattr(self._checkers.get(rule.checker_id), "external", False)),
+                        "external": rule.checker_id == "content_safety" or bool(getattr(self._checkers.get(rule.checker_id), "external", False)),
+                        "provider": getattr(self._checkers.get(rule.checker_id), "provider", None),
                         "stages": list(rule.stages)}
                        for rule in policy.rules],
         } for (owner, _), policy in self._policies.items() if owner == application_id]
@@ -90,7 +91,7 @@ class Engine:
             checker = self._checkers.get(checker_id)
             if checker is None:
                 return CheckerResult(checker_id=checker_id, checker_version="unknown",
-                                     status="unsupported", error_code="checker_unavailable")
+                                     status="unsupported", error_code="checker_unavailable", external=checker_id == "content_safety")
             simulated = bool(getattr(checker, "simulated", False))
             version = getattr(checker, "checker_version", "unknown")
             external = bool(getattr(checker, "external", False))

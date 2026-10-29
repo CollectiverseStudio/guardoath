@@ -67,3 +67,15 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install -e ".[test,pii]"
       - run: python -m pytest tests/test_launcher.py -q
+
+  optional-aws-adapter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e '.[test,pii,aws]'
+      - name: Content safety - 100 offline contract cases plus integration tests
+        run: python -m pytest tests/test_content_safety.py tests/test_bedrock_guardrails.py -q
+

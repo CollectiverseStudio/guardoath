@@ -49,13 +49,20 @@
 - [ ] Add independently reviewed accuracy/calibration datasets and stronger fixture/provenance versioning.
 - [x] Build a local playground with input/output findings, held answer previews, and prominent simulation labels.
 
-## Milestone 3 — first live integration
+## Milestone 3 — provider-independent integration and live calibration
+
+- [x] Separate hosting from validation-provider selection; stable content_safety interface and provider replacement test.
+- [x] Optional Bedrock content adapter: input/output, five active categories, detect-only findings, local-first gate, safe errors, retained worker slots, 100 offline contract cases plus integration/browser coverage.
+- [ ] Demo hosting/deployment: handled separately by Greg. No Lambda/CloudFront implementation in the validation-check batch.
+- [ ] Independently review and calibrate real harmful-content examples; no accuracy claim from protocol fixtures.
+- [ ] Add additional managed safety adapters as requirements justify; maintain documented differences in coverage.
+
 
 - [ ] Configure an approved Azure resource, region, retention/data terms, and test budget; run a live Prompt Shields smoke/calibration suite.
 
 - [ ] Choose managed safety service, region, data routing rules, and test budget.
 - [ ] Add credentials through a secret manager or local environment, never source control.
-- [ ] Test provider errors and deadlines using recorded synthetic fixtures.
+- [x] Test provider errors and deadlines using synthetic local SDK fixtures (not live calibration).
 - [ ] Add real provider cost metadata and approved fallback behavior.
 - [ ] Evaluate Tokatlas compatibility for optional contextual evaluator calls.
 

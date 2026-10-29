@@ -86,7 +86,7 @@ def simulated_checker(kind: str) -> Checker:
     return run
 
 
-def default_checkers(enable_pii: bool = False, enable_azure: bool = False) -> dict[str, Checker]:
+def default_checkers(enable_pii: bool = False, enable_azure: bool = False, content_safety_provider: str = "none") -> dict[str, Checker]:
     checkers = {"schema": schema_check, "safety": simulated_checker("safety"),
                 "bias": simulated_checker("bias"), "cross_field": cross_field_check,
                 "secrets": build_secret_checker(), "completeness": completeness_check, "text_security": text_security_check}
@@ -96,4 +96,8 @@ def default_checkers(enable_pii: bool = False, enable_azure: bool = False) -> di
     if enable_azure:
         from valinator.azure_prompt_shields import from_environment
         checkers["azure_prompt_shields"] = from_environment()
+    from valinator.content_safety import build_content_safety
+    safety_adapter = build_content_safety(content_safety_provider)
+    if safety_adapter is not None:
+        checkers["content_safety"] = safety_adapter
     return checkers

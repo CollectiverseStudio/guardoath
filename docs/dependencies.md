@@ -96,3 +96,12 @@ UTF-8 decoding with the existing bounded JSON parser. Fixed diagnostic classes
 are Valinator logic; no NLP/Unicode database/model or provider is consulted.
 No canonical Base64 padding-bit enforcement is claimed. Python reference:
 https://docs.python.org/3/library/base64.html. Upstream pins remain unchanged.
+
+
+Version 0.21 optional validation adapter: boto3 1.43.119 and botocore 1.43.121
+were verified available and installed for the isolated `aws` extra; the portable
+core never imports them when no provider is selected. This extra is for a chosen
+validation service, not a hosting requirement. The resolver selected botocore
+1.43.121, pinned for adapter compatibility tests. This is a point-in-time choice,
+not automatic updates. Primary reference: https://pypi.org/project/boto3/.
+No paid provider calls, deployment dependencies or infrastructure are added.

@@ -217,7 +217,7 @@ test("external-provider routing and unknown cost are visible before and after ch
   });
   await connect(page);
   await expect(page.locator("#execution-mode")).toHaveText("External provider gated");
-  await expect(page.locator("#data-routing")).toContainText("only after all configured local checks pass");
+  await expect(page.locator("#data-routing")).toContainText("all configured local checks pass");
   await run(page);
   await expect(page.locator("#input-results")).toContainText("Provider cost not estimated");
   await expect(page.locator("#input-results")).toContainText("external provider");
@@ -396,7 +396,7 @@ for (const stage of ["input","output"]) {
   test(stage + " examples change only their own data and format",async({page})=>{
     await connect(page); const other=stage==='input'?'output':'input'; const seen=new Set(); let checks=0;
     page.on('request',r=>{if(r.url().includes('/v1/checks/')) checks++;});
-    for(const version of ['conversation-v1','redaction-v1','business-v1','completeness-v1','structure-v1','business-number-le-v1','text-security-v1']) {
+    for(const version of ['conversation-v1','redaction-v1','business-v1','completeness-v1','structure-v1','business-number-le-v1','text-security-v1','content-safety-v1']) {
       await page.locator('#policy').selectOption(version);
       const ids=await page.locator('#'+stage+'-samples button:enabled').evaluateAll(nodes=>nodes.map(n=>n.id));
       for(const id of ids) {
@@ -412,7 +412,7 @@ for (const stage of ["input","output"]) {
         await expect(page.locator('#policy')).toHaveValue(version);
       }
     }
-    expect(seen.size).toBe(stage==='input'?46:49);
+    expect(seen.size).toBe(stage==='input'?52:55);
     expect(checks).toBe(0);
   });
 }
@@ -604,4 +604,61 @@ test('local text-security batch keeps incomplete evaluations separate from match
   await expect(page.locator('body')).toContainText('Incomplete evaluations: 14');
   await expect(page.locator('tbody tr')).toHaveCount(100);
   await expect(page.locator('body')).not.toContainText('private-marker');
+});
+
+test('content safety is an optional provider check independent of hosting', async ({page}) => {
+  await connect(page); await profile(page,'content-safety-v1');
+  await expect(page.locator('#profile-status')).toContainText('Provider: not configured');
+  await expect(page.locator('#profile-status')).toContainText('Hosting does not choose the provider');
+  await expect(page.locator('#coverage')).toContainText('Harmful content and abuse · unavailable');
+  await expect(page.locator('#data-routing')).toContainText('selected stage');
+  await run(page);
+  await expect(page.locator('#result-status')).toHaveText('Incomplete');
+  await expect(page.locator('#input-results')).toContainText('checker_unavailable');
+  await expect(page.locator('#answer')).toBeHidden();
+  await expect(page.locator('#run-output')).toBeDisabled();
+});
+
+// API response fixtures exercise UI behavior only. No provider calls or local
+// semantic classification are implied by these browser tests.
+async function contentSafetyFixtures(page, outputFinding, failure=false) {
+  await page.route('**/v1/applications/current',async route=>{
+    const response=await route.fetch(); const data=await response.json();
+    const check=data.policies.find(p=>p.version==='content-safety-v1').checks.find(c=>c.id==='content_safety');
+    check.available=true; check.provider='synthetic-browser-fixture';
+    await route.fulfill({response,json:data});
+  });
+  await page.route('**/v1/checks/*',async route=>{
+    const response=await route.fetch(); const data=await response.json();
+    if(data.policy_version!=='content-safety-v1') return route.fulfill({response,json:data});
+    const output=data.stage==='output';
+    const finding=output&&outputFinding?{rule_id:'harmful_content.fixture_'+outputFinding,category:'harmful_content',severity:'medium',explanation:'Synthetic browser fixture: '+outputFinding+' review signal.'}:null;
+    const check=data.checker_results.find(c=>c.checker_id==='content_safety');
+    check.status=output&&failure?'error':finding?'flagged':'passed'; check.error_code=output&&failure?'bedrock_rate_limited':null;
+    check.checker_version='browser-fixture/1'; check.findings=finding?[finding]:[];
+    data.findings=finding?[finding]:[]; data.evaluation_status=output&&failure?'incomplete':'complete';
+    data.recommended_action=output&&(finding||failure)?'block':'allow';
+    const group=data.groups.find(g=>g.group_id==='harmful_content'); group.status=output&&failure?'incomplete':finding?'findings':'passed';
+    await route.fulfill({response,json:data});
+  });
+}
+for(const category of ['hate','insults','sexual','violence','misconduct']) {
+  test('content safety output holds a '+category+' provider finding',async({page})=>{
+    await contentSafetyFixtures(page,category); await connect(page); await profile(page,'content-safety-v1'); await run(page);
+    await expect(page.locator('#input-results [data-group="harmful_content"] summary')).toContainText('Passed');
+    await expect(page.locator('#output-results')).toContainText('harmful_content.fixture_'+category);
+    await expect(page.locator('#output-results [data-group="harmful_content"] summary')).toContainText('Findings');
+    await expect(page.locator('#answer')).toBeHidden();
+  });
+}
+test('content safety provider failure holds the answer after a completed input',async({page})=>{
+  await contentSafetyFixtures(page,null,true); await connect(page); await profile(page,'content-safety-v1'); await run(page);
+  await expect(page.locator('#result-status')).toHaveText('Incomplete');
+  await expect(page.locator('#output-results')).toContainText('bedrock_rate_limited');
+  await expect(page.locator('#answer')).toBeHidden();
+});
+test('content safety clean fixture can complete the full sequence',async({page})=>{
+  await contentSafetyFixtures(page,null); await connect(page); await profile(page,'content-safety-v1'); await run(page);
+  await expect(page.locator('#result-status')).toHaveText('No findings');
+  await expect(page.locator('#answer')).toBeVisible();
 });

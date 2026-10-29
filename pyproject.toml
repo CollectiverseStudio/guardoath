@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "valinator"
-version = "0.20.0"
+version = "0.21.0"
 description = "Policy-driven input and output checks for AI applications"
 requires-python = ">=3.11"
 dependencies = [
@@ -15,6 +15,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+aws = ["boto3==1.43.119", "botocore==1.43.121"]
 azure = ["httpx2==2.16.0"]
 test = ["httpx2==2.16.0", "pytest==9.2.0"]
 pii = ["presidio-analyzer==2.2.366; python_version < '3.15'"]
