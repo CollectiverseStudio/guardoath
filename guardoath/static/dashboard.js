@@ -12,12 +12,17 @@ function waiting(stage) { const box = $(stage + "-results"); box.replaceChildren
   const title = document.createElement("h3"); title.textContent = stage === "input" ? "Input checks" : "Output checks";
   const note = document.createElement("p"); note.textContent = stage === "input" ? "Waiting for a check." : "Waiting for the input test or proposed answer check."; note.className = "muted"; box.append(title, note);
 }
+function gateText(result) {
+  if (!result) return "Complete the input test first.";
+  return canProceed(result) ? "Input checks passed. Paste your AI’s answer, then run output checks."
+    : "Input held. The input checks found issues or did not complete, so in your application this message would not be sent to the AI model and there is no answer to check. Change the user message (for example, choose Clean question) and run the input checks again.";
+}
 const currentPolicy = () => application?.policies.find(p => p.version === $("policy").value);
 const groupLabels = {passed:"Passed", findings:"Findings", incomplete:"Incomplete", simulated:"Simulated", partial:"Partial coverage", disabled:"Disabled", not_applicable:"Not applicable", not_implemented:"Not implemented"};
 function reset(keepInput = false) {
   revision++;
   if (!keepInput) inputResult = null;
-  $("input-gate").textContent = canProceed(inputResult) ? "Input checks passed. Paste your AI’s answer, then run output checks." : "Complete the input test first.";
+  $("input-gate").textContent = gateText(inputResult);
   buttons();
   $("answer").hidden = true; $("answer").textContent = "";
   $("answer-status").textContent = "Not checked"; $("answer-status").className = "pill";
@@ -333,6 +338,7 @@ function qualityExample(stage, name) {
   }
   return example;
 }
+const sampleReply = "You can return an unused item within 30 days. Please check the store’s policy for details.";
 const samples = [
   {id:"clean", label:"Clean question", outputLabel:"Safe reply", content:stage => {
     for (const name of ["ledger","timestamps","graph","integrity"]) if (currentPolicy()?.version === name+"-v1") return qualityExample(stage,name+"-clean");
@@ -343,7 +349,7 @@ const samples = [
     if (currentPolicy()?.version === "structure-v1") return structureExample(stage,"clean");
     if (currentPolicy()?.version === "business-v1") return {format:"json", text:businessData(false,stage)};
     if (currentPolicy()?.version === "completeness-v1") return {text:stage === "input" ? "Summary: Customer requests return instructions." : "Summary: Return instructions are available.\nNext steps: Contact the store for instructions."};
-    return {text:stage === "input" ? "Can you explain your return policy?" : "You can return an unused item within 30 days. Please check the store’s policy for details."};
+    return {text:stage === "input" ? "Can you explain your return policy?" : sampleReply};
   }},
   {id:"email", label:"Email address", checker:"pii", input:"Can you help me update my contact email? jane@example.com", output:"Your contact email is jane@example.com."},
   {id:"card", label:"Card number", checker:"pii", input:"Can you check this synthetic payment example? Card 4111 1111 1111 1111", output:"The test card number is 4111 1111 1111 1111."},
@@ -499,6 +505,10 @@ function render(stage, result) {
 }
 async function execute(target) {
   if (!application || busy || (target === "output" && !canProceed(inputResult))) return;
+  if (!$("output-content").value.trim()) {
+    if (target === "output") { $("run-error").textContent = "Paste your AI’s answer or choose an output example, then run output checks."; return; }
+    if (target === "both") $("output-content").value = sampleReply;
+  }
   reset(target === "output"); const attempt = revision, policy = $("policy").value, app = application.application_id, token = key;
   const proposed = $("output-content").value; busy = true; buttons(); $("result-status").textContent = "Checking…";
   try {
@@ -507,7 +517,7 @@ async function execute(target) {
       const checked = await assess("input");
       if (attempt !== revision) return;
       inputResult = checked; render("input", checked);
-      $("input-gate").textContent = canProceed(checked) ? "Input checks passed. Paste your AI’s answer, then run output checks." : "Input held. Review findings or incomplete checks and correct the message before continuing.";
+      $("input-gate").textContent = gateText(checked);
     }
     const results = [inputResult];
     if (target !== "input" && canProceed(inputResult)) {

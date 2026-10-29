@@ -851,3 +851,17 @@ for(const [name,sample,code] of [['ledger','4','ledger_invalid_document'],['time
     await expect(page.locator('#run-output')).toBeDisabled();await expect(page.locator('#answer')).toBeHidden();
   });
 }
+test("proposed answer starts empty and a held input keeps its explanation", async ({page}) => {
+  await connect(page); const calls=[];
+  page.on("request",r=>{if(r.url().includes("/v1/checks/")) calls.push(r.url().split("/").pop());});
+  await expect(page.locator("#output-content")).toHaveValue("");
+  await page.locator("#run-input").click(); await expect(page.locator("#run-output")).toBeEnabled();
+  await page.locator("#run-output").click();
+  await expect(page.locator("#run-error")).toContainText("Paste your AI’s answer");
+  expect(calls).toEqual(["input"]);
+  await page.locator("#input-ssn-sample").click(); await page.locator("#run-input").click();
+  await expect(page.locator("#input-gate")).toContainText("Input held");
+  await page.locator("#output-content").fill("Edited answer.");
+  await expect(page.locator("#input-gate")).toContainText("Input held");
+  await expect(page.locator("#run-output")).toBeDisabled(); expect(calls).toEqual(["input","input"]);
+});
