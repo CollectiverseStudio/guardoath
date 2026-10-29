@@ -102,8 +102,8 @@ it does not generate the answer. Passed checks cover only their stated scope.
 py -3.13 start_dashboard.py --evaluate --suite all
 ```
 
-This runs all nine local suites, then opens one index with per-group report links:
-830 expectations, including 160 intentionally incomplete assessments. Matching an
+This runs all ten local suites, then opens one index with per-group report links:
+930 expectations, including 188 intentionally incomplete assessments. Matching an
 expected error/finding is not a clean-content or model-accuracy claim. No provider
 calls run. Python unit/API tests, browser tests, managed-provider contract fixtures
 and unimplemented capabilities are separate. Each run preserves earlier reports;
@@ -876,3 +876,22 @@ Each suite contains 100 saved input/output expectations (36 and 28 deliberately
 incomplete, respectively). See the [user guide](docs/user-guide.md),
 [evidence limits](docs/evidence-coverage.md) and [action limits](docs/actions-coverage.md).
 These checks add no dependencies, model downloads, deployment code or paid calls.
+
+
+## Encoded sensitive-data checks
+
+The optional local encoded_pii checker adds bounded, one-layer labeled Base64/hex
+inspection with existing PII recognizers, including decoded JSON field hints.
+It is included in the default conversation profile. Focused privacy-encoded-v1
+examples cover encoded identifiers, malformed/nested payloads and scan limits;
+encoded data is never rewritten or released through raw PII redaction.
+
+```powershell
+py -3.13 start_dashboard.py --evaluate --suite encoded-privacy
+```
+
+This adds 100 regression expectations, including 28 intentional incomplete cases.
+The all-suite command now runs ten local suites / 930 expectations. No new model,
+dependency, cloud deployment or paid provider call is introduced. See
+[the guide](docs/user-guide.md#sensitive-identifiers-inside-labeled-encodings) and
+[coverage/limits](docs/encoded-privacy-coverage.md).

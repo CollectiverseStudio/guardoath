@@ -122,3 +122,9 @@ The proposed-action checker reuses the existing jsonschema 4.26.0 validator and
 supported format predicates. It adds an explicit lossy numeric-token rejection
 before schema evaluation, not a new arithmetic engine. No new packages, model
 weights, executable tools, reference lookups or cloud services are introduced.
+
+
+Version 0.23 encoded PII reuses the existing optional Presidio patterns, strict
+JSON parser and bounded standard-library Base64/hex UTF-8 decoder. It adds no
+packages or new upstream-version claim, and performs no verification/network/model
+calls. The wrapper preserves its underlying PII checker version in metadata.

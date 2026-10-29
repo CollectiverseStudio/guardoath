@@ -96,6 +96,8 @@ def default_checkers(enable_pii: bool = False, enable_azure: bool = False, conte
     if enable_pii:
         from valinator.pii import build_pii_checker
         checkers["pii"] = build_pii_checker()
+        from valinator.encoded_pii import build_encoded_pii_checker
+        checkers["encoded_pii"] = build_encoded_pii_checker(checkers["pii"])
     if enable_azure:
         from valinator.azure_prompt_shields import from_environment
         checkers["azure_prompt_shields"] = from_environment()

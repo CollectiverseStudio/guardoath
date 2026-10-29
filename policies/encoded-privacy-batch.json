@@ -1,0 +1,81 @@
+{
+  "format_version": "1",
+  "policies": [
+    {
+      "application_id": "demo",
+      "version": "privacy-encoded-v1",
+      "mode": "observe",
+      "timeout_ms": 2000,
+      "detect_labeled_sensitive_data": true,
+      "rules": [
+        {
+          "checker_id": "pii",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        },
+        {
+          "checker_id": "encoded_pii",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "privacy-encoded-redact-v1",
+      "mode": "observe",
+      "timeout_ms": 2000,
+      "detect_labeled_sensitive_data": true,
+      "rules": [
+        {
+          "checker_id": "pii",
+          "on_finding": "redact",
+          "on_output_finding": "redact"
+        },
+        {
+          "checker_id": "encoded_pii",
+          "on_finding": "block",
+          "on_output_finding": "block"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "privacy-encoded-enforce-v1",
+      "mode": "enforce",
+      "timeout_ms": 2000,
+      "detect_labeled_sensitive_data": true,
+      "rules": [
+        {
+          "checker_id": "pii",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        },
+        {
+          "checker_id": "encoded_pii",
+          "on_finding": "flag",
+          "on_output_finding": "block"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "privacy-encoded-redact-enforce-v1",
+      "mode": "enforce",
+      "timeout_ms": 2000,
+      "detect_labeled_sensitive_data": true,
+      "rules": [
+        {
+          "checker_id": "pii",
+          "on_finding": "redact",
+          "on_output_finding": "redact"
+        },
+        {
+          "checker_id": "encoded_pii",
+          "on_finding": "block",
+          "on_output_finding": "block"
+        }
+      ]
+    }
+  ]
+}

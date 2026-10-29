@@ -535,3 +535,19 @@ index. The collection contains 830 expectations with 160 intentional incomplete
 outcomes, not a completed accuracy/fairness/semantic coverage claim. Mismatches
 return 1 and configuration/report failure 2. Collections do not replace individual
 baseline formats or unit/API/browser/provider-contract tests.
+
+
+## Version 0.23: encoded sensitive-data checks
+
+Register encoded_pii with the optional local PII dependency. It recognizes one
+labeled strict Base64/hex UTF-8 layer with document-wide count/token budgets,
+reuses existing identifier detectors, and preserves decoded JSON keys/escapes and
+field hints. No recursive/unlabeled/decryption/file coverage is claimed. Invalid,
+nested, incomplete or overbudget scans cannot become clean passes and discard
+partial encoded findings. No encoded value is transformed; remaining encoded
+identifiers withhold raw-redaction rechecks and external calls. The default
+conversation now selects this checker. Legacy focused policies retain their scope.
+The new 100-case batch adds 28 deliberate incomplete assessments, independent
+examples and unit/API/gate/launcher/browser/CI coverage. The all-suite collection
+now runs ten suites / 930 expectations / 188 expected incomplete cases. No new
+dependency, provider call, model download, deployment or product rename is added.

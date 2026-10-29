@@ -1,7 +1,7 @@
 # Valinator user guide
 
 This guide grows with the product. It describes user-facing validation checks,
-examples, expected results, configuration, and boundaries. Version: 0.22.0.
+examples, expected results, configuration, and boundaries. Version: 0.23.0.
 
 A **check** examines an input or proposed AI answer. A **regression case** tests
 whether that check behaves as expected on a saved example. Passing a regression
@@ -125,17 +125,17 @@ For redaction, explicitly select `redaction-v1` before the Redaction preview but
 
 ## Run every bundled local regression suite
 
-On your Windows computer, one command runs all nine bundled local suites and
+On your Windows computer, one command runs all ten bundled local suites and
 opens an index linking to each detailed report:
 
 ```powershell
 py -3.13 start_dashboard.py --evaluate --suite all
 ```
 
-The current collection has **830 saved expectations**, including **160 deliberate
+The current collection has **930 saved expectations**, including **188 deliberate
 incomplete assessments**. It covers starter examples, secrets, privacy, structure,
-business, local text security, matched decisions, citation evidence and proposed
-tool calls. Matching an expected finding/error is not a clean-content or detector
+business, local text security, matched decisions, citation evidence, proposed
+tool calls and encoded sensitive data. Matching an expected finding/error is not a clean-content or detector
 accuracy claim. These are local engine regressions, separate from the Python
 unit/API tests, browser tests and synthetic provider-contract tests in CI.
 
@@ -574,6 +574,57 @@ gate; output examples demonstrate answer findings. Under `redaction-v1`,
 Redaction preview covers all eight supported types on either stage. No
 paid/provider call is made.
 
+## Sensitive identifiers inside labeled encodings
+
+The new local `encoded_pii` check inspects one explicit Base64/hex layer using the
+same supported PII recognizers. It returns safe findings such as
+`pii.encoded_email_address`, not decoded text. The normal conversation profile
+now includes it. Under Advanced choose `privacy-encoded-v1` to test raw/encoded
+identifiers without the separate formatting check's broader encoding review.
+
+| Example / use case | Checked behavior | Expected result |
+| --- | --- | --- |
+| Encoded email | Email inside labeled strict Base64 UTF-8 | Encoded email candidate finding |
+| Encoded card | Card candidate/checksum inside labeled hex | Encoded card finding |
+| Encoded SSN | Supported SSN context/pattern after decoding | Encoded SSN candidate finding |
+| Encoded JSON fields | Parse decoded JSON keys/escapes and preserve supported field hints | Encoded labeled-phone finding in the example; other supported fields also work |
+| Malformed encoded payload | Invalid/empty/non-UTF-8 bytes cannot be fully scanned | Incomplete: encoded_pii_invalid_encoding |
+| Nested encoding | Explicit second encoding layer remains | Incomplete: encoded_pii_nested_payload; no recursion |
+| Encoded scan budget exceeded | More than 16 payloads or shared/token size limits | Incomplete: encoded_pii_budget_exceeded |
+| Benign encoded text | Decoding completes without a supported identifier | Focused identifier profile passes; normal formatting checks may still flag encoding for review |
+
+Labeled fields include supported phone, birth-date, medical-record, health-plan
+and bank-account candidates when detect_labeled_sensitive_data is enabled.
+No ownership, identity or full-PHI guarantee follows. Only unbroken explicit
+Base64/hex UTF-8 tokens are covered—not unlabeled, URL-safe/percent, compressed,
+encrypted, MIME-wrapped or arbitrary file data. An unlabeled second encoding layer
+may produce no finding and is an explicit scope gap.
+
+The limits are 16 payloads, 4,096 characters per token and 8,192 total token
+characters across text/JSON keys/values. The underlying PII field/deadline limits
+apply per decoded payload, and the engine deadline applies to the whole checker.
+An error discards this checker's partial results and marks required coverage
+incomplete. Decoded malformed JSON is encoded_pii_invalid_decoded_json; malformed
+outer JSON is encoded_pii_invalid_json; underlying scan limits/errors are
+encoded_pii_scan_incomplete. No private values are included in those messages.
+
+Encoded values are never redacted or returned as a transformation. The focused
+privacy-encoded-redact-v1 profile demonstrates that raw redaction must still pass
+all checks: a remaining encoded identifier withholds the transformed result.
+An encoded-only finding can coexist with raw redaction status not_needed; always
+inspect the overall action/findings. Ordinary sample findings recommend input
+flag/output block, while raw-redaction variants block encoded findings on both
+stages. Observe mode still requires the application to apply its review behavior.
+
+```powershell
+py -3.13 start_dashboard.py --evaluate --suite encoded-privacy
+```
+
+This runs 100 expectations with 28 deliberately incomplete cases. The all-suite
+collection now has ten local suites and 930 expectations. See
+[encoded privacy coverage](encoded-privacy-coverage.md) for exact contracts,
+redaction/gating behavior and known gaps. No provider call or new dependency is used.
+
 ## Prompt injection and manipulation checks
 
 The **supported local text-security batch** checks selected formatting controls
@@ -587,7 +638,7 @@ result means only that the configured local signals were not found.
 Select **`text-security-v1` under Advanced**, choose Clean question and run input,
 then choose an output example and run output. The profile notice explains that
 attack intent is not assessed. Buttons change only their own editor/format.
-The total catalogs now have 78 input / 81 output examples across profiles;
+The total catalogs now have 86 input / 89 output examples across profiles;
 only examples applicable to the active profile are shown.
 
 | Check / example | Use case | Expected behavior |
@@ -716,7 +767,7 @@ disabled. The normal free-text conversation profile is unchanged.
 
 The same error examples are available for input. Each button changes only its
 own editor and format; it never changes the other editor or the profile. There
-are now 78 input / 81 output examples across all groups. Only examples for the active profile are shown; select another profile under Advanced
+are now 86 input / 89 output examples across all groups. Only examples for the active profile are shown; select another profile under Advanced
 to explore other groups.
 
 ### Sample contract and checks
@@ -832,7 +883,7 @@ checks, not a fraud detector or an authoritative spending control.
 Use **Advanced** to select a profile explicitly. Example buttons never switch it
 or overwrite the opposite editor. Output examples preserve a completed input
 check. Only examples applicable to the active profile are shown, to keep the
-expanding catalogs manageable. There are 78 input / 81 output examples across
+expanding catalogs manageable. There are 86 input / 89 output examples across
 all groups. No AI answer is generated or provider called.
 
 ### Submitted-field comparisons

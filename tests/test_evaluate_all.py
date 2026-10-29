@@ -20,9 +20,9 @@ def full_collection(tmp_path_factory):
 
 def test_all_bundled_suites_and_reports(full_collection):
     directory,collection=full_collection
-    assert collection['totals']=={'total':830,'matched':830,'mismatched':0,'incomplete':160,'simulated':0}
+    assert collection['totals']=={'total':930,'matched':930,'mismatched':0,'incomplete':188,'simulated':0}
     assert [row['suite'] for row in collection['suites']]==list(all_checks.SUITES)
-    assert len(collection['suites'])==9
+    assert len(collection['suites'])==10
     for name in all_checks.SUITES:
         report=json.loads((directory/name/'report.json').read_text())
         assert report['summary']['matched']==report['summary']['total']
@@ -33,7 +33,7 @@ def test_all_bundled_suites_and_reports(full_collection):
 def test_collection_index_is_source_free_and_not_a_clean_content_claim(full_collection):
     directory,_=full_collection
     html=(directory/'index.html').read_text()
-    assert '830 of 830 expectations matched' in html
+    assert '930 of 930 expectations matched' in html
     assert 'not clean-content or accuracy claims' in html and 'Incomplete' in html
     assert "default-src 'none'" in html and '<script' not in html
     for name in all_checks.SUITES:assert name+'/report.html' in html

@@ -44,6 +44,8 @@ jobs:
       - run: pytest -q
       - name: Privacy group - 100 expectations
         run: python -m valinator.evaluate --pii --cases evals/privacy.json --policies policies/privacy-batch.json
+      - name: Encoded sensitive data - 100 expectations
+        run: python -m valinator.evaluate --pii --cases evals/encoded-privacy.json --policies policies/encoded-privacy-batch.json
   dashboard:
     runs-on: ubuntu-latest
     steps:

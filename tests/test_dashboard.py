@@ -45,7 +45,7 @@ def test_conversation_profile_cannot_pass_without_its_required_pii_adapter():
     result = response.json()
     assert response.status_code == 200
     assert result['evaluation_status'] == 'incomplete'
-    assert {c['checker_id'] for c in result['checker_results']} == {'pii', 'secrets', 'text_security'}
+    assert {c['checker_id'] for c in result['checker_results']} == {'pii', 'secrets', 'text_security', 'encoded_pii'}
 
 
 def test_conversation_profile_runs_combined_checks_on_both_stages():
@@ -63,7 +63,7 @@ def test_conversation_profile_runs_combined_checks_on_both_stages():
             assert response.status_code == 200
             assert result['evaluation_status'] == 'complete'
             checks = {c['checker_id']: c for c in result['checker_results']}
-            assert set(checks) == {'pii', 'secrets', 'text_security'}
+            assert set(checks) == {'pii', 'secrets', 'text_security', 'encoded_pii'}
             assert all(not c['simulated'] and not c['external'] for c in checks.values())
             if flagged:
                 assert checks[flagged]['status'] == 'flagged'

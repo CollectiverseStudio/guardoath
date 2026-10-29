@@ -162,7 +162,7 @@ class Engine:
         if redact_rule:
             original = next(r for r in results if r.checker_id == "pii")
             if original.status == "passed":
-                redaction = RedactionResult(status="not_needed", explanation="No supported identifier was detected; no content is returned.")
+                redaction = RedactionResult(status="not_needed", explanation="The raw PII checker found no supported identifier. Other checker findings and the overall decision still apply; no transformed content is returned.")
             elif original.status != "flagged" or original.transformed_content is None or incomplete:
                 redaction = RedactionResult(status="withheld", explanation="A complete, valid transformation is unavailable; no transformed content is returned.")
                 actions.append(Action.BLOCK)

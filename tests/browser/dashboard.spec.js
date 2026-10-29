@@ -396,7 +396,7 @@ for (const stage of ["input","output"]) {
   test(stage + " examples change only their own data and format",async({page})=>{
     await connect(page); const other=stage==='input'?'output':'input'; const seen=new Set(); let checks=0;
     page.on('request',r=>{if(r.url().includes('/v1/checks/')) checks++;});
-    for(const version of ['conversation-v1','redaction-v1','business-v1','completeness-v1','structure-v1','business-number-le-v1','text-security-v1','content-safety-v1','bias-matched-string-v1','bias-matched-boolean-v1','bias-matched-number-v1','evidence-v1','tool-calls-v1']) {
+    for(const version of ['conversation-v1','redaction-v1','business-v1','completeness-v1','structure-v1','business-number-le-v1','text-security-v1','content-safety-v1','bias-matched-string-v1','bias-matched-boolean-v1','bias-matched-number-v1','evidence-v1','tool-calls-v1','privacy-encoded-v1','privacy-encoded-redact-v1']) {
       await page.locator('#policy').selectOption(version);
       const ids=await page.locator('#'+stage+'-samples button:enabled').evaluateAll(nodes=>nodes.map(n=>n.id));
       for(const id of ids) {
@@ -412,7 +412,7 @@ for (const stage of ["input","output"]) {
         await expect(page.locator('#policy')).toHaveValue(version);
       }
     }
-    expect(seen.size).toBe(stage==='input'?78:81);
+    expect(seen.size).toBe(stage==='input'?86:89);
     expect(checks).toBe(0);
   });
 }
@@ -792,7 +792,36 @@ test('all local regression suites have one index with working group report links
   const {execFileSync}=require('node:child_process');const {pathToFileURL}=require('node:url');const path=testInfo.outputPath('all-local');
   execFileSync('python',['-m','valinator.evaluate_all','--pii','--output',path],{stdio:'pipe'});
   await page.goto(pathToFileURL(require('node:path').join(path,'index.html')).href);
-  await expect(page.locator('body')).toContainText('830 of 830 expectations matched');await expect(page.locator('tbody tr')).toHaveCount(9);
+  await expect(page.locator('body')).toContainText('930 of 930 expectations matched');await expect(page.locator('tbody tr')).toHaveCount(10);
   await page.getByRole('link',{name:'bias',exact:true}).click();
   await expect(page.locator('body')).toContainText('100 of 100 expectations matched');await expect(page.locator('tbody tr')).toHaveCount(100);
+});
+
+for(const [sample,rule] of [['encoded-email','email_address'],['encoded-card','credit_card'],['encoded-ssn','us_ssn'],['encoded-field-json','phone_number']]) {
+  test('encoded sensitive data is held for '+sample,async({page})=>{
+    await connect(page);await profile(page,'privacy-encoded-v1');await page.locator('#output-'+sample+'-sample').click();
+    const response=page.waitForResponse(r=>r.url().endsWith('/v1/checks/output')&&r.request().method()==='POST');await run(page);
+    expect((await (await response).json()).findings.map(f=>f.rule_id)).toContain('pii.encoded_'+rule);
+    await expect(page.locator('#output-results')).toContainText('inside a labeled encoded payload');await expect(page.locator('#answer')).toBeHidden();
+  });
+}
+for(const [sample,code] of [['encoded-invalid','encoded_pii_invalid_encoding'],['encoded-nested','encoded_pii_nested_payload'],['encoded-budget','encoded_pii_budget_exceeded']]) {
+  test('encoded privacy gaps remain incomplete for '+sample,async({page})=>{
+    await connect(page);await profile(page,'privacy-encoded-v1');await page.locator('#input-'+sample+'-sample').click();await run(page);
+    await expect(page.locator('#result-status')).toHaveText('Incomplete');await expect(page.locator('#input-results')).toContainText(code);await expect(page.locator('#run-output')).toBeDisabled();
+  });
+}
+test('benign encoding can pass the focused identifier scan',async({page})=>{
+  await connect(page);await profile(page,'privacy-encoded-v1');await page.locator('#input-encoded-benign-sample').click();await page.locator('#output-encoded-benign-sample').click();await run(page);
+  await expect(page.locator('#result-status')).toHaveText('No findings');await expect(page.locator('#answer')).toBeVisible();
+});
+test('raw redaction does not release remaining encoded identifiers',async({page})=>{
+  await connect(page);await profile(page,'privacy-encoded-redact-v1');await page.locator('#output-content').fill('Contact jane@example.com base64: '+Buffer.from('SSN: 219-09-9999').toString('base64'));await run(page);
+  await expect(page.locator('#output-results')).toContainText('withheld');await expect(page.locator('#answer')).toBeHidden();
+});
+test('encoded privacy report preserves incomplete cases without decoded content',async({page},testInfo)=>{
+  const {execFileSync}=require('node:child_process');const {pathToFileURL}=require('node:url');const path=testInfo.outputPath('encoded-privacy.html');
+  execFileSync('python',['-m','valinator.evaluate','--pii','--cases','evals/encoded-privacy.json','--policies','policies/encoded-privacy-batch.json','--html',path],{stdio:'pipe'});
+  await page.goto(pathToFileURL(path).href);await expect(page.locator('body')).toContainText('100 of 100 expectations matched');await expect(page.locator('body')).toContainText('Incomplete evaluations: 28');
+  await expect(page.locator('body')).not.toContainText('jane@example.com');await expect(page.locator('tbody tr')).toHaveCount(100);
 });

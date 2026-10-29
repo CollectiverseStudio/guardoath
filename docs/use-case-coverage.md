@@ -17,7 +17,7 @@ checks; application-specific checks require their configured contracts.
 | 1 | Indirect injection in incoming email | Not implemented as document/email attack analysis; local formatting signals only. Optional Azure connector currently sends userPrompt, not documents. |
 | 2 | Jailbreak detection | Optional input-only Azure user-attack connector; offline contract tested, live effectiveness uncalibrated. No local semantic jailbreak detector. |
 | 3 | Invisible characters / homoglyphs | Selected invisible/bidi/control characters detected; no scrubbing or general homoglyph coverage. Legitimate joiners are excluded. |
-| 4 | Base64/hex payload inspection | Explicitly labeled, one-layer, bounded text-security signals and opt-in secret inspection. Not recursive decoding or encoded-PII detection. |
+| 4 | Base64/hex payload inspection | Explicitly labeled, one-layer, bounded text-security signals and opt-in secret inspection. One labeled Base64/hex layer of supported PII candidates is now also checked, including decoded JSON/hints. No recursive, unlabeled, general encoded-data or complete-obfuscation coverage. |
 | 5 | System-prompt extraction requests | Plain attack wording is deliberately demonstrated as a local coverage gap. Optional semantic service may signal attacks, not a prompt-leak guarantee. |
 | 6 | Sandbox escape commands | Not implemented. Code execution and sandbox boundaries belong to the integrating application. |
 | 7 | Prompt size / resource caps | Character/UTF-8 body/depth/field budgets, check quotas and concurrency controls. Not model-token counting or distributed billing quotas. |

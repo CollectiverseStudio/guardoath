@@ -43,14 +43,15 @@
 - [x] Add bounded hidden/control-character and explicit Base64/hex review signals with dashboard examples.
 - [x] Complete the supported local text-security batch: fixed signal/reason diagnostics, 100 cases, Unicode/encoding/JSON/shared-budget boundaries, explicit semantic gaps, independent examples and guide/launcher/CI coverage.
 - [x] Implement an opt-in Azure Prompt Shields input adapter, external-routing disclosure, unknown-cost reporting, and offline provider-contract tests.
-- [ ] Activate and calibrate semantic prompt-attack detection against live approved fixtures; evaluate encoded PII/secrets and additional Unicode coverage.
+- [x] One-layer encoded PII batch: shared encoding budgets, existing identifier recognizers/decoded JSON hints, safe incomplete states, raw-redaction/gate protections, 100 expectations and guide/browser/launcher/CI coverage.
+- [ ] Activate/calibrate semantic prompt-attack detection; extend unlabeled/nested/other obfuscations and Unicode coverage with reviewed data.
 - [x] Gate registered external checks behind explicit policy permission and all configured real local passes, including redaction rechecks.
 - [ ] Expand privacy-gate coverage beyond supported PII/secrets; improve combined required-external/redaction workflows.
 - [x] Add per-application token-bucket and concurrent-check limits plus process-level check/ingress budgets and retry guidance.
 - [ ] Add shared multi-worker/multi-server quotas, application-specific plans, and worker CPU/job budgets.
 - [x] Add a cross-platform dashboard launcher with isolated setup, fresh keys, and browser opening.
 - [x] Add bounded local regression suites, source-free JSON/HTML reports, group filtering, and an easy launcher option.
-- [x] One-command collection of all nine bundled local regression suites, source-free index/per-group reports, nonzero mismatch exits and preserved prior outputs.
+- [x] One-command collection of all ten bundled local regression suites, source-free index/per-group reports, nonzero mismatch exits and preserved prior outputs.
 - [x] Compare saved local regression baselines with changed outcomes, mismatches, case-set changes, and separate timing observations.
 - [ ] Add independently reviewed accuracy/calibration datasets and stronger fixture/provenance versioning.
 - [x] Build a local playground with input/output findings, held answer previews, and prominent simulation labels.

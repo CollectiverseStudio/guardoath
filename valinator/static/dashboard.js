@@ -57,6 +57,7 @@ function coverage() {
   if (policy?.version.startsWith("bias-matched-")) $("profile-status").textContent += " Local comparison of submitted matched decisions only. Every record needs a comparable counterpart. This does not classify free-text bias or establish fairness.";
   if (policy?.version === "evidence-v1") $("profile-status").textContent += " Citation and quotation consistency against a configured source catalog only. Factual truth, source authenticity and support for each claim are not assessed.";
   if (policy?.version === "tool-calls-v1") $("profile-status").textContent += " Proposed tool names and argument schemas only. No tool is executed or authorized; code, URLs and side effects are not assessed.";
+  if (policy?.version.startsWith("privacy-encoded")) $("profile-status").textContent += " One labeled Base64/hex layer only. No recursive or unlabeled decoding and no encoded-value redaction. Incomplete scans hold the answer.";
   updateSampleButtons();
 }
 $("connect").addEventListener("click", async () => {
@@ -229,6 +230,18 @@ const samples = [
   {id:"matched-precision",label:"Exact score difference",profiles:["bias-matched-number-v1"],content:stage=>matchedExample(stage,"matched-precision")},
   ...[["evidence-unknown","Unknown source"],["evidence-missing","Missing citation entry"],["evidence-mismatch","Altered quotation"],["evidence-short","Quotation too short"],["evidence-unused","Unused citation"],["evidence-duplicate","Duplicate citation"],["evidence-marker","Invalid citation marker"],["evidence-unrelated","Unrelated claim (not assessed)"],["evidence-catalog","Caller-supplied source catalog"]].map(([id,label])=>({id,label,profiles:["evidence-v1"],content:stage=>evidenceExample(stage,id)})),
   ...[["tool-unknown","Tool outside allowlist"],["tool-invalid","Invalid tool arguments"],["tool-extra","Unexpected command field"],["tool-refund","Refund request over limit"],["tool-missing","Missing tool arguments"],["tool-limit","Too many proposed calls"],["tool-none","No proposed tool calls"],["tool-catalog","Caller-supplied tool catalog"],["tool-lossy","Ambiguous numeric argument"]].map(([id,label])=>({id,label,profiles:["tool-calls-v1"],content:stage=>toolExample(stage,id)})),
+  ...[["encoded-email","Encoded email"],["encoded-card","Encoded card"],["encoded-ssn","Encoded SSN"],["encoded-field-json","Encoded JSON fields"],["encoded-invalid","Malformed encoded payload"],["encoded-nested","Nested encoding (incomplete)"],["encoded-budget","Encoded scan budget exceeded"],["encoded-benign","Benign encoded text"]].map(([id,label])=>({id,label,profiles:["privacy-encoded-v1","privacy-encoded-redact-v1"],content:stage=>{
+    const text=stage === "input"?"Email: jane@example.com":"Email: alex@example.com";
+    let value="base64: "+btoa(text);
+    if(id === "encoded-card") value="hex: "+Array.from("Card: 4111 1111 1111 1111",c=>c.charCodeAt(0).toString(16)).join("");
+    if(id === "encoded-ssn") value="base64: "+btoa("SSN: 219-09-9999");
+    if(id === "encoded-field-json") value="base64: "+btoa(JSON.stringify({Phone:stage === "input"?"202-555-0147":"202-555-0186"}));
+    if(id === "encoded-invalid") value="base64: @bad";
+    if(id === "encoded-nested") value="base64: "+btoa(value);
+    if(id === "encoded-budget") value=Array(17).fill("hex: 61").join(" ");
+    if(id === "encoded-benign") value="base64: "+btoa("Hello world.");
+    return {text:value};
+  }})),
   {id:"output-confidential", label:"Output-only confidential term", stages:["output"], profiles:["conversation-v1","secrets-extended-v1"], output:"The draft reply reveals our unreleased pricing plan."},
   {id:"multiple", label:"Multiple issues", stages:["output"], profiles:["conversation-v1"], content:() => ({text:'Your contact email is jane@example.com.\npassword = "synthetic-example!42"\nThe reply also includes hidden\u200btext.'})},
 ];

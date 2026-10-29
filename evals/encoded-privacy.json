@@ -1,0 +1,2320 @@
+{
+  "format_version": "1",
+  "suite_id": "encoded-privacy-v1",
+  "cases": [
+    {
+      "case_id": "encoded.base64.email_address.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: RW1haWw6IGphbmVAZXhhbXBsZS5jb20=",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_email_address"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.base64.email_address.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: RW1haWw6IGphbmVAZXhhbXBsZS5jb20=",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_email_address"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.hex.email_address.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 456d61696c3a206a616e65406578616d706c652e636f6d",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_email_address"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.hex.email_address.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 456d61696c3a206a616e65406578616d706c652e636f6d",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_email_address"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.base64.credit_card.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: Q2FyZDogNDExMSAxMTExIDExMTEgMTExMQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_credit_card"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.base64.credit_card.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: Q2FyZDogNDExMSAxMTExIDExMTEgMTExMQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_credit_card"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.hex.credit_card.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 436172643a2034313131203131313120313131312031313131",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_credit_card"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.hex.credit_card.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 436172643a2034313131203131313120313131312031313131",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_credit_card"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.base64.us_ssn.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: U1NOOiAyMTktMDktOTk5OQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_us_ssn"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.base64.us_ssn.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: U1NOOiAyMTktMDktOTk5OQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_us_ssn"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.hex.us_ssn.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 53534e3a203231392d30392d39393939",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_us_ssn"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.hex.us_ssn.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 53534e3a203231392d30392d39393939",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_us_ssn"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.base64.phone_number.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: UGhvbmU6IDIwMi01NTUtMDE0Nw==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_phone_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.base64.phone_number.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: UGhvbmU6IDIwMi01NTUtMDE0Nw==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_phone_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.hex.phone_number.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 50686f6e653a203230322d3535352d30313437",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_phone_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.hex.phone_number.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 50686f6e653a203230322d3535352d30313437",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_phone_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.base64.date_of_birth.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: RE9COiAxOTgwLTAyLTI5",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_date_of_birth"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.base64.date_of_birth.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: RE9COiAxOTgwLTAyLTI5",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_date_of_birth"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.hex.date_of_birth.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 444f423a20313938302d30322d3239",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_date_of_birth"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.hex.date_of_birth.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 444f423a20313938302d30322d3239",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_date_of_birth"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.base64.medical_record_number.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: TVJOOiBBMTIzNA==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_medical_record_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.base64.medical_record_number.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: TVJOOiBBMTIzNA==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_medical_record_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.hex.medical_record_number.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 4d524e3a204131323334",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_medical_record_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.hex.medical_record_number.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 4d524e3a204131323334",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_medical_record_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.base64.health_plan_id.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: aW5zdXJhbmNlX21lbWJlcl9pZDogTTAwMDEyMw==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_health_plan_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.base64.health_plan_id.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: aW5zdXJhbmNlX21lbWJlcl9pZDogTTAwMDEyMw==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_health_plan_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.hex.health_plan_id.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 696e737572616e63655f6d656d6265725f69643a204d303030313233",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_health_plan_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.hex.health_plan_id.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 696e737572616e63655f6d656d6265725f69643a204d303030313233",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_health_plan_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.base64.bank_account.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: YmFua19hY2NvdW50X251bWJlcjogNzY1NDMyMTA=",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_bank_account"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.base64.bank_account.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: YmFua19hY2NvdW50X251bWJlcjogNzY1NDMyMTA=",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_bank_account"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.hex.bank_account.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 62616e6b5f6163636f756e745f6e756d6265723a203736353433323130",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_bank_account"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "encoded.hex.bank_account.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 62616e6b5f6163636f756e745f6e756d6265723a203736353433323130",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_bank_account"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.email_address.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: eyJlbWFpbCI6ICJqYW5lQGV4YW1wbGUuY29tIn0=",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_email_address"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.email_address.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: eyJlbWFpbCI6ICJqYW5lQGV4YW1wbGUuY29tIn0=",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_email_address"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.credit_card.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: eyJjYXJkIjogIjQxMTEgMTExMSAxMTExIDExMTEifQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_credit_card"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.credit_card.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: eyJjYXJkIjogIjQxMTEgMTExMSAxMTExIDExMTEifQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_credit_card"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.us_ssn.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: eyJzc24iOiAiMjE5LTA5LTk5OTkifQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_us_ssn"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.us_ssn.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: eyJzc24iOiAiMjE5LTA5LTk5OTkifQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_us_ssn"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.phone_number.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: eyJwaG9uZSI6ICIyMDItNTU1LTAxNDcifQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_phone_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.phone_number.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: eyJwaG9uZSI6ICIyMDItNTU1LTAxNDcifQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_phone_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.date_of_birth.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: eyJkb2IiOiAiMTk4MC0wMi0yOSJ9",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_date_of_birth"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.date_of_birth.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: eyJkb2IiOiAiMTk4MC0wMi0yOSJ9",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_date_of_birth"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.medical_record_number.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: eyJtcm4iOiAiQTEyMzQifQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_medical_record_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.medical_record_number.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: eyJtcm4iOiAiQTEyMzQifQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_medical_record_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.health_plan_id.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: eyJpbnN1cmFuY2VfbWVtYmVyX2lkIjogIk0wMDAxMjMifQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_health_plan_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.health_plan_id.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: eyJpbnN1cmFuY2VfbWVtYmVyX2lkIjogIk0wMDAxMjMifQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_health_plan_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.bank_account.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: eyJiYW5rX2FjY291bnRfbnVtYmVyIjogIjc2NTQzMjEwIn0=",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_bank_account"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.bank_account.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: eyJiYW5rX2FjY291bnRfbnVtYmVyIjogIjc2NTQzMjEwIn0=",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_bank_account"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "benign.base64.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: SGVsbG8gd29ybGQu",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "benign.base64.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: SGVsbG8gd29ybGQu",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "benign.hex.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 556e72656c61746564207265666572656e636520746578742e",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "benign.hex.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 556e72656c61746564207265666572656e636520746578742e",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "scope.unlabeled.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "amFuZUBleGFtcGxlLmNvbQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "scope.unlabeled.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "amFuZUBleGFtcGxlLmNvbQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "scope.unlabeled-nesting.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: YW1GdVpVQmxlR0Z0Y0d4bExtTnZiUT09",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "scope.unlabeled-nesting.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: YW1GdVpVQmxlR0Z0Y0d4bExtTnZiUT09",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "benign.no-encoding.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "A clean question.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "benign.no-encoding.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "A clean question.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "benign.outer-json.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "{\"note\": \"base64: SGVsbG8=\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "benign.outer-json.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "{\"note\": \"base64: SGVsbG8=\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "raw.email.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "Contact jane@example.com",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [
+          "pii.email_address"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "raw.email.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "Contact jane@example.com",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [
+          "pii.email_address"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "benign.unlabeled-phone.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "202-555-0147",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "benign.unlabeled-phone.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "202-555-0147",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.base64.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: @bad",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.base64.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: @bad",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.hex.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: zz",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.hex.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: zz",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.binary.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: ff",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.binary.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: ff",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.empty.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64:",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.empty.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64:",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.count.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.count.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61 hex: 61",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.token.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.token.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.total.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFh base64: YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFh base64: YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFh",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.total.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFh base64: YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFh base64: YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFh",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.nested.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: YmFzZTY0OiBhbUZ1WlVCbGVHRnRjR3hsTG1OdmJRPT0=",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.nested.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: YmFzZTY0OiBhbUZ1WlVCbGVHRnRjR3hsTG1OdmJRPT0=",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.decoded-json.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: e2JhZA==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.decoded-json.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: e2JhZA==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.outer-json.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "{bad",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "error",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.outer-json.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "{bad",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "error",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.duplicate-json.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "{\"note\":1,\"note\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "error",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.duplicate-json.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "{\"note\":1,\"note\":2}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "error",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.decoded-depth.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbMF1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.decoded-depth.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbMF1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.field-budget.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: UGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.field-budget.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: UGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3ClBob25lOiAyMDItNTU1LTAxNDcKUGhvbmU6IDIwMi01NTUtMDE0NwpQaG9uZTogMjAyLTU1NS0wMTQ3",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.partial-discard.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: amFuZUBleGFtcGxlLmNvbQ== base64: @bad",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "incomplete.partial-discard.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-v1",
+        "content": "base64: amFuZUBleGFtcGxlLmNvbQ== base64: @bad",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "error"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "redaction.encoded-only.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-redact-v1",
+        "content": "base64: amFuZUBleGFtcGxlLmNvbQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_email_address"
+        ],
+        "redaction_status": "not_needed"
+      }
+    },
+    {
+      "case_id": "redaction.encoded-only.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-redact-v1",
+        "content": "base64: amFuZUBleGFtcGxlLmNvbQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.encoded_email_address"
+        ],
+        "redaction_status": "not_needed"
+      }
+    },
+    {
+      "case_id": "redaction.mixed.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-redact-v1",
+        "content": "Contact jane@example.com base64: U1NOOiAyMTktMDktOTk5OQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.email_address",
+          "pii.encoded_us_ssn"
+        ],
+        "redaction_status": "withheld"
+      }
+    },
+    {
+      "case_id": "redaction.mixed.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-redact-v1",
+        "content": "Contact jane@example.com base64: U1NOOiAyMTktMDktOTk5OQ==",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged",
+          "encoded_pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.email_address",
+          "pii.encoded_us_ssn"
+        ],
+        "redaction_status": "withheld"
+      }
+    },
+    {
+      "case_id": "redaction.raw-only.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-redact-v1",
+        "content": "Contact jane@example.com",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "redact",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [
+          "pii.email_address"
+        ],
+        "redaction_status": "preview"
+      }
+    },
+    {
+      "case_id": "redaction.raw-only.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-redact-v1",
+        "content": "Contact jane@example.com",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "redact",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [
+          "pii.email_address"
+        ],
+        "redaction_status": "preview"
+      }
+    },
+    {
+      "case_id": "redaction.clean.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-redact-v1",
+        "content": "A clean question.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_needed"
+      }
+    },
+    {
+      "case_id": "redaction.clean.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-encoded-redact-v1",
+        "content": "A clean question.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed",
+          "encoded_pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_needed"
+      }
+    }
+  ]
+}

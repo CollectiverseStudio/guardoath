@@ -70,7 +70,7 @@ def test_launcher_serves_dashboard_and_all_policies_with_fresh_key():
                                          headers={'Authorization':'Bearer '+key})
         with opener.open(request,timeout=2) as response:
             metadata = json.load(response)
-        assert {'pii-v1','redaction-v1','secrets-v1','business-v1','completeness-v1','text-security-v1','content-safety-v1','bias-matched-string-v1','evidence-v1','tool-calls-v1'} <= {p['version'] for p in metadata['policies']}
+        assert {'pii-v1','redaction-v1','secrets-v1','business-v1','completeness-v1','text-security-v1','content-safety-v1','bias-matched-string-v1','evidence-v1','tool-calls-v1','privacy-encoded-v1'} <= {p['version'] for p in metadata['policies']}
         with pytest.raises(urllib.error.HTTPError) as denied:
             opener.open(urllib.request.Request(request.full_url,headers={'Authorization':'Bearer old-key'}),timeout=2)
         assert denied.value.code == 401
@@ -133,7 +133,7 @@ def test_launcher_second_run_compares_with_previous_without_overwriting_it(tmp_p
 
 
 @pytest.mark.skipif(not PII_AVAILABLE, reason='Launcher preparation uses the complete optional environment')
-@pytest.mark.parametrize("suite",["secrets","privacy","structure","business","text-security","bias","evidence","actions"])
+@pytest.mark.parametrize("suite",["secrets","privacy","structure","business","text-security","bias","evidence","actions","encoded-privacy"])
 def test_launcher_runs_the_entire_group(tmp_path,monkeypatch,suite):
     import start_dashboard
     (tmp_path/'evals').mkdir(); (tmp_path/'policies').mkdir()
@@ -177,5 +177,5 @@ def test_launcher_runs_every_local_suite_with_one_command(tmp_path,monkeypatch):
     assert start_dashboard.main()==0
     index=next((tmp_path/'.valinator-reports').glob('*/index.html'))
     data=json.loads(index.with_name('collection.json').read_text())
-    assert data['totals']['matched']==830 and data['totals']['mismatched']==0
-    assert len(data['suites'])==9
+    assert data['totals']['matched']==930 and data['totals']['mismatched']==0
+    assert len(data['suites'])==10
