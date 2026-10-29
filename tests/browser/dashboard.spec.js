@@ -644,9 +644,13 @@ async function contentSafetyFixtures(page, outputFinding, failure=false) {
 }
 for(const category of ['hate','insults','sexual','violence','misconduct']) {
   test('content safety output holds a '+category+' provider finding',async({page})=>{
-    await contentSafetyFixtures(page,category); await connect(page); await profile(page,'content-safety-v1'); await run(page);
+    await contentSafetyFixtures(page,category); await connect(page); await profile(page,'content-safety-v1');
+    const outputResponse=page.waitForResponse(response=>response.url().endsWith('/v1/checks/output')&&response.request().method()==='POST');
+    await run(page);
+    const result=await (await outputResponse).json();
+    expect(result.findings.map(f=>f.rule_id)).toContain('harmful_content.fixture_'+category);
     await expect(page.locator('#input-results [data-group="harmful_content"] summary')).toContainText('Passed');
-    await expect(page.locator('#output-results')).toContainText('harmful_content.fixture_'+category);
+    await expect(page.locator('#output-results')).toContainText('Synthetic browser fixture: '+category+' review signal.');
     await expect(page.locator('#output-results [data-group="harmful_content"] summary')).toContainText('Findings');
     await expect(page.locator('#answer')).toBeHidden();
   });
