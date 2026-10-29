@@ -7,6 +7,10 @@ Valisentry (formerly Valinator) — policy-driven input and output checks for AI
 Start with the [user guide](docs/user-guide.md): each supported check has a purpose,
 example/use case, expected result, configuration and limitations. The [200-use-case catalog](docs/use-case-coverage.md) spans [UC001–050](docs/use-case-coverage.md), [UC051–100](docs/additional-use-cases.md), and [UC101–200](docs/use-cases-101-200.md), distinguishing supported, partial and proposed coverage.
 
+## 200-use-case implementation inventory
+
+The [machine-readable catalog](docs/use-case-manifest.json) enumerates **UC001–UC200** with stable IDs and source-document links. The corresponding [inventory integrity test](tests/test_use_case_manifest.py) verifies all IDs are present and unique. This test **does not** demonstrate that 200 validators exist or that their behavior is correct. Entries remain `review_required` or `proposed` until audited against real implementation, regression evidence, and domain-specific accuracy review. The first working [CORE/LOG/AGENT demo policy](policies/validation-packs-demo.json) exercises only narrow existing text, timestamp, and proposed-tool-call checks.
+
 ## Current milestone
 
 This is a portable API prototype with local checks, optional provider adapters,
