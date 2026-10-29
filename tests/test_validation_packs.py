@@ -133,12 +133,12 @@ def test_load_published_registry_and_reject_invalid_files(tmp_path):
     from valinator.validation_packs import load_pack_registry
     target = tmp_path / "packs.json"
     target.write_text(json.dumps({"format_version": "1", "applications": {
-        "demo": [{"code": "LOG", "version": "1", "checker_ids": ["timestamps"]}]
+        "demo": {"core_checker_ids": ["text_security"], "packs": [{"code": "LOG", "version": "1", "checker_ids": ["timestamps"]}]}
     }}))
     assert load_pack_registry(target).resolve("demo", ("LOG",))[0].version == "1"
     target.write_text(json.dumps({"format_version": "1", "applications": {
-        "demo": [{"code": "LOG", "version": "1", "checker_ids": ["timestamps"],
-                  "untrusted_override": True}]
+        "demo": {"core_checker_ids": ["text_security"], "packs": [{"code": "LOG", "version": "1", "checker_ids": ["timestamps"],
+                  "untrusted_override": True}]}
     }}))
     with pytest.raises(ValueError, match="Unable to load"):
         load_pack_registry(target)
@@ -153,3 +153,18 @@ def test_startup_requires_policy_file_when_registry_is_configured(monkeypatch):
     monkeypatch.delenv("VALINATOR_POLICY_FILE", raising=False)
     with pytest.raises(ValueError, match="requires a policy file"):
         create_app()
+
+
+def test_explicit_core_cannot_be_made_optional():
+    from valinator.engine import Engine
+    from valinator.models import Policy, Rule
+    from valinator.checkers import default_checkers
+    with pytest.raises(ValueError, match="CORE checker cannot be optional"):
+        PackRegistry({"demo": (Pack("LOG", "1", ("text_security",)),)},
+                     core={"demo": ("text_security",)})
+    registry = PackRegistry({"demo": (Pack("LOG", "1", ("schema",)),)},
+                            core={"demo": ("text_security",)})
+    with pytest.raises(ValueError, match="partition policy checks"):
+        Engine([Policy(application_id="demo", version="v1",
+                       rules=(Rule(checker_id="text_security"),))],
+               default_checkers(), pack_registry=registry)
