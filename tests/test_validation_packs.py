@@ -206,3 +206,16 @@ def test_real_demo_bundle_core_log_and_agent():
                     '"arguments":{"shipment_id":"SHP-1234"}}]}', ("AGENT",), "json")
     assert bad_agent.recommended_action == "block"
     assert any(f.rule_id == "actions.unknown_tool" for f in bad_agent.findings)
+
+
+def test_registry_rejects_duplicate_json_keys_and_core_optional_overlap(tmp_path):
+    from valinator.validation_packs import load_pack_registry
+    path = tmp_path / "registry.json"
+    path.write_text('{"format_version":"1","format_version":"1","applications":{}}')
+    with pytest.raises(ValueError, match="Unable to load"):
+        load_pack_registry(path)
+    path.write_text('{"format_version":"1","applications":{"demo":{'
+                    '"core_checker_ids":["text_security"],"packs":[{'
+                    '"code":"LOG","version":"1","checker_ids":["text_security"]}]}}}')
+    with pytest.raises(ValueError, match="Unable to load"):
+        load_pack_registry(path)
