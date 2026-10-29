@@ -30,6 +30,7 @@ class CheckRequest(Contract):
     # One canonical content value is used by every checker.
     content_format: Literal["text", "json"] = "text"
     request_context: str | None = Field(default=None, max_length=8_000)
+    validation_codes: tuple[Annotated[str, Field(pattern=r"^[A-Z][A-Z0-9_]{1,31}$", strict=True)], ...] = Field(default=(), max_length=12)
 
 
 class Finding(Contract):
