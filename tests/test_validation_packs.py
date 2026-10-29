@@ -249,3 +249,40 @@ def test_authenticated_pack_discovery_is_tenant_scoped():
     other = client.get("/v1/validation-packs", headers={
         "Authorization": "Bearer other-key"})
     assert other.json()["available_packs"] == [{"code": "HLTH", "version": "2"}]
+
+
+def test_registry_snapshots_mutable_caller_inputs():
+    source = ["schema"]
+    pack = Pack("LOG", "1", source)
+    published = {"demo": [pack]}
+    registry = PackRegistry(published, core={"demo": ("text_security",)})
+    source.append("tool_calls")
+    published["demo"].append(Pack("AGENT", "1", ("tool_calls",)))
+    assert registry.resolve("demo", ("LOG",))[0].checker_ids == ("schema",)
+    with pytest.raises(PackSelectionError):
+        registry.resolve("demo", ("AGENT",))
+
+
+def test_required_incompatible_packs_are_not_reported_clean():
+    import asyncio
+    from pathlib import Path
+    from valinator.config import load_policies
+    from valinator.validation_packs import load_pack_registry
+    from valinator.checkers import default_checkers
+    from valinator.engine import Engine
+    from valinator.models import CheckRequest, Stage
+    root = Path(__file__).resolve().parents[1]
+    engine = Engine(load_policies(root / "policies/validation-packs-demo.json"),
+                    default_checkers(),
+                    pack_registry=load_pack_registry(root / "policies/validation-packs.example.json"))
+    result = asyncio.run(engine.check(CheckRequest(
+        application_id="demo", policy_version="valisentry-packs-v1",
+        content='{"samples":[{"timestamp":"2026-10-28T10:00:00Z","value":1},'
+                '{"timestamp":"2026-10-28T10:01:00Z","value":2}]}',
+        content_format="json", validation_codes=("LOG", "AGENT"),
+    ), Stage.INPUT))
+    assert result.applied_validation_packs == ("CORE", "LOG@1", "AGENT@1")
+    assert result.evaluation_status == "incomplete"
+    assert result.recommended_action == "block"
+    assert result.effective_action == "block"
+    assert any(r.checker_id == "tool_calls" and r.status != "passed" for r in result.checker_results)
