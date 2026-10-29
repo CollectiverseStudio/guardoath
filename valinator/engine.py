@@ -97,12 +97,14 @@ class Engine:
 
     async def check(self, request: CheckRequest, stage: Stage) -> CheckResponse:
         policy = self._policies[(request.application_id, request.policy_version)]
+        applied_packs = ("CORE",)
         if self._pack_registry is None:
             if request.validation_codes:
                 raise PackSelectionError("Validation packs are not configured")
             selected_ids = {rule.checker_id for rule in policy.rules}
         else:
             packs = self._pack_registry.resolve(request.application_id, request.validation_codes)
+            applied_packs = ("CORE", *(pack.code + "@" + pack.version for pack in packs))
             available = {rule.checker_id for rule in policy.rules}
             optional = self._pack_registry.optional_checker_ids(request.application_id)
             if not optional <= available:
@@ -204,7 +206,7 @@ class Engine:
         external = any(c.external for c in (*results, *redaction.validation_results))
         return CheckResponse(
             check_id=str(uuid4()), application_id=request.application_id,
-            policy_version=policy.version, stage=stage, mode=policy.mode,
+            policy_version=policy.version, applied_validation_packs=applied_packs, stage=stage, mode=policy.mode,
             evaluation_status="incomplete" if incomplete else "complete",
             recommended_action=recommended,
             effective_action=Action.ALLOW if policy.mode == "observe" else recommended,
