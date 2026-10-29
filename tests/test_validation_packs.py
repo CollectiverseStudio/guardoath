@@ -355,3 +355,24 @@ def test_group_results_only_report_selected_checks():
     selected = check(("LOG",))
     assert "schema" in next(g for g in selected.groups if g.group_id == "structure").checker_ids
     assert any(result.checker_id == "schema" for result in selected.checker_results)
+
+
+def test_stage_inapplicable_remains_not_applicable_with_pack_registry():
+    import asyncio
+    from valinator.engine import Engine
+    from valinator.checkers import default_checkers
+    from valinator.models import CheckRequest, Policy, Rule, Stage
+    policy = Policy(application_id="demo", version="v1", rules=(
+        Rule(checker_id="text_security", stages=(Stage.OUTPUT,)),
+        Rule(checker_id="schema", stages=(Stage.INPUT,), required=False),
+    ))
+    registry = PackRegistry({"demo": (Pack("LOG", "1", ("schema",)),)},
+                            core={"demo": ("text_security",)})
+    engine = Engine([policy], default_checkers(), pack_registry=registry)
+    response = asyncio.run(engine.check(CheckRequest(
+        application_id="demo", policy_version="v1", content="hello",
+    ), Stage.INPUT))
+    groups = {g.group_id: g for g in response.groups}
+    assert groups["prompt_security"].status == "not_applicable"
+    assert groups["structure"].status == "disabled"
+    assert response.checker_results == ()
