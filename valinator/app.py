@@ -19,6 +19,7 @@ from valinator.models import Action, CheckRequest, CheckResponse, Policy, Rule, 
 from valinator.ingress import JsonIngressLimits
 from valinator.groups import GROUPS
 from valinator.budgets import ResourceLimits, RequestBudgets, RequestCapacity
+from valinator.validation_packs import PackSelectionError
 
 
 def demo_engine(enable_pii: bool = False, enable_azure: bool = False, content_safety_provider: str = "none") -> Engine:
@@ -100,7 +101,10 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         if not service.has_policy(application_id, request.policy_version):
             raise HTTPException(404, "Policy version not found")
         with budgets.check(application_id):
-            return await service.check(request, stage)
+            try:
+                return await service.check(request, stage)
+            except PackSelectionError:
+                raise HTTPException(422, "Invalid or unavailable validation pack selection") from None
 
     @api.get("/healthz")
     async def health():
