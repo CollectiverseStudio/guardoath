@@ -24,3 +24,7 @@ Status: **requirements and fixture plan**, not implemented coverage. All tool pe
 ## Acceptance and evidence
 
 Each implementation must show: trusted policy source; input and output stages where applicable; observed and enforced action; fail-safe on missing dependencies; correct tenant isolation; positive, adversarial and boundary fixtures; independent dispatch denial tests; sanitized evidence with policy/checker version; and CI success. Never mark an item verified from a simulated checker, a prompt-only test, or a test that does not reach the actual enforcement boundary.
+
+## Implemented primitive — not integrated into agent dispatch
+
+`valinator.agent_budgets.AgentBudget` now provides bounded, thread-safe in-process reservations for per-run steps, depth and call counts. Reservations are atomic and do not refund usage after a failed downstream call. `tests/test_agent_budgets.py` covers boundaries, invalid values and concurrent contention. This is a **partial foundation** for UC102 and UC109, not a complete implementation: it is not yet connected to the API, persistent run identity, agent runtime, billing/token costs, distributed coordination, or cancellation of in-flight work. No claim of preventing autonomous loops or cost overruns is made until those boundaries are enforced and verified.
