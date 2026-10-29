@@ -286,3 +286,47 @@ def test_required_incompatible_packs_are_not_reported_clean():
     assert result.recommended_action == "block"
     assert result.effective_action == "block"
     assert any(r.checker_id == "tool_calls" and r.status != "passed" for r in result.checker_results)
+
+
+def test_pack_without_active_checks_at_stage_is_rejected():
+    import asyncio
+    from valinator.engine import Engine
+    from valinator.models import CheckRequest, Policy, Rule, Stage
+    from valinator.checkers import default_checkers
+    reg = PackRegistry({"demo": (Pack("AGENT", "1", ("schema",)),)},
+                       core={"demo": ("text_security",)})
+    policy = Policy(application_id="demo", version="v1", rules=(
+        Rule(checker_id="text_security"),
+        Rule(checker_id="schema", stages=(Stage.INPUT,), required=False),
+    ))
+    engine = Engine([policy], default_checkers(), pack_registry=reg)
+    request = CheckRequest(application_id="demo", policy_version="v1",
+                           content="hello", validation_codes=("AGENT",))
+    with pytest.raises(PackSelectionError, match="unavailable for this stage"):
+        asyncio.run(engine.check(request, Stage.OUTPUT))
+    response = asyncio.run(engine.check(request, Stage.INPUT))
+    assert response.applied_validation_packs == ("CORE", "AGENT@1")
+
+
+def test_api_rejects_stage_inapplicable_pack_with_sanitized_error():
+    from fastapi.testclient import TestClient
+    from valinator.app import create_app
+    from valinator.engine import Engine
+    from valinator.models import Policy, Rule, Stage
+    from valinator.checkers import default_checkers
+    registry = PackRegistry({"demo": (Pack("LOG", "1", ("schema",)),)},
+                            core={"demo": ("text_security",)})
+    policy = Policy(application_id="demo", version="v1", rules=(
+        Rule(checker_id="text_security"),
+        Rule(checker_id="schema", stages=(Stage.INPUT,), required=False),
+    ))
+    client = TestClient(create_app(
+        engine=Engine([policy], default_checkers(), pack_registry=registry),
+        credentials={"demo-key": "demo"},
+    ))
+    result = client.post("/v1/checks/output",
+        headers={"Authorization": "Bearer demo-key"},
+        json={"application_id": "demo", "policy_version": "v1",
+              "content": "private-customer-content", "validation_codes": ["LOG"]})
+    assert result.status_code == 422
+    assert "private-customer-content" not in result.text
