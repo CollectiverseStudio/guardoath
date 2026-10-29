@@ -28,3 +28,9 @@ Each implementation must show: trusted policy source; input and output stages wh
 ## Implemented primitive — not integrated into agent dispatch
 
 `valinator.agent_budgets.AgentBudget` now provides bounded, thread-safe in-process reservations for per-run steps, depth and call counts. Reservations are atomic and do not refund usage after a failed downstream call. `tests/test_agent_budgets.py` covers boundaries, invalid values and concurrent contention. This is a **partial foundation** for UC102 and UC109, not a complete implementation: it is not yet connected to the API, persistent run identity, agent runtime, billing/token costs, distributed coordination, or cancellation of in-flight work. No claim of preventing autonomous loops or cost overruns is made until those boundaries are enforced and verified.
+
+## Additional deterministic primitives (pending CI verification)
+
+- `valinator.workflow_guard` provides a strict, server-configured transition graph and deterministic allow/deny decisions for UC104. It rejects shipping directly from `created` in the illustrative workflow. **It does not own the database state, verify payment or perform atomic compare-and-swap**, so full UC104 enforcement is still outstanding.
+- `valinator.agent_authorization` provides a tenant-scoped permission decision for UC105. Identity and grants must be authenticated by the integrating application, and actual tool dispatch must independently enforce authorization. **It does not authenticate users or prevent a host from bypassing it.**
+- Unit tests cover valid/invalid transitions, cross-tenant isolation, least privilege and missing identity. These are deterministic foundation tests, not proof of full agent orchestration security.
