@@ -206,7 +206,7 @@ Redaction is a separate preview/result. A clean ordinary preview does not certif
 privacy, correctness, compliance, or absence of bias. Reports omit submitted and
 redacted text; your fixture files themselves contain their saved input examples.
 
-The [50-use-case coverage inventory](use-case-coverage.md) maps every submitted
+The [100-use-case coverage inventory](use-case-coverage.md) maps every submitted
 example to actual coverage or its remaining gap.
 
 ## Available validation groups
@@ -1400,3 +1400,23 @@ There is no expansion in the normal check API: only the offline regression runne
 understands these names. Reports still omit constructed values. The case catalog
 above describes each resulting use case; ordinary custom text cases remain
 supported without a fixture name.
+
+
+## Additional use cases 51–100
+
+The [extended catalog and test plan](additional-use-cases.md) records all 50 new
+examples, with invalid/attack cases, legitimate controls and boundary/failure
+requirements. Seventeen have scoped or partial existing controls exercised by
+77 new unit/API/engine tests. Thirty-three need new components and reviewed
+fixtures; they are not represented as passing detectors. Examples of current
+coverage are null quotas, coordinate-array limits, exact category codes, declared
+sensor/box bounds, policy versioning, aggregate comparisons, over-posting rejection,
+UTF-8 rejection and configured terms. Their documented limitations matter: a box
+is not a polygon, supplied totals are not summed line items, and valid Unicode is
+not a semantic language-safety judgment.
+
+Run the new tests with `python -m pytest tests/test_additional_use_cases.py -q`
+in a development environment with the test extra installed. These are distinct
+from the 930 saved engine-regression expectations in the all-suite HTML index.
+No statistical, medical, biometric, threat-intel, audio/image, session or
+cryptographic capability is implied by their appearance in the requirements list.

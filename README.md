@@ -4,7 +4,7 @@ Policy-driven input and output checks for AI applications.
 
 Start with the [user guide](docs/user-guide.md): each supported check has a purpose,
 example/use case, expected result, configuration and limitations. The
-[50-use-case inventory](docs/use-case-coverage.md) records supported, partial and
+[100-use-case inventory](docs/use-case-coverage.md) records supported, partial and
 unimplemented coverage explicitly.
 
 ## Current milestone
@@ -895,3 +895,19 @@ The all-suite command now runs ten local suites / 930 expectations. No new model
 dependency, cloud deployment or paid provider call is introduced. See
 [the guide](docs/user-guide.md#sensitive-identifiers-inside-labeled-encodings) and
 [coverage/limits](docs/encoded-privacy-coverage.md).
+
+
+## Additional acceptance cases 51–100
+
+The [extended requirements/test catalog](docs/additional-use-cases.md) includes
+all 50 new examples with concrete acceptance criteria. Seventeen have scoped or
+partial existing controls, backed by 77 new unit/API/engine tests; 33 require new
+components and reviewed data. They are not claimed as implemented detectors.
+
+```powershell
+py -3.13 -m pytest tests/test_additional_use_cases.py -q
+```
+
+Install the test extra first in a prepared development environment. These tests
+are separate from the 930 saved local engine expectations and run in normal CI.
+No new dependency, paid provider, deployment or product rename is introduced.

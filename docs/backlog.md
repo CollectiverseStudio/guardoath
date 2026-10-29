@@ -92,3 +92,15 @@
 - [ ] Dashboard, evaluation worker, and regression reports.
 - [ ] Dependency review, load tests, and pilot accuracy/latency/cost gates.
 - [ ] Enable blocking only after customer review of observe-mode results.
+
+
+## Additional acceptance catalog — use cases 51–100
+
+- [x] Document all 50 additional requirements with current scope, positive/benign/edge acceptance criteria and remaining dependencies: docs/additional-use-cases.md.
+- [x] Add 77 executable unit/API/engine cases for 17 scoped/partial existing controls. No placeholder test reports an unimplemented detector as passed.
+- [ ] Semantic/context/session evaluation: UC051–060 (except existing transport/size controls), UC066, UC071, UC094. Requires reviewed rubrics, trusted context and independent evaluation.
+- [ ] Behavior/correlation/telemetry/corpus services: UC061–070 beyond existing quotas/array limits; shared tenant/session/event handling remains separate.
+- [ ] Statistical drift, graph/sequence algorithms, derived field rules and taxonomy/quarantine workflows: UC073–080 beyond the tested deterministic subset.
+- [ ] Specialized medical/CAD/code/bio/audio/geospatial/ledger/telematics pipelines: UC081–090 beyond scalar/box/submitted-total checks, with approved fixtures and domain review.
+- [ ] URL reputation, orchestration graphs, dataset checksums, regulated-entity resolution, tokenizer contracts and proof verification: UC091–100 beyond existing over-posting/UTF-8/phrase/cap controls.
+- [ ] Live publication/normalization/repair behaviors need explicit contracts and preservation/revalidation tests; no automatic sanitization or silent truncation is enabled.

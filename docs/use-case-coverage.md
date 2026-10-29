@@ -1,4 +1,9 @@
-# Coverage of Greg's 50 example use cases
+# Coverage of Greg's 100 example use cases
+
+The first 50 examples are mapped below. [Use cases 51–100](additional-use-cases.md)
+contain the second list, concrete acceptance criteria and links to 77 additional
+unit/API/engine tests for currently supported portions. The new list has 17 scoped/
+partial controls and 33 planned capabilities; none is silently counted as complete.
 
 This inventory distinguishes actual implemented checks from partial signals,
 optional provider contracts and planned features. It is not a claim that 50
