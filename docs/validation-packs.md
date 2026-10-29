@@ -31,3 +31,9 @@ Initial proposed selectors: CORE (implicit mandatory), LOG, HLTH, FIN, AGENT, CY
 
 ## Implementation sequence
 P0: registry schema and resolver, request model extension, API/engine integration and deterministic offline tests; launch CORE + AGENT + LOG using *only* supported existing validators, explicitly reporting unsupported cases. P1: tenant configuration, admin publication and audit, specialist adapters, pricing/metering and customer self-service. Do not label a catalog use case implemented merely because its pack is selectable.
+
+## Implemented integration slice (unverified by CI)
+
+The request contract now accepts `validation_codes` as a bounded tuple of uppercase selectors. `Engine(..., pack_registry=PackRegistry(...))` can resolve tenant-authorized codes and select checker rules already configured in that application's published policy. Checks not assigned to any optional pack remain the mandatory baseline; rules assigned to optional packs run only when selected. Without a registry, requests with no codes retain legacy behavior, and requests with codes are rejected. The API maps unavailable selections to a sanitized HTTP 422. This does **not** dynamically load new policy configurations, add specialist validators, expose pack metadata in responses, or enable packs in the default launcher. The `CORE` selector is implicit and is not an accepted request code.
+
+The design requires an additional review of baseline classification, policy snapshot immutability, evidence/version response fields and behavior under redaction/external gating before enabling this for customers. Automated tests were committed, but they have not been executed in this environment.
