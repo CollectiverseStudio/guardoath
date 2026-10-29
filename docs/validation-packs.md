@@ -70,3 +70,12 @@ This example uses `mode: enforce`, unlike the existing playground's observe mode
 ## Authenticated pack discovery (implemented; CI verification pending)
 
 `GET /v1/validation-packs` uses the existing bearer application credential and returns the mandatory `CORE` label plus only the caller application's registered optional codes and versions. It does not expose other tenants' packs, internal checker policies, or credentials. An application with no configured pack registry receives an empty optional list. This endpoint is metadata discovery only: availability of a pack code does not certify complete coverage of the industry's use cases. Tests cover unauthorized access and cross-tenant isolation.
+
+## Latest coverage and hardening
+
+- A [machine-readable manifest](use-case-manifest.json) enumerates UC001–UC200 and intentionally keeps implementation claims unverified until audited.
+- [UC101–UC110 acceptance scenarios](agentic-safety-acceptance.md) now specify concrete attack, benign and edge cases at the real enforcement boundary.
+- Pack definitions are snapshotted at registry creation; modifying the original caller's lists cannot silently alter published pack membership.
+- The regression suite includes multi-pack incompatible document shapes: when two required packs cannot validate one canonical payload, the result must be incomplete and blocked rather than reported clean.
+- `GET /v1/validation-packs` exposes authorized pack codes and versions, not a guarantee of complete industry coverage.
+- The existing [GitHub Actions workflow](../.github/workflows/tests.yml) includes `pytest -q` across its Python matrix, so the new test modules are in the intended CI path. A passing workflow run has **not** been independently verified in this session.
