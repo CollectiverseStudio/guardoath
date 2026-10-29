@@ -40,7 +40,7 @@ class PackRegistry:
                     raise ValueError("Duplicate or incomplete pack")
                 if len(set(pack.checker_ids)) != len(pack.checker_ids):
                     raise ValueError("Duplicate checker in pack")
-                entries[pack.code] = pack
+                entries[pack.code] = Pack(pack.code, pack.version, tuple(pack.checker_ids))
             if app in self._core and set(self._core[app]) & {i for p in packs for i in p.checker_ids}:
                 raise ValueError("CORE checker cannot be optional")
             self._published[app] = entries
@@ -65,7 +65,7 @@ class PackRegistry:
         return self._core.get(application_id)
 
     def optional_checker_ids(self, application_id: str) -> set[str]:
-        return {checker for pack in self._published.get(application_id, {}).values() for checker in pack.checker_ids}
+        return frozenset(checker for pack in self._published.get(application_id, {}).values() for checker in pack.checker_ids)
 
     @staticmethod
     def checker_union(core: tuple[str, ...], packs: tuple[Pack, ...]) -> tuple[str, ...]:
