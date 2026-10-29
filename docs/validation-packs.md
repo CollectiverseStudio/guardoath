@@ -51,3 +51,18 @@ The API documentation title is now Valisentry. Python import names, environment 
 Published pack-registry JSON now requires each application's `core_checker_ids` and `packs`. At startup the engine checks that the configured policy's checker IDs are exactly partitioned between mandatory CORE and optional pack membership, with no overlap; invalid configurations stop startup. In-memory registries without explicit CORE remain supported for older tests and development only. The sample registry uses `text_security` as illustrative CORE, with optional `timestamps` and `tool_calls`. The sample is **not** a complete production baseline, nor does it constitute a complete standalone policy bundle.
 
 This change is committed but full CI execution remains unverified. Future hardening: pin required baseline identifiers independently of pack configuration, provide versioned per-policy registries, and reject duplicate JSON keys and conflicting rule semantics before production deployment.
+
+## Runnable local demonstration (added; CI verification pending)
+
+Use the paired files [policy bundle](../policies/validation-packs-demo.json) and [pack registry](../policies/validation-packs.example.json). The bundle includes a mandatory `text_security` CORE checker, optional `timestamps` under LOG, and optional `tool_calls` under AGENT. These are **existing deterministic checks**, not comprehensive logistics or autonomous-agent defenses.
+
+```bash
+export VALINATOR_POLICY_FILE=policies/validation-packs-demo.json
+export VALINATOR_PACK_FILE=policies/validation-packs.example.json
+export VALINATOR_API_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+uvicorn valinator.app:app --host 127.0.0.1 --port 8000
+```
+
+Send a request to `/v1/checks/input` using the configured key, application `demo`, policy `valisentry-packs-v1`, and `validation_codes: ["LOG"]` with `content_format: "json"` and a JSON-encoded `samples` document. For AGENT, use `validation_codes: ["AGENT"]` with a JSON-encoded `tool_calls` document. Do not select both packs for incompatible document shapes: both required checks will evaluate the same canonical content, so the request may correctly return incomplete.
+
+This example uses `mode: enforce`, unlike the existing playground's observe mode. Neither the API nor this example executes a shipment operation or grants tool permissions. The added test exercises valid and invalid LOG and AGENT cases; it has been committed but not run here because the container cannot resolve GitHub. No live model/provider tests were performed.
