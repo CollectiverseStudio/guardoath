@@ -48,6 +48,9 @@ class PackRegistry:
             result.append(allowed[code])
         return tuple(result)
 
+    def optional_checker_ids(self, application_id: str) -> set[str]:
+        return {checker for pack in self._published.get(application_id, {}).values() for checker in pack.checker_ids}
+
     @staticmethod
     def checker_union(core: tuple[str, ...], packs: tuple[Pack, ...]) -> tuple[str, ...]:
         # CORE is always included; ordering is stable and overlaps execute once.
