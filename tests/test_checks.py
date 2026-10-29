@@ -4,10 +4,10 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from valinator.app import create_app, demo_engine
-from valinator.checkers import default_checkers
-from valinator.engine import Engine
-from valinator.models import Action, CheckerResult, CheckRequest, Policy, Rule, Stage
+from guardoath.app import create_app, demo_engine
+from guardoath.checkers import default_checkers
+from guardoath.engine import Engine
+from guardoath.models import Action, CheckerResult, CheckRequest, Policy, Rule, Stage
 
 TOKEN = "test-only-key"
 

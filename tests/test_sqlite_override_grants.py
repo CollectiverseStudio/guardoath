@@ -2,7 +2,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from time import time
 
-from valinator.sqlite_override_grants import SqliteOverrideGrants
+from guardoath.sqlite_override_grants import SqliteOverrideGrants
 
 
 def test_grant_consumed_once_and_survives_restart(tmp_path):

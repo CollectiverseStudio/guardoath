@@ -1,6 +1,6 @@
 """Offline tests for trusted validation-pack resolution; no detector claims."""
 import pytest
-from valinator.validation_packs import Pack, PackRegistry, PackSelectionError
+from guardoath.validation_packs import Pack, PackRegistry, PackSelectionError
 
 
 def registry():
@@ -47,7 +47,7 @@ def test_bad_registry_is_rejected():
 
 def test_request_contract_accepts_multiple_codes_and_rejects_malformed():
     from pydantic import ValidationError
-    from valinator.models import CheckRequest
+    from guardoath.models import CheckRequest
     base = dict(application_id="demo", policy_version="v1", content="hello")
     assert CheckRequest(**base, validation_codes=["LOG", "AGENT"]).validation_codes == ("LOG", "AGENT")
     with pytest.raises(ValidationError):
@@ -58,9 +58,9 @@ def test_request_contract_accepts_multiple_codes_and_rejects_malformed():
 
 def test_engine_selects_optional_rules_and_retains_core():
     import asyncio
-    from valinator.engine import Engine
-    from valinator.models import CheckRequest, Policy, Rule, Stage
-    from valinator.checkers import default_checkers
+    from guardoath.engine import Engine
+    from guardoath.models import CheckRequest, Policy, Rule, Stage
+    from guardoath.checkers import default_checkers
 
     policy = Policy(application_id="demo", version="v1", rules=(
         Rule(checker_id="text_security"),
@@ -81,10 +81,10 @@ def test_engine_selects_optional_rules_and_retains_core():
 
 def test_api_rejects_unconfigured_pack_without_implicit_fallback():
     from fastapi.testclient import TestClient
-    from valinator.app import create_app
-    from valinator.engine import Engine
-    from valinator.models import Policy, Rule
-    from valinator.checkers import default_checkers
+    from guardoath.app import create_app
+    from guardoath.engine import Engine
+    from guardoath.models import Policy, Rule
+    from guardoath.checkers import default_checkers
     engine = Engine([Policy(application_id="demo", version="v1", rules=(
         Rule(checker_id="text_security"),
     ))], default_checkers())
@@ -99,10 +99,10 @@ def test_api_rejects_unconfigured_pack_without_implicit_fallback():
 
 def test_api_activates_pack_and_preserves_baseline():
     from fastapi.testclient import TestClient
-    from valinator.app import create_app
-    from valinator.engine import Engine
-    from valinator.models import Policy, Rule
-    from valinator.checkers import default_checkers
+    from guardoath.app import create_app
+    from guardoath.engine import Engine
+    from guardoath.models import Policy, Rule
+    from guardoath.checkers import default_checkers
     registry = PackRegistry({"demo": (Pack("LOG", "1", ("schema",)),)})
     policy = Policy(application_id="demo", version="v1", rules=(
         Rule(checker_id="text_security"),
@@ -130,7 +130,7 @@ def test_api_activates_pack_and_preserves_baseline():
 
 def test_load_published_registry_and_reject_invalid_files(tmp_path):
     import json
-    from valinator.validation_packs import load_pack_registry
+    from guardoath.validation_packs import load_pack_registry
     target = tmp_path / "packs.json"
     target.write_text(json.dumps({"format_version": "1", "applications": {
         "demo": {"core_checker_ids": ["text_security"], "packs": [{"code": "LOG", "version": "1", "checker_ids": ["timestamps"]}]}
@@ -148,17 +148,17 @@ def test_load_published_registry_and_reject_invalid_files(tmp_path):
 
 
 def test_startup_requires_policy_file_when_registry_is_configured(monkeypatch):
-    from valinator.app import create_app
-    monkeypatch.setenv("VALINATOR_PACK_FILE", "missing.json")
-    monkeypatch.delenv("VALINATOR_POLICY_FILE", raising=False)
+    from guardoath.app import create_app
+    monkeypatch.setenv("GUARDOATH_PACK_FILE", "missing.json")
+    monkeypatch.delenv("GUARDOATH_POLICY_FILE", raising=False)
     with pytest.raises(ValueError, match="requires a policy file"):
         create_app()
 
 
 def test_explicit_core_cannot_be_made_optional():
-    from valinator.engine import Engine
-    from valinator.models import Policy, Rule
-    from valinator.checkers import default_checkers
+    from guardoath.engine import Engine
+    from guardoath.models import Policy, Rule
+    from guardoath.checkers import default_checkers
     with pytest.raises(ValueError, match="CORE checker cannot be optional"):
         PackRegistry({"demo": (Pack("LOG", "1", ("text_security",)),)},
                      core={"demo": ("text_security",)})
@@ -173,11 +173,11 @@ def test_explicit_core_cannot_be_made_optional():
 def test_real_demo_bundle_core_log_and_agent():
     import asyncio
     from pathlib import Path
-    from valinator.config import load_policies
-    from valinator.validation_packs import load_pack_registry
-    from valinator.checkers import default_checkers
-    from valinator.engine import Engine
-    from valinator.models import CheckRequest, Stage
+    from guardoath.config import load_policies
+    from guardoath.validation_packs import load_pack_registry
+    from guardoath.checkers import default_checkers
+    from guardoath.engine import Engine
+    from guardoath.models import CheckRequest, Stage
     root = Path(__file__).resolve().parents[1]
     engine = Engine(
         load_policies(root / "policies/validation-packs-demo.json"),
@@ -186,7 +186,7 @@ def test_real_demo_bundle_core_log_and_agent():
     )
     def run(content, codes=(), fmt="text"):
         return asyncio.run(engine.check(CheckRequest(
-            application_id="demo", policy_version="valisentry-packs-v1",
+            application_id="demo", policy_version="guardoath-packs-v1",
             content=content, content_format=fmt, validation_codes=codes,
         ), Stage.INPUT))
     baseline = run("Hello, world")
@@ -209,7 +209,7 @@ def test_real_demo_bundle_core_log_and_agent():
 
 
 def test_registry_rejects_duplicate_json_keys_and_core_optional_overlap(tmp_path):
-    from valinator.validation_packs import load_pack_registry
+    from guardoath.validation_packs import load_pack_registry
     path = tmp_path / "registry.json"
     path.write_text('{"format_version":"1","format_version":"1","applications":{}}')
     with pytest.raises(ValueError, match="Unable to load"):
@@ -223,10 +223,10 @@ def test_registry_rejects_duplicate_json_keys_and_core_optional_overlap(tmp_path
 
 def test_authenticated_pack_discovery_is_tenant_scoped():
     from fastapi.testclient import TestClient
-    from valinator.app import create_app
-    from valinator.engine import Engine
-    from valinator.models import Policy, Rule
-    from valinator.checkers import default_checkers
+    from guardoath.app import create_app
+    from guardoath.engine import Engine
+    from guardoath.models import Policy, Rule
+    from guardoath.checkers import default_checkers
     reg = PackRegistry({
         "demo": (Pack("LOG", "1", ("schema",)),),
         "other": (Pack("HLTH", "2", ("pii",)),),
@@ -266,17 +266,17 @@ def test_registry_snapshots_mutable_caller_inputs():
 def test_required_incompatible_packs_are_not_reported_clean():
     import asyncio
     from pathlib import Path
-    from valinator.config import load_policies
-    from valinator.validation_packs import load_pack_registry
-    from valinator.checkers import default_checkers
-    from valinator.engine import Engine
-    from valinator.models import CheckRequest, Stage
+    from guardoath.config import load_policies
+    from guardoath.validation_packs import load_pack_registry
+    from guardoath.checkers import default_checkers
+    from guardoath.engine import Engine
+    from guardoath.models import CheckRequest, Stage
     root = Path(__file__).resolve().parents[1]
     engine = Engine(load_policies(root / "policies/validation-packs-demo.json"),
                     default_checkers(),
                     pack_registry=load_pack_registry(root / "policies/validation-packs.example.json"))
     result = asyncio.run(engine.check(CheckRequest(
-        application_id="demo", policy_version="valisentry-packs-v1",
+        application_id="demo", policy_version="guardoath-packs-v1",
         content='{"samples":[{"timestamp":"2026-10-28T10:00:00Z","value":1},'
                 '{"timestamp":"2026-10-28T10:01:00Z","value":2}]}',
         content_format="json", validation_codes=("LOG", "AGENT"),
@@ -290,9 +290,9 @@ def test_required_incompatible_packs_are_not_reported_clean():
 
 def test_pack_without_active_checks_at_stage_is_rejected():
     import asyncio
-    from valinator.engine import Engine
-    from valinator.models import CheckRequest, Policy, Rule, Stage
-    from valinator.checkers import default_checkers
+    from guardoath.engine import Engine
+    from guardoath.models import CheckRequest, Policy, Rule, Stage
+    from guardoath.checkers import default_checkers
     reg = PackRegistry({"demo": (Pack("AGENT", "1", ("schema",)),)},
                        core={"demo": ("text_security",)})
     policy = Policy(application_id="demo", version="v1", rules=(
@@ -310,10 +310,10 @@ def test_pack_without_active_checks_at_stage_is_rejected():
 
 def test_api_rejects_stage_inapplicable_pack_with_sanitized_error():
     from fastapi.testclient import TestClient
-    from valinator.app import create_app
-    from valinator.engine import Engine
-    from valinator.models import Policy, Rule, Stage
-    from valinator.checkers import default_checkers
+    from guardoath.app import create_app
+    from guardoath.engine import Engine
+    from guardoath.models import Policy, Rule, Stage
+    from guardoath.checkers import default_checkers
     registry = PackRegistry({"demo": (Pack("LOG", "1", ("schema",)),)},
                             core={"demo": ("text_security",)})
     policy = Policy(application_id="demo", version="v1", rules=(
@@ -334,9 +334,9 @@ def test_api_rejects_stage_inapplicable_pack_with_sanitized_error():
 
 def test_group_results_only_report_selected_checks():
     import asyncio
-    from valinator.engine import Engine
-    from valinator.checkers import default_checkers
-    from valinator.models import CheckRequest, Policy, Rule, Stage
+    from guardoath.engine import Engine
+    from guardoath.checkers import default_checkers
+    from guardoath.models import CheckRequest, Policy, Rule, Stage
     policy = Policy(application_id="demo", version="v1", rules=(
         Rule(checker_id="text_security"),
         Rule(checker_id="schema", required=False),
@@ -359,9 +359,9 @@ def test_group_results_only_report_selected_checks():
 
 def test_stage_inapplicable_remains_not_applicable_with_pack_registry():
     import asyncio
-    from valinator.engine import Engine
-    from valinator.checkers import default_checkers
-    from valinator.models import CheckRequest, Policy, Rule, Stage
+    from guardoath.engine import Engine
+    from guardoath.checkers import default_checkers
+    from guardoath.models import CheckRequest, Policy, Rule, Stage
     policy = Policy(application_id="demo", version="v1", rules=(
         Rule(checker_id="text_security", stages=(Stage.OUTPUT,)),
         Rule(checker_id="schema", stages=(Stage.INPUT,), required=False),

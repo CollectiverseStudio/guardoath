@@ -23,7 +23,7 @@ must still be confirmed against a real configured guardrail before live reliance
 
 `detected: true` produces a finding even if AWS detect mode returns action NONE.
 AWS confidence is displayed as provider confidence, not a probability or local
-harm severity. All such findings use Valinator medium review severity. Stable
+harm severity. All such findings use GuardOath medium review severity. Stable
 rule IDs are `harmful_content.bedrock_hate`, `_insults`, `_sexual`, `_violence`
 and `_misconduct`. Findings include fixed category/confidence/strength labels;
 provider output text, matched content, actionReason, credentials and resource
@@ -44,7 +44,7 @@ configured failure action. Joe's application must implement the decision.
   It sets INPUT or OUTPUT independently. The output endpoint does not itself
   prove the caller previously submitted/passed an input; Joe coordinates that flow.
 - Plain text only, at most 10,000 Unicode code points. This is a conservative
-  Valinator cap, not a statement of AWS service quotas. No splitting/truncation.
+  GuardOath cap, not a statement of AWS service quotas. No splitting/truncation.
 - Published numeric version, explicit commercial-AWS region and short resource
   ID only. No arbitrary URL, ARN override, DRAFT, retries or fallback provider.
 - boto3 uses the standard credential chain, preferably a workload IAM role.

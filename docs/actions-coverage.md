@@ -75,7 +75,7 @@ py -3.13 start_dashboard.py --evaluate --suite actions
 Or:
 
 ```bash
-python -m valinator.evaluate --cases evals/actions.json --policies policies/actions-batch.json
+python -m guardoath.evaluate --cases evals/actions.json --policies policies/actions-batch.json
 python -m pytest tests/test_tool_calls.py -q
 ```
 

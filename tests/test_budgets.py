@@ -8,10 +8,10 @@ from fastapi.testclient import TestClient
 import httpx2
 import pytest
 
-from valinator.app import create_app
-from valinator.budgets import RequestBudgets, ResourceLimits, RequestCapacity
-from valinator.engine import Engine
-from valinator.models import CheckerResult, Policy, Rule
+from guardoath.app import create_app
+from guardoath.budgets import RequestBudgets, ResourceLimits, RequestCapacity
+from guardoath.engine import Engine
+from guardoath.models import CheckerResult, Policy, Rule
 
 
 @dataclass
@@ -171,12 +171,12 @@ def test_outer_capacity_rejects_before_reading_body_and_releases_on_disconnect()
 
 @pytest.mark.parametrize('value', ['0','-1','x','1.0',' 2','100001','1_000','１２','999999999'])
 def test_invalid_environment_rejected(monkeypatch,value):
-    monkeypatch.setenv('VALINATOR_CHECKS_PER_MINUTE',value)
+    monkeypatch.setenv('GUARDOATH_CHECKS_PER_MINUTE',value)
     with pytest.raises(ValueError): ResourceLimits.from_environment()
 
 
 def test_environment_limits_are_loaded(monkeypatch):
-    monkeypatch.setenv('VALINATOR_BURST','3')
+    monkeypatch.setenv('GUARDOATH_BURST','3')
     client = TestClient(create_app(engine=engine(),credentials={'one':'demo'}))
     result = client.get('/v1/applications/current',headers={'Authorization':'Bearer one'})
     assert result.json()['resource_limits']['burst'] == 3

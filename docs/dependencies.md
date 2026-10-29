@@ -30,7 +30,7 @@ Presidio analyzer 2.2.366 is integrated as an optional `pii` extra. Its publishe
 Python constraint is >=3.11,<3.15, so the core service still tests Python 3.15
 while the optional adapter has separate 3.12 and 3.14 CI jobs. Enabling PII on
 3.15 fails explicitly at startup. No NLP model weights are downloaded or bundled.
-Presidio anonymizer 2.2.366 was checked but is not integrated. Valinator applies
+Presidio anonymizer 2.2.366 was checked but is not integrated. GuardOath applies
 bounded span replacements from its local recognizers and reruns active checks;
 this avoids adding another dependency for the current limited transformation.
 
@@ -64,14 +64,14 @@ The Secrets group batch reuses additional regex-based plugin expressions from
 installed detect-secrets 1.5.0 (GitLab, Slack, SendGrid, Twilio, npm, PyPI, Azure
 Storage, Basic Auth, Discord and Telegram). No plugin verification or network
 calls are invoked and no upstream source is vendored. Quoted-assignment,
-configured literal-term and bounded decoding orchestration are local Valinator
+configured literal-term and bounded decoding orchestration are local GuardOath
 code. The new GitHub fine-grained rule is explicitly a prefix-based candidate,
 not a documented full-token validator; GitHub's prefix reference is
 https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github.
 
 The Privacy group batch adds no dependencies and makes no new upstream-version
 claim: installed Presidio remains the optional email/card/SSN adapter; local
-Valinator field heuristics reuse the pinned regex package and Python calendar
+GuardOath field heuristics reuse the pinned regex package and Python calendar
 validation. No NLP model, phone numbering-plan database, patient/insurance/bank
 lookup or external service is introduced.
 
@@ -93,7 +93,7 @@ https://docs.python.org/3/library/json.html (parse_float).
 The supported local text-security batch adds no dependencies or detection models.
 It reuses Python standard-library base64 (validate=True), hex byte decoding and
 UTF-8 decoding with the existing bounded JSON parser. Fixed diagnostic classes
-are Valinator logic; no NLP/Unicode database/model or provider is consulted.
+are GuardOath logic; no NLP/Unicode database/model or provider is consulted.
 No canonical Base64 padding-bit enforcement is claimed. Python reference:
 https://docs.python.org/3/library/base64.html. Upstream pins remain unchanged.
 
@@ -109,7 +109,7 @@ No paid provider calls, deployment dependencies or infrastructure are added.
 
 Version 0.22 matched-outcome checks add no dependencies. They reuse the existing
 bounded JSON parser, exact decimal-token conversion, Pydantic policy contracts
-and engine. The algorithm is a limited Valinator consistency check, not an
+and engine. The algorithm is a limited GuardOath consistency check, not an
 implementation or invocation of Fairlearn metrics. Fairlearn's primary fairness
 and construct-validity documentation informs the documented limitations:
 https://fairlearn.org/main/user_guide/fairness_in_machine_learning.html.

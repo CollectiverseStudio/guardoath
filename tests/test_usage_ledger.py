@@ -4,8 +4,8 @@ from dataclasses import replace
 
 import pytest
 
-from valinator.billing import BillingAccount, BillingMode, usage_event
-from valinator.usage_ledger import UsageLedger, UsageConflict
+from guardoath.billing import BillingAccount, BillingMode, usage_event
+from guardoath.usage_ledger import UsageLedger, UsageConflict
 
 
 def event(tenant, check):

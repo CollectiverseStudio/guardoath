@@ -1,10 +1,10 @@
 """Agent dispatch gate composition tests. No tool execution is performed."""
 from concurrent.futures import ThreadPoolExecutor
 
-from valinator.agent_authorization import Principal
-from valinator.agent_budgets import AgentBudget, AgentLimits
-from valinator.agent_dispatch_gate import AgentDispatchGate, DispatchRequest
-from valinator.workflow_guard import TransitionPolicy
+from guardoath.agent_authorization import Principal
+from guardoath.agent_budgets import AgentBudget, AgentLimits
+from guardoath.agent_dispatch_gate import AgentDispatchGate, DispatchRequest
+from guardoath.workflow_guard import TransitionPolicy
 
 
 def fixture():

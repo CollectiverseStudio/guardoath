@@ -1,8 +1,8 @@
 """No-charge settlement routing tests."""
 import pytest
 
-from valinator.billing import BillingAccount, BillingMode, usage_event
-from valinator.billing_router import settlement_record
+from guardoath.billing import BillingAccount, BillingMode, usage_event
+from guardoath.billing_router import settlement_record
 
 
 @pytest.mark.parametrize("mode,channel", [

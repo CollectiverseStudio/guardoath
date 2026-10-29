@@ -1,7 +1,7 @@
 """UC105 authorization decisions; identity must be authenticated by host."""
 import pytest
 
-from valinator.agent_authorization import Principal, authorize
+from guardoath.agent_authorization import Principal, authorize
 
 
 def test_read_only_cannot_escalate():

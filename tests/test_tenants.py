@@ -1,7 +1,7 @@
 """Multi-tenant registry identity and isolation tests."""
 import pytest
 
-from valinator.tenants import TenantApplication, TenantRegistry
+from guardoath.tenants import TenantApplication, TenantRegistry
 
 
 def test_credentials_bind_to_one_tenant_and_application():
@@ -33,10 +33,10 @@ def test_empty_identity_fails_closed():
 
 def test_tenant_registry_authenticates_api_and_rejects_cross_tenant_requests():
     from fastapi.testclient import TestClient
-    from valinator.app import create_app
-    from valinator.engine import Engine
-    from valinator.models import Policy, Rule
-    from valinator.checkers import default_checkers
+    from guardoath.app import create_app
+    from guardoath.engine import Engine
+    from guardoath.models import Policy, Rule
+    from guardoath.checkers import default_checkers
     registry = TenantRegistry((
         TenantApplication("hospital-a", "app-a", "key-a"),
         TenantApplication("company-b", "app-b", "key-b"),
@@ -57,7 +57,7 @@ def test_tenant_registry_authenticates_api_and_rejects_cross_tenant_requests():
 
 
 def test_tenant_registry_and_legacy_credentials_are_mutually_exclusive():
-    from valinator.app import create_app
+    from guardoath.app import create_app
     with pytest.raises(ValueError, match="not both"):
         create_app(tenant_registry=TenantRegistry((
             TenantApplication("a", "app-a", "key-a"),)),

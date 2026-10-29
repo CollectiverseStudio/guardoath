@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "product": "Valisentry",
+  "product": "GuardOath",
   "verification": "Unverified inventory; statuses require audited code/test evidence",
   "cases": [
     {
@@ -330,7 +330,7 @@
       "title": "UI element layout",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Valinator's own dashboard has mobile/browser layout tests. This is not a product endpoint for arbitrary screenshot/layout validation."
+      "existing_coverage_note": "GuardOath's own dashboard has mobile/browser layout tests. This is not a product endpoint for arbitrary screenshot/layout validation."
     },
     {
       "id": "UC048",

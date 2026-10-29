@@ -5,11 +5,11 @@ import sys
 import pytest
 from fastapi.testclient import TestClient
 
-from valinator.app import create_app
-from valinator.checkers import default_checkers
-from valinator.config import load_policies
-from valinator.engine import Engine
-from valinator.models import CheckRequest, Stage
+from guardoath.app import create_app
+from guardoath.checkers import default_checkers
+from guardoath.config import load_policies
+from guardoath.engine import Engine
+from guardoath.models import CheckRequest, Stage
 
 pytestmark = pytest.mark.skipif(sys.version_info >= (3, 15), reason="Presidio does not support Python 3.15")
 pytest.importorskip("presidio_analyzer")
@@ -94,8 +94,8 @@ def test_api_output_and_logs_do_not_echo_sensitive_values(engine, caplog):
 
 
 def test_environment_enables_pii_without_a_custom_policy(monkeypatch):
-    monkeypatch.setenv("VALINATOR_ENABLE_PII", "1")
-    monkeypatch.delenv("VALINATOR_POLICY_FILE", raising=False)
+    monkeypatch.setenv("GUARDOATH_ENABLE_PII", "1")
+    monkeypatch.delenv("GUARDOATH_POLICY_FILE", raising=False)
     client = TestClient(create_app(credentials={"test-key": "demo"}))
     response = client.post("/v1/checks/input", headers={"Authorization": "Bearer test-key"}, json={
         "application_id": "demo", "policy_version": "support-v1", "content": "jane@example.com"})

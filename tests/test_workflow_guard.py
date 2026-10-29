@@ -1,7 +1,7 @@
 """UC104 local transition guard tests; not an atomic workflow database."""
 import pytest
 
-from valinator.workflow_guard import TransitionPolicy, validate_transition
+from guardoath.workflow_guard import TransitionPolicy, validate_transition
 
 
 def policy():

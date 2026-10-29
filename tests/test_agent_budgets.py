@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from valinator.agent_budgets import AgentBudget, AgentLimits, BudgetExceeded
+from guardoath.agent_budgets import AgentBudget, AgentLimits, BudgetExceeded
 
 
 def test_boundary_and_depth():

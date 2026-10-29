@@ -65,7 +65,7 @@ checks; application-specific checks require their configured contracts.
 | 44 | Code syntax | Source-code syntax is not implemented. The new proposed-tool allowlist/argument-schema checker is distinct from parsing or executing source code; no sandbox claim. |
 | 45 | Real-estate photo rules | Not implemented; no image-type/advertisement/contact-detail vision review. |
 | 46 | Sentiment escalation | Not implemented; no calibrated anger/frustration classifier or human-routing integration. |
-| 47 | UI element layout | Valinator's own dashboard has mobile/browser layout tests. This is not a product endpoint for arbitrary screenshot/layout validation. |
+| 47 | UI element layout | GuardOath's own dashboard has mobile/browser layout tests. This is not a product endpoint for arbitrary screenshot/layout validation. |
 | 48 | Financial fraud patterns | Submitted numeric/date comparisons and structural contracts only. No recipient ownership, bank-routing validation or fraud database. |
 | 49 | Shipping barcode quality | Not implemented; no barcode/image inspection. |
 | 50 | Academic references | Local citation IDs and exact quotations can now be checked against a policy-owned source catalog. No academic database/URL lookup, source authenticity or claim-truth/entailment verification. |

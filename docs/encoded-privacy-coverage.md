@@ -88,7 +88,7 @@ py -3.13 start_dashboard.py --evaluate --suite all
 Or use the existing prepared environment:
 
 ```bash
-python -m valinator.evaluate --pii --cases evals/encoded-privacy.json --policies policies/encoded-privacy-batch.json
+python -m guardoath.evaluate --pii --cases evals/encoded-privacy.json --policies policies/encoded-privacy-batch.json
 python -m pytest tests/test_encoded_pii.py -q
 ```
 

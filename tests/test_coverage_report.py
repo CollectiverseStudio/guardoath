@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from valinator.coverage_report import summarize
+from guardoath.coverage_report import summarize
 
 ROOT = Path(__file__).resolve().parents[1]
 

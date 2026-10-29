@@ -8,12 +8,12 @@ import socket
 import pytest
 pytest.importorskip('presidio_analyzer')
 from fastapi.testclient import TestClient
-from valinator.app import create_app
-from valinator.checkers import default_checkers
-from valinator.config import load_policies
-from valinator.engine import Engine
-from valinator.evaluate import evaluate,load_suite
-from valinator.models import CheckRequest,CheckerResult,Rule,Stage
+from guardoath.app import create_app
+from guardoath.checkers import default_checkers
+from guardoath.config import load_policies
+from guardoath.engine import Engine
+from guardoath.evaluate import evaluate,load_suite
+from guardoath.models import CheckRequest,CheckerResult,Rule,Stage
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -146,8 +146,8 @@ def test_raw_redaction_not_needed_is_not_an_overall_privacy_pass(adapters):
 
 @pytest.mark.parametrize('kind',['wrong-id','empty-flag','hidden-finding','external','simulated'])
 def test_inconsistent_inner_results_cannot_become_a_pass(kind):
-    from valinator.encoded_pii import build_encoded_pii_checker
-    from valinator.models import Finding
+    from guardoath.encoded_pii import build_encoded_pii_checker
+    from guardoath.models import Finding
     async def inner(request,p,stage):
         finding=Finding(rule_id='pii.email_address',category='privacy',severity='medium',explanation='Synthetic private result')
         return CheckerResult(checker_id='wrong' if kind=='wrong-id' else 'pii',checker_version='fixture',
@@ -159,7 +159,7 @@ def test_inconsistent_inner_results_cannot_become_a_pass(kind):
 
 
 def test_policy_deadline_is_preserved_for_an_unfinished_inner_scan(adapters):
-    from valinator.encoded_pii import build_encoded_pii_checker
+    from guardoath.encoded_pii import build_encoded_pii_checker
     async def inner(request,p,stage):await asyncio.Event().wait()
     result=check({**adapters,'encoded_pii':build_encoded_pii_checker(inner)},encode('jane@example.com'),selected=policy().model_copy(update={'timeout_ms':10}))
     assert result.evaluation_status=='incomplete' and encoded(result).error_code=='checker_timeout'

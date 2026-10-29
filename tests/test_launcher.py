@@ -37,9 +37,9 @@ def test_launcher_serves_dashboard_and_all_policies_with_fresh_key():
     with socket.socket() as allocation:
         allocation.bind(('127.0.0.1',0))
         port = allocation.getsockname()[1]
-    environment = {**os.environ, 'VALINATOR_CONTENT_SAFETY_PROVIDER':'bedrock', 'VALINATOR_AWS_REGION':'invalid-inherited-region', 'VALINATOR_API_KEY':'old-key', 'VALINATOR_POLICY_FILE':'missing-old-policy',
-                   'VALINATOR_ENABLE_PII':'0', 'VALINATOR_ENABLE_AZURE_PROMPT_SHIELDS':'1',
-                   'VALINATOR_AZURE_CONTENT_SAFETY_ENDPOINT':'invalid-old-endpoint'}
+    environment = {**os.environ, 'GUARDOATH_CONTENT_SAFETY_PROVIDER':'bedrock', 'GUARDOATH_AWS_REGION':'invalid-inherited-region', 'GUARDOATH_API_KEY':'old-key', 'GUARDOATH_POLICY_FILE':'missing-old-policy',
+                   'GUARDOATH_ENABLE_PII':'0', 'GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS':'1',
+                   'GUARDOATH_AZURE_CONTENT_SAFETY_ENDPOINT':'invalid-old-endpoint'}
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     process = subprocess.Popen([sys.executable,str(SCRIPT),'--serve','--no-browser','--port',str(port)],
                                cwd=ROOT.parent,env=environment,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
@@ -106,7 +106,7 @@ def test_launcher_evaluation_creates_a_report_without_starting_server(tmp_path,m
     monkeypatch.setattr(start_dashboard,'prepare_environment',lambda reinstall=False: Path(sys.executable))
     monkeypatch.setattr(sys,'argv',['start_dashboard.py','--evaluate','--no-browser'])
     assert start_dashboard.main() == 0
-    reports = list((tmp_path/'.valinator-reports').glob('*/report.json'))
+    reports = list((tmp_path/'.guardoath-reports').glob('*/report.json'))
     assert len(reports) == 1
     assert json.loads(reports[0].read_text())['summary']['matched'] == 30
     assert reports[0].with_name('report.html').is_file()
@@ -123,10 +123,10 @@ def test_launcher_second_run_compares_with_previous_without_overwriting_it(tmp_p
     monkeypatch.setattr(start_dashboard,'prepare_environment',lambda reinstall=False: Path(sys.executable))
     monkeypatch.setattr(sys,'argv',['start_dashboard.py','--evaluate','--no-browser'])
     assert start_dashboard.main()==0
-    first=next((tmp_path/'.valinator-reports').glob('*/report.json'))
+    first=next((tmp_path/'.guardoath-reports').glob('*/report.json'))
     original=first.read_bytes()
     assert start_dashboard.main()==0
-    comparisons=list((tmp_path/'.valinator-reports').glob('*/comparison.json'))
+    comparisons=list((tmp_path/'.guardoath-reports').glob('*/comparison.json'))
     assert len(comparisons)==1
     assert json.loads(comparisons[0].read_text())['summary']['unchanged']==30
     assert first.read_bytes()==original
@@ -143,16 +143,16 @@ def test_launcher_runs_the_entire_group(tmp_path,monkeypatch,suite):
     monkeypatch.setattr(start_dashboard,'prepare_environment',lambda reinstall=False: Path(sys.executable))
     monkeypatch.setattr(sys,'argv',['start_dashboard.py','--evaluate','--suite',suite,'--no-browser'])
     code=start_dashboard.main()
-    path=next((tmp_path/'.valinator-reports').glob('*/report.json'))
+    path=next((tmp_path/'.guardoath-reports').glob('*/report.json'))
     report=json.loads(path.read_text())
     diagnostics=[]
     if code:
         # Only sanitized checker results and timing; never print fixture content.
         import asyncio
-        from valinator.checkers import default_checkers
-        from valinator.config import load_policies
-        from valinator.engine import Engine
-        from valinator.evaluate import load_suite
+        from guardoath.checkers import default_checkers
+        from guardoath.config import load_policies
+        from guardoath.engine import Engine
+        from guardoath.evaluate import load_suite
         engine=Engine(load_policies(tmp_path/f'policies/{suite}-batch.json'),default_checkers(enable_pii=True))
         cases={c.case_id:c for c in load_suite(tmp_path/f'evals/{suite}.json').cases}
         for row in report['cases']:
@@ -175,7 +175,7 @@ def test_launcher_runs_every_local_suite_with_one_command(tmp_path,monkeypatch):
     monkeypatch.setattr(start_dashboard,'prepare_environment',lambda reinstall=False: Path(sys.executable))
     monkeypatch.setattr(sys,'argv',['start_dashboard.py','--evaluate','--suite','all','--no-browser'])
     assert start_dashboard.main()==0
-    index=next((tmp_path/'.valinator-reports').glob('*/index.html'))
+    index=next((tmp_path/'.guardoath-reports').glob('*/index.html'))
     data=json.loads(index.with_name('collection.json').read_text())
     assert data['totals']['matched']==1330 and data['totals']['mismatched']==0
     assert len(data['suites'])==14

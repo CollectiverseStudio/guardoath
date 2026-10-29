@@ -7,11 +7,11 @@ import sys
 
 import pytest
 
-from valinator.checkers import default_checkers
-from valinator.config import load_policies
-from valinator.engine import Engine
-from valinator.evaluate import Suite, evaluate, load_suite, main, render_html
-from valinator.models import CheckerResult, Policy, Rule
+from guardoath.checkers import default_checkers
+from guardoath.config import load_policies
+from guardoath.engine import Engine
+from guardoath.evaluate import Suite, evaluate, load_suite, main, render_html
+from guardoath.models import CheckerResult, Policy, Rule
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -138,10 +138,10 @@ def test_unknown_policy_refused_before_any_partial_execution(tmp_path):
 def test_subprocess_ignores_provider_environment(tmp_path):
     import os
     source = single_suite(tmp_path)
-    env = {**os.environ,'VALINATOR_ENABLE_AZURE_PROMPT_SHIELDS':'1',
-           'VALINATOR_AZURE_CONTENT_SAFETY_ENDPOINT':'invalid-endpoint',
-           'VALINATOR_POLICY_FILE':'missing-policy'}
-    result = subprocess.run([sys.executable,'-m','valinator.evaluate','--cases',str(source),
+    env = {**os.environ,'GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS':'1',
+           'GUARDOATH_AZURE_CONTENT_SAFETY_ENDPOINT':'invalid-endpoint',
+           'GUARDOATH_POLICY_FILE':'missing-policy'}
+    result = subprocess.run([sys.executable,'-m','guardoath.evaluate','--cases',str(source),
                              '--policies',str(ROOT/'policies/playground.json')],
                             cwd=ROOT,env=env,capture_output=True,text=True,timeout=15)
     assert result.returncode == 0

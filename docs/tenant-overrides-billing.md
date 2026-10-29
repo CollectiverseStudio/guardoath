@@ -11,24 +11,24 @@ A tenant is a customer organization, not merely an API key. Every application cr
 5. Actual downstream AI ingress must enforce the decision. No general-purpose `override=true` bypass is allowed. PHI routes require appropriate legal/contractual basis, minimum-necessary use and an approved provider/BAA arrangement where applicable.
 
 ## Billing models
-- **Direct Stripe:** Valisentry is merchant of record. Tenant's Stripe customer and meter/subscription map to an internal billing account. Emit durable, idempotent usage events after the billable action; deliver to Stripe asynchronously with retry, deduplication, reconciliation and webhook signature verification.
-- **Partner-managed (Tokatlas):** Tokatlas is merchant of record and invoices its customers. Valisentry authenticates Tokatlas as a trusted reseller, meters usage per downstream tenant, and provides signed usage statements or a partner settlement feed. Never assume Tokatlas has accepted the integration or that revenue share has been negotiated.
+- **Direct Stripe:** GuardOath is merchant of record. Tenant's Stripe customer and meter/subscription map to an internal billing account. Emit durable, idempotent usage events after the billable action; deliver to Stripe asynchronously with retry, deduplication, reconciliation and webhook signature verification.
+- **Partner-managed (Tokatlas):** Tokatlas is merchant of record and invoices its customers. GuardOath authenticates Tokatlas as a trusted reseller, meters usage per downstream tenant, and provides signed usage statements or a partner settlement feed. Never assume Tokatlas has accepted the integration or that revenue share has been negotiated.
 - **Internal/sponsored:** Contractually permitted non-billed accounts still generate usage for quotas and cost attribution.
 
 Use separate contracts for `validation_request` and `override_review`. Pricing, minimum commitments, usage dimensions, currency, refund handling, tax, Stripe meter identifiers and partner revenue-share are commercial configuration, not caller-supplied request fields. Never accept arbitrary `payer_id` or `mode` from an untrusted API request.
 
 ## Implemented foundations
-- `valinator.override_policy`: per-tenant deterministic eligibility checks for selected findings; requires complete assessment and reviewer approval where configured.
-- `valinator.billing`: typed tenant/payer/mode usage event contract with deterministic event IDs for idempotent downstream processing.
+- `guardoath.override_policy`: per-tenant deterministic eligibility checks for selected findings; requires complete assessment and reviewer approval where configured.
+- `guardoath.billing`: typed tenant/payer/mode usage event contract with deterministic event IDs for idempotent downstream processing.
 - `tests/test_override_billing.py`: tenant isolation, reviewer requirement, non-overrideable findings, billing modes, event identity and bounds.
 
 **Not yet implemented:** persistent tenants and principals, secure review workflow, override endpoints, single-use authorization tokens, ingestion-boundary enforcement, durable usage ledger, Stripe API calls, Stripe webhook verification, customer billing portal, Tokatlas partner contract and settlement integration. No charges have been created and no external payment credentials are required for these foundations.
 
 ## Additional foundations (CI pending)
 
-- `valinator.tenants` binds trusted application credentials to tenant/application identities in an immutable in-memory registry. It is not yet wired into the FastAPI authentication path and does not provide credential rotation, persistence or user identity.
-- `valinator.usage_ledger` records deterministic usage events with bounded, thread-safe, idempotent inserts. This is an **in-memory test ledger**, not durable billing infrastructure. Process restart loses its contents.
-- `valinator.billing_router` produces settlement routing records for Stripe, partner-managed (including prospective Tokatlas), and internal modes without contacting any external service.
+- `guardoath.tenants` binds trusted application credentials to tenant/application identities in an immutable in-memory registry. It is not yet wired into the FastAPI authentication path and does not provide credential rotation, persistence or user identity.
+- `guardoath.usage_ledger` records deterministic usage events with bounded, thread-safe, idempotent inserts. This is an **in-memory test ledger**, not durable billing infrastructure. Process restart loses its contents.
+- `guardoath.billing_router` produces settlement routing records for Stripe, partner-managed (including prospective Tokatlas), and internal modes without contacting any external service.
 - Unit tests cover tenant isolation, duplicate identities, idempotent event recording, conflicting replay, concurrent insertions and settlement routing.
 
 Before production billing: durable transactional outbox, tenant/account management, signed webhook handling, Stripe meter/event submission with retries and reconciliation, partner settlement authentication and contract, and explicit customer consent to paid usage are mandatory.
@@ -41,6 +41,6 @@ This is an opt-in in-memory registry, not durable multi-tenant identity manageme
 
 ## Durable local storage prototypes (new)
 
-`valinator.sqlite_usage_ledger.SqliteUsageLedger` stores per-tenant usage events in a SQLite file using a unique event ID and `BEGIN IMMEDIATE` transactional insert. Exact duplicate deliveries are idempotent, conflicting replays are rejected, and records survive process restart. `valinator.sqlite_override_grants.SqliteOverrideGrants` stores SHA-256 digests of opaque grant tokens, tenant/application identifiers, content digests, expiry and consumption state. Atomic conditional updates prevent two callers from consuming the same grant. These components have separate persistence and concurrency tests.
+`guardoath.sqlite_usage_ledger.SqliteUsageLedger` stores per-tenant usage events in a SQLite file using a unique event ID and `BEGIN IMMEDIATE` transactional insert. Exact duplicate deliveries are idempotent, conflicting replays are rejected, and records survive process restart. `guardoath.sqlite_override_grants.SqliteOverrideGrants` stores SHA-256 digests of opaque grant tokens, tenant/application identifiers, content digests, expiry and consumption state. Atomic conditional updates prevent two callers from consuming the same grant. These components have separate persistence and concurrency tests.
 
 **Deployment warning:** SQLite is a local single-host prototype, not a distributed billing ledger. It needs restricted file permissions, backups, retention controls, migrations, operational recovery and a transactional outbox before production. Override grants are not approval tokens by themselves: the grant store currently does not bind reviewer identity, finding IDs, policy/pack versions, provider, purpose or evidence. Do not expose issuance to untrusted users or route PHI to AI based solely on a successful `consume` call. Production must use a complete signed/bound exception protocol and verify all mandatory checks and downstream permissions before consumption. No Stripe/partner charges or API transmissions have been activated.

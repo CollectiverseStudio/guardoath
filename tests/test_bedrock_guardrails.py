@@ -9,11 +9,11 @@ botocore = pytest.importorskip('botocore')
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError, ReadTimeoutError
 from botocore.stub import Stubber
-from valinator.bedrock_guardrails import build_bedrock_guardrails, CATEGORIES, configuration, _sdk_call
-from valinator.checkers import default_checkers, simulated_checker
-from valinator.config import load_policies
-from valinator.engine import Engine
-from valinator.models import CheckRequest, Rule, Stage
+from guardoath.bedrock_guardrails import build_bedrock_guardrails, CATEGORIES, configuration, _sdk_call
+from guardoath.checkers import default_checkers, simulated_checker
+from guardoath.config import load_policies
+from guardoath.engine import Engine
+from guardoath.models import CheckRequest, Rule, Stage
 
 SOURCE = 'private-source-value'
 CONTEXT = 'private-context-not-for-provider'
@@ -232,14 +232,14 @@ def test_configuration_rejects_urls_arns_draft_and_missing_values():
 
 
 def test_selected_adapter_is_lazy_and_keeps_normalized_id(monkeypatch):
-    from valinator.content_safety import build_content_safety
-    import valinator.bedrock_guardrails as module
+    from guardoath.content_safety import build_content_safety
+    import guardoath.bedrock_guardrails as module
     calls = []
     def call(*args): calls.append(args); return data()
     monkeypatch.setattr(module, '_sdk_call', call)
-    monkeypatch.setenv('VALINATOR_AWS_REGION', 'us-east-1')
-    monkeypatch.setenv('VALINATOR_BEDROCK_GUARDRAIL_ID', 'syntheticguardrail')
-    monkeypatch.setenv('VALINATOR_BEDROCK_GUARDRAIL_VERSION', '1')
+    monkeypatch.setenv('GUARDOATH_AWS_REGION', 'us-east-1')
+    monkeypatch.setenv('GUARDOATH_BEDROCK_GUARDRAIL_ID', 'syntheticguardrail')
+    monkeypatch.setenv('GUARDOATH_BEDROCK_GUARDRAIL_VERSION', '1')
     selected = build_content_safety('bedrock')
     assert not calls
     p = policy()

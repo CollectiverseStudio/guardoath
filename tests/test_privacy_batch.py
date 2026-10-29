@@ -8,12 +8,12 @@ import sys
 import pytest
 from fastapi.testclient import TestClient
 
-from valinator.app import create_app
-from valinator.checkers import default_checkers
-from valinator.config import load_policies
-from valinator.engine import Engine
-from valinator.evaluate import evaluate, load_suite
-from valinator.models import CheckRequest, CheckerResult, Policy, Rule, Stage
+from guardoath.app import create_app
+from guardoath.checkers import default_checkers
+from guardoath.config import load_policies
+from guardoath.engine import Engine
+from guardoath.evaluate import evaluate, load_suite
+from guardoath.models import CheckRequest, CheckerResult, Policy, Rule, Stage
 
 pytestmark = pytest.mark.skipif(sys.version_info >= (3,15), reason='PII adapter supports Python below 3.15')
 pytest.importorskip('presidio_analyzer')

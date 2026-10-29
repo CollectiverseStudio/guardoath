@@ -11,4 +11,4 @@ node_modules/
 test-results/
 playwright-report/
 .dashboard-venv/
-.valinator-reports/
+.guardoath-reports/

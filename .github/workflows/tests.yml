@@ -16,27 +16,27 @@ jobs:
       - run: python -m pip install -e '.[test]'
       - run: pytest -q
       - name: Secrets group - 100 expectations
-        run: python -m valinator.evaluate --cases evals/secrets.json --policies policies/secrets-batch.json
+        run: python -m guardoath.evaluate --cases evals/secrets.json --policies policies/secrets-batch.json
       - name: Structure group - 100 expectations
-        run: python -m valinator.evaluate --cases evals/structure.json --policies policies/structure-batch.json
+        run: python -m guardoath.evaluate --cases evals/structure.json --policies policies/structure-batch.json
       - name: Business group - 100 expectations
-        run: python -m valinator.evaluate --cases evals/business.json --policies policies/business-batch.json
+        run: python -m guardoath.evaluate --cases evals/business.json --policies policies/business-batch.json
       - name: Local text security - 100 expectations
-        run: python -m valinator.evaluate --cases evals/text-security.json --policies policies/text-security-batch.json
+        run: python -m guardoath.evaluate --cases evals/text-security.json --policies policies/text-security-batch.json
       - name: Matched-outcome bias checks - 100 expectations
-        run: python -m valinator.evaluate --cases evals/bias.json --policies policies/bias-batch.json
+        run: python -m guardoath.evaluate --cases evals/bias.json --policies policies/bias-batch.json
       - name: Citation evidence checks - 100 expectations
-        run: python -m valinator.evaluate --cases evals/evidence.json --policies policies/evidence-batch.json
+        run: python -m guardoath.evaluate --cases evals/evidence.json --policies policies/evidence-batch.json
       - name: Proposed tool-call checks - 100 expectations
-        run: python -m valinator.evaluate --cases evals/actions.json --policies policies/actions-batch.json
+        run: python -m guardoath.evaluate --cases evals/actions.json --policies policies/actions-batch.json
       - name: Ledger checks - 100 expectations
-        run: python -m valinator.evaluate --cases evals/ledger.json --policies policies/ledger-batch.json
+        run: python -m guardoath.evaluate --cases evals/ledger.json --policies policies/ledger-batch.json
       - name: Timestamps checks - 100 expectations
-        run: python -m valinator.evaluate --cases evals/timestamps.json --policies policies/timestamps-batch.json
+        run: python -m guardoath.evaluate --cases evals/timestamps.json --policies policies/timestamps-batch.json
       - name: Graph checks - 100 expectations
-        run: python -m valinator.evaluate --cases evals/graph.json --policies policies/graph-batch.json
+        run: python -m guardoath.evaluate --cases evals/graph.json --policies policies/graph-batch.json
       - name: Integrity checks - 100 expectations
-        run: python -m valinator.evaluate --cases evals/integrity.json --policies policies/integrity-batch.json
+        run: python -m guardoath.evaluate --cases evals/integrity.json --policies policies/integrity-batch.json
   local-pii:
     runs-on: ubuntu-latest
     strategy:
@@ -51,9 +51,9 @@ jobs:
       - run: python -m pip install -e '.[test,pii]'
       - run: pytest -q
       - name: Privacy group - 100 expectations
-        run: python -m valinator.evaluate --pii --cases evals/privacy.json --policies policies/privacy-batch.json
+        run: python -m guardoath.evaluate --pii --cases evals/privacy.json --policies policies/privacy-batch.json
       - name: Encoded sensitive data - 100 expectations
-        run: python -m valinator.evaluate --pii --cases evals/encoded-privacy.json --policies policies/encoded-privacy-batch.json
+        run: python -m guardoath.evaluate --pii --cases evals/encoded-privacy.json --policies policies/encoded-privacy-batch.json
   dashboard:
     runs-on: ubuntu-latest
     steps:

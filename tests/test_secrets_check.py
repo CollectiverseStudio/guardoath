@@ -6,11 +6,11 @@ import socket
 import pytest
 from fastapi.testclient import TestClient
 
-from valinator.app import create_app
-from valinator.checkers import default_checkers
-from valinator.config import load_policies
-from valinator.engine import Engine
-from valinator.models import CheckRequest, Stage
+from guardoath.app import create_app
+from guardoath.checkers import default_checkers
+from guardoath.config import load_policies
+from guardoath.engine import Engine
+from guardoath.models import CheckRequest, Stage
 
 
 def github_sample():
@@ -97,9 +97,9 @@ def test_no_verification_or_network(monkeypatch):
 
 
 def test_timeout_is_incomplete_not_a_pass(engine, monkeypatch):
-    import valinator.secrets_check
+    import guardoath.secrets_check
     values = iter([0, 1])
-    monkeypatch.setattr(valinator.secrets_check, "monotonic", lambda:next(values))
+    monkeypatch.setattr(guardoath.secrets_check, "monotonic", lambda:next(values))
     result = evaluate(engine, "hello")
     assert result.evaluation_status == "incomplete"
     assert result.checker_results[0].error_code == "checker_timeout"

@@ -4,26 +4,26 @@ import subprocess
 import sys
 from fastapi.testclient import TestClient
 import pytest
-from valinator.app import create_app
-from valinator.checkers import default_checkers
-from valinator.config import load_policies
-from valinator.content_safety import build_content_safety
-from valinator.engine import Engine
-from valinator.models import CheckerResult, CheckRequest, Stage
+from guardoath.app import create_app
+from guardoath.checkers import default_checkers
+from guardoath.config import load_policies
+from guardoath.content_safety import build_content_safety
+from guardoath.engine import Engine
+from guardoath.models import CheckerResult, CheckRequest, Stage
 
 
 def test_no_provider_or_sdk_is_implicitly_selected():
     assert build_content_safety() is None
     assert 'content_safety' not in default_checkers()
     completed = subprocess.run([sys.executable, '-c',
-        "from valinator.checkers import default_checkers; import sys; default_checkers(); assert 'boto3' not in sys.modules; assert 'botocore' not in sys.modules"], capture_output=True)
+        "from guardoath.checkers import default_checkers; import sys; default_checkers(); assert 'boto3' not in sys.modules; assert 'botocore' not in sys.modules"], capture_output=True)
     assert completed.returncode == 0
     with pytest.raises(ValueError, match='Unsupported content safety provider'):
         build_content_safety('auto')
 
 
 def test_invalid_provider_is_rejected_at_startup(monkeypatch):
-    monkeypatch.setenv('VALINATOR_CONTENT_SAFETY_PROVIDER', 'auto')
+    monkeypatch.setenv('GUARDOATH_CONTENT_SAFETY_PROVIDER', 'auto')
     with pytest.raises(ValueError, match='Unsupported content safety provider'): create_app()
 
 

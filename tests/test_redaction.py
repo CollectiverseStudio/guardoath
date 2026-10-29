@@ -5,10 +5,10 @@ import sys
 import pytest
 from fastapi.testclient import TestClient
 
-from valinator.app import create_app
-from valinator.checkers import default_checkers
-from valinator.engine import Engine
-from valinator.models import Action, CheckerResult, CheckRequest, Policy, Rule, Stage
+from guardoath.app import create_app
+from guardoath.checkers import default_checkers
+from guardoath.engine import Engine
+from guardoath.models import Action, CheckerResult, CheckRequest, Policy, Rule, Stage
 
 pytestmark = pytest.mark.skipif(sys.version_info >= (3, 15), reason="Presidio does not support Python 3.15")
 pytest.importorskip("presidio_analyzer")

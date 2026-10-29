@@ -5,11 +5,11 @@ import asyncio
 import httpx2
 import pytest
 
-from valinator.azure_prompt_shields import build_azure_prompt_shields
-from valinator.checkers import default_checkers
-from valinator.config import load_policies
-from valinator.engine import Engine
-from valinator.models import Action, CheckerResult, CheckRequest, Finding, Policy, Rule, Stage
+from guardoath.azure_prompt_shields import build_azure_prompt_shields
+from guardoath.checkers import default_checkers
+from guardoath.config import load_policies
+from guardoath.engine import Engine
+from guardoath.models import Action, CheckerResult, CheckRequest, Finding, Policy, Rule, Stage
 
 
 def request(content='Hello'):

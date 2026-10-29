@@ -16,7 +16,7 @@ that every secret, password, provider format or proprietary document is detected
 | User experience | Three new dashboard examples, corrections release preview, whole-group launcher/report, same-suite baselines | Browser and launcher tests |
 | Documentation | Purpose/use case/result/limits for each supported check and every authored group case | `docs/user-guide.md` and catalog completeness test |
 
-Run `python -m valinator.evaluate --cases evals/secrets.json --policies
+Run `python -m guardoath.evaluate --cases evals/secrets.json --policies
 policies/secrets-batch.json` for 100 authored expectations. Eight intentionally
 expect incomplete evaluations. `tests/test_secrets_check.py` and
 `tests/test_secrets_batch.py` expand those examples into the provider/stage/mode/
