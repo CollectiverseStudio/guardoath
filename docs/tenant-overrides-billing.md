@@ -32,3 +32,9 @@ Use separate contracts for `validation_request` and `override_review`. Pricing, 
 - Unit tests cover tenant isolation, duplicate identities, idempotent event recording, conflicting replay, concurrent insertions and settlement routing.
 
 Before production billing: durable transactional outbox, tenant/account management, signed webhook handling, Stripe meter/event submission with retries and reconciliation, partner settlement authentication and contract, and explicit customer consent to paid usage are mandatory.
+
+## Tenant-aware API authentication (new)
+
+`create_app(..., tenant_registry=TenantRegistry(...))` now supports trusted tenant-to-application API key bindings in place of legacy credential mappings. The existing `/v1/checks/input`, `/v1/checks/output` and `/v1/validation-packs` endpoints retain their routes; application ID mismatch is denied. Legacy credentials remain supported when a tenant registry is not supplied. Mixing both credential sources is rejected at startup.
+
+This is an opt-in in-memory registry, not durable multi-tenant identity management. Production still requires secure credential storage/rotation, tenant administration, role-aware override approvals, per-tenant billing entitlements, durable usage and independent authorization at downstream AI ingress. New API integration tests cover authenticated access and cross-tenant denial.
