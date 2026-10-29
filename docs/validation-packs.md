@@ -79,3 +79,7 @@ This example uses `mode: enforce`, unlike the existing playground's observe mode
 - The regression suite includes multi-pack incompatible document shapes: when two required packs cannot validate one canonical payload, the result must be incomplete and blocked rather than reported clean.
 - `GET /v1/validation-packs` exposes authorized pack codes and versions, not a guarantee of complete industry coverage.
 - The existing [GitHub Actions workflow](../.github/workflows/tests.yml) includes `pytest -q` across its Python matrix, so the new test modules are in the intended CI path. A passing workflow run has **not** been independently verified in this session.
+
+## Stage applicability enforcement
+
+When a caller selects a pack, at least one checker belonging to that pack must be active for the requested stage. Otherwise the engine raises a selection error, and the API returns a sanitized HTTP 422 instead of reporting the pack as applied without performing its checks. A pack may contain multiple checkers with different stage scopes; the check results must still be inspected individually for passed, skipped, error and unsupported outcomes. This behavior is covered by engine and API tests and remains pending CI verification.
