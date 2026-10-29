@@ -12,12 +12,13 @@ from valinator.config import validate_local_schema
 from valinator.formats import validate_schema_formats
 from valinator.groups import GROUPS, group_results
 from valinator.models import Action, CheckerResult, CheckRequest, CheckResponse, Policy, Stage, RedactionResult
+from valinator.validation_packs import PackRegistry, PackSelectionError
 
 PRIORITY = {Action.ALLOW: 0, Action.FLAG: 1, Action.REDACT: 2, Action.BLOCK: 3}
 
 
 class Engine:
-    def __init__(self, policies: list[Policy], checkers: dict[str, Checker]):
+    def __init__(self, policies: list[Policy], checkers: dict[str, Checker], pack_registry: PackRegistry | None = None):
         self._policies: dict[tuple[str, str], Policy] = {}
         for policy in policies:
             key = (policy.application_id, policy.version)
@@ -76,6 +77,7 @@ class Engine:
                     validate_schema_formats(schema)
             self._policies[key] = deepcopy(policy)
         self._checkers = dict(checkers)
+        self._pack_registry = pack_registry
 
     def has_policy(self, application_id: str, version: str) -> bool:
         return (application_id, version) in self._policies
@@ -95,7 +97,18 @@ class Engine:
 
     async def check(self, request: CheckRequest, stage: Stage) -> CheckResponse:
         policy = self._policies[(request.application_id, request.policy_version)]
-        rules = [rule for rule in policy.rules if stage in rule.stages]
+        if self._pack_registry is None:
+            if request.validation_codes:
+                raise PackSelectionError("Validation packs are not configured")
+            selected_ids = {rule.checker_id for rule in policy.rules}
+        else:
+            packs = self._pack_registry.resolve(request.application_id, request.validation_codes)
+            available = {rule.checker_id for rule in policy.rules}
+            optional = self._pack_registry.optional_checker_ids(request.application_id)
+            if not optional <= available:
+                raise PackSelectionError("Validation pack configuration is unavailable")
+            selected_ids = (available - optional) | set(PackRegistry.checker_union((), packs))
+        rules = [rule for rule in policy.rules if stage in rule.stages and rule.checker_id in selected_ids]
         started = perf_counter()
 
         async def execute(checker_id: str, content_request: CheckRequest = request) -> CheckerResult:
