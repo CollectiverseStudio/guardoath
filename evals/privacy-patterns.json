@@ -1,0 +1,2280 @@
+{
+  "format_version": "1",
+  "suite_id": "privacy-patterns-v1",
+  "cases": [
+    {
+      "case_id": "financial.iban.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Please send the refund to IBAN DE89 3704 0044 0532 0130 00.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.iban_code"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "financial.iban.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Please send the refund to IBAN DE89 3704 0044 0532 0130 00.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.iban_code"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "financial.crypto.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "My bitcoin wallet is 16Yeky6GMjeNkAiNcBY7ZhrLoMSgg1BoyZ.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.crypto"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "financial.crypto.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "My bitcoin wallet is 16Yeky6GMjeNkAiNcBY7ZhrLoMSgg1BoyZ.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.crypto"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "financial.us-bank.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "My checking account is 945456787654.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.us_bank_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "financial.us-bank.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "My checking account is 945456787654.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.us_bank_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "financial.aba-routing.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Routing number 121000358 for the transfer.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.aba_routing_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "financial.aba-routing.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Routing number 121000358 for the transfer.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.aba_routing_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "network.ip.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "The server is at 192.168.1.10 today.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.ip_address"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "network.ip.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "The server is at 192.168.1.10 today.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.ip_address"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "network.mac.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Device MAC: 01:23:45:67:89:AB",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.mac_address"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "network.mac.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Device MAC: 01:23:45:67:89:AB",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.mac_address"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "network.url.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Read more at https://example.com/help",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.url"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "network.url.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Read more at https://example.com/help",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.url"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "network.uuid.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Ticket 6ba7b810-9dad-31d1-80b4-00c04fd430c8 is open.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.uuid"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "network.uuid.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Ticket 6ba7b810-9dad-31d1-80b4-00c04fd430c8 is open.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.uuid"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "date.date.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Your appointment is on 5-20-2021.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.date_time"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "date.date.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Your appointment is on 5-20-2021.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.date_time"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "phone.generic.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Call me on (415) 555-0132.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "phone.generic.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Call me on (415) 555-0132.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "phone.za-mobile.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "My cell is +27632118258",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number",
+          "pii.za_mobile_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "phone.za-mobile.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "My cell is +27632118258",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.phone_number",
+          "pii.za_mobile_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "us.passport.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "My passport number is 912803456.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.us_passport"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "us.passport.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "My passport number is 912803456.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.us_passport"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "us.itin.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "My ITIN is 911-70-1234.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.us_itin"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "us.itin.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "My ITIN is 911-70-1234.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.us_itin"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "us.driver-license.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "My driver license is H12234567.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.us_driver_license"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "us.driver-license.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "My driver license is H12234567.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.us_driver_license"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "us.mbi.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Medicare MBI 1EG4-TE5-MK73",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.us_mbi"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "us.mbi.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Medicare MBI 1EG4-TE5-MK73",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.us_mbi"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "us.health-member-id.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Member ID A12345",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.us_health_insurance_member_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "us.health-member-id.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Member ID A12345",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.us_health_insurance_member_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "uk.nino.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "National insurance number AB123456C",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.uk_nino",
+          "pii.us_health_insurance_member_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "uk.nino.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "National insurance number AB123456C",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.uk_nino",
+          "pii.us_health_insurance_member_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "uk.nhs.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "NHS number 401-023-2137",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.uk_nhs"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "uk.nhs.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "NHS number 401-023-2137",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.uk_nhs"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "uk.postcode.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "My address is SW1A 1AA in London",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.uk_postcode"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "uk.postcode.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "My address is SW1A 1AA in London",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.uk_postcode"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "eu.de-tax-id.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Steuer-ID 98765432106",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.de_tax_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "eu.de-tax-id.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Steuer-ID 98765432106",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.de_tax_id"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "eu.es-nif.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Mi NIF es 1111111G",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.es_nif"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "eu.es-nif.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Mi NIF es 1111111G",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.es_nif"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "eu.it-fiscal-code.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Codice fiscale AAAAAA00B11C333Y",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.it_fiscal_code"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "eu.it-fiscal-code.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Codice fiscale AAAAAA00B11C333Y",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.it_fiscal_code"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "eu.pl-pesel.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "PESEL 44051401458",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.pl_pesel"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "eu.pl-pesel.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "PESEL 44051401458",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.pl_pesel"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "eu.se-personnummer.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Personnummer 20110925-2385",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.se_personnummer"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "eu.se-personnummer.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Personnummer 20110925-2385",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.se_personnummer"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "apac.au-tfn.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "TFN 876543210",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.au_tfn"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "apac.au-tfn.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "TFN 876543210",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.au_tfn"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "apac.in-aadhaar.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Aadhaar 312345678909",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.in_aadhaar"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "apac.in-aadhaar.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Aadhaar 312345678909",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.in_aadhaar"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "apac.kr-rrn.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "RRN 960121-1234567",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.kr_rrn"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "apac.kr-rrn.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "RRN 960121-1234567",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.kr_rrn"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "apac.sg-nric.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "NRIC S2740116C",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.sg_nric_fin"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "apac.sg-nric.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "NRIC S2740116C",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.sg_nric_fin"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "africa.za-id.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "ID number 8001015009087",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.kr_frn",
+          "pii.za_id_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "africa.za-id.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "ID number 8001015009087",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.kr_frn",
+          "pii.za_id_number"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "africa.ng-nin.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Nigerian NIN 23456789019",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.ng_nin"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "africa.ng-nin.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Nigerian NIN 23456789019",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.ng_nin"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "americas.ca-sin.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "SIN 130 692 544",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.ca_sin"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "americas.ca-sin.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "SIN 130 692 544",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.ca_sin"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.field-context.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "{\"passport_number\": \"912803456\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.us_passport"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "json.field-context.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "{\"passport_number\": \"912803456\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.us_passport"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "failure.iban-checksum.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "IBAN DE89 3704 0044 0532 0130 01",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "failure.iban-checksum.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "IBAN DE89 3704 0044 0532 0130 01",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "failure.nhs-checksum.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "NHS number 401-023-2138",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "failure.nhs-checksum.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "NHS number 401-023-2138",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "benign.bare-number.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Order 912803456 shipped.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "benign.bare-number.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Order 912803456 shipped.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "benign.clean-question.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Can you explain your return policy?",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "benign.clean-question.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Can you explain your return policy?",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "benign.version.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Version 3.14.10 is installed.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "benign.version.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-v1",
+        "content": "Version 3.14.10 is installed.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "config.off-iban.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-off-v1",
+        "content": "IBAN DE89 3704 0044 0532 0130 00",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "config.off-iban.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-off-v1",
+        "content": "IBAN DE89 3704 0044 0532 0130 00",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "config.off-keeps-core.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-off-v1",
+        "content": "Card 4111 1111 1111 1111",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.credit_card"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "config.off-keeps-core.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-off-v1",
+        "content": "Card 4111 1111 1111 1111",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.credit_card"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "config.disabled-iban.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-no-iban-v1",
+        "content": "IBAN DE89 3704 0044 0532 0130 00",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "config.disabled-iban.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-no-iban-v1",
+        "content": "IBAN DE89 3704 0044 0532 0130 00",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "config.disabled-keeps-others.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-no-iban-v1",
+        "content": "My bitcoin wallet is 16Yeky6GMjeNkAiNcBY7ZhrLoMSgg1BoyZ.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.crypto"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "config.disabled-keeps-others.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-no-iban-v1",
+        "content": "My bitcoin wallet is 16Yeky6GMjeNkAiNcBY7ZhrLoMSgg1BoyZ.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.crypto"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "config.strict-context-only.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-strict-v1",
+        "content": "My passport number is 912803456.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "config.strict-context-only.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-strict-v1",
+        "content": "My passport number is 912803456.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "config.strict-validated.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-strict-v1",
+        "content": "IBAN DE89 3704 0044 0532 0130 00",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.iban_code"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "config.strict-validated.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-strict-v1",
+        "content": "IBAN DE89 3704 0044 0532 0130 00",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.iban_code"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "config.low-threshold.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-low-threshold-v1",
+        "content": "Order 912803456 shipped.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.de_bsnr",
+          "pii.us_bank_number",
+          "pii.us_itin",
+          "pii.us_passport"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "config.low-threshold.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-low-threshold-v1",
+        "content": "Order 912803456 shipped.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "flag",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.de_bsnr",
+          "pii.us_bank_number",
+          "pii.us_itin",
+          "pii.us_passport"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "enforce.iban.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-enforce-v1",
+        "content": "Please send the refund to IBAN DE89 3704 0044 0532 0130 00.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.iban_code"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "enforce.iban.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-enforce-v1",
+        "content": "Please send the refund to IBAN DE89 3704 0044 0532 0130 00.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.iban_code"
+        ],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "enforce.clean.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-enforce-v1",
+        "content": "Can you explain your return policy?",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "enforce.clean.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-enforce-v1",
+        "content": "Can you explain your return policy?",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_requested"
+      }
+    },
+    {
+      "case_id": "redact.iban.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-redact-v1",
+        "content": "Send the refund to IBAN DE89 3704 0044 0532 0130 00 please.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "redact",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.iban_code"
+        ],
+        "redaction_status": "preview"
+      }
+    },
+    {
+      "case_id": "redact.iban.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-redact-v1",
+        "content": "Send the refund to IBAN DE89 3704 0044 0532 0130 00 please.",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "redact",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.iban_code"
+        ],
+        "redaction_status": "preview"
+      }
+    },
+    {
+      "case_id": "redact.network.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-redact-v1",
+        "content": "Server 192.168.1.10 has MAC 01:23:45:67:89:AB",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "redact",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.ip_address",
+          "pii.mac_address"
+        ],
+        "redaction_status": "preview"
+      }
+    },
+    {
+      "case_id": "redact.network.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-redact-v1",
+        "content": "Server 192.168.1.10 has MAC 01:23:45:67:89:AB",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "redact",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.ip_address",
+          "pii.mac_address"
+        ],
+        "redaction_status": "preview"
+      }
+    },
+    {
+      "case_id": "redact.json.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-redact-v1",
+        "content": "{\"ni_number\": \"AB123456C\", \"note\": \"ok\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "redact",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.uk_nino"
+        ],
+        "redaction_status": "preview"
+      }
+    },
+    {
+      "case_id": "redact.json.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-redact-v1",
+        "content": "{\"ni_number\": \"AB123456C\", \"note\": \"ok\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "redact",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "flagged"
+        },
+        "finding_rule_ids": [
+          "pii.uk_nino"
+        ],
+        "redaction_status": "preview"
+      }
+    },
+    {
+      "case_id": "redact.clean.input",
+      "group": "sensitive_data",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-redact-v1",
+        "content": "Can you explain your return policy?",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_needed"
+      }
+    },
+    {
+      "case_id": "redact.clean.output",
+      "group": "sensitive_data",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "privacy-patterns-redact-v1",
+        "content": "Can you explain your return policy?",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "pii": "passed"
+        },
+        "finding_rule_ids": [],
+        "redaction_status": "not_needed"
+      }
+    }
+  ]
+}

@@ -112,7 +112,8 @@ def test_cancelled_local_scan_never_starts_provider():
 
 @pytest.mark.parametrize('content', ['Contact jane@example.com', 'Example SSN: 219-09-9999', 'Card: 4111 1111 1111 1111', 'ghp'+'_'+'A'*36])
 def test_actual_local_privacy_and_secret_detectors_stop_provider(content):
-    pytest.importorskip('presidio_analyzer')
+    pytest.importorskip('tldextract')
+    pytest.importorskip('phonenumbers')
     calls = []
     def provider(message):
         calls.append(message)
@@ -159,7 +160,8 @@ def test_redaction_rechecks_use_same_gate_and_never_send_original(transformed,ex
 
 
 def test_full_sample_allows_clean_input_after_real_local_guards():
-    pytest.importorskip('presidio_analyzer')
+    pytest.importorskip('tldextract')
+    pytest.importorskip('phonenumbers')
     calls = []
     def provider(message):
         calls.append(message)

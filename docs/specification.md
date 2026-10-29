@@ -32,8 +32,8 @@ are introduced.
 
 ## Planned component evaluation
 
-Use Pydantic and JSON Schema for deterministic checks. Evaluate Presidio for local
-personal information handling, Bedrock ApplyGuardrail as a first managed safety
+Use Pydantic and JSON Schema for deterministic checks. Evaluate the Data Privacy Stack privacy
+analyzer for local personal information handling, Bedrock ApplyGuardrail as a first managed safety
 adapter, OpenAI Moderation as an optional alternative, and Promptfoo for regression
 evaluation. NeMo, selected Guardrails AI Hub validators, Azure Prompt Shields,
 Model Armor, Instructor, Outlines, and Garak remain candidates where requirements
@@ -41,10 +41,11 @@ justify them. LLM Guard was archived when checked; do not make it the main
 dependency without a maintenance plan. Check licenses of packages and model
 weights separately before adoption.
 
-The optional local PII adapter reuses Presidio's email, credit-card, and U.S. SSN patterns
-and validators without invoking its NLP engine. It scans decoded JSON as well as
+The optional local PII adapter uses a copy of the Data Privacy Stack privacy analyzer 2.2.366 pattern code
+(MIT, `guardoath/privacy_patterns`): email, credit-card and U.S. SSN rules plus 90 more identifier types on by
+default; the analyzer's NLP engine and spaCy are not included. It scans decoded JSON as well as
 text, uses an offline domain snapshot, and returns generic entity findings without
-source values. The current scope excludes names, addresses, phone numbers, and
+source values. The current scope excludes names, addresses, locations and
 full PHI classification. Missing required adapters remain incomplete assessments.
 Version 0.5 adds policy-controlled redaction, a separate transformation result,
 and full active-check revalidation before returning transformed content. Observe
@@ -117,7 +118,7 @@ open decisions. No universal bias-free or prompt-injection-proof claims.
 - https://developers.openai.com/api/docs/guides/structured-outputs
 - https://aws.amazon.com/bedrock/guardrails/
 - https://docs.nvidia.com/nemo/guardrails/
-- https://microsoft.github.io/presidio/
+- Data Privacy Stack privacy analyzer, release 2.2.366 (MIT); see `guardoath/privacy_patterns/README.md`
 - https://github.com/promptfoo/promptfoo
 - https://doi.org/10.6028/NIST.AI.600-1
 
@@ -193,7 +194,7 @@ background-thread/CPU limit, connection protection, or model-cost cap is claimed
 ## Local dashboard launcher
 
 `start_dashboard.py` supplies an optional cross-platform first-run path. Python
-3.11–3.14 is required for the complete PII-enabled playground. It creates an
+3.11 or newer is required for the complete PII-enabled playground. It creates an
 ignored `.dashboard-venv` with pip, installs the existing `.[pii]` dependency set,
 and records a successful setup fingerprint after `pip check`. Interrupted setup
 is retried. Project/Python changes invalidate the marker; `--reinstall` explicitly

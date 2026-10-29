@@ -20,7 +20,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.email_address"
+          "pii.email_address",
+          "pii.url"
         ],
         "redaction_status": "not_requested"
       }
@@ -43,7 +44,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.email_address"
+          "pii.email_address",
+          "pii.url"
         ],
         "redaction_status": "not_requested"
       }
@@ -296,7 +298,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.date_of_birth"
+          "pii.date_of_birth",
+          "pii.date_time"
         ],
         "redaction_status": "not_requested"
       }
@@ -319,7 +322,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.date_of_birth"
+          "pii.date_of_birth",
+          "pii.date_time"
         ],
         "redaction_status": "not_requested"
       }
@@ -342,7 +346,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.date_of_birth"
+          "pii.date_of_birth",
+          "pii.date_time"
         ],
         "redaction_status": "not_requested"
       }
@@ -365,7 +370,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.date_of_birth"
+          "pii.date_of_birth",
+          "pii.date_time"
         ],
         "redaction_status": "not_requested"
       }
@@ -388,7 +394,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.date_of_birth"
+          "pii.date_of_birth",
+          "pii.date_time"
         ],
         "redaction_status": "not_requested"
       }
@@ -411,7 +418,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.date_of_birth"
+          "pii.date_of_birth",
+          "pii.date_time"
         ],
         "redaction_status": "not_requested"
       }
@@ -572,7 +580,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.health_plan_id"
+          "pii.health_plan_id",
+          "pii.us_health_insurance_member_id"
         ],
         "redaction_status": "not_requested"
       }
@@ -595,7 +604,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.health_plan_id"
+          "pii.health_plan_id",
+          "pii.us_health_insurance_member_id"
         ],
         "redaction_status": "not_requested"
       }
@@ -664,7 +674,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.health_plan_id"
+          "pii.health_plan_id",
+          "pii.us_health_insurance_member_id"
         ],
         "redaction_status": "not_requested"
       }
@@ -687,7 +698,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.health_plan_id"
+          "pii.health_plan_id",
+          "pii.us_health_insurance_member_id"
         ],
         "redaction_status": "not_requested"
       }
@@ -710,7 +722,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.bank_account"
+          "pii.bank_account",
+          "pii.us_bank_number"
         ],
         "redaction_status": "not_requested"
       }
@@ -733,7 +746,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.bank_account"
+          "pii.bank_account",
+          "pii.us_bank_number"
         ],
         "redaction_status": "not_requested"
       }
@@ -756,7 +770,9 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.bank_account"
+          "pii.bank_account",
+          "pii.kr_driver_license",
+          "pii.us_bank_number"
         ],
         "redaction_status": "not_requested"
       }
@@ -779,7 +795,9 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.bank_account"
+          "pii.bank_account",
+          "pii.kr_driver_license",
+          "pii.us_bank_number"
         ],
         "redaction_status": "not_requested"
       }
@@ -802,7 +820,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.bank_account"
+          "pii.bank_account",
+          "pii.us_bank_number"
         ],
         "redaction_status": "not_requested"
       }
@@ -825,7 +844,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.bank_account"
+          "pii.bank_account",
+          "pii.us_bank_number"
         ],
         "redaction_status": "not_requested"
       }
@@ -836,7 +856,7 @@
       "stage": "input",
       "request": {
         "application_id": "demo",
-        "policy_version": "pii-extended-v1",
+        "policy_version": "pii-extended-lookalike-v1",
         "content": "Order reference 202-555-0147",
         "content_format": "text"
       },
@@ -857,7 +877,7 @@
       "stage": "output",
       "request": {
         "application_id": "demo",
-        "policy_version": "pii-extended-v1",
+        "policy_version": "pii-extended-lookalike-v1",
         "content": "Order reference 202-555-0147",
         "content_format": "text"
       },
@@ -878,7 +898,7 @@
       "stage": "input",
       "request": {
         "application_id": "demo",
-        "policy_version": "pii-extended-v1",
+        "policy_version": "pii-extended-lookalike-v1",
         "content": "Calendar date 1980-02-29",
         "content_format": "text"
       },
@@ -899,7 +919,7 @@
       "stage": "output",
       "request": {
         "application_id": "demo",
-        "policy_version": "pii-extended-v1",
+        "policy_version": "pii-extended-lookalike-v1",
         "content": "Calendar date 1980-02-29",
         "content_format": "text"
       },
@@ -1088,7 +1108,7 @@
       "stage": "input",
       "request": {
         "application_id": "demo",
-        "policy_version": "pii-extended-v1",
+        "policy_version": "pii-extended-lookalike-v1",
         "content": "DOB: 2025-02-29",
         "content_format": "text"
       },
@@ -1109,7 +1129,7 @@
       "stage": "output",
       "request": {
         "application_id": "demo",
-        "policy_version": "pii-extended-v1",
+        "policy_version": "pii-extended-lookalike-v1",
         "content": "DOB: 2025-02-29",
         "content_format": "text"
       },
@@ -1256,7 +1276,7 @@
       "stage": "input",
       "request": {
         "application_id": "demo",
-        "policy_version": "pii-extended-v1",
+        "policy_version": "pii-extended-lookalike-v1",
         "content": "customer_phone_typo: 202-555-0147",
         "content_format": "text"
       },
@@ -1277,7 +1297,7 @@
       "stage": "output",
       "request": {
         "application_id": "demo",
-        "policy_version": "pii-extended-v1",
+        "policy_version": "pii-extended-lookalike-v1",
         "content": "customer_phone_typo: 202-555-0147",
         "content_format": "text"
       },
@@ -1566,7 +1586,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.date_of_birth"
+          "pii.date_of_birth",
+          "pii.date_time"
         ],
         "redaction_status": "not_requested"
       }
@@ -1589,7 +1610,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.date_of_birth"
+          "pii.date_of_birth",
+          "pii.date_time"
         ],
         "redaction_status": "not_requested"
       }
@@ -1658,7 +1680,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.health_plan_id"
+          "pii.health_plan_id",
+          "pii.us_health_insurance_member_id"
         ],
         "redaction_status": "not_requested"
       }
@@ -1681,7 +1704,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.health_plan_id"
+          "pii.health_plan_id",
+          "pii.us_health_insurance_member_id"
         ],
         "redaction_status": "not_requested"
       }
@@ -1704,7 +1728,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.bank_account"
+          "pii.bank_account",
+          "pii.us_bank_number"
         ],
         "redaction_status": "not_requested"
       }
@@ -1727,7 +1752,8 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.bank_account"
+          "pii.bank_account",
+          "pii.us_bank_number"
         ],
         "redaction_status": "not_requested"
       }
@@ -1750,11 +1776,14 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.phone_number",
+          "pii.bank_account",
           "pii.date_of_birth",
-          "pii.medical_record_number",
+          "pii.date_time",
           "pii.health_plan_id",
-          "pii.bank_account"
+          "pii.medical_record_number",
+          "pii.phone_number",
+          "pii.us_bank_number",
+          "pii.us_health_insurance_member_id"
         ],
         "redaction_status": "preview"
       }
@@ -1777,11 +1806,14 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.phone_number",
+          "pii.bank_account",
           "pii.date_of_birth",
-          "pii.medical_record_number",
+          "pii.date_time",
           "pii.health_plan_id",
-          "pii.bank_account"
+          "pii.medical_record_number",
+          "pii.phone_number",
+          "pii.us_bank_number",
+          "pii.us_health_insurance_member_id"
         ],
         "redaction_status": "preview"
       }
@@ -1804,11 +1836,15 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.phone_number",
+          "pii.bank_account",
           "pii.date_of_birth",
-          "pii.medical_record_number",
+          "pii.date_time",
           "pii.health_plan_id",
-          "pii.bank_account"
+          "pii.medical_record_number",
+          "pii.phone_number",
+          "pii.us_bank_number",
+          "pii.us_health_insurance_member_id",
+          "pii.za_income_tax_number"
         ],
         "redaction_status": "preview"
       }
@@ -1831,11 +1867,15 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.phone_number",
+          "pii.bank_account",
           "pii.date_of_birth",
-          "pii.medical_record_number",
+          "pii.date_time",
           "pii.health_plan_id",
-          "pii.bank_account"
+          "pii.medical_record_number",
+          "pii.phone_number",
+          "pii.us_bank_number",
+          "pii.us_health_insurance_member_id",
+          "pii.za_income_tax_number"
         ],
         "redaction_status": "preview"
       }
@@ -1858,11 +1898,14 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.phone_number",
+          "pii.bank_account",
           "pii.date_of_birth",
-          "pii.medical_record_number",
+          "pii.date_time",
           "pii.health_plan_id",
-          "pii.bank_account"
+          "pii.medical_record_number",
+          "pii.phone_number",
+          "pii.us_bank_number",
+          "pii.us_health_insurance_member_id"
         ],
         "redaction_status": "ready"
       }
@@ -1885,11 +1928,14 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.phone_number",
+          "pii.bank_account",
           "pii.date_of_birth",
-          "pii.medical_record_number",
+          "pii.date_time",
           "pii.health_plan_id",
-          "pii.bank_account"
+          "pii.medical_record_number",
+          "pii.phone_number",
+          "pii.us_bank_number",
+          "pii.us_health_insurance_member_id"
         ],
         "redaction_status": "ready"
       }
@@ -1912,11 +1958,15 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.phone_number",
+          "pii.bank_account",
           "pii.date_of_birth",
-          "pii.medical_record_number",
+          "pii.date_time",
           "pii.health_plan_id",
-          "pii.bank_account"
+          "pii.medical_record_number",
+          "pii.phone_number",
+          "pii.us_bank_number",
+          "pii.us_health_insurance_member_id",
+          "pii.za_income_tax_number"
         ],
         "redaction_status": "ready"
       }
@@ -1939,11 +1989,15 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.phone_number",
+          "pii.bank_account",
           "pii.date_of_birth",
-          "pii.medical_record_number",
+          "pii.date_time",
           "pii.health_plan_id",
-          "pii.bank_account"
+          "pii.medical_record_number",
+          "pii.phone_number",
+          "pii.us_bank_number",
+          "pii.us_health_insurance_member_id",
+          "pii.za_income_tax_number"
         ],
         "redaction_status": "ready"
       }
@@ -2206,7 +2260,7 @@
       "stage": "input",
       "request": {
         "application_id": "demo",
-        "policy_version": "pii-v1",
+        "policy_version": "pii-no-phone-pattern-v1",
         "content": "Phone: 202-555-0147",
         "content_format": "text"
       },
@@ -2227,7 +2281,7 @@
       "stage": "output",
       "request": {
         "application_id": "demo",
-        "policy_version": "pii-v1",
+        "policy_version": "pii-no-phone-pattern-v1",
         "content": "Phone: 202-555-0147",
         "content_format": "text"
       },

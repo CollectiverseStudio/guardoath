@@ -6,7 +6,8 @@ from pathlib import Path
 import socket
 
 import pytest
-pytest.importorskip('presidio_analyzer')
+pytest.importorskip('tldextract')
+pytest.importorskip('phonenumbers')
 from fastapi.testclient import TestClient
 from guardoath.app import create_app
 from guardoath.checkers import default_checkers

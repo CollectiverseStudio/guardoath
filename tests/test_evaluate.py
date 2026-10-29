@@ -32,7 +32,8 @@ def test_handwritten_core_cases_match_real_engine():
 
 
 def test_complete_local_suite_and_redaction_reports_omit_values():
-    pytest.importorskip('presidio_analyzer')
+    pytest.importorskip('tldextract')
+    pytest.importorskip('phonenumbers')
     report = asyncio.run(evaluate(load_suite(ROOT/'evals/local.json'),
         Engine(load_policies(ROOT/'policies/playground.json'),default_checkers(enable_pii=True))))
     assert report['summary']['total'] == report['summary']['matched'] == 30

@@ -11,7 +11,7 @@ from guardoath.config import load_policies
 from guardoath.engine import Engine
 from guardoath.evaluate import evaluate, load_suite, render_html, write_outputs
 
-SUITES = ('local', 'secrets', 'privacy', 'structure', 'business', 'text-security', 'bias', 'evidence', 'actions', 'encoded-privacy', 'ledger', 'timestamps', 'graph', 'integrity')
+SUITES = ('local', 'secrets', 'privacy', 'structure', 'business', 'text-security', 'bias', 'evidence', 'actions', 'encoded-privacy', 'privacy-patterns', 'ledger', 'timestamps', 'graph', 'integrity')
 
 
 def render_index(collection):
@@ -76,7 +76,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', default='.', help='Repository root containing evals and policies')
     parser.add_argument('--output', required=True, help='New collection directory; existing paths are never overwritten')
-    parser.add_argument('--pii', action='store_true', help='Enable offline Presidio for the starter/privacy suites')
+    parser.add_argument('--pii', action='store_true', help='Enable the offline sensitive-data checks for the starter and privacy suites')
     args = parser.parse_args(argv)
     try:
         collection = asyncio.run(run_all(args.root, args.output, args.pii))

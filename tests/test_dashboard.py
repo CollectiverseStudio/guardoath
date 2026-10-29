@@ -50,7 +50,8 @@ def test_conversation_profile_cannot_pass_without_its_required_pii_adapter():
 
 def test_conversation_profile_runs_combined_checks_on_both_stages():
     import pytest
-    pytest.importorskip('presidio_analyzer')
+    pytest.importorskip('tldextract')
+    pytest.importorskip('phonenumbers')
     client = conversation_client(True)
     for stage in ['input', 'output']:
         for content, flagged in [('Explain returns.', None), ('Email jane@example.com', 'pii'),

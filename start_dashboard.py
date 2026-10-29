@@ -98,7 +98,7 @@ def main():
     parser.add_argument('--no-browser', action='store_true', help='Print the URL without opening a browser')
     parser.add_argument('--reinstall', action='store_true', help='Reinstall the dashboard dependencies')
     parser.add_argument('--evaluate', action='store_true', help='Run the bundled local regression cases and open their report')
-    parser.add_argument('--suite', choices=['local','secrets','privacy','structure','business','text-security','bias','evidence','actions','encoded-privacy','ledger','timestamps','graph','integrity','all'], default='local', help='Choose starter examples or a complete group batch')
+    parser.add_argument('--suite', choices=['local','secrets','privacy','structure','business','text-security','bias','evidence','actions','encoded-privacy','privacy-patterns','ledger','timestamps','graph','integrity','all'], default='local', help='Choose starter examples or a complete group batch')
     parser.add_argument('--baseline', help='Compare an evaluation against this saved report')
     parser.add_argument('--no-compare', action='store_true', help='Skip automatic comparison with a previous evaluation')
     parser.add_argument('--serve', action='store_true', help=argparse.SUPPRESS)
@@ -113,8 +113,8 @@ def main():
         parser.error('Choose --baseline or --no-compare')
     if args.evaluate and args.serve:
         parser.error('--evaluate cannot be combined with internal server mode')
-    if not (3, 11) <= sys.version_info[:2] < (3, 15):
-        print('The complete dashboard needs Python 3.11–3.14 for its PII detector. Use Python 3.12 or 3.14.', file=sys.stderr)
+    if sys.version_info[:2] < (3, 11):
+        print('The complete dashboard needs Python 3.11 or newer.', file=sys.stderr)
         return 1
     try:
         if args.serve:
@@ -132,7 +132,7 @@ def main():
             return completed.returncode
         if args.evaluate:
             cases_path = ROOT / 'evals' / (args.suite + '.json')
-            policies_path = ROOT / 'policies' / ({'secrets':'secrets-batch.json','privacy':'privacy-batch.json','structure':'structure-batch.json','business':'business-batch.json','text-security':'text-security-batch.json','bias':'bias-batch.json','evidence':'evidence-batch.json','actions':'actions-batch.json','encoded-privacy':'encoded-privacy-batch.json',**{n:n+'-batch.json' for n in ['ledger','timestamps','graph','integrity']}}.get(args.suite,'playground.json'))
+            policies_path = ROOT / 'policies' / ({'secrets':'secrets-batch.json','privacy':'privacy-batch.json','structure':'structure-batch.json','business':'business-batch.json','text-security':'text-security-batch.json','bias':'bias-batch.json','evidence':'evidence-batch.json','actions':'actions-batch.json','encoded-privacy':'encoded-privacy-batch.json',**{n:n+'-batch.json' for n in ['privacy-patterns','ledger','timestamps','graph','integrity']}}.get(args.suite,'playground.json'))
             baseline = Path(args.baseline).resolve() if args.baseline else None
             if not baseline and not args.no_compare:
                 previous = sorted((ROOT / '.guardoath-reports').glob('*/report.json'),

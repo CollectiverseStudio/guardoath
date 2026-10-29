@@ -138,7 +138,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description='Run local GuardOath regression expectations without provider calls.')
     parser.add_argument('--cases', default='evals/local.json')
     parser.add_argument('--policies', default='policies/playground.json')
-    parser.add_argument('--pii',action='store_true',help='Enable the optional offline Presidio adapter')
+    parser.add_argument('--pii',action='store_true',help='Enable the optional offline sensitive-data checks')
     parser.add_argument('--group',action='append',help='Select a group; repeat for multiple groups')
     parser.add_argument('--report',help='Write a JSON report without submitted content')
     parser.add_argument('--html',help='Write a standalone HTML report without submitted content')

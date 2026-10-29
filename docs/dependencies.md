@@ -26,17 +26,27 @@ Local validation uses the available Python 3.12 runtime. Hosted CI covers Python
 3.11, 3.12, 3.14, and the latest stable 3.15 line. Python 3.15.2 was the latest
 stable Python release when checked at https://www.python.org/downloads/.
 
-Presidio analyzer 2.2.366 is integrated as an optional `pii` extra. Its published
-Python constraint is >=3.11,<3.15, so the core service still tests Python 3.15
-while the optional adapter has separate 3.12 and 3.14 CI jobs. Enabling PII on
-3.15 fails explicitly at startup. No NLP model weights are downloaded or bundled.
-Presidio anonymizer 2.2.366 was checked but is not integrated. GuardOath applies
-bounded span replacements from its local recognizers and reruns active checks;
-this avoids adding another dependency for the current limited transformation.
+The upstream analyzer package is not installed. GuardOath includes a copy of the
+pattern code from the Data Privacy Stack privacy analyzer, release 2.2.366, in
+`guardoath/privacy_patterns`: the 7 shared base files, 88 recognizer files with 93
+recognizers, and `iban_patterns.py`. Recognizers that need an NLP model or a remote
+service are not copied. Every copied file was checked against the release by git blob
+hash; the changes (import lines, logger name, three reworded comments, NLP type hints
+written as strings) are listed file by file in `guardoath/privacy_patterns/README.md`.
+The upstream tests for these recognizers are copied to `tests/privacy_patterns` (92 files;
+22 test functions that need the upstream analyzer engine are left out and listed there).
 
-Presidio analyzer source and license: https://github.com/data-privacy-stack/presidio
-The analyzer package declares the MIT license. Its dependencies retain their own
-licenses. This integration reuses installed packages rather than vendoring them.
+The optional `pii` extra installs tldextract 5.4.0 (email domain check) and
+phonenumbers 9.0.42 (phone-number recognizers; Apache-2.0, pure Python, includes its own
+numbering-plan metadata, Requires-Python >=2.5). spaCy, numpy and NLP model weights are
+not installed, downloaded or bundled. The upstream anonymizer was checked but is not
+integrated. GuardOath applies bounded span replacements from its local recognizers and
+reruns active checks; this avoids adding another dependency for the current limited
+transformation.
+
+License: the analyzer package declares the MIT license. The copied files keep it, with
+the copyright notice the MIT license requires, in `guardoath/privacy_patterns/LICENSE`.
+tldextract, phonenumbers and regex keep their own licenses.
 
 This register records verification at a point in time. It does not imply that
 versions stay current automatically. Supporting dependencies are resolved by pip;
@@ -70,10 +80,11 @@ not a documented full-token validator; GitHub's prefix reference is
 https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github.
 
 The Privacy group batch adds no dependencies and makes no new upstream-version
-claim: installed Presidio remains the optional email/card/SSN adapter; local
+claim: the copied privacy pattern code remains the optional email/card/SSN adapter; local
 GuardOath field heuristics reuse the pinned regex package and Python calendar
-validation. No NLP model, phone numbering-plan database, patient/insurance/bank
-lookup or external service is introduced.
+validation. No NLP model, patient/insurance/bank lookup or external service is
+introduced. (The later privacy pattern checks add phonenumbers and its bundled
+numbering-plan metadata; see above.)
 
 Structure batch: no dependency/version additions. The existing jsonschema 4.26.0,
 email-validator 2.3.0 and rfc3339-validator 0.1.4 are reused. Explicit time/date-time
@@ -124,7 +135,7 @@ before schema evaluation, not a new arithmetic engine. No new packages, model
 weights, executable tools, reference lookups or cloud services are introduced.
 
 
-Version 0.23 encoded PII reuses the existing optional Presidio patterns, strict
+Version 0.23 encoded PII reuses the existing optional copied privacy patterns, strict
 JSON parser and bounded standard-library Base64/hex UTF-8 decoder. It adds no
 packages or new upstream-version claim, and performs no verification/network/model
 calls. The wrapper preserves its underlying PII checker version in metadata.

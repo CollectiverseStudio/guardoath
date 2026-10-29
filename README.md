@@ -33,9 +33,13 @@ select a validation provider. See [cloud portability](docs/cloud-portability.md)
 [content-safety coverage](docs/content-safety-coverage.md). Hosting implementation
 is handled separately by Greg; this batch contains no deployment resources.
 
-An optional **real local detector** checks email addresses, credit-card candidates,
-and selected U.S. SSN candidates using Presidio's patterns and validation routines. It is separate
-from the simulated safety/bias adapters; see setup below.
+An optional **real local detector** checks email addresses, credit-card candidates
+and selected U.S. SSN candidates, plus 90 more identifier types that are on by default
+(bank, tax, health, identity-document, network, phone and postal identifiers for the U.S.
+and 17 other countries). It uses pattern and validation code copied from the Data Privacy
+Stack privacy analyzer, release 2.2.366 (MIT, `guardoath/privacy_patterns`; no NLP model
+or spaCy). It does not detect names or locations. It is separate from the simulated
+safety/bias adapters; see setup below.
 
 The demo follows **Input data → Input test → Output (AI) data → Output test**.
 Its default conversation profile combines the implemented general text checks on
@@ -45,7 +49,7 @@ application-specific rules and groups that are not implemented.
 
 ## Open the dashboard with one command
 
-Install Git and Python 3.13 (or another supported 3.11–3.14 version), then download this repository:
+Install Git and Python 3.13 (or another supported 3.11–3.15 version), then download this repository:
 
 ```bash
 git clone https://github.com/CollectiverseStudio/guardoath.git
@@ -69,7 +73,7 @@ The first launch installs the dashboard dependencies in its own ignored
 Later launches reuse that environment unless `pyproject.toml` or the launcher
 Python changes. No shell activation or manually configured environment is needed.
 The launcher selects all playground policies and the real local PII detector.
-Python 3.15 still supports the core API, but not this complete PII-enabled profile.
+CI runs the PII-enabled tests on Python 3.11–3.15.
 
 The launcher prints a fresh **Application API key**, then opens
 [the dashboard](http://127.0.0.1:8000/dashboard). Copy the key from the terminal,
@@ -110,8 +114,8 @@ it does not generate the answer. Passed checks cover only their stated scope.
 py -3.13 start_dashboard.py --evaluate --suite all
 ```
 
-This runs all 14 local suites, then opens one index with per-group report links:
-1,330 expectations, including 396 intentionally incomplete assessments. Matching an
+This runs all 15 local suites, then opens one index with per-group report links:
+1,430 expectations, including 396 intentionally incomplete assessments. Matching an
 expected error/finding is not a clean-content or model-accuracy claim. No provider
 calls run. Python unit/API tests, browser tests, managed-provider contract fixtures
 and unimplemented capabilities are separate. Each run preserves earlier reports;
@@ -213,7 +217,7 @@ npm run test:browser
 ```
 
 Activate the Python environment first. Browser tests start their own local server
-with the combined playground policy, so install `.[test,pii]` on Python 3.11–3.14. To use an
+with the combined playground policy, so install `.[test,pii]` on Python 3.11–3.15. To use an
 installed Chrome instead of downloading Chromium, set `PLAYWRIGHT_CHANNEL=chrome`.
 The GitHub dashboard job uses the runner's installed Chrome.
 
@@ -222,7 +226,7 @@ failure handling, skipped required checks, response privacy, and simulator limit
 
 ## Real local sensitive-data checks
 
-Use Python 3.11–3.14; Presidio currently does not support 3.15. Install the optional
+Use Python 3.11–3.15. Install the optional
 extra, enable the detector, and select the PII-only example policy before starting:
 
 ```bash
@@ -252,9 +256,9 @@ the safety/bias simulators; the overall response remains `simulated: true`.
 
 - Email patterns use a bundled domain suffix snapshot. Snapshot updates arrive
   with dependency updates; no domain-list download occurs during startup or scans.
-- Credit-card candidates require a matching Presidio pattern and valid Luhn
+- Credit-card candidates require a matching copied pattern and valid Luhn
   checksum. A match does not prove that an account exists or belongs to a person.
-- SSN candidates use Presidio patterns and invalid-value exclusions, plus the
+- SSN candidates use the copied patterns and invalid-value exclusions, plus the
   SSA exclusion of area numbers 900–999. Standard hyphenated values may be
   flagged without context; unformatted, space/dot-delimited, and unusual formats
   require nearby SSN wording or a corresponding JSON key. Known example values
@@ -268,13 +272,20 @@ the safety/bias simulators; the overall response remains `simulated: true`.
   and redaction profiles enable it. Names, postal addresses, unlabelled medical
   narratives, other government identifiers and arbitrary encodings remain outside
   this scope. See the [user guide](docs/user-guide.md#regulated-and-sensitive-data-checks).
-- Supported patterns are driven directly with an internal scan deadline so a
-  regex timeout becomes a failed check instead of silently skipping a pattern.
-  Work runs in a thread; API timeout does not instantly terminate that thread.
+- Privacy pattern checks for 90 more types run with every `pii` rule unless a policy
+  turns them off (`privacy_patterns: false`) or lists types in `disabled_privacy_entities`.
+  Weak patterns (for example a bare 9-digit number) count only with a nearby context
+  word; `privacy_min_score` (default 0.4) sets the bar. They report what the copied
+  patterns find, including common lookalikes such as domains inside email addresses
+  (`pii.url`) and dates (`pii.date_time`). See the
+  [user guide](docs/user-guide.md#privacy-pattern-checks).
+- Supported patterns are driven directly with a scan deadline (the policy's
+  `timeout_ms`) so a regex timeout becomes a failed check instead of silently skipping
+  a pattern. Work runs in a thread; API timeout does not instantly terminate that thread.
 
-No NLP models are downloaded, and no model or cloud endpoint is called. Presidio
-still installs its normal package dependencies, including spaCy. Review the
-supported subset and false alarms on application examples before enforcement.
+No NLP models are downloaded, and no model or cloud endpoint is called. The copied
+code needs only `regex`, `tldextract` and `phonenumbers`; spaCy is not installed. Review
+the supported subset and false alarms on application examples before enforcement.
 
 ### Optional redaction
 
@@ -320,7 +331,7 @@ scrubbed by this adapter. Integrators must assess every field they send onward.
 
 Load `policies/secrets.json` directly, or select `secrets-v1` from the combined
 playground policy and click **Credential pattern**. This adapter works without
-the optional Presidio installation. Input findings recommend flagging; output
+the optional `pii` extra. Input findings recommend flagging; output
 findings recommend blocking, while the example remains observe-only.
 
 It reuses selected patterns from the pinned detect-secrets 1.5.0 package:
@@ -519,7 +530,7 @@ version is managed by Azure; `checker_version` records the API version, not a
 pinned model checkpoint. Provider findings can be wrong and need context review.
 
 Activation requires an Azure Content Safety resource and deliberate server-side
-configuration. Install `pip install -e '.[azure,pii]'` on Python 3.11–3.14, configure these variables in
+configuration. Install `pip install -e '.[azure,pii]'` on Python 3.11–3.15, configure these variables in
 your environment/secret-management system, and use the manual uvicorn start path:
 
 | Variable | Value |
@@ -899,7 +910,7 @@ py -3.13 start_dashboard.py --evaluate --suite encoded-privacy
 ```
 
 This adds 100 regression expectations, including 28 intentional incomplete cases.
-The all-suite command now runs 14 local suites / 1,330 expectations. No new model,
+The all-suite command now runs 15 local suites / 1,430 expectations. No new model,
 dependency, cloud deployment or paid provider call is introduced. See
 [the guide](docs/user-guide.md#sensitive-identifiers-inside-labeled-encodings) and
 [coverage/limits](docs/encoded-privacy-coverage.md).
@@ -917,7 +928,7 @@ py -3.13 -m pytest tests/test_additional_use_cases.py -q
 ```
 
 Install the test extra first in a prepared development environment. These tests
-are separate from the 1,330 saved local engine expectations and run in normal CI.
+are separate from the 1,430 saved local engine expectations and run in normal CI.
 No new dependency, paid provider, deployment or product rename is introduced.
 
 ## Local data-quality checks (0.24.0)

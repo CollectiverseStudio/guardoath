@@ -3,7 +3,9 @@
 from enum import StrEnum
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from guardoath.privacy_catalog import DEFAULT_MIN_SCORE, PATTERN_ENTITIES
 
 
 class Contract(BaseModel):
@@ -200,6 +202,10 @@ class Policy(Contract):
     comparisons: tuple[FieldComparison, ...] = Field(default=(), max_length=50)
     required_sections: tuple[RequiredSection, ...] = Field(default=(), max_length=50)
     detect_labeled_sensitive_data: bool = Field(default=False, strict=True)
+    # Copied privacy pattern checks run with every pii rule unless turned off here.
+    privacy_patterns: bool = Field(default=True, strict=True)
+    disabled_privacy_entities: tuple[Annotated[str, Field(pattern=r"^[A-Z][A-Z0-9_]{1,63}$", strict=True)], ...] = Field(default=(), max_length=100)
+    privacy_min_score: float = Field(default=DEFAULT_MIN_SCORE, ge=0.0, le=1.0, allow_inf_nan=False)
     detect_secret_assignments: bool = Field(default=False,strict=True)
     inspect_encoded_secrets: bool = Field(default=False,strict=True)
     confidential_terms: tuple[ConfidentialTerm, ...] = Field(default=(),max_length=50)
@@ -210,6 +216,28 @@ class Policy(Contract):
     timestamps: TimestampPolicy | None = None
     graph: GraphPolicy | None = None
     integrity: IntegrityPolicy | None = None
+
+    @field_validator("privacy_min_score", mode="before")
+    @classmethod
+    def numeric_score(cls, value):
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError("privacy_min_score must be a number")
+        return value
+
+    @field_validator("disabled_privacy_entities")
+    @classmethod
+    def known_privacy_entities(cls, value):
+        if len(set(value)) != len(value):
+            raise ValueError("Disabled privacy entity types must be distinct")
+        if any(entity not in PATTERN_ENTITIES for entity in value):
+            raise ValueError("Unknown privacy pattern entity type")
+        return value
+
+    @model_validator(mode="after")
+    def consistent_privacy_patterns(self):
+        if not self.privacy_patterns and self.disabled_privacy_entities:
+            raise ValueError("disabled_privacy_entities has no effect when privacy_patterns is false")
+        return self
 
 
 class GroupResult(Contract):

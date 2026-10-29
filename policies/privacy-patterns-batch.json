@@ -1,0 +1,95 @@
+{
+  "format_version": "1",
+  "policies": [
+    {
+      "application_id": "demo",
+      "version": "privacy-patterns-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "rules": [
+        {
+          "checker_id": "pii",
+          "on_finding": "flag"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "privacy-patterns-enforce-v1",
+      "mode": "enforce",
+      "timeout_ms": 500,
+      "rules": [
+        {
+          "checker_id": "pii",
+          "on_finding": "block"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "privacy-patterns-redact-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "rules": [
+        {
+          "checker_id": "pii",
+          "on_finding": "redact"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "privacy-patterns-off-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "privacy_patterns": false,
+      "rules": [
+        {
+          "checker_id": "pii",
+          "on_finding": "flag"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "privacy-patterns-no-iban-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "disabled_privacy_entities": [
+        "IBAN_CODE"
+      ],
+      "rules": [
+        {
+          "checker_id": "pii",
+          "on_finding": "flag"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "privacy-patterns-strict-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "privacy_min_score": 1.0,
+      "rules": [
+        {
+          "checker_id": "pii",
+          "on_finding": "flag"
+        }
+      ]
+    },
+    {
+      "application_id": "demo",
+      "version": "privacy-patterns-low-threshold-v1",
+      "mode": "observe",
+      "timeout_ms": 500,
+      "privacy_min_score": 0.05,
+      "rules": [
+        {
+          "checker_id": "pii",
+          "on_finding": "flag"
+        }
+      ]
+    }
+  ]
+}

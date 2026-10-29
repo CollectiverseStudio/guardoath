@@ -169,7 +169,8 @@ def test_policy_disabled_no_local_or_simulated_gate():
 
 
 def test_privacy_gate_and_missing_pii_never_send():
-    pytest.importorskip('presidio_analyzer')
+    pytest.importorskip('tldextract')
+    pytest.importorskip('phonenumbers')
     p = load_policies('policies/content-safety.json')[0]
     calls = []
     def call(*args): calls.append(1); return data()

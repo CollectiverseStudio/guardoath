@@ -173,7 +173,7 @@ configuration, privacy, local execution and external-transfer gate checks.
 The dashboard adds eight independent examples per checker per stage, plus
 adapted clean examples and browser sequence/hold tests.
 
-Run each batch, or all 14 local suites, without enabling a paid provider:
+Run each batch, or all 15 local suites, without enabling a paid provider:
 
 ```powershell
 py -3.13 start_dashboard.py --evaluate --suite ledger
@@ -183,7 +183,7 @@ py -3.13 start_dashboard.py --evaluate --suite integrity
 py -3.13 start_dashboard.py --evaluate --suite all
 ```
 
-The combined index now has **1,330 expectations**, including **396 deliberately
+The combined index now has **1,430 expectations**, including **396 deliberately
 incomplete** assessments. Matched expectations are software regression evidence,
 not measured detection accuracy or a guarantee of safe data.
 

@@ -15,7 +15,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / 'start_dashboard.py'
-PII_AVAILABLE = importlib.util.find_spec('presidio_analyzer') is not None and sys.version_info[:2] < (3,15)
+PII_AVAILABLE = all(importlib.util.find_spec(name) is not None for name in ('tldextract', 'phonenumbers'))
 
 
 def test_help_does_not_install_or_start_server():
@@ -133,7 +133,7 @@ def test_launcher_second_run_compares_with_previous_without_overwriting_it(tmp_p
 
 
 @pytest.mark.skipif(not PII_AVAILABLE, reason='Launcher preparation uses the complete optional environment')
-@pytest.mark.parametrize("suite",["secrets","privacy","structure","business","text-security","bias","evidence","actions","encoded-privacy","ledger","timestamps","graph","integrity"])
+@pytest.mark.parametrize("suite",["secrets","privacy","structure","business","text-security","bias","evidence","actions","encoded-privacy","privacy-patterns","ledger","timestamps","graph","integrity"])
 def test_launcher_runs_the_entire_group(tmp_path,monkeypatch,suite):
     import start_dashboard
     (tmp_path/'evals').mkdir(); (tmp_path/'policies').mkdir()
@@ -177,5 +177,5 @@ def test_launcher_runs_every_local_suite_with_one_command(tmp_path,monkeypatch):
     assert start_dashboard.main()==0
     index=next((tmp_path/'.guardoath-reports').glob('*/index.html'))
     data=json.loads(index.with_name('collection.json').read_text())
-    assert data['totals']['matched']==1330 and data['totals']['mismatched']==0
-    assert len(data['suites'])==14
+    assert data['totals']['matched']==1430 and data['totals']['mismatched']==0
+    assert len(data['suites'])==15

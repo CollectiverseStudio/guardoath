@@ -50,6 +50,9 @@ class Engine:
                 raise ValueError("Required sections require a completeness checker rule")
             if policy.detect_labeled_sensitive_data and "pii" not in ids:
                 raise ValueError("Labeled sensitive-data checks require a pii checker rule")
+            if "pii" not in ids and (not policy.privacy_patterns or policy.disabled_privacy_entities
+                                     or "privacy_min_score" in policy.model_fields_set):
+                raise ValueError("Privacy pattern options require a pii checker rule")
             if policy.confidential_terms or policy.detect_secret_assignments or policy.inspect_encoded_secrets:
                 if 'secrets' not in ids:
                     raise ValueError('Secret options require a secrets checker rule')

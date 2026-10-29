@@ -3,7 +3,7 @@
 from guardoath.models import GroupResult
 
 GROUPS = (
-    ("sensitive_data", "Regulated and sensitive data", ("pii", "encoded_pii"), "Optional encoded_pii checks one labeled Base64/hex layer with bounded scanning; no recursive/unlabeled/file coverage or encoded redaction. Email, credit-card and selected U.S. SSN candidates. Opt-in explicitly labeled phone, birth date, medical-record, health-plan and bank-account fields. Redaction is policy-controlled. Not comprehensive PHI detection, compliance assessment, names/address recognition or identity verification."),
+    ("sensitive_data", "Regulated and sensitive data", ("pii", "encoded_pii"), "Optional encoded_pii checks one labeled Base64/hex layer with bounded scanning; no recursive/unlabeled/file coverage or encoded redaction. Email, credit-card and selected U.S. SSN candidates, plus on-by-default privacy pattern checks for 90 identifier types (bank, tax, health, identity-document, network, phone and postal identifiers for the U.S. and 17 other countries); weak patterns count only with nearby context words. Opt-in explicitly labeled phone, birth date, medical-record, health-plan and bank-account fields. Redaction is policy-controlled. No names or locations; not comprehensive PHI detection, compliance assessment, address recognition or identity verification."),
     ("secrets", "Secrets and confidential information", ("secrets",), "Selected provider credentials, JWTs, private-key markers and embedded URL credentials. Optional quoted assignments, labeled encoding inspection and configured confidential terms. No credential verification, secret redaction, general password detection or proprietary-document classification."),
     ("prompt_security", "Prompt injection and manipulation", ("text_security", "azure_prompt_shields"), "Local text_security checks selected controls/encodings only. Optional Azure Prompt Shields analyzes user-prompt attacks externally on input only. No document, multi-turn, output-attack, or malicious-intent guarantee; inspect selected checkers. Content is not sanitized."),
     ("harmful_content", "Harmful content and abuse", ("safety", "content_safety"), "Optional provider-backed text assessment under the content_safety interface; coverage depends on the selected adapter. Initial Bedrock adapter covers hate, insults, sexual content, violence and misconduct. Disabled in the local launcher; live accuracy is uncalibrated. No dedicated self-harm, general bias, image or emergency-response coverage. The safety checker remains a synthetic test double."),
@@ -45,6 +45,12 @@ def group_results(policy, results, stage):
             status = "passed"
         if group_id == 'sensitive_data' and configured:
             limitations += f" Labeled sensitive-data fields: {'enabled' if policy.detect_labeled_sensitive_data else 'disabled'}."
+            if policy.privacy_patterns:
+                from guardoath.privacy_catalog import PATTERN_ENTITIES
+                count = len(PATTERN_ENTITIES) - len(policy.disabled_privacy_entities)
+                limitations += f" Privacy pattern checks: enabled ({count} types, minimum score {policy.privacy_min_score:g})."
+            else:
+                limitations += " Privacy pattern checks: disabled."
         if group_id == 'secrets' and configured:
             count=sum(stage in r.stages for r in policy.confidential_terms)
             limitations += f" Quoted assignments: {'enabled' if policy.detect_secret_assignments else 'disabled'}; encoded inspection: {'enabled' if policy.inspect_encoded_secrets else 'disabled'}; active confidential-term rules: {count}."

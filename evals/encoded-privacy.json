@@ -21,7 +21,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_email_address"
+          "pii.encoded_email_address",
+          "pii.encoded_url"
         ],
         "redaction_status": "not_requested"
       }
@@ -45,7 +46,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_email_address"
+          "pii.encoded_email_address",
+          "pii.encoded_url"
         ],
         "redaction_status": "not_requested"
       }
@@ -69,7 +71,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_email_address"
+          "pii.encoded_email_address",
+          "pii.encoded_url"
         ],
         "redaction_status": "not_requested"
       }
@@ -93,7 +96,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_email_address"
+          "pii.encoded_email_address",
+          "pii.encoded_url"
         ],
         "redaction_status": "not_requested"
       }
@@ -405,7 +409,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_date_of_birth"
+          "pii.encoded_date_of_birth",
+          "pii.encoded_date_time"
         ],
         "redaction_status": "not_requested"
       }
@@ -429,7 +434,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_date_of_birth"
+          "pii.encoded_date_of_birth",
+          "pii.encoded_date_time"
         ],
         "redaction_status": "not_requested"
       }
@@ -453,7 +459,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_date_of_birth"
+          "pii.encoded_date_of_birth",
+          "pii.encoded_date_time"
         ],
         "redaction_status": "not_requested"
       }
@@ -477,7 +484,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_date_of_birth"
+          "pii.encoded_date_of_birth",
+          "pii.encoded_date_time"
         ],
         "redaction_status": "not_requested"
       }
@@ -545,11 +553,12 @@
         "recommended_action": "flag",
         "effective_action": "allow",
         "checker_statuses": {
-          "pii": "passed",
+          "pii": "flagged",
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_medical_record_number"
+          "pii.encoded_medical_record_number",
+          "pii.kr_driver_license"
         ],
         "redaction_status": "not_requested"
       }
@@ -569,11 +578,12 @@
         "recommended_action": "block",
         "effective_action": "allow",
         "checker_statuses": {
-          "pii": "passed",
+          "pii": "flagged",
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_medical_record_number"
+          "pii.encoded_medical_record_number",
+          "pii.kr_driver_license"
         ],
         "redaction_status": "not_requested"
       }
@@ -597,7 +607,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_health_plan_id"
+          "pii.encoded_health_plan_id",
+          "pii.encoded_us_health_insurance_member_id"
         ],
         "redaction_status": "not_requested"
       }
@@ -621,7 +632,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_health_plan_id"
+          "pii.encoded_health_plan_id",
+          "pii.encoded_us_health_insurance_member_id"
         ],
         "redaction_status": "not_requested"
       }
@@ -645,7 +657,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_health_plan_id"
+          "pii.encoded_health_plan_id",
+          "pii.encoded_us_health_insurance_member_id"
         ],
         "redaction_status": "not_requested"
       }
@@ -669,7 +682,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_health_plan_id"
+          "pii.encoded_health_plan_id",
+          "pii.encoded_us_health_insurance_member_id"
         ],
         "redaction_status": "not_requested"
       }
@@ -693,7 +707,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_bank_account"
+          "pii.encoded_bank_account",
+          "pii.encoded_us_bank_number"
         ],
         "redaction_status": "not_requested"
       }
@@ -717,7 +732,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_bank_account"
+          "pii.encoded_bank_account",
+          "pii.encoded_us_bank_number"
         ],
         "redaction_status": "not_requested"
       }
@@ -737,11 +753,13 @@
         "recommended_action": "flag",
         "effective_action": "allow",
         "checker_statuses": {
-          "pii": "passed",
+          "pii": "flagged",
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_bank_account"
+          "pii.encoded_bank_account",
+          "pii.encoded_us_bank_number",
+          "pii.se_organisationsnummer"
         ],
         "redaction_status": "not_requested"
       }
@@ -761,11 +779,13 @@
         "recommended_action": "block",
         "effective_action": "allow",
         "checker_statuses": {
-          "pii": "passed",
+          "pii": "flagged",
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_bank_account"
+          "pii.encoded_bank_account",
+          "pii.encoded_us_bank_number",
+          "pii.se_organisationsnummer"
         ],
         "redaction_status": "not_requested"
       }
@@ -789,7 +809,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_email_address"
+          "pii.encoded_email_address",
+          "pii.encoded_url"
         ],
         "redaction_status": "not_requested"
       }
@@ -813,7 +834,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_email_address"
+          "pii.encoded_email_address",
+          "pii.encoded_url"
         ],
         "redaction_status": "not_requested"
       }
@@ -981,7 +1003,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_date_of_birth"
+          "pii.encoded_date_of_birth",
+          "pii.encoded_date_time"
         ],
         "redaction_status": "not_requested"
       }
@@ -1005,7 +1028,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_date_of_birth"
+          "pii.encoded_date_of_birth",
+          "pii.encoded_date_time"
         ],
         "redaction_status": "not_requested"
       }
@@ -1077,7 +1101,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_health_plan_id"
+          "pii.encoded_health_plan_id",
+          "pii.encoded_us_health_insurance_member_id"
         ],
         "redaction_status": "not_requested"
       }
@@ -1101,7 +1126,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_health_plan_id"
+          "pii.encoded_health_plan_id",
+          "pii.encoded_us_health_insurance_member_id"
         ],
         "redaction_status": "not_requested"
       }
@@ -1125,7 +1151,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_bank_account"
+          "pii.encoded_bank_account",
+          "pii.encoded_us_bank_number"
         ],
         "redaction_status": "not_requested"
       }
@@ -1149,7 +1176,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_bank_account"
+          "pii.encoded_bank_account",
+          "pii.encoded_us_bank_number"
         ],
         "redaction_status": "not_requested"
       }
@@ -1437,7 +1465,8 @@
           "encoded_pii": "passed"
         },
         "finding_rule_ids": [
-          "pii.email_address"
+          "pii.email_address",
+          "pii.url"
         ],
         "redaction_status": "not_requested"
       }
@@ -1461,7 +1490,8 @@
           "encoded_pii": "passed"
         },
         "finding_rule_ids": [
-          "pii.email_address"
+          "pii.email_address",
+          "pii.url"
         ],
         "redaction_status": "not_requested"
       }
@@ -1472,7 +1502,7 @@
       "stage": "input",
       "request": {
         "application_id": "demo",
-        "policy_version": "privacy-encoded-v1",
+        "policy_version": "privacy-encoded-no-phone-pattern-v1",
         "content": "202-555-0147",
         "content_format": "text"
       },
@@ -1494,7 +1524,7 @@
       "stage": "output",
       "request": {
         "application_id": "demo",
-        "policy_version": "privacy-encoded-v1",
+        "policy_version": "privacy-encoded-no-phone-pattern-v1",
         "content": "202-555-0147",
         "content_format": "text"
       },
@@ -2145,7 +2175,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_email_address"
+          "pii.encoded_email_address",
+          "pii.encoded_url"
         ],
         "redaction_status": "not_needed"
       }
@@ -2169,7 +2200,8 @@
           "encoded_pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.encoded_email_address"
+          "pii.encoded_email_address",
+          "pii.encoded_url"
         ],
         "redaction_status": "not_needed"
       }
@@ -2194,7 +2226,8 @@
         },
         "finding_rule_ids": [
           "pii.email_address",
-          "pii.encoded_us_ssn"
+          "pii.encoded_us_ssn",
+          "pii.url"
         ],
         "redaction_status": "withheld"
       }
@@ -2219,7 +2252,8 @@
         },
         "finding_rule_ids": [
           "pii.email_address",
-          "pii.encoded_us_ssn"
+          "pii.encoded_us_ssn",
+          "pii.url"
         ],
         "redaction_status": "withheld"
       }
@@ -2243,7 +2277,8 @@
           "encoded_pii": "passed"
         },
         "finding_rule_ids": [
-          "pii.email_address"
+          "pii.email_address",
+          "pii.url"
         ],
         "redaction_status": "preview"
       }
@@ -2267,7 +2302,8 @@
           "encoded_pii": "passed"
         },
         "finding_rule_ids": [
-          "pii.email_address"
+          "pii.email_address",
+          "pii.url"
         ],
         "redaction_status": "preview"
       }

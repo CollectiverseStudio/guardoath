@@ -793,7 +793,7 @@ test('all local regression suites have one index with working group report links
   const {execFileSync}=require('node:child_process');const {pathToFileURL}=require('node:url');const path=testInfo.outputPath('all-local');
   execFileSync('python',['-m','guardoath.evaluate_all','--pii','--output',path],{stdio:'pipe'});
   await page.goto(pathToFileURL(require('node:path').join(path,'index.html')).href);
-  await expect(page.locator('body')).toContainText('1330 of 1330 expectations matched');await expect(page.locator('tbody tr')).toHaveCount(14);
+  await expect(page.locator('body')).toContainText('1430 of 1430 expectations matched');await expect(page.locator('tbody tr')).toHaveCount(15);
   await page.getByRole('link',{name:'bias',exact:true}).click();
   await expect(page.locator('body')).toContainText('100 of 100 expectations matched');await expect(page.locator('tbody tr')).toHaveCount(100);
 });
@@ -865,3 +865,15 @@ test("proposed answer starts empty and a held input keeps its explanation", asyn
   await expect(page.locator("#input-gate")).toContainText("Input held");
   await expect(page.locator("#run-output")).toBeDisabled(); expect(calls).toEqual(["input","input"]);
 });
+
+for(const [sample,rule] of [['iban','iban_code'],['crypto','crypto'],['ip-address','ip_address'],['url','url'],['us-bank','us_bank_number'],['us-passport','us_passport'],['us-itin','us_itin'],['uk-nino','uk_nino'],['phone-text','phone_number']]) {
+  test('default privacy pattern example '+sample+' is found and holds the input',async({page})=>{
+    await connect(page);await page.locator('#input-'+sample+'-sample').click();
+    const input=page.waitForResponse(r=>r.url().endsWith('/v1/checks/input')&&r.request().method()==='POST');
+    await page.locator('#run-input').click();
+    expect((await (await input).json()).findings.map(f=>f.rule_id)).toContain('pii.'+rule);
+    await expect(page.locator('#policy')).toHaveValue('conversation-v1');
+    await expect(page.locator('#input-results [data-group="sensitive_data"] summary')).toContainText('Findings');
+    await expect(page.locator('#run-output')).toBeDisabled();await expect(page.locator('#answer')).toBeHidden();
+  });
+}

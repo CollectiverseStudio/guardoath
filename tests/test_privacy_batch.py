@@ -3,7 +3,6 @@ import asyncio
 import json
 from pathlib import Path
 import socket
-import sys
 
 import pytest
 from fastapi.testclient import TestClient
@@ -15,8 +14,8 @@ from guardoath.engine import Engine
 from guardoath.evaluate import evaluate, load_suite
 from guardoath.models import CheckRequest, CheckerResult, Policy, Rule, Stage
 
-pytestmark = pytest.mark.skipif(sys.version_info >= (3,15), reason='PII adapter supports Python below 3.15')
-pytest.importorskip('presidio_analyzer')
+pytest.importorskip('tldextract')
+pytest.importorskip('phonenumbers')
 ROOT = Path(__file__).resolve().parents[1]
 
 @pytest.fixture(scope='module')
@@ -24,12 +23,12 @@ def checkers():
     return default_checkers(enable_pii=True)
 
 
-def assess(checkers, content, *, fmt='text', redact=False, schema=None, context=None, enabled=True):
+def assess(checkers, content, *, fmt='text', redact=False, schema=None, context=None, enabled=True, patterns=True):
     rules=[Rule(checker_id='pii',on_finding='redact' if redact else 'block')]
     if schema is not None:
         rules.append(Rule(checker_id='schema',on_finding='block'))
     policy=Policy(application_id='demo',version='v1',mode='enforce',timeout_ms=500,
-                  rules=tuple(rules),detect_labeled_sensitive_data=enabled,input_schema=schema)
+                  rules=tuple(rules),detect_labeled_sensitive_data=enabled,privacy_patterns=patterns,input_schema=schema)
     request=CheckRequest(application_id='demo',policy_version='v1',content=content,content_format=fmt,request_context=context)
     return asyncio.run(Engine([policy],checkers).check(request,Stage.INPUT))
 
@@ -41,7 +40,9 @@ def assess(checkers, content, *, fmt='text', redact=False, schema=None, context=
 def test_all_new_fields_are_rechecked_and_original_values_are_withheld(checkers,fmt,content):
     result=assess(checkers,content,fmt=fmt,redact=True)
     assert result.redaction.status=='ready'
-    assert len(result.findings)==5
+    # Five labeled fields plus three default privacy pattern types on the same values.
+    assert {f.rule_id for f in result.findings}=={'pii.phone_number','pii.date_of_birth','pii.medical_record_number',
+        'pii.health_plan_id','pii.bank_account','pii.date_time','pii.us_bank_number','pii.us_health_insurance_member_id'}
     assert all(c.status=='passed' for c in result.redaction.validation_results)
     for entity in ['PHONE_NUMBER','DATE_OF_BIRTH','MEDICAL_RECORD_NUMBER','HEALTH_PLAN_ID','BANK_ACCOUNT']:
         assert '[REDACTED_'+entity+']' in result.redaction.content
@@ -100,8 +101,24 @@ def test_limit_boundary_allows_64_fields(checkers):
  ('Diagnosis: Example condition\nName: Synthetic Person','text'),
 ])
 def test_explicitly_unsupported_formats_do_not_become_semantic_claims(checkers,content,fmt):
-    result=assess(checkers,content,fmt=fmt)
+    # The labeled-field heuristics on their own; the pattern checks are covered below.
+    result=assess(checkers,content,fmt=fmt,patterns=False)
     assert not result.findings
+
+
+@pytest.mark.parametrize('content,fmt,expected',[
+ ('My birth date is 1980-02-29.','text',{'pii.date_time'}),
+ ('{"mrn":true,"phone_number":202.5}','json',set()),
+ ('{"MRN_custom":"A1234"}','json',set()),
+ ('Date of birth: 29/02/1980','text',{'pii.date_time'}),
+ ('Phone: ２０２５５５０１４７','text',{'pii.phone_number'}),
+ ('MRN: A1234; member_id: M000123','text',{'pii.us_health_insurance_member_id'}),
+ ('Diagnosis: Example condition\nName: Synthetic Person','text',set()),
+])
+def test_default_privacy_patterns_report_only_their_own_types_for_unsupported_labels(checkers,content,fmt,expected):
+    result=assess(checkers,content,fmt=fmt)
+    assert {f.rule_id for f in result.findings}==expected
+    assert not {f.rule_id for f in result.findings} & {'pii.date_of_birth','pii.medical_record_number','pii.health_plan_id','pii.bank_account'}
 
 
 def test_context_is_not_scanned_and_opt_in_remains_required(checkers):

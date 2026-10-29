@@ -12,7 +12,8 @@ ROOT=Path(__file__).resolve().parents[1]
 
 @pytest.fixture(scope='module')
 def full_collection(tmp_path_factory):
-    pytest.importorskip('presidio_analyzer')
+    pytest.importorskip('tldextract')
+    pytest.importorskip('phonenumbers')
     directory=tmp_path_factory.mktemp('collections')/'all'
     report=asyncio.run(all_checks.run_all(ROOT,directory,True))
     return directory,report
@@ -20,9 +21,9 @@ def full_collection(tmp_path_factory):
 
 def test_all_bundled_suites_and_reports(full_collection):
     directory,collection=full_collection
-    assert collection['totals']=={'total':1330,'matched':1330,'mismatched':0,'incomplete':396,'simulated':0}
+    assert collection['totals']=={'total':1430,'matched':1430,'mismatched':0,'incomplete':396,'simulated':0}
     assert [row['suite'] for row in collection['suites']]==list(all_checks.SUITES)
-    assert len(collection['suites'])==14
+    assert len(collection['suites'])==15
     for name in all_checks.SUITES:
         report=json.loads((directory/name/'report.json').read_text())
         assert report['summary']['matched']==report['summary']['total']
@@ -33,7 +34,7 @@ def test_all_bundled_suites_and_reports(full_collection):
 def test_collection_index_is_source_free_and_not_a_clean_content_claim(full_collection):
     directory,_=full_collection
     html=(directory/'index.html').read_text()
-    assert '1330 of 1330 expectations matched' in html
+    assert '1430 of 1430 expectations matched' in html
     assert 'not clean-content or accuracy claims' in html and 'Incomplete' in html
     assert "default-src 'none'" in html and '<script' not in html
     for name in all_checks.SUITES:assert name+'/report.html' in html

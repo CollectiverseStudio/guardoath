@@ -114,8 +114,44 @@ def test_invalid_pii_setting_fails_startup(monkeypatch):
         create_app(credentials={})
 
 
-def test_python_315_rejects_pii_explicitly(monkeypatch):
-    import guardoath.pii
-    monkeypatch.setattr(guardoath.pii.sys, "version_info", (3, 15))
-    with pytest.raises(ValueError, match="Python 3.11 through 3.14"):
-        guardoath.pii.build_pii_checker()
+def _requirement_closure(name, extras=()):
+    """Distribution names required by `name` (with `extras`), transitively, by metadata."""
+    import re
+    from importlib.metadata import PackageNotFoundError, distribution
+    seen, pending = set(), [(name, tuple(extras))]
+    while pending:
+        current, wanted = pending.pop()
+        key = re.sub(r"[-_.]+", "-", current).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        try:
+            requirements = distribution(current).requires or []
+        except PackageNotFoundError:
+            continue
+        for requirement in requirements:
+            requirement_name = re.match(r"[A-Za-z0-9._-]+", requirement).group(0)
+            extra = re.search(r"extra\s*==\s*[\"']([^\"']+)", requirement)
+            if extra is None or extra.group(1) in wanted:
+                pending.append((requirement_name, ()))
+    return seen
+
+
+def test_pii_checker_loads_only_its_declared_dependencies():
+    pytest.importorskip("tldextract")
+    pytest.importorskip("phonenumbers")
+    import re
+    import subprocess
+    import sys
+    from importlib.metadata import packages_distributions
+    code = ("import sys; before = set(sys.modules); import guardoath.pii; "
+            "checker = guardoath.pii.build_pii_checker(); print(checker.checker_version); "
+            "print(' '.join(sorted({m.split('.')[0] for m in set(sys.modules) - before})))")
+    output = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True).stdout.splitlines()
+    assert output[0] == "privacy-patterns-2.2.366/guardoath-patterns-4"
+    loaded = set(output[1].split()) - set(sys.stdlib_module_names) - {"guardoath"}
+    allowed = _requirement_closure("guardoath", ("pii",))
+    owners = packages_distributions()
+    outside = {module for module in loaded
+               if not {re.sub(r"[-_.]+", "-", owner).lower() for owner in owners.get(module, [])} & allowed}
+    assert loaded and not outside

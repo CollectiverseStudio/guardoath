@@ -15,9 +15,9 @@ compressed, encrypted and MIME-wrapped payloads are not covered. A passed check
 cannot certify that all opaque data has been found.
 
 The decoded text is inspected by the existing local PII adapter: email,
-credit-card candidates/checksums, selected U.S. SSN candidates and, when enabled
-by the policy, labeled phone, birth date, medical-record, health-plan and
-bank-account candidates. Ownership, issuance, actual identities and comprehensive
+credit-card candidates/checksums, selected U.S. SSN candidates, the privacy pattern
+types that are on by default (see the user guide), and, when enabled by the policy,
+labeled phone, birth date, medical-record, health-plan and bank-account candidates. Ownership, issuance, actual identities and comprehensive
 PHI are still not verified. These findings use the corresponding `pii.encoded_`
 prefix, such as `pii.encoded_email_address` or
 `pii.encoded_medical_record_number`. No decoded/encoded values appear in findings.

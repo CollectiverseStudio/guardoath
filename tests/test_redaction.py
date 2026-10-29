@@ -1,6 +1,5 @@
 import asyncio
 import json
-import sys
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,8 +9,8 @@ from guardoath.checkers import default_checkers
 from guardoath.engine import Engine
 from guardoath.models import Action, CheckerResult, CheckRequest, Policy, Rule, Stage
 
-pytestmark = pytest.mark.skipif(sys.version_info >= (3, 15), reason="Presidio does not support Python 3.15")
-pytest.importorskip("presidio_analyzer")
+pytest.importorskip("tldextract")
+pytest.importorskip("phonenumbers")
 
 
 @pytest.fixture(scope="module")

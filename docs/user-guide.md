@@ -125,17 +125,17 @@ For redaction, explicitly select `redaction-v1` before the Redaction preview but
 
 ## Run every bundled local regression suite
 
-On your Windows computer, one command runs all 14 bundled local suites and
+On your Windows computer, one command runs all 15 bundled local suites and
 opens an index linking to each detailed report:
 
 ```powershell
 py -3.13 start_dashboard.py --evaluate --suite all
 ```
 
-The current collection has **1,330 saved expectations**, including **396 deliberate
+The current collection has **1,430 saved expectations**, including **396 deliberate
 incomplete assessments**. It covers starter examples, secrets, privacy, structure,
 business, local text security, matched decisions, citation evidence, proposed
-tool calls, encoded sensitive data, ledger sums, timestamp ordering, directed graphs
+tool calls, encoded sensitive data, privacy pattern checks, ledger sums, timestamp ordering, directed graphs
 and trusted SHA-256 equality. Matching an expected finding/error is not a clean-content or detector
 accuracy claim. These are local engine regressions, separate from the Python
 unit/API tests, browser tests and synthetic provider-contract tests in CI.
@@ -493,19 +493,21 @@ they do not constitute independent detector accuracy calibration.
 The normal conversation profile now enables the expanded local privacy checks on
 both stages. In Advanced, `pii-extended-v1` focuses on this group;
 `redaction-v1` demonstrates supported replacements after rechecking. The older
-`pii-v1` keeps its original email/card/SSN scope.
+`pii-v1` keeps its original email/card/SSN rules; like every profile with a `pii` rule it
+also runs the [privacy pattern checks](#privacy-pattern-checks) unless the profile turns
+them off.
 
 | Check / finding | Example or use case | What is checked / expected result |
 | --- | --- | --- |
-| `pii.email_address` | `Contact jane@example.com.` in a support answer | Presidio pattern and bundled domain-suffix check; finding, no mailbox verification |
-| `pii.credit_card` | Synthetic card `4111 1111 1111 1111` | Presidio candidate pattern and Luhn checksum; finding, no account verification |
+| `pii.email_address` | `Contact jane@example.com.` in a support answer | Copied pattern and bundled domain-suffix check; finding, no mailbox verification. The default pattern checks also report the domain as `pii.url` |
+| `pii.credit_card` | Synthetic card `4111 1111 1111 1111` | Copied candidate pattern and Luhn checksum; finding, no account verification |
 | `pii.us_ssn` | Synthetic-format `SSN: 219-09-9999` | Selected U.S. SSN candidate; context and invalid-value exclusions, no issuance verification |
 | `pii.phone_number` | `Phone: 202-555-0147` in a support form | Explicit label plus bounded ASCII phone syntax; finding, no ownership/reachability lookup |
 | `pii.date_of_birth` | `DOB: 1980-02-29` in intake data | Explicit label plus real calendar date in supported format; finding, no identity or actual-birth check |
 | `pii.medical_record_number` | `MRN: A1234` in a clinical export | Explicit medical-record label plus identifier shape; finding, no medical-system lookup |
 | `pii.health_plan_id` | `insurance_member_id: M000123` | Explicit member/health-plan label plus identifier shape; finding, no membership verification |
 | `pii.bank_account` | `bank_account_number: 76543210` | Explicit account label plus 6–17 ASCII digits; finding, no bank/account verification |
-| Invalid/lookalike values | `DOB: 2025-02-29`, `MRN: ABC`, `Order reference 202-555-0147` | No new-field finding; not a declaration of privacy or schema validity |
+| Invalid/lookalike values | `DOB: 2025-02-29`, `MRN: ABC`, `Order reference 202-555-0147` | No labeled-field finding; not a declaration of privacy or schema validity. The default pattern checks can still report `pii.date_time` or `pii.phone_number` for these values; `pii-extended-lookalike-v1` turns those two types off to test the labeled fields alone |
 | Supported redaction | `Phone: 202-555-0147` under `redaction-v1` | Separate `Phone: [REDACTED_PHONE_NUMBER]` preview after selected checks rerun |
 | No supported identifier | Clean text under a redaction policy | `not_needed`; no transformed text returned |
 | Sensitive JSON key / invalid transformed content | A sensitive value in a key, or numeric replacement violates schema | Redaction withheld; no original/transformed text released |
@@ -515,7 +517,7 @@ both stages. In Advanced, `pii-extended-v1` focuses on this group;
 
 Set `detect_labeled_sensitive_data: true` in a trusted policy containing a `pii`
 rule. It is strict Boolean, defaults off, and cannot be enabled without that rule.
-The installed Presidio email/card/SSN adapter is still required; the extension
+The copied email/card/SSN adapter (`pii` extra) is still required; the extension
 adds bounded local field heuristics, no model, dependency or network call.
 
 Supported labels are case-insensitive; spaces and hyphens normalize to underscores:
@@ -575,6 +577,108 @@ gate; output examples demonstrate answer findings. Under `redaction-v1`,
 Redaction preview covers all eight supported types on either stage. No
 paid/provider call is made.
 
+## Privacy pattern checks
+
+**Purpose.** Report identifiers beyond email, card and SSN: 90 more types of bank, tax, health,
+identity-document, network, phone and postal identifiers for the U.S. and 17 other countries. The
+checks use pattern and validation code copied from the Data Privacy Stack privacy analyzer, release
+2.2.366 (MIT), in `guardoath/privacy_patterns`. They run locally with no model, download or network
+call. They do **not** detect names, locations or other free-text personal details; those need an NLP
+model and are not included.
+
+**On by default.** Every profile with a `pii` rule runs them on the stages that rule covers. A
+finding uses the rule id `pii.<type in lower case>`, for example `pii.iban_code`, with a generic
+explanation and no detected value.
+
+| Family | Types | Example | Expected result |
+| --- | --- | --- | --- |
+| Financial | IBAN_CODE, CRYPTO, US_BANK_NUMBER, ABA_ROUTING_NUMBER | `Please send the refund to IBAN DE89 3704 0044 0532 0130 00.` | `pii.iban_code` (checksum-validated). A bare 8–17 digit number counts as a U.S. bank number only next to a word such as "account" or "checking". |
+| Network and technical | IP_ADDRESS, MAC_ADDRESS, URL, UUID | `The server is at 192.168.1.10 today.` | `pii.ip_address`. URLs include bare domains, so the domain inside an email address is also reported as `pii.url`, and dotted code such as `result.status` can be too. |
+| Dates | DATE_TIME | `Your appointment is on 5-20-2021.` | `pii.date_time` for many date and time formats, including ISO timestamps; not limited to birth dates. |
+| Phone numbers | PHONE_NUMBER (U.S., UK, Germany, France, Israel, India, Canada, Brazil), ZA_MOBILE_NUMBER, ZA_TELEPHONE_NUMBER | `Call me on (415) 555-0132.` | `pii.phone_number`, checked against phonenumbers' numbering plans. Unlabeled numbers are reported; the labeled `Phone:` field rule keeps its own explanation when it also matches. |
+| U.S. identity and tax | US_PASSPORT, US_DRIVER_LICENSE, US_ITIN, plus email, card and SSN | `My passport number is 912803456.` | `pii.us_passport`. Passport and licence patterns are weak and need a context word; `Order 912803456 shipped.` is not reported. |
+| U.S. health and provider | US_MBI, US_NPI, US_HEALTH_INSURANCE_MEMBER_ID, US_CLAIM_NUMBER, US_PRESCRIPTION_NUMBER, US_PRIOR_AUTHORIZATION_NUMBER, US_REFERRAL_NUMBER, US_PROVIDER_TAX_ID, MEDICAL_LICENSE | `Medicare MBI 1EG4-TE5-MK73` | `pii.us_mbi`. Most of these need a nearby label such as "member ID", "claim" or "Rx". |
+| United Kingdom | UK_NINO, UK_NHS, UK_PASSPORT, UK_DRIVING_LICENCE, UK_POSTCODE, UK_VEHICLE_REGISTRATION | `NHS number 401-023-2137` | `pii.uk_nhs` (checksum-validated); `NHS number 401-023-2138` is not reported. |
+| Europe | Germany (13 types), Spain (3), Italy (5), Poland, Finland, Sweden (2) | `PESEL 44051401458` | `pii.pl_pesel`. Several German types (postal code, tax number, vehicle plate) are weak and need German context words such as "PLZ", "Steuernummer" or "Kennzeichen". |
+| Asia-Pacific | Australia (4), India (6), Korea (5), Singapore (2), Thailand, Philippines (3) | `TFN 876543210` | `pii.au_tfn` (checksum-validated). |
+| Africa | South Africa (10), Nigeria (2) | `Nigerian NIN 23456789019` | `pii.ng_nin` (checksum plus context). |
+| Americas and Turkey | Canada (2), Turkey (2) | `SIN 130 692 544` | `pii.ca_sin` (Luhn-validated). |
+
+The full list of 90 types, with the description and severity used in findings, is in
+`guardoath/privacy_catalog.py`. One example per type is in `tests/test_privacy_patterns.py`.
+
+### How a match becomes a finding
+
+Each copied pattern has a score from 0.01 ("very weak", such as any 9-digit number) to 1.0. A
+pattern with a checksum or format validator scores 1.0 when the value validates and is dropped when
+it does not. A weak score is raised when one of the type's context words appears among the five
+words before the value, in the word where the value starts, or in the JSON field name: the score
+goes up by 0.35 and to at least 0.4. A match is reported when its score is at least
+`privacy_min_score` (default 0.4). In practice: validated values and medium patterns count on their
+own; weak patterns count only with context.
+
+These numbers are the copied analyzer's own context defaults (`context_similarity_factor` 0.35,
+`min_score_with_context_similarity` 0.4, five words before the value). Two differences: the upstream
+analyzer finds context words through an NLP model that removes stop words and compares word stems;
+GuardOath counts every word and compares lower-case text, so "passports" still matches "passport"
+but a stop word uses up one of the five places. The upstream analyzer reports every match above
+score 0 by default; GuardOath's default of 0.4 means a weak match needs context.
+
+### Configure
+
+| Policy setting | Default | Effect |
+| --- | --- | --- |
+| `privacy_patterns` | `true` | `false` turns all 90 types off; email, card, SSN and labeled fields still run. |
+| `disabled_privacy_entities` | `[]` | Upper-case type names to turn off, for example `["DATE_TIME", "URL"]`. Unknown names, duplicates, the three core types, or a list together with `privacy_patterns: false` are configuration errors. |
+| `privacy_min_score` | `0.4` | Number from 0 to 1. `1.0` keeps only validated values; a low value such as `0.05` also reports weak matches without context. |
+
+These settings need a `pii` rule in the same policy. `policies/privacy-patterns-batch.json` shows
+each one. The group summary in a result states whether the checks were on, how many types, and the
+minimum score.
+
+### Redaction
+
+Under a `redact` rule, pattern findings are replaced like the other types, for example
+`[REDACTED_IBAN_CODE]`, and every selected check reruns on the result. When one detected value
+lies inside another (the domain inside an email address), the outer value's label is used. When
+two pattern types claim exactly the same characters, the label is `[REDACTED_SENSITIVE]`.
+
+### Limitations
+
+- **Lookalikes are reported.** The patterns are broad by design: domains inside email addresses
+  (`pii.url`), dates and timestamps (`pii.date_time`), dotted code identifiers (`pii.url`), and
+  validated numbers inside longer digit or hex strings (for example a Korean licence number or a
+  Swedish organisation number). Use `disabled_privacy_entities` or a higher `privacy_min_score`
+  for applications where this is noise. The upstream analyzer ships 70 of its 95 recognizers turned
+  off by default for this reason; GuardOath turns all 93 copyable ones on, as requested.
+- No names, locations, addresses or medical narratives; no recognizers that need a model or a
+  remote service.
+- Context words are mostly English, with local-language words for many countries (German,
+  French, Spanish, Italian, Finnish, Swedish, Korean, Thai, Turkish). Context words made of two
+  terms, such as "postal code", cannot match a single word.
+- A match is a candidate only: no issuer, registry, bank or numbering lookup.
+- Cost: 173 patterns plus phone numbering-plan checks per text, on top of the email, card and SSN rules. Very long inputs with many
+  numbers can exceed the policy's `timeout_ms`; the check then reports `checker_timeout` and the
+  result is incomplete, never a pass.
+
+### Regression suite
+
+```powershell
+py -3.13 start_dashboard.py --evaluate --suite privacy-patterns
+```
+
+`evals/privacy-patterns.json` has 100 cases (50 scenarios on both stages): positives per family,
+failed checksums, context-free numbers, clean text, every setting above, enforce and redaction.
+See [all 100 cases](privacy-patterns-coverage.md).
+
+The `pii` checker version is now `privacy-patterns-2.2.366/guardoath-patterns-4`. Because the
+pattern checks add findings to existing cases, a run compared against a baseline report saved
+before this change shows those cases as **Outcome changed** (32 privacy, 34 encoded privacy and 3 starter
+cases). Review the changes, then save a new baseline.
+
+The dashboard's default profile offers IBAN, Crypto wallet, IP address, URL, U.S. bank account,
+U.S. passport, U.S. ITIN, UK National Insurance number and Phone number in text as examples.
+
 ## Sensitive identifiers inside labeled encodings
 
 The new local `encoded_pii` check inspects one explicit Base64/hex layer using the
@@ -622,7 +726,7 @@ py -3.13 start_dashboard.py --evaluate --suite encoded-privacy
 ```
 
 This runs 100 expectations with 28 deliberately incomplete cases. The all-suite
-collection now has 14 local suites and 1,330 expectations. See
+collection now has 15 local suites and 1,430 expectations. See
 [encoded privacy coverage](encoded-privacy-coverage.md) for exact contracts,
 redaction/gating behavior and known gaps. No provider call or new dependency is used.
 
@@ -1420,7 +1524,7 @@ Unicode is not a semantic language-safety judgment.
 
 Run the new tests with `python -m pytest tests/test_additional_use_cases.py -q`
 in a development environment with the test extra installed. These are distinct
-from the 1,330 saved engine-regression expectations in the all-suite HTML index.
+from the 1,430 saved engine-regression expectations in the all-suite HTML index.
 No statistical, medical, biometric, threat-intel, audio/image, session or
 cryptographic capability is implied by their appearance in the requirements list.
 

@@ -106,7 +106,7 @@ py -3.13 -m pytest tests/test_additional_use_cases.py -q
 ```
 
 These **77 unit/API/engine assertions** are collected by the normal CI pytest
-jobs. They are separate from the 14 saved local regression suites (1,330
+jobs. They are separate from the 15 saved local regression suites (1,430
 expectations) opened by `start_dashboard.py --evaluate --suite all`; no 29 planned
 features have been added to that index as fake passes. Existing broader tests
 remain relevant: ingress/quotas, schema contracts, business comparisons, secret
