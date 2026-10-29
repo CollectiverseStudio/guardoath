@@ -120,6 +120,9 @@ class Engine:
             packs = self._pack_registry.resolve(request.application_id, request.validation_codes)
             applied_packs = ("CORE", *(pack.code + "@" + pack.version for pack in packs))
             available = {rule.checker_id for rule in policy.rules}
+            active_at_stage = {rule.checker_id for rule in policy.rules if stage in rule.stages}
+            if any(not (set(pack.checker_ids) & active_at_stage) for pack in packs):
+                raise PackSelectionError("Selected validation pack is unavailable for this stage")
             optional = self._pack_registry.optional_checker_ids(request.application_id)
             if not optional <= available:
                 raise PackSelectionError("Validation pack configuration is unavailable")
