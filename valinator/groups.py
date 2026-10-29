@@ -21,14 +21,18 @@ def group_results(policy, results, stage):
     groups = []
     for group_id, name, checker_ids, limitations in GROUPS:
         configured = [r for r in policy.rules if r.checker_id in checker_ids]
-        active = [r for r in configured if stage in r.stages]
+        stage_rules = [r for r in configured if stage in r.stages]
+        # Unselected optional checks have no result; retain stage semantics.
+        active = [r for r in stage_rules if r.checker_id in indexed]
         checks = [indexed[r.checker_id] for r in active]
         if not checker_ids:
             status = "not_implemented"
         elif not configured:
             status = "disabled"
-        elif not active:
+        elif not stage_rules:
             status = "not_applicable"
+        elif not active:
+            status = "disabled"
         elif any(r.required and c.status not in {"passed", "flagged"} for r, c in zip(active, checks)):
             status = "incomplete"
         elif any(c.status == "flagged" and not c.simulated for c in checks):
