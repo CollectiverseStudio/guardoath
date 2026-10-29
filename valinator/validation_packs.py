@@ -27,7 +27,7 @@ class PackRegistry:
         self._published: dict[str, dict[str, Pack]] = {}
         self._core = {app: tuple(ids) for app, ids in (core or {}).items()}
         for app, ids in self._core.items():
-            if app not in published or not ids or len(set(ids)) != len(ids):
+            if app not in published or not ids or len(set(ids)) != len(ids) or not all(re.fullmatch(r"[a-z][a-z0-9_]{0,49}", x) for x in ids):
                 raise ValueError("Invalid mandatory CORE configuration")
         for app, packs in published.items():
             if not app:
@@ -36,7 +36,7 @@ class PackRegistry:
             for pack in packs:
                 if not _CODE.fullmatch(pack.code) or pack.code == "CORE":
                     raise ValueError("Invalid or reserved pack code")
-                if pack.code in entries or not pack.version or not pack.checker_ids:
+                if pack.code in entries or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,31}", pack.version) or not pack.checker_ids:
                     raise ValueError("Duplicate or incomplete pack")
                 if len(set(pack.checker_ids)) != len(pack.checker_ids):
                     raise ValueError("Duplicate checker in pack")
@@ -75,7 +75,14 @@ def load_pack_registry(path: str | Path) -> PackRegistry:
             raw = stream.read(262_145)
         if len(raw) > 262_144:
             raise ValueError("Pack registry too large")
-        data = json.loads(raw)
+        def unique_pairs(pairs):
+            obj = {}
+            for key, value in pairs:
+                if key in obj:
+                    raise ValueError("Duplicate registry key")
+                obj[key] = value
+            return obj
+        data = json.loads(raw, object_pairs_hook=unique_pairs)
         if not isinstance(data, dict) or set(data) != {"format_version", "applications"}:
             raise ValueError("Invalid registry envelope")
         if data["format_version"] != "1" or not isinstance(data["applications"], dict):
