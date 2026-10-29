@@ -23,3 +23,12 @@ Use separate contracts for `validation_request` and `override_review`. Pricing, 
 - `tests/test_override_billing.py`: tenant isolation, reviewer requirement, non-overrideable findings, billing modes, event identity and bounds.
 
 **Not yet implemented:** persistent tenants and principals, secure review workflow, override endpoints, single-use authorization tokens, ingestion-boundary enforcement, durable usage ledger, Stripe API calls, Stripe webhook verification, customer billing portal, Tokatlas partner contract and settlement integration. No charges have been created and no external payment credentials are required for these foundations.
+
+## Additional foundations (CI pending)
+
+- `valinator.tenants` binds trusted application credentials to tenant/application identities in an immutable in-memory registry. It is not yet wired into the FastAPI authentication path and does not provide credential rotation, persistence or user identity.
+- `valinator.usage_ledger` records deterministic usage events with bounded, thread-safe, idempotent inserts. This is an **in-memory test ledger**, not durable billing infrastructure. Process restart loses its contents.
+- `valinator.billing_router` produces settlement routing records for Stripe, partner-managed (including prospective Tokatlas), and internal modes without contacting any external service.
+- Unit tests cover tenant isolation, duplicate identities, idempotent event recording, conflicting replay, concurrent insertions and settlement routing.
+
+Before production billing: durable transactional outbox, tenant/account management, signed webhook handling, Stripe meter/event submission with retries and reconciliation, partner settlement authentication and contract, and explicit customer consent to paid usage are mandatory.
