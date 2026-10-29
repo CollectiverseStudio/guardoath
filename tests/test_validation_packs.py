@@ -126,3 +126,30 @@ def test_api_activates_pack_and_preserves_baseline():
                                json={**payload, "validation_codes": ["AGENT"]})
     assert unauthorized.status_code == 422
     assert "hello" not in unauthorized.text
+
+
+def test_load_published_registry_and_reject_invalid_files(tmp_path):
+    import json
+    from valinator.validation_packs import load_pack_registry
+    target = tmp_path / "packs.json"
+    target.write_text(json.dumps({"format_version": "1", "applications": {
+        "demo": [{"code": "LOG", "version": "1", "checker_ids": ["timestamps"]}]
+    }}))
+    assert load_pack_registry(target).resolve("demo", ("LOG",))[0].version == "1"
+    target.write_text(json.dumps({"format_version": "1", "applications": {
+        "demo": [{"code": "LOG", "version": "1", "checker_ids": ["timestamps"],
+                  "untrusted_override": True}]
+    }}))
+    with pytest.raises(ValueError, match="Unable to load"):
+        load_pack_registry(target)
+    target.write_bytes(b"x" * 262145)
+    with pytest.raises(ValueError, match="Unable to load"):
+        load_pack_registry(target)
+
+
+def test_startup_requires_policy_file_when_registry_is_configured(monkeypatch):
+    from valinator.app import create_app
+    monkeypatch.setenv("VALINATOR_PACK_FILE", "missing.json")
+    monkeypatch.delenv("VALINATOR_POLICY_FILE", raising=False)
+    with pytest.raises(ValueError, match="requires a policy file"):
+        create_app()
