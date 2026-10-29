@@ -231,7 +231,9 @@ class Engine:
             findings=tuple(f for r in results for f in r.findings),
             checker_results=tuple(results), simulated=any(r.simulated for r in results),
             total_latency_ms=round((perf_counter() - started) * 1000, 3),
-            groups=group_results(policy, results, stage),
+            # Group reporting must use the effective selected rule set, not all
+            # optional rules declared in the original immutable policy.
+            groups=group_results(policy.model_copy(update={"rules": tuple(rules)}), results, stage),
             redaction=redaction,
             cost_usd=None if external else 0,
             cost_basis="provider_unpriced" if external else "local_only",
