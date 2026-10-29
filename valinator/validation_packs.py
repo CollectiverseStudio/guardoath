@@ -56,6 +56,11 @@ class PackRegistry:
             result.append(allowed[code])
         return tuple(result)
 
+    def describe(self, application_id: str) -> list[dict]:
+        """Expose only this application's available selectors and versions."""
+        return [{"code": pack.code, "version": pack.version}
+                for pack in self._published.get(application_id, {}).values()]
+
     def core_checker_ids(self, application_id: str) -> tuple[str, ...] | None:
         return self._core.get(application_id)
 
