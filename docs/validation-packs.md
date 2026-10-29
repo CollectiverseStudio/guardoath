@@ -66,3 +66,7 @@ uvicorn valinator.app:app --host 127.0.0.1 --port 8000
 Send a request to `/v1/checks/input` using the configured key, application `demo`, policy `valisentry-packs-v1`, and `validation_codes: ["LOG"]` with `content_format: "json"` and a JSON-encoded `samples` document. For AGENT, use `validation_codes: ["AGENT"]` with a JSON-encoded `tool_calls` document. Do not select both packs for incompatible document shapes: both required checks will evaluate the same canonical content, so the request may correctly return incomplete.
 
 This example uses `mode: enforce`, unlike the existing playground's observe mode. Neither the API nor this example executes a shipment operation or grants tool permissions. The added test exercises valid and invalid LOG and AGENT cases; it has been committed but not run here because the container cannot resolve GitHub. No live model/provider tests were performed.
+
+## Authenticated pack discovery (implemented; CI verification pending)
+
+`GET /v1/validation-packs` uses the existing bearer application credential and returns the mandatory `CORE` label plus only the caller application's registered optional codes and versions. It does not expose other tenants' packs, internal checker policies, or credentials. An application with no configured pack registry receives an empty optional list. This endpoint is metadata discovery only: availability of a pack code does not certify complete coverage of the industry's use cases. Tests cover unauthorized access and cross-tenant isolation.
