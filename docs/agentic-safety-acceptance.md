@@ -34,3 +34,9 @@ Each implementation must show: trusted policy source; input and output stages wh
 - `valinator.workflow_guard` provides a strict, server-configured transition graph and deterministic allow/deny decisions for UC104. It rejects shipping directly from `created` in the illustrative workflow. **It does not own the database state, verify payment or perform atomic compare-and-swap**, so full UC104 enforcement is still outstanding.
 - `valinator.agent_authorization` provides a tenant-scoped permission decision for UC105. Identity and grants must be authenticated by the integrating application, and actual tool dispatch must independently enforce authorization. **It does not authenticate users or prevent a host from bypassing it.**
 - Unit tests cover valid/invalid transitions, cross-tenant isolation, least privilege and missing identity. These are deterministic foundation tests, not proof of full agent orchestration security.
+
+## Pre-dispatch composition (new; CI verification pending)
+
+`valinator.agent_dispatch_gate.AgentDispatchGate` now composes the existing tenant permission decision, workflow transition guard and atomic in-process budget reservation. A denied permission or invalid transition consumes no budget. A successful assessment reserves one step and one call before a host attempts a tool action. `tests/test_agent_dispatch_gate.py` covers authorized, unauthorized, invalid transition, depth and concurrent budget-exhaustion scenarios.
+
+**Security boundary:** This is an opt-in library primitive, not a production enforcement gateway. It does not authenticate the principal, validate the tool's JSON arguments, verify durable workflow state, dispatch tools, implement database atomicity, or coordinate across replicas. The returned `approved_for_host_recheck` explicitly requires the integrating host to revalidate trusted state and permissions at execution. Never treat this return value as an independent authorization token or a guarantee of safety.
