@@ -3,11 +3,11 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from valinator.app import create_app
-from valinator.checkers import default_checkers
-from valinator.config import load_policies
-from valinator.engine import Engine
-from valinator.models import Policy, Rule
+from guardoath.app import create_app
+from guardoath.checkers import default_checkers
+from guardoath.config import load_policies
+from guardoath.engine import Engine
+from guardoath.models import Policy, Rule
 
 
 def test_example_file_loads():
@@ -50,7 +50,7 @@ def test_environment_loads_policy_file(monkeypatch, tmp_path):
     path.write_text(json.dumps({"format_version": "1", "policies": [{
         "application_id": "demo", "version": "custom-v1", "rules": [{"checker_id": "schema"}],
         "input_schema": {"type": "integer"}}]}))
-    monkeypatch.setenv("VALINATOR_POLICY_FILE", str(path))
+    monkeypatch.setenv("GUARDOATH_POLICY_FILE", str(path))
     client = TestClient(create_app(credentials={"test-key": "demo"}))
     response = client.post("/v1/checks/input", headers={"Authorization": "Bearer test-key"}, json={
         "application_id": "demo", "policy_version": "custom-v1", "content": "42", "content_format": "json"})
@@ -109,13 +109,13 @@ def test_disabled_pii_is_incomplete_not_a_pass():
 
 
 def test_invalid_pii_setting_fails_startup(monkeypatch):
-    monkeypatch.setenv("VALINATOR_ENABLE_PII", "yes")
+    monkeypatch.setenv("GUARDOATH_ENABLE_PII", "yes")
     with pytest.raises(ValueError, match="must be 0 or 1"):
         create_app(credentials={})
 
 
 def test_python_315_rejects_pii_explicitly(monkeypatch):
-    import valinator.pii
-    monkeypatch.setattr(valinator.pii.sys, "version_info", (3, 15))
+    import guardoath.pii
+    monkeypatch.setattr(guardoath.pii.sys, "version_info", (3, 15))
     with pytest.raises(ValueError, match="Python 3.11 through 3.14"):
-        valinator.pii.build_pii_checker()
+        guardoath.pii.build_pii_checker()

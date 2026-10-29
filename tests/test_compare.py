@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from valinator.compare import compare_reports, load_report, main, render_html
-from valinator.evaluate import main as evaluate_main
+from guardoath.compare import compare_reports, load_report, main, render_html
+from guardoath.evaluate import main as evaluate_main
 
 ROOT = Path(__file__).resolve().parents[1]
 

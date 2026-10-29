@@ -1,6 +1,6 @@
 """Synthetic test examples; credential-shaped values are built in memory."""
 
-from valinator.synthetic_secrets import provider_examples
+from guardoath.synthetic_secrets import provider_examples
 
 EXAMPLES = provider_examples()
 

@@ -1,4 +1,4 @@
-# Valinator implementation specification
+# GuardOath implementation specification
 
 Version 0.1, October 27, 2026. This repository document captures the initial
 engineering baseline. The separate product specification covers the wider plan.
@@ -78,7 +78,7 @@ Select checks using trusted application configuration and approved request
 context. Never allow user text to change policy or silently relax required checks.
 Future policy changes are drafts until an administrator publishes a version.
 The prototype selects policy by application and version, and schema by stage.
-Versioned JSON policy files load at startup through VALINATOR_POLICY_FILE.
+Versioned JSON policy files load at startup through GUARDOATH_POLICY_FILE.
 Request-type routing and live policy management remain later milestones.
 All adapters receive one canonical content field; JSON schema checks parse that
 same content when content_format is json. A separate payload field is rejected.
@@ -166,7 +166,7 @@ The implementation uses only existing Python standard-library functionality.
 A bounded startup `ResourceLimits` contract configures sustained checks/minute,
 application burst, application active checks, process active checks, and active
 POST `/v1/` requests. Defaults are 120/minute, burst 20, and concurrency 4/16/32.
-Environment configuration uses `VALINATOR_` plus each upper-case field name;
+Environment configuration uses `GUARDOATH_` plus each upper-case field name;
 invalid settings fail startup. Constructor injection overrides environment limits.
 No remote service or new dependency is required.
 
@@ -287,7 +287,7 @@ checks does not establish complete privacy, lack of PHI, or safe model behavior.
 
 ## Local regression suites and reports
 
-`python -m valinator.evaluate` loads a strict bounded suite of up to 100 uniquely
+`python -m guardoath.evaluate` loads a strict bounded suite of up to 100 uniquely
 identified cases from at most 256 KiB of JSON. Each case contains group/stage,
 canonical CheckRequest, and explicit expectations for evaluation status,
 recommended/effective actions, exact checker-status mapping, exact finding-ID set,
@@ -312,14 +312,14 @@ CSP. Existing reports need --overwrite; source aliases and duplicate destination
 are refused. Exit status is 0/1/2 for matched/mismatched/configuration failure.
 
 `start_dashboard.py --evaluate` reuses the isolated complete environment and
-creates a unique ignored `.valinator-reports/` run directory, then optionally opens
+creates a unique ignored `.guardoath-reports/` run directory, then optionally opens
 the HTML file. It starts no API server and creates no platform/provider key.
 The full manual CLI supports custom file paths/group filters. See README for
 commands, limits, report privacy, and the distinction from detector evaluation.
 
 ## Regression baseline comparison
 
-`valinator.compare` validates source-free format-1 local reports (256 KiB max,
+`guardoath.compare` validates source-free format-1 local reports (256 KiB max,
 100 unique cases each), typed statuses/decisions, finite nonnegative timings,
 consistent assertion metadata and recomputed summaries. Reports with unknown
 source fields or different suite IDs are rejected. Comparisons align case IDs and
@@ -351,7 +351,7 @@ The bounded offline adapter now imports selected upstream expressions for sixtee
 credential/identifier families plus a prefix-based fine-grained GitHub candidate
 rule. It does not call plugin verification, file/baseline scans or user-controlled
 suppression filters. Existing checker/finding IDs remain stable; version metadata
-uses valinator-patterns-2. Private-key/JWT/identifier results do not establish
+uses guardoath-patterns-2. Private-key/JWT/identifier results do not establish
 credential activity or cryptographic validity.
 
 Policy options default off: detect_secret_assignments inspects bounded quoted
@@ -529,7 +529,7 @@ semantic scope, fact checking and free-text bias remain explicitly unsupported.
 
 
 All-suite local orchestration is available through launcher --evaluate --suite all
-and valinator.evaluate_all. It preloads all configurations, never selects external
+and guardoath.evaluate_all. It preloads all configurations, never selects external
 providers, preserves fresh per-group reports and writes a source-free collection
 index. The collection contains 830 expectations with 160 intentional incomplete
 outcomes, not a completed accuracy/fairness/semantic coverage claim. Mismatches

@@ -4,11 +4,11 @@ import json
 
 import pytest
 from fastapi.testclient import TestClient
-from valinator.app import create_app
-from valinator.budgets import ResourceLimits
-from valinator.checkers import default_checkers
-from valinator.engine import Engine
-from valinator.models import CheckRequest,CheckerResult,ConfidentialTerm,FieldComparison,Policy,Rule,Stage
+from guardoath.app import create_app
+from guardoath.budgets import ResourceLimits
+from guardoath.checkers import default_checkers
+from guardoath.engine import Engine
+from guardoath.models import CheckRequest,CheckerResult,ConfidentialTerm,FieldComparison,Policy,Rule,Stage
 
 STAGES=['input','output']
 
@@ -179,7 +179,7 @@ def test_uc080_deterministic_conditional_policy_requires_no_semantic_model(stage
 @pytest.mark.parametrize('stage',STAGES)
 def test_uc077_sql_proposal_is_rejected_by_allowlist_not_sql_sanitization(stage):
     from pathlib import Path
-    from valinator.config import load_policies
+    from guardoath.config import load_policies
     p=load_policies(Path(__file__).resolve().parents[1]/'policies/actions-batch.json')[0]
     result=asyncio.run(Engine([p],default_checkers()).check(CheckRequest(application_id='demo',policy_version=p.version,
         content=json.dumps({'tool_calls':[{'name':'execute_sql','arguments':{'query':'SELECT 1'}}]}),content_format='json'),Stage(stage)))

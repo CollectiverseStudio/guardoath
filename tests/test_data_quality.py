@@ -8,12 +8,12 @@ import socket
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
-from valinator.app import create_app
-from valinator.budgets import ResourceLimits
-from valinator.checkers import default_checkers
-from valinator.config import load_policies
-from valinator.engine import Engine
-from valinator.models import CheckRequest, CheckerResult, IntegrityPolicy, Policy, Rule, Stage
+from guardoath.app import create_app
+from guardoath.budgets import ResourceLimits
+from guardoath.checkers import default_checkers
+from guardoath.config import load_policies
+from guardoath.engine import Engine
+from guardoath.models import CheckRequest, CheckerResult, IntegrityPolicy, Policy, Rule, Stage
 
 ROOT=Path(__file__).resolve().parents[1]
 NAMES=['ledger','timestamps','graph','integrity']

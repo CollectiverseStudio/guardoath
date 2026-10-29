@@ -163,7 +163,7 @@ These 100 additional cases extend the existing [UC001–050](use-case-coverage.m
 
 ## Architecture — proposed target
 
-Customer application / agent / sensor pipeline → **Valinator policy enforcement and orchestration** → allow / quarantine / block / human review → downstream AI or tool. Four core services: (1) bounded schema and data-contract validation; (2) trusted versioned policy and authorization evaluation; (3) isolated specialist validator adapters with explicit external-egress gates; (4) redacted, tenant-scoped decision/evidence logging. Existing checks remain in place; no implicit execution or silent transformations. ISO/IEC 42001 support means evidence for an organization's AI management system, **not** automatic certification or compliance.
+Customer application / agent / sensor pipeline → **GuardOath policy enforcement and orchestration** → allow / quarantine / block / human review → downstream AI or tool. Four core services: (1) bounded schema and data-contract validation; (2) trusted versioned policy and authorization evaluation; (3) isolated specialist validator adapters with explicit external-egress gates; (4) redacted, tenant-scoped decision/evidence logging. Existing checks remain in place; no implicit execution or silent transformations. ISO/IEC 42001 support means evidence for an organization's AI management system, **not** automatic certification or compliance.
 
 ## Delivery phases
 

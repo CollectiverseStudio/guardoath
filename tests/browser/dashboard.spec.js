@@ -242,11 +242,11 @@ test("standalone regression report shows assertions separately from evaluations"
   const { execFileSync } = require("node:child_process");
   const { pathToFileURL } = require("node:url");
   const reportPath = testInfo.outputPath("regression-report.html");
-  execFileSync("python", ["-m","valinator.evaluate","--pii","--html",reportPath], {stdio:"pipe"});
+  execFileSync("python", ["-m","guardoath.evaluate","--pii","--html",reportPath], {stdio:"pipe"});
   const networkRequests = [];
   page.on("request", request => { if (/^https?:/.test(request.url())) networkRequests.push(request.url()); });
   await page.goto(pathToFileURL(reportPath).href);
-  await expect(page.getByRole("heading",{name:"Valinator regression report"})).toBeVisible();
+  await expect(page.getByRole("heading",{name:"GuardOath regression report"})).toBeVisible();
   await expect(page.locator("body")).toContainText("30 of 30 expectations matched");
   await expect(page.locator("body")).toContainText("Incomplete evaluations: 2");
   await expect(page.locator("body")).not.toContainText("jane@example.com");
@@ -259,8 +259,8 @@ test("baseline comparison appears in the offline evaluation report", async ({ pa
   const { pathToFileURL } = require("node:url");
   const baseline = testInfo.outputPath("baseline.json");
   const output = testInfo.outputPath("compared.html");
-  execFileSync("python", ["-m","valinator.evaluate","--group","secrets","--report",baseline], {stdio:"pipe"});
-  execFileSync("python", ["-m","valinator.evaluate","--group","secrets","--baseline",baseline,"--html",output], {stdio:"pipe"});
+  execFileSync("python", ["-m","guardoath.evaluate","--group","secrets","--report",baseline], {stdio:"pipe"});
+  execFileSync("python", ["-m","guardoath.evaluate","--group","secrets","--baseline",baseline,"--html",output], {stdio:"pipe"});
   const requests = [];
   page.on("request", request => { if (/^https?:/.test(request.url())) requests.push(request.url()); });
   await page.goto(pathToFileURL(output).href);
@@ -292,7 +292,7 @@ test("secrets group batch report keeps expected incomplete cases visible", async
   const { execFileSync } = require("node:child_process");
   const { pathToFileURL } = require("node:url");
   const file = testInfo.outputPath("secrets-batch.html");
-  execFileSync("python",["-m","valinator.evaluate","--cases","evals/secrets.json","--policies","policies/secrets-batch.json","--html",file],{stdio:"pipe"});
+  execFileSync("python",["-m","guardoath.evaluate","--cases","evals/secrets.json","--policies","policies/secrets-batch.json","--html",file],{stdio:"pipe"});
   await page.goto(pathToFileURL(file).href);
   await expect(page.locator("body")).toContainText("100 of 100 expectations matched");
   await expect(page.locator("body")).toContainText("Incomplete evaluations: 8");
@@ -302,7 +302,7 @@ test("secrets group batch report keeps expected incomplete cases visible", async
 
 test("dashboard links to the maintained user guide", async ({ page }) => {
   await page.goto("/dashboard");
-  await expect(page.getByRole("link",{name:"User guide"})).toHaveAttribute("href","https://github.com/CollectiverseStudio/valinator/blob/main/docs/user-guide.md");
+  await expect(page.getByRole("link",{name:"User guide"})).toHaveAttribute("href","https://github.com/CollectiverseStudio/guardoath/blob/main/docs/user-guide.md");
 });
 
 
@@ -384,7 +384,7 @@ test("extended privacy redaction shows only rechecked replacements",async({page}
 test("privacy batch report distinguishes incomplete cases from matched expectations",async({page},testInfo)=>{
   const {execFileSync}=require('node:child_process'); const {pathToFileURL}=require('node:url');
   const path=testInfo.outputPath('privacy.html');
-  execFileSync('python',['-m','valinator.evaluate','--pii','--cases','evals/privacy.json','--policies','policies/privacy-batch.json','--html',path],{stdio:'pipe'});
+  execFileSync('python',['-m','guardoath.evaluate','--pii','--cases','evals/privacy.json','--policies','policies/privacy-batch.json','--html',path],{stdio:'pipe'});
   await page.goto(pathToFileURL(path).href);
   await expect(page.locator('body')).toContainText('100 of 100 expectations matched');
   await expect(page.locator('body')).toContainText('Incomplete evaluations: 12');
@@ -487,7 +487,7 @@ test('correcting a structured answer preserves input and releases the preview',a
 test('structure group report keeps required and optional skips explicit',async({page},testInfo)=>{
   const {execFileSync}=require('node:child_process'); const {pathToFileURL}=require('node:url');
   const path=testInfo.outputPath('structure.html');
-  execFileSync('python',['-m','valinator.evaluate','--cases','evals/structure.json','--policies','policies/structure-batch.json','--html',path],{stdio:'pipe'});
+  execFileSync('python',['-m','guardoath.evaluate','--cases','evals/structure.json','--policies','policies/structure-batch.json','--html',path],{stdio:'pipe'});
   await page.goto(pathToFileURL(path).href);
   await expect(page.locator('body')).toContainText('100 of 100 expectations matched');
   await expect(page.locator('body')).toContainText('Incomplete evaluations: 4');
@@ -538,7 +538,7 @@ test('only examples applicable to the active profile are shown',async({page})=>{
 test('business batch report keeps skipped requirements visible',async({page},testInfo)=>{
   const {execFileSync}=require('node:child_process'); const {pathToFileURL}=require('node:url');
   const path=testInfo.outputPath('business.html');
-  execFileSync('python',['-m','valinator.evaluate','--cases','evals/business.json','--policies','policies/business-batch.json','--html',path],{stdio:'pipe'});
+  execFileSync('python',['-m','guardoath.evaluate','--cases','evals/business.json','--policies','policies/business-batch.json','--html',path],{stdio:'pipe'});
   await page.goto(pathToFileURL(path).href);
   await expect(page.locator('body')).toContainText('100 of 100 expectations matched');
   await expect(page.locator('body')).toContainText('Incomplete evaluations: 6');
@@ -599,7 +599,7 @@ for(const id of ['plain-intent','joiner-safe']) {
 test('local text-security batch keeps incomplete evaluations separate from matched cases',async({page},testInfo)=>{
   const {execFileSync}=require('node:child_process'); const {pathToFileURL}=require('node:url');
   const path=testInfo.outputPath('text-security.html');
-  execFileSync('python',['-m','valinator.evaluate','--cases','evals/text-security.json','--policies','policies/text-security-batch.json','--html',path],{stdio:'pipe'});
+  execFileSync('python',['-m','guardoath.evaluate','--cases','evals/text-security.json','--policies','policies/text-security-batch.json','--html',path],{stdio:'pipe'});
   await page.goto(pathToFileURL(path).href);
   await expect(page.locator('body')).toContainText('100 of 100 expectations matched');
   await expect(page.locator('body')).toContainText('Incomplete evaluations: 14');
@@ -713,7 +713,7 @@ test('exact matched scores are preserved and a small difference is reviewed',asy
 test('the entire matched-outcome report is readable without private scenario values',async({page})=>{
   const {execFileSync}=require('node:child_process');const path=require('node:path').join(test.info().outputDir,'bias.html');
   require('node:fs').mkdirSync(test.info().outputDir,{recursive:true});
-  execFileSync('python',['-m','valinator.evaluate','--cases','evals/bias.json','--policies','policies/bias-batch.json','--html',path],{stdio:'pipe'});
+  execFileSync('python',['-m','guardoath.evaluate','--cases','evals/bias.json','--policies','policies/bias-batch.json','--html',path],{stdio:'pipe'});
   await page.goto('file://'+path);await expect(page.locator('body')).toContainText('100 of 100 expectations matched');
   await expect(page.locator('body')).toContainText('Incomplete evaluations: 50');await expect(page.locator('tbody tr')).toHaveCount(100);
   await expect(page.locator('body')).not.toContainText('qualification');
@@ -747,7 +747,7 @@ test('caller-supplied sources cannot replace the configured evidence catalog',as
 });
 test('the full citation-evidence report omits quotations and preserves incomplete counts',async({page},testInfo)=>{
   const {execFileSync}=require('node:child_process');const {pathToFileURL}=require('node:url');const path=testInfo.outputPath('evidence.html');
-  execFileSync('python',['-m','valinator.evaluate','--cases','evals/evidence.json','--policies','policies/evidence-batch.json','--html',path],{stdio:'pipe'});
+  execFileSync('python',['-m','guardoath.evaluate','--cases','evals/evidence.json','--policies','policies/evidence-batch.json','--html',path],{stdio:'pipe'});
   await page.goto(pathToFileURL(path).href);await expect(page.locator('body')).toContainText('100 of 100 expectations matched');
   await expect(page.locator('body')).toContainText('Incomplete evaluations: 36');await expect(page.locator('tbody tr')).toHaveCount(100);
   await expect(page.locator('body')).not.toContainText('Unused items may be returned within 30 days.');
@@ -782,7 +782,7 @@ test('an empty proposed-call list is handled explicitly',async({page})=>{
 });
 test('proposed action report omits argument values',async({page},testInfo)=>{
   const {execFileSync}=require('node:child_process');const {pathToFileURL}=require('node:url');const path=testInfo.outputPath('actions.html');
-  execFileSync('python',['-m','valinator.evaluate','--cases','evals/actions.json','--policies','policies/actions-batch.json','--html',path],{stdio:'pipe'});
+  execFileSync('python',['-m','guardoath.evaluate','--cases','evals/actions.json','--policies','policies/actions-batch.json','--html',path],{stdio:'pipe'});
   await page.goto(pathToFileURL(path).href);await expect(page.locator('body')).toContainText('100 of 100 expectations matched');
   await expect(page.locator('body')).toContainText('Incomplete evaluations: 28');await expect(page.locator('tbody tr')).toHaveCount(100);
   await expect(page.locator('body')).not.toContainText('ORD-1234');
@@ -791,7 +791,7 @@ test('proposed action report omits argument values',async({page},testInfo)=>{
 
 test('all local regression suites have one index with working group report links',async({page},testInfo)=>{
   const {execFileSync}=require('node:child_process');const {pathToFileURL}=require('node:url');const path=testInfo.outputPath('all-local');
-  execFileSync('python',['-m','valinator.evaluate_all','--pii','--output',path],{stdio:'pipe'});
+  execFileSync('python',['-m','guardoath.evaluate_all','--pii','--output',path],{stdio:'pipe'});
   await page.goto(pathToFileURL(require('node:path').join(path,'index.html')).href);
   await expect(page.locator('body')).toContainText('1330 of 1330 expectations matched');await expect(page.locator('tbody tr')).toHaveCount(14);
   await page.getByRole('link',{name:'bias',exact:true}).click();
@@ -822,7 +822,7 @@ test('raw redaction does not release remaining encoded identifiers',async({page}
 });
 test('encoded privacy report preserves incomplete cases without decoded content',async({page},testInfo)=>{
   const {execFileSync}=require('node:child_process');const {pathToFileURL}=require('node:url');const path=testInfo.outputPath('encoded-privacy.html');
-  execFileSync('python',['-m','valinator.evaluate','--pii','--cases','evals/encoded-privacy.json','--policies','policies/encoded-privacy-batch.json','--html',path],{stdio:'pipe'});
+  execFileSync('python',['-m','guardoath.evaluate','--pii','--cases','evals/encoded-privacy.json','--policies','policies/encoded-privacy-batch.json','--html',path],{stdio:'pipe'});
   await page.goto(pathToFileURL(path).href);await expect(page.locator('body')).toContainText('100 of 100 expectations matched');await expect(page.locator('body')).toContainText('Incomplete evaluations: 28');
   await expect(page.locator('body')).not.toContainText('jane@example.com');await expect(page.locator('tbody tr')).toHaveCount(100);
 });

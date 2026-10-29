@@ -5,7 +5,7 @@ from pathlib import Path
 import shutil
 
 import pytest
-import valinator.evaluate_all as all_checks
+import guardoath.evaluate_all as all_checks
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -80,9 +80,9 @@ def test_real_mismatched_expectation_produces_failure_exit_and_visible_count(tmp
 def test_provider_selection_is_ignored_and_external_cases_are_rejected(tmp_path,monkeypatch):
     (tmp_path/'input').mkdir()
     root=fixture_root(tmp_path/'input')
-    monkeypatch.setenv('VALINATOR_CONTENT_SAFETY_PROVIDER','bedrock')
-    monkeypatch.setenv('VALINATOR_AWS_REGION','invalid-inherited-region')
-    monkeypatch.setenv('VALINATOR_ENABLE_AZURE_PROMPT_SHIELDS','1')
+    monkeypatch.setenv('GUARDOATH_CONTENT_SAFETY_PROVIDER','bedrock')
+    monkeypatch.setenv('GUARDOATH_AWS_REGION','invalid-inherited-region')
+    monkeypatch.setenv('GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS','1')
     monkeypatch.setattr(all_checks,'SUITES',('evidence',))
     assert all_checks.main(['--root',str(root),'--output',str(tmp_path/'local-results')])==0
     policies=json.loads((root/'policies/evidence-batch.json').read_text())

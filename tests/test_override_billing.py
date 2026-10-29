@@ -1,8 +1,8 @@
 """Tenant override decisions and provider-neutral billing events."""
 import pytest
 
-from valinator.override_policy import OverridePolicy, decide_override
-from valinator.billing import BillingAccount, BillingMode, usage_event
+from guardoath.override_policy import OverridePolicy, decide_override
+from guardoath.billing import BillingAccount, BillingMode, usage_event
 
 
 def test_two_tenants_have_independent_override_policies():

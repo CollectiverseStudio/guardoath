@@ -7,12 +7,12 @@ from fastapi.testclient import TestClient
 import httpx2
 import pytest
 
-from valinator.app import create_app
-from valinator.azure_prompt_shields import build_azure_prompt_shields, validate_endpoint
-from valinator.checkers import default_checkers
-from valinator.config import load_policies
-from valinator.engine import Engine
-from valinator.models import CheckRequest, Stage
+from guardoath.app import create_app
+from guardoath.azure_prompt_shields import build_azure_prompt_shields, validate_endpoint
+from guardoath.checkers import default_checkers
+from guardoath.config import load_policies
+from guardoath.engine import Engine
+from guardoath.models import CheckRequest, Stage
 
 ENDPOINT = 'https://unit-test.cognitiveservices.azure.com'
 KEY = 'synthetic-provider-key'
@@ -154,25 +154,25 @@ def test_invalid_keys_do_not_echo_value(key):
 
 
 def test_azure_off_by_default_and_bad_flag_rejected(monkeypatch):
-    monkeypatch.setenv('VALINATOR_AZURE_CONTENT_SAFETY_ENDPOINT','invalid')
-    monkeypatch.setenv('VALINATOR_AZURE_CONTENT_SAFETY_KEY','ignored-when-disabled')
+    monkeypatch.setenv('GUARDOATH_AZURE_CONTENT_SAFETY_ENDPOINT','invalid')
+    monkeypatch.setenv('GUARDOATH_AZURE_CONTENT_SAFETY_KEY','ignored-when-disabled')
     assert 'azure_prompt_shields' not in default_checkers()
     assert create_app(credentials={'test-key':'demo'})
-    monkeypatch.setenv('VALINATOR_ENABLE_AZURE_PROMPT_SHIELDS','yes')
+    monkeypatch.setenv('GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS','yes')
     with pytest.raises(ValueError,match='must be 0 or 1'): create_app()
 
 
 def test_explicit_enable_requires_configuration(monkeypatch):
-    monkeypatch.setenv('VALINATOR_ENABLE_AZURE_PROMPT_SHIELDS','1')
-    monkeypatch.delenv('VALINATOR_AZURE_CONTENT_SAFETY_ENDPOINT',raising=False)
+    monkeypatch.setenv('GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS','1')
+    monkeypatch.delenv('GUARDOATH_AZURE_CONTENT_SAFETY_ENDPOINT',raising=False)
     with pytest.raises(ValueError,match='HTTPS public-Azure resource origin'): create_app()
 
 
 def test_enabled_startup_metadata_does_not_disclose_key_or_endpoint(monkeypatch):
-    monkeypatch.setenv('VALINATOR_ENABLE_AZURE_PROMPT_SHIELDS','1')
-    monkeypatch.setenv('VALINATOR_AZURE_CONTENT_SAFETY_ENDPOINT',ENDPOINT)
-    monkeypatch.setenv('VALINATOR_AZURE_CONTENT_SAFETY_KEY',KEY)
-    monkeypatch.setenv('VALINATOR_POLICY_FILE','policies/azure-prompt-shields.json')
+    monkeypatch.setenv('GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS','1')
+    monkeypatch.setenv('GUARDOATH_AZURE_CONTENT_SAFETY_ENDPOINT',ENDPOINT)
+    monkeypatch.setenv('GUARDOATH_AZURE_CONTENT_SAFETY_KEY',KEY)
+    monkeypatch.setenv('GUARDOATH_POLICY_FILE','policies/azure-prompt-shields.json')
     client = TestClient(create_app(credentials={'test-key':'demo'}))
     response = client.get('/v1/applications/current',headers={'Authorization':'Bearer test-key'})
     assert response.status_code == 200

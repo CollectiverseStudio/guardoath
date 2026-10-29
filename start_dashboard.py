@@ -67,12 +67,12 @@ def open_when_ready(url):
 def serve(port, browser=True):
     key = secrets.token_urlsafe(32)
     # Deliberately choose the complete local profile, independent of old setup.
-    os.environ.update(VALINATOR_API_KEY=key, VALINATOR_ENABLE_PII='1',
-                      VALINATOR_ENABLE_AZURE_PROMPT_SHIELDS='0', VALINATOR_CONTENT_SAFETY_PROVIDER='none',
-                      VALINATOR_POLICY_FILE=str(ROOT / 'policies/playground.json'))
+    os.environ.update(GUARDOATH_API_KEY=key, GUARDOATH_ENABLE_PII='1',
+                      GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS='0', GUARDOATH_CONTENT_SAFETY_PROVIDER='none',
+                      GUARDOATH_POLICY_FILE=str(ROOT / 'policies/playground.json'))
     try:
         import uvicorn
-        from valinator.app import app
+        from guardoath.app import app
     except ImportError:
         print('Dashboard dependencies are missing. Run python start_dashboard.py --reinstall.', file=sys.stderr)
         return 1
@@ -93,7 +93,7 @@ def serve(port, browser=True):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Prepare and open the complete local Valinator dashboard.')
+    parser = argparse.ArgumentParser(description='Prepare and open the complete local GuardOath dashboard.')
     parser.add_argument('--port', type=port_number, default=8000)
     parser.add_argument('--no-browser', action='store_true', help='Print the URL without opening a browser')
     parser.add_argument('--reinstall', action='store_true', help='Reinstall the dashboard dependencies')
@@ -122,8 +122,8 @@ def main():
         interpreter = prepare_environment(args.reinstall)
         if args.evaluate and args.suite == 'all':
             run_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ-all-') + secrets.token_hex(4)
-            directory = ROOT / '.valinator-reports' / run_id
-            command = [str(interpreter), '-m', 'valinator.evaluate_all', '--pii', '--root', str(ROOT), '--output', str(directory)]
+            directory = ROOT / '.guardoath-reports' / run_id
+            command = [str(interpreter), '-m', 'guardoath.evaluate_all', '--pii', '--root', str(ROOT), '--output', str(directory)]
             completed = subprocess.run(command, cwd=ROOT)
             if completed.returncode in {0, 1} and (directory/'index.html').is_file():
                 print(f'All local regression reports: {directory / "index.html"}', flush=True)
@@ -135,7 +135,7 @@ def main():
             policies_path = ROOT / 'policies' / ({'secrets':'secrets-batch.json','privacy':'privacy-batch.json','structure':'structure-batch.json','business':'business-batch.json','text-security':'text-security-batch.json','bias':'bias-batch.json','evidence':'evidence-batch.json','actions':'actions-batch.json','encoded-privacy':'encoded-privacy-batch.json',**{n:n+'-batch.json' for n in ['ledger','timestamps','graph','integrity']}}.get(args.suite,'playground.json'))
             baseline = Path(args.baseline).resolve() if args.baseline else None
             if not baseline and not args.no_compare:
-                previous = sorted((ROOT / '.valinator-reports').glob('*/report.json'),
+                previous = sorted((ROOT / '.guardoath-reports').glob('*/report.json'),
                                   key=lambda p:p.stat().st_mtime_ns,reverse=True)
                 # Candidate selection uses only bounded metadata; the child validates
                 # the chosen report fully before running cases or producing output.
@@ -150,10 +150,10 @@ def main():
                     except (OSError,ValueError,AttributeError,RecursionError):
                         continue
             run_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ-') + secrets.token_hex(4)
-            directory = ROOT / '.valinator-reports' / run_id
+            directory = ROOT / '.guardoath-reports' / run_id
             directory.mkdir(parents=True)
             html_path = directory / 'report.html'
-            command = [str(interpreter), '-m', 'valinator.evaluate', '--pii',
+            command = [str(interpreter), '-m', 'guardoath.evaluate', '--pii',
                        '--cases', str(cases_path),
                        '--policies', str(policies_path),
                        '--report', str(directory / 'report.json'), '--html', str(html_path)]

@@ -1,4 +1,4 @@
-# Valinator user guide
+# GuardOath user guide
 
 This guide grows with the product. It describes user-facing validation checks,
 examples, expected results, configuration, and boundaries. Version: 0.24.0.
@@ -11,7 +11,7 @@ are not additional content detectors.
 
 ## Start here on your Windows computer
 
-In your `valinator-latest` folder:
+In your `guardoath-latest` folder:
 
 ```powershell
 git pull --ff-only
@@ -33,7 +33,7 @@ py -3.13 start_dashboard.py --evaluate --suite secrets
 ```
 
 This runs **100 saved examples**, opens an HTML report, and preserves JSON/HTML
-under `.valinator-reports/`. The first run becomes a reference; later runs compare
+under `.guardoath-reports/`. The first run becomes a reference; later runs compare
 with a previous report of the same suite. No server, API key, real credential,
 provider account, or paid call is required. This is separate from the smaller
 30-case starter suite selected by `--evaluate` without `--suite secrets`.
@@ -52,7 +52,7 @@ You do not need to choose a policy before entering a question.
    terms), and bounded text-security signals.
 3. **Output (AI) data:** once input passes, your real application would call its
    AI model. In this local demo, paste the proposed answer or use a sample;
-   Valinator does not generate an answer or call Tokatlas here.
+   GuardOath does not generate an answer or call Tokatlas here.
 4. **Output test:** select **Run output checks**. The proposed answer runs through
    those same three checkers. A preview appears only after the sequence completes
    without findings, required-check failures or simulation.
@@ -151,7 +151,7 @@ baseline comparison. Use an individual --suite with --baseline to compare that
 suite's saved report. For a manually prepared environment, the equivalent CLI is:
 
 ```bash
-python -m valinator.evaluate_all --pii --output .valinator-reports/all-local-new
+python -m guardoath.evaluate_all --pii --output .guardoath-reports/all-local-new
 ```
 
 Use a new output folder for each manual run. A mismatch returns exit code 1;
@@ -373,7 +373,7 @@ local scan deadline also apply. Errors never become a clean secret-check pass.
 - User-supplied allowlist/noqa/gitleaks comments do not disable scanning.
 - Configured local findings/errors hold external checks under the local-first
   gate, including in observe mode. This does not stop model calls your app makes
-  independently of Valinator or prove complete confidentiality coverage.
+  independently of GuardOath or prove complete confidentiality coverage.
 - The optional Azure sample now enables quoted-assignment and encoded-secret
   inspection in its local gate. The ordinary launcher still disables Azure.
 
@@ -735,7 +735,7 @@ examples](text-security-coverage.md). Reports omit source/decoded content and ca
 compare against a previous report with the same suite ID. Direct CLI needs no PII:
 
 ```bash
-python -m valinator.evaluate --cases evals/text-security.json --policies policies/text-security-batch.json
+python -m guardoath.evaluate --cases evals/text-security.json --policies policies/text-security-batch.json
 ```
 
 ### Semantic detection remains separate
@@ -816,7 +816,7 @@ included; consult your configured schema to locate the problem.
 **Compatibility change in 0.18.0:** time now uses the RFC3339 full-time format of
 JSON Schema 2020-12, requiring `Z` or an explicit numeric offset. The prior generic
 checker accidentally selected the older timezone-free rule. Send `12:30:00Z` or
-`12:30:00-04:00` instead of bare `12:30:00`. Valinator does not guess a timezone.
+`12:30:00-04:00` instead of bare `12:30:00`. GuardOath does not guess a timezone.
 Fractional seconds and lowercase `z` are accepted. Time and date-time reject
 leading/trailing whitespace, including a terminal newline. The existing RFC3339
 helper does not support leap seconds; `23:59:60Z` is outside the supported subset.
@@ -841,7 +841,7 @@ content and can compare to a previous report of the same suite ID. See [all 100
 cases and examples](structure-coverage.md). Direct CLI use needs no PII extra:
 
 ```bash
-python -m valinator.evaluate --cases evals/structure.json --policies policies/structure-batch.json
+python -m guardoath.evaluate --cases evals/structure.json --policies policies/structure-batch.json
 ```
 
 ### Limits
@@ -985,13 +985,13 @@ support comparison with a previous report of the same suite ID. No PII extra is
 needed for direct CLI use:
 
 ```bash
-python -m valinator.evaluate --cases evals/business.json --policies policies/business-batch.json
+python -m guardoath.evaluate --cases evals/business.json --policies policies/business-batch.json
 ```
 
 
 ## Harmful content and abuse: optional provider assessment
 
-`content_safety` is the common checker interface, independent of where Valinator
+`content_safety` is the common checker interface, independent of where GuardOath
 runs. It is disabled by default. Hosting on AWS does not select Bedrock; moving
 the API to another host does not change requests, policies or local checks.
 The initial optional adapter uses Bedrock. Other providers can implement the same
@@ -1033,12 +1033,12 @@ For a separately approved provider trial, install optional `aws` and `pii` extra
 select the dedicated policy file, and configure server-side settings:
 
 ```text
-VALINATOR_CONTENT_SAFETY_PROVIDER=bedrock
-VALINATOR_AWS_REGION=<reviewed commercial AWS region>
-VALINATOR_BEDROCK_GUARDRAIL_ID=<short guardrail ID>
-VALINATOR_BEDROCK_GUARDRAIL_VERSION=<published numeric version>
-VALINATOR_POLICY_FILE=policies/content-safety.json
-VALINATOR_ENABLE_PII=1
+GUARDOATH_CONTENT_SAFETY_PROVIDER=bedrock
+GUARDOATH_AWS_REGION=<reviewed commercial AWS region>
+GUARDOATH_BEDROCK_GUARDRAIL_ID=<short guardrail ID>
+GUARDOATH_BEDROCK_GUARDRAIL_VERSION=<published numeric version>
+GUARDOATH_POLICY_FILE=policies/content-safety.json
+GUARDOATH_ENABLE_PII=1
 ```
 
 Use a workload role or normal server-side SDK credential configuration. Provider
@@ -1338,7 +1338,7 @@ The dashboard holds findings and incomplete results regardless of observe mode.
 This does not establish demographic parity, equalized odds, causation, statistical
 significance, fairness of the selected factors, authenticity of submitted records,
 or absence of stereotypes in prose. Repeated rows are not independent evidence.
-The integrating application collects the cases; Valinator does not generate
+The integrating application collects the cases; GuardOath does not generate
 matched model trials or extract decisions from arbitrary answers automatically.
 
 ### Run the entire bias comparison batch

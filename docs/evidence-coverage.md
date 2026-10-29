@@ -63,7 +63,7 @@ py -3.13 start_dashboard.py --evaluate --suite evidence
 Or:
 
 ```bash
-python -m valinator.evaluate --cases evals/evidence.json --policies policies/evidence-batch.json
+python -m guardoath.evaluate --cases evals/evidence.json --policies policies/evidence-batch.json
 python -m pytest tests/test_evidence.py -q
 ```
 

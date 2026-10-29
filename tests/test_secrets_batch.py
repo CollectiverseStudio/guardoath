@@ -7,11 +7,11 @@ from fastapi.testclient import TestClient
 import pytest
 
 from secret_examples import EXAMPLES, BENIGN
-from valinator.app import create_app
-from valinator.checkers import default_checkers
-from valinator.config import load_policies
-from valinator.engine import Engine
-from valinator.models import CheckRequest, ConfidentialTerm, Rule, Stage
+from guardoath.app import create_app
+from guardoath.checkers import default_checkers
+from guardoath.config import load_policies
+from guardoath.engine import Engine
+from guardoath.models import CheckRequest, ConfidentialTerm, Rule, Stage
 
 
 @pytest.fixture(scope='module')
@@ -272,8 +272,8 @@ def test_same_confidential_term_can_have_distinct_nonoverlapping_stage_rules(pro
 
 
 def test_named_synthetic_fixtures_are_explicit_and_not_arbitrary_execution():
-    from valinator.evaluate import Suite
-    from valinator.synthetic_secrets import build_fixture
+    from guardoath.evaluate import Suite
+    from guardoath.synthetic_secrets import build_fixture
     for name in ['unknown','../../file','__import__','https://external.invalid/']:
         with pytest.raises(ValueError): build_fixture(name)
     raw={'format_version':'1','suite_id':'x','cases':[{'case_id':'x','group':'secrets','stage':'input',

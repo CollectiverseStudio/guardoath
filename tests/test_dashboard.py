@@ -1,9 +1,9 @@
 from fastapi.testclient import TestClient
 
-from valinator.app import create_app
-from valinator.checkers import default_checkers
-from valinator.engine import Engine
-from valinator.models import Policy, Rule
+from guardoath.app import create_app
+from guardoath.checkers import default_checkers
+from guardoath.engine import Engine
+from guardoath.models import Policy, Rule
 
 
 def test_dashboard_and_local_assets_load():
@@ -31,7 +31,7 @@ def test_dashboard_metadata_requires_auth_and_is_application_scoped():
 
 def conversation_client(enable_pii):
     from pathlib import Path
-    from valinator.config import load_policies
+    from guardoath.config import load_policies
     engine = Engine(load_policies(Path(__file__).resolve().parents[1] / 'policies/playground.json'),
                     default_checkers(enable_pii=enable_pii))
     return TestClient(create_app(engine=engine, credentials={'test-key': 'demo'}))

@@ -1,8 +1,10 @@
-# Valisentry
+# GuardOath
 
-Valisentry (formerly Valinator) — policy-driven input and output checks for AI applications.
+GuardOath was previously developed as "Valinator" and briefly branded "Valisentry".
 
-**Brand transition:** Valisentry is the product name. The Python package, API identifiers, environment variables, and GitHub repository remain `valinator` temporarily to preserve existing installations and tests. Do not interpret the name change as a released API migration. See [migration plan](docs/valisentry-migration.md) and [validation packs](docs/validation-packs.md).
+GuardOath (formerly GuardOath) — policy-driven input and output checks for AI applications.
+
+**Brand transition:** GuardOath is the product name. The Python package, API identifiers, environment variables, and GitHub repository remain `guardoath` temporarily to preserve existing installations and tests. Do not interpret the name change as a released API migration. See [migration plan](docs/guardoath-migration.md) and [validation packs](docs/validation-packs.md).
 
 Start with the [user guide](docs/user-guide.md): each supported check has a purpose,
 example/use case, expected result, configuration and limitations. The [200-use-case catalog](docs/use-case-coverage.md) spans [UC001–050](docs/use-case-coverage.md), [UC051–100](docs/additional-use-cases.md), and [UC101–200](docs/use-cases-101-200.md), distinguishing supported, partial and proposed coverage.
@@ -13,7 +15,7 @@ The [machine-readable catalog](docs/use-case-manifest.json) enumerates **UC001�
 
 ## Inspect actual use-case completion
 
-Run `python -m valinator.coverage_report` to count documented use cases by evidence status. A row may be marked `verified` only with an implementation commit and test references, followed by review of actual test results. The report currently lists all 200 entries as unverified (including existing partial checks) because a per-case implementation audit has not been completed. This is deliberately conservative: **200 catalog entries do not mean 200 implemented validators**.
+Run `python -m guardoath.coverage_report` to count documented use cases by evidence status. A row may be marked `verified` only with an implementation commit and test references, followed by review of actual test results. The report currently lists all 200 entries as unverified (including existing partial checks) because a per-case implementation audit has not been completed. This is deliberately conservative: **200 catalog entries do not mean 200 implemented validators**.
 
 ## Current milestone
 
@@ -48,8 +50,8 @@ application-specific rules and groups that are not implemented.
 Install Git and Python 3.13 (or another supported 3.11–3.14 version), then download this repository:
 
 ```bash
-git clone https://github.com/CollectiverseStudio/valinator.git
-cd valinator
+git clone https://github.com/CollectiverseStudio/guardoath.git
+cd guardoath
 ```
 
 On **Windows PowerShell**:
@@ -125,14 +127,14 @@ Requires Python 3.11 or newer. From the repository directory:
 python -m venv .venv
 source .venv/bin/activate
 pip install -e '.[test]'
-export VALINATOR_API_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
-uvicorn valinator.app:app --host 127.0.0.1 --port 8000 --no-access-log
+export GUARDOATH_API_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+uvicorn guardoath.app:app --host 127.0.0.1 --port 8000 --no-access-log
 ```
 
 On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1` and set the key:
 
 ```powershell
-$env:VALINATOR_API_KEY = python -c "import secrets; print(secrets.token_urlsafe(32))"
+$env:GUARDOATH_API_KEY = python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
 Open http://127.0.0.1:8000/docs to use the API explorer. Click **Authorize** and
@@ -151,8 +153,8 @@ Your key is held only in tab memory, not browser storage. Check content is not
 saved as history. The dashboard is for local testing and is not a hosted service.
 
 To try both local sensitive-data checks and structured business rules, install
-`.[test,pii]`, enable `VALINATOR_ENABLE_PII=1`, and set
-`VALINATOR_POLICY_FILE=policies/playground.json`. Select `pii-v1` for text or
+`.[test,pii]`, enable `GUARDOATH_ENABLE_PII=1`, and set
+`GUARDOATH_POLICY_FILE=policies/playground.json`. Select `pii-v1` for text or
 `business-v1` for the JSON examples, then click **Business rule error** to see a
 date-order and refund-limit violation. No model is called.
 
@@ -169,7 +171,7 @@ Input example (run in a second shell with the same key configured):
 
 ```bash
 curl http://127.0.0.1:8000/v1/checks/input \
-  -H "Authorization: Bearer $VALINATOR_API_KEY" \
+  -H "Authorization: Bearer $GUARDOATH_API_KEY" \
   -H 'Content-Type: application/json' \
   -d '{"application_id":"demo","policy_version":"support-v1","content":"{\"message\":\"Hello\"}","content_format":"json"}'
 ```
@@ -227,16 +229,16 @@ extra, enable the detector, and select the PII-only example policy before starti
 
 ```bash
 pip install -e '.[test,pii]'
-export VALINATOR_ENABLE_PII=1
-export VALINATOR_POLICY_FILE=policies/pii-only.json
+export GUARDOATH_ENABLE_PII=1
+export GUARDOATH_POLICY_FILE=policies/pii-only.json
 ```
 
 In PowerShell:
 
 ```powershell
 pip install -e '.[test,pii]'
-$env:VALINATOR_ENABLE_PII = '1'
-$env:VALINATOR_POLICY_FILE = 'policies/pii-only.json'
+$env:GUARDOATH_ENABLE_PII = '1'
+$env:GUARDOATH_POLICY_FILE = 'policies/pii-only.json'
 ```
 
 Submit `policy_version: "pii-v1"` with text such as `Contact jane@example.com`.
@@ -357,7 +359,7 @@ The initial policy is an immutable startup snapshot in `demo_engine()`. To use
 the included example policy file instead, set this before starting the server:
 
 ```bash
-export VALINATOR_POLICY_FILE=policies/support.json
+export GUARDOATH_POLICY_FILE=policies/support.json
 ```
 
 The JSON file requires `format_version: "1"` and one or more policies. Files are
@@ -472,11 +474,11 @@ application:
 
 | Environment variable | Default | Meaning |
 | --- | ---: | --- |
-| `VALINATOR_CHECKS_PER_MINUTE` | 120 | Sustained token refill rate per application |
-| `VALINATOR_BURST` | 20 | Initial and maximum tokens per application |
-| `VALINATOR_APPLICATION_CONCURRENCY` | 4 | Active checks per application |
-| `VALINATOR_PROCESS_CONCURRENCY` | 16 | Active checks across applications |
-| `VALINATOR_INGRESS_CONCURRENCY` | 32 | Active POST requests under `/v1/`, before body reading |
+| `GUARDOATH_CHECKS_PER_MINUTE` | 120 | Sustained token refill rate per application |
+| `GUARDOATH_BURST` | 20 | Initial and maximum tokens per application |
+| `GUARDOATH_APPLICATION_CONCURRENCY` | 4 | Active checks per application |
+| `GUARDOATH_PROCESS_CONCURRENCY` | 16 | Active checks across applications |
+| `GUARDOATH_INGRESS_CONCURRENCY` | 32 | Active POST requests under `/v1/`, before body reading |
 
 Use positive integer environment values and restart to change them. Rate is
 bounded at 100,000, burst at 10,000, and each concurrency setting at 1,024.
@@ -524,12 +526,12 @@ your environment/secret-management system, and use the manual uvicorn start path
 
 | Variable | Value |
 | --- | --- |
-| `VALINATOR_ENABLE_AZURE_PROMPT_SHIELDS` | `1` |
-| `VALINATOR_ENABLE_PII` | `1` (required by the sample privacy gate) |
-| `VALINATOR_AZURE_CONTENT_SAFETY_ENDPOINT` | Your `https://RESOURCE.cognitiveservices.azure.com` resource origin |
-| `VALINATOR_AZURE_CONTENT_SAFETY_KEY` | Your Azure subscription key, never a browser/platform key |
-| `VALINATOR_POLICY_FILE` | `policies/azure-prompt-shields.json` |
-| `VALINATOR_API_KEY` | A separate platform API key for connecting to Valinator |
+| `GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS` | `1` |
+| `GUARDOATH_ENABLE_PII` | `1` (required by the sample privacy gate) |
+| `GUARDOATH_AZURE_CONTENT_SAFETY_ENDPOINT` | Your `https://RESOURCE.cognitiveservices.azure.com` resource origin |
+| `GUARDOATH_AZURE_CONTENT_SAFETY_KEY` | Your Azure subscription key, never a browser/platform key |
+| `GUARDOATH_POLICY_FILE` | `policies/azure-prompt-shields.json` |
+| `GUARDOATH_API_KEY` | A separate platform API key for connecting to GuardOath |
 
 Use your resource's exact endpoint. Only public-Azure custom resource origins on
 HTTPS port 443 are supported; sovereign clouds and arbitrary/private origins are
@@ -558,7 +560,7 @@ skips/errors, missing adapters, timeouts, and simulated passes all hold egress.
 The gate applies in observe and enforce modes, and repeats on transformed-content
 revalidation. A skipped required external check makes the evaluation incomplete;
 the dashboard explains why it was withheld. Original input is not sent when the
-local gate fails. The gate controls Valinator's registered external checks, not
+local gate fails. The gate controls GuardOath's registered external checks, not
 model calls made independently by your application.
 
 This is limited to configured detector coverage. A local pass does not guarantee
@@ -572,7 +574,7 @@ same local gate before any external call. Rechecks may incur additional charges.
 Custom adapters must declare `external=True` for the gate to recognize them.
 
 Enable only for data permitted to leave your environment. Choose your Azure
-region and review its current data handling/retention terms yourself; Valinator
+region and review its current data handling/retention terms yourself; GuardOath
 does not infer or verify residency or promise provider retention behavior.
 Shared quotas/region controls remain deployment work.
 
@@ -587,7 +589,7 @@ returned. The response is bounded to 16 KiB and must contain a strict Boolean
 `userPromptAnalysis.attackDetected`.
 
 External checks report `cost_usd: null` and `cost_basis: "provider_unpriced"`,
-including failures and locally rejected external checks, because Valinator has no
+including failures and locally rejected external checks, because GuardOath has no
 billing receipt or pricing calculation. This is not evidence that a billable
 request was made. Local-only checks retain zero / `local_only`. Each registered
 external adapter must declare `external=True` so routing/cost metadata survives
@@ -616,7 +618,7 @@ python3.12 start_dashboard.py --evaluate
 It prepares/reuses the same isolated environment, runs 30 hand-written examples,
 and opens a standalone HTML report. No API key or running API server is needed.
 Use `--no-browser` to print the report path instead. Each run creates a new folder
-under ignored `.valinator-reports/`, containing `report.html` and `report.json`;
+under ignored `.guardoath-reports/`, containing `report.html` and `report.json`;
 previous reports are preserved. The command exits after generating the report.
 
 Examples cover supported PII and redaction, credential patterns and benign
@@ -655,7 +657,7 @@ For custom cases or automation, use the prepared environment directly:
 
 ```bash
 # Mac/Linux; use .dashboard-venv\Scripts\python.exe on Windows
-.dashboard-venv/bin/python -m valinator.evaluate --pii --cases evals/local.json --policies policies/playground.json --report results/report.json --html results/report.html
+.dashboard-venv/bin/python -m guardoath.evaluate --pii --cases evals/local.json --policies policies/playground.json --report results/report.json --html results/report.html
 ```
 
 Repeat `--group` to select groups, for example `--group secrets --group structure`.
@@ -702,7 +704,7 @@ An outcome change alone is not evidence of better or worse detector accuracy.
 For two saved JSON reports, use the prepared environment directly:
 
 ```powershell
-.dashboard-venv\Scripts\python.exe -m valinator.compare --baseline before.json --current after.json --report comparison.json --html comparison.html
+.dashboard-venv\Scripts\python.exe -m guardoath.compare --baseline before.json --current after.json --report comparison.json --html comparison.html
 ```
 
 On Mac/Linux use `.dashboard-venv/bin/python`. Both inputs must be validated local
@@ -745,7 +747,7 @@ stage decisions. Baselines compare only against the same suite ID.
 For automation without optional PII:
 
 ```bash
-python -m valinator.evaluate --cases evals/secrets.json --policies policies/secrets-batch.json --report secrets-report.json --html secrets-report.html
+python -m guardoath.evaluate --cases evals/secrets.json --policies policies/secrets-batch.json --report secrets-report.json --html secrets-report.html
 ```
 
 The dashboard includes Quoted password, Confidential term and Encoded credential

@@ -3,7 +3,7 @@
   "policies": [
     {
       "application_id": "demo",
-      "version": "valisentry-packs-v1",
+      "version": "guardoath-packs-v1",
       "mode": "enforce",
       "failure_action": "block",
       "timeout_ms": 500,
