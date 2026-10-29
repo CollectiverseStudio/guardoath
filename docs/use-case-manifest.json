@@ -1,0 +1,1407 @@
+{
+  "schema_version": "1",
+  "product": "Valisentry",
+  "verification": "Unverified inventory; statuses require audited code/test evidence",
+  "cases": [
+    {
+      "id": "UC001",
+      "title": "Indirect injection in incoming email",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented as document/email attack analysis; local formatting signals only. Optional Azure connector currently sends userPrompt, not documents."
+    },
+    {
+      "id": "UC002",
+      "title": "Jailbreak detection",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Optional input-only Azure user-attack connector; offline contract tested, live effectiveness uncalibrated. No local semantic jailbreak detector."
+    },
+    {
+      "id": "UC003",
+      "title": "Invisible characters / homoglyphs",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Selected invisible/bidi/control characters detected; no scrubbing or general homoglyph coverage. Legitimate joiners are excluded."
+    },
+    {
+      "id": "UC004",
+      "title": "Base64/hex payload inspection",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Explicitly labeled, one-layer, bounded text-security signals and opt-in secret inspection. One labeled Base64/hex layer of supported PII candidates is now also checked, including decoded JSON/hints. No recursive, unlabeled, general encoded-data or complete-obfuscation coverage."
+    },
+    {
+      "id": "UC005",
+      "title": "System-prompt extraction requests",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Plain attack wording is deliberately demonstrated as a local coverage gap. Optional semantic service may signal attacks, not a prompt-leak guarantee."
+    },
+    {
+      "id": "UC006",
+      "title": "Sandbox escape commands",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented. Code execution and sandbox boundaries belong to the integrating application."
+    },
+    {
+      "id": "UC007",
+      "title": "Prompt size / resource caps",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Character/UTF-8 body/depth/field budgets, check quotas and concurrency controls. Not model-token counting or distributed billing quotas."
+    },
+    {
+      "id": "UC008",
+      "title": "Token smuggling",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Limited normalization for configured literal confidential phrases and bounded encoded secrets; no general adversarial token-smuggling detector."
+    },
+    {
+      "id": "UC009",
+      "title": "Multi-turn manipulation",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; request_context is not analyzed by the local text detectors or sent by current connectors."
+    },
+    {
+      "id": "UC010",
+      "title": "De-anonymization intent",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; identifier detection cannot infer correlation/de-anonymization intent."
+    },
+    {
+      "id": "UC011",
+      "title": "Hate speech",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Initial optional content_safety adapter supports provider hate signals on input/output. Offline contract tested, live classification uncalibrated."
+    },
+    {
+      "id": "UC012",
+      "title": "Self-harm interception",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "No dedicated self-harm classifier or crisis-routing workflow implemented. Do not infer it from the initial five content categories."
+    },
+    {
+      "id": "UC013",
+      "title": "Profanity masking",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented. Current supported redaction is for selected sensitive identifiers, not profanity."
+    },
+    {
+      "id": "UC014",
+      "title": "Brand political/religious neutrality",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; requires approved application-specific scope/rubric. Neutral identity examples are not automatically violations."
+    },
+    {
+      "id": "UC015",
+      "title": "Extremism / radicalization",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "No dedicated classifier or reference database implemented."
+    },
+    {
+      "id": "UC016",
+      "title": "Image CSAM detection",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; no image upload, perceptual hash database or vision adapter."
+    },
+    {
+      "id": "UC017",
+      "title": "Cyberbullying",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Optional provider insults/hate signals; no tested covert sarcasm, student-intent or repeated-harassment model."
+    },
+    {
+      "id": "UC018",
+      "title": "Misinformation",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; no independent facts/evidence retrieval or verification service."
+    },
+    {
+      "id": "UC019",
+      "title": "Plagiarism",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; no corpus/web index, provenance matching or originality claim."
+    },
+    {
+      "id": "UC020",
+      "title": "Defamation",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; content moderation cannot establish truth or legal defamation."
+    },
+    {
+      "id": "UC021",
+      "title": "SSN masking",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Supported contextual U.S. SSN candidates and policy-controlled, revalidated redaction. No issuance/identity verification."
+    },
+    {
+      "id": "UC022",
+      "title": "Card-number masking",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Supported card patterns/Luhn and revalidated redaction. This alone does not establish PCI compliance."
+    },
+    {
+      "id": "UC023",
+      "title": "PHI scrubbing",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Selected labeled birth-date, medical-record and health-plan identifiers plus base PII patterns. Not full medical narrative/name/address/PHI detection."
+    },
+    {
+      "id": "UC024",
+      "title": "Corporate secrets",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Selected credential patterns, quoted assignments, labeled encoded secrets and configured literal confidential phrases. No semantic proprietary-document classification."
+    },
+    {
+      "id": "UC025",
+      "title": "Geographic privacy consent",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; no user-location/consent/transfer-rules engine or compliance determination."
+    },
+    {
+      "id": "UC026",
+      "title": "Biometric consent token",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; no biometric ingestion or cryptographic consent verifier."
+    },
+    {
+      "id": "UC027",
+      "title": "Third-party copyright / IP",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; literal confidential phrases do not establish ownership, licensing or infringement."
+    },
+    {
+      "id": "UC028",
+      "title": "Hashed log identities",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "JSON Schema can enforce a submitted field's shape; no hash provenance, safe-hashing or re-identification verification."
+    },
+    {
+      "id": "UC029",
+      "title": "Financial pseudonymization",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Selected labeled bank-account redaction. No reversible token vault or complete balance/name pseudonymization workflow."
+    },
+    {
+      "id": "UC030",
+      "title": "Age-appropriate handling",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; no verified age metadata or reviewed per-age content rubric."
+    },
+    {
+      "id": "UC031",
+      "title": "ID image legibility",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; no OCR/vision upload pipeline."
+    },
+    {
+      "id": "UC032",
+      "title": "Invoice tampering",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; no forensic PDF/image analysis."
+    },
+    {
+      "id": "UC033",
+      "title": "Receipt completeness",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Schemas can check already extracted fields; no receipt OCR or source legibility verification."
+    },
+    {
+      "id": "UC034",
+      "title": "Medical scan quality",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; no DICOM/image quality or clinical validation."
+    },
+    {
+      "id": "UC035",
+      "title": "Deepfake detection",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; no image authenticity model or accuracy claim."
+    },
+    {
+      "id": "UC036",
+      "title": "Handwriting legibility",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; no handwriting/OCR confidence pipeline."
+    },
+    {
+      "id": "UC037",
+      "title": "Passport/MRZ consistency",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; no document ingestion, MRZ checksum or visual-zone comparison."
+    },
+    {
+      "id": "UC038",
+      "title": "Document type / renamed files",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "JSON request media/encoding is checked. No uploaded-document classification, malware scanning or MIME-content forensics."
+    },
+    {
+      "id": "UC039",
+      "title": "Signature presence",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; no visual signature detector or legal-execution workflow."
+    },
+    {
+      "id": "UC040",
+      "title": "Image steganography",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; no pixel/file payload inspection or guarantee of hidden-payload absence."
+    },
+    {
+      "id": "UC041",
+      "title": "E-commerce intent",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; schemas/required sections enforce form, not semantic shopping relevance."
+    },
+    {
+      "id": "UC042",
+      "title": "Legal contract completeness",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Configured labeled text sections can detect missing/duplicate/short bodies. No assessment of clause meaning, adequacy or legal sufficiency."
+    },
+    {
+      "id": "UC043",
+      "title": "Symptom context",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Schemas/sections can require submitted fields. No clinical interpretation, safe-triage or symptom-adequacy claim."
+    },
+    {
+      "id": "UC044",
+      "title": "Code syntax",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Source-code syntax is not implemented. The new proposed-tool allowlist/argument-schema checker is distinct from parsing or executing source code; no sandbox claim."
+    },
+    {
+      "id": "UC045",
+      "title": "Real-estate photo rules",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; no image-type/advertisement/contact-detail vision review."
+    },
+    {
+      "id": "UC046",
+      "title": "Sentiment escalation",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; no calibrated anger/frustration classifier or human-routing integration."
+    },
+    {
+      "id": "UC047",
+      "title": "UI element layout",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Valinator's own dashboard has mobile/browser layout tests. This is not a product endpoint for arbitrary screenshot/layout validation."
+    },
+    {
+      "id": "UC048",
+      "title": "Financial fraud patterns",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Submitted numeric/date comparisons and structural contracts only. No recipient ownership, bank-routing validation or fraud database."
+    },
+    {
+      "id": "UC049",
+      "title": "Shipping barcode quality",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Not implemented; no barcode/image inspection."
+    },
+    {
+      "id": "UC050",
+      "title": "Academic references",
+      "status": "review_required",
+      "source": "docs/use-case-coverage.md",
+      "existing_coverage_note": "Local citation IDs and exact quotations can now be checked against a policy-owned source catalog. No academic database/URL lookup, source authenticity or claim-truth/entailment verification."
+    },
+    {
+      "id": "UC051",
+      "title": "Topic hijacking detection",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no semantic topic evaluator"
+    },
+    {
+      "id": "UC052",
+      "title": "Sarcasm/irony disambiguation",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no severity-intent classifier"
+    },
+    {
+      "id": "UC053",
+      "title": "Multilingual code switching",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Partial: Unicode transport preserved, `uc053`"
+    },
+    {
+      "id": "UC054",
+      "title": "Context-window saturation flooding",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Partial: character/byte caps, `uc054_and_uc097`"
+    },
+    {
+      "id": "UC055",
+      "title": "Logical contradictions",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no premise/logic model"
+    },
+    {
+      "id": "UC056",
+      "title": "Conversational loops",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no server conversation ledger"
+    },
+    {
+      "id": "UC057",
+      "title": "Persona hijacking",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned semantic persona check; optional input attack service is narrower and uncalibrated"
+    },
+    {
+      "id": "UC058",
+      "title": "Stale-context eviction",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no session freshness engine"
+    },
+    {
+      "id": "UC059",
+      "title": "Idiomatic threats",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned contextual classifier"
+    },
+    {
+      "id": "UC060",
+      "title": "Compressed-prompt reconstruction",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned beyond the documented single labeled Base64/hex layer"
+    },
+    {
+      "id": "UC061",
+      "title": "Keystroke dynamics",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; the API does not collect typing events"
+    },
+    {
+      "id": "UC062",
+      "title": "Prompt-frequency anomalies",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Partial: per-application quota, `uc062`"
+    },
+    {
+      "id": "UC063",
+      "title": "Copied-payload fingerprinting",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no live adversarial corpus"
+    },
+    {
+      "id": "UC064",
+      "title": "User-agent/context matching",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no device/behavior model"
+    },
+    {
+      "id": "UC065",
+      "title": "Adversarial audio filtering",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no audio ingestion/DSP pipeline"
+    },
+    {
+      "id": "UC066",
+      "title": "Session takeover signals",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no session-risk ledger"
+    },
+    {
+      "id": "UC067",
+      "title": "Adversarial image perturbations",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no image preprocessing"
+    },
+    {
+      "id": "UC068",
+      "title": "Coordinate-spam blocking",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Partial: declared array limits, `uc068`"
+    },
+    {
+      "id": "UC069",
+      "title": "Audio CAPTCHA response",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no audio/challenge service"
+    },
+    {
+      "id": "UC070",
+      "title": "Distributed attack correlation",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no shared event store"
+    },
+    {
+      "id": "UC071",
+      "title": "Embedding-distance thresholding",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no embedding model/index"
+    },
+    {
+      "id": "UC072",
+      "title": "Dynamic JSON Schema alignment",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Scoped: versioned schemas, `uc072`"
+    },
+    {
+      "id": "UC073",
+      "title": "Statistical data-drift fencing",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no baseline/distribution evaluator"
+    },
+    {
+      "id": "UC074",
+      "title": "Missing-feature quotas",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Scoped: declared null quota, `uc074`"
+    },
+    {
+      "id": "UC075",
+      "title": "Graph-edge validation",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Partial: declared directed graph structure, `graph`"
+    },
+    {
+      "id": "UC076",
+      "title": "Timestamp sequence alignment",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Partial: within-packet timestamp order, `timestamps`"
+    },
+    {
+      "id": "UC077",
+      "title": "SQL parameter injection defense",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Partial: proposed-tool allowlist, `uc077`"
+    },
+    {
+      "id": "UC078",
+      "title": "Cross-field logical consistency",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Partial: declared numeric comparisons, `uc078`"
+    },
+    {
+      "id": "UC079",
+      "title": "Categorical outlier quarantine",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Scoped: exact taxonomy codes, `uc079`"
+    },
+    {
+      "id": "UC080",
+      "title": "Deterministic rule interception",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Scoped: policy-file conditional schemas, `uc080`"
+    },
+    {
+      "id": "UC081",
+      "title": "DICOM identity scrubbing",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no binary medical-image reader"
+    },
+    {
+      "id": "UC082",
+      "title": "CAD geometry validation",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no CAD/mesh reader"
+    },
+    {
+      "id": "UC083",
+      "title": "Source-code AST validation",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; current tool-name/argument checks do not parse source code"
+    },
+    {
+      "id": "UC084",
+      "title": "DNA/RNA sequence screening",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; specialized reviewed workflow required"
+    },
+    {
+      "id": "UC085",
+      "title": "Sensor extremum filtering",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Partial: declared scalar bounds, `uc085`"
+    },
+    {
+      "id": "UC086",
+      "title": "Patent claim structure",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned filing-specific validator; existing schemas enforce generic fields only"
+    },
+    {
+      "id": "UC087",
+      "title": "Geospatial boundaries",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Partial: coordinate bounding box, `uc087`"
+    },
+    {
+      "id": "UC088",
+      "title": "Financial ledger balancing",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Partial: exact line-item sums and declared currency, `ledger`"
+    },
+    {
+      "id": "UC089",
+      "title": "Telematics smoothing",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no time-series filter"
+    },
+    {
+      "id": "UC090",
+      "title": "Audio rate/format alignment",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no audio decoder/resampler"
+    },
+    {
+      "id": "UC091",
+      "title": "URL threat-intelligence lookup",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no URL extraction/reputation service"
+    },
+    {
+      "id": "UC092",
+      "title": "API over-posting",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Scoped: extra-field rejection, `uc092`"
+    },
+    {
+      "id": "UC093",
+      "title": "Prompt dependency graphs",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Partial: supplied directed graph, `graph`"
+    },
+    {
+      "id": "UC094",
+      "title": "Hallucination-prone ambiguity",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no reviewed ambiguity/clarification evaluator"
+    },
+    {
+      "id": "UC095",
+      "title": "Trusted SHA-256 verification",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Partial: bounded submitted bytes and policy SHA-256, `integrity`"
+    },
+    {
+      "id": "UC096",
+      "title": "Sanctions/PEP matching",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no regulated-entity list or entity resolver"
+    },
+    {
+      "id": "UC097",
+      "title": "Prompt redundancy stripping",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Partial: hard limits, `uc054_and_uc097`"
+    },
+    {
+      "id": "UC098",
+      "title": "Token-to-byte mismatches",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Partial: UTF-8 envelope rejection, `uc098`"
+    },
+    {
+      "id": "UC099",
+      "title": "Organization phrase blocklists",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Partial: versioned configured terms, `uc099`"
+    },
+    {
+      "id": "UC100",
+      "title": "Zero-knowledge input proofs",
+      "status": "review_required",
+      "source": "docs/additional-use-cases.md",
+      "existing_coverage_note": "Planned; no proof system/verifier"
+    },
+    {
+      "id": "UC101",
+      "title": "Tool-Argument Sandbox Validation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC102",
+      "title": "Recursive Loop Depth Guardrails",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC103",
+      "title": "Exploratory Prompt Quarantine",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC104",
+      "title": "State-Machine Inconsistency Halting",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC105",
+      "title": "Prompt-Induced Privilege Escalation Defense",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC106",
+      "title": "Agentic Context Corruption Scrubbing",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC107",
+      "title": "Downstream API Response Sanitization",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC108",
+      "title": "Dynamic System Boundary Checking",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC109",
+      "title": "Prompt Cost-Threshold Blocking",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC110",
+      "title": "Agent Target Whitelisting",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC111",
+      "title": "LiDAR Mesh Collision Validation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC112",
+      "title": "Gaze-Tracking Intent Verification",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC113",
+      "title": "Hand-Gesture Jitter Filtering",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC114",
+      "title": "Audio Acoustic Echo Cancellation Validation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC115",
+      "title": "Haptic Feedback Force Boundaries",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC116",
+      "title": "Thermal Camera Artifact Filtering",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC117",
+      "title": "Point-Cloud Spatial Outlier Removal",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC118",
+      "title": "Multi-Camera Sync Stitching Validation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC119",
+      "title": "AR Marker Authenticity Checks",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC120",
+      "title": "Biometric Gait Anomaly Isolation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC121",
+      "title": "Firmware Binary Hash Attestation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC122",
+      "title": "Over-The-Air Update Schema Fencing",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC123",
+      "title": "Battery Telemetry Inrush Filtering",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC124",
+      "title": "Acoustic Drone Motor Validation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC125",
+      "title": "RF Spectrum Interference Masking",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC126",
+      "title": "Edge Hardware Memory Ceiling Clamping",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC127",
+      "title": "PLC Register Boundary Validation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC128",
+      "title": "Smart Grid Phase Alignment Checks",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC129",
+      "title": "Cold-Chain Temperature Step Filtering",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC130",
+      "title": "Agricultural Soil Moisture Range Normalization",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC131",
+      "title": "Smart Contract ABI Payload Validation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC132",
+      "title": "Decentralized Identity Proof Verification",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC133",
+      "title": "NFT Metadata Structural Auditing",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC134",
+      "title": "Oracle Price Feed Outlier Rejection",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC135",
+      "title": "Sybil Attack Prompt Pattern Clumping",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC136",
+      "title": "Encrypted Payload Homomorphic Boundary Checks",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC137",
+      "title": "Synthetic Data Label Balance Verification",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC138",
+      "title": "Graph Neural Network De-duplication",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC139",
+      "title": "DNS Tunneling Pattern Extraction",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC140",
+      "title": "Malicious PDF Action-Object Scrubbing",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC141",
+      "title": "MIDI Note Velocity Fencing",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC142",
+      "title": "Voice Clone Phoneme Consistency Checks",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC143",
+      "title": "Video Codec Keyframe Verification",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC144",
+      "title": "Subtitle-to-Audio Alignment Validation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC145",
+      "title": "Gaming Anti-Cheat Input Vector Normalization",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC146",
+      "title": "Script Formatting Structural Enforcements",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC147",
+      "title": "Typography Font Metric Validation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC148",
+      "title": "Audio Bitrate Ceiling Normalization",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC149",
+      "title": "Recipe Ingredient Scalability Check",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC150",
+      "title": "Chatbot Emotional Outlier Dampening",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC151",
+      "title": "Satellite Imagery Cloud-Cover Masking",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC152",
+      "title": "Marine Sonar Echo-Clutter Filtering",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC153",
+      "title": "Avionics Pitot-Tube Sensor Sanity Checks",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC154",
+      "title": "Drone Wind-Shear Telemetry Smoothing",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC155",
+      "title": "AIS Ship Tracking Spoofing Detection",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC156",
+      "title": "Rocket Telemetry Cryogenic Slosh Isolation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC157",
+      "title": "Autonomous Train Track-Obstruction Vision Validation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC158",
+      "title": "Subsea ROV Depth Gauge Pressure Cross-Checking",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC159",
+      "title": "Air Traffic Control Voice Command Squawk Matching",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC160",
+      "title": "Spacecraft Reaction-Wheel Current Limit Fencing",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC161",
+      "title": "Quantum Control Pulse Amplitude Fencing",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC162",
+      "title": "Qubit Readout Classification Noise Mitigation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC163",
+      "title": "Seismic Interferometry Ambient Wave Stripping",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC164",
+      "title": "Particle Collider Calorimeter Calibration Bounds",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC165",
+      "title": "Nuclear Reactor Coolant Flow Transducer Validation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC166",
+      "title": "Fusion Tokamak Magnet Plasma-Disruption Filtering",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC167",
+      "title": "Supercomputer Liquid-Cooling Vapor Sensor Auditing",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC168",
+      "title": "Optical Microscope Laser-Intensity Safety Interlocking",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC169",
+      "title": "Electron Beam Lithography Current Calibration Validation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC170",
+      "title": "Radio Telescope RFI Excision",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC171",
+      "title": "Protein Structure PDB File Geometry Verification",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC172",
+      "title": "DNA Sequencer Flow-Cell Fluorescence De-noising",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC173",
+      "title": "CRISPR Off-Target Guide RNA Sequence Scrubbing",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC174",
+      "title": "In Vitro Diagnostic Liquid-Handling Volumetric Profiling",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC175",
+      "title": "EEG Electrode Contact-Impedance Rejection",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC176",
+      "title": "Pacemaker Telemetry Battery Impedance Filtering",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC177",
+      "title": "Insulin Pump Carbohydrate Estimation Sanity Fencing",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC178",
+      "title": "Pharmacy Dispensing Robot Weight-Check Validation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC179",
+      "title": "Cryo-EM Micrograph Ice Thickness Evaluation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC180",
+      "title": "Bioreactor Dissolved-Oxygen Sensor Biofouling Masking",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC181",
+      "title": "Weather Model Grid-Cell Barometric Pressure Smoothing",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC182",
+      "title": "Wildfire Perimeter Thermal-Hotspot De-duplication",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC183",
+      "title": "Hydrological River Gauge Flash-Flood Telemetry Check",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC184",
+      "title": "Avalanche Infrasound Acoustic Masking",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC185",
+      "title": "Ocean Buoy Wave-Height Extremum Normalization",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC186",
+      "title": "Urban Traffic Loop Speed-Trap Inversion Rejection",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC187",
+      "title": "Wind Turbine Anemometer Wake-Effect Masking",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC188",
+      "title": "Solar Farm Inverter Clipping Ceiling Normalization",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC189",
+      "title": "Mine Tailing Dam Inclinometer Shift Filtering",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC190",
+      "title": "Tsunami Pressure Sensor Seismic-Thump Isolation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC191",
+      "title": "Metal 3D Printing Powder-Bed Flaw Scan Validation",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC192",
+      "title": "Gas Pipeline Ultrasonic Leak-Detector Harmonic Scraping",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC193",
+      "title": "HVAC Airflow Damper Static-Pressure Boundary Checks",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC194",
+      "title": "High-Speed Rail Catenary Wire Laser Profiling Calibration",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC195",
+      "title": "Suspension Bridge Strain-Gauge Thermal-Expansion Decoupling",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC196",
+      "title": "Warehouse Autonomous Forklift Pallet-Pocket Depth Check",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC197",
+      "title": "Commercial Laundry RFID Sorting Tag Conflict Resolution",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC198",
+      "title": "Electrical Grid Transformer Dissolved Gas Analysis Sensor Verification",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC199",
+      "title": "Concrete Maturity Sensor Hydration Peak Alignment",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    },
+    {
+      "id": "UC200",
+      "title": "Semiconductor Etch Plasma Emission Spectroscopy Optical Alignment",
+      "status": "proposed",
+      "source": "docs/use-cases-101-200.md",
+      "existing_coverage_note": "Proposed only; no implementation claim"
+    }
+  ]
+}
