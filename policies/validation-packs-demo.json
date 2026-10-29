@@ -1,0 +1,53 @@
+{
+  "format_version": "1",
+  "policies": [
+    {
+      "application_id": "demo",
+      "version": "valisentry-packs-v1",
+      "mode": "enforce",
+      "failure_action": "block",
+      "timeout_ms": 500,
+      "rules": [
+        {
+          "checker_id": "text_security",
+          "required": true,
+          "on_finding": "block"
+        },
+        {
+          "checker_id": "timestamps",
+          "required": true,
+          "on_finding": "block"
+        },
+        {
+          "checker_id": "tool_calls",
+          "required": true,
+          "on_finding": "block"
+        }
+      ],
+      "timestamps": {
+        "allow_equal": false,
+        "max_samples": 100
+      },
+      "tool_calls": {
+        "tools": [
+          {
+            "name": "lookup_shipment",
+            "arguments_schema": {
+              "type": "object",
+              "properties": {
+                "shipment_id": {
+                  "type": "string",
+                  "pattern": "^SHP-[0-9]{4}$"
+                }
+              },
+              "required": [
+                "shipment_id"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
