@@ -20,6 +20,7 @@ from valinator.ingress import JsonIngressLimits
 from valinator.groups import GROUPS
 from valinator.budgets import ResourceLimits, RequestBudgets, RequestCapacity
 from valinator.validation_packs import PackSelectionError, load_pack_registry
+from valinator.tenants import TenantRegistry
 
 
 def demo_engine(enable_pii: bool = False, enable_azure: bool = False, content_safety_provider: str = "none") -> Engine:
@@ -38,7 +39,8 @@ def demo_engine(enable_pii: bool = False, enable_azure: bool = False, content_sa
 
 
 def create_app(engine: Engine | None = None, credentials: dict[str, str] | None = None,
-               limits: ResourceLimits | None = None) -> FastAPI:
+               limits: ResourceLimits | None = None,
+               tenant_registry: TenantRegistry | None = None) -> FastAPI:
     policy_file = os.getenv("VALINATOR_POLICY_FILE")
     pack_file = os.getenv("VALINATOR_PACK_FILE")
     if engine is not None:
@@ -62,10 +64,13 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     # No embedded credential. Without configuration, checks fail closed with 503.
     key = os.getenv("VALINATOR_API_KEY", "")
     bindings = dict(credentials) if credentials is not None else ({key: "demo"} if key else {})
+    if tenant_registry is not None and bindings:
+        raise ValueError("Use tenant registry or legacy credentials, not both")
     if any(not token or not app_id for token, app_id in bindings.items()):
         raise ValueError("Credentials and application identifiers must be nonempty")
     resource_limits = limits if limits is not None else ResourceLimits.from_environment()
-    budgets = RequestBudgets(resource_limits, set(bindings.values()))
+    budget_apps = set(bindings.values()) if tenant_registry is None else set(tenant_registry.application_ids())
+    budgets = RequestBudgets(resource_limits, budget_apps)
     api = FastAPI(title="Valisentry", version="0.24.0")
     api.add_middleware(JsonIngressLimits)
     api.add_middleware(RequestCapacity, budgets=budgets)
@@ -92,8 +97,13 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     async def authenticate(
         auth: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
     ) -> str:
-        if not bindings:
+        if not bindings and tenant_registry is None:
             raise HTTPException(503, "Application credentials are not configured")
+        if tenant_registry is not None:
+            application = tenant_registry.authenticate(auth.credentials if auth else "")
+            if application is not None:
+                return application.application_id
+            raise HTTPException(401, "Invalid application credential", headers={"WWW-Authenticate": "Bearer"})
         if auth is not None:
             for token, app_id in bindings.items():
                 if hmac.compare_digest(auth.credentials.encode(), token.encode()):
