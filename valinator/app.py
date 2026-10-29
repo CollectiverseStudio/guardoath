@@ -19,7 +19,7 @@ from valinator.models import Action, CheckRequest, CheckResponse, Policy, Rule, 
 from valinator.ingress import JsonIngressLimits
 from valinator.groups import GROUPS
 from valinator.budgets import ResourceLimits, RequestBudgets, RequestCapacity
-from valinator.validation_packs import PackSelectionError
+from valinator.validation_packs import PackSelectionError, load_pack_registry
 
 
 def demo_engine(enable_pii: bool = False, enable_azure: bool = False, content_safety_provider: str = "none") -> Engine:
@@ -40,7 +40,10 @@ def demo_engine(enable_pii: bool = False, enable_azure: bool = False, content_sa
 def create_app(engine: Engine | None = None, credentials: dict[str, str] | None = None,
                limits: ResourceLimits | None = None) -> FastAPI:
     policy_file = os.getenv("VALINATOR_POLICY_FILE")
+    pack_file = os.getenv("VALINATOR_PACK_FILE")
     if engine is not None:
+        if pack_file:
+            raise ValueError("Pack registry must be configured on the supplied engine")
         service = engine
     else:
         pii_setting = os.getenv("VALINATOR_ENABLE_PII", "0")
@@ -52,8 +55,10 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             raise ValueError("VALINATOR_ENABLE_AZURE_PROMPT_SHIELDS must be 0 or 1")
         enable_azure = azure_setting == "1"
         content_safety_provider = os.getenv("VALINATOR_CONTENT_SAFETY_PROVIDER", "none")
-        service = (Engine(load_policies(policy_file), default_checkers(enable_pii=enable_pii, enable_azure=enable_azure, content_safety_provider=content_safety_provider))
+        service = (Engine(load_policies(policy_file), default_checkers(enable_pii=enable_pii, enable_azure=enable_azure, content_safety_provider=content_safety_provider), pack_registry=load_pack_registry(pack_file) if pack_file else None)
                    if policy_file else demo_engine(enable_pii=enable_pii, enable_azure=enable_azure, content_safety_provider=content_safety_provider))
+    if pack_file and not policy_file and engine is None:
+        raise ValueError("Pack configuration requires a policy file")
     # No embedded credential. Without configuration, checks fail closed with 503.
     key = os.getenv("VALINATOR_API_KEY", "")
     bindings = dict(credentials) if credentials is not None else ({key: "demo"} if key else {})
