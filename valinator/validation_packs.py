@@ -23,8 +23,12 @@ class Pack:
 class PackRegistry:
     """Immutable per-application registry; never constructed from user text."""
 
-    def __init__(self, published: dict[str, tuple[Pack, ...]]):
+    def __init__(self, published: dict[str, tuple[Pack, ...]], core: dict[str, tuple[str, ...]] | None = None):
         self._published: dict[str, dict[str, Pack]] = {}
+        self._core = {app: tuple(ids) for app, ids in (core or {}).items()}
+        for app, ids in self._core.items():
+            if app not in published or not ids or len(set(ids)) != len(ids):
+                raise ValueError("Invalid mandatory CORE configuration")
         for app, packs in published.items():
             if not app:
                 raise ValueError("Application ID is required")
@@ -37,6 +41,8 @@ class PackRegistry:
                 if len(set(pack.checker_ids)) != len(pack.checker_ids):
                     raise ValueError("Duplicate checker in pack")
                 entries[pack.code] = pack
+            if app in self._core and set(self._core[app]) & {i for p in packs for i in p.checker_ids}:
+                raise ValueError("CORE checker cannot be optional")
             self._published[app] = entries
 
     def resolve(self, application_id: str, requested: tuple[str, ...] = ()) -> tuple[Pack, ...]:
@@ -49,6 +55,9 @@ class PackRegistry:
                 raise PackSelectionError("Unknown or unauthorized validation pack")
             result.append(allowed[code])
         return tuple(result)
+
+    def core_checker_ids(self, application_id: str) -> tuple[str, ...] | None:
+        return self._core.get(application_id)
 
     def optional_checker_ids(self, application_id: str) -> set[str]:
         return {checker for pack in self._published.get(application_id, {}).values() for checker in pack.checker_ids}
@@ -74,9 +83,18 @@ def load_pack_registry(path: str | Path) -> PackRegistry:
         if len(data["applications"]) > 100:
             raise ValueError("Too many applications")
         published = {}
+        core = {}
         for app, rows in data["applications"].items():
-            if not isinstance(app, str) or not isinstance(rows, list) or len(rows) > 30:
+            if not isinstance(app, str) or not isinstance(rows, dict) or set(rows) != {"core_checker_ids", "packs"}:
                 raise ValueError("Invalid application packs")
+            core_ids = rows["core_checker_ids"]
+            if (not isinstance(core_ids, list) or not core_ids or len(core_ids) > 30
+                    or not all(isinstance(x, str) and re.fullmatch(r"[a-z][a-z0-9_]{0,49}", x) for x in core_ids)):
+                raise ValueError("Invalid CORE identifiers")
+            rows = rows["packs"]
+            if not isinstance(rows, list) or len(rows) > 30:
+                raise ValueError("Invalid application packs")
+            core[app] = tuple(core_ids)
             packs = []
             for row in rows:
                 if not isinstance(row, dict) or set(row) != {"code", "version", "checker_ids"}:
@@ -88,6 +106,6 @@ def load_pack_registry(path: str | Path) -> PackRegistry:
                     raise ValueError("Invalid pack identifiers")
                 packs.append(Pack(row["code"], row["version"], tuple(ids)))
             published[app] = tuple(packs)
-        return PackRegistry(published)
+        return PackRegistry(published, core=core)
     except Exception:
         raise ValueError("Unable to load validation pack configuration") from None
