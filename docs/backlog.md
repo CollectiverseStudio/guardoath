@@ -109,3 +109,13 @@
 
 - [x] Exact ledger line-item arithmetic/currency, timestamp sequence order, directed-graph structure and trusted SHA-256 matching: bounded contracts, 400 regressions, API/gate/privacy tests, independent dashboard examples, launcher/CI and guide.
 - [ ] Ledger accounting/fraud semantics, cross-request telemetry order/freshness, graph relationship legality/package compatibility and checksum provenance/streaming uploads remain separate requirements.
+
+## Extended validation catalog and orchestration architecture (UC101–200)
+
+- [x] Register 100 additional proposed scenarios and their required positive, negative, boundary, failure and evidence acceptance categories: [UC101–200](use-cases-101-200.md). This is requirements coverage, not detector implementation.
+- [x] Record target architecture: trusted policy enforcement/orchestration, bounded schema checks, specialist adapters, allow/quarantine/block/review, and auditable evidence.
+- [ ] P0 agentic enforcement UC101–110: trusted tool authorization, state-machine transitions, recursion and cost budgets, sandbox boundaries, downstream injection handling; implement enforcement outside the LLM with real API tests.
+- [ ] P1 selective Web3/network and regulated-healthcare adapter contracts UC131–140 and UC171–180; require domain-specific validation and qualified reviewers.
+- [ ] P2 multimodal, edge, aerospace, climate and industrial adapters UC111–130, UC151–160, UC181–200; do not suppress safety-critical alarms.
+- [ ] P3 quantum/deep-tech adapters UC161–170 subject to real demand, fixtures and specialist expertise.
+- [ ] For every implemented row, update user guide, dashboard examples, CI, and coverage status with evidence. Never count a proposed acceptance test as a passing implementation.
