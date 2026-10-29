@@ -168,3 +168,41 @@ def test_explicit_core_cannot_be_made_optional():
         Engine([Policy(application_id="demo", version="v1",
                        rules=(Rule(checker_id="text_security"),))],
                default_checkers(), pack_registry=registry)
+
+
+def test_real_demo_bundle_core_log_and_agent():
+    import asyncio
+    from pathlib import Path
+    from valinator.config import load_policies
+    from valinator.validation_packs import load_pack_registry
+    from valinator.checkers import default_checkers
+    from valinator.engine import Engine
+    from valinator.models import CheckRequest, Stage
+    root = Path(__file__).resolve().parents[1]
+    engine = Engine(
+        load_policies(root / "policies/validation-packs-demo.json"),
+        default_checkers(),
+        pack_registry=load_pack_registry(root / "policies/validation-packs.example.json"),
+    )
+    def run(content, codes=(), fmt="text"):
+        return asyncio.run(engine.check(CheckRequest(
+            application_id="demo", policy_version="valisentry-packs-v1",
+            content=content, content_format=fmt, validation_codes=codes,
+        ), Stage.INPUT))
+    baseline = run("Hello, world")
+    assert [r.checker_id for r in baseline.checker_results] == ["text_security"]
+    assert baseline.applied_validation_packs == ("CORE",)
+    good_log = run('{"samples":[{"timestamp":"2026-10-28T10:00:00Z","value":1},'
+                   '{"timestamp":"2026-10-28T10:01:00Z","value":2}]}', ("LOG",), "json")
+    assert good_log.applied_validation_packs == ("CORE", "LOG@1")
+    assert next(r for r in good_log.checker_results if r.checker_id == "timestamps").status == "passed"
+    bad_log = run('{"samples":[{"timestamp":"2026-10-28T10:01:00Z","value":1},'
+                  '{"timestamp":"2026-10-28T10:00:00Z","value":2}]}', ("LOG",), "json")
+    assert bad_log.recommended_action == "block"
+    good_agent = run('{"tool_calls":[{"name":"lookup_shipment",'
+                     '"arguments":{"shipment_id":"SHP-1234"}}]}', ("AGENT",), "json")
+    assert next(r for r in good_agent.checker_results if r.checker_id == "tool_calls").status == "passed"
+    bad_agent = run('{"tool_calls":[{"name":"delete_shipment",'
+                    '"arguments":{"shipment_id":"SHP-1234"}}]}', ("AGENT",), "json")
+    assert bad_agent.recommended_action == "block"
+    assert any(f.rule_id == "actions.unknown_tool" for f in bad_agent.findings)
