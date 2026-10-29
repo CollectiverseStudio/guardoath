@@ -1407,14 +1407,16 @@ supported without a fixture name.
 
 The [extended catalog and test plan](additional-use-cases.md) records all 50 new
 examples, with invalid/attack cases, legitimate controls and boundary/failure
-requirements. Seventeen have scoped or partial existing controls exercised by
-77 new unit/API/engine tests. Thirty-three need new components and reviewed
-fixtures; they are not represented as passing detectors. Examples of current
-coverage are null quotas, coordinate-array limits, exact category codes, declared
-sensor/box bounds, policy versioning, aggregate comparisons, over-posting rejection,
-UTF-8 rejection and configured terms. Their documented limitations matter: a box
-is not a polygon, supplied totals are not summed line items, and valid Unicode is
-not a semantic language-safety judgment.
+requirements. Twenty-one now have scoped or partial controls: 77 initial
+unit/API/engine tests cover the previously supported portions, and 433 data-quality
+tests cover the new graph, timestamp, ledger and integrity contracts. Twenty-nine
+still need new components and reviewed fixtures; they are not represented as
+passing detectors. Current coverage includes null quotas, coordinate-array limits,
+exact category codes, declared sensor/box bounds, policy versioning, exact ledger
+line-item sums, bounded graphs, timestamp order, trusted SHA-256 equality,
+over-posting rejection, UTF-8 rejection and configured terms. A box is not a
+polygon, equal ledger sums do not establish accounting correctness, and valid
+Unicode is not a semantic language-safety judgment.
 
 Run the new tests with `python -m pytest tests/test_additional_use_cases.py -q`
 in a development environment with the test extra installed. These are distinct
