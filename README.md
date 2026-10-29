@@ -1,11 +1,11 @@
-# Valinator
+# Valisentry
 
-Policy-driven input and output checks for AI applications.
+Valisentry (formerly Valinator) — policy-driven input and output checks for AI applications.
+
+**Brand transition:** Valisentry is the product name. The Python package, API identifiers, environment variables, and GitHub repository remain `valinator` temporarily to preserve existing installations and tests. Do not interpret the name change as a released API migration. See [migration plan](docs/valisentry-migration.md) and [validation packs](docs/validation-packs.md).
 
 Start with the [user guide](docs/user-guide.md): each supported check has a purpose,
-example/use case, expected result, configuration and limitations. The
-[100-use-case inventory](docs/use-case-coverage.md) records supported, partial and
-unimplemented coverage explicitly.
+example/use case, expected result, configuration and limitations. The [200-use-case catalog](docs/use-case-coverage.md) spans [UC001–050](docs/use-case-coverage.md), [UC051–100](docs/additional-use-cases.md), and [UC101–200](docs/use-cases-101-200.md), distinguishing supported, partial and proposed coverage.
 
 ## Current milestone
 
