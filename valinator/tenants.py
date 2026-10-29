@@ -25,6 +25,9 @@ class TenantRegistry:
             raise ValueError("Application identifiers must be globally unique")
         self._applications = tuple(applications)
 
+    def application_ids(self) -> tuple[str, ...]:
+        return tuple(app.application_id for app in self._applications)
+
     def authenticate(self, token: str) -> TenantApplication | None:
         if not token:
             return None
