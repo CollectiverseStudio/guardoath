@@ -219,3 +219,33 @@ def test_registry_rejects_duplicate_json_keys_and_core_optional_overlap(tmp_path
                     '"code":"LOG","version":"1","checker_ids":["text_security"]}]}}}')
     with pytest.raises(ValueError, match="Unable to load"):
         load_pack_registry(path)
+
+
+def test_authenticated_pack_discovery_is_tenant_scoped():
+    from fastapi.testclient import TestClient
+    from valinator.app import create_app
+    from valinator.engine import Engine
+    from valinator.models import Policy, Rule
+    from valinator.checkers import default_checkers
+    reg = PackRegistry({
+        "demo": (Pack("LOG", "1", ("schema",)),),
+        "other": (Pack("HLTH", "2", ("pii",)),),
+    })
+    engine = Engine([
+        Policy(application_id="demo", version="v1", rules=(
+            Rule(checker_id="text_security"), Rule(checker_id="schema", required=False))),
+        Policy(application_id="other", version="v1", rules=(
+            Rule(checker_id="text_security"), Rule(checker_id="pii", required=False))),
+    ], default_checkers(), pack_registry=reg)
+    client = TestClient(create_app(engine=engine, credentials={
+        "demo-key": "demo", "other-key": "other"}))
+    assert client.get("/v1/validation-packs").status_code == 401
+    response = client.get("/v1/validation-packs", headers={
+        "Authorization": "Bearer demo-key"})
+    assert response.status_code == 200
+    assert response.json() == {"application_id": "demo", "mandatory": "CORE",
+                               "available_packs": [{"code": "LOG", "version": "1"}]}
+    assert "HLTH" not in response.text
+    other = client.get("/v1/validation-packs", headers={
+        "Authorization": "Bearer other-key"})
+    assert other.json()["available_packs"] == [{"code": "HLTH", "version": "2"}]
