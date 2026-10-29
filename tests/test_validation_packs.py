@@ -43,3 +43,55 @@ def test_bad_registry_is_rejected():
         PackRegistry({"a": (Pack("CORE", "1", ("schema",)),)})
     with pytest.raises(ValueError):
         PackRegistry({"a": (Pack("LOG", "1", ("schema",)), Pack("LOG", "2", ("pii",)))})
+
+
+def test_request_contract_accepts_multiple_codes_and_rejects_malformed():
+    from pydantic import ValidationError
+    from valinator.models import CheckRequest
+    base = dict(application_id="demo", policy_version="v1", content="hello")
+    assert CheckRequest(**base, validation_codes=["LOG", "AGENT"]).validation_codes == ("LOG", "AGENT")
+    with pytest.raises(ValidationError):
+        CheckRequest(**base, validation_codes=["log"])
+    with pytest.raises(ValidationError):
+        CheckRequest(**base, validation_codes=["LOG"] * 13)
+
+
+def test_engine_selects_optional_rules_and_retains_core():
+    import asyncio
+    from valinator.engine import Engine
+    from valinator.models import CheckRequest, Policy, Rule, Stage
+    from valinator.checkers import default_checkers
+
+    policy = Policy(application_id="demo", version="v1", rules=(
+        Rule(checker_id="text_security"),
+        Rule(checker_id="schema", required=False),
+    ))
+    registry = PackRegistry({"demo": (Pack("LOG", "1", ("schema",)),)})
+    engine = Engine([policy], default_checkers(), pack_registry=registry)
+    def run(codes):
+        return asyncio.run(engine.check(CheckRequest(
+            application_id="demo", policy_version="v1", content="hello",
+            validation_codes=codes,
+        ), Stage.INPUT))
+    assert [r.checker_id for r in run(()).checker_results] == ["text_security"]
+    assert [r.checker_id for r in run(("LOG",)).checker_results] == ["text_security", "schema"]
+    with pytest.raises(PackSelectionError):
+        run(("AGENT",))
+
+
+def test_api_rejects_unconfigured_pack_without_implicit_fallback():
+    from fastapi.testclient import TestClient
+    from valinator.app import create_app
+    from valinator.engine import Engine
+    from valinator.models import Policy, Rule
+    from valinator.checkers import default_checkers
+    engine = Engine([Policy(application_id="demo", version="v1", rules=(
+        Rule(checker_id="text_security"),
+    ))], default_checkers())
+    client = TestClient(create_app(engine=engine, credentials={"test-key": "demo"}))
+    result = client.post("/v1/checks/input",
+        headers={"Authorization": "Bearer test-key"},
+        json={"application_id": "demo", "policy_version": "v1",
+              "content": "hello", "validation_codes": ["LOG"]})
+    assert result.status_code == 422
+    assert "hello" not in result.text
