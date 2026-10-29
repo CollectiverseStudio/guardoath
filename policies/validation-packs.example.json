@@ -1,0 +1,17 @@
+{
+  "format_version": "1",
+  "applications": {
+    "demo": [
+      {
+        "code": "LOG",
+        "version": "1",
+        "checker_ids": ["timestamps"]
+      },
+      {
+        "code": "AGENT",
+        "version": "1",
+        "checker_ids": ["tool_calls"]
+      }
+    ]
+  }
+}
