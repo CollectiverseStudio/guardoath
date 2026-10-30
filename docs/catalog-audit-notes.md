@@ -238,3 +238,14 @@ The adapter is opt-in and provider-dependent. It does **not** establish repeated
 **UC022 `review_required` → `partial`.** Existing `guardoath/pii.py` supports selected card-number patterns with Luhn validation and policy-configured redaction. Exact tests: `tests/test_pii.py::test_real_local_findings`, `::test_benign_lookalikes`, `::test_api_output_and_logs_do_not_echo_sensitive_values`. Saved eval IDs: `privacy:card.input` and `privacy:card.output`.
 
 Limits: selected formats and configured policy, not blanket payment-data detection, processor integration or PCI DSS compliance. The audit is evidence-only; no checker, existing test, saved eval or Director-reserved file was modified. CI on this commit remains to be verified.
+
+
+## 2026-10-30 — UC025–027 negative coverage audit
+
+Three cases retain canonical `review_required` with `audit_classification=not_implemented`. No dedicated saved eval cases were identified.
+
+- **UC025 Geographic privacy consent:** `guardoath/pii.py`, `guardoath/content_safety.py`; `tests/test_pii.py::test_real_local_findings`, `tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external`. Identifier matching does not prove jurisdictional consent or cross-border transfer authorization.
+- **UC026 Biometric consent token:** `guardoath/ingress.py`, `guardoath/pii.py`; `tests/test_foundations.py::test_formats_are_enforced`, `tests/test_pii.py::test_real_local_findings`. Bounded JSON/text requests and identifier detection do not verify biometric consent or cryptographic authorization.
+- **UC027 Third-party copyright/IP:** `guardoath/secrets_check.py`; `tests/test_secrets_check.py::test_supported_candidates`, `::test_no_verification_or_network`. Literal confidential phrase/credential checks are not copyright ownership, license or infringement analysis.
+
+These are **negative adjacent-evidence audits**, not dedicated tests proving absence of functionality. No checker, existing test, eval case or Director-reserved file was changed. New CI verification pending.
