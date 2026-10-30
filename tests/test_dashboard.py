@@ -81,3 +81,22 @@ def test_labeled_sensitive_data_setting_is_strict_and_requires_a_pii_rule():
         Policy(application_id='demo',version='v1',rules=(),detect_labeled_sensitive_data='true')
     with pytest.raises(ValueError,match='require a pii'):
         Engine([Policy(application_id='demo',version='v1',rules=(),detect_labeled_sensitive_data=True)],{})
+
+
+def test_dashboard_shows_the_demo_video():
+    from pathlib import Path
+    import tomllib
+    root = Path(__file__).resolve().parents[1]
+    client = TestClient(create_app(credentials={"test-key": "demo"}))
+    page = client.get("/dashboard").text
+    assert '<video id="demo-video"' in page and 'src="/assets/guardoath_ai_final.mp4"' in page
+    size = (root / "guardoath" / "static" / "guardoath_ai_final.mp4").stat().st_size
+    response = client.get("/assets/guardoath_ai_final.mp4")
+    assert response.status_code == 200 and response.headers["content-type"].startswith("video/mp4")
+    assert int(response.headers["content-length"]) == size and response.headers["accept-ranges"] == "bytes"
+    part = client.get("/assets/guardoath_ai_final.mp4", headers={"Range": "bytes=0-1023"})
+    assert part.status_code == 206 and len(part.content) == 1024
+    assert part.headers["content-range"] == f"bytes 0-1023/{size}"
+    # The installed package (and the hosted build) must include the video.
+    package_data = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))["tool"]["setuptools"]["package-data"]
+    assert "static/*.mp4" in package_data["guardoath"]

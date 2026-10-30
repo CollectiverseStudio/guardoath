@@ -877,3 +877,17 @@ for(const [sample,rule] of [['iban','iban_code'],['crypto','crypto'],['ip-addres
     await expect(page.locator('#run-output')).toBeDisabled();await expect(page.locator('#answer')).toBeHidden();
   });
 }
+test("demo video loads with its full length and size", async ({ page }) => {
+  await page.goto("/dashboard");
+  const video = page.locator("#demo-video");
+  await expect(video).toBeVisible();
+  const meta = await video.evaluate(v => new Promise(resolve => {
+    const done = () => resolve({ duration: v.duration, width: v.videoWidth, height: v.videoHeight, error: v.error ? v.error.code : null });
+    if (v.readyState >= 1) return done();
+    v.addEventListener("loadedmetadata", done, { once: true });
+    v.addEventListener("error", done, { once: true });
+  }));
+  expect(meta.error).toBeNull();
+  expect(Math.round(meta.duration)).toBe(136);
+  expect([meta.width, meta.height]).toEqual([1280, 720]);
+});
