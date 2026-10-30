@@ -165,3 +165,15 @@ The new workflow remains opt-in, local-only, and does not modify the protected e
 ## Director coding-agent handoff (2026-10-30)
 
 The consolidated engineering handoff is now [director-coding-agent-handoff.md](director-coding-agent-handoff.md). It links all relevant architecture, 200-use-case, implementation and coordination documents; distinguishes committed work from the unmerged v8 ZIP; lists CI failures and subsequent labeled-evaluation fixes; and prioritizes the next work. Read it before integrating the external package or modifying shared files. No catalog status or reserved implementation was changed by this documentation update.
+
+
+## 2026-10-30 — Integration of previously drafted API regression tests
+
+The baseline GitHub Actions **Tests #223** on commit `4817dcc2` completed **successfully**, allowing integration of the previously unmerged API regression scenarios. The following two **new** test files were committed without editing the Director-owned website or any existing tests:
+
+- `tests/test_catalog_partial_boundaries.py`: four parametrized test functions, **36 cases** for UC068 (coordinate array shape/count), UC079 (exact taxonomy), UC087 (latitude/longitude bounds), and UC092 (additional-field rejection).
+- `tests/test_catalog_partial_contracts.py`: five parametrized test functions, **58 cases** for UC074 (null/numeric contract), UC085 (sensor range), UC078 (explicit cross-field semantic gap), UC080 (static conditional schema), and UC092 (over-posting and missing fields).
+
+**Total: nine new test functions, 94 parametrized scenarios.** These are narrowly scoped JSON Schema and API-contract tests, **not** evidence that domain-specific detectors, semantic interpretation, real-world agent safety, or all 200 use cases are implemented. No use-case manifest status is changed solely because tests were added. The 21 drafted audit classifications in the v8 ZIP remain unmerged pending independent evidence review.
+
+**CI:** The new commits triggered fresh GitHub Actions runs. These tests are *committed*, not yet independently confirmed passing at the time of this documentation update. If CI fails, inspect the failing tests and fix the implementation/test fixture mismatch without weakening any existing regression or altering reserved files. Record the final CI run ID, matrix results and test counts before marking them verified.
