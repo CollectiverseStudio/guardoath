@@ -935,3 +935,7 @@ No new dependency, paid provider, deployment or product rename is introduced.
 ## Local data-quality checks (0.24.0)
 
 Exact ledger line-item sums, explicit-offset timestamp sequence order, bounded directed graph structure and trusted SHA-256 matching now have focused demo profiles and 100 regression cases each. See [data-quality contracts, examples and limits](docs/data-quality-coverage.md). No cloud or paid provider is required.
+
+## Website launch video
+
+The approved first-person AI-agent development-preview video is documented in the [website video publishing guide](docs/launch-video-website.md). The final MP4 is **not hosted in this repository or deployed to a public site**; the guide includes asset handoff, accessible embed markup, captions, QA and product-claim safeguards. Coordinate with the website owner before publishing.
