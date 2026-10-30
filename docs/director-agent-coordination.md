@@ -401,3 +401,7 @@ Commit isolation: Atlas changed only the manifest, audit notes and this coordina
 Rule #1 followed before work; the Director's DynamoDB tenant store and hosted API reservations remain respected. Atlas committed **four new catalog evidence quality test functions** in `tests/test_catalog_evidence_quality.py` (`f360122b`) and documented them in `docs/catalog-audit-notes.md` (`2e271b3f`). They validate duplicate-free audit references, negative status consistency, explicit partial evidence, and existence/uniqueness of cited saved eval IDs. No existing tests were weakened and no website, tenant, API, DynamoDB, CI or Director-reserved files were edited.
 
 The latest baseline Tests #275 on the prior commit was successful; the newer test workflow for this batch is pending. These are **bookkeeping integrity tests**, not newly implemented security detectors. Atlas used file-scoped GitHub writes with current SHA and did not stage any of the Director's local work.
+
+## 2026-10-30 — Atlas — UC033 update
+
+Rule #1 followed. Added 12 parametrized input/output JSON Schema regression cases for extracted receipt fields in `tests/test_catalog_receipt_contracts.py` (commit `7f27c597`). Updated the UC033 partial audit in `docs/use-case-manifest.json` (`8fe77273`) and the audit notes (`809dbe73`). These tests do not implement receipt OCR or document authenticity checks. The Director's reserved website, tenant, API, DynamoDB and CI files were not modified. CI verification is pending.
