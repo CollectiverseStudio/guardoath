@@ -33,11 +33,9 @@ def run_labeled_suite(*, suite_path: str, policy_path: str,
     report = asyncio.run(evaluate(suite, engine))
     observations = observations_from_report(report, labels)
     policy_versions = {case.request.policy_version for case in suite.cases}
-    if len(policy_versions) != 1:
-        raise ValueError("Mixed policy versions require separate reports")
     run = EvaluationRun(
         dataset_id=suite.suite_id, dataset_version=dataset_version,
-        policy_version=next(iter(policy_versions)),
+        policy_version=",".join(sorted(policy_versions)),
         checker_version=checker_version, commit_sha=commit_sha,
         observations=observations)
     return LabeledRun(run=run, metrics=summarize(observations))
