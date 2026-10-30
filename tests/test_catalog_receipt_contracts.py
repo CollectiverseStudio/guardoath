@@ -35,7 +35,7 @@ SCHEMA = {
     ({"merchant": "Shop", "date": "2026-10-30", "total": 12.50, "hidden": 1}, "block"),
 ])
 def test_uc033_extracted_receipt_fields_only(stage, record, expected):
-    policy = Policy(application_id="receipt-demo", version="v1",
+    policy = Policy(application_id="receipt-demo", version="v1", mode="enforce",
                     rules=(Rule(checker_id="schema", on_finding=Action.BLOCK),),
                     input_schema=SCHEMA, output_schema=SCHEMA)
     engine = Engine([policy], default_checkers())
