@@ -224,3 +224,10 @@ Four cases retain canonical `review_required` and gain `audit_classification=not
 | UC016 | Image CSAM detection not implemented | `guardoath/ingress.py`; `tests/test_foundations.py::test_formats_are_enforced` documents JSON/text check-envelope boundaries, not an image classifier |
 
 No dedicated saved eval case ID was identified for these capabilities. These are negative coverage audits, **not** proof that the cited tests directly test absence of the requested capability. Do not advertise these as supported. No new detectors, tests, saved evals or Director-reserved code were changed.
+
+
+## 2026-10-30 — UC017 cyberbullying audit
+
+**UC017 `review_required` → `partial`.** Existing optional Bedrock content safety adapter exposes provider `HATE` and `INSULTS` category contracts for input/output. Exact modules: `guardoath/bedrock_guardrails.py`, `guardoath/content_safety.py`. Exact tests: `tests/test_bedrock_guardrails.py::test_category_contract`, `::test_missing_or_partial_coverage_is_not_a_pass`; `tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external`. Dedicated saved eval case ID: **none identified** (`[]`).
+
+The adapter is opt-in and provider-dependent. It does **not** establish repeated harassment detection, sarcasm/intent interpretation, youth-specific risk assessment, or a locally calibrated cyberbullying model. No checker, test or saved eval was changed; this is an evidence-only classification. The new GitHub Actions run must be checked before calling the audit CI-green.
