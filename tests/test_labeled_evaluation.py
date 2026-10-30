@@ -46,6 +46,6 @@ def test_same_labeled_fixture_can_be_compared_without_missing_cases():
     a = run_labeled_suite(**kwargs)
     b = run_labeled_suite(**kwargs)
     comparison = compare_labeled_suites(a, b)
-    assert comparison["case_count"] == len(suite.cases)
+    assert comparison["case_count"] == len(selected)
     assert comparison["recall_delta"] == 0
     assert comparison["newly_missed_attack_ids"] == []
