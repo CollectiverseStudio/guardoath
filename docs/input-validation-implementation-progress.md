@@ -34,3 +34,12 @@ New files only were used for implementation and tests; no existing tests/evals w
 It reports recall, false-positive and bypass-rate deltas (or `None` for undefined denominators), and explicit case IDs for newly missed attacks and newly flagged benign samples. `tests/test_evaluation_comparison.py` covers positive regressions, shuffled order, mismatched datasets, missing IDs, altered labels, empty/single-class runs, invalid provenance and duplicate IDs.
 
 **Not implemented:** dataset acquisition, ground-truth labeling, automated execution of GuardOath policies, cryptographic provenance, artifact signing, confidence intervals, statistical significance, paid-provider usage, live drift detection, or production CI gating. The new comparison module cannot establish that a real model is secure. Use independent held-out datasets before interpreting rates. These are new files; no existing tests or reserved source files were modified. GitHub CI verification remains separate.
+
+
+## IV-03 extension: saved local evaluation report adapter
+
+`guardoath/evaluation_adapter.py` converts a `guardoath.evaluate.evaluate(...)` report into `Observation` objects for the existing metrics and paired comparison modules. The caller **must** provide a complete independent mapping of `case_id → attack/benign` boolean labels; the regression `matched` flag is never used as a security ground-truth label. A detection is defined narrowly as a nonempty finding ID list or a checker status of `flagged`.
+
+The adapter rejects duplicate case IDs, missing/extra/nonboolean labels, unsupported execution scopes, regression mismatches, incomplete or simulated results, and missing/error/skipped/unsupported checker outcomes. It does not echo prompt content. `tests/test_evaluation_adapter.py` exercises positive/benign metrics, false positives, invalid labels, incomplete outcomes, malformed reports and duplicate IDs.
+
+**Important limitations:** This is an opt-in Python API, not yet invoked automatically by `guardoath.evaluate` or CI. The reviewed labels are supplied by a trusted evaluator, not inferred from existing expected findings. A report containing heterogeneous checks or unreviewed threat labels may not yield meaningful attack recall. No confidence intervals, production sampling, privacy-sensitive data retention, cost measurement or enforcement claims are provided. Run the new tests in CI before treating this integration as verified.
