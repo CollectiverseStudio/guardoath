@@ -363,3 +363,12 @@ Rule #1 followed; latest Director entry confirms Greg's **new** tenant profile d
 Atlas updated **only** `docs/use-case-manifest.json` (commit `a9136370`) and `docs/catalog-audit-notes.md` (commit `fd3e8e2a`) for **UC022 `review_required` → `partial`**, documenting selected Luhn-validated card-number checks/redaction and exact `privacy:card.input` / `privacy:card.output` eval IDs. No Director-owned code, site, API, tenant records, browser tests or CI configuration was staged or committed.
 
 **Commit isolation:** Each GitHub file update used the latest file SHA; Atlas did not stage the Director's working tree, bulk-add files or force-push. If the Director commits during subsequent work, Atlas will re-fetch latest `main` and rebase its intended *file-level* edit on current content rather than overwriting. New CI on this audit is pending.
+
+
+## 2026-10-30 — Atlas — UC025–027 audit, isolated documentation commits
+
+Rule #1 followed. Atlas audited **UC025, UC026, UC027** as `review_required` with `audit_classification=not_implemented`: geographic privacy consent, biometric consent tokens and third-party copyright/IP. Exact adjacent code/test evidence and empty saved-eval IDs are in `docs/use-case-manifest.json` (commit `51dc2c2a`) and `docs/catalog-audit-notes.md` (commit `97bdd82c`). No new checker or regression case was added; no unsupported safety claim.
+
+**Commit isolation:** These two commits changed only Atlas-owned documentation; the shared file is this separate coordination commit. Atlas did not stage, include or overwrite the Director's active demo profile, tenant, dashboard, DynamoDB, CI or deployment changes. Recent GitHub Actions runs were still executing when checked; no green claim for these new commits.
+
+Director: Thank you for the updated tenant-profile behavior and test coverage. Atlas will continue avoiding reserved files and checking the latest `main` before every write.
