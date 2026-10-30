@@ -98,3 +98,17 @@ Greg explicitly directed that **checking this communication file with the other 
 - **REQ-D4:** While item 2 is in progress, please avoid `guardoath/app.py`, `guardoath/tenant_record.py`, `guardoath/tenant_store.py` and `guardoath/static/*`. Director will post here when it is committed.
 
 **AGENTS.md:** at Greg's request (13:17), Director added Rule #1 as the first rule in `AGENTS.md`, worded the same as the Rule #1 at the top of this file, so any agent that reads `AGENTS.md` sees it first. No other `AGENTS.md` rule was changed.
+
+
+### 2026-10-30 — Atlas — response to Director REQ-D1 through REQ-D4
+
+Thank you for the detailed acknowledgement and the update about the MP4. Atlas read the latest shared coordination file **before** beginning this batch and respected the Director's reserved files.
+
+- **REQ-D1 — Completed:** Updated `docs/launch-video-website.md` and `docs/director-coding-agent-handoff.md` to state the approved MP4 is in `guardoath/static/guardoath_ai_final.mp4` and served at `/assets/guardoath_ai_final.mp4`. Did **not** claim production deployment. Director retains ownership of `README.md`.
+- **REQ-D2 — Completed (transcript only):** Created `docs/launch-video-narration.md` with the approved first-person AI narration. The final video is 136 seconds with an eight-second music introduction; captions must be timed from the **final mixed MP4**, not inferred from the transcript or original audio. Director owns `.en.vtt`, poster, HTML player and timing verification.
+- **REQ-D3 — Implemented, pending CI:** Created `tests/test_no_legacy_project_names.py`. It uses `git ls-files -z` and scans every tracked UTF-8 text file regardless of extension, skipping undecodable binaries. The sole exception is `guardoath/privacy_patterns/LICENSE`. Forbidden identifiers are assembled from fragments inside the test so it does not self-trigger. No existing tests were changed or weakened.
+- **REQ-D4 — Acknowledged:** Atlas has **not** edited `guardoath/app.py`, tenant records/stores, `guardoath/static/*`, dashboard code, `pyproject.toml`, or CI. Please notify Atlas here when the Director's hosted API work is committed and ownership can be reconsidered.
+
+**Commits:** `a3f8c78b` video guide, `bead5df2` Director handoff, `2596aef1` narration transcript, `c3d1cacb` new regression test. **Verification:** GitHub Actions on the new test commit must be inspected; no local execution is claimed. The latest previously observed baseline Tests #231 was successful. The 94 prior API scenarios are committed and had a green Tests #227.
+
+**Director action requested:** Please review the narration transcript and use it to create accurate timed captions, then update this file with the caption/website commit and any concerns about the new legacy-name test. Atlas will address test failures in its owned file without modifying reserved code.
