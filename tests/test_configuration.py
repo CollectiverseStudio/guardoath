@@ -143,15 +143,40 @@ def test_pii_checker_loads_only_its_declared_dependencies():
     import re
     import subprocess
     import sys
+    import sysconfig
     from importlib.metadata import packages_distributions
-    code = ("import sys; before = set(sys.modules); import guardoath.pii; "
-            "checker = guardoath.pii.build_pii_checker(); print(checker.checker_version); "
-            "print(' '.join(sorted({m.split('.')[0] for m in set(sys.modules) - before})))")
-    output = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True).stdout.splitlines()
-    assert output[0] == "privacy-patterns-2.2.366/guardoath-patterns-4"
-    loaded = set(output[1].split()) - set(sys.stdlib_module_names) - {"guardoath"}
+    from pathlib import Path
+    code = ("import json, sys; before = set(sys.modules); import guardoath.pii; "
+            "checker = guardoath.pii.build_pii_checker(); "
+            "new = sorted({m.split('.')[0] for m in set(sys.modules) - before}); "
+            "origin = lambda m: getattr(getattr(sys.modules.get(m), '__spec__', None), 'origin', None); "
+            "print(json.dumps({'version': checker.checker_version, 'modules': {m: origin(m) for m in new}}))")
+    output = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True).stdout
+    report = json.loads(output.splitlines()[-1])
+    assert report["version"] == "privacy-patterns-2.2.366/guardoath-patterns-5"
+    paths = sysconfig.get_paths()
+    stdlib_dirs = [Path(paths[key]).resolve() for key in ("stdlib", "platstdlib")]
+    site_dirs = [Path(paths[key]).resolve() for key in ("purelib", "platlib")]
+
+    def inside(origin, folders):
+        return any(Path(origin).resolve().is_relative_to(folder) for folder in folders)
+
+    def standard_library(module, origin):
+        # Includes generated modules such as _sysconfigdata__linux_x86_64-linux-gnu, which
+        # live in the standard library folder but are not listed in sys.stdlib_module_names.
+        if module in sys.stdlib_module_names or origin in ("built-in", "frozen"):
+            return True
+        return origin is not None and inside(origin, stdlib_dirs) and not inside(origin, site_dirs)
+
+    def cython_runtime(module, origin):
+        # Created in memory (no file) by Cython-compiled extension modules; the package that
+        # owns the extension is itself a loaded module and must pass the ownership check.
+        return origin is None and re.fullmatch(r"cython_runtime|_cython_\d+_\d+(?:_\d+)?\w*", module) is not None
+
+    loaded = {module: origin for module, origin in report["modules"].items()
+              if module != "guardoath" and not standard_library(module, origin) and not cython_runtime(module, origin)}
     allowed = _requirement_closure("guardoath", ("pii",))
     owners = packages_distributions()
-    outside = {module for module in loaded
+    outside = {module: origin for module, origin in loaded.items()
                if not {re.sub(r"[-_.]+", "-", owner).lower() for owner in owners.get(module, [])} & allowed}
-    assert loaded and not outside
+    assert loaded and not outside, outside

@@ -117,7 +117,7 @@ def build_pii_checker():
             for part in parts:
                 part.analyze("Call +1 202-555-0147 or 082 123 4567", [entity])
     word_pattern = regex.compile(r"\w+")
-    checker_version = f"privacy-patterns-{SOURCE_VERSION}/guardoath-patterns-4"
+    checker_version = f"privacy-patterns-{SOURCE_VERSION}/guardoath-patterns-5"
 
     def scan(request, redact, policy):
         # The policy timeout is the budget for this checker; the scan stops there too.

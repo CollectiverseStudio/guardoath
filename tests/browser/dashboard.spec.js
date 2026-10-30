@@ -413,7 +413,7 @@ for (const stage of ["input","output"]) {
         await expect(page.locator('#policy')).toHaveValue(version);
       }
     }
-    expect(seen.size).toBe(stage==='input'?118:121);
+    expect(seen.size).toBe(stage==='input'?127:130);
     expect(checks).toBe(0);
   });
 }

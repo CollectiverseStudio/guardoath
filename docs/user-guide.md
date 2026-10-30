@@ -671,10 +671,14 @@ py -3.13 start_dashboard.py --evaluate --suite privacy-patterns
 failed checksums, context-free numbers, clean text, every setting above, enforce and redaction.
 See [all 100 cases](privacy-patterns-coverage.md).
 
-The `pii` checker version is now `privacy-patterns-2.2.366/guardoath-patterns-4`. Because the
+The `pii` checker version is now `privacy-patterns-2.2.366/guardoath-patterns-5`. Because the
 pattern checks add findings to existing cases, a run compared against a baseline report saved
 before this change shows those cases as **Outcome changed** (32 privacy, 34 encoded privacy and 3 starter
 cases). Review the changes, then save a new baseline.
+
+Version 5 requires a URL's top-level domain to end the host name. Text such as `window.injected`,
+`index.html` or `Mr.Smith` is no longer reported as a URL, and `example.community` is reported in
+full instead of as `example.com`. No case in the four privacy suites changes outcome.
 
 The dashboard's default profile offers IBAN, Crypto wallet, IP address, URL, U.S. bank account,
 U.S. passport, U.S. ITIN, UK National Insurance number and Phone number in text as examples.

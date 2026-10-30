@@ -256,4 +256,33 @@ def test_skip_rules_use_pattern_length_and_phone_metadata():
 
 
 def test_checker_version_names_the_copied_code(checkers):
-    assert checkers["pii"].checker_version == "privacy-patterns-2.2.366/guardoath-patterns-4"
+    assert checkers["pii"].checker_version == "privacy-patterns-2.2.366/guardoath-patterns-5"
+
+
+@pytest.mark.parametrize("text", ['<img src=x onerror="window.injected=true">', "Open index.html first.",
+                                  "Read obj.prop here.", "Mr.Smith called.", "See test.com-x now."])
+def test_url_needs_a_complete_top_level_domain(text):
+    from guardoath.privacy_patterns import UrlRecognizer
+    assert UrlRecognizer().analyze(text, ["URL"]) == []
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("see example.com", "example.com"), ("Visit example.com.", "example.com"),
+    ("Use example.com:8080", "example.com"), ("Try www.example.co.uk", "www.example.co.uk"),
+    ("Join example.community", "example.community"), ("Ask shop.example.in", "shop.example.in"),
+    ("Open https://example.com/path?x=1", "https://example.com/path?x=1"),
+    ('<img src="https://example.com/a.png">', '"https://example.com/a.png"'),
+])
+def test_complete_urls_are_still_found(text, expected):
+    from guardoath.privacy_patterns import UrlRecognizer
+    found = {text[result.start:result.end] for result in UrlRecognizer().analyze(text, ["URL"])}
+    assert expected in found
+
+
+def test_markup_answer_without_a_url_passes_the_output_check(checkers):
+    # The dashboard's "answer markup is displayed as text" example: no URL, no finding.
+    policy = Policy(application_id="demo", version="v1", timeout_ms=500, rules=(Rule(checker_id="pii"),))
+    request = CheckRequest(application_id="demo", policy_version="v1", content_format="text",
+                           content='<img src=x onerror="window.injected=true">')
+    result = asyncio.run(Engine([policy], checkers).check(request, Stage.OUTPUT))
+    assert result.evaluation_status == "complete" and not result.findings

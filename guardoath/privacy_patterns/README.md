@@ -109,7 +109,7 @@ and exactly what changed. Line endings follow this repository (CRLF).
 | `ip_recognizer.py` | `predefined_recognizers/generic/ip_recognizer.py` | package import of the shared classes rewritten as relative imports |
 | `mac_recognizer.py` | `predefined_recognizers/generic/mac_recognizer.py` | package import of the shared classes rewritten as relative imports |
 | `phone_recognizer.py` | `predefined_recognizers/generic/phone_recognizer.py` | NLP-engine type import removed (no NLP engine is included); `NlpArtifacts` type hints written as strings; package import of the shared classes rewritten as relative imports |
-| `url_recognizer.py` | `predefined_recognizers/generic/url_recognizer.py` | package import of the shared classes rewritten as relative imports |
+| `url_recognizer.py` | `predefined_recognizers/generic/url_recognizer.py` | package import of the shared classes rewritten as relative imports; `(?![a-z0-9-])` added after the top-level domain, so a domain-like prefix inside a longer word (`window.injected`, `index.html`) is not a URL |
 | `uuid_recognizer.py` | `predefined_recognizers/generic/uuid_recognizer.py` | package import of the shared classes rewritten as relative imports |
 
 `__init__.py`, this README and `LICENSE` were added. `__init__.py` exports the classes,
