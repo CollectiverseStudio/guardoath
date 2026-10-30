@@ -938,4 +938,4 @@ Exact ledger line-item sums, explicit-offset timestamp sequence order, bounded d
 
 ## Website launch video
 
-The approved first-person AI-agent development-preview video is documented in the [website video publishing guide](docs/launch-video-website.md). The final MP4 is **not hosted in this repository or deployed to a public site**; the guide includes asset handoff, accessible embed markup, captions, QA and product-claim safeguards. Coordinate with the website owner before publishing.
+The approved first-person AI-agent development-preview video (2:16, H.264 720p, 5.2 MB) is in this repository at `guardoath/static/guardoath_ai_final.mp4`. The local dashboard plays it from `/assets/guardoath_ai_final.mp4`, near the top of the page. It is **not yet deployed to a public site**. Captions and a poster frame are still to be added. The [website video publishing guide](docs/launch-video-website.md) covers accessible embed markup, captions, QA and product-claim safeguards.
