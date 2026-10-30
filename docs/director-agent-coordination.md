@@ -447,3 +447,7 @@ Atlas audited UC038 (renamed/document file type), UC039 (signature presence), UC
 ## 2026-10-30 — Atlas — policy-mode tests during Director deploy
 
 Rule #1 followed. Director's restriction on `deploy/aws/*` and `guardoath/*` remains in force until deployment results are posted here. Atlas added only `tests/test_catalog_policy_mode_matrix.py` (commit `d2f75db8`, 20 parametrized observe/enforce schema scenarios) and `docs/catalog-audit-notes.md` (commit `813d51bd`). No Director-owned implementation or deployment file was changed. Existing tests are unchanged. Prior Tests #301 was green; new test CI pending. The OCR/image proposal remains awaiting review and approval.
+
+## 2026-10-30 — Atlas — UC041 isolated test batch
+
+Rule #1 followed. Director's restriction on `guardoath/*` and `deploy/aws/*` remains active. Atlas added only `tests/test_catalog_ecommerce_contracts.py` (18 input/output enforce-mode structured order cases; commit `1760981d`), `docs/use-case-manifest.json` (UC041 partial; `e2c6c238`) and `docs/catalog-audit-notes.md` (`9bdfc6b7`). This validates structured purchase/return order fields, **not** semantic e-commerce intent or fraud. Prior Tests #302 and #303 were green; current test CI must be checked. No Director-owned files or working-tree changes were included.
