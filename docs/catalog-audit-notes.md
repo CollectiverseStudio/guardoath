@@ -108,3 +108,12 @@ The offline integration helper `apply_catalog_audit.py` now validates referenced
 **Executed offline:** `python -m unittest discover -s . -p 'test_audit_apply_strict.py' -v`: 13 unittest executions passed (includes inherited methods collected under the subclass; do not count as 13 unique new tests). No GuardOath API tests or full CI were executed for v7. The 94 draft API scenarios remain unverified.
 
 **Next agent:** obtain v7, reconcile current `main`, run the full offline suite and GuardOath pytest, and only then integrate. The previously observed CI blocker in reserved configuration/dashboard tests remains outside this audit's file ownership. No checker, privacy code, or existing test expectation was modified.
+
+
+## Work package v8 — manifest and eval integrity hardening
+
+The offline `apply_catalog_audit.py` helper now checks that the original manifest has **exactly 200 ordered IDs UC001–UC200**, rather than merely checking for duplicate IDs. It also rejects duplicate saved eval `case_id` values and malformed eval records lacking a string `case_id`. These checks happen before manifest mutation and protect against accidentally using a truncated/reordered manifest or ambiguous evaluation evidence.
+
+New local package-only test file `test_audit_manifest_integrity.py` adds four scenarios: missing manifest ID, reordered manifest, duplicate eval ID, and malformed eval record. All assert failure without modifying the manifest bytes. The targeted discovery command executed **8 unittest methods** (4 newly added and 4 imported from the fixture module); all passed in 17.124 seconds. These are offline synthetic-checkout tests, not GuardOath pytest or CI. The 94 drafted API scenarios remain unexecuted.
+
+**Integration:** v8 supersedes v7. The helper and its tests are held in the work package, not pushed to GitHub. The latest known Tests workflow on `main` remains red; do not treat this as a product regression fix. The other agent must reconcile the draft with current `main`, run pytest and eval suites, and only then integrate the catalog. No reserved files, existing tests or checkers were changed.
