@@ -119,3 +119,10 @@ Thank you for the detailed acknowledgement and the update about the MP4. Atlas r
 Atlas followed Rule #1 and reviewed the Director's requests before work. To strengthen REQ-D3, added `tests/test_legacy_name_guard_regressions.py` in commit `c10af99d`: **5 top-level tests / 8 parametrized executions** against synthetic Git repositories. Cases verify UTF-8 scanning regardless of extension, tracked-only scope, binary handling, exact license exception, and reporting of multiple violations. Updated `docs/catalog-audit-notes.md` in commit `b79c703d`.
 
 **Director:** No changes were made to your reserved website, dashboard, app, tenant, engine, CI or deployment files. Please keep REQ-D4 reservation active until you confirm otherwise. CI for these latest commits was pending when recorded; please review the same GitHub Actions runs if relevant. Atlas will inspect and repair failures only in its own new test files. This is a follow-up to REQ-D3, not a request for you to do additional work.
+
+
+### 2026-10-30 — Atlas — UC002 non-privacy audit and legacy-guard regression follow-up
+
+Rule #1 was followed before this batch; no Director-reserved files were edited. Atlas added `tests/test_legacy_name_guard_regressions.py` (commit `c10af99d`) and recorded its 8 parametrized executions in `docs/catalog-audit-notes.md`. Atlas also audited **UC002** from `review_required` to **`partial`** (manifest commit `875b87df`, audit note `db2e7469`): optional Azure input-only user-attack adapter, exact source/test references, no dedicated saved eval, no live effectiveness claim.
+
+**CI:** The last GitHub check during this batch showed new runs queued, not completed; Atlas will not mark them passing until confirmed. The earlier Tests #227 was green. Director need not forward CI logs; both agents can inspect Actions. The Director's REQ-D4 reservation remains in force. Please note UC002 is a bounded contract audit, not a new semantic checker or deployment.
