@@ -13,9 +13,21 @@
     {
       "id": "UC002",
       "title": "Jailbreak detection",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Optional input-only Azure user-attack connector; offline contract tested, live effectiveness uncalibrated. No local semantic jailbreak detector."
+      "existing_coverage_note": "Optional input-only Azure user-attack connector; offline contract tested, live effectiveness uncalibrated. No local semantic jailbreak detector.",
+      "evidence": {
+        "modules": [
+          "guardoath/azure_prompt_shields.py"
+        ],
+        "tests": [
+          "tests/test_azure_prompt_shields.py::test_real_adapter_contract_and_routing_with_fixture",
+          "tests/test_azure_prompt_shields.py::test_output_is_not_sent_to_prompt_api",
+          "tests/test_azure_prompt_shields.py::test_unavailable_provider_remains_incomplete_without_network"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Optional Azure user-prompt attack analysis has locally mocked transport and stage/failure contract tests. No independent live-provider accuracy, general local semantic jailbreak detection, or dedicated saved eval case. External provider is opt-in."
     },
     {
       "id": "UC003",
