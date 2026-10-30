@@ -275,3 +275,10 @@ These are **catalog integrity tests**, not content security detectors or proof t
 Added **12 parametrized input/output test executions** in new `tests/test_catalog_receipt_contracts.py` (`7f27c597`): six extracted JSON receipt records × two stages. Tests cover valid merchant/date/total, missing required total, blank merchant, invalid date, negative total and unexpected field. Existing JSON Schema checker: `guardoath/checkers.py`. The UC033 manifest is `partial` (`8fe77273`) with exact new test reference and no dedicated saved eval.
 
 **Limitations:** This is only a schema contract for **already extracted JSON**, not receipt OCR, source-document authenticity, image legibility, semantic receipt completeness, or fraud detection. No Director-reserved code, existing test or eval suite changed. New CI is pending.
+
+
+## 2026-10-30 — Media-ingress boundary tests and UC031/032/034/035/036
+
+Added **10 parametrized HTTP ingress regressions** in `tests/test_catalog_media_ingress.py` (commit `2e341f5f`): eight unsupported media types (PNG, JPEG, WebP, DICOM, PDF, multipart, WAV, MP4) and two non-UTF-8 JSON charsets. These assert the existing `guardoath/ingress.py` rejects unsupported request types with HTTP 415; no image, document, medical or audio analysis is claimed.
+
+Five use cases retain canonical `review_required` with `audit_classification=not_implemented` in `docs/use-case-manifest.json` (commit `cdae3326`): **UC031 ID image legibility; UC032 invoice tampering; UC034 medical scan quality; UC035 deepfake detection; UC036 handwriting legibility**. Each cites the exact new ingress tests and no dedicated saved eval. The test only proves the direct HTTP media boundary; externally extracted JSON fields may still be schema-validated. No existing tests, saved evals, Director-reserved code or deployment files were modified. CI pending.
