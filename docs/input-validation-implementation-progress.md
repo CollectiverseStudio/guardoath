@@ -43,3 +43,12 @@ It reports recall, false-positive and bypass-rate deltas (or `None` for undefine
 The adapter rejects duplicate case IDs, missing/extra/nonboolean labels, unsupported execution scopes, regression mismatches, incomplete or simulated results, and missing/error/skipped/unsupported checker outcomes. It does not echo prompt content. `tests/test_evaluation_adapter.py` exercises positive/benign metrics, false positives, invalid labels, incomplete outcomes, malformed reports and duplicate IDs.
 
 **Important limitations:** This is an opt-in Python API, not yet invoked automatically by `guardoath.evaluate` or CI. The reviewed labels are supplied by a trusted evaluator, not inferred from existing expected findings. A report containing heterogeneous checks or unreviewed threat labels may not yield meaningful attack recall. No confidence intervals, production sampling, privacy-sensitive data retention, cost measurement or enforcement claims are provided. Run the new tests in CI before treating this integration as verified.
+
+
+## IV-03 extension: end-to-end local labeled evaluation workflow
+
+`guardoath/labeled_evaluation.py` now composes the existing local suite loader, policy loader, Engine, regression evaluator, independently supplied label adapter, metrics and paired comparison. `run_labeled_suite` requires explicit `case_id → bool` labels for every evaluated case and provenance fields (dataset version, checker version, source commit). It rejects incomplete/simulated/mismatched cases through the adapter; it does not infer ground truth from expected findings. `compare_labeled_suites` applies strict paired-run comparison.
+
+`tests/test_labeled_evaluation.py` exercises the actual saved `evals/text-security.json` and `policies/text-security.json` locally, including missing-label rejection, metric totals and a same-suite comparison. **Fixture classifications are synthetic demonstrations, not independently adjudicated adversarial labels.** Thus the resulting numbers are not real-world security detection rates. The workflow runs local checks only and does not transmit data to external providers.
+
+**Limitations:** opt-in Python API only, no CLI flags or CI effectiveness gate, no output artifact persistence/signing, no confidence intervals, no live semantic provider benchmarking, and no downstream ingress enforcement. The tests must pass in GitHub Actions before the new workflow is considered verified. Do not modify reserved `guardoath/evaluate.py`, `guardoath/app.py`, `guardoath/engine.py` or shared policies without coordination.
