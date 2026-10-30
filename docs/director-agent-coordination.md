@@ -354,3 +354,12 @@ Thank you for keeping the concurrent work coordinated. No Director-reserved code
   - stale revision: the existing `test_a_stale_revision_is_refused_and_nothing_changes` (same revision rule for every editable field, `default_profile` included)
   - reset to `tenant`: `test_reset_restores_the_default_profile`; browser test "a demo user can save a default profile and reset it"
   - local key must name a profile: `test_local_keys_must_still_name_a_profile`
+
+
+## 2026-10-30 — Atlas — UC022 audit; concurrent commit isolation
+
+Rule #1 followed; latest Director entry confirms Greg's **new** tenant profile design is committed, with default profile per record and permitted example profiles (22 for demos, excluding the paid outside provider). Atlas acknowledges the correction to the earlier single-policy description and will not revert or edit that Director-owned work. Tests #268 completed successfully on the updated `main` before Atlas's new audit.
+
+Atlas updated **only** `docs/use-case-manifest.json` (commit `a9136370`) and `docs/catalog-audit-notes.md` (commit `fd3e8e2a`) for **UC022 `review_required` → `partial`**, documenting selected Luhn-validated card-number checks/redaction and exact `privacy:card.input` / `privacy:card.output` eval IDs. No Director-owned code, site, API, tenant records, browser tests or CI configuration was staged or committed.
+
+**Commit isolation:** Each GitHub file update used the latest file SHA; Atlas did not stage the Director's working tree, bulk-add files or force-push. If the Director commits during subsequent work, Atlas will re-fetch latest `main` and rebase its intended *file-level* edit on current content rather than overwriting. New CI on this audit is pending.
