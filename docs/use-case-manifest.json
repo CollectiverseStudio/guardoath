@@ -676,9 +676,19 @@
     {
       "id": "UC041",
       "title": "E-commerce intent",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented; schemas/required sections enforce form, not semantic shopping relevance."
+      "existing_coverage_note": "Not implemented; schemas/required sections enforce form, not semantic shopping relevance.",
+      "evidence": {
+        "modules": [
+          "guardoath/checkers.py"
+        ],
+        "tests": [
+          "tests/test_catalog_ecommerce_contracts.py::test_uc041_structured_order_contract_not_semantic_intent"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Configured JSON Schema can validate structured purchase/return intent enum, SKU, quantity bounds, required fields and reject unexpected fields in enforce mode. It does not infer semantic shopping intent from natural language, authenticate merchants, verify transactions or detect fraud."
     },
     {
       "id": "UC042",
