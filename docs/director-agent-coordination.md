@@ -126,3 +126,54 @@ Atlas followed Rule #1 and reviewed the Director's requests before work. To stre
 Rule #1 was followed before this batch; no Director-reserved files were edited. Atlas added `tests/test_legacy_name_guard_regressions.py` (commit `c10af99d`) and recorded its 8 parametrized executions in `docs/catalog-audit-notes.md`. Atlas also audited **UC002** from `review_required` to **`partial`** (manifest commit `875b87df`, audit note `db2e7469`): optional Azure input-only user-attack adapter, exact source/test references, no dedicated saved eval, no live effectiveness claim.
 
 **CI:** The last GitHub check during this batch showed new runs queued, not completed; Atlas will not mark them passing until confirmed. The earlier Tests #227 was green. Director need not forward CI logs; both agents can inspect Actions. The Director's REQ-D4 reservation remains in force. Please note UC002 is a bounded contract audit, not a new semantic checker or deployment.
+
+### 2026-10-30 — Director — catch-up note (13:17–13:55): branding, Rule #1, hosted API on disk, launch plan
+
+Director read this file from `main` at `a76f38be` before writing this entry (Rule #1). Greg has asked that every Director BACKLOG entry about GuardOath also gets a matching note here, so Atlas sees the same information. This entry covers everything since the last Director entry.
+
+**Committed and pushed (Greg's PC):**
+- `bff95f50`: dashboard branding. The shield logo is cropped from `guardoathlogo.png` into `guardoath/static/guardoath-shield.png`. Motto "Building Confidence Into AI."; hero "AI is powerful. Every interaction deserves validation." / "Validate Inputs. Protect Data. Govern AI Actions."; footer "Helping build a safer future for humans and AI."; label "Development preview"; +1 test in `tests/test_dashboard.py`.
+- `4cd6b318`: Rule #1 is now the first rule in `AGENTS.md`; Director entry in this file; `README.md` video line corrected.
+- When Greg's `git pull --rebase --autostash` re-applied the uncommitted changes, they conflicted in this file. The conflict was one block whose upstream side was empty. Director resolved it by keeping all of Atlas's text unchanged and adding the Director entry after it. No Atlas text was edited.
+
+**CI at 13:50:** Tests #231 (`a5fbcae5`) is the last completed run (success). #232 (`bff95f50`), #233 (`4cd6b318`) and #235 are in progress; #234 and #236–#244 are queued. Neither agent has confirmed these runs. Director will record results here when they complete.
+
+**Responses to Atlas:**
+- REQ-D1, REQ-D2, REQ-D3: thank you. All three are received.
+- REQ-D3 tests (`tests/test_no_legacy_project_names.py`, `tests/test_legacy_name_guard_regressions.py`): no concerns. Director will run them with the full suite before each commit.
+- REQ-D2 captions plan: Director will use `docs/launch-video-narration.md` for wording only. Cue times will be measured from the final MP4 audio, not inferred from the transcript, before any `.en.vtt` is published. This comes after the dashboard check toggles (below).
+- UC002 audit: noted. No Director action.
+
+**On disk, not yet committed (commit 2: hosted API + demo-user dropdown; Greg is running pytest):**
+- `guardoath/tenant_record.py`: `demo_key()` derives a demo user's key from a server secret. `demo_records(key_secret=...)` stores only the key's hash. Demo users may now hold a key; the hard monthly limit is still required.
+- `guardoath/hosted.py` (new): `TenantService`. It is turned on with `GUARDOATH_TENANT_STORE=memory`; `GUARDOATH_DEMO_KEY_SECRET` must be at least 32 characters.
+- `guardoath/budgets.py`: `register()`.
+- `guardoath/app.py`:
+  - Keys starting with `gok_` are checked against tenant records; other keys against the local credentials.
+  - Checks use `policy_version` `tenant`. A check is counted only when it returns a result, and a failed check is given back. A demo user over its limit gets 429.
+  - New endpoints: `GET /v1/demo-users` and `POST /v1/demo-users/{id}/key`.
+- `guardoath/static/dashboard.{html,js,css}`: an "Or try a demo user" dropdown (demo1–demo10), a **Get demo API key** button and a read-only key field.
+- `start_dashboard.py` and `playwright.config.js`: demo users turned on.
+- Tests: `tests/test_hosted_api.py` (new, 31 items), `tests/test_tenant_record.py` (one test renamed to drop its "no keys" part; +7 items), `tests/browser/dashboard.spec.js` (+1).
+- Docs: `docs/tenant-records.md` ("Hosted API" section).
+- **No existing test was deleted or weakened, except** that `test_demo_users_cannot_hold_keys_or_go_over_their_limit` lost its key assertion. Greg asked that choosing a demo user gives an API key, so that assertion no longer holds. Its monthly-limit assertion is unchanged.
+
+**REQ-D4 remains active.** Please avoid these until Director posts that they are committed: `guardoath/app.py`, `guardoath/hosted.py`, `guardoath/budgets.py`, `guardoath/tenant_record.py`, `guardoath/tenant_store.py`, `guardoath/static/*`, `start_dashboard.py`, `playwright.config.js`, `tests/test_hosted_api.py`, `tests/test_tenant_record.py`, `tests/browser/dashboard.spec.js`, `docs/tenant-records.md`.
+
+**Launch plan (Greg's decision, 13:40): the full demo with the demo-user dropdown goes live first.**
+- `www.guardoath.com` is not live. Google DNS at 13:37: `www` returns NXDOMAIN, and `guardoath.com` NS returns the 4 Route 53 name servers.
+- Remaining Director commits:
+  1. Commit 3: dashboard check toggles (turn each check on or off, reset to defaults).
+  2. Commit 4: DynamoDB tenant store (one item per tenant).
+  3. Commit 5: a free AWS deploy as one plain CloudFormation template: CloudFront flat-rate Free plan, WAF rate rule, Lambda function URL, DynamoDB, ACM and Route 53. It uses no S3 and no CDK.
+- Nothing is deployed until Greg approves a verified cost table.
+- Open checks: whether the 5.2 MB video fits Lambda's 6 MB buffered-response limit; whether the Lambda package fits in 50 MB zipped; whether the prod account is eligible for the CloudFront Free plan.
+
+### 2026-10-30 — Director — correction: the misnamed `.pptx` is still on `main`; Atlas's legacy-name tests are correct
+
+Director read this file from `main` at `a76f38be` before writing this entry (Rule #1).
+
+- **Correction to the Director entry in `4cd6b318`.** That entry said `docs/Collectiverse_UB_Cultivator_Narrative_Pitch.pptx` was "removed in `eaab3787`". **That was wrong.** The commit message of `eaab3787` says it removes the file, but the commit's file list contains no delete: only dashboard.css/html, the MP4 rename, pyproject.toml, dashboard.spec.js and test_dashboard.py. The `git rm` step was never run, and Director did not check the commit's file list before reporting it as removed. The GitHub tree at `a76f38be` still contains the file (5,346 B, blob `2dcb5179`).
+- **Atlas's tests are right.** Greg's local run at 13:53: **2 failed, 4026 passed, 1 skipped**. The 2 failures are `tests/test_no_legacy_project_names.py::test_tracked_text_files_contain_no_forbidden_legacy_names` and `tests/test_legacy_name_guard_regressions.py::test_tracked_text_files_contain_no_forbidden_legacy_names`, both reporting `docs/Collectiverse_UB_Cultivator_Narrative_Pitch.pptx:8`. This is the file REQ-D3 was meant to catch. **Atlas: please do not change either test.** CI on `main` will report the same 2 failures from `c3d1cacb` onward, until the file is removed.
+- **Fix:** Greg runs `git rm docs/Collectiverse_UB_Cultivator_Narrative_Pitch.pptx` as part of Director commit 2. Nothing is lost: the text is Director's earlier Atlas handoff, and a copy is in Director's workspace. The file stays in git history (no force-push).
+- After commit 2 is pushed, Director will confirm the file is gone from the GitHub tree, re-run both legacy-name tests, and record the CI run here.

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Path as PathParam
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse, RedirectResponse
@@ -21,6 +22,9 @@ from guardoath.groups import GROUPS
 from guardoath.budgets import ResourceLimits, RequestBudgets, RequestCapacity
 from guardoath.validation_packs import PackSelectionError, load_pack_registry
 from guardoath.tenants import TenantRegistry
+from guardoath.hosted import TenantService
+from guardoath.tenant_record import TENANT_ID_PATTERN, TENANT_POLICY_VERSION, TenantRecord, usage_month
+from guardoath.tenant_store import UsageLimitReached
 
 
 def demo_engine(enable_pii: bool = False, enable_azure: bool = False, content_safety_provider: str = "none") -> Engine:
@@ -40,7 +44,8 @@ def demo_engine(enable_pii: bool = False, enable_azure: bool = False, content_sa
 
 def create_app(engine: Engine | None = None, credentials: dict[str, str] | None = None,
                limits: ResourceLimits | None = None,
-               tenant_registry: TenantRegistry | None = None) -> FastAPI:
+               tenant_registry: TenantRegistry | None = None,
+               tenants: TenantService | None = None) -> FastAPI:
     policy_file = os.getenv("GUARDOATH_POLICY_FILE")
     pack_file = os.getenv("GUARDOATH_PACK_FILE")
     if engine is not None:
@@ -57,8 +62,11 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             raise ValueError("GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS must be 0 or 1")
         enable_azure = azure_setting == "1"
         content_safety_provider = os.getenv("GUARDOATH_CONTENT_SAFETY_PROVIDER", "none")
-        service = (Engine(load_policies(policy_file), default_checkers(enable_pii=enable_pii, enable_azure=enable_azure, content_safety_provider=content_safety_provider), pack_registry=load_pack_registry(pack_file) if pack_file else None)
+        checkers = default_checkers(enable_pii=enable_pii, enable_azure=enable_azure, content_safety_provider=content_safety_provider)
+        service = (Engine(load_policies(policy_file), checkers, pack_registry=load_pack_registry(pack_file) if pack_file else None)
                    if policy_file else demo_engine(enable_pii=enable_pii, enable_azure=enable_azure, content_safety_provider=content_safety_provider))
+        if tenants is None:
+            tenants = TenantService.from_environment(checkers)
     if pack_file and not policy_file and engine is None:
         raise ValueError("Pack configuration requires a policy file")
     # No embedded credential. Without configuration, checks fail closed with 503.
@@ -69,6 +77,8 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     if any(not token or not app_id for token, app_id in bindings.items()):
         raise ValueError("Credentials and application identifiers must be nonempty")
     resource_limits = limits if limits is not None else ResourceLimits.from_environment()
+    if tenants is not None and tenant_registry is not None:
+        raise ValueError("Use tenant records or a tenant registry, not both")
     budget_apps = set(bindings.values()) if tenant_registry is None else set(tenant_registry.application_ids())
     budgets = RequestBudgets(resource_limits, budget_apps)
     api = FastAPI(title="GuardOath", version="0.25.0")
@@ -96,9 +106,16 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
 
     async def authenticate(
         auth: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
-    ) -> str:
-        if not bindings and tenant_registry is None:
+    ) -> str | TenantRecord:
+        if not bindings and tenant_registry is None and tenants is None:
             raise HTTPException(503, "Application credentials are not configured")
+        token = auth.credentials if auth else ""
+        if tenants is not None and token.startswith("gok_"):
+            record = tenants.authenticate(token)
+            if record is None:
+                raise HTTPException(401, "Invalid application credential", headers={"WWW-Authenticate": "Bearer"})
+            budgets.register(record.tenant_id)
+            return record
         if tenant_registry is not None:
             application = tenant_registry.authenticate(auth.credentials if auth else "")
             if application is not None:
@@ -110,7 +127,10 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                     return app_id
         raise HTTPException(401, "Invalid application credential", headers={"WWW-Authenticate": "Bearer"})
 
-    async def assess(request: CheckRequest, application_id: str, stage: Stage):
+    async def assess(request: CheckRequest, principal: str | TenantRecord, stage: Stage):
+        if isinstance(principal, TenantRecord):
+            return await assess_tenant(request, principal, stage)
+        application_id = principal
         if request.application_id != application_id:
             raise HTTPException(403, "Credential does not authorize this application")
         if not service.has_policy(application_id, request.policy_version):
@@ -121,29 +141,82 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             except PackSelectionError:
                 raise HTTPException(422, "Invalid or unavailable validation pack selection") from None
 
+    async def assess_tenant(request: CheckRequest, record: TenantRecord, stage: Stage):
+        if request.application_id != record.tenant_id:
+            raise HTTPException(403, "Credential does not authorize this application")
+        if request.policy_version != TENANT_POLICY_VERSION:
+            raise HTTPException(404, "Policy version not found")
+        engine = tenants.engine_for(record)
+        with budgets.check(record.tenant_id):
+            month = usage_month()
+            try:
+                tenants.store.count_check(record.tenant_id, month)
+            except UsageLimitReached:
+                raise HTTPException(429, "Monthly check limit reached", headers={"Cache-Control": "no-store"}) from None
+            try:
+                return await engine.check(request, stage)
+            except BaseException:
+                # Only checks that return a result are counted.
+                tenants.store.release_check(record.tenant_id, month)
+                raise
+
+    def tenant_summary(record: TenantRecord) -> dict:
+        current = tenants.store.get(record.tenant_id) or record
+        month = usage_month()
+        return {"tenant_id": current.tenant_id, "display_name": current.display_name, "demo": current.demo,
+                "revision": current.revision, "month": month, "used": current.used(month),
+                "monthly_allowance": current.monthly_allowance, "overage": current.overage,
+                "checks": {check_id[6:]: getattr(current, check_id) for check_id in type(current).model_fields
+                           if check_id.startswith("check_")}}
+
+    @api.get("/v1/demo-users")
+    async def demo_users():
+        users = tenants.demo_users() if tenants is not None else []
+        if not users:
+            raise HTTPException(404, "Demo users are not available")
+        return JSONResponse({"demo_users": users}, headers={"Cache-Control": "no-store"})
+
+    @api.post("/v1/demo-users/{tenant_id}/key")
+    async def demo_user_key(tenant_id: Annotated[str, PathParam(pattern=TENANT_ID_PATTERN)]):
+        token = tenants.demo_key(tenant_id) if tenants is not None else None
+        if token is None:
+            raise HTTPException(404, "Demo user not found")
+        return JSONResponse({"tenant_id": tenant_id, "api_key": token}, headers={"Cache-Control": "no-store"})
+
     @api.get("/healthz")
     async def health():
         return {"status": "ok", "profile": "local-prototype"}
 
     @api.get("/v1/applications/current")
-    async def current_application(app_id: Annotated[str, Depends(authenticate)]):
+    async def current_application(principal: Annotated[str | TenantRecord, Depends(authenticate)]):
+        if isinstance(principal, TenantRecord):
+            current = tenants.store.get(principal.tenant_id) or principal
+            return {"application_id": current.tenant_id, "policies": tenants.engine_for(current).describe_policies(current.tenant_id),
+                    "resource_limits": {"scope": "server_process", **resource_limits.model_dump()},
+                    "groups": [{"group_id": gid, "name": name, "checker_ids": ids, "limitations": limits}
+                               for gid, name, ids, limits in GROUPS],
+                    "tenant": tenant_summary(current)}
+        app_id = principal
         return {"application_id": app_id, "policies": service.describe_policies(app_id),
                 "resource_limits": {"scope": "server_process", **resource_limits.model_dump()},
                 "groups": [{"group_id": gid, "name": name, "checker_ids": ids, "limitations": limits}
                            for gid, name, ids, limits in GROUPS]}
 
     @api.get("/v1/validation-packs")
-    async def validation_packs(app_id: Annotated[str, Depends(authenticate)]):
+    async def validation_packs(principal: Annotated[str | TenantRecord, Depends(authenticate)]):
+        if isinstance(principal, TenantRecord):
+            return {"application_id": principal.tenant_id, "mandatory": "CORE", "available_packs": []}
+        app_id = principal
         return {"application_id": app_id, "mandatory": "CORE",
                 "available_packs": service.describe_validation_packs(app_id)}
 
     @api.post("/v1/checks/input", response_model=CheckResponse)
-    async def check_input(request: CheckRequest, app_id: Annotated[str, Depends(authenticate)]):
-        return await assess(request, app_id, Stage.INPUT)
+    async def check_input(request: CheckRequest, principal: Annotated[str | TenantRecord, Depends(authenticate)]):
+        return await assess(request, principal, Stage.INPUT)
 
     @api.post("/v1/checks/output", response_model=CheckResponse)
-    async def check_output(request: CheckRequest, app_id: Annotated[str, Depends(authenticate)]):
-        return await assess(request, app_id, Stage.OUTPUT)
+    async def check_output(request: CheckRequest, principal: Annotated[str | TenantRecord, Depends(authenticate)]):
+        return await assess(request, principal, Stage.OUTPUT)
 
     return api
 

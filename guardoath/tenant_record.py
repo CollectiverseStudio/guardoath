@@ -5,6 +5,7 @@ redact (pii only). A check field with no value means the check does not run. The
 checks need are fields on the same record. They are kept while a check is off, so turning the
 check back on restores them, and they are passed to the engine only while the check is on.
 """
+import base64
 from datetime import datetime, timezone
 import hashlib
 import hmac
@@ -125,8 +126,8 @@ class TenantRecord(Contract):
         if self.demo:
             if on.keys() & EXTERNAL_CHECK_IDS:
                 raise ValueError("Demo users cannot run checks that call a paid outside provider")
-            if self.overage != "block" or self.key_hashes:
-                raise ValueError("Demo users have a hard monthly limit and no keys")
+            if self.overage != "block":
+                raise ValueError("Demo users have a hard monthly limit")
         # Field-level rules of every stored setting, including settings of checks that are off.
         Policy(application_id=self.tenant_id, version=TENANT_POLICY_VERSION, rules=(),
                **{name: getattr(self, name) for name in SETTING_FIELDS})
@@ -187,8 +188,23 @@ def key_matches(record: TenantRecord, token: str) -> bool:
     return matched
 
 
-def demo_records(path: Path = DEMO_DEFAULTS_FILE) -> tuple[TenantRecord, ...]:
-    """demo1..demoN, each an ordinary tenant record created from the demo defaults."""
+MIN_DEMO_KEY_SECRET = 32
+
+
+def demo_key(tenant_id: str, secret: str) -> str:
+    """The API key of a demo user. It is derived from a server secret, so every visitor who chooses
+    the same demo user gets the same key and no key is stored; the record keeps only its hash."""
+    if not re.fullmatch(TENANT_ID_PATTERN, tenant_id):
+        raise ValueError("Invalid tenant identifier")
+    if not isinstance(secret, str) or len(secret) < MIN_DEMO_KEY_SECRET:
+        raise ValueError(f"The demo key secret must be at least {MIN_DEMO_KEY_SECRET} characters")
+    digest = hmac.new(secret.encode(), b"guardoath-demo-key\x00" + tenant_id.encode(), hashlib.sha256).digest()
+    return f"{KEY_PREFIX}{tenant_id}_" + base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
+
+
+def demo_records(path: Path = DEMO_DEFAULTS_FILE, key_secret: str | None = None) -> tuple[TenantRecord, ...]:
+    """demo1..demoN, each an ordinary tenant record created from the demo defaults. With a key secret,
+    each record holds the hash of its derived demo key."""
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(raw, dict) or set(raw) - {"format_version", "_comment", "count", "monthly_allowance", "defaults"}:
         raise ValueError("Unknown demo defaults format")
@@ -200,7 +216,9 @@ def demo_records(path: Path = DEMO_DEFAULTS_FILE) -> tuple[TenantRecord, ...]:
     if not isinstance(defaults, dict) or set(defaults) - EDITABLE_FIELDS:
         raise ValueError("Demo defaults may only set check fields and check settings")
     return tuple(TenantRecord(tenant_id=f"demo{n}", display_name=f"Demo user {n}", demo=True,
-                              monthly_allowance=allowance, overage="block", **defaults)
+                              monthly_allowance=allowance, overage="block",
+                              key_hashes=(key_hash(demo_key(f"demo{n}", key_secret)),) if key_secret else (),
+                              **defaults)
                  for n in range(1, count + 1))
 
 

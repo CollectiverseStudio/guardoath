@@ -9,7 +9,7 @@ from guardoath.checkers import default_checkers
 from guardoath.engine import Engine
 from guardoath.models import Action, CheckRequest, Stage
 from guardoath.tenant_record import (CHECK_FIELDS, CHECK_IDS, EDITABLE_FIELDS, EXTERNAL_CHECK_IDS, REQUIRED_SETTINGS,
-                                     SETTINGS_OF, TENANT_POLICY_VERSION, TenantRecord, demo_defaults, demo_records,
+                                     SETTINGS_OF, TENANT_POLICY_VERSION, TenantRecord, demo_defaults, demo_key, demo_records,
                                      key_hash, key_matches, new_key, tenant_id_from_key, usage_month)
 from guardoath.tenant_store import MemoryTenantStore, TenantConflict, TenantNotFound, UsageLimitReached
 
@@ -199,11 +199,34 @@ def test_demo_users_cannot_run_paid_outside_checks(check_id):
         demo(**{"check_" + check_id: "flag"})
 
 
-def test_demo_users_cannot_hold_keys_or_go_over_their_limit():
+def test_demo_users_cannot_go_over_their_limit():
     with pytest.raises(ValidationError, match="hard monthly limit"):
         demo(overage="allow_and_record")
-    with pytest.raises(ValidationError, match="hard monthly limit"):
-        demo(key_hashes=(key_hash("x"),))
+
+
+DEMO_SECRET = "s" * 32
+
+
+def test_demo_keys_are_derived_named_and_stored_only_as_hashes():
+    users = demo_records(key_secret=DEMO_SECRET)
+    keys = [demo_key(u.tenant_id, DEMO_SECRET) for u in users]
+    assert len(set(keys)) == 10
+    for user, token in zip(users, keys):
+        assert token.startswith(f"gok_{user.tenant_id}_") and tenant_id_from_key(token) == user.tenant_id
+        assert key_matches(user, token) and token not in user.model_dump_json()
+    assert demo_key("demo1", DEMO_SECRET) == keys[0]
+    assert demo_key("demo1", "t" * 32) != keys[0]
+    assert not key_matches(users[0], keys[1])
+
+
+@pytest.mark.parametrize("secret", ["", "short", "x" * 31, None, 5])
+def test_demo_key_secret_must_be_long_enough(secret):
+    with pytest.raises(ValueError, match="at least 32"):
+        demo_key("demo1", secret)
+
+
+def test_demo_users_have_no_keys_without_a_secret():
+    assert all(u.key_hashes == () for u in demo_records())
 
 
 def test_demo_defaults_block_an_email_and_pass_a_clean_question():

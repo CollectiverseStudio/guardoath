@@ -41,6 +41,7 @@ async function api(path, body, token = key) {
     const seconds = Number(response.headers.get("Retry-After"));
     throw new Error((response.status === 429 ? "Application limit reached." : "Service capacity reached.") + (Number.isSafeInteger(seconds) && seconds > 0 ? " Retry in " + seconds + (seconds === 1 ? " second." : " seconds.") : " Try again shortly."));
   }
+  if (!response.ok && response.status === 429) throw new Error("Monthly check limit reached for this user. Choose another demo user or try again next month.");
   if (!response.ok) throw new Error(response.status === 401 ? "The API key was not accepted." : response.status === 422 ? "Check the required fields, content length, and selected format." : "The check could not be completed (HTTP " + response.status + ").");
   return response.json();
 }
@@ -54,7 +55,7 @@ function coverage() {
     const state = !group.checker_ids.length ? "not implemented" : !checks.length ? "disabled" : checks.some(c => !c.available) ? "unavailable" : checks.some(c => c.simulated) ? "simulated" : "enabled";
     const tag = document.createElement("span"); tag.textContent = group.name + " · " + state; tag.title = group.limitations; $("coverage").append(tag);
   }
-  $("profile-status").textContent = policy ? (policy.version === "conversation-v1" ? "Combined conversation checks are active on both stages." : "Focused example profile: " + policy.version + ". Only its configured checks run.") : "Connect to load the combined conversation profile.";
+  $("profile-status").textContent = policy ? (policy.version === "conversation-v1" ? "Combined conversation checks are active on both stages." : policy.version === "tenant" ? "Checks set on " + (application.tenant ? application.tenant.display_name : application.application_id) + "\u2019s tenant record: " + policy.checks.map(c => c.id).join(", ") + ". They run on both stages." : "Focused example profile: " + policy.version + ". Only its configured checks run.") : "Connect to load the combined conversation profile.";
   if (policy?.version === "text-security-v1") $("profile-status").textContent += " Local formatting/encoding signals only. Plain-language attacks, indirect instructions and multi-turn manipulation are not assessed.";
   if (policy?.version === "content-safety-v1") {
     const check = policy.checks.find(c => c.id === "content_safety");
@@ -73,9 +74,9 @@ $("connect").addEventListener("click", async () => {
   $("coverage").replaceChildren(); $("execution-mode").textContent = "Local checks"; $("data-routing").textContent = ""; $("resource-limits").textContent = ""; $("disconnect").disabled = true;
   try { const data = await api("/v1/applications/current", null, token); if (attempt !== revision) return;
     key = token; application = data; $("api-key").value = ""; $("policy").replaceChildren();
-    for (const policy of data.policies) { const option = document.createElement("option"); option.value = policy.version; option.textContent = (policy.version === "conversation-v1" ? "Conversation — combined general text checks" : policy.version) + " · " + policy.mode + " mode"; $("policy").append(option); }
+    for (const policy of data.policies) { const option = document.createElement("option"); option.value = policy.version; option.textContent = (policy.version === "conversation-v1" ? "Conversation — combined general text checks" : policy.version === "tenant" ? "Tenant record checks" : policy.version) + " · " + policy.mode + " mode"; $("policy").append(option); }
     if (data.policies.some(p => p.version === "conversation-v1")) $("policy").value = "conversation-v1";
-    $("connection-status").textContent = "Connected to " + data.application_id + ". " + data.policies.length + " policy available.";
+    $("connection-status").textContent = "Connected to " + data.application_id + ". " + data.policies.length + " policy available." + (data.tenant ? " " + data.tenant.used + " of " + data.tenant.monthly_allowance + " checks used in " + data.tenant.month + "." : "");
     const limits = data.resource_limits;
     $("resource-limits").textContent = limits ? "Per server process: " + limits.checks_per_minute + " checks/minute per application · burst " + limits.burst + " · " + limits.application_concurrency + " concurrent checks per application. Each stage uses one API check; a full sequence uses two checks." : "";
     $("policy").disabled = false; $("disconnect").disabled = false; buttons(); coverage();
@@ -83,11 +84,33 @@ $("connect").addEventListener("click", async () => {
   finally { $("connect").disabled = false; }
 });
 $("disconnect").addEventListener("click", () => {
-  key = ""; application = null; $("api-key").value = ""; $("resource-limits").textContent = ""; reset(); $("coverage").replaceChildren(); $("profile-status").textContent = "Connect to load the combined conversation profile.";
+  key = ""; application = null; $("api-key").value = ""; $("demo-key-value").value = ""; $("resource-limits").textContent = ""; reset(); $("coverage").replaceChildren(); $("profile-status").textContent = "Connect to load the combined conversation profile.";
   $("execution-mode").textContent = "Local checks"; $("data-routing").textContent = "";
   $("policy").replaceChildren(); $("policy").disabled = true; $("run").disabled = true; $("disconnect").disabled = true;
   $("connection-status").textContent = "Disconnected. Key removed from this tab’s memory.";
 });
+async function loadDemoUsers() {
+  try {
+    const response = await fetch("/v1/demo-users", {cache: "no-store"});
+    if (!response.ok) return;
+    const users = (await response.json()).demo_users || [];
+    if (!users.length) return;
+    for (const user of users) { const option = document.createElement("option"); option.value = user.tenant_id; option.textContent = user.display_name + " (" + user.tenant_id + ")"; $("demo-user").append(option); }
+    $("demo-users").hidden = false;
+  } catch (error) { /* Demo users are optional; the API key field still works. */ }
+}
+$("demo-key").addEventListener("click", async () => {
+  const tenant = $("demo-user").value; if (!tenant || busy) return;
+  $("demo-key").disabled = true;
+  try {
+    const response = await fetch("/v1/demo-users/" + encodeURIComponent(tenant) + "/key", {method: "POST", cache: "no-store", headers: {"Content-Type": "application/json"}, body: "{}"});
+    if (!response.ok) throw new Error(response.status === 404 ? "That demo user is not available." : "The demo key could not be issued (HTTP " + response.status + ").");
+    const data = await response.json();
+    $("demo-key-value").value = data.api_key; $("api-key").value = data.api_key; $("connect").click();
+  } catch (error) { $("connection-status").textContent = error.message || "The demo key could not be issued."; }
+  finally { $("demo-key").disabled = false; }
+});
+loadDemoUsers();
 $("policy").addEventListener("change", () => { reset(); coverage(); });
 for (const id of ["input-content", "input-format", "api-key"]) $(id).addEventListener("input", () => reset());
 for (const id of ["output-content", "output-format"]) $(id).addEventListener("input", () => reset(true));

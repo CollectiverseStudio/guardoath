@@ -63,3 +63,29 @@ Rules:
 - **Never on:** content_safety and azure_prompt_shields (paid providers).
 - **Limits:** 2,000 checks per month each, hard limit (`overage: block`), and no keys.
 - **Reset:** a reset sets every check field and check setting back to these values.
+
+## Hosted API
+
+Set `GUARDOATH_TENANT_STORE=memory` to turn on tenant records. The memory store keeps records for the
+life of the server process; it is for local use and tests. Set `GUARDOATH_DEMO_KEY_SECRET` (at least 32
+characters) to create demo1 to demo10 with demo keys. The local single-key mode (`GUARDOATH_API_KEY`)
+keeps working alongside it.
+
+| Endpoint | Key needed | What it does |
+|---|---|---|
+| `GET /v1/demo-users` | no | Lists the demo users. 404 when demo users are off. |
+| `POST /v1/demo-users/{tenant_id}/key` (JSON body `{}`) | no | Returns that demo user's API key. Every visitor who picks the same demo user gets the same key. |
+| `GET /v1/applications/current` | yes | The tenant's checks (policy version `tenant`) and this month's usage. |
+| `POST /v1/checks/input`, `POST /v1/checks/output` | yes | Runs the checks that have a value on the tenant record. Use `application_id` = the tenant id and `policy_version` = `tenant`. |
+
+- **Keys:** tenant keys look like `gok_<tenant_id>_<secret>` and lead to exactly one record. A demo key is
+  derived from `GUARDOATH_DEMO_KEY_SECRET` and the tenant id. Only its hash is on the record. Changing the
+  secret changes every demo key.
+- **Counting:** each check that returns a result (HTTP 200) adds one to the record's count for the UTC month.
+  Refused requests (401, 403, 404, 422, 429) and failed checks are not counted.
+- **Monthly limit:** a demo user at its limit gets HTTP 429 "Monthly check limit reached" until the next
+  month. Customers (`overage: allow_and_record`) are counted past their allowance.
+- **Check changes:** a change to a record's check fields applies from the next request.
+- **Dashboard:** when demo users are on, the dashboard shows **Or try a demo user**. Choosing one and
+  selecting **Get demo API key** shows the key and connects with it.
+- **Local launcher:** `python start_dashboard.py` turns on demo users with a new secret on every start.

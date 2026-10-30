@@ -891,3 +891,21 @@ test("demo video loads with its full length and size", async ({ page }) => {
   expect(Math.round(meta.duration)).toBe(136);
   expect([meta.width, meta.height]).toEqual([1280, 720]);
 });
+test("choosing a demo user shows its API key and connects", async ({ page }) => {
+  await page.goto("/dashboard");
+  await expect(page.locator("#demo-users")).toBeVisible();
+  await expect(page.locator("#demo-user option")).toHaveCount(10);
+  await page.locator("#demo-user").selectOption("demo2");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
+  await expect(page.locator("#demo-key-value")).toHaveValue(/^gok_demo2_[A-Za-z0-9_-]{43}$/);
+  await expect(page.locator("#api-key")).toHaveValue("");
+  await expect(page.locator("#profile-status")).toContainText("pii, encoded_pii, secrets, text_security");
+  await page.locator("#run-input").click();
+  await expect(page.locator("#result-status")).toHaveText("Input checks passed");
+  await page.locator("#input-content").fill("Please email jane@example.com about my order.");
+  await page.locator("#run-input").click();
+  await expect(page.locator("#input-results")).toContainText("Potential email address");
+  await page.getByRole("button", { name: "Disconnect", exact: true }).click();
+  await expect(page.locator("#demo-key-value")).toHaveValue("");
+});

@@ -67,6 +67,8 @@ def open_when_ready(url):
 def serve(port, browser=True):
     key = secrets.token_urlsafe(32)
     # Deliberately choose the complete local profile, independent of old setup.
+    # Demo users demo1-demo10 are kept in memory for this run; their keys change on every start.
+    os.environ.update(GUARDOATH_TENANT_STORE='memory', GUARDOATH_DEMO_KEY_SECRET=secrets.token_urlsafe(32))
     os.environ.update(GUARDOATH_API_KEY=key, GUARDOATH_ENABLE_PII='1',
                       GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS='0', GUARDOATH_CONTENT_SAFETY_PROVIDER='none',
                       GUARDOATH_POLICY_FILE=str(ROOT / 'policies/playground.json'))
@@ -84,7 +86,7 @@ def serve(port, browser=True):
         except OSError:
             print(f'Cannot use port {port}. Close the other server or try --port {port + 1 if port < 65535 else 8000}.', file=sys.stderr)
             return 1
-        print(f'\nDashboard: {url}\nApplication API key: {key}\nPaste the key into the dashboard and click Connect.\nKeep this terminal open. Press Ctrl+C to stop.\n', flush=True)
+        print(f'\nDashboard: {url}\nApplication API key: {key}\nPaste the key into the dashboard and click Connect, or choose a demo user there.\nKeep this terminal open. Press Ctrl+C to stop.\n', flush=True)
         if browser:
             threading.Thread(target=open_when_ready, args=(url,), daemon=True).start()
         server = uvicorn.Server(uvicorn.Config(app, host='127.0.0.1', port=port, access_log=False))

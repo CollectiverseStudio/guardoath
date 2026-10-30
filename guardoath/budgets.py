@@ -56,6 +56,11 @@ class RequestBudgets:
         self._applications = {key: ApplicationUsage(float(limits.burst), now) for key in application_ids}
         self._checks = self._ingress = 0
 
+    def register(self, application_id):
+        """Start tracking an application authenticated by its tenant record."""
+        with self._lock:
+            self._applications.setdefault(application_id, ApplicationUsage(float(self.limits.burst), self._clock()))
+
     @contextmanager
     def ingress(self):
         with self._lock:
