@@ -1,6 +1,6 @@
 """Additional API contract regressions; no semantic domain capability claims."""
 import pytest
-from tests.test_catalog_partial_boundaries import check
+from test_catalog_partial_boundaries import check
 
 
 @pytest.mark.parametrize("stage", ["input", "output"])
