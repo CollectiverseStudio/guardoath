@@ -177,3 +177,10 @@ The baseline GitHub Actions **Tests #223** on commit `4817dcc2` completed **succ
 **Total: nine new test functions, 94 parametrized scenarios.** These are narrowly scoped JSON Schema and API-contract tests, **not** evidence that domain-specific detectors, semantic interpretation, real-world agent safety, or all 200 use cases are implemented. No use-case manifest status is changed solely because tests were added. The 21 drafted audit classifications in the v8 ZIP remain unmerged pending independent evidence review.
 
 **CI:** The new commits triggered fresh GitHub Actions runs. These tests are *committed*, not yet independently confirmed passing at the time of this documentation update. If CI fails, inspect the failing tests and fix the implementation/test fixture mismatch without weakening any existing regression or altering reserved files. Record the final CI run ID, matrix results and test counts before marking them verified.
+
+
+## 2026-10-30 — Legacy-name guard adversarial test coverage
+
+Added `tests/test_legacy_name_guard_regressions.py` with **five top-level pytest functions and eight parametrized executions**. Synthetic temporary Git repositories exercise tracked UTF-8 content across extensions (including text masquerading as `.pptx`), untracked-file exclusion, binary undecodable content, exact-path license exception, and multiple violation reporting. The target guard is `tests/test_no_legacy_project_names.py::test_tracked_text_files_contain_no_forbidden_legacy_names`.
+
+This adds test evidence for the Director's REQ-D3 without modifying the Director-owned site, API, engine, privacy or CI files. No existing tests or saved eval cases were removed, skipped or weakened. **Verification status:** new tests are committed; latest GitHub Actions on this commit must finish before calling them CI-green. The previously added 94 API scenarios were included in successful Tests #227. These guard tests do not add content validation checkers or change any UC status.
