@@ -1,0 +1,227 @@
+{
+  "format_version": "1",
+  "_comment": "Demo users demo1..demoN. Each is an ordinary tenant record created with these values. A check with a value runs with that action; a check without a value does not run. Settings for checks that are off are kept so the check can be turned on. Taken from policies/playground.json: conversation-v1, business-v1, completeness-v1, bias-matched-string-v1, evidence-v1, tool-calls-v1, ledger-v1, timestamps-v1, graph-v1, integrity-v1.",
+  "count": 10,
+  "monthly_allowance": 2000,
+  "defaults": {
+    "mode": "enforce",
+    "timeout_ms": 1000,
+    "failure_action": "block",
+    "check_pii": "block",
+    "check_encoded_pii": "block",
+    "check_secrets": "block",
+    "check_text_security": "block",
+    "detect_labeled_sensitive_data": true,
+    "detect_secret_assignments": true,
+    "inspect_encoded_secrets": true,
+    "confidential_terms": [
+      {
+        "rule_id": "internal_project",
+        "term": "PROJECT LANTERN"
+      },
+      {
+        "rule_id": "unreleased_plan",
+        "term": "unreleased pricing plan",
+        "stages": [
+          "output"
+        ]
+      }
+    ],
+    "input_schema": {
+      "type": "object",
+      "required": [
+        "start_date",
+        "end_date",
+        "purchase_amount",
+        "refund_amount"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "start_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "end_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "purchase_amount": {
+          "type": "number",
+          "minimum": 0
+        },
+        "refund_amount": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "output_schema": {
+      "type": "object",
+      "required": [
+        "start_date",
+        "end_date",
+        "purchase_amount",
+        "refund_amount"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "start_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "end_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "purchase_amount": {
+          "type": "number",
+          "minimum": 0
+        },
+        "refund_amount": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "comparisons": [
+      {
+        "rule_id": "date_order",
+        "left": "/start_date",
+        "right": "/end_date",
+        "operator": "lt",
+        "value_type": "date"
+      },
+      {
+        "rule_id": "refund_limit",
+        "left": "/refund_amount",
+        "right": "/purchase_amount",
+        "operator": "le",
+        "value_type": "number"
+      }
+    ],
+    "required_sections": [
+      {
+        "rule_id": "request_summary",
+        "label": "Summary",
+        "stages": [
+          "input"
+        ]
+      },
+      {
+        "rule_id": "response_summary",
+        "label": "Summary",
+        "stages": [
+          "output"
+        ]
+      },
+      {
+        "rule_id": "next_steps",
+        "label": "Next steps",
+        "min_characters": 5,
+        "stages": [
+          "output"
+        ]
+      }
+    ],
+    "matched_outcomes": {
+      "attributes": [
+        "group"
+      ],
+      "outcome_type": "string"
+    },
+    "evidence": {
+      "min_quote_characters": 20,
+      "sources": [
+        {
+          "source_id": "returns",
+          "text": "Unused items may be returned within 30 days. Keep the original receipt for a return."
+        },
+        {
+          "source_id": "shipping",
+          "text": "Standard delivery usually takes three to five business days. Delivery dates are estimates."
+        }
+      ]
+    },
+    "tool_calls": {
+      "tools": [
+        {
+          "name": "lookup_order",
+          "arguments_schema": {
+            "type": "object",
+            "properties": {
+              "order_id": {
+                "type": "string",
+                "pattern": "^ORD-[0-9]{4}$",
+                "minLength": 8,
+                "maxLength": 8
+              }
+            },
+            "required": [
+              "order_id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "request_refund",
+          "arguments_schema": {
+            "type": "object",
+            "$defs": {
+              "orderId": {
+                "type": "string",
+                "pattern": "^ORD-[0-9]{4}$",
+                "minLength": 8,
+                "maxLength": 8
+              }
+            },
+            "properties": {
+              "order_id": {
+                "$ref": "#/$defs/orderId"
+              },
+              "amount": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100,
+                "multipleOf": 1
+              },
+              "reason": {
+                "enum": [
+                  "damaged",
+                  "incorrect_item"
+                ]
+              },
+              "currency": {
+                "const": "USD"
+              }
+            },
+            "required": [
+              "order_id",
+              "amount",
+              "reason",
+              "currency"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ]
+    },
+    "ledger": {
+      "currency": "USD",
+      "decimal_places": 2,
+      "max_entries": 100
+    },
+    "timestamps": {
+      "allow_equal": false,
+      "max_samples": 200
+    },
+    "graph": {
+      "max_nodes": 100,
+      "max_edges": 500
+    },
+    "integrity": {
+      "sha256": "29b6c5956aa2ee231eb923e85b2ce8abc069c12e1a12c9bfb2efa4fd71a9b83a",
+      "encoding": "utf8",
+      "max_bytes": 16384
+    }
+  }
+}

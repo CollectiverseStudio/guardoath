@@ -24,7 +24,7 @@ pii = ["tldextract==5.4.0", "phonenumbers==9.0.42"]
 include = ["guardoath*"]
 
 [tool.setuptools.package-data]
-guardoath = ["static/*.html", "static/*.css", "static/*.js"]
+guardoath = ["static/*.html", "static/*.css", "static/*.js", "demo_tenant_defaults.json"]
 "guardoath.privacy_patterns" = ["LICENSE", "README.md"]
 
 [tool.pytest.ini_options]
