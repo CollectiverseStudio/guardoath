@@ -162,9 +162,23 @@
     {
       "id": "UC011",
       "title": "Hate speech",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Initial optional content_safety adapter supports provider hate signals on input/output. Offline contract tested, live classification uncalibrated."
+      "existing_coverage_note": "Initial optional content_safety adapter supports provider hate signals on input/output. Offline contract tested, live classification uncalibrated.",
+      "evidence": {
+        "modules": [
+          "guardoath/content_safety.py",
+          "guardoath/bedrock_guardrails.py"
+        ],
+        "tests": [
+          "tests/test_content_safety.py::test_provider_can_be_replaced_without_changing_api_or_policy",
+          "tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external",
+          "tests/test_bedrock_guardrails.py::test_category_contract",
+          "tests/test_bedrock_guardrails.py::test_missing_or_partial_coverage_is_not_a_pass"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Optional AWS Bedrock guardrail adapter recognizes provider hate-category assessments and maps to normalized findings for input/output. No local hate-speech classifier, dedicated saved eval case or independently calibrated live provider accuracy. Missing/disabled provider remains incomplete."
     },
     {
       "id": "UC012",
