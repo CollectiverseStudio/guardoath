@@ -468,9 +468,23 @@
     {
       "id": "UC028",
       "title": "Hashed log identities",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "JSON Schema can enforce a submitted field's shape; no hash provenance, safe-hashing or re-identification verification."
+      "existing_coverage_note": "JSON Schema can enforce a submitted field's shape; no hash provenance, safe-hashing or re-identification verification.",
+      "evidence": {
+        "modules": [
+          "guardoath/data_quality.py"
+        ],
+        "tests": [
+          "tests/test_data_quality.py::test_data_quality_api_expectations",
+          "tests/test_data_quality.py::test_digest_reference_is_private_and_not_caller_controlled"
+        ],
+        "eval_case_ids": [
+          "integrity:valid.exact-utf8.input",
+          "integrity:valid.exact-base64.input"
+        ]
+      },
+      "audit_note": "Trusted configured SHA-256 digest equality can verify exact submitted bytes under an integrity policy; this does not establish identity-safe hashing, salt/key management, source provenance, resistance to re-identification, or correct pseudonymization of log subjects."
     },
     {
       "id": "UC029",
