@@ -279,9 +279,22 @@
     {
       "id": "UC017",
       "title": "Cyberbullying",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Optional provider insults/hate signals; no tested covert sarcasm, student-intent or repeated-harassment model."
+      "existing_coverage_note": "Optional provider insults/hate signals; no tested covert sarcasm, student-intent or repeated-harassment model.",
+      "evidence": {
+        "modules": [
+          "guardoath/bedrock_guardrails.py",
+          "guardoath/content_safety.py"
+        ],
+        "tests": [
+          "tests/test_bedrock_guardrails.py::test_category_contract",
+          "tests/test_bedrock_guardrails.py::test_missing_or_partial_coverage_is_not_a_pass",
+          "tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Optional Bedrock content safety offers hate/insults category signals on input/output, but not contextual cyberbullying classification, repeated harassment across turns, student intent or sarcasm detection. No dedicated saved cyberbullying eval or calibrated live provider assessment."
     },
     {
       "id": "UC018",
