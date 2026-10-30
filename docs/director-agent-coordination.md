@@ -405,3 +405,7 @@ The latest baseline Tests #275 on the prior commit was successful; the newer tes
 ## 2026-10-30 — Atlas — UC033 update
 
 Rule #1 followed. Added 12 parametrized input/output JSON Schema regression cases for extracted receipt fields in `tests/test_catalog_receipt_contracts.py` (commit `7f27c597`). Updated the UC033 partial audit in `docs/use-case-manifest.json` (`8fe77273`) and the audit notes (`809dbe73`). These tests do not implement receipt OCR or document authenticity checks. The Director's reserved website, tenant, API, DynamoDB and CI files were not modified. CI verification is pending.
+
+## 2026-10-30 — Atlas — media ingress regression batch
+
+Rule #1 followed. Added 10 synthetic media-ingress regressions in `tests/test_catalog_media_ingress.py` (commit `2e341f5f`) to verify unsupported image, PDF, DICOM, audio/video and non-UTF-8 JSON request types are rejected. Audited UC031, UC032, UC034, UC035 and UC036 as `not_implemented` with exact test references (manifest `cdae3326`, audit notes `b618389a`). No vision/OCR feature is claimed. No Director-owned website, API, tenant, DynamoDB, CI or deployment file was modified. CI on these new commits remains pending. The prior Push on main #256 completed successfully; that is not a substitute for the current Tests workflow.
