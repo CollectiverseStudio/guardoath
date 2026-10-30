@@ -151,3 +151,16 @@ def test_every_check_and_profile_has_an_explanation_and_a_real_guide_link():
     anchors = {re.sub(r"[^\w\- ]", "", h.strip().lower()).replace(" ", "-") for h in re.findall(r"^#{1,6} (.*)$", guide, re.M)}
     for help in [*checks.values(), *profiles.values()]:
         assert help["what"] and help["why"] and help["anchor"] in anchors, help
+
+
+def test_proposed_answer_is_locked_until_the_input_test_passes():
+    page = TestClient(create_app(credentials={"test-key": "demo"})).get("/dashboard").text
+    box = page[page.index('<textarea id="output-content"'):]
+    box = box[:box.index("</textarea>")]
+    assert " readonly " in box and "the input test has not run" in box
+    assert 'id="batch-run"' in page
+    from pathlib import Path
+    script = (Path(__file__).resolve().parents[1] / "guardoath" / "static" / "dashboard.js").read_text(encoding="utf-8")
+    for text in ["the input test has not run", "the input test did not pass", "The input test passed", "Prepared example"]:
+        assert text in script, text
+    assert "function outputLocked() { return !preparedRun() && !canProceed(inputResult); }" in script

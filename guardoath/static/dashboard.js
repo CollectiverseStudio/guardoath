@@ -6,8 +6,23 @@ function buttons() {
   $("run").disabled = $("run-input").disabled = busy || !application?.policies.length;
   $("run-output").disabled = busy || !application || !canProceed(inputResult);
   for (const name of ["ledger","timestamps","graph","integrity"]) if (policy?.version === name+"-v1") $("profile-status").textContent += " Bounded local data-contract check only. No fraud detection, relationship authorization, source authenticity or content-safety assessment. Invalid or oversized data stays incomplete; data is never repaired or executed.";
+  updateOutputField();
   updateSampleButtons();
 }
+function updateOutputField() {
+  const outputText = {
+  notRun: "No proposed answer yet: the input test has not run. Run the input checks first. In your application, only a message that passes the input test is sent to your AI model, so there is no answer to check before then.",
+  failed: "No proposed answer: the input test did not pass, so in your application this message would not be sent to your AI model. Change the user message and run the input checks again.",
+  ready: "The input test passed. Paste your AI’s answer here or choose an output example.",
+  prepared: "Prepared example: choose or paste a proposed answer now. It is checked only if the input test passes. If it is empty, a sample safe reply is used."
+  };
+  const box = $("output-content"), locked = outputLocked();
+  if (locked && box.value) box.value = "";
+  box.readOnly = locked;
+  box.placeholder = preparedRun() ? outputText.prepared : !inputResult ? outputText.notRun : canProceed(inputResult) ? outputText.ready : outputText.failed;
+}
+function preparedRun() { return Boolean($("batch-run")?.open); }
+function outputLocked() { return !preparedRun() && !canProceed(inputResult); }
 function waiting(stage) { const box = $(stage + "-results"); box.replaceChildren();
   const title = document.createElement("h3"); title.textContent = stage === "input" ? "Input checks" : "Output checks";
   const note = document.createElement("p"); note.textContent = stage === "input" ? "Waiting for a check." : "Waiting for the input test or proposed answer check."; note.className = "muted"; box.append(title, note);
@@ -557,9 +572,10 @@ function updateSampleButtons() {
   for (const stage of ["input","output"]) for (const sample of samples) {
     const button = $(stage+"-"+sample.id+"-sample"); if (!button) continue;
     const available=sampleAvailable(sample,stage);
-    button.disabled = busy || !available;
+    const locked = stage === "output" && outputLocked();
+    button.disabled = busy || !available || locked;
     button.hidden = !available;
-    button.title = sample.profiles ? "Requires profile: " + sample.profiles.join(", ") + ". Changes only " + stage + " data." : "Changes only " + stage + " data.";
+    button.title = sample.profiles ? "Requires profile: " + sample.profiles.join(", ") + ". Changes only " + stage + " data." : "Changes only " + stage + " data." + (locked ? " Run the input checks first; output examples unlock when the input test passes." : "");
   }
 }
 for (const stage of ["input","output"]) {
@@ -568,7 +584,7 @@ for (const stage of ["input","output"]) {
     const button = document.createElement("button"); button.className = "chip"; button.id = stage+"-"+sample.id+"-sample";
     button.dataset.sample = sample.id; button.dataset.stage = stage; button.textContent = stage === "output" ? (sample.outputLabel || sample.label) : sample.label; button.disabled = true; button.hidden = true;
     button.addEventListener("click", () => {
-      if (busy || !sampleAvailable(sample,stage)) return;
+      if (busy || !sampleAvailable(sample,stage) || (stage === "output" && outputLocked())) return;
       const example = sample.content ? sample.content(stage) : {text:sample[stage]};
       reset(stage === "output");
       $(stage+"-format").value = example.format || "text";
@@ -655,5 +671,6 @@ async function execute(target) {
   finally { busy = false; buttons(); }
 }
 $("run").addEventListener("click", () => execute("both"));
+$("batch-run").addEventListener("toggle", buttons);
 $("run-input").addEventListener("click", () => execute("input"));
 $("run-output").addEventListener("click", () => execute("output"));

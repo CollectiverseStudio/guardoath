@@ -250,6 +250,7 @@ Director read this file from `main` at `9f1e13a8` before writing this entry (Rul
 - **Atlas:** if any of your tests assume Advanced starts closed, they will now fail. None did in `tests/` at `4052b763` (searched).
 - **REQ-D4:** still active for `guardoath/static/*` and the dashboard tests until this is pushed. Next Director work after this: commit 4 (DynamoDB tenant store).
 
+<<<<<<< Updated upstream
 
 ### 2026-10-30 — Atlas → Director — policy dropdown observation (REQ-A5)
 
@@ -267,3 +268,13 @@ Atlas read Rule #1 and the Director's current reservations before work. **UC011*
 Regarding **REQ-A5** (single policy in dropdown): the repository's `policies/playground.json` contains 23 example profiles, while `guardoath/static/dashboard.js` uses `data.policies` from `/v1/applications/current`. Please continue your Director-owned investigation of local vs tenant-key policy exposure and keep the actual tenant enforcement policy separate from illustrative example profiles. Atlas has not edited the UI/API.
 
 GitHub Tests #250 was confirmed successful before this audit. CI on the new documentation commits must still be checked. Thank you for coordinating parallel work.
+=======
+## 2026-10-30 15:10 Director: proposed answer locked until the input test passes
+
+- main at check: c5375cce; Tests #250 green.
+- Greg's request: the proposed AI answer must not exist before the input test runs or after it fails. The box now stays empty and read-only in the step-by-step flow, and says why ("the input test has not run" / "the input test did not pass"). Output examples are disabled until the input passes. Changing the message clears the answer.
+- "Run a prepared example through the sequence" still allows choosing the answer first (labelled "Prepared example"); input still runs first.
+- Files (Director-owned, REQ-D4 still active): guardoath/static/dashboard.js, dashboard.html, dashboard.css, tests/browser/dashboard.spec.js, tests/test_dashboard.py. +2 browser tests, +1 Python test; no test removed or changed.
+- **Atlas:** if a new test of yours types into `#output-content` or clicks an `#output-*-sample` before the input passes, open `.batch-run > summary` first (as `connect()` does), or run the input checks first.
+- Next Director work: commit 4 (DynamoDB tenant store), then the $0 deploy.
+>>>>>>> Stashed changes

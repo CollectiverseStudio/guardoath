@@ -966,3 +966,32 @@ test("the conversation box holds every step and Advanced starts open", async ({ 
   expect(widths.length).toBe(5);
   expect(new Set(widths).size).toBe(1);
 });
+test("the proposed answer stays empty and locked until the input test passes", async ({page}) => {
+  await page.goto("/dashboard");
+  await page.getByLabel("Application API key").fill("playwright-test-key");
+  await page.getByRole("button",{name:"Connect",exact:true}).click();
+  await expect(page.locator("#run-input")).toBeEnabled();
+  const answer = page.locator("#output-content");
+  await expect(answer).toHaveValue(""); await expect(answer).not.toBeEditable();
+  await expect(answer).toHaveAttribute("placeholder", /input test has not run/);
+  await expect(page.locator("#output-clean-sample")).toBeVisible(); await expect(page.locator("#output-clean-sample")).toBeDisabled();
+  await page.locator("#run-input").click();
+  await expect(page.locator("#run-output")).toBeEnabled();
+  await expect(answer).toBeEditable(); await expect(answer).toHaveAttribute("placeholder", /input test passed/);
+  await page.locator("#output-clean-sample").click(); await expect(answer).not.toHaveValue("");
+  await page.locator("#input-ssn-sample").click();
+  await expect(answer).toHaveValue(""); await expect(answer).not.toBeEditable();
+  await page.locator("#run-input").click();
+  await expect(page.locator("#input-gate")).toContainText("Input held");
+  await expect(answer).toHaveValue(""); await expect(answer).not.toBeEditable();
+  await expect(answer).toHaveAttribute("placeholder", /input test did not pass/);
+  await expect(page.locator("#output-clean-sample")).toBeDisabled(); await expect(page.locator("#run-output")).toBeDisabled();
+});
+test("prepared example mode lets the answer be chosen before the input test", async ({page}) => {
+  await connect(page);
+  const answer = page.locator("#output-content");
+  await expect(answer).toBeEditable(); await expect(answer).toHaveAttribute("placeholder", /Prepared example/);
+  await expect(page.locator("#output-clean-sample")).toBeEnabled();
+  await page.locator(".batch-run > summary").click();
+  await expect(answer).not.toBeEditable(); await expect(answer).toHaveAttribute("placeholder", /input test has not run/);
+});
