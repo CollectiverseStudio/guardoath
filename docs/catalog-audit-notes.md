@@ -38,3 +38,12 @@ All three retain canonical `review_required` and receive `audit_classification: 
 The manifest audit test now requires evidence for seven audited entries. No existing tests/evals or engine behavior were changed. The coverage reporter remains compatible with canonical statuses.
 
 CI currently has failures in files owned by commit B (privacy dependency isolation and dashboard) and cannot be claimed green; see prior notes. 
+
+## Batch 3 — non-privacy UC024, UC042, UC044, UC050
+
+- UC024 `review_required → partial`: `guardoath/secrets_check.py`; `test_supported_candidates`, `test_benign_and_incomplete_lookalikes`, `test_no_verification_or_network` in `tests/test_secrets_check.py`. Matching saved eval case ID: unknown. Pattern credentials do not imply all corporate secrets are detected.
+- UC042 `review_required → partial`: `guardoath/completeness.py`; `test_labeled_sections_pass`, `test_missing_short_or_ambiguous_sections_flag`, `test_labels_are_literal_not_semantic` in `tests/test_completeness.py`. Matching saved eval case ID: unknown. Literal labels do not certify legal adequacy.
+- UC044 retains `review_required`, `audit_classification=not_implemented`: `guardoath/tool_calls.py`; `tests/test_tool_calls.py::test_plain_code_is_not_treated_as_validated_action_safety` and `test_no_calls_is_not_an_execution_or_authorization_claim`; actions suite `valid.lookup.input`, `allowlist.unknown.input` show adjacent action validation, **not** code syntax verification.
+- UC050 `review_required → partial`: `guardoath/evidence.py`; `test_each_citation_relationship`, `test_valid_citation_does_not_establish_claim_entailment`, `test_no_network_or_reference_lookup` in `tests/test_evidence.py`; evidence suite `valid.repeated-marker.input`, `citation.missing-entry.input`, `source.unknown-marker.input`. No academic source authenticity check.
+
+The audit evidence test now covers eleven entries. Added test functions: 0; added saved eval cases: 0. No checker changes. New dedicated cases for partial coverage are still needed.
