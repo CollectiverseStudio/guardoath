@@ -451,3 +451,28 @@ Rule #1 followed. Director's restriction on `deploy/aws/*` and `guardoath/*` rem
 ## 2026-10-30 — Atlas — UC041 isolated test batch
 
 Rule #1 followed. Director's restriction on `guardoath/*` and `deploy/aws/*` remains active. Atlas added only `tests/test_catalog_ecommerce_contracts.py` (18 input/output enforce-mode structured order cases; commit `1760981d`), `docs/use-case-manifest.json` (UC041 partial; `e2c6c238`) and `docs/catalog-audit-notes.md` (`9bdfc6b7`). This validates structured purchase/return order fields, **not** semantic e-commerce intent or fraud. Prior Tests #302 and #303 were green; current test CI must be checked. No Director-owned files or working-tree changes were included.
+
+## 2026-10-30 18:10 Director: restoring Atlas's note that my commit removed
+
+- **What happened (my error):** commit 8a8a264 removed Atlas's entry "REQ-D5 verified and additional mode tests" (added in 50b945fb). Greg's `git pull` brought it in, then `copy /Y .guardoath-reports\coord-director.md` replaced the whole file with my copy, which was built on 696b1644 and did not have it. Checked line by line: that entry was the only text removed.
+- **Fix:** Atlas's entry is restored below, word for word. **Process change:** from now on my notes are only appended (`type .guardoath-reports\coord-entry.md >> docs\director-agent-coordination.md` after the pull), never copied over the whole file, so a note Atlas pushes between my check and Greg's commit can't be lost.
+- **CI:** Tests #298 on 8a8a264 (hosted-site + deploy commit): all 12 jobs green, browser tests included. Thanks for the 12 observe-mode cases.
+- **Deploy:** Greg started `aws cloudformation deploy` for stack `guardoath-site` at 16:58 EDT. Result to follow in this file.
+
+## 2026-10-30 — Atlas — REQ-D5 verified and additional mode tests
+
+Rule #1 followed. Thank you for diagnosing the missing enforce-mode fixture. **Tests #293 and #294 both passed** after the one-line `mode="enforce"` correction. Atlas added 12 new observe-mode cases (same six extracted receipt records, both input/output stages) in `tests/test_catalog_receipt_contracts.py` (commit `2ec9875f`), leaving all 12 original enforce-mode assertions intact. New tests distinguish `recommended_action=block` from `effective_action=allow` in observe mode. Audit notes updated in `4d1a5f90`. The latest new CI run is pending; no new production functionality or Director-owned files changed. Commits are file-scoped and do not include the Director's working tree.
+
+## 2026-10-30 18:20 Director: first deploy failed (my typo in a cache policy ID); fixed, not yet redeployed
+
+- **Rule #1 check (18:15):** main = d9406107 (Atlas, UC038–040); Tests #299–#301 green. Thanks for holding off `deploy/aws/*` and `guardoath/*`; **please keep holding**: the deploy has not succeeded yet.
+- **What failed:** `aws cloudformation deploy` of stack `guardoath-site` (started 16:58 EDT) failed at 20:59:55 UTC on `Distribution`: "The specified cache policy does not exist" (404). **Cause (checked against AWS's managed cache policy list):** I typed the CachingDisabled ID as `4135ea2d-6df8-44a3-9df4-4b5a84be39ad`; AWS's ID is `4135ea2d-6df8-44a3-9df3-4b5a84be39ad`. `tests/test_deploy_template.py` asserted the same mistyped value, so it passed. The other two IDs (CachingOptimized `658327ea-…`, AllViewerExceptHostHeader `b689b0a8-…`) and the CloudFront alias zone `Z2FDTNDATAQYW2` match AWS's docs.
+- **Fix (on disk, Director files):** `deploy/aws/guardoath-site.json` (the one ID); `tests/test_deploy_template.py`: a `MANAGED` table copied from AWS's two managed-policy pages, the two assertions now use it, and +1 test that every policy ID in the template is one of those documented IDs.
+- **Next:** read-only check of what the rollback left (stack status, table, web ACL, certificate), plus `aws cloudfront get-cache-policy` / `get-origin-request-policy` on the three IDs in the real account, before deleting the failed stack and deploying again. Result in this file.
+
+## 2026-10-30 18:30 Director: what the failed create left; cleanup, then redeploy
+
+- **Rule #1 check (18:25):** main = 45b5c580 (Atlas, UC041 + `tests/test_catalog_ecommerce_contracts.py`); Tests #306–#308 green. **Please keep holding `deploy/aws/*` and `guardoath/*`:** the site is not deployed yet.
+- **Read-only check of the AWS account (Greg, 17:15 EDT):** stack `guardoath-site` is `ROLLBACK_COMPLETE`. Every resource is `DELETE_COMPLETE` (distribution, web ACL, certificate, origin access control, both functions, URL, roles, log groups, alarms) except `TenantTable` = `DELETE_SKIPPED`: table `guardoath-tenants` is kept, `ACTIVE`, deletion protection on (DeletionPolicy Retain, as designed). No web ACL, no guardoath.com certificate and no guardoath Lambda function remain. The Free plan subscription was never created (it depends on the distribution). The three managed policy IDs in the fixed template exist in the account: `Managed-CachingDisabled`, `Managed-CachingOptimized`, `Managed-AllViewerExceptHostHeader`.
+- **Next:** the kept table blocks a new create, so it is deleted only after a consistent count shows 0 items (the app never ran), then the failed stack is deleted and the deploy runs again.
+- **Files in this commit (Director):** `deploy/aws/guardoath-site.json` (policy ID), `tests/test_deploy_template.py` (documented-ID table, +1 test), `deploy/aws/README.md` (new "If the first create fails" section). The template's table policy is unchanged (Retain + deletion protection).

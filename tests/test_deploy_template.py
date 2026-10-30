@@ -16,6 +16,13 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_FILE = ROOT / "deploy" / "aws" / "guardoath-site.json"
 FREE_REQUESTS, FREE_GB_SECONDS, HOURS, DAYS = 1_000_000, 400_000, 24 * 31, 31
+# CloudFront managed policy IDs, copied from AWS's lists (checked 2026-10-30):
+# docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-cache-policies.html
+# docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-origin-request-policies.html
+# The first deploy failed because CachingDisabled was mistyped (9df4 for 9df3) in both the template and here.
+MANAGED = {"CachingDisabled": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+           "CachingOptimized": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+           "AllViewerExceptHostHeader": "b689b0a8-53d0-40ab-baf2-68738e2966ac"}
 
 
 @pytest.fixture(scope="module")
@@ -80,11 +87,11 @@ def test_cloudfront_reaches_lambda_only_through_origin_access_control(template):
 def test_api_requests_are_not_cached_and_reach_the_app_with_their_headers(template):
     config = resources(template, "AWS::CloudFront::Distribution")["Distribution"]["DistributionConfig"]
     behavior = config["DefaultCacheBehavior"]
-    assert behavior["CachePolicyId"] == "4135ea2d-6df8-44a3-9df4-4b5a84be39ad"  # CachingDisabled
-    assert behavior["OriginRequestPolicyId"] == "b689b0a8-53d0-40ab-baf2-68738e2966ac"  # AllViewerExceptHostHeader
+    assert behavior["CachePolicyId"] == MANAGED["CachingDisabled"]
+    assert behavior["OriginRequestPolicyId"] == MANAGED["AllViewerExceptHostHeader"]
     assert "POST" in behavior["AllowedMethods"] and behavior["ViewerProtocolPolicy"] == "redirect-to-https"
     (assets,) = config["CacheBehaviors"]
-    assert assets["PathPattern"] == "/assets/*" and assets["CachePolicyId"] == "658327ea-f89d-4fab-a63d-7e88639e58f6"
+    assert assets["PathPattern"] == "/assets/*" and assets["CachePolicyId"] == MANAGED["CachingOptimized"]
     assert assets["AllowedMethods"] == ["GET", "HEAD"]
 
 
@@ -196,3 +203,9 @@ def test_the_build_bundles_the_dependencies_the_hosted_site_needs():
     assert all("==" in r for r in build.requirements())
     assert build.INDEX.startswith("from guardoath.lambda_handler import handler")
     assert build.DIRECT_UPLOAD_LIMIT == 50 * 1024 * 1024 and build.UNZIPPED_LIMIT == 250 * 1024 * 1024
+
+
+def test_every_policy_id_in_the_template_is_a_documented_managed_policy():
+    import re
+    ids = set(re.findall(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", TEMPLATE_FILE.read_text(encoding="utf-8")))
+    assert ids == set(MANAGED.values())

@@ -94,6 +94,30 @@ Expect `"ConcurrentExecutions": 1000` and `"UnreservedConcurrentExecutions"` of 
    curl -s https://guardoath.com/healthz
    ```
 
+## If the first create fails
+
+CloudFormation rolls the new stack back to `ROLLBACK_COMPLETE` and deletes what it created, except the
+table `guardoath-tenants` (DeletionPolicy Retain and deletion protection, so tenant data is never lost
+by a stack operation). The kept table makes the next create fail ("already exists"), and a stack in
+`ROLLBACK_COMPLETE` must be deleted before it can be created again. After a failed **first** create the
+table is empty (the app never ran), so:
+
+1. Check that the table has no items (expect `0`):
+   ```cmd
+   aws dynamodb scan --region us-east-1 --profile collectiverse-prod --table-name guardoath-tenants --select COUNT --consistent-read --query Count --output text
+   ```
+2. Only if it is `0`: turn off deletion protection, delete the table, delete the failed stack, then deploy again:
+   ```cmd
+   aws dynamodb update-table --region us-east-1 --profile collectiverse-prod --table-name guardoath-tenants --no-deletion-protection-enabled
+   aws dynamodb delete-table --region us-east-1 --profile collectiverse-prod --table-name guardoath-tenants
+   aws dynamodb wait table-not-exists --region us-east-1 --profile collectiverse-prod --table-name guardoath-tenants
+   aws cloudformation delete-stack --region us-east-1 --profile collectiverse-prod --stack-name guardoath-site
+   aws cloudformation wait stack-delete-complete --region us-east-1 --profile collectiverse-prod --stack-name guardoath-site
+   ```
+
+While it exists the kept table costs $0 (10/10 provisioned units, inside the 25/25 always-free units).
+If the table has items, do not delete it: the stack was live before, and the data must be kept.
+
 ## After a code change
 
 Run steps 1 and 4, then clear the cached assets (one invalidation path):
