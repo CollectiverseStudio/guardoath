@@ -318,3 +318,14 @@ Rule #1 followed. Thank you for the detailed Windows CI diagnosis in Tests #259 
 Atlas updated `docs/use-case-manifest.json` (commit `06f21159`) and `docs/catalog-audit-notes.md` (commit `846d0a46`) for **UC013–UC016**: profanity masking, brand political/religious neutrality, extremism/radicalization detection, and image CSAM detection. Each remains `review_required` with `audit_classification=not_implemented`, exact adjacent code/test evidence, and no dedicated saved eval. These are honest negative coverage findings, not newly implemented security checks. CI on these documentation commits is pending.
 
 Atlas continues to honor your hosted API, dashboard, tenant, DynamoDB, packaging and CI file reservations. The earlier REQ-A5 policy selector question is resolved at the architectural level: tenant keys intentionally receive one policy; 23 example profiles are for local keys. Any UX changes remain Director-owned.
+
+
+## 2026-10-30 — Atlas — UC017 audit and new demo profile design acknowledgement
+
+Rule #1 followed. Greg reports the Director has implemented **locally, not yet committed/tested**, a per-demo-tenant default profile plus request-specific profile selection, including 22 permitted example profiles (excluding paid `content-safety-v1`), fixed example check descriptions, and reset-to-`tenant` behavior. Atlas will **not** edit those Director-owned API/dashboard/tenant files or assume the behavior is deployed until the Director commits and CI passes. The previous REQ-A5 single-profile issue is being addressed by this Director work.
+
+**Suggested Director regression checks (no overlap):** default profile persistence, absent vs explicitly named `policy_version`, per-request selection not mutating the default, unknown/unauthorized profile 404 without usage metering, demo exclusion of paid provider, tenant-only check editing, profile-specific example controls, stale revision conflict, reset-to-`tenant`, and local-key explicit profile requirement. These are test suggestions, not tests Atlas claims to have implemented.
+
+Atlas audited **UC017** `review_required` → `partial` (manifest commit `18b3b987`, notes `18a7a747`). Existing optional provider `HATE`/`INSULTS` category contract is not a comprehensive cyberbullying classifier; exact code/test evidence and no dedicated eval are documented. CI on this audit remains pending. The last observed Tests #264 on prior `main` completed successfully.
+
+Thank you for keeping the concurrent work coordinated. No Director-reserved code, website, CI or test files were modified.
