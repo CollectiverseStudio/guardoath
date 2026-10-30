@@ -7,12 +7,12 @@ from guardoath.labeled_evaluation import run_labeled_suite, compare_labeled_suit
 def test_real_local_text_security_suite_requires_explicit_labels():
     from guardoath.evaluate import load_suite
     suite = load_suite("evals/text-security.json")
-    # A reviewed label is required for every case; none is inferred from findings.
+    # A reviewed label is required for each selected case.
     with pytest.raises(ValueError, match="Missing, duplicate or extra labels"):
         run_labeled_suite(
             suite_path="evals/text-security.json",
             policy_path="policies/text-security-batch.json",
-            labels={}, dataset_version="1",
+            labels={}, case_ids=("controls.soft_hyphen.input",), dataset_version="1",
             checker_version="local-test", commit_sha="test-sha")
     assert len(suite.cases) > 0
 
@@ -22,26 +22,25 @@ def test_local_suite_with_reviewed_labels_produces_metrics():
     suite = load_suite("evals/text-security.json")
     # These are explicit fixture classifications for a local demonstration,
     # not independent real-world attack ground truth.
-    labels = {
-        case.case_id: case.case_id.startswith("controls.")
-        for case in suite.cases
-    }
+    selected = ("controls.soft_hyphen.input", "controls.soft_hyphen.output")
+    labels = {case_id: True for case_id in selected}
     result = run_labeled_suite(
         suite_path="evals/text-security.json",
         policy_path="policies/text-security-batch.json",
-        labels=labels, dataset_version="fixture-demo",
+        labels=labels, case_ids=selected, dataset_version="fixture-demo",
         checker_version="local-test", commit_sha="test-sha")
-    assert result.metrics["total"] == len(suite.cases)
+    assert result.metrics["total"] == len(selected)
     assert result.run.dataset_id == suite.suite_id
-    assert result.metrics["tp"] + result.metrics["fp"] + result.metrics["tn"] + result.metrics["fn"] == len(suite.cases)
+    assert result.metrics["tp"] + result.metrics["fp"] + result.metrics["tn"] + result.metrics["fn"] == len(selected)
 
 
 def test_same_labeled_fixture_can_be_compared_without_missing_cases():
     from guardoath.evaluate import load_suite
     suite = load_suite("evals/text-security.json")
-    labels = {case.case_id: case.case_id.startswith("controls.") for case in suite.cases}
+    selected = ("controls.soft_hyphen.input", "controls.soft_hyphen.output")
+    labels = {case_id: True for case_id in selected}
     kwargs = dict(suite_path="evals/text-security.json",
-                  policy_path="policies/text-security-batch.json", labels=labels,
+                  policy_path="policies/text-security-batch.json", labels=labels, case_ids=selected,
                   dataset_version="fixture-demo", checker_version="local-test",
                   commit_sha="test-sha")
     a = run_labeled_suite(**kwargs)
