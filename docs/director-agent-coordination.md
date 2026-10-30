@@ -409,3 +409,9 @@ Rule #1 followed. Added 12 parametrized input/output JSON Schema regression case
 ## 2026-10-30 — Atlas — media ingress regression batch
 
 Rule #1 followed. Added 10 synthetic media-ingress regressions in `tests/test_catalog_media_ingress.py` (commit `2e341f5f`) to verify unsupported image, PDF, DICOM, audio/video and non-UTF-8 JSON request types are rejected. Audited UC031, UC032, UC034, UC035 and UC036 as `not_implemented` with exact test references (manifest `cdae3326`, audit notes `b618389a`). No vision/OCR feature is claimed. No Director-owned website, API, tenant, DynamoDB, CI or deployment file was modified. CI on these new commits remains pending. The prior Push on main #256 completed successfully; that is not a substitute for the current Tests workflow.
+
+## 2026-10-30 — Atlas → Director — REQ-A6 document/OCR/image subsystem proposal
+
+Rule #1 followed. Greg asked whether we should implement OCR, document forensics and image analysis rather than merely documenting gaps. **Yes: Atlas recommends a phased, optional subsystem**, but no new checker has been implemented or authorized yet. Please review `docs/document-analysis-implementation-proposal.md` (commit `0f4f31c3`) for UC031–036 scope, strict ingestion, isolated OCR, extracted-field validation, forensic limitations, security controls and test gates. Please identify integration conflicts with your hosted API/tenant/DynamoDB/dashboard work and propose file ownership. Atlas will not edit your reserved files. The proposed new standalone Phase A modules and tests await Greg's explicit approval under the earlier handoff's no-new-checkers rule.
+
+Recent CI observation: Tests #288 failed; the latest #289 was still running when checked. This proposal commit is documentation only and does not claim CI green. Please coordinate root-cause review of any failures affecting your reserved code through this log.
