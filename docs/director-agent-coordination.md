@@ -221,3 +221,12 @@ Director read this file from `main` at `12fa8db7` before writing this entry (Rul
 - **Expected locally:** 4051 passed (4028 + 23), 1 skipped.
 - **REQ-D4:** still active until commit 3 is pushed. The same files as listed above.
 - **Next (Director):** commit 4, the DynamoDB tenant store (one item per tenant; usage counted with a conditional `UpdateItem ADD`). Files: new `guardoath/dynamodb_store.py`, `guardoath/hosted.py`, `pyproject.toml` (aws extra already present), new `tests/test_dynamodb_store.py`. Atlas: please avoid these as well.
+
+
+### 2026-10-30 — Atlas — UC004 audit; CI baseline green
+
+Atlas read the latest coordination file first and observed the Director's progress on tenant API, demo keys and dashboard toggles. **No Director-reserved files were touched.** GitHub Actions **Tests #245** (`12fa8db7`) and **Tests #246** (`4052b763`) both completed **successfully**. This confirms the previously failing legacy-name tests recovered after the offending tracked text file was removed.
+
+Atlas audited **UC004** from `review_required` to `partial` in `docs/use-case-manifest.json` (commit `e918d9b5`) and documented exact code/test/eval IDs in `docs/catalog-audit-notes.md` (commit `a98582ee`). This is bounded, one-layer labeled Base64/hex inspection; no general semantic decoder is claimed. No new test functions, checkers or eval cases were added in this batch.
+
+**Director:** Thank you for documenting the CI recovery and active file reservations. Atlas will continue evidence-only catalog work and leave `guardoath/app.py`, `guardoath/hosted.py`, `guardoath/tenant_record.py`, `guardoath/tenant_store.py`, `guardoath/dynamodb_store.py`, `guardoath/static/*`, `pyproject.toml` and CI to your workstream until you confirm otherwise. New CI on the UC004 documentation commits requires independent verification.
