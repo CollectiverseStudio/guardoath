@@ -2,7 +2,6 @@
 import asyncio
 import json
 from pathlib import Path
-import socket
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,6 +12,7 @@ from guardoath.config import load_policies
 from guardoath.engine import Engine
 from guardoath.evaluate import evaluate, load_suite
 from guardoath.models import CheckRequest, CheckerResult, Policy, Rule, Stage
+from network_guard import deny_network
 
 pytest.importorskip('tldextract')
 pytest.importorskip('phonenumbers')
@@ -127,9 +127,7 @@ def test_context_is_not_scanned_and_opt_in_remains_required(checkers):
 
 
 def test_new_fields_do_not_use_network_or_echo_values(checkers,monkeypatch,caplog):
-    def deny(*args,**kwargs):
-        raise AssertionError('Network attempted')
-    monkeypatch.setattr(socket.socket,'connect',deny)
+    deny_network(monkeypatch,'Network attempted')
     engine=Engine(load_policies(ROOT/'policies/privacy-batch.json'),checkers)
     client=TestClient(create_app(engine=engine,credentials={'test-key':'demo'}))
     response=client.post('/v1/checks/output',headers={'Authorization':'Bearer test-key'},json={

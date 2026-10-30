@@ -1,7 +1,6 @@
 import asyncio
 import base64
 import json
-import socket
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,6 +10,7 @@ from guardoath.checkers import default_checkers
 from guardoath.config import load_policies
 from guardoath.engine import Engine
 from guardoath.models import CheckRequest, Stage
+from network_guard import deny_network
 
 
 def github_sample():
@@ -87,7 +87,7 @@ def test_no_verification_or_network(monkeypatch):
     from detect_secrets.plugins.aws import AWSKeyDetector
     from detect_secrets.plugins.stripe import StripeDetector
     def deny(*args, **kwargs): raise AssertionError("Verification or network attempted")
-    monkeypatch.setattr(socket.socket, "connect", deny)
+    deny_network(monkeypatch, "Verification or network attempted")
     monkeypatch.setattr(requests.Session, "request", deny)
     monkeypatch.setattr(AWSKeyDetector, "verify", deny)
     monkeypatch.setattr(StripeDetector, "verify", deny)

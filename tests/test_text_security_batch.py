@@ -3,7 +3,6 @@ import asyncio
 import base64
 import json
 from pathlib import Path
-import socket
 
 import pytest
 from fastapi.testclient import TestClient
@@ -14,6 +13,7 @@ from guardoath.config import load_policies
 from guardoath.engine import Engine
 from guardoath.evaluate import evaluate,load_suite
 from guardoath.models import CheckRequest,CheckerResult,Policy,Rule,Stage
+from network_guard import deny_network
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -138,7 +138,6 @@ def test_real_local_signals_gate_registered_external_adapters(content,should_cal
 
 
 def test_no_network_or_model_download_is_used(monkeypatch):
-    def deny(*args,**kwargs):raise AssertionError('Network attempted')
-    monkeypatch.setattr(socket.socket,'connect',deny)
+    deny_network(monkeypatch,'Network attempted')
     engine=Engine(load_policies(ROOT/'policies/text-security-batch.json'),default_checkers())
     assert asyncio.run(evaluate(load_suite(ROOT/'evals/text-security.json'),engine))['summary']['matched']==100

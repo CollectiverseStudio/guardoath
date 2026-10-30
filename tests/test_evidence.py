@@ -2,7 +2,6 @@
 import asyncio
 import json
 from pathlib import Path
-import socket
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,6 +12,7 @@ from guardoath.config import load_policies
 from guardoath.engine import Engine
 from guardoath.evaluate import evaluate, load_suite
 from guardoath.models import CheckRequest, EvidencePolicy, EvidenceSource, Policy, Rule, Stage
+from network_guard import deny_network
 
 ROOT=Path(__file__).resolve().parents[1]
 QUOTE='Unused items may be returned within 30 days.'
@@ -142,7 +142,6 @@ def test_catalog_is_a_snapshot_and_is_not_disclosed_in_metadata_or_findings(capl
 
 
 def test_no_network_or_reference_lookup(monkeypatch):
-    def deny(*args,**kwargs):raise AssertionError('Network attempted')
-    monkeypatch.setattr(socket.socket,'connect',deny)
+    deny_network(monkeypatch,'Network attempted')
     result=check(document(source='unknown',answer='An unknown source [[unknown]].'))
     assert {f.rule_id for f in result.findings}=={'evidence.unknown_source'}

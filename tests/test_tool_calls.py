@@ -3,7 +3,6 @@ import asyncio
 from copy import deepcopy
 import json
 from pathlib import Path
-import socket
 import subprocess
 
 import pytest
@@ -15,6 +14,7 @@ from guardoath.config import load_policies
 from guardoath.engine import Engine
 from guardoath.evaluate import evaluate, load_suite
 from guardoath.models import CheckRequest, Policy, Rule, Stage, ToolDefinition, ToolPolicy
+from network_guard import deny_network
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -148,6 +148,6 @@ def test_api_and_metadata_do_not_echo_tool_names_values_or_schema_errors(caplog)
 
 def test_the_entire_batch_cannot_invoke_tools_or_use_network(monkeypatch):
     def deny(*args,**kwargs):raise AssertionError('Execution/network attempted')
-    monkeypatch.setattr(socket.socket,'connect',deny);monkeypatch.setattr(subprocess,'Popen',deny)
+    deny_network(monkeypatch,'Execution/network attempted');monkeypatch.setattr(subprocess,'Popen',deny)
     report=asyncio.run(evaluate(load_suite(ROOT/'evals/actions.json'),Engine(load_policies(ROOT/'policies/actions-batch.json'),default_checkers())))
     assert report['summary']['matched']==100

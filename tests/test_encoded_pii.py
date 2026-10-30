@@ -3,7 +3,6 @@ import asyncio
 import base64
 import json
 from pathlib import Path
-import socket
 
 import pytest
 pytest.importorskip('tldextract')
@@ -15,6 +14,7 @@ from guardoath.config import load_policies
 from guardoath.engine import Engine
 from guardoath.evaluate import evaluate,load_suite
 from guardoath.models import CheckRequest,CheckerResult,Rule,Stage
+from network_guard import deny_network
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -133,8 +133,7 @@ def test_local_findings_stop_external_calls_even_with_allow_action(adapters):
 
 
 def test_no_network(adapters,monkeypatch):
-    def deny(*args,**kwargs):raise AssertionError('Network attempted')
-    monkeypatch.setattr(socket.socket,'connect',deny)
+    deny_network(monkeypatch,'Network attempted')
     assert encoded(check(adapters,encode('jane@example.com'))).status=='flagged'
 
 

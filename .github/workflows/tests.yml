@@ -84,7 +84,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install -e ".[test,pii]"
-      - run: python -m pytest tests/test_launcher.py -q
+      - name: Full test suite on Windows (includes the launcher tests)
+        run: python -m pytest -q
 
   optional-aws-adapter:
     runs-on: ubuntu-latest

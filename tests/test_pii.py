@@ -1,5 +1,4 @@
 import asyncio
-import socket
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,6 +8,7 @@ from guardoath.checkers import default_checkers
 from guardoath.config import load_policies
 from guardoath.engine import Engine
 from guardoath.models import CheckRequest, Stage
+from network_guard import deny_network
 
 pytest.importorskip("tldextract")
 pytest.importorskip("phonenumbers")
@@ -74,9 +74,7 @@ def test_invalid_json_does_not_pass_pii(engine, content):
 
 
 def test_no_network_is_used(monkeypatch):
-    def deny(*args, **kwargs):
-        raise AssertionError("Network access attempted")
-    monkeypatch.setattr(socket.socket, "connect", deny)
+    deny_network(monkeypatch, "Network access attempted")
     engine = Engine(load_policies("policies/pii-only.json"), default_checkers(enable_pii=True))
     assert scan(engine, "jane@example.com").findings
 

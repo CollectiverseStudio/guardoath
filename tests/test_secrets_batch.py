@@ -1,7 +1,6 @@
 import asyncio
 import base64
 import json
-import socket
 
 from fastapi.testclient import TestClient
 import pytest
@@ -12,6 +11,7 @@ from guardoath.checkers import default_checkers
 from guardoath.config import load_policies
 from guardoath.engine import Engine
 from guardoath.models import CheckRequest, ConfidentialTerm, Rule, Stage
+from network_guard import deny_network
 
 
 @pytest.fixture(scope='module')
@@ -148,7 +148,7 @@ def test_api_metadata_findings_and_logs_never_expose_terms_or_candidates(profile
 def test_no_network_or_verification_for_extended_group(profiles,monkeypatch):
     import requests
     def deny(*args,**kwargs): raise AssertionError('Network or credential verification attempted')
-    monkeypatch.setattr(socket.socket,'connect',deny)
+    deny_network(monkeypatch,'Network or credential verification attempted')
     monkeypatch.setattr(requests.Session,'request',deny)
     for name,candidate in EXAMPLES.items():
         assert 'secrets.'+name in {f.rule_id for f in assess(profiles[1],candidate).findings}

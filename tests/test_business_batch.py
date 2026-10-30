@@ -3,7 +3,6 @@ import asyncio
 from decimal import localcontext
 import json
 from pathlib import Path
-import socket
 
 import pytest
 from fastapi.testclient import TestClient
@@ -14,6 +13,7 @@ from guardoath.config import load_policies
 from guardoath.engine import Engine
 from guardoath.evaluate import evaluate,load_suite
 from guardoath.models import CheckRequest,Stage
+from network_guard import deny_network
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -99,8 +99,7 @@ def test_section_failure_reasons_are_specific_without_copying_bodies(engine,text
 
 
 def test_full_batch_uses_no_network(monkeypatch):
-    def deny(*args,**kwargs):raise AssertionError('Network attempted')
-    monkeypatch.setattr(socket.socket,'connect',deny)
+    deny_network(monkeypatch,'Network attempted')
     engine=Engine(load_policies(ROOT/'policies/business-batch.json'),default_checkers())
     assert asyncio.run(evaluate(load_suite(ROOT/'evals/business.json'),engine))['summary']['matched']==100
 

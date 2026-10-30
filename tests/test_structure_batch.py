@@ -2,7 +2,6 @@
 import asyncio
 import json
 from pathlib import Path
-import socket
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,6 +12,7 @@ from guardoath.config import load_policies
 from guardoath.engine import Engine
 from guardoath.evaluate import evaluate,load_suite
 from guardoath.models import CheckRequest,Policy,Rule,Stage
+from network_guard import deny_network
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -72,8 +72,7 @@ def test_safe_failure_reasons_never_expose_values_or_schema_names(schema,payload
 
 
 def test_schema_batch_and_local_references_use_no_network(monkeypatch):
-    def deny(*args,**kwargs):raise AssertionError('Network attempted')
-    monkeypatch.setattr(socket.socket,'connect',deny)
+    deny_network(monkeypatch,'Network attempted')
     engine=Engine(load_policies(ROOT/'policies/structure-batch.json'),default_checkers())
     suite=load_suite(ROOT/'evals/structure.json')
     assert asyncio.run(evaluate(suite,engine))['summary']['matched']==100

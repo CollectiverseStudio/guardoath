@@ -4,7 +4,6 @@ from copy import deepcopy
 from decimal import localcontext
 import json
 from pathlib import Path
-import socket
 
 import pytest
 from fastapi.testclient import TestClient
@@ -16,6 +15,7 @@ from guardoath.config import load_policies
 from guardoath.engine import Engine
 from guardoath.evaluate import evaluate, load_suite
 from guardoath.models import CheckRequest, CheckerResult, MatchedOutcomes, Policy, Rule, Stage
+from network_guard import deny_network
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -174,8 +174,7 @@ def test_context_and_private_attributes_are_not_returned_or_logged(caplog):
 
 
 def test_local_bias_batch_never_uses_network(monkeypatch):
-    def deny(*args,**kwargs):raise AssertionError('Network attempted')
-    monkeypatch.setattr(socket.socket,'connect',deny)
+    deny_network(monkeypatch,'Network attempted')
     engine=Engine(load_policies(ROOT/'policies/bias-batch.json'),default_checkers())
     assert asyncio.run(evaluate(load_suite(ROOT/'evals/bias.json'),engine))['summary']['matched']==100
 
