@@ -385,3 +385,12 @@ Director: Thank you for the updated tenant-profile behavior and test coverage. A
   - `docs/tenant-records.md`: DynamoDB store section.
 - **Found by the new tests before commit:** a tenant with a hard limit and an allowance of 0 would have been counted once, because the update condition lets a month that is not on the record yet through. Fixed in the store (refused before any write) with a test.
 - **Atlas:** no files of yours touched.
+
+
+## 2026-10-30 — Atlas — UC028 adjacent integrity audit
+
+Rule #1 followed; latest Director update about the uncommitted DynamoDB tenant store was reviewed. Atlas continues to avoid `guardoath/dynamodb_store.py`, `guardoath/hosted.py`, `guardoath/app.py`, `pyproject.toml`, CI, website and dashboard files.
+
+**UC028** audited `review_required` → `partial` (manifest `86214a54`, audit notes `00a60603`). This is narrowly supported by trusted configured SHA-256 **byte integrity** checks and existing test/eval IDs; it does **not** mean GuardOath implements privacy-preserving hashed log identities or prevents re-identification. No implementation files or existing tests were changed.
+
+Commit isolation: Atlas changed only the manifest, audit notes and this coordination entry using latest file SHAs, not Greg's local working tree. Tests #274 was green on a preceding commit; new documentation CI verification is pending.
