@@ -116,3 +116,38 @@ def test_dashboard_shows_the_logo_motto_and_product_message():
     assert logo.content.startswith(b"\x89PNG\r\n\x1a\n")
     # The video sits right after the hero, ahead of the playground.
     assert page.index('id="hero-title"') < page.index('id="demo-video"') < page.index('id="connect-title"')
+
+
+def test_conversation_box_holds_every_step_and_advanced_is_open():
+    page = TestClient(create_app(credentials={"test-key": "demo"})).get("/dashboard").text
+    start = page.index('<section class="workspace panel" aria-labelledby="conversation-title">')
+    end = page.index("</section><footer>")
+    box = page[start:end]
+    for marker in ['id="advanced" open', 'id="input-title"', 'id="input-check-title"', 'id="output-title"',
+                   'id="output-check-title"', 'id="answer-title"', 'id="policy-help"']:
+        assert marker in box, marker
+    assert box.count('class="panel flow-step"') == 4
+
+
+def test_tenant_panel_explains_every_action():
+    page = TestClient(create_app(credentials={"test-key": "demo"})).get("/dashboard").text
+    for term in ["<dt>Off</dt>", "<dt>Block</dt>", "<dt>Flag</dt>", "<dt>Allow</dt>", "<dt>Redact</dt>"]:
+        assert term in page
+
+
+def test_every_check_and_profile_has_an_explanation_and_a_real_guide_link():
+    import json
+    import re
+    from pathlib import Path
+    from guardoath.tenant_record import CHECK_IDS
+    root = Path(__file__).resolve().parents[1]
+    script = (root / "guardoath" / "static" / "dashboard.js").read_text(encoding="utf-8")
+    checks = json.loads(re.search(r"^const checkHelp = (.*);$", script, re.M).group(1))
+    profiles = json.loads(re.search(r"^const profileHelp = (.*);$", script, re.M).group(1))
+    assert set(checks) == set(CHECK_IDS)
+    versions = {p["version"] for p in json.loads((root / "policies" / "playground.json").read_text(encoding="utf-8"))["policies"]}
+    assert set(profiles) == versions | {"tenant"}
+    guide = (root / "docs" / "user-guide.md").read_text(encoding="utf-8")
+    anchors = {re.sub(r"[^\w\- ]", "", h.strip().lower()).replace(" ", "-") for h in re.findall(r"^#{1,6} (.*)$", guide, re.M)}
+    for help in [*checks.values(), *profiles.values()]:
+        assert help["what"] and help["why"] and help["anchor"] in anchors, help

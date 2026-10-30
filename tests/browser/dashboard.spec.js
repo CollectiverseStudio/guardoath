@@ -4,7 +4,7 @@ async function connect(page) {
   await page.getByLabel("Application API key").fill("playwright-test-key");
   await page.getByRole("button", { name: "Connect", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo");
-  await page.locator("#advanced > summary").click();
+  await expect(page.locator("#advanced")).toHaveAttribute("open", "");
   await page.locator(".batch-run > summary").click();
 }
 async function profile(page, version) {
@@ -311,7 +311,7 @@ test("normal conversation needs no profile selection and follows four stages", a
   await page.getByLabel("Application API key").fill("playwright-test-key");
   await page.getByRole("button",{name:"Connect",exact:true}).click();
   await expect(page.locator("#run-input")).toBeEnabled();
-  await expect(page.locator("#advanced")).not.toHaveAttribute("open", "");
+  await expect(page.locator("#advanced")).toHaveAttribute("open", "");
   await expect(page.locator("#policy")).toHaveValue("conversation-v1");
   await expect(page.locator("#run-output")).toBeDisabled();
   const calls=[]; page.on("request",r=>{if(r.url().includes("/v1/checks/")) calls.push(r.url().split("/").pop());});
@@ -936,4 +936,33 @@ test("a demo user can turn checks off and reset them", async ({ page }) => {
   await page.locator("#input-content").fill(email);
   await page.locator("#run-input").click();
   await expect(page.locator("#input-results")).toContainText("Potential email address");
+});
+test("every check and profile explains what it does and why", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo4");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
+  await expect(page.locator("#tenant-checks .check-help")).toHaveCount(16);
+  await expect(page.locator(".action-legend dt")).toHaveText(["Off", "Block", "Flag", "Allow", "Redact"]);
+  const help = page.locator("#tenant-help-schema");
+  await help.locator("summary").click();
+  await expect(help).toContainText("What it checks:");
+  await expect(help).toContainText("Why use it:");
+  await expect(help).toContainText("Limits:");
+  await expect(help.locator("a")).toHaveAttribute("href", /docs\/user-guide\.md#structure-and-data-validity-checks$/);
+  await expect(page.locator("#policy-help")).toContainText("Checks on this tenant record");
+  await expect(page.locator("#policy option")).toHaveText(/Checks on this tenant record \(tenant\)/);
+});
+test("the conversation box holds every step and Advanced starts open", async ({ page }) => {
+  await connect(page);
+  const box = page.locator("section.workspace");
+  for (const id of ["#advanced", "#input-title", "#input-check-title", "#output-title", "#output-check-title", "#answer-title"])
+    await expect(box.locator(id)).toHaveCount(1);
+  await expect(page.locator("#policy-help")).toContainText("Conversation: everyday checks");
+  await page.locator("#policy").selectOption("structure-v1");
+  await expect(page.locator("#policy-help")).toContainText("JSON structure (schema)");
+  await expect(page.locator("#policy-help a")).toHaveAttribute("href", /#structure-and-data-validity-checks$/);
+  const widths = await page.locator("section.workspace > .flow-step, section.workspace > .answer-panel").evaluateAll(nodes => nodes.map(n => Math.round(n.getBoundingClientRect().width)));
+  expect(widths.length).toBe(5);
+  expect(new Set(widths).size).toBe(1);
 });

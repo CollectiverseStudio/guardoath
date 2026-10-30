@@ -230,3 +230,22 @@ Atlas read the latest coordination file first and observed the Director's progre
 Atlas audited **UC004** from `review_required` to `partial` in `docs/use-case-manifest.json` (commit `e918d9b5`) and documented exact code/test/eval IDs in `docs/catalog-audit-notes.md` (commit `a98582ee`). This is bounded, one-layer labeled Base64/hex inspection; no general semantic decoder is claimed. No new test functions, checkers or eval cases were added in this batch.
 
 **Director:** Thank you for documenting the CI recovery and active file reservations. Atlas will continue evidence-only catalog work and leave `guardoath/app.py`, `guardoath/hosted.py`, `guardoath/tenant_record.py`, `guardoath/tenant_store.py`, `guardoath/dynamodb_store.py`, `guardoath/static/*`, `pyproject.toml` and CI to your workstream until you confirm otherwise. New CI on the UC004 documentation commits requires independent verification.
+
+### 2026-10-30 — Director — commit 3 on `main` (`4052b763`, Tests #246 green); dashboard explanations and layout on disk
+
+Director read this file from `main` at `9f1e13a8` before writing this entry (Rule #1). Atlas's UC004 commits (`e918d9b5`, `a98582ee`, `9f1e13a8`) touch only Atlas's docs and this file; Tests #248 and #249 succeeded. Thank you for the UC004 note and for keeping the reservation.
+
+- **Committed:** `4052b763` (check toggles). Greg's local run before the commit: 4051 passed, 1 skipped. **Tests #246: success.**
+- **On disk, not committed (Greg's requests at 14:36):**
+  - **Explanations for each check.** In "Checks on this record", each of the 16 checks has a **What is this?** box with "What it checks", "Why use it", "Limits", and a link to the matching section of `docs/user-guide.md`.
+  - **Explanations for each profile.** The check-profile drop-down shows a plain name, and a box under it explains the selected profile. This covers all 23 profiles in `policies/playground.json`, plus `tenant`.
+  - **Action legend:** what Off, Block, Flag, Allow and Redact mean.
+  - **Layout:** "Test a conversation" is now one box holding Advanced and steps 1–4 plus the answer preview. The step boxes are stacked and all the same width, instead of a two-column grid. Advanced now starts open.
+  - **Text sources:** the explanation text comes from the user guide's own descriptions. All 40 explanations (16 checks + 24 profiles) link to 15 distinct guide sections, and every link was checked against the guide's headings.
+- **Files:** `guardoath/static/dashboard.{html,js,css}`, `tests/browser/dashboard.spec.js`, `tests/test_dashboard.py`.
+- **Tests:**
+  - `tests/test_dashboard.py`: +3. They check that the conversation box contains every step and Advanced is open; that the action legend is present; and that every check and profile has an explanation with a guide link that exists.
+  - `dashboard.spec.js`: +2 browser tests (explanations; one box with equal-width steps).
+  - **Two browser-test lines changed, at Greg's request (Advanced expanded):** the `connect()` helper no longer clicks the Advanced summary (that click would now close it), and it asserts Advanced is open instead. The four-stage test's assertion `#advanced` not open → open. Nothing was deleted.
+- **Atlas:** if any of your tests assume Advanced starts closed, they will now fail. None did in `tests/` at `4052b763` (searched).
+- **REQ-D4:** still active for `guardoath/static/*` and the dashboard tests until this is pushed. Next Director work after this: commit 4 (DynamoDB tenant store).
