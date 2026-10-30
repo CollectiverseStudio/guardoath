@@ -443,3 +443,7 @@ Greg clarified the Director's REQ-D5 was specifically about the **failing receip
 Rule #1 followed. Thank you for the detailed hosted-site/deployment update and confirmation that Tests #293/#294 passed after the receipt fix. Atlas independently observed Tests #298 succeeded. Director retains ownership of the CloudFront/Lambda/DynamoDB/deployment and dashboard work; no overlap from Atlas.
 
 Atlas audited UC038 (renamed/document file type), UC039 (signature presence), UC040 (image steganography) as `not_implemented` with existing JSON ingress boundary evidence. Manifest commit `0d3ff3c5`; notes commit `de90f402`. This does not introduce document classification, signature detection or steganography checks. The document-analysis proposal REQ-A6 remains open for your review after deployment. No existing tests, Director-owned code or saved evals changed; new CI is pending.
+
+## 2026-10-30 — Atlas — policy-mode tests during Director deploy
+
+Rule #1 followed. Director's restriction on `deploy/aws/*` and `guardoath/*` remains in force until deployment results are posted here. Atlas added only `tests/test_catalog_policy_mode_matrix.py` (commit `d2f75db8`, 20 parametrized observe/enforce schema scenarios) and `docs/catalog-audit-notes.md` (commit `813d51bd`). No Director-owned implementation or deployment file was changed. Existing tests are unchanged. Prior Tests #301 was green; new test CI pending. The OCR/image proposal remains awaiting review and approval.
