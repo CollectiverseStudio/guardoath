@@ -152,10 +152,13 @@ def test_every_check_and_profile_has_an_explanation_and_a_real_guide_link():
     assert set(checks) == set(CHECK_IDS)
     versions = {p["version"] for p in json.loads((root / "policies" / "playground.json").read_text(encoding="utf-8"))["policies"]}
     assert set(profiles) == versions | {"tenant"}
-    guide = (root / "docs" / "user-guide.md").read_text(encoding="utf-8")
-    anchors = {re.sub(r"[^\w\- ]", "", h.strip().lower()).replace(" ", "-") for h in re.findall(r"^#{1,6} (.*)$", guide, re.M)}
-    for help in [*checks.values(), *profiles.values()]:
-        assert help["what"] and help["why"] and help["anchor"] in anchors, help
+    # The links go to the developer guide on guardoath.com (it was the user guide on GitHub until 2026-10-30).
+    guide = (root / "guardoath" / "static" / "guide.html").read_text(encoding="utf-8")
+    anchors = set(re.findall(r'id="([^"]+)"', guide))
+    for check_id, help in checks.items():
+        assert help["what"] and help["why"] and help["anchor"] == "check-" + check_id and help["anchor"] in anchors, help
+    for version, help in profiles.items():
+        assert help["what"] and help["why"] and help["anchor"] == "profile-" + version and help["anchor"] in anchors, help
 
 
 def test_proposed_answer_is_locked_until_the_input_test_passes():
@@ -253,3 +256,149 @@ def test_the_page_offers_no_download_link_that_could_not_be_served():
     page = TestClient(create_app(credentials={"test-key": "demo"})).get("/dashboard").text
     video = page[page.index('<video id="demo-video"'):]
     assert "<a " not in video[:video.index("</video>")]
+
+
+# The developer guide (guardoath/static/guide.html, served at /guide)
+
+def guide_text():
+    from pathlib import Path
+    return (Path(__file__).resolve().parents[1] / "guardoath" / "static" / "guide.html").read_text(encoding="utf-8")
+
+
+def dashboard_help():
+    import json
+    import re
+    from pathlib import Path
+    script = (Path(__file__).resolve().parents[1] / "guardoath" / "static" / "dashboard.js").read_text(encoding="utf-8")
+    return (json.loads(re.search(r"^const checkHelp = (.*);$", script, re.M).group(1)),
+            json.loads(re.search(r"^const profileHelp = (.*);$", script, re.M).group(1)))
+
+
+def test_the_guide_is_served_as_a_page_without_scripts():
+    response = TestClient(create_app(credentials={"test-key": "demo"})).get("/guide")
+    assert response.status_code == 200 and response.headers["content-type"].startswith("text/html")
+    assert "script-src 'none'" in response.headers["content-security-policy"]
+    assert "<script" not in response.text and "Developer guide" in response.text
+    assert TestClient(create_app(credentials={"test-key": "demo"})).get("/assets/guide.css").status_code == 200
+
+
+def test_the_site_links_to_the_guide_and_never_to_the_source_repository():
+    from pathlib import Path
+    static = Path(__file__).resolve().parents[1] / "guardoath" / "static"
+    for path in [*static.glob("*.html"), *static.glob("*.js"), *static.glob("*.css")]:
+        assert "github.com" not in path.read_text(encoding="utf-8").lower(), path.name
+    page = TestClient(create_app(credentials={"test-key": "demo"})).get("/dashboard").text
+    assert '<a href="/guide" target="_blank" rel="noopener noreferrer">Developer guide' in page
+
+
+def test_the_guide_has_every_check_and_profile_in_the_dashboards_words():
+    import html
+    guide = guide_text()
+    checks, profiles = dashboard_help()
+    for check_id, help in checks.items():
+        section = guide[guide.index(f'id="check-{check_id}"'):]
+        section = section[:section.index("</section>")]
+        for text in (help["what"], help["why"], help["limit"], "check_" + check_id):
+            assert html.escape(text) in section, (check_id, text)
+    for version, help in profiles.items():
+        row = guide[guide.index(f'id="profile-{version}"'):]
+        row = row[:row.index("</tr>")]
+        assert html.escape(help["name"]) in row and html.escape(help["what"]) in row, version
+
+
+def test_the_guide_shows_the_real_checks_and_mode_of_each_example_profile():
+    import json
+    from pathlib import Path
+    guide = guide_text()
+    policies = json.loads((Path(__file__).resolve().parents[1] / "policies" / "playground.json").read_text(encoding="utf-8"))["policies"]
+    for policy in policies:
+        row = guide[guide.index(f'id="profile-{policy["version"]}"'):]
+        cells = row[:row.index("</tr>")].split("<td>")
+        assert cells[3].startswith(", ".join(rule["checker_id"] for rule in policy["rules"])), policy["version"]
+        assert cells[4].startswith(policy.get("mode", "observe")), policy["version"]
+    # Every example profile observes, so the guide must say so.
+    assert {policy.get("mode", "observe") for policy in policies} == {"observe"}
+    assert "The example profiles run in observe mode" in guide
+
+
+def test_every_link_inside_the_guide_goes_somewhere():
+    import re
+    guide = guide_text()
+    ids = set(re.findall(r'id="([^"]+)"', guide))
+    for target in re.findall(r'href="#([^"]+)"', guide):
+        assert target in ids, target
+    for href in re.findall(r'href="([^"#]+)"', guide):
+        assert href in {"/assets/dashboard.css", "/assets/guide.css", "/dashboard", "/docs"}, href
+
+
+def test_the_guide_documents_every_public_endpoint_and_request_field():
+    from guardoath.app import KEY_HEADER
+    from guardoath.models import ApiCheckRequest
+    guide = guide_text()
+    app = create_app(credentials={"test-key": "demo"})
+    # Validation packs are not offered on tenant records, so the guide leaves them out on purpose.
+    left_out = {"/v1/validation-packs"}
+    paths = {route.path for route in app.routes if getattr(route, "path", "").startswith("/v1/")} - left_out
+    assert paths and all(f"<code>{path}</code>" in guide for path in paths), paths
+    for field in set(ApiCheckRequest.model_fields) - {"validation_codes"}:
+        assert f"<td><code>{field}</code></td>" in guide, field
+    assert KEY_HEADER in guide and "x-amz-content-sha256" in guide and "<code>/healthz</code>" in guide
+
+
+def test_the_guide_examples_hash_the_exact_body_they_send():
+    import html
+    guide = html.unescape(guide_text())
+    assert "hashlib.sha256(body).hexdigest()" in guide and "data=body" in guide
+    assert 'createHash("sha256").update(body, "utf8").digest("hex")' in guide and "    body,\n" in guide
+
+
+def test_the_guides_python_example_works_against_the_api(monkeypatch):
+    # Run the guide's own Python example against the app, through its decision helper.
+    import html
+    import io
+    import json
+    import re
+    import urllib.request
+    from guardoath.checkers import default_checkers
+    from guardoath.hosted import TenantService
+    from guardoath.tenant_record import demo_key, demo_records
+    from guardoath.tenant_store import MemoryTenantStore
+    import pytest
+    pytest.importorskip("tldextract")
+    secret = "guide-example-secret-" + "g" * 32
+    from guardoath.config import load_policies
+    tenants = TenantService(MemoryTenantStore(demo_records(key_secret=secret)), default_checkers(enable_pii=True), secret,
+                            tuple(load_policies("policies/playground.json")))
+    client = TestClient(create_app(credentials={}, tenants=tenants))
+    guide = html.unescape(guide_text())
+    blocks = re.findall(r"<pre><code>(.*?)</code></pre>", guide, re.S)
+    example = next(b for b in blocks if b.startswith("import hashlib"))
+    decide = next(b for b in blocks if b.startswith("def next_step"))
+    sent = []
+
+    class Reply(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def fake_urlopen(request, timeout=None):
+        headers = {k.lower(): v for k, v in request.header_items()}
+        sent.append(headers)
+        response = client.post(request.full_url.replace("https://guardoath.com", ""), content=request.data, headers=headers)
+        assert response.status_code == 200, response.text
+        return Reply(response.content)
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    namespace = {}
+    exec(compile(example.replace('"gok_demo1_..."', repr(demo_key("demo1", secret))), "guide-example", "exec"), namespace)
+    exec(compile(decide, "guide-decide", "exec"), namespace)
+    import hashlib
+    assert sent[0]["x-amz-content-sha256"] == hashlib.sha256(json.dumps({"application_id": "demo1", "content": "Please email jane@example.com about my order."}).encode()).hexdigest()
+    blocked = namespace["check"]("input", "Please email jane@example.com about my order.")
+    assert blocked["effective_action"] == "block" and namespace["next_step"](blocked) == "stop"
+    clean = namespace["check"]("output", "Can you explain your return policy?")
+    assert namespace["next_step"](clean) == "continue"
+    observed = namespace["check"]("input", "Please email jane@example.com about my order.", profile="pii-v1")
+    assert observed["recommended_action"] == "flag" and observed["effective_action"] == "allow" and namespace["next_step"](observed) == "continue"

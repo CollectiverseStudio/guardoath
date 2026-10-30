@@ -300,9 +300,9 @@ test("secrets group batch report keeps expected incomplete cases visible", async
   await expect(page.locator("body")).not.toContainText("PROJECT LANTERN");
 });
 
-test("dashboard links to the maintained user guide", async ({ page }) => {
+test("dashboard links to the developer guide on this site", async ({ page }) => {
   await page.goto("/dashboard");
-  await expect(page.getByRole("link",{name:"User guide"})).toHaveAttribute("href","https://github.com/CollectiverseStudio/guardoath/blob/main/docs/user-guide.md");
+  await expect(page.getByRole("link",{name:"Developer guide"})).toHaveAttribute("href","/guide");
 });
 
 
@@ -949,7 +949,7 @@ test("every check and profile explains what it does and why", async ({ page }) =
   await expect(help).toContainText("What it checks:");
   await expect(help).toContainText("Why use it:");
   await expect(help).toContainText("Limits:");
-  await expect(help.locator("a")).toHaveAttribute("href", /docs\/user-guide\.md#structure-and-data-validity-checks$/);
+  await expect(help.locator("a")).toHaveAttribute("href", /\/guide#check-schema$/);
   await expect(page.locator("#policy-help")).toContainText("Checks on this tenant record");
   await expect(page.locator('#policy option[value="tenant"]')).toHaveText(/Checks on this tenant record \(tenant\)/);
 });
@@ -1058,4 +1058,39 @@ test("requests carry the key header and the body hash CloudFront needs", async (
   for (const r of posts) expect(r.headers["x-amz-content-sha256"]).toBe(createHash("sha256").update(r.body || "").digest("hex"));
   for (const r of [...posts, ...gets]) expect(r.headers["authorization"]).toBeUndefined();
   for (const r of [...posts.filter(r => !r.url.includes("/v1/demo-users/")), ...gets]) expect(r.headers["x-guardoath-key"]).toMatch(/^gok_demo7_/);
+});
+test("a busy server is retried, so the demo users still appear", async ({ page }) => {
+  let refused = 0;
+  await page.route("**/v1/demo-users", async route => {
+    if (refused < 2) { refused++; await route.fulfill({status: 429, contentType: "application/json",
+      body: JSON.stringify({Reason: "ReservedFunctionConcurrentInvocationLimitExceeded", Type: "User", message: "Rate Exceeded."})}); return; }
+    await route.fallback();
+  });
+  await page.goto("/dashboard");
+  await expect(page.locator("#demo-users")).toBeVisible();
+  await expect(page.locator("#demo-user option")).toHaveCount(10);
+  expect(refused).toBe(2);
+});
+test("when demo users cannot be loaded the page says so", async ({ page }) => {
+  await page.route("**/v1/demo-users", route => route.fulfill({status: 500, contentType: "application/json", body: "{}"}));
+  await page.goto("/dashboard");
+  await expect(page.locator("#connection-status")).toHaveText("Demo users could not be loaded right now. Reload the page to try again.");
+  await expect(page.locator("#demo-users")).toBeHidden();
+});
+test("other 429s are not retried", async ({ page }) => {
+  let calls = 0;
+  await page.route("**/v1/demo-users/demo1/key", async route => { calls++;
+    await route.fulfill({status: 429, contentType: "application/json", body: JSON.stringify({detail: "Monthly check limit reached"})}); });
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo1");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toHaveText("The demo key could not be issued (HTTP 429).");
+  expect(calls).toBe(1);
+});
+test("the developer guide opens at a check's section from its What is this? link", async ({ page }) => {
+  await page.goto("/guide#check-schema");
+  await expect(page.locator("#check-schema")).toBeVisible();
+  await expect(page.locator("#check-schema h3")).toContainText("JSON structure (schema)");
+  await expect(page.locator("a[href*='github.com']")).toHaveCount(0);
+  await expect(page.locator("#profiles tbody tr")).toHaveCount(24);
 });

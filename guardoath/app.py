@@ -154,6 +154,14 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             "Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
         })
 
+    @api.get("/guide", include_in_schema=False)
+    async def guide():
+        # The developer guide is static text: no scripts at all.
+        return FileResponse(static_dir / "guide.html", headers={
+            "Content-Security-Policy": "default-src 'self'; script-src 'none'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+            "Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
+        })
+
     @api.exception_handler(RequestValidationError)
     async def validation_error(_request, _exc):
         # FastAPI's default 422 echoes invalid submitted values.
@@ -220,6 +228,10 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 raise HTTPException(429, "Monthly check limit reached", headers={"Cache-Control": "no-store"}) from None
             try:
                 return await engine.check(request, stage)
+            except PackSelectionError:
+                # Validation packs are not offered on tenant records: refuse the request (not counted).
+                tenants.store.release_check(record.tenant_id, month)
+                raise HTTPException(422, "Invalid or unavailable validation pack selection") from None
             except BaseException:
                 # Only checks that return a result are counted.
                 tenants.store.release_check(record.tenant_id, month)

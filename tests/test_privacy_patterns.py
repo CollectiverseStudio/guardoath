@@ -293,3 +293,13 @@ def test_markup_answer_without_a_url_passes_the_output_check(checkers):
                            content='<img src=x onerror="window.injected=true">')
     result = asyncio.run(Engine([policy], checkers).check(request, Stage.OUTPUT))
     assert result.evaluation_status == "complete" and not result.findings
+
+
+def test_an_iban_candidate_that_fails_validation_is_not_written_to_the_logs(caplog):
+    import logging
+    from guardoath.privacy_patterns import IbanRecognizer
+    candidate = "DE89.3704.0044.0532.0130.00"  # dots are not removed, so the checksum step raises ValueError
+    with caplog.at_level(logging.DEBUG, logger="guardoath.privacy"):
+        assert IbanRecognizer().validate_result(candidate) is False
+    assert "Failed to validate an IBAN candidate" in caplog.text
+    assert candidate not in caplog.text and "3704" not in caplog.text

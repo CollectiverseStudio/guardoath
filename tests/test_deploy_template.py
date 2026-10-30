@@ -109,7 +109,10 @@ def test_the_site_answers_on_the_domain_and_www_over_https(template):
 def test_the_site_function_runs_the_hosted_app(template):
     function = resources(template, "AWS::Lambda::Function")["SiteFunction"]
     assert function["Handler"] == "index.handler" and function["Runtime"] == "python3.13"
-    assert function["ReservedConcurrentExecutions"] == 2
+    # Was 2: too few for one page load (Lambda refused the extra requests with 429, 2026-10-30).
+    assert function["ReservedConcurrentExecutions"] == {"Ref": "SiteConcurrency"}
+    concurrency = template["Parameters"]["SiteConcurrency"]
+    assert concurrency["Default"] == 5 and concurrency["MinValue"] == 1 and concurrency["MaxValue"] == 10
     env = function["Environment"]["Variables"]
     assert env["GUARDOATH_TENANT_STORE"] == "dynamodb" and env["GUARDOATH_TENANT_TABLE"] == {"Ref": "TenantTable"}
     assert env["GUARDOATH_DEMO_KEY_SECRET"] == {"Ref": "DemoKeySecret"} and template["Parameters"]["DemoKeySecret"]["NoEcho"] is True
@@ -209,3 +212,12 @@ def test_every_policy_id_in_the_template_is_a_documented_managed_policy():
     import re
     ids = set(re.findall(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", TEMPLATE_FILE.read_text(encoding="utf-8")))
     assert ids == set(MANAGED.values())
+
+
+def test_even_at_full_load_an_hour_uses_a_small_part_of_the_free_compute(template):
+    # Every allowed request running for the whole timeout, for a whole hour, at the highest allowed
+    # concurrency: still under 5% of the 400,000 free GB-seconds a month, so the shutoff alarms
+    # (evaluated every minute) stop the site long before the allowance is at risk.
+    function = resources(template, "AWS::Lambda::Function")["SiteFunction"]
+    most = template["Parameters"]["SiteConcurrency"]["MaxValue"] * 3600 * function["MemorySize"] / 1024
+    assert most <= 0.05 * FREE_GB_SECONDS

@@ -565,3 +565,10 @@ def test_check_changes_accept_the_key_header(client):
     revision = summary(client, token)["revision"]
     response = client.post("/v1/tenants/current/checks", headers=keyed(token), json={"revision": revision, "changes": {"check_pii": "flag"}})
     assert response.status_code == 200 and response.json()["checks"]["pii"] == "flag"
+
+
+def test_validation_packs_on_a_tenant_record_are_refused_not_a_server_error(client, tenants):
+    response = client.post("/v1/checks/input", headers=auth(demo_key("demo1", SECRET)),
+                           json={"application_id": "demo1", "content": CLEAN, "validation_codes": ["PII"]})
+    assert response.status_code == 422 and response.json() == {"detail": "Invalid or unavailable validation pack selection"}
+    assert used(tenants, "demo1") == 0

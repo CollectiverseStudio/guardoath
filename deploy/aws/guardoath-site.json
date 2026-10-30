@@ -19,6 +19,13 @@
    "MaxLength": 200,
    "Description": "Secret the demo user keys are derived from (GUARDOATH_DEMO_KEY_SECRET). At least 32 characters."
   },
+  "SiteConcurrency": {
+   "Type": "Number",
+   "Default": 5,
+   "MinValue": 1,
+   "MaxValue": 10,
+   "Description": "How many requests the site function runs at the same time. One page load sends up to 5 at once (page, script, styles, logo, demo users); requests over the limit are refused by Lambda and the dashboard retries them. Raising it does not change prices; the shutoff alarms limit total use."
+  },
   "TableReadCapacity": {
    "Type": "Number",
    "Default": 10,
@@ -184,7 +191,9 @@
     },
     "MemorySize": 512,
     "Timeout": 15,
-    "ReservedConcurrentExecutions": 2,
+    "ReservedConcurrentExecutions": {
+     "Ref": "SiteConcurrency"
+    },
     "Role": {
      "Fn::GetAtt": [
       "SiteRole",

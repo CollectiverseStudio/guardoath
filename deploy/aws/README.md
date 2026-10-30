@@ -9,7 +9,7 @@ below says where each figure comes from.
 visitor --HTTPS--> CloudFront (Free plan) --> AWS WAF (1 rate rule, in the plan)
                         |  origin access control (SigV4)
                         v
-                 Lambda function URL (AWS_IAM) --> guardoath-site (python3.13, 512 MB, 2 at a time)
+                 Lambda function URL (AWS_IAM) --> guardoath-site (python3.13, 512 MB, 5 at a time)
                                                         |
                                                         v
                                                DynamoDB guardoath-tenants (provisioned 10/10)
@@ -24,6 +24,13 @@ alarms (invocations per hour/day, run time per hour) --> guardoath-site-shutoff 
 - **Video:** served in parts of at most 3 MiB, because a Lambda function URL response is limited to 6 MB.
 - **Demo users:** created in the table on the first request; their keys come from the `DemoKeySecret`
   parameter (kept in the function's environment).
+
+- **Requests at the same time:** the function runs `SiteConcurrency` requests at once (5 by default). A
+  request over that is refused by Lambda with HTTP 429 before the app runs (nothing is counted), and the
+  dashboard sends it again after a short wait (up to 4 times). With 2 at a time, one page load was already
+  too many, so parts of the page (such as the demo user list) failed at random. Reserved concurrency has no
+  charge; at the highest setting (10) an hour of full load is 18,000 GB-seconds, under 5% of the free
+  400,000 a month, and the run-time alarm (evaluated every minute) stops the site first.
 
 ## Cost table (all figures checked against AWS pricing pages or the AWS price list before deploying)
 
@@ -57,8 +64,8 @@ cd /d C:\Users\bellgj\Documents\Personal\collectiverse\guardoath
 aws lambda get-account-settings --region us-east-1 --profile collectiverse-prod > .guardoath-reports\lambda-account.json
 type .guardoath-reports\lambda-account.json
 ```
-Expect `"ConcurrentExecutions": 1000` and `"UnreservedConcurrentExecutions"` of at least 102 (Lambda keeps
-100 unreserved; the site reserves 2).
+Expect `"ConcurrentExecutions": 1000` and `"UnreservedConcurrentExecutions"` of at least 110 (Lambda keeps
+100 unreserved; the site reserves `SiteConcurrency`, 5 by default, at most 10).
 
 ## Deploy
 
@@ -130,7 +137,7 @@ aws cloudfront create-invalidation --profile collectiverse-prod --distribution-i
 The shutoff sets the site's reserved concurrency to 0, so CloudFront gets an error for every request.
 Find out why (CloudWatch alarm history), then turn the site back on:
 ```cmd
-aws lambda put-function-concurrency --region us-east-1 --profile collectiverse-prod --function-name guardoath-site --reserved-concurrent-executions 2
+aws lambda put-function-concurrency --region us-east-1 --profile collectiverse-prod --function-name guardoath-site --reserved-concurrent-executions 5
 ```
 
 ## Removing the site

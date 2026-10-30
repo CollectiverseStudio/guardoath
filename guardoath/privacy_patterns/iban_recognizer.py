@@ -103,7 +103,8 @@ class IbanRecognizer(PatternRecognizer):
                     result = None
             return result
         except ValueError:
-            logger.error("Failed to validate text %s", pattern_text)
+            # Never log the candidate: it is customer content.
+            logger.error("Failed to validate an IBAN candidate")
             return False
 
     def analyze(

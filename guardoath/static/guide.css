@@ -1,0 +1,7 @@
+.guide{max-width:1000px}.guide section.panel{margin-bottom:22px}.guide h2{font-size:20px;margin:0 0 12px}.guide h3{font-size:15px;margin:18px 0 8px}
+.guide p,.guide li{font-size:14px}.guide code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12.5px;background:#f0f3f8;border-radius:4px;padding:1px 4px}
+.guide pre{background:#111e31;color:#e6edf8;border-radius:8px;padding:14px 16px;overflow-x:auto;font-size:12.5px;line-height:1.55}.guide pre code{background:none;padding:0;color:inherit}
+.guide table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}.guide th,.guide td{text-align:left;vertical-align:top;border-top:1px solid #e1e7f0;padding:8px 10px}.guide th{background:#f4f6fa;font-size:12px}
+.guide .item{border-top:1px solid #e1e7f0;padding:12px 0}.guide .meta{color:#5d6a7e;font-size:12.5px}.guide .note{background:#fff5e5;border-radius:6px;padding:8px 12px;color:#7d531c}
+.guide .toc ol{columns:2;margin:8px 0 0}.guide :target{scroll-margin-top:16px;outline:2px solid #8daaff;outline-offset:4px;border-radius:6px}
+@media(max-width:850px){.guide .toc ol{columns:1}.guide table{display:block;overflow-x:auto}}
