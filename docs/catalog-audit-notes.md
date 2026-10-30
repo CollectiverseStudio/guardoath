@@ -290,3 +290,7 @@ GitHub Actions **Tests #293** (fix commit `a6a764b0`) and **Tests #294** (coordi
 ## 2026-10-30 — UC038–040 document/image unsupported boundaries
 
 **UC038, UC039, UC040** retain canonical `review_required` and gain `audit_classification=not_implemented`. Adjacent source: `guardoath/ingress.py`; exact regression: `tests/test_catalog_media_ingress.py::test_uc031_032_034_035_036_binary_media_is_not_analyzed`; dedicated saved eval IDs: none. The JSON-only ingress boundary is **not** uploaded-document MIME/magic-byte classification, visual or cryptographic signature verification, or steganography detection. These are negative-evidence audits only. OCR/document/image subsystem is separately proposed in `docs/document-analysis-implementation-proposal.md` and awaits approval; no new checker or Director-reserved code changed. GitHub Tests #298 was green on the preceding main commit.
+
+## 2026-10-30 — Policy mode test matrix
+
+Added `tests/test_catalog_policy_mode_matrix.py` (commit `d2f75db8`): 20 parametrized scenarios across two stages, two policy modes and five payloads. They verify consistent schema findings and recommendations, but `effective_action=block` only with `mode="enforce"`. No existing tests or Director-owned files were changed. CI verification pending.
