@@ -256,9 +256,21 @@
     {
       "id": "UC024",
       "title": "Corporate secrets",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Selected credential patterns, quoted assignments, labeled encoded secrets and configured literal confidential phrases. No semantic proprietary-document classification."
+      "existing_coverage_note": "Selected credential patterns, quoted assignments, labeled encoded secrets and configured literal confidential phrases. No semantic proprietary-document classification.",
+      "evidence": {
+        "modules": [
+          "guardoath/secrets_check.py"
+        ],
+        "tests": [
+          "tests/test_secrets_check.py::test_supported_candidates",
+          "tests/test_secrets_check.py::test_benign_and_incomplete_lookalikes",
+          "tests/test_secrets_check.py::test_no_verification_or_network"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Pattern/assignment-based credential checks exist, but general corporate secret ownership or semantic confidentiality is not established; no dedicated matching eval ID verified in this batch."
     },
     {
       "id": "UC025",
@@ -382,9 +394,21 @@
     {
       "id": "UC042",
       "title": "Legal contract completeness",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Configured labeled text sections can detect missing/duplicate/short bodies. No assessment of clause meaning, adequacy or legal sufficiency."
+      "existing_coverage_note": "Configured labeled text sections can detect missing/duplicate/short bodies. No assessment of clause meaning, adequacy or legal sufficiency.",
+      "evidence": {
+        "modules": [
+          "guardoath/completeness.py"
+        ],
+        "tests": [
+          "tests/test_completeness.py::test_labeled_sections_pass",
+          "tests/test_completeness.py::test_missing_short_or_ambiguous_sections_flag",
+          "tests/test_completeness.py::test_labels_are_literal_not_semantic"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Literal labeled section presence and length checks exist; no legal clause adequacy or jurisdiction-specific completeness assessment."
     },
     {
       "id": "UC043",
@@ -398,7 +422,22 @@
       "title": "Code syntax",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Source-code syntax is not implemented. The new proposed-tool allowlist/argument-schema checker is distinct from parsing or executing source code; no sandbox claim."
+      "existing_coverage_note": "Source-code syntax is not implemented. The new proposed-tool allowlist/argument-schema checker is distinct from parsing or executing source code; no sandbox claim.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/tool_calls.py"
+        ],
+        "tests": [
+          "tests/test_tool_calls.py::test_plain_code_is_not_treated_as_validated_action_safety",
+          "tests/test_tool_calls.py::test_no_calls_is_not_an_execution_or_authorization_claim"
+        ],
+        "eval_case_ids": [
+          "actions:valid.lookup.input",
+          "actions:allowlist.unknown.input"
+        ]
+      },
+      "audit_note": "Existing action payload schema/allowlist validation is not source-code parsing, syntax checking or compiler execution."
     },
     {
       "id": "UC045",
@@ -438,9 +477,25 @@
     {
       "id": "UC050",
       "title": "Academic references",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Local citation IDs and exact quotations can now be checked against a policy-owned source catalog. No academic database/URL lookup, source authenticity or claim-truth/entailment verification."
+      "existing_coverage_note": "Local citation IDs and exact quotations can now be checked against a policy-owned source catalog. No academic database/URL lookup, source authenticity or claim-truth/entailment verification.",
+      "evidence": {
+        "modules": [
+          "guardoath/evidence.py"
+        ],
+        "tests": [
+          "tests/test_evidence.py::test_each_citation_relationship",
+          "tests/test_evidence.py::test_valid_citation_does_not_establish_claim_entailment",
+          "tests/test_evidence.py::test_no_network_or_reference_lookup"
+        ],
+        "eval_case_ids": [
+          "evidence:valid.repeated-marker.input",
+          "evidence:citation.missing-entry.input",
+          "evidence:source.unknown-marker.input"
+        ]
+      },
+      "audit_note": "Policy-owned source IDs and exact quotation relationships are checked; academic bibliography accuracy, live sources and citation authenticity are not verified."
     },
     {
       "id": "UC051",
