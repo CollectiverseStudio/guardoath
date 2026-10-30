@@ -231,3 +231,10 @@ No dedicated saved eval case ID was identified for these capabilities. These are
 **UC017 `review_required` → `partial`.** Existing optional Bedrock content safety adapter exposes provider `HATE` and `INSULTS` category contracts for input/output. Exact modules: `guardoath/bedrock_guardrails.py`, `guardoath/content_safety.py`. Exact tests: `tests/test_bedrock_guardrails.py::test_category_contract`, `::test_missing_or_partial_coverage_is_not_a_pass`; `tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external`. Dedicated saved eval case ID: **none identified** (`[]`).
 
 The adapter is opt-in and provider-dependent. It does **not** establish repeated harassment detection, sarcasm/intent interpretation, youth-specific risk assessment, or a locally calibrated cyberbullying model. No checker, test or saved eval was changed; this is an evidence-only classification. The new GitHub Actions run must be checked before calling the audit CI-green.
+
+
+## 2026-10-30 — UC022 card-number masking audit
+
+**UC022 `review_required` → `partial`.** Existing `guardoath/pii.py` supports selected card-number patterns with Luhn validation and policy-configured redaction. Exact tests: `tests/test_pii.py::test_real_local_findings`, `::test_benign_lookalikes`, `::test_api_output_and_logs_do_not_echo_sensitive_values`. Saved eval IDs: `privacy:card.input` and `privacy:card.output`.
+
+Limits: selected formats and configured policy, not blanket payment-data detection, processor integration or PCI DSS compliance. The audit is evidence-only; no checker, existing test, saved eval or Director-reserved file was modified. CI on this commit remains to be verified.
