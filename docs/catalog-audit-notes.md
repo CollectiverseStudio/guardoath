@@ -147,3 +147,10 @@ New files `guardoath/effectiveness.py`, `tests/test_effectiveness.py`, `guardoat
 New `guardoath/evaluation_comparison.py` and `tests/test_evaluation_comparison.py` provide offline paired-run regression analysis with strict matching of dataset ID/version, case IDs and ground-truth labels. Results include rate deltas and case IDs for newly missed attacks and newly flagged benign inputs. See [implementation progress](input-validation-implementation-progress.md) for the complete behavior, test functions and limitations.
 
 **Counts:** 1 new implementation module, 1 new test file, 4 top-level test functions (including one parametrized over 3 cases), 0 new eval cases, 0 new detectors. No changes to existing tests, privacy files, engine, app, models or reserved work. Tests were committed but not run locally; check GitHub Actions on the latest commit. Previous CI failures remain a separate coordination issue.
+
+
+## IV-03 follow-up: local evaluation adapter (2026-10-29)
+
+Added `guardoath/evaluation_adapter.py` and `tests/test_evaluation_adapter.py` to translate already executed local regression reports into labeled effectiveness observations. The adapter requires separately reviewed boolean attack/benign labels and refuses incomplete, simulated, skipped/error, duplicate or mismatched cases. It is not wired into the CLI or the protected engine. Exact behavior and limitations are in [input-validation-implementation-progress.md](input-validation-implementation-progress.md).
+
+**Change accounting:** one new implementation module, one new test file, four top-level pytest functions (two parametrized), zero saved eval changes, zero checkers, zero manifest status changes. No reserved files edited. The latest CI result must be checked independently; this commit does not claim live detection accuracy.
