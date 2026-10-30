@@ -3,20 +3,43 @@
 Turned on with GUARDOATH_TENANT_STORE. The local single-key mode (GUARDOATH_API_KEY) keeps working
 alongside it: keys that start with "gok_" are tenant keys, any other key is checked against the local
 credentials.
+
+Every tenant can use its record's own checks (profile "tenant") and the example profiles, by default
+those in policies/playground.json (GUARDOATH_TENANT_PROFILE_FILE chooses another file). Demo users do not
+get profiles that call a paid outside provider. A check request that names no profile uses the record's
+default_profile.
 """
 import os
+from pathlib import Path
+import re
 from threading import Lock
 from typing import Any
 
 from pydantic import Field, ValidationError
 
+from guardoath.config import load_policies
 from guardoath.engine import Engine
-from guardoath.models import Contract
-from guardoath.tenant_record import (EDITABLE_FIELDS, MIN_DEMO_KEY_SECRET, TenantRecord, demo_defaults, demo_key,
-                                     demo_records, key_matches, tenant_id_from_key)
+from guardoath.models import Contract, Policy
+from guardoath.tenant_record import (EDITABLE_FIELDS, EXTERNAL_CHECK_IDS, MIN_DEMO_KEY_SECRET, PROFILE_PATTERN,
+                                     TENANT_POLICY_VERSION, TenantRecord, demo_defaults, demo_key, demo_records,
+                                     key_matches, tenant_id_from_key)
 from guardoath.tenant_store import MemoryTenantStore, TenantNotFound
 
 TENANT_STORES = ("memory",)
+DEFAULT_PROFILE_FILE = Path(__file__).resolve().parents[1] / "policies" / "playground.json"
+
+
+def calls_outside_provider(policy: Policy) -> bool:
+    return policy.external_checks != "disabled" or any(rule.checker_id in EXTERNAL_CHECK_IDS for rule in policy.rules)
+
+
+def load_example_profiles(path: str | Path | None = None) -> tuple[Policy, ...]:
+    """The example profiles every tenant may use. A missing file stops startup instead of silently
+    offering no profiles."""
+    file = Path(path) if path else DEFAULT_PROFILE_FILE
+    if not file.is_file():
+        raise ValueError("Example profile file not found; set GUARDOATH_TENANT_PROFILE_FILE")
+    return tuple(load_policies(file))
 
 
 class CheckChanges(Contract):
@@ -43,12 +66,20 @@ def rejection_message(error: ValidationError) -> str:
 
 
 class TenantService:
-    def __init__(self, store, checkers, demo_key_secret: str | None = None):
+    def __init__(self, store, checkers, demo_key_secret: str | None = None, profiles: tuple[Policy, ...] = ()):
         if demo_key_secret is not None and len(demo_key_secret) < MIN_DEMO_KEY_SECRET:
             raise ValueError(f"GUARDOATH_DEMO_KEY_SECRET must be at least {MIN_DEMO_KEY_SECRET} characters")
+        versions = [profile.version for profile in profiles]
+        if len(set(versions)) != len(versions):
+            raise ValueError("Example profile versions must be distinct")
+        if TENANT_POLICY_VERSION in versions:
+            raise ValueError(f"No example profile may be called {TENANT_POLICY_VERSION}")
+        if any(not re.fullmatch(PROFILE_PATTERN, version) for version in versions):
+            raise ValueError("Example profile versions must be lower-case letters, digits and hyphens")
         self.store = store
         self._checkers = dict(checkers)
         self._demo_key_secret = demo_key_secret
+        self._profiles = tuple(profiles)
         self._engines: dict[str, tuple[int, Engine]] = {}
         self._lock = Lock()
 
@@ -63,8 +94,9 @@ class TenantService:
             return None
         if store_name not in TENANT_STORES:
             raise ValueError("GUARDOATH_TENANT_STORE must be one of: " + ", ".join(TENANT_STORES))
+        profiles = load_example_profiles(os.getenv("GUARDOATH_TENANT_PROFILE_FILE"))
         # The memory store starts with the demo users only; it is for local use and tests.
-        return cls(MemoryTenantStore(demo_records(key_secret=secret) if secret else ()), checkers, secret)
+        return cls(MemoryTenantStore(demo_records(key_secret=secret) if secret else ()), checkers, secret, profiles)
 
     @property
     def demo_enabled(self) -> bool:
@@ -79,13 +111,24 @@ class TenantService:
             return None
         return record
 
+    def profiles_for(self, record: TenantRecord) -> tuple[Policy, ...]:
+        """The example profiles this tenant may use, as the tenant's own. Demo users get none that call a
+        paid outside provider."""
+        return tuple(profile.model_copy(update={"application_id": record.tenant_id}) for profile in self._profiles
+                     if not (record.demo and calls_outside_provider(profile)))
+
+    def profile_versions(self, record: TenantRecord) -> tuple[str, ...]:
+        """Every profile the tenant may name: its record's own checks first, then the example profiles."""
+        return (TENANT_POLICY_VERSION, *(profile.version for profile in self.profiles_for(record)))
+
     def engine_for(self, record: TenantRecord) -> Engine:
-        """An engine built from the record's check fields, rebuilt whenever the record changes."""
+        """An engine with the record's own checks and the tenant's example profiles, rebuilt whenever
+        the record changes."""
         with self._lock:
             cached = self._engines.get(record.tenant_id)
             if cached is not None and cached[0] == record.revision:
                 return cached[1]
-        engine = Engine([record.to_policy()], self._checkers)
+        engine = Engine([record.to_policy(), *self.profiles_for(record)], self._checkers)
         with self._lock:
             self._engines[record.tenant_id] = (record.revision, engine)
         return engine
@@ -122,6 +165,8 @@ class TenantService:
             candidate = TenantRecord.model_validate({**current.model_dump(), **changes})
         except ValidationError as error:
             raise ChangeRejected(rejection_message(error)) from None
+        if candidate.default_profile not in self.profile_versions(candidate):
+            raise ChangeRejected("default_profile: choose one of the profiles available to this tenant")
         try:
             Engine([candidate.to_policy()], self._checkers)
         except ValueError as error:

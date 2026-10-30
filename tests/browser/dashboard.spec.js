@@ -951,7 +951,7 @@ test("every check and profile explains what it does and why", async ({ page }) =
   await expect(help).toContainText("Limits:");
   await expect(help.locator("a")).toHaveAttribute("href", /docs\/user-guide\.md#structure-and-data-validity-checks$/);
   await expect(page.locator("#policy-help")).toContainText("Checks on this tenant record");
-  await expect(page.locator("#policy option")).toHaveText(/Checks on this tenant record \(tenant\)/);
+  await expect(page.locator('#policy option[value="tenant"]')).toHaveText(/Checks on this tenant record \(tenant\)/);
 });
 test("the conversation box holds every step and Advanced starts open", async ({ page }) => {
   await connect(page);
@@ -994,4 +994,51 @@ test("prepared example mode lets the answer be chosen before the input test", as
   await expect(page.locator("#output-clean-sample")).toBeEnabled();
   await page.locator(".batch-run > summary").click();
   await expect(answer).not.toBeEditable(); await expect(answer).toHaveAttribute("placeholder", /input test has not run/);
+});
+test("a demo user starts on its default profile and can choose any example profile", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo5");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo5. 23 profiles available.");
+  await expect(page.locator("#policy")).toHaveValue("tenant");
+  await expect(page.locator('#policy option[value="tenant"]')).toContainText("· default");
+  await expect(page.locator('#policy option[value="content-safety-v1"]')).toHaveCount(0);
+  await expect(page.locator("#tenant-default-profile")).toHaveValue("tenant");
+  await expect(page.locator("#tenant-checks select")).toHaveCount(16);
+  await expect(page.locator("#tenant-save")).toBeEnabled();
+  // Choosing an example profile shows that profile's checks, fixed, and its examples.
+  await page.locator("#policy").selectOption("conversation-v1");
+  await expect(page.locator("#tenant-title")).toHaveText("Checks in the profile Conversation: everyday checks");
+  await expect(page.locator("#tenant-checks select")).toHaveCount(0);
+  await expect(page.locator("#tenant-check-pii")).toHaveText("Input Flag · Output Block");
+  await expect(page.locator("#tenant-check-ledger")).toHaveText("Off");
+  await expect(page.locator("#tenant-profile-note")).toContainText("its checks are fixed");
+  await expect(page.locator("#tenant-save")).toBeDisabled();
+  await expect(page.locator("#input-phone-sample")).toBeVisible();
+  const sent = [];
+  page.on("request", r => { if (r.url().includes("/v1/checks/")) sent.push(JSON.parse(r.postData()).policy_version); });
+  await page.locator("#run-input").click();
+  await expect(page.locator("#result-status")).toHaveText("Input checks passed");
+  expect(sent).toEqual(["conversation-v1"]);
+  // Back to the record's own checks: editable again.
+  await page.locator("#policy").selectOption("tenant");
+  await expect(page.locator("#tenant-checks select")).toHaveCount(16);
+  await expect(page.locator("#tenant-save")).toBeEnabled();
+});
+test("a demo user can save a default profile and reset it", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo6");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo6");
+  await page.locator("#tenant-default-profile").selectOption("pii-v1");
+  await page.getByRole("button", { name: "Save default profile", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toHaveText("Saved. Personal data: email, card, SSN is now the default profile.");
+  await expect(page.locator("#policy")).toHaveValue("pii-v1");
+  await expect(page.locator('#policy option[value="pii-v1"]')).toContainText("· default");
+  await expect(page.locator("#tenant-default-note")).toContainText("Default profile: Personal data: email, card, SSN.");
+  await expect(page.locator("#tenant-save")).toBeDisabled();
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+  await expect(page.locator("#policy")).toHaveValue("tenant");
+  await expect(page.locator("#tenant-default-profile")).toHaveValue("tenant");
 });

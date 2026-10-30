@@ -400,3 +400,24 @@ def test_usage_month_is_utc():
     from datetime import datetime, timedelta, timezone
     late = datetime(2026, 10, 31, 23, 30, tzinfo=timezone(timedelta(hours=-4)))
     assert usage_month(late) == "2026-11"
+
+
+# Default profile
+
+
+def test_the_default_profile_starts_as_the_records_own_checks():
+    assert demo(1).default_profile == TENANT_POLICY_VERSION == "tenant"
+    assert "default_profile" in EDITABLE_FIELDS
+
+
+@pytest.mark.parametrize("value", ["", "Tenant", "pii v1", "-pii", "a" * 101, "pii_v1"])
+def test_default_profile_names_are_restricted(value):
+    with pytest.raises(ValidationError):
+        TenantRecord.model_validate({**demo(1).model_dump(), "default_profile": value})
+
+
+def test_a_default_profile_change_is_a_check_change():
+    store = MemoryTenantStore(demo_records())
+    updated = store.update_checks("demo1", {"default_profile": "pii-v1"}, 1)
+    assert updated.default_profile == "pii-v1" and updated.revision == 2
+    assert store.get("demo2").default_profile == "tenant"

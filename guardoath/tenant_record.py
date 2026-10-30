@@ -4,6 +4,9 @@ A check field holds the action taken when that check finds something: block, fla
 redact (pii only). A check field with no value means the check does not run. The settings some
 checks need are fields on the same record. They are kept while a check is off, so turning the
 check back on restores them, and they are passed to the engine only while the check is on.
+
+The record also names its default profile: "tenant" (the record's own checks, above) or one of the
+example profiles the hosted service offers. A check request that names no profile uses it.
 """
 import base64
 from datetime import datetime, timezone
@@ -46,8 +49,10 @@ SETTINGS_OF = {
 SETTING_FIELDS = tuple(dict.fromkeys(name for names in SETTINGS_OF.values() for name in names))
 CHECK_FIELDS = tuple("check_" + check_id for check_id in CHECK_IDS)
 # Fields a tenant (or a demo visitor, on a demo record) may change. Account fields are admin-only.
-EDITABLE_FIELDS = frozenset({"mode", "timeout_ms", "failure_action", *CHECK_FIELDS, *SETTING_FIELDS})
+EDITABLE_FIELDS = frozenset({"mode", "timeout_ms", "failure_action", "default_profile", *CHECK_FIELDS, *SETTING_FIELDS})
 TENANT_POLICY_VERSION = "tenant"
+# Profile names a record can choose as its default. Which profiles exist is checked by the hosted service.
+PROFILE_PATTERN = r"^[a-z][a-z0-9-]{0,99}$"
 KEY_PREFIX = "gok_"
 TENANT_ID_PATTERN = r"^[a-z][a-z0-9-]{1,39}$"
 MONTH_PATTERN = r"^[0-9]{4}-(0[1-9]|1[0-2])$"
@@ -75,6 +80,8 @@ class TenantRecord(Contract):
     mode: Literal["observe", "enforce"] = "enforce"
     timeout_ms: int = Field(default=1000, ge=1, le=5_000, strict=True)
     failure_action: Literal["block", "flag"] = "block"
+    # The profile used when a check request names none: "tenant" = the check fields below
+    default_profile: str = Field(default=TENANT_POLICY_VERSION, pattern=PROFILE_PATTERN)
     # One field per check: no value = the check does not run
     check_pii: Action | None = None
     check_encoded_pii: Action | None = None

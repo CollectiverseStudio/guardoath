@@ -87,9 +87,11 @@ function coverage() {
 async function loadApplication(token, attempt) {
   const data = await api("/v1/applications/current", null, token); if (attempt !== revision) return;
     key = token; application = data; $("api-key").value = ""; $("policy").replaceChildren();
-    for (const policy of data.policies) { const option = document.createElement("option"); option.value = policy.version; option.textContent = (profileHelp[policy.version] ? profileHelp[policy.version].name + " (" + policy.version + ")" : policy.version) + " · " + policy.mode + " mode"; $("policy").append(option); }
-    if (data.policies.some(p => p.version === "conversation-v1")) $("policy").value = "conversation-v1";
-    $("connection-status").textContent = "Connected to " + data.application_id + ". " + data.policies.length + " policy available." + (data.tenant ? " " + data.tenant.used + " of " + data.tenant.monthly_allowance + " checks used in " + data.tenant.month + "." : "");
+    for (const policy of data.policies) { const option = document.createElement("option"); option.value = policy.version; option.textContent = (profileHelp[policy.version] ? profileHelp[policy.version].name + " (" + policy.version + ")" : policy.version) + " · " + policy.mode + " mode" + (data.tenant && policy.version === data.tenant.default_profile ? " · default" : ""); $("policy").append(option); }
+    // A tenant starts on its record's default profile; a local key on the combined conversation profile.
+    const preferred = data.tenant ? data.tenant.default_profile : "conversation-v1";
+    if (data.policies.some(p => p.version === preferred)) $("policy").value = preferred;
+    $("connection-status").textContent = "Connected to " + data.application_id + ". " + data.policies.length + (data.policies.length === 1 ? " profile" : " profiles") + " available." + (data.tenant ? " " + data.tenant.used + " of " + data.tenant.monthly_allowance + " checks used in " + data.tenant.month + "." : "");
     const limits = data.resource_limits;
     $("resource-limits").textContent = limits ? "Per server process: " + limits.checks_per_minute + " checks/minute per application · burst " + limits.burst + " · " + limits.application_concurrency + " concurrent checks per application. Each stage uses one API check; a full sequence uses two checks." : "";
     $("policy").disabled = false; $("disconnect").disabled = false; buttons(); coverage(); renderTenant();
@@ -108,23 +110,42 @@ function helpBlock(help, extra) {
 }
 const checkNames = {pii:"Personal data (PII)", encoded_pii:"Encoded personal data", secrets:"Secrets and credentials", text_security:"Hidden text and encodings", schema:"JSON structure (schema)", cross_field:"Field comparisons", completeness:"Required sections", matched_outcomes:"Matched outcomes (bias)", evidence:"Citation evidence", tool_calls:"Proposed tool calls", ledger:"Ledger totals", timestamps:"Timestamp order", graph:"Graph structure", integrity:"Content integrity (SHA-256)", content_safety:"Content safety (outside provider)", azure_prompt_shields:"Prompt Shields (outside provider, input only)"};
 const paidChecks = ["content_safety", "azure_prompt_shields"];
+function profileName(version) { return profileHelp[version] ? profileHelp[version].name : version; }
+function actionName(value) { return value ? value.charAt(0).toUpperCase() + value.slice(1) : "Off"; }
+// The record's own checks can be changed here; an example profile's checks are shown as they are.
+function ownChecksSelected() { const policy = currentPolicy(); return !policy || policy.version === "tenant"; }
 function renderTenant() {
   const tenant = application?.tenant; $("tenant-panel").hidden = !tenant; $("tenant-message").textContent = "";
   if (!tenant) return;
-  $("tenant-title").textContent = "Checks on " + tenant.display_name + "\u2019s record";
+  const policy = currentPolicy(), own = ownChecksSelected();
+  const choice = $("tenant-default-profile"); choice.replaceChildren();
+  for (const item of application.policies) { const option = document.createElement("option"); option.value = item.version; option.textContent = profileName(item.version) + " (" + item.version + ")"; choice.append(option); }
+  choice.value = tenant.default_profile;
+  $("tenant-default-note").textContent = "Default profile: " + profileName(tenant.default_profile) + ". A check request that does not name a profile (policy_version) uses it, and this page starts with it selected.";
+  $("tenant-title").textContent = own ? "Checks on " + tenant.display_name + "\u2019s record" : "Checks in the profile " + profileName(policy.version);
   $("tenant-usage").textContent = tenant.used + " of " + tenant.monthly_allowance + " checks used in " + tenant.month + (tenant.overage === "block" ? " (hard limit)" : "") + " \u00b7 revision " + tenant.revision;
+  $("tenant-profile-note").textContent = own ? "" : "This is an example profile, so its checks are fixed and are shown as they run: the action on the user\u2019s message (input) and on the AI\u2019s answer (output). To choose each check yourself, select \u201c" + profileName("tenant") + "\u201d as the check profile.";
   const box = $("tenant-checks"); box.replaceChildren();
   for (const [id, value] of Object.entries(tenant.checks)) {
     const row = document.createElement("div"); row.className = "tenant-check";
     const line = document.createElement("div"); line.className = "tenant-check-row";
-    const name = document.createElement("label"); name.htmlFor = "tenant-check-" + id; name.textContent = checkNames[id] || id;
-    const select = document.createElement("select"); select.id = "tenant-check-" + id; select.dataset.check = id;
-    for (const [option, text] of [["", "Off"], ["block", "Block"], ["flag", "Flag"], ["allow", "Allow"], ...(id === "pii" ? [["redact", "Redact"]] : [])]) {
-      const item = document.createElement("option"); item.value = option; item.textContent = text; select.append(item);
+    const name = document.createElement("label"); name.textContent = checkNames[id] || id;
+    if (own) {
+      name.htmlFor = "tenant-check-" + id;
+      const select = document.createElement("select"); select.id = "tenant-check-" + id; select.dataset.check = id;
+      for (const [option, text] of [["", "Off"], ["block", "Block"], ["flag", "Flag"], ["allow", "Allow"], ...(id === "pii" ? [["redact", "Redact"]] : [])]) {
+        const item = document.createElement("option"); item.value = option; item.textContent = text; select.append(item);
+      }
+      select.value = value || "";
+      if (tenant.demo && paidChecks.includes(id)) { select.disabled = true; row.title = "Calls a paid outside provider. Not available for demo users."; }
+      line.append(name, select);
+    } else {
+      const rule = policy.checks.find(c => c.id === id);
+      const shown = document.createElement("span"); shown.className = "tenant-action"; shown.id = "tenant-check-" + id; shown.dataset.check = id;
+      shown.textContent = !rule ? "Off" : rule.stages.map(stage => (stage === "input" ? "Input " : "Output ") + actionName(rule.actions?.[stage])).join(" \u00b7 ");
+      line.append(name, shown);
     }
-    select.value = value || "";
-    if (tenant.demo && paidChecks.includes(id)) { select.disabled = true; row.title = "Calls a paid outside provider. Not available for demo users."; }
-    line.append(name, select); row.append(line);
+    row.append(line);
     const help = checkHelp[id];
     if (help) {
       const details = document.createElement("details"); details.className = "check-help"; details.id = "tenant-help-" + id;
@@ -133,12 +154,13 @@ function renderTenant() {
     }
     box.append(row);
   }
+  $("tenant-save").disabled = !own;
   $("tenant-reset").hidden = !tenant.demo;
 }
 async function reloadApplication() { reset(); const attempt = revision; await loadApplication(key, attempt); }
 async function saveTenant(path, body, done) {
   if (!application?.tenant || busy) return;
-  $("tenant-save").disabled = $("tenant-reset").disabled = true;
+  $("tenant-save").disabled = $("tenant-reset").disabled = $("tenant-default-save").disabled = true;
   let message = done;
   try {
     const response = await fetch(path, {method: "POST", cache: "no-store", headers: {"Authorization": "Bearer " + key, "Content-Type": "application/json"}, body: JSON.stringify(body)});
@@ -148,10 +170,10 @@ async function saveTenant(path, body, done) {
       try { await reloadApplication(); } catch (error) { message += " The record could not be reloaded; connect again to see the current values."; }
     }
   } catch (error) { message = "The change was not saved."; }
-  finally { $("tenant-save").disabled = $("tenant-reset").disabled = false; $("tenant-message").textContent = message; }
+  finally { $("tenant-reset").disabled = $("tenant-default-save").disabled = false; $("tenant-save").disabled = !ownChecksSelected(); $("tenant-message").textContent = message; }
 }
 $("tenant-save").addEventListener("click", () => {
-  const tenant = application?.tenant; if (!tenant) return;
+  const tenant = application?.tenant; if (!tenant || !ownChecksSelected()) return;
   const changes = {};
   for (const select of $("tenant-checks").querySelectorAll("select")) {
     const value = select.value || null;
@@ -161,6 +183,12 @@ $("tenant-save").addEventListener("click", () => {
   saveTenant("/v1/tenants/current/checks", {revision: tenant.revision, changes}, "Saved. The new checks apply from the next check.");
 });
 $("tenant-reset").addEventListener("click", () => saveTenant("/v1/tenants/current/reset", {}, "Reset to the demo defaults."));
+$("tenant-default-save").addEventListener("click", () => {
+  const tenant = application?.tenant; if (!tenant) return;
+  const value = $("tenant-default-profile").value;
+  if (value === tenant.default_profile) { $("tenant-message").textContent = profileName(value) + " is already the default profile."; return; }
+  saveTenant("/v1/tenants/current/checks", {revision: tenant.revision, changes: {default_profile: value}}, "Saved. " + profileName(value) + " is now the default profile.");
+});
 $("connect").addEventListener("click", async () => {
   const token = $("api-key").value.trim(); if (!token || busy) return;
   reset(); const attempt = revision; $("connect").disabled = true;
@@ -198,7 +226,7 @@ $("demo-key").addEventListener("click", async () => {
   finally { $("demo-key").disabled = false; }
 });
 loadDemoUsers();
-$("policy").addEventListener("change", () => { reset(); coverage(); });
+$("policy").addEventListener("change", () => { reset(); coverage(); renderTenant(); });
 for (const id of ["input-content", "input-format", "api-key"]) $(id).addEventListener("input", () => reset());
 for (const id of ["output-content", "output-format"]) $(id).addEventListener("input", () => reset(true));
 // Each example owns exactly one editor. Profiles are never switched implicitly.

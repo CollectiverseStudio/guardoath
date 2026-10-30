@@ -35,6 +35,12 @@ class CheckRequest(Contract):
     validation_codes: tuple[Annotated[str, Field(pattern=r"^[A-Z][A-Z0-9_]{1,31}$", strict=True)], ...] = Field(default=(), max_length=12)
 
 
+class ApiCheckRequest(CheckRequest):
+    """A check request sent to the HTTP API. With a tenant key, policy_version may be left out: the
+    tenant record's default profile is used. Every other key must name a profile."""
+    policy_version: str | None = Field(default=None, min_length=1, max_length=100)
+
+
 class Finding(Contract):
     rule_id: str
     category: str

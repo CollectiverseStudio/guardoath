@@ -9,6 +9,8 @@ Each tenant is one record. Everything about the tenant is on it:
   the allowance still run and are recorded for billing. Demo users use `block`: their checks stop at the
   allowance.
 - **Usage:** `usage`, one counter per UTC month (`"2026-10": 1532`).
+- **Default profile:** `default_profile`, the profile used when a check request names none (see
+  [Profiles](#profiles)). It starts as `tenant`, the record's own checks.
 - **One field per check**, listed below.
 - **Check settings:** what some checks need to run (schemas, comparisons, required sections, and so on).
 
@@ -52,6 +54,21 @@ Rules:
 - A record with an invalid setting is rejected, even if that setting's check is off.
 - `mode` (`enforce` or `observe`), `timeout_ms` and `failure_action` apply to all of the tenant's checks.
 
+## Profiles
+
+A profile is a named set of checks. Every tenant can use:
+
+- **`tenant`**: the record's own check fields and settings. These are the only checks a tenant changes
+  one by one.
+- **The example profiles** in `policies/playground.json` (23 profiles; `GUARDOATH_TENANT_PROFILE_FILE`
+  chooses another file). Each runs exactly as it is defined there, including its own mode, deadline and
+  actions per stage. Demo users do not get `content-safety-v1`, which calls a paid outside provider.
+
+A check request can name a profile in `policy_version`. If it names none, the record's
+`default_profile` is used. A tenant changes its default profile like a check field
+(`{"default_profile": "pii-v1"}`); only a profile the tenant can use is accepted. The server does not
+start if the example profile file is missing.
+
 ## Demo users
 
 `demo1` to `demo10` are ordinary tenant records. Their starting values are in
@@ -62,7 +79,8 @@ Rules:
   matched_outcomes, evidence, tool_calls, ledger, timestamps, graph and integrity.
 - **Never on:** content_safety and azure_prompt_shields (paid providers).
 - **Limits:** 2,000 checks per month each, hard limit (`overage: block`), and no keys.
-- **Reset:** a reset sets every check field and check setting back to these values.
+- **Default profile:** `tenant`.
+- **Reset:** a reset sets every check field, check setting and the default profile back to these values.
 
 ## Hosted API
 
@@ -75,9 +93,9 @@ keeps working alongside it.
 |---|---|---|
 | `GET /v1/demo-users` | no | Lists the demo users. 404 when demo users are off. |
 | `POST /v1/demo-users/{tenant_id}/key` (JSON body `{}`) | no | Returns that demo user's API key. Every visitor who picks the same demo user gets the same key. |
-| `GET /v1/applications/current` | yes | The tenant's checks (policy version `tenant`) and this month's usage. |
-| `POST /v1/checks/input`, `POST /v1/checks/output` | yes | Runs the checks that have a value on the tenant record. Use `application_id` = the tenant id and `policy_version` = `tenant`. |
-| `POST /v1/tenants/current/checks` (JSON `{"revision": n, "changes": {...}}`) | yes, a tenant key | Changes the tenant's own check fields and check settings. `null` turns a check off. Refused with 409 if the record changed since revision `n`, and with 422 (and a reason) for an invalid value, an account field, or settings the engine rejects. Nothing is stored when a change is refused. Not counted as a check. |
+| `GET /v1/applications/current` | yes | Every profile the tenant can use (`tenant` first), each check with its action on each stage, the default profile and this month's usage. |
+| `POST /v1/checks/input`, `POST /v1/checks/output` | yes | Runs a profile. Use `application_id` = the tenant id. `policy_version` names the profile; leave it out to use the record's default profile. A profile the tenant cannot use gets 404. Local keys must always name a profile. |
+| `POST /v1/tenants/current/checks` (JSON `{"revision": n, "changes": {...}}`) | yes, a tenant key | Changes the tenant's own check fields, check settings and default profile. `null` turns a check off. Refused with 409 if the record changed since revision `n`, and with 422 (and a reason) for an invalid value, an account field, or settings the engine rejects. Nothing is stored when a change is refused. Not counted as a check. |
 | `POST /v1/tenants/current/reset` (JSON `{}`) | yes, a demo key | Sets a demo user's check fields and settings back to the demo defaults. 403 for customers. |
 
 - **Keys:** tenant keys look like `gok_<tenant_id>_<secret>` and lead to exactly one record. A demo key is
@@ -89,8 +107,11 @@ keeps working alongside it.
   month. Customers (`overage: allow_and_record`) are counted past their allowance.
 - **Check changes:** a change to a record's check fields applies from the next request.
 - **Dashboard:** when demo users are on, the dashboard shows **Or try a demo user**. Choosing one and
-  selecting **Get demo API key** shows the key and connects with it. With any tenant key, **Checks on this
-  record** lists all 16 check fields (Off, Block, Flag, Allow, and Redact for pii). **Save checks** saves the
-  changed fields, and **Reset to defaults** (demo users) restores the demo values. Paid outside checks cannot
-  be turned on for demo users.
+  selecting **Get demo API key** shows the key and connects with it. The check profile drop-down lists every
+  profile the tenant can use and starts on its default profile. **Default profile** with **Save default
+  profile** changes the default. The checks panel follows the selected profile: for `tenant` it lists all 16
+  check fields (Off, Block, Flag, Allow, and Redact for pii) and **Save checks** saves the changed fields; for
+  an example profile it shows that profile's checks and their input and output actions, which cannot be
+  changed. **Reset to defaults** (demo users) restores the demo values. Paid outside checks cannot be turned
+  on for demo users.
 - **Local launcher:** `python start_dashboard.py` turns on demo users with a new secret on every start.

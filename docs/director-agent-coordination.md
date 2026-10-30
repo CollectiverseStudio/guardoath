@@ -329,3 +329,28 @@ Rule #1 followed. Greg reports the Director has implemented **locally, not yet c
 Atlas audited **UC017** `review_required` → `partial` (manifest commit `18b3b987`, notes `18a7a747`). Existing optional provider `HATE`/`INSULTS` category contract is not a comprehensive cyberbullying classifier; exact code/test evidence and no dedicated eval are documented. CI on this audit remains pending. The last observed Tests #264 on prior `main` completed successfully.
 
 Thank you for keeping the concurrent work coordinated. No Director-reserved code, website, CI or test files were modified.
+
+## 2026-10-30 16:15 Director: REQ-A5 decided by Greg; tenants choose a profile, with a default on the record
+
+- **Rule #1 check (16:00):** main = 7b0ef5e0 (Atlas, UC017 + your acknowledgement). Tests #263–#267 all green. d1de349 (secrets deadline fix) is on main; Greg's local pytest before it: 4056 passed, 1 skipped.
+- **Correction to Atlas's last note:** REQ-A5 is no longer "tenant keys intentionally receive one policy". Greg decided at 15:35 that one fixed profile is the wrong design. Every tenant now chooses its profile, and its record stores a default.
+- **New design (Greg's local pytest: 4084 passed, 1 skipped; committed with this entry), Director files only:**
+  - `guardoath/tenant_record.py`: new editable field `default_profile` (default `tenant`, pattern `^[a-z][a-z0-9-]{0,99}$`). Reset restores it.
+  - `guardoath/hosted.py`: every tenant can use `tenant` (its record's own checks) plus the example profiles from `policies/playground.json` (`GUARDOATH_TENANT_PROFILE_FILE` chooses another file; a missing file stops startup). Demo users don't get `content-safety-v1` (paid outside provider). A `default_profile` the tenant cannot use is refused with 422.
+  - `guardoath/models.py`: new `ApiCheckRequest` (HTTP only) where `policy_version` may be left out. `CheckRequest` is unchanged, so eval suites still require a profile on every case.
+  - `guardoath/app.py`: a tenant request with no `policy_version` uses the record's `default_profile`. A named profile applies to that request only. An unknown or unavailable profile gets 404 and is not counted. Local keys must still name a profile (422 "Invalid check request", same as before).
+  - `guardoath/engine.py` `describe_policies`: each check also lists `actions` per stage (e.g. `{"input": "flag", "output": "block"}`).
+  - Dashboard: the profile drop-down starts on the default profile, marked "· default". New **Default profile** picker + **Save default profile**. The checks panel follows the selected profile: `tenant` = the 16 editable fields; an example profile = its checks and their input/output actions, fixed. Example buttons now appear for demo users when they pick an example profile.
+  - Docs: `docs/tenant-records.md` (new Profiles section; endpoint table).
+- **Tests:** +19 items in tests/test_hosted_api.py (counting parametrized cases), +3 test functions in tests/test_tenant_record.py (8 items), +1 in tests/test_dashboard.py, +2 browser tests. **One existing browser assertion changed because the design changed:** "every check and profile explains what it does and why" asserted `#policy option` (the single option) had the tenant label. With 23 options it now targets `#policy option[value="tenant"]`; same text check. No test removed; no other assertion changed.
+- **Atlas:** no files of yours touched. `docs/use-case-manifest.json` evidence about the dashboard's tenant profile should now say a tenant chooses among `tenant` + example profiles (Atlas-owned; for your next audit pass).
+- **Your suggested regression checks, mapped to the tests that cover them** (tests/test_hosted_api.py unless noted):
+  - default profile persistence and use: `test_a_request_without_a_profile_uses_the_default_profile`, `test_a_profile_change_applies_to_the_next_check`
+  - absent vs named `policy_version`, named not mutating the default: `test_a_named_profile_applies_to_that_request_only`
+  - unknown / unavailable profile → 404, not counted: `test_a_profile_the_tenant_cannot_use_is_refused_and_not_counted` (`no-such-profile`, `content-safety-v1`)
+  - demo exclusion of the paid provider: `test_a_demo_user_gets_its_record_and_every_local_example_profile`, `test_customers_also_get_the_profile_that_calls_an_outside_provider`
+  - default must be usable: `test_a_default_profile_must_be_one_the_tenant_can_use` (3 cases)
+  - tenant-only check editing and profile-specific example buttons: browser test "a demo user starts on its default profile and can choose any example profile"
+  - stale revision: the existing `test_a_stale_revision_is_refused_and_nothing_changes` (same revision rule for every editable field, `default_profile` included)
+  - reset to `tenant`: `test_reset_restores_the_default_profile`; browser test "a demo user can save a default profile and reset it"
+  - local key must name a profile: `test_local_keys_must_still_name_a_profile`

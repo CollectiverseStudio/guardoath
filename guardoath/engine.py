@@ -108,7 +108,10 @@ class Engine:
                         "simulated": bool(getattr(self._checkers.get(rule.checker_id), "simulated", False)),
                         "external": rule.checker_id == "content_safety" or bool(getattr(self._checkers.get(rule.checker_id), "external", False)),
                         "provider": getattr(self._checkers.get(rule.checker_id), "provider", None),
-                        "stages": list(rule.stages)}
+                        "stages": list(rule.stages),
+                        # What a finding does on each stage the check runs on.
+                        "actions": {stage.value: ((rule.on_input_finding if stage == Stage.INPUT else rule.on_output_finding)
+                                                  or rule.on_finding).value for stage in rule.stages}}
                        for rule in policy.rules],
         } for (owner, _), policy in self._policies.items() if owner == application_id]
 

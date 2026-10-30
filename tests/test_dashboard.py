@@ -164,3 +164,13 @@ def test_proposed_answer_is_locked_until_the_input_test_passes():
     for text in ["the input test has not run", "the input test did not pass", "The input test passed", "Prepared example"]:
         assert text in script, text
     assert "function outputLocked() { return !preparedRun() && !canProceed(inputResult); }" in script
+
+
+def test_tenant_panel_has_a_default_profile_picker_and_a_profile_note():
+    page = TestClient(create_app(credentials={"test-key": "demo"})).get("/dashboard").text
+    panel = page[page.index('id="tenant-panel"'):]
+    panel = panel[:panel.index("</section>")]
+    for marker in ['id="tenant-default-profile"', 'id="tenant-default-save"', 'id="tenant-default-note"',
+                   'id="tenant-profile-note"', 'id="tenant-checks"']:
+        assert marker in panel, marker
+    assert panel.index('id="tenant-default-profile"') < panel.index('id="tenant-checks"')
