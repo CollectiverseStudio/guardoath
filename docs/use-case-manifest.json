@@ -411,21 +411,59 @@
       "title": "Geographic privacy consent",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented; no user-location/consent/transfer-rules engine or compliance determination."
+      "existing_coverage_note": "Not implemented; no user-location/consent/transfer-rules engine or compliance determination.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/pii.py",
+          "guardoath/content_safety.py"
+        ],
+        "tests": [
+          "tests/test_pii.py::test_real_local_findings",
+          "tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Identifier detection and optional content safety do not establish geographic consent, jurisdiction, cross-border transfer authorization or compliance."
     },
     {
       "id": "UC026",
       "title": "Biometric consent token",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented; no biometric ingestion or cryptographic consent verifier."
+      "existing_coverage_note": "Not implemented; no biometric ingestion or cryptographic consent verifier.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/ingress.py",
+          "guardoath/pii.py"
+        ],
+        "tests": [
+          "tests/test_foundations.py::test_formats_are_enforced",
+          "tests/test_pii.py::test_real_local_findings"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "JSON/text ingress and identifier scanning do not verify biometric consent tokens, cryptographic proof or biometric-data processing authorization."
     },
     {
       "id": "UC027",
       "title": "Third-party copyright / IP",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented; literal confidential phrases do not establish ownership, licensing or infringement."
+      "existing_coverage_note": "Not implemented; literal confidential phrases do not establish ownership, licensing or infringement.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/secrets_check.py"
+        ],
+        "tests": [
+          "tests/test_secrets_check.py::test_supported_candidates",
+          "tests/test_secrets_check.py::test_no_verification_or_network"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Configured literal confidential phrase and credential checks do not establish third-party copyright ownership, licensing terms or infringement."
     },
     {
       "id": "UC028",
