@@ -74,3 +74,7 @@ As of the last independently inspected run, [Tests #207](https://github.com/Coll
 For every future batch, report: changed paths, commit SHA, old/new use-case statuses, source module and exact test/eval IDs, added test counts, CI run number/results, reserved-file coordination, and documentation changes. Maintain [catalog audit notes](catalog-audit-notes.md) and [implementation progress](input-validation-implementation-progress.md). Do not claim tests were executed locally unless they were.
 
 **Critical distinction:** GitHub contains the 11 committed audit classifications and IV-02/IV-03 code; the 21 additional catalog classifications, 94 API scenarios and UC101–200 feasibility rankings remain in a separate unmerged ZIP.
+
+## Website launch video handoff (2026-10-30)
+
+The approved 2:16 AI-agent narration film is `guardoath_ai_final.mp4`. See [launch-video-website.md](launch-video-website.md) for creative/technical specifications, embed example, accessibility, asset transfer status and deployment QA. **The video is not in GitHub and has not been deployed.** The actual marketing website repository is not identified in this codebase; coordinate with its owner before making website changes. Preserve development-preview labeling and do not present planned features as live.
