@@ -182,21 +182,55 @@
       "title": "Misinformation",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented; no independent facts/evidence retrieval or verification service."
+      "existing_coverage_note": "Not implemented; no independent facts/evidence retrieval or verification service.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/evidence.py"
+        ],
+        "tests": [
+          "tests/test_evidence.py::test_valid_citation_does_not_establish_claim_entailment",
+          "tests/test_evidence.py::test_no_network_or_reference_lookup"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Exact local citation checks cannot establish independent factual truth or misinformation; no fact retrieval."
     },
     {
       "id": "UC019",
       "title": "Plagiarism",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented; no corpus/web index, provenance matching or originality claim."
+      "existing_coverage_note": "Not implemented; no corpus/web index, provenance matching or originality claim.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/evidence.py"
+        ],
+        "tests": [
+          "tests/test_evidence.py::test_no_network_or_reference_lookup"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "No originality corpus or cross-document plagiarism search. Evidence citation comparison is not plagiarism detection."
     },
     {
       "id": "UC020",
       "title": "Defamation",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented; content moderation cannot establish truth or legal defamation."
+      "existing_coverage_note": "Not implemented; content moderation cannot establish truth or legal defamation.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/evidence.py"
+        ],
+        "tests": [
+          "tests/test_evidence.py::test_valid_citation_does_not_establish_claim_entailment"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "No legal fact-finding, contextual reputation analysis, or defamation adjudication."
     },
     {
       "id": "UC021",
