@@ -185,7 +185,20 @@
       "title": "Self-harm interception",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "No dedicated self-harm classifier or crisis-routing workflow implemented. Do not infer it from the initial five content categories."
+      "existing_coverage_note": "No dedicated self-harm classifier or crisis-routing workflow implemented. Do not infer it from the initial five content categories.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/bedrock_guardrails.py",
+          "guardoath/content_safety.py"
+        ],
+        "tests": [
+          "tests/test_bedrock_guardrails.py::test_category_contract",
+          "tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Current optional content-safety adapter enumerates five categories (hate, insults, sexual, violence, misconduct), not a self-harm classification or crisis-routing workflow. No dedicated self-harm saved eval exists; absence of a finding must not be interpreted as safety."
     },
     {
       "id": "UC013",
