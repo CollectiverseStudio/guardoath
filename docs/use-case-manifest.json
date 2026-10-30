@@ -712,9 +712,19 @@
     {
       "id": "UC043",
       "title": "Symptom context",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Schemas/sections can require submitted fields. No clinical interpretation, safe-triage or symptom-adequacy claim."
+      "existing_coverage_note": "Schemas/sections can require submitted fields. No clinical interpretation, safe-triage or symptom-adequacy claim.",
+      "evidence": {
+        "modules": [
+          "guardoath/checkers.py"
+        ],
+        "tests": [
+          "tests/test_catalog_symptom_contracts.py::test_uc043_structured_symptom_intake_not_clinical_assessment"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Configured JSON Schema enforces structured symptom, duration and severity field presence, types and bounds on input/output. No symptom adequacy assessment, diagnosis, emergency triage, clinical safety inference or medical advice is provided."
     },
     {
       "id": "UC044",
