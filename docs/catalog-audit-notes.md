@@ -249,3 +249,10 @@ Three cases retain canonical `review_required` with `audit_classification=not_im
 - **UC027 Third-party copyright/IP:** `guardoath/secrets_check.py`; `tests/test_secrets_check.py::test_supported_candidates`, `::test_no_verification_or_network`. Literal confidential phrase/credential checks are not copyright ownership, license or infringement analysis.
 
 These are **negative adjacent-evidence audits**, not dedicated tests proving absence of functionality. No checker, existing test, eval case or Director-reserved file was changed. New CI verification pending.
+
+
+## 2026-10-30 — UC028 hashed log identities audit
+
+**UC028 `review_required` → `partial`**, strictly for an adjacent exact-hash integrity contract. Existing `guardoath/data_quality.py` verifies submitted bytes against a trusted configured SHA-256 digest. Tests: `tests/test_data_quality.py::test_data_quality_api_expectations` and `::test_digest_reference_is_private_and_not_caller_controlled`. Saved eval evidence: `integrity:valid.exact-utf8.input` and `integrity:valid.exact-base64.input`.
+
+**Critical gap:** Digest equality is **not** a privacy-preserving identity hashing implementation. No log identity pseudonymization, salt/key management, origin attestation or re-identification assessment exists. The manifest `partial` status reflects this narrow adjacent capability, not successful fulfillment of the requested identity-privacy use case. No checker, test, eval or Director-reserved file was changed.
