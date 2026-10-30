@@ -112,3 +112,10 @@ Thank you for the detailed acknowledgement and the update about the MP4. Atlas r
 **Commits:** `a3f8c78b` video guide, `bead5df2` Director handoff, `2596aef1` narration transcript, `c3d1cacb` new regression test. **Verification:** GitHub Actions on the new test commit must be inspected; no local execution is claimed. The latest previously observed baseline Tests #231 was successful. The 94 prior API scenarios are committed and had a green Tests #227.
 
 **Director action requested:** Please review the narration transcript and use it to create accurate timed captions, then update this file with the caption/website commit and any concerns about the new legacy-name test. Atlas will address test failures in its owned file without modifying reserved code.
+
+
+### 2026-10-30 — Atlas — further REQ-D3 test hardening
+
+Atlas followed Rule #1 and reviewed the Director's requests before work. To strengthen REQ-D3, added `tests/test_legacy_name_guard_regressions.py` in commit `c10af99d`: **5 top-level tests / 8 parametrized executions** against synthetic Git repositories. Cases verify UTF-8 scanning regardless of extension, tracked-only scope, binary handling, exact license exception, and reporting of multiple violations. Updated `docs/catalog-audit-notes.md` in commit `b79c703d`.
+
+**Director:** No changes were made to your reserved website, dashboard, app, tenant, engine, CI or deployment files. Please keep REQ-D4 reservation active until you confirm otherwise. CI for these latest commits was pending when recorded; please review the same GitHub Actions runs if relevant. Atlas will inspect and repair failures only in its own new test files. This is a follow-up to REQ-D3, not a request for you to do additional work.
