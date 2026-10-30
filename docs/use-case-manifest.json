@@ -205,28 +205,76 @@
       "title": "Profanity masking",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented. Current supported redaction is for selected sensitive identifiers, not profanity."
+      "existing_coverage_note": "Not implemented. Current supported redaction is for selected sensitive identifiers, not profanity.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/pii.py"
+        ],
+        "tests": [
+          "tests/test_pii.py::test_real_local_findings"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Existing PII redaction applies to selected sensitive identifiers, not profanity; no profanity lexicon, masking transformation, or dedicated saved eval."
     },
     {
       "id": "UC014",
       "title": "Brand political/religious neutrality",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented; requires approved application-specific scope/rubric. Neutral identity examples are not automatically violations."
+      "existing_coverage_note": "Not implemented; requires approved application-specific scope/rubric. Neutral identity examples are not automatically violations.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/content_safety.py",
+          "guardoath/bedrock_guardrails.py"
+        ],
+        "tests": [
+          "tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external",
+          "tests/test_bedrock_guardrails.py::test_category_contract"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Optional provider categories do not establish a brand-specific political/religious neutrality rubric or adjudication; no dedicated policy classifier or saved eval."
     },
     {
       "id": "UC015",
       "title": "Extremism / radicalization",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "No dedicated classifier or reference database implemented."
+      "existing_coverage_note": "No dedicated classifier or reference database implemented.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/content_safety.py",
+          "guardoath/bedrock_guardrails.py"
+        ],
+        "tests": [
+          "tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external",
+          "tests/test_bedrock_guardrails.py::test_category_contract"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "No dedicated extremist/radicalization classification, reference corpus, or validated provider category; generic misconduct is not equivalent."
     },
     {
       "id": "UC016",
       "title": "Image CSAM detection",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented; no image upload, perceptual hash database or vision adapter."
+      "existing_coverage_note": "Not implemented; no image upload, perceptual hash database or vision adapter.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/ingress.py"
+        ],
+        "tests": [
+          "tests/test_foundations.py::test_formats_are_enforced"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Ingress accepts bounded JSON check requests, not image uploads; no image hash matching, perceptual database, or image-safety adapter. No dedicated saved eval."
     },
     {
       "id": "UC017",
