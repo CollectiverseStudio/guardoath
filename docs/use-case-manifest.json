@@ -361,9 +361,24 @@
     {
       "id": "UC022",
       "title": "Card-number masking",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Supported card patterns/Luhn and revalidated redaction. This alone does not establish PCI compliance."
+      "existing_coverage_note": "Supported card patterns/Luhn and revalidated redaction. This alone does not establish PCI compliance.",
+      "evidence": {
+        "modules": [
+          "guardoath/pii.py"
+        ],
+        "tests": [
+          "tests/test_pii.py::test_real_local_findings",
+          "tests/test_pii.py::test_benign_lookalikes",
+          "tests/test_pii.py::test_api_output_and_logs_do_not_echo_sensitive_values"
+        ],
+        "eval_case_ids": [
+          "privacy:card.input",
+          "privacy:card.output"
+        ]
+      },
+      "audit_note": "Luhn-validated card-number detection and configured privacy redaction are supported for selected formats; this does not establish comprehensive PCI DSS compliance, all payment instrument coverage or merchant/payment processor integration. Input/output eval evidence exists."
     },
     {
       "id": "UC023",
