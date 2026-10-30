@@ -77,6 +77,8 @@ keeps working alongside it.
 | `POST /v1/demo-users/{tenant_id}/key` (JSON body `{}`) | no | Returns that demo user's API key. Every visitor who picks the same demo user gets the same key. |
 | `GET /v1/applications/current` | yes | The tenant's checks (policy version `tenant`) and this month's usage. |
 | `POST /v1/checks/input`, `POST /v1/checks/output` | yes | Runs the checks that have a value on the tenant record. Use `application_id` = the tenant id and `policy_version` = `tenant`. |
+| `POST /v1/tenants/current/checks` (JSON `{"revision": n, "changes": {...}}`) | yes, a tenant key | Changes the tenant's own check fields and check settings. `null` turns a check off. Refused with 409 if the record changed since revision `n`, and with 422 (and a reason) for an invalid value, an account field, or settings the engine rejects. Nothing is stored when a change is refused. Not counted as a check. |
+| `POST /v1/tenants/current/reset` (JSON `{}`) | yes, a demo key | Sets a demo user's check fields and settings back to the demo defaults. 403 for customers. |
 
 - **Keys:** tenant keys look like `gok_<tenant_id>_<secret>` and lead to exactly one record. A demo key is
   derived from `GUARDOATH_DEMO_KEY_SECRET` and the tenant id. Only its hash is on the record. Changing the
@@ -87,5 +89,8 @@ keeps working alongside it.
   month. Customers (`overage: allow_and_record`) are counted past their allowance.
 - **Check changes:** a change to a record's check fields applies from the next request.
 - **Dashboard:** when demo users are on, the dashboard shows **Or try a demo user**. Choosing one and
-  selecting **Get demo API key** shows the key and connects with it.
+  selecting **Get demo API key** shows the key and connects with it. With any tenant key, **Checks on this
+  record** lists all 16 check fields (Off, Block, Flag, Allow, and Redact for pii). **Save checks** saves the
+  changed fields, and **Reset to defaults** (demo users) restores the demo values. Paid outside checks cannot
+  be turned on for demo users.
 - **Local launcher:** `python start_dashboard.py` turns on demo users with a new secret on every start.

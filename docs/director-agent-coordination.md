@@ -177,3 +177,47 @@ Director read this file from `main` at `a76f38be` before writing this entry (Rul
 - **Atlas's tests are right.** Greg's local run at 13:53: **2 failed, 4026 passed, 1 skipped**. The 2 failures are `tests/test_no_legacy_project_names.py::test_tracked_text_files_contain_no_forbidden_legacy_names` and `tests/test_legacy_name_guard_regressions.py::test_tracked_text_files_contain_no_forbidden_legacy_names`, both reporting `docs/Collectiverse_UB_Cultivator_Narrative_Pitch.pptx:8`. This is the file REQ-D3 was meant to catch. **Atlas: please do not change either test.** CI on `main` will report the same 2 failures from `c3d1cacb` onward, until the file is removed.
 - **Fix:** Greg runs `git rm docs/Collectiverse_UB_Cultivator_Narrative_Pitch.pptx` as part of Director commit 2. Nothing is lost: the text is Director's earlier Atlas handoff, and a copy is in Director's workspace. The file stays in git history (no force-push).
 - After commit 2 is pushed, Director will confirm the file is gone from the GitHub tree, re-run both legacy-name tests, and record the CI run here.
+
+### 2026-10-30 — Director — commit 2 pushed (`12fa8db7`); legacy-name failures explained; commit 3 starting
+
+Director read this file from `main` at `12fa8db7` before writing this entry (Rule #1).
+
+- **Pushed:** `12fa8db7` (a76f38be..12fa8db7, 15 files). It contains the hosted API on tenant records and the demo-user dropdown that gives a demo API key, plus the removal of `docs/Collectiverse_UB_Cultivator_Narrative_Pitch.pptx`.
+  - The GitHub commit files API lists the deletion (`removed`), and the `main` tree no longer contains any `.pptx` file.
+- **Local before the commit (Greg's PC):** 4028 passed, 1 skipped, 0 failed. Both legacy-name tests now pass.
+- **CI so far:**
+  - Tests #232–#236 succeeded (`bff95f50`, `4cd6b318`, `a3f8c78b`, `bead5df2`, `2596aef1`).
+  - Tests #237–#244 failed, from `c3d1cacb` through `a76f38be`. The job log for #244 `test (3.12)` (job 124219729416) shows exactly 2 failures: `tests/test_legacy_name_guard_regressions.py::test_tracked_text_files_contain_no_forbidden_legacy_names` and `tests/test_no_legacy_project_names.py::test_tracked_text_files_contain_no_forbidden_legacy_names`, both `docs/Collectiverse_UB_Cultivator_Narrative_Pitch.pptx:8`. Result: 2 failed, 3988 passed, 1 skipped.
+  - `12fa8db7` removes that file. Tests #245 (`12fa8db7`) was queued when this was written; Director will record its result.
+  - Atlas: no action needed. Your tests did exactly what REQ-D3 asked for.
+- **REQ-D4 update:** still active for the same files. Commit 3 (below) changes `guardoath/app.py`, `guardoath/hosted.py`, `guardoath/static/dashboard.{html,js,css}`, `tests/test_hosted_api.py`, `tests/browser/dashboard.spec.js` and `docs/tenant-records.md`.
+- **Commit 3 (in progress): dashboard check toggles.**
+  - When connected with a tenant key, the dashboard shows the record's 16 check fields: Off / Block / Flag / Allow, plus Redact for pii.
+  - **Save checks** sends `POST /v1/tenants/current/checks`. The change is tied to the record's revision (409 if someone else changed it), and every rejected value gets a clear 422 message.
+  - **Reset to defaults** (demo users only) sends `POST /v1/tenants/current/reset`.
+  - Paid outside checks stay unavailable for demo users.
+
+### 2026-10-30 — Director — `main` green again (Tests #245); commit 3 (dashboard check toggles) on disk
+
+Director read this file from `main` at `12fa8db7` before writing this entry (Rule #1). No commits since `12fa8db7`.
+
+- **CI:** **Tests #245 (`12fa8db7`) completed successfully.** Removing `docs/Collectiverse_UB_Cultivator_Narrative_Pitch.pptx` fixed both legacy-name tests. Tests #237–#244 failed, all on that file, as recorded above. `main` has been green since `12fa8db7`.
+- **Commit 3, on disk and not committed (Greg is running pytest).** It covers the check toggles for the full-demo launch:
+  - `guardoath/hosted.py`:
+    - `CheckChanges` (`revision` ≥ 1, strict int; `changes` 1–N fields).
+    - `TenantService.change_checks()` refuses non-editable fields. It validates the whole record, then builds the engine from it, so nothing the engine would reject is stored. Only then does it save, against the record's revision.
+    - `reset_demo()` works for demo users only.
+    - `rejection_message()` gives field names and pydantic messages, never submitted values.
+  - `guardoath/app.py`: two new endpoints, both for tenant keys only (403 for a local key, 401 for an unknown key), and not counted as checks:
+    - `POST /v1/tenants/current/checks` returns 200 with the tenant summary; 409 for a stale revision; 422 with a reason.
+    - `POST /v1/tenants/current/reset` is for demo users only (403 for customers).
+  - `guardoath/static/dashboard.{html,js,css}`:
+    - A **Checks on this record** panel with 16 selects: Off / Block / Flag / Allow, and Redact for pii only. Paid outside checks are disabled for demo users.
+    - **Save checks** sends only the changed fields. **Reset to defaults** appears for demo users. A usage line shows "x of 2000 checks used in YYYY-MM (hard limit) · revision n".
+    - Connect now goes through `loadApplication()`, which saving also uses to reload.
+  - `tests/test_hosted_api.py`: +12 functions = 23 items.
+  - `tests/browser/dashboard.spec.js`: +1 test. demo3 turns pii and encoded_pii off; an email passes; Redact is not offered for secrets; Reset to defaults; the email is caught again.
+  - `docs/tenant-records.md`: 2 endpoint rows and the dashboard paragraph.
+- **Expected locally:** 4051 passed (4028 + 23), 1 skipped.
+- **REQ-D4:** still active until commit 3 is pushed. The same files as listed above.
+- **Next (Director):** commit 4, the DynamoDB tenant store (one item per tenant; usage counted with a conditional `UpdateItem ADD`). Files: new `guardoath/dynamodb_store.py`, `guardoath/hosted.py`, `pyproject.toml` (aws extra already present), new `tests/test_dynamodb_store.py`. Atlas: please avoid these as well.

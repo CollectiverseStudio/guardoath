@@ -67,24 +67,74 @@ function coverage() {
   if (policy?.version.startsWith("privacy-encoded")) $("profile-status").textContent += " One labeled Base64/hex layer only. No recursive or unlabeled decoding and no encoded-value redaction. Incomplete scans hold the answer.";
   updateSampleButtons();
 }
-$("connect").addEventListener("click", async () => {
-  const token = $("api-key").value.trim(); if (!token || busy) return;
-  reset(); const attempt = revision; $("connect").disabled = true;
-  key = ""; application = null; buttons(); $("run").disabled = true; $("policy").disabled = true;
-  $("coverage").replaceChildren(); $("execution-mode").textContent = "Local checks"; $("data-routing").textContent = ""; $("resource-limits").textContent = ""; $("disconnect").disabled = true;
-  try { const data = await api("/v1/applications/current", null, token); if (attempt !== revision) return;
+async function loadApplication(token, attempt) {
+  const data = await api("/v1/applications/current", null, token); if (attempt !== revision) return;
     key = token; application = data; $("api-key").value = ""; $("policy").replaceChildren();
     for (const policy of data.policies) { const option = document.createElement("option"); option.value = policy.version; option.textContent = (policy.version === "conversation-v1" ? "Conversation — combined general text checks" : policy.version === "tenant" ? "Tenant record checks" : policy.version) + " · " + policy.mode + " mode"; $("policy").append(option); }
     if (data.policies.some(p => p.version === "conversation-v1")) $("policy").value = "conversation-v1";
     $("connection-status").textContent = "Connected to " + data.application_id + ". " + data.policies.length + " policy available." + (data.tenant ? " " + data.tenant.used + " of " + data.tenant.monthly_allowance + " checks used in " + data.tenant.month + "." : "");
     const limits = data.resource_limits;
     $("resource-limits").textContent = limits ? "Per server process: " + limits.checks_per_minute + " checks/minute per application · burst " + limits.burst + " · " + limits.application_concurrency + " concurrent checks per application. Each stage uses one API check; a full sequence uses two checks." : "";
-    $("policy").disabled = false; $("disconnect").disabled = false; buttons(); coverage();
+    $("policy").disabled = false; $("disconnect").disabled = false; buttons(); coverage(); renderTenant();
+}
+const checkNames = {pii:"Personal data (PII)", encoded_pii:"Encoded personal data", secrets:"Secrets and credentials", text_security:"Hidden text and encodings", schema:"JSON structure (schema)", cross_field:"Field comparisons", completeness:"Required sections", matched_outcomes:"Matched outcomes (bias)", evidence:"Citation evidence", tool_calls:"Proposed tool calls", ledger:"Ledger totals", timestamps:"Timestamp order", graph:"Graph structure", integrity:"Content integrity (SHA-256)", content_safety:"Content safety (outside provider)", azure_prompt_shields:"Prompt Shields (outside provider, input only)"};
+const paidChecks = ["content_safety", "azure_prompt_shields"];
+function renderTenant() {
+  const tenant = application?.tenant; $("tenant-panel").hidden = !tenant; $("tenant-message").textContent = "";
+  if (!tenant) return;
+  $("tenant-title").textContent = "Checks on " + tenant.display_name + "\u2019s record";
+  $("tenant-usage").textContent = tenant.used + " of " + tenant.monthly_allowance + " checks used in " + tenant.month + (tenant.overage === "block" ? " (hard limit)" : "") + " \u00b7 revision " + tenant.revision;
+  const box = $("tenant-checks"); box.replaceChildren();
+  for (const [id, value] of Object.entries(tenant.checks)) {
+    const row = document.createElement("label"); row.className = "tenant-check"; row.htmlFor = "tenant-check-" + id;
+    const name = document.createElement("span"); name.textContent = checkNames[id] || id;
+    const select = document.createElement("select"); select.id = "tenant-check-" + id; select.dataset.check = id;
+    for (const [option, text] of [["", "Off"], ["block", "Block"], ["flag", "Flag"], ["allow", "Allow"], ...(id === "pii" ? [["redact", "Redact"]] : [])]) {
+      const item = document.createElement("option"); item.value = option; item.textContent = text; select.append(item);
+    }
+    select.value = value || "";
+    if (tenant.demo && paidChecks.includes(id)) { select.disabled = true; row.title = "Calls a paid outside provider. Not available for demo users."; }
+    row.append(name, select); box.append(row);
+  }
+  $("tenant-reset").hidden = !tenant.demo;
+}
+async function reloadApplication() { reset(); const attempt = revision; await loadApplication(key, attempt); }
+async function saveTenant(path, body, done) {
+  if (!application?.tenant || busy) return;
+  $("tenant-save").disabled = $("tenant-reset").disabled = true;
+  let message = done;
+  try {
+    const response = await fetch(path, {method: "POST", cache: "no-store", headers: {"Authorization": "Bearer " + key, "Content-Type": "application/json"}, body: JSON.stringify(body)});
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) message = response.status === 409 ? "Someone else changed this record. It has been reloaded; check the values and save again." : (typeof data.detail === "string" ? data.detail : "The change was not saved (HTTP " + response.status + ").");
+    if (response.ok || response.status === 409) {
+      try { await reloadApplication(); } catch (error) { message += " The record could not be reloaded; connect again to see the current values."; }
+    }
+  } catch (error) { message = "The change was not saved."; }
+  finally { $("tenant-save").disabled = $("tenant-reset").disabled = false; $("tenant-message").textContent = message; }
+}
+$("tenant-save").addEventListener("click", () => {
+  const tenant = application?.tenant; if (!tenant) return;
+  const changes = {};
+  for (const select of $("tenant-checks").querySelectorAll("select")) {
+    const value = select.value || null;
+    if (value !== (tenant.checks[select.dataset.check] || null)) changes["check_" + select.dataset.check] = value;
+  }
+  if (!Object.keys(changes).length) { $("tenant-message").textContent = "No changes to save."; return; }
+  saveTenant("/v1/tenants/current/checks", {revision: tenant.revision, changes}, "Saved. The new checks apply from the next check.");
+});
+$("tenant-reset").addEventListener("click", () => saveTenant("/v1/tenants/current/reset", {}, "Reset to the demo defaults."));
+$("connect").addEventListener("click", async () => {
+  const token = $("api-key").value.trim(); if (!token || busy) return;
+  reset(); const attempt = revision; $("connect").disabled = true;
+  key = ""; application = null; $("tenant-panel").hidden = true; buttons(); $("run").disabled = true; $("policy").disabled = true;
+  $("coverage").replaceChildren(); $("execution-mode").textContent = "Local checks"; $("data-routing").textContent = ""; $("resource-limits").textContent = ""; $("disconnect").disabled = true;
+  try { await loadApplication(token, attempt);
   } catch (error) { if (attempt === revision) $("connection-status").textContent = error.message || "Connection failed."; }
   finally { $("connect").disabled = false; }
 });
 $("disconnect").addEventListener("click", () => {
-  key = ""; application = null; $("api-key").value = ""; $("demo-key-value").value = ""; $("resource-limits").textContent = ""; reset(); $("coverage").replaceChildren(); $("profile-status").textContent = "Connect to load the combined conversation profile.";
+  key = ""; application = null; $("api-key").value = ""; $("demo-key-value").value = ""; $("tenant-panel").hidden = true; $("resource-limits").textContent = ""; reset(); $("coverage").replaceChildren(); $("profile-status").textContent = "Connect to load the combined conversation profile.";
   $("execution-mode").textContent = "Local checks"; $("data-routing").textContent = "";
   $("policy").replaceChildren(); $("policy").disabled = true; $("run").disabled = true; $("disconnect").disabled = true;
   $("connection-status").textContent = "Disconnected. Key removed from this tab’s memory.";

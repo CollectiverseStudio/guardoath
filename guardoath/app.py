@@ -22,9 +22,9 @@ from guardoath.groups import GROUPS
 from guardoath.budgets import ResourceLimits, RequestBudgets, RequestCapacity
 from guardoath.validation_packs import PackSelectionError, load_pack_registry
 from guardoath.tenants import TenantRegistry
-from guardoath.hosted import TenantService
+from guardoath.hosted import ChangeRejected, CheckChanges, NotADemoUser, TenantService
 from guardoath.tenant_record import TENANT_ID_PATTERN, TENANT_POLICY_VERSION, TenantRecord, usage_month
-from guardoath.tenant_store import UsageLimitReached
+from guardoath.tenant_store import TenantConflict, TenantNotFound, UsageLimitReached
 
 
 def demo_engine(enable_pii: bool = False, enable_azure: bool = False, content_safety_provider: str = "none") -> Engine:
@@ -168,6 +168,34 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 "monthly_allowance": current.monthly_allowance, "overage": current.overage,
                 "checks": {check_id[6:]: getattr(current, check_id) for check_id in type(current).model_fields
                            if check_id.startswith("check_")}}
+
+    def tenant_only(principal: str | TenantRecord) -> TenantRecord:
+        if not isinstance(principal, TenantRecord):
+            raise HTTPException(403, "This endpoint needs a tenant API key")
+        return principal
+
+    def saved(update):
+        try:
+            record = update()
+        except TenantConflict:
+            raise HTTPException(409, "The tenant record changed; reload it and try again") from None
+        except TenantNotFound:
+            raise HTTPException(404, "Tenant not found") from None
+        except NotADemoUser as error:
+            raise HTTPException(403, str(error)) from None
+        except ChangeRejected as error:
+            raise HTTPException(422, str(error)) from None
+        return JSONResponse(tenant_summary(record), headers={"Cache-Control": "no-store"})
+
+    @api.post("/v1/tenants/current/checks")
+    async def change_checks(body: CheckChanges, principal: Annotated[str | TenantRecord, Depends(authenticate)]):
+        record = tenant_only(principal)
+        return saved(lambda: tenants.change_checks(record.tenant_id, body.changes, body.revision))
+
+    @api.post("/v1/tenants/current/reset")
+    async def reset_checks(principal: Annotated[str | TenantRecord, Depends(authenticate)]):
+        record = tenant_only(principal)
+        return saved(lambda: tenants.reset_demo(record.tenant_id))
 
     @api.get("/v1/demo-users")
     async def demo_users():
