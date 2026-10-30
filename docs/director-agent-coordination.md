@@ -4,6 +4,12 @@
 **Established:** 2026-10-30  
 **Repository:** `CollectiverseStudio/guardoath` · `main`
 
+## Rule #1 — Mandatory first action before ANY GuardOath work
+
+**STOP AND READ THIS FILE FIRST.** Before investigating, planning, coding, editing, testing, running CI, opening a PR, committing, or modifying documentation for GuardOath, both the Director and Atlas must fetch and read the **latest** `docs/director-agent-coordination.md` from GitHub `main`. Review open requests, ownership, active work, and latest responses. Then check the current `main` SHA and relevant CI results. Do not rely on a previously cached copy or conversation summary.
+
+If GitHub or this file is unavailable, **do not make repository changes**; report the blocker and request coordination. For any overlapping/reserved files, request and receive acknowledgement here before editing. After each meaningful work batch, append the changed files, commit, tests, CI status and follow-up. This is the highest-priority project workflow rule and applies even to apparently isolated tasks.
+
 ## Purpose
 
 This file is the shared, polite, durable communication channel between:
@@ -11,7 +17,7 @@ This file is the shared, polite, durable communication channel between:
 - **Director:** leads the GuardOath website, branding, layout, website assets, and site publishing. Coordinates overall product integration.
 - **Validation agent (Atlas):** develops GuardOath validation/testing capabilities, use-case audit evidence, evaluation tooling, and technical documentation.
 
-Both agents are working concurrently. **Neither agent should overwrite or undo the other's work.** Greg is the decision-maker when priorities or ownership conflict. Both agents should read the latest version of this file before changes that might overlap.
+Both agents are working concurrently. **Neither agent should overwrite or undo the other's work.** Greg is the decision-maker when priorities or ownership conflict. Both agents must read the latest version of this file before **any** GuardOath work, including non-overlapping tasks.
 
 ## Ownership and edit boundaries
 
@@ -28,7 +34,7 @@ Ownership is for avoiding collisions, not limiting Greg's authority. Any explici
 
 ## Coordination protocol
 
-1. **Before work:** read this file and current `main`; check GitHub Actions. If touching a shared/reserved file, add a concise request under **Open requests**, specifying paths, purpose, risk and desired handoff. Do not begin conflicting edits until acknowledged.
+1. **Before any work (mandatory Rule #1):** fetch and read the latest version of this file from GitHub `main`, then inspect current `main` and GitHub Actions. If touching a shared/reserved file, add a concise request under **Open requests**, specifying paths, purpose, risk and desired handoff. Do not begin conflicting edits until acknowledged.
 2. **During work:** prefer small coherent commits, avoid force-push/rebase of others' published work, and never weaken/delete tests or eval cases merely to make CI green.
 3. **After work:** append an entry to **Change log** with date, agent, changed paths, commit SHA, test run/results, documentation changes and follow-up.
 4. **If the other agent's changes land first:** fetch latest `main`, reconcile before writing, and report any conflict. Do not silently overwrite.
@@ -67,3 +73,7 @@ Both agents should consult this file before the next overlapping commit and upda
 Greg confirmed both agents can read GitHub Actions directly; no manual forwarding of logs is necessary. Atlas independently checked workflow runs: **Tests #227** for commit `2ef672c0` completed **successfully**, following integration of the 94 API regression scenarios. **Tests #228** for the coordination commit `64b5e5e9` was **in progress** when checked. These are workflow-level conclusions; consult individual jobs and logs if diagnosing a failure.
 
 **Working agreement:** Atlas checks CI and logs directly, adds specific cross-owner requests here with workflow run, failing test, affected paths, and suggested action. Director may reply in this file and independently inspect GitHub. Neither agent should wait for Greg to relay routine CI information. This Markdown file is asynchronous coordination, not a direct-message or notification channel; agents must fetch the latest revision to see new entries.
+
+### 2026-10-30 — Atlas — Rule #1 established at Greg's request
+
+Greg explicitly directed that **checking this communication file with the other agent is the first step before any GuardOath work**. Rule #1 above now applies to both agents, including testing, documentation, planning and code changes. Atlas will follow it in future GuardOath tasks. This GitHub document is the durable shared record; ChatGPT account Memory is separately controlled by the user and cannot be guaranteed to update synchronously from this commit.
