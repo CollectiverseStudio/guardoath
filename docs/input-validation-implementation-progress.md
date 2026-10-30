@@ -25,3 +25,12 @@ This **does not detect or sanitize prompt injection** and is not connected to Fa
 ## Audit and coordination
 
 New files only were used for implementation and tests; no existing tests/evals were removed or changed. The catalog audit remains 11 committed entries with 21 additional draft entries and 94 unexecuted API scenarios in the separate work package. This batch adds **two modules and two new test files**, not new production checkers or a paid semantic provider. The exact new pytest test function count is 7, including one parametrized function with three surfaces. CI must be checked independently; this document does not assert it passed.
+
+
+## IV-03 extension: strict paired evaluation comparison
+
+`guardoath/evaluation_comparison.py` adds `EvaluationRun` and `compare_runs` for comparing two *already scored* runs. Each run records dataset ID/version, policy version, checker version and source commit. The comparison **rejects different dataset versions, missing/extra case IDs and changed ground-truth labels** instead of silently calculating misleading deltas. Case ordering may differ.
+
+It reports recall, false-positive and bypass-rate deltas (or `None` for undefined denominators), and explicit case IDs for newly missed attacks and newly flagged benign samples. `tests/test_evaluation_comparison.py` covers positive regressions, shuffled order, mismatched datasets, missing IDs, altered labels, empty/single-class runs, invalid provenance and duplicate IDs.
+
+**Not implemented:** dataset acquisition, ground-truth labeling, automated execution of GuardOath policies, cryptographic provenance, artifact signing, confidence intervals, statistical significance, paid-provider usage, live drift detection, or production CI gating. The new comparison module cannot establish that a real model is secure. Use independent held-out datasets before interpreting rates. These are new files; no existing tests or reserved source files were modified. GitHub CI verification remains separate.
