@@ -191,3 +191,10 @@ This adds test evidence for the Director's REQ-D3 without modifying the Director
 **UC002 Jailbreak detection: `review_required` → `partial`.** Narrow implemented portion: the optional input-only Azure Prompt Shields user-prompt adapter, not a local semantic jailbreak detector. Source: `guardoath/azure_prompt_shields.py`. Exact tests: `tests/test_azure_prompt_shields.py::test_real_adapter_contract_and_routing_with_fixture`, `::test_output_is_not_sent_to_prompt_api`, and `::test_unavailable_provider_remains_incomplete_without_network`. Dedicated saved eval case ID: **none identified** (`[]` in manifest). The provider is opt-in, mocked in tests, and no live accuracy/recall benchmark exists. No claim of full jailbreak protection.
 
 Changed only `docs/use-case-manifest.json` and this audit note; no checker, test, website, Director-reserved file, or saved eval was modified. CI on the manifest commit must be verified before marking the audit integration green.
+
+
+## 2026-10-30 — UC004 encoded payload audit
+
+**UC004 Base64/hex payload inspection: `review_required` → `partial`.** The existing `guardoath/text_security.py` checker recognizes explicitly labeled `base64:` and `hex:` tokens, enforces count/length budgets, decodes one UTF-8 layer, and flags encoded text, malformed encoding and selected hidden control characters. It does not perform recursive decoding, unlabeled payload inspection, general malware detection or semantic injection analysis.
+
+Exact tests: `tests/test_text_security.py::test_labeled_encoded_text_is_review_signal_even_when_benign`, `::test_malformed_or_non_utf8_encoded_data`, `::test_encoded_hidden_controls_and_no_payload_echo`, `::test_boundary_budgets_and_single_layer_only`. Saved eval evidence: `text-security:encoding.base64.input`, `encoding.hex.input`, `encoding.base64_hidden.input`, `encoding.hex_bad.input`, and `scope.unlabeled_base64.input`. Existing checker/evals/tests were not modified. This is an evidence-only manifest status update, not a new security feature. Verify CI on the corresponding commit.
