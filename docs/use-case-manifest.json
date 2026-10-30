@@ -54,9 +54,28 @@
     {
       "id": "UC004",
       "title": "Base64/hex payload inspection",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Explicitly labeled, one-layer, bounded text-security signals and opt-in secret inspection. One labeled Base64/hex layer of supported PII candidates is now also checked, including decoded JSON/hints. No recursive, unlabeled, general encoded-data or complete-obfuscation coverage."
+      "existing_coverage_note": "Explicitly labeled, one-layer, bounded text-security signals and opt-in secret inspection. One labeled Base64/hex layer of supported PII candidates is now also checked, including decoded JSON/hints. No recursive, unlabeled, general encoded-data or complete-obfuscation coverage.",
+      "evidence": {
+        "modules": [
+          "guardoath/text_security.py"
+        ],
+        "tests": [
+          "tests/test_text_security.py::test_labeled_encoded_text_is_review_signal_even_when_benign",
+          "tests/test_text_security.py::test_malformed_or_non_utf8_encoded_data",
+          "tests/test_text_security.py::test_encoded_hidden_controls_and_no_payload_echo",
+          "tests/test_text_security.py::test_boundary_budgets_and_single_layer_only"
+        ],
+        "eval_case_ids": [
+          "text-security:encoding.base64.input",
+          "text-security:encoding.hex.input",
+          "text-security:encoding.base64_hidden.input",
+          "text-security:encoding.hex_bad.input",
+          "text-security:scope.unlabeled_base64.input"
+        ]
+      },
+      "audit_note": "One-layer bounded inspection of explicitly labeled Base64/hex UTF-8 strings; flags labeled payloads, malformed encodings and selected decoded hidden controls without echo. Does not recursively decode, inspect unlabeled tokens or determine malicious semantic intent."
     },
     {
       "id": "UC005",
