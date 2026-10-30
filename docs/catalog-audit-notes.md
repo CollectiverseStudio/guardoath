@@ -161,3 +161,7 @@ Added `guardoath/evaluation_adapter.py` and `tests/test_evaluation_adapter.py` t
 New `guardoath/labeled_evaluation.py` composes `load_suite`, `load_policies`, the local Engine, `evaluate`, `observations_from_report`, `summarize` and `compare_runs`. New `tests/test_labeled_evaluation.py` runs existing `evals/text-security.json` with `policies/text-security.json` using explicit fixture classifications. Three new test functions were added; zero existing eval cases or checkers changed. Tests are not a live accuracy benchmark.
 
 The new workflow remains opt-in, local-only, and does not modify the protected evaluation runner or the other agent's reserved files. See [implementation progress](input-validation-implementation-progress.md) for exact behavior and remaining verification. Latest baseline CI previously failed in reserved configuration/dashboard tests; verify new workflow status before claiming completion.
+
+## Director coding-agent handoff (2026-10-30)
+
+The consolidated engineering handoff is now [director-coding-agent-handoff.md](director-coding-agent-handoff.md). It links all relevant architecture, 200-use-case, implementation and coordination documents; distinguishes committed work from the unmerged v8 ZIP; lists CI failures and subsequent labeled-evaluation fixes; and prioritizes the next work. Read it before integrating the external package or modifying shared files. No catalog status or reserved implementation was changed by this documentation update.
