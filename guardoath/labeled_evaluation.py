@@ -25,9 +25,17 @@ class LabeledRun:
 def run_labeled_suite(*, suite_path: str, policy_path: str,
                       labels: Mapping[str, bool], dataset_version: str,
                       checker_version: str, commit_sha: str,
-                      enable_pii: bool = False) -> LabeledRun:
+                      enable_pii: bool = False,
+                      case_ids: tuple[str, ...] | None = None) -> LabeledRun:
     """Run local-only checks and reject unreviewed or incomplete evidence."""
     suite = load_suite(suite_path)
+    if case_ids is not None:
+        if not case_ids or len(case_ids) != len(set(case_ids)):
+            raise ValueError("Unique nonempty case selection required")
+        selected = tuple(case for case in suite.cases if case.case_id in case_ids)
+        if len(selected) != len(case_ids):
+            raise ValueError("Unknown evaluation case selection")
+        suite = suite.model_copy(update={"cases": selected})
     engine = Engine(load_policies(policy_path),
                     default_checkers(enable_pii=enable_pii))
     report = asyncio.run(evaluate(suite, engine))
