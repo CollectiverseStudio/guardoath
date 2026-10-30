@@ -24,7 +24,7 @@ def test_no_unverified_use_case_is_reported_as_verified():
 def test_audited_cases_have_existing_module_tests_and_explicit_eval_evidence():
     manifest = json.loads((ROOT / "docs/use-case-manifest.json").read_text(encoding="utf-8"))
     audited = [row for row in manifest["cases"] if row["status"] == "partial" or row.get("audit_classification") == "not_implemented"]
-    assert len(audited) >= 7
+    assert len(audited) >= 11
     for row in audited:
         evidence = row["evidence"]
         assert evidence["modules"] and evidence["tests"]
