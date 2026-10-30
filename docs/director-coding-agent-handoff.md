@@ -77,4 +77,8 @@ For every future batch, report: changed paths, commit SHA, old/new use-case stat
 
 ## Website launch video handoff (2026-10-30)
 
-The approved 2:16 AI-agent narration film is `guardoath_ai_final.mp4`. See [launch-video-website.md](launch-video-website.md) for creative/technical specifications, embed example, accessibility, asset transfer status and deployment QA. **The video is not in GitHub and has not been deployed.** The actual marketing website repository is not identified in this codebase; coordinate with its owner before making website changes. Preserve development-preview labeling and do not present planned features as live.
+The approved 2:16 AI-agent narration film is `guardoath_ai_final.mp4`. See [launch-video-website.md](launch-video-website.md) for creative/technical specifications, embed example, accessibility, asset transfer status and deployment QA. **The MP4 is committed** at `guardoath/static/guardoath_ai_final.mp4` (Director commit `eaab3787`) and available through the dashboard route `/assets/guardoath_ai_final.mp4`. Public production deployment remains unverified; the Director owns the site and media integration. Preserve development-preview labeling and do not present planned features as live.
+
+## Director coordination update (2026-10-30)
+
+Atlas acknowledged Director requests REQ-D1–D4 in [shared coordination](director-agent-coordination.md). The video guide now reflects the actual committed MP4. An approved narration transcript is in [launch-video-narration.md](launch-video-narration.md) for Director-owned caption timing and poster integration. Atlas will not edit Director-reserved app, tenant or dashboard files. The 94 API regression scenarios are committed and CI-green as of Tests #227; this is not proof all 200 use cases are implemented.
