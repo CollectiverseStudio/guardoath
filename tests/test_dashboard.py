@@ -100,3 +100,19 @@ def test_dashboard_shows_the_demo_video():
     # The installed package (and the hosted build) must include the video.
     package_data = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))["tool"]["setuptools"]["package-data"]
     assert "static/*.mp4" in package_data["guardoath"]
+
+
+def test_dashboard_shows_the_logo_motto_and_product_message():
+    client = TestClient(create_app(credentials={"test-key": "demo"}))
+    page = client.get("/dashboard").text
+    assert 'class="logo" src="/assets/guardoath-shield.png"' in page
+    assert ">G</span>" not in page
+    for text in ["Building Confidence Into AI.", "Validate Inputs. Protect Data. Govern AI Actions.",
+                 "AI is powerful. Every interaction deserves validation.",
+                 "Helping build a safer future for humans and AI.", "DEVELOPMENT PREVIEW"]:
+        assert text in page
+    logo = client.get("/assets/guardoath-shield.png")
+    assert logo.status_code == 200 and logo.headers["content-type"] == "image/png"
+    assert logo.content.startswith(b"\x89PNG\r\n\x1a\n")
+    # The video sits right after the hero, ahead of the playground.
+    assert page.index('id="hero-title"') < page.index('id="demo-video"') < page.index('id="connect-title"')

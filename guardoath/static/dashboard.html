@@ -2,12 +2,15 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GuardOath — Check playground</title><link rel="stylesheet" href="/assets/dashboard.css"><script src="/assets/dashboard.js" defer></script></head>
 <body>
-<header><div class="brand"><span class="logo">G</span> GuardOath <span class="tag">LOCAL PREVIEW</span></div><a href="https://github.com/CollectiverseStudio/guardoath/blob/main/docs/user-guide.md" target="_blank" rel="noopener noreferrer">User guide ↗</a><a href="/docs">API reference ↗</a></header>
+<header><div class="brand"><img class="logo" src="/assets/guardoath-shield.png" alt="" width="40" height="40"><span class="brand-text"><span class="brand-name">GuardOath</span><span class="motto">Building Confidence Into AI.</span></span><span class="tag">DEVELOPMENT PREVIEW</span></div><a href="https://github.com/CollectiverseStudio/guardoath/blob/main/docs/user-guide.md" target="_blank" rel="noopener noreferrer">User guide ↗</a><a href="/docs">API reference ↗</a></header>
 <main>
-<div class="eyebrow">CHECK PLAYGROUND</div><h1>See what your AI checks catch.</h1>
+<section class="hero" aria-labelledby="hero-title"><div class="eyebrow">GUARDOATH · AI SECURITY &amp; VALIDATION</div><h1 id="hero-title">AI is powerful. Every interaction deserves validation.</h1>
+<p class="value">Validate Inputs. Protect Data. Govern AI Actions.</p>
+<p class="intro">An API-first platform that checks AI inputs and outputs against configurable policies: before a message reaches your model, and before an answer reaches your user.</p></section>
+<section class="panel video-panel" aria-labelledby="video-title"><h2 id="video-title">Watch GuardOath in 2 minutes</h2><p class="hint">An AI narrator explains GuardOath’s approach to input and output validation and configurable policies. Development preview: some capabilities shown are planned or in progress.</p><video id="demo-video" controls preload="metadata" playsinline width="1280" height="720" src="/assets/guardoath_ai_final.mp4">Your browser cannot play this video. <a href="/assets/guardoath_ai_final.mp4">Download the video</a>.</video></section>
+<div class="eyebrow">CHECK PLAYGROUND</div><h2 class="playground-title">See what your AI checks catch.</h2>
 <p class="intro">Follow the conversation: enter a message, check it, paste your AI’s answer, then check the answer before releasing it.</p>
 <div class="notice"><strong>This playground checks content. It does not generate an AI answer.</strong> The default conversation profile runs all implemented general text checks: sensitive identifiers, secrets and text-security signals. Other groups need application-specific rules or are not implemented.</div>
-<section class="panel video-panel" aria-labelledby="video-title"><h2 id="video-title">Watch: GuardOath overview (2:16)</h2><video id="demo-video" controls preload="metadata" playsinline width="1280" height="720" src="/assets/guardoath_ai_final.mp4">Your browser cannot play this video. <a href="/assets/guardoath_ai_final.mp4">Download the video</a>.</video></section>
 <section class="connection panel" aria-labelledby="connect-title"><div><h2 id="connect-title">Connect your application</h2><p>Your API key stays in this tab’s memory and is sent only to this server.</p></div>
 <div class="connect-fields"><label for="api-key">Application API key</label><div class="inline"><input id="api-key" type="password" autocomplete="off" placeholder="Enter your local API key"><button id="connect">Connect</button><button id="disconnect" class="secondary" disabled>Disconnect</button></div></div>
 <div id="connection-status" role="status">Not connected</div><p id="resource-limits" class="hint"></p></section>
@@ -34,5 +37,5 @@
 <div class="section-top"><h3 id="results-title">Conversation status</h3><span id="result-status" class="pill">Ready to test</span></div><p id="result-summary" aria-live="polite">Connect and run the input test to begin.</p></section>
 <section class="panel answer-panel" aria-labelledby="answer-title"><div class="section-top"><h2 id="answer-title">Answer preview</h2><span id="answer-status" class="pill">Not checked</span></div><p id="answer-note">An answer appears here when the configured checks complete without findings.</p><pre id="answer" hidden></pre></section>
 <section class="how"><h3>How an application uses GuardOath</h3><p>Check the user’s input → call your AI model → check its answer → apply your policy’s decision.</p><p>The same input and output API endpoints power this playground. There is no separate demo scoring system.</p></section>
-</section><footer>Local prototype · No check history is retained · A passed check is limited to that checker’s coverage</footer>
+</section><footer><span class="footer-mission">Helping build a safer future for humans and AI.</span> Development preview · Capabilities under active development · No check history is retained · A passed check is limited to that checker’s coverage</footer>
 </main></body></html>
