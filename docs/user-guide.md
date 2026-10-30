@@ -499,7 +499,7 @@ them off.
 
 | Check / finding | Example or use case | What is checked / expected result |
 | --- | --- | --- |
-| `pii.email_address` | `Contact jane@example.com.` in a support answer | Copied pattern and bundled domain-suffix check; finding, no mailbox verification. The default pattern checks also report the domain as `pii.url` |
+| `pii.email_address` | `Contact jane@example.com.` in a support answer | Copied pattern and bundled domain-suffix check; finding, no mailbox verification. The domain inside the address is not reported again as `pii.url` |
 | `pii.credit_card` | Synthetic card `4111 1111 1111 1111` | Copied candidate pattern and Luhn checksum; finding, no account verification |
 | `pii.us_ssn` | Synthetic-format `SSN: 219-09-9999` | Selected U.S. SSN candidate; context and invalid-value exclusions, no issuance verification |
 | `pii.phone_number` | `Phone: 202-555-0147` in a support form | Explicit label plus bounded ASCII phone syntax; finding, no ownership/reachability lookup |
@@ -593,7 +593,7 @@ explanation and no detected value.
 | Family | Types | Example | Expected result |
 | --- | --- | --- | --- |
 | Financial | IBAN_CODE, CRYPTO, US_BANK_NUMBER, ABA_ROUTING_NUMBER | `Please send the refund to IBAN DE89 3704 0044 0532 0130 00.` | `pii.iban_code` (checksum-validated). A bare 8–17 digit number counts as a U.S. bank number only next to a word such as "account" or "checking". |
-| Network and technical | IP_ADDRESS, MAC_ADDRESS, URL, UUID | `The server is at 192.168.1.10 today.` | `pii.ip_address`. URLs include bare domains, so the domain inside an email address is also reported as `pii.url`, and dotted code such as `result.status` can be too. |
+| Network and technical | IP_ADDRESS, MAC_ADDRESS, URL, UUID | `The server is at 192.168.1.10 today.` | `pii.ip_address`. URLs include bare domains, so dotted code such as `result.status` can be reported as `pii.url`. The domain inside a reported email address is not reported again. |
 | Dates | DATE_TIME | `Your appointment is on 5-20-2021.` | `pii.date_time` for many date and time formats, including ISO timestamps; not limited to birth dates. |
 | Phone numbers | PHONE_NUMBER (U.S., UK, Germany, France, Israel, India, Canada, Brazil), ZA_MOBILE_NUMBER, ZA_TELEPHONE_NUMBER | `Call me on (415) 555-0132.` | `pii.phone_number`, checked against phonenumbers' numbering plans. Unlabeled numbers are reported; the labeled `Phone:` field rule keeps its own explanation when it also matches. |
 | U.S. identity and tax | US_PASSPORT, US_DRIVER_LICENSE, US_ITIN, plus email, card and SSN | `My passport number is 912803456.` | `pii.us_passport`. Passport and licence patterns are weak and need a context word; `Order 912803456 shipped.` is not reported. |
@@ -624,6 +624,38 @@ GuardOath counts every word and compares lower-case text, so "passports" still m
 but a stop word uses up one of the five places. The upstream analyzer reports every match above
 score 0 by default; GuardOath's default of 0.4 means a weak match needs context.
 
+### One value, one finding
+
+A value that one check has already reported is not reported again by a less specific check.
+Every match is collected first; then, for each scanned text or JSON string:
+
+1. **GuardOath's own checks win.** Email, card and SSN findings and labeled fields (phone, birth
+   date, medical record, health plan, bank account) are always reported. A pattern match whose
+   characters lie entirely inside, or exactly on, one of those values is dropped. Examples:
+   `Email jane@example.com` gives only `pii.email_address` (not also `pii.url`);
+   `DOB: 1980-02-29` gives only `pii.date_of_birth` (not also `pii.date_time`);
+   `bank account: 12345678` gives only `pii.bank_account` (not also `pii.us_bank_number`);
+   `member_id: PLAN-12345` gives only `pii.health_plan_id`.
+2. **Between pattern types, the higher score wins.** A pattern match that lies entirely inside, or
+   exactly on, another pattern match with an equal or higher score is dropped. Example:
+   `National insurance number AB123456C` gives only `pii.uk_nino` (score 0.5), not also the
+   weaker U.S. health-plan member ID pattern (0.45) on the same characters.
+3. **Exact ties are both kept.** When two pattern types match exactly the same characters with
+   the same score, nothing tells them apart, so both are reported (and redaction labels the value
+   `[REDACTED_SENSITIVE]`).
+4. **Partial overlaps are kept.** A match that only partly overlaps another one, or lies outside
+   every other match, is still reported.
+
+The rule is applied before findings are built, on plain text, on every JSON string and key, and
+on decoded `base64:`/`hex:` payloads (`pii.encoded_*`). It never removes characters from what is
+redacted: a dropped match lies inside a value that is still reported and masked.
+
+This follows the copied analyzer's duplicate rule (`EntityRecognizer.remove_duplicates` in
+release 2.2.366: a result contained in another result with an equal or higher score is dropped).
+Two differences: upstream applies that rule only between results of the same type, and GuardOath
+applies it between all pattern types; and GuardOath's own checks always take precedence, much like
+the upstream redaction step drops any result contained in another one before replacing text.
+
 ### Configure
 
 | Policy setting | Default | Effect |
@@ -640,15 +672,16 @@ minimum score.
 
 Under a `redact` rule, pattern findings are replaced like the other types, for example
 `[REDACTED_IBAN_CODE]`, and every selected check reruns on the result. When one detected value
-lies inside another (the domain inside an email address), the outer value's label is used. When
-two pattern types claim exactly the same characters, the label is `[REDACTED_SENSITIVE]`.
+lies inside another, it is not reported (see [One value, one finding](#one-value-one-finding)),
+and the outer value's label is used. When two pattern types match exactly the same characters
+with the same score, both are reported and the label is `[REDACTED_SENSITIVE]`.
 
 ### Limitations
 
-- **Lookalikes are reported.** The patterns are broad by design: domains inside email addresses
-  (`pii.url`), dates and timestamps (`pii.date_time`), dotted code identifiers (`pii.url`), and
-  validated numbers inside longer digit or hex strings (for example a Korean licence number or a
-  Swedish organisation number). Use `disabled_privacy_entities` or a higher `privacy_min_score`
+- **Lookalikes are reported.** The patterns are broad by design: dates and timestamps
+  (`pii.date_time`), dotted code identifiers (`pii.url`), and validated numbers inside longer
+  digit or hex strings that no other check reported (for example a Korean licence number or a
+  Swedish organisation number inside a `hex:` token). Use `disabled_privacy_entities` or a higher `privacy_min_score`
   for applications where this is noise. The upstream analyzer ships 70 of its 95 recognizers turned
   off by default for this reason; GuardOath turns all 93 copyable ones on, as requested.
 - No names, locations, addresses or medical narratives; no recognizers that need a model or a
@@ -657,6 +690,9 @@ two pattern types claim exactly the same characters, the label is `[REDACTED_SEN
   French, Spanish, Italian, Finnish, Swedish, Korean, Thai, Turkish). Context words made of two
   terms, such as "postal code", cannot match a single word.
 - A match is a candidate only: no issuer, registry, bank or numbering lookup.
+- **The higher score decides between types, not the country.** On the same characters a validated
+  pattern of one country outranks a weak pattern of another: `my travel document is A12803456`
+  is reported as a South African passport (validated, 1.0), not as a U.S. passport (0.45).
 - Cost: 173 patterns plus phone numbering-plan checks per text, on top of the email, card and SSN rules. Very long inputs with many
   numbers can exceed the policy's `timeout_ms`; the check then reports `checker_timeout` and the
   result is incomplete, never a pass.
@@ -671,10 +707,12 @@ py -3.13 start_dashboard.py --evaluate --suite privacy-patterns
 failed checksums, context-free numbers, clean text, every setting above, enforce and redaction.
 See [all 100 cases](privacy-patterns-coverage.md).
 
-The `pii` checker version is now `privacy-patterns-2.2.366/guardoath-patterns-5`. Because the
-pattern checks add findings to existing cases, a run compared against a baseline report saved
-before this change shows those cases as **Outcome changed** (32 privacy, 34 encoded privacy and 3 starter
-cases). Review the changes, then save a new baseline.
+The `pii` checker version is now `privacy-patterns-2.2.366/guardoath-patterns-6` (version 6 adds
+[One value, one finding](#one-value-one-finding)). Compared against a baseline report saved before
+the pattern checks were added, 4 encoded-privacy cases show **Outcome changed** (pattern matches
+inside `hex:` tokens). Compared against a baseline saved with version 4 or 5, 73 cases show **Outcome
+changed**, each with fewer finding IDs (32 privacy, 32 encoded privacy, 6 privacy-pattern and 3
+starter cases). Review the changes, then save a new baseline.
 
 Version 5 requires a URL's top-level domain to end the host name. Text such as `window.injected`,
 `index.html` or `Mr.Smith` is no longer reported as a URL, and `example.community` is reported in

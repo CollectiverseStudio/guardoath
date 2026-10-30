@@ -758,8 +758,7 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.uk_nino",
-          "pii.us_health_insurance_member_id"
+          "pii.uk_nino"
         ],
         "redaction_status": "not_requested"
       }
@@ -782,8 +781,7 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.uk_nino",
-          "pii.us_health_insurance_member_id"
+          "pii.uk_nino"
         ],
         "redaction_status": "not_requested"
       }
@@ -1312,7 +1310,6 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.kr_frn",
           "pii.za_id_number"
         ],
         "redaction_status": "not_requested"
@@ -1336,7 +1333,6 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.kr_frn",
           "pii.za_id_number"
         ],
         "redaction_status": "not_requested"
@@ -1972,10 +1968,7 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.de_bsnr",
-          "pii.us_bank_number",
-          "pii.us_itin",
-          "pii.us_passport"
+          "pii.us_itin"
         ],
         "redaction_status": "not_requested"
       }
@@ -1998,10 +1991,7 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.de_bsnr",
-          "pii.us_bank_number",
-          "pii.us_itin",
-          "pii.us_passport"
+          "pii.us_itin"
         ],
         "redaction_status": "not_requested"
       }

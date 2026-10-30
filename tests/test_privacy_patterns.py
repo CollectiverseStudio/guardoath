@@ -89,7 +89,10 @@ EXAMPLES = {
     "US_ITIN": "911-70-1234",
     "US_MBI": "1EG4-TE5-MK73",
     "US_NPI": "1234-567-893",
-    "US_PASSPORT": "my travel document is A12803456",
+    # Upstream's example uses A12803456. A, D, M or T plus 8 digits is also a validated South
+    # African passport number, which outranks the weak U.S. pattern on the same characters
+    # (see test_privacy_overlaps.py), so this example starts with C.
+    "US_PASSPORT": "my travel document is C12803456",
     "US_PRESCRIPTION_NUMBER": "Rx #1234567",
     "US_PRIOR_AUTHORIZATION_NUMBER": "pRiOr AuThOrIzAtIoN pa-123456",
     "US_PROVIDER_TAX_ID": "Provider EIN 12-3456789.",
@@ -145,7 +148,8 @@ def test_every_pattern_type_is_detected_by_default(checkers, entity):
 
 
 def test_turning_pattern_checks_off_restores_email_card_and_ssn_only(checkers):
-    assert rule_ids(check(checkers, MIXED)) == {"pii.email_address", "pii.iban_code", "pii.phone_number", "pii.url"}
+    # The domain inside the email address is not reported again as a URL.
+    assert rule_ids(check(checkers, MIXED)) == {"pii.email_address", "pii.iban_code", "pii.phone_number"}
     assert rule_ids(check(checkers, MIXED, privacy_patterns=False)) == {"pii.email_address"}
 
 
@@ -182,7 +186,9 @@ def test_privacy_settings_require_a_pii_rule(checkers, settings):
 def test_weak_patterns_count_only_with_context_at_the_default_score(checkers):
     assert not check(checkers, "Order 912803456 shipped.").findings
     assert "pii.us_passport" in rule_ids(check(checkers, "My passport number is 912803456."))
-    assert "pii.us_passport" in rule_ids(check(checkers, "Order 912803456 shipped.", privacy_min_score=0.05))
+    # With a low minimum the weak matches count without context. Four pattern types match the
+    # same nine digits; the highest score (U.S. ITIN, 0.3) is reported once for them.
+    assert rule_ids(check(checkers, "Order 912803456 shipped.", privacy_min_score=0.05)) == {"pii.us_itin"}
     assert not check(checkers, "My passport number is 912803456.", privacy_min_score=1.0).findings
     assert rule_ids(check(checkers, "IBAN DE89 3704 0044 0532 0130 00", privacy_min_score=1.0)) == {"pii.iban_code"}
 
@@ -200,9 +206,10 @@ def test_pattern_types_are_redacted_and_rechecked(checkers):
 
 
 def test_redaction_keeps_the_outer_label_for_contained_values(checkers):
-    # The domain inside an email address is also a URL; the address keeps its own label.
+    # The domain inside an email address also matches the URL pattern. It is reported once,
+    # as the email address, which keeps its own label in the redacted text.
     result = check(checkers, "Email jane@example.com", action=Action.REDACT)
-    assert rule_ids(result) == {"pii.email_address", "pii.url"}
+    assert rule_ids(result) == {"pii.email_address"}
     assert result.redaction.content == "Email [REDACTED_EMAIL_ADDRESS]"
 
 
@@ -256,7 +263,7 @@ def test_skip_rules_use_pattern_length_and_phone_metadata():
 
 
 def test_checker_version_names_the_copied_code(checkers):
-    assert checkers["pii"].checker_version == "privacy-patterns-2.2.366/guardoath-patterns-5"
+    assert checkers["pii"].checker_version == "privacy-patterns-2.2.366/guardoath-patterns-6"
 
 
 @pytest.mark.parametrize("text", ['<img src=x onerror="window.injected=true">', "Open index.html first.",

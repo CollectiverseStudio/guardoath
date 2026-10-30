@@ -153,7 +153,7 @@ def test_pii_checker_loads_only_its_declared_dependencies():
             "print(json.dumps({'version': checker.checker_version, 'modules': {m: origin(m) for m in new}}))")
     output = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True).stdout
     report = json.loads(output.splitlines()[-1])
-    assert report["version"] == "privacy-patterns-2.2.366/guardoath-patterns-5"
+    assert report["version"] == "privacy-patterns-2.2.366/guardoath-patterns-6"
     paths = sysconfig.get_paths()
     stdlib_dirs = [Path(paths[key]).resolve() for key in ("stdlib", "platstdlib")]
     site_dirs = [Path(paths[key]).resolve() for key in ("purelib", "platlib")]

@@ -85,8 +85,8 @@ def test_api_output_and_logs_do_not_echo_sensitive_values(engine, caplog):
     response = client.post("/v1/checks/output", headers={"Authorization": "Bearer test-key"}, json={
         "application_id": "demo", "policy_version": "pii-v1", "content": content})
     assert response.status_code == 200
-    # The default privacy pattern checks also report the domain inside the address as a URL.
-    assert {f["rule_id"] for f in response.json()["findings"]} == {"pii.credit_card", "pii.email_address", "pii.url"}
+    # The domain inside the address is reported once, as part of the email address.
+    assert {f["rule_id"] for f in response.json()["findings"]} == {"pii.credit_card", "pii.email_address"}
     assert "jane@example.com" not in response.text + caplog.text
     assert "4111111111111111" not in response.text + caplog.text
 

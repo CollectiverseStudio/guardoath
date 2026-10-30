@@ -40,8 +40,8 @@ recommended and effective actions, and the redaction status. Profiles are in
 | `us.mbi.output` | `privacy-patterns-v1` | `Medicare MBI 1EG4-TE5-MK73` | complete; pii.us_mbi; recommend flag / effective allow |
 | `us.health-member-id.input` | `privacy-patterns-v1` | `Member ID A12345` | complete; pii.us_health_insurance_member_id; recommend flag / effective allow |
 | `us.health-member-id.output` | `privacy-patterns-v1` | `Member ID A12345` | complete; pii.us_health_insurance_member_id; recommend flag / effective allow |
-| `uk.nino.input` | `privacy-patterns-v1` | `National insurance number AB123456C` | complete; pii.uk_nino, pii.us_health_insurance_member_id; recommend flag / effective allow |
-| `uk.nino.output` | `privacy-patterns-v1` | `National insurance number AB123456C` | complete; pii.uk_nino, pii.us_health_insurance_member_id; recommend flag / effective allow |
+| `uk.nino.input` | `privacy-patterns-v1` | `National insurance number AB123456C` | complete; pii.uk_nino; recommend flag / effective allow |
+| `uk.nino.output` | `privacy-patterns-v1` | `National insurance number AB123456C` | complete; pii.uk_nino; recommend flag / effective allow |
 | `uk.nhs.input` | `privacy-patterns-v1` | `NHS number 401-023-2137` | complete; pii.uk_nhs; recommend flag / effective allow |
 | `uk.nhs.output` | `privacy-patterns-v1` | `NHS number 401-023-2137` | complete; pii.uk_nhs; recommend flag / effective allow |
 | `uk.postcode.input` | `privacy-patterns-v1` | `My address is SW1A 1AA in London` | complete; pii.uk_postcode; recommend flag / effective allow |
@@ -64,8 +64,8 @@ recommended and effective actions, and the redaction status. Profiles are in
 | `apac.kr-rrn.output` | `privacy-patterns-v1` | `RRN 960121-1234567` | complete; pii.kr_rrn; recommend flag / effective allow |
 | `apac.sg-nric.input` | `privacy-patterns-v1` | `NRIC S2740116C` | complete; pii.sg_nric_fin; recommend flag / effective allow |
 | `apac.sg-nric.output` | `privacy-patterns-v1` | `NRIC S2740116C` | complete; pii.sg_nric_fin; recommend flag / effective allow |
-| `africa.za-id.input` | `privacy-patterns-v1` | `ID number 8001015009087` | complete; pii.kr_frn, pii.za_id_number; recommend flag / effective allow |
-| `africa.za-id.output` | `privacy-patterns-v1` | `ID number 8001015009087` | complete; pii.kr_frn, pii.za_id_number; recommend flag / effective allow |
+| `africa.za-id.input` | `privacy-patterns-v1` | `ID number 8001015009087` | complete; pii.za_id_number; recommend flag / effective allow |
+| `africa.za-id.output` | `privacy-patterns-v1` | `ID number 8001015009087` | complete; pii.za_id_number; recommend flag / effective allow |
 | `africa.ng-nin.input` | `privacy-patterns-v1` | `Nigerian NIN 23456789019` | complete; pii.ng_nin; recommend flag / effective allow |
 | `africa.ng-nin.output` | `privacy-patterns-v1` | `Nigerian NIN 23456789019` | complete; pii.ng_nin; recommend flag / effective allow |
 | `americas.ca-sin.input` | `privacy-patterns-v1` | `SIN 130 692 544` | complete; pii.ca_sin; recommend flag / effective allow |
@@ -94,8 +94,8 @@ recommended and effective actions, and the redaction status. Profiles are in
 | `config.strict-context-only.output` | `privacy-patterns-strict-v1` | `My passport number is 912803456.` | complete; passed; recommend allow / effective allow |
 | `config.strict-validated.input` | `privacy-patterns-strict-v1` | `IBAN DE89 3704 0044 0532 0130 00` | complete; pii.iban_code; recommend flag / effective allow |
 | `config.strict-validated.output` | `privacy-patterns-strict-v1` | `IBAN DE89 3704 0044 0532 0130 00` | complete; pii.iban_code; recommend flag / effective allow |
-| `config.low-threshold.input` | `privacy-patterns-low-threshold-v1` | `Order 912803456 shipped.` | complete; pii.de_bsnr, pii.us_bank_number, pii.us_itin, pii.us_passport; recommend flag / effective allow |
-| `config.low-threshold.output` | `privacy-patterns-low-threshold-v1` | `Order 912803456 shipped.` | complete; pii.de_bsnr, pii.us_bank_number, pii.us_itin, pii.us_passport; recommend flag / effective allow |
+| `config.low-threshold.input` | `privacy-patterns-low-threshold-v1` | `Order 912803456 shipped.` | complete; pii.us_itin; recommend flag / effective allow |
+| `config.low-threshold.output` | `privacy-patterns-low-threshold-v1` | `Order 912803456 shipped.` | complete; pii.us_itin; recommend flag / effective allow |
 | `enforce.iban.input` | `privacy-patterns-enforce-v1` | `Please send the refund to IBAN DE89 3704 0044 0532 0130 00.` | complete; pii.iban_code; recommend block / effective block |
 | `enforce.iban.output` | `privacy-patterns-enforce-v1` | `Please send the refund to IBAN DE89 3704 0044 0532 0130 00.` | complete; pii.iban_code; recommend block / effective block |
 | `enforce.clean.input` | `privacy-patterns-enforce-v1` | `Can you explain your return policy?` | complete; passed; recommend allow / effective allow |

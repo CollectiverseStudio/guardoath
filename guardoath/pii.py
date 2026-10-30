@@ -13,6 +13,60 @@ from guardoath.models import Action, CheckerResult, Finding, Stage
 
 LABELED_FIELD = "labeled_field"
 PATTERN = "pattern"
+# Which detections win when two of them cover the same characters (see resolve_overlaps).
+OWN_TIER = 0       # GuardOath's own checks: email, card, SSN and labeled fields
+PATTERN_TIER = 1   # the copied privacy pattern checks
+
+
+def resolve_overlaps(candidates, check_deadline=lambda: None):
+    """Return the candidates that are reported, as (start, end, entity, source) tuples.
+
+    candidates are (start, end, entity, source, tier, score). One run of characters is
+    reported once, by the most specific check, following the copied analyzer's rules:
+    - GuardOath's own detections are always kept, as before the pattern checks existed.
+    - A pattern detection whose span lies within (or equals) a GuardOath detection's
+      span is dropped: the characters are already reported, by a more specific check.
+    - Between pattern detections the copied analyzer's duplicate rule applies across
+      types: a detection contained in another one with an equal or higher score is
+      dropped. On identical spans the higher score wins; equal scores keep both, since
+      nothing tells the two types apart (redaction then labels the span SENSITIVE).
+    Partial overlaps are kept. Every dropped span lies inside a kept span, so redaction
+    still covers exactly the same characters."""
+    own = sorted({(start, end) for start, end, _entity, _source, tier, _score in candidates if tier == OWN_TIER})
+    best = {}
+    for start, end, entity, source, tier, score in candidates:
+        key = (start, end, entity, source, tier)
+        best[key] = max(score, best.get(key, score))
+    kept = [(start, end, entity, source) for (start, end, entity, source, tier) in best if tier == OWN_TIER]
+    patterns = []
+    own_index, own_end = 0, -1
+    for (start, end, entity, source, tier), score in sorted(
+            ((key, score) for key, score in best.items() if key[4] == PATTERN_TIER),
+            key=lambda item: (item[0][0], -item[0][1])):
+        check_deadline()
+        while own_index < len(own) and own[own_index][0] <= start:
+            own_end = max(own_end, own[own_index][1])
+            own_index += 1
+        if own_end >= end:
+            continue
+        patterns.append((start, end, entity, source, score))
+    top = {}
+    for start, end, _entity, _source, score in patterns:
+        top[(start, end)] = max(score, top.get((start, end), score))
+    # Sorted by start, longer first: every span that can contain the current one comes first.
+    containers = []
+    for start, end, entity, source, score in sorted(patterns, key=lambda item: (item[0], -item[1])):
+        check_deadline()
+        if score < top[(start, end)]:
+            continue
+        # As in the copied analyzer, only spans that still reach this start can contain it.
+        containers = [item for item in containers if item[1] >= start]
+        if any(other_end >= end and (other_start, other_end) != (start, end) and other_score >= score
+               for other_start, other_end, other_score in containers):
+            continue
+        kept.append((start, end, entity, source))
+        containers.append((start, end, score))
+    return kept
 
 
 def shortest_match(expression):
@@ -117,7 +171,7 @@ def build_pii_checker():
             for part in parts:
                 part.analyze("Call +1 202-555-0147 or 082 123 4567", [entity])
     word_pattern = regex.compile(r"\w+")
-    checker_version = f"privacy-patterns-{SOURCE_VERSION}/guardoath-patterns-5"
+    checker_version = f"privacy-patterns-{SOURCE_VERSION}/guardoath-patterns-6"
 
     def scan(request, redact, policy):
         # The policy timeout is the budget for this checker; the scan stops there too.
@@ -135,12 +189,11 @@ def build_pii_checker():
                 raise TimeoutError("Local scan deadline")
             return remaining
 
-        def found(entity, source, spans, start, end):
-            entities.setdefault(entity, set()).add(source)
-            spans.append((start, end, entity))
-
         def process_text(text, hint=""):
-            spans = []
+            candidates = []
+
+            def found(entity, source, tier, start, end, score=1.0):
+                candidates.append((start, end, entity, source, tier, score))
             for recognizer, pattern in patterns:
                 remaining = check_deadline()
                 for match in pattern.finditer(text, timeout=remaining):
@@ -158,7 +211,7 @@ def build_pii_checker():
                             continue
                     elif recognizer.validate_result(candidate) is not True:
                         continue
-                    found(entity, PATTERN, spans, match.start(), match.end())
+                    found(entity, PATTERN, OWN_TIER, match.start(), match.end())
             if active:
                 words = None
 
@@ -175,11 +228,12 @@ def build_pii_checker():
                     return any(cue in word for cue in context for word in window)
 
                 def keep(score, start, context):
+                    """The final score when it reaches the policy minimum, else None."""
                     if score <= 0:
-                        return False
+                        return None
                     if score < 1 and context and supported_by_context(start, context):
                         score = min(max(score + CONTEXT_BOOST, CONTEXT_SCORE_FLOOR), 1.0)
-                    return score >= minimum
+                    return score if score >= minimum else None
 
                 digits = sum(c.isdigit() for c in text)
                 for entity, parts, custom, compiled, context, phone_digits in active:
@@ -190,8 +244,9 @@ def build_pii_checker():
                         for part in parts:
                             check_deadline()
                             for result in part.analyze(text, [entity]):
-                                if keep(result.score, result.start, context):
-                                    found(entity, PATTERN, spans, result.start, result.end)
+                                kept_score = keep(result.score, result.start, context)
+                                if kept_score is not None:
+                                    found(entity, PATTERN, PATTERN_TIER, result.start, result.end, kept_score)
                         check_deadline()
                         continue
                     recognizer = parts[0]
@@ -220,11 +275,16 @@ def build_pii_checker():
                                 score = 1.0 if validation else 0
                             if recognizer.invalidate_result(candidate):
                                 score = 0
-                            if keep(score, match.start(), context):
-                                found(entity, PATTERN, spans, match.start(), match.end())
+                            kept_score = keep(score, match.start(), context)
+                            if kept_score is not None:
+                                found(entity, PATTERN, PATTERN_TIER, match.start(), match.end(), kept_score)
             if policy.detect_labeled_sensitive_data:
                 for start, end, entity in field_spans(text, hint, deadline, field_budget):
-                    found(entity, LABELED_FIELD, spans, start, end)
+                    found(entity, LABELED_FIELD, OWN_TIER, start, end)
+            spans = []
+            for start, end, entity, source in resolve_overlaps(candidates, check_deadline):
+                entities.setdefault(entity, set()).add(source)
+                spans.append((start, end, entity))
             if not redact or not spans:
                 return text, bool(spans)
             # Merge overlapping spans to avoid preserving a fragment of a value. A span inside

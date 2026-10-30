@@ -42,8 +42,7 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.email_address",
-          "pii.url"
+          "pii.email_address"
         ],
         "redaction_status": "not_requested",
         "simulated": false
@@ -159,8 +158,7 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.email_address",
-          "pii.url"
+          "pii.email_address"
         ],
         "redaction_status": "not_requested",
         "simulated": false
@@ -184,8 +182,7 @@
           "pii": "flagged"
         },
         "finding_rule_ids": [
-          "pii.email_address",
-          "pii.url"
+          "pii.email_address"
         ],
         "redaction_status": "preview",
         "simulated": false

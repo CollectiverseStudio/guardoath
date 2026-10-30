@@ -40,9 +40,10 @@ def assess(checkers, content, *, fmt='text', redact=False, schema=None, context=
 def test_all_new_fields_are_rechecked_and_original_values_are_withheld(checkers,fmt,content):
     result=assess(checkers,content,fmt=fmt,redact=True)
     assert result.redaction.status=='ready'
-    # Five labeled fields plus three default privacy pattern types on the same values.
+    # Five labeled fields. The default pattern checks also match three of these values
+    # (date, U.S. bank number, health insurance member ID); they are not reported again.
     assert {f.rule_id for f in result.findings}=={'pii.phone_number','pii.date_of_birth','pii.medical_record_number',
-        'pii.health_plan_id','pii.bank_account','pii.date_time','pii.us_bank_number','pii.us_health_insurance_member_id'}
+        'pii.health_plan_id','pii.bank_account'}
     assert all(c.status=='passed' for c in result.redaction.validation_results)
     for entity in ['PHONE_NUMBER','DATE_OF_BIRTH','MEDICAL_RECORD_NUMBER','HEALTH_PLAN_ID','BANK_ACCOUNT']:
         assert '[REDACTED_'+entity+']' in result.redaction.content

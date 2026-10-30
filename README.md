@@ -276,8 +276,9 @@ the safety/bias simulators; the overall response remains `simulated: true`.
   turns them off (`privacy_patterns: false`) or lists types in `disabled_privacy_entities`.
   Weak patterns (for example a bare 9-digit number) count only with a nearby context
   word; `privacy_min_score` (default 0.4) sets the bar. They report what the copied
-  patterns find, including common lookalikes such as domains inside email addresses
-  (`pii.url`) and dates (`pii.date_time`). See the
+  patterns find, including common lookalikes such as dates (`pii.date_time`); a value
+  already reported by a more specific check (the domain inside an email address, the date
+  in a labeled birth date) is not reported again. See the
   [user guide](docs/user-guide.md#privacy-pattern-checks).
 - Supported patterns are driven directly with a scan deadline (the policy's
   `timeout_ms`) so a regex timeout becomes a failed check instead of silently skipping
