@@ -505,14 +505,38 @@
       "title": "ID image legibility",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented; no OCR/vision upload pipeline."
+      "existing_coverage_note": "Not implemented; no OCR/vision upload pipeline.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/ingress.py"
+        ],
+        "tests": [
+          "tests/test_catalog_media_ingress.py::test_uc031_032_034_035_036_binary_media_is_not_analyzed",
+          "tests/test_catalog_media_ingress.py::test_document_json_ingress_requires_utf8"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "HTTP check ingress requires UTF-8 JSON and rejects image, PDF, DICOM, multipart, audio and video media types; no direct document/vision/OCR or image-authenticity capability is present. The tests prove only the transport boundary, not the impossibility of externally supplied extracted JSON."
     },
     {
       "id": "UC032",
       "title": "Invoice tampering",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented; no forensic PDF/image analysis."
+      "existing_coverage_note": "Not implemented; no forensic PDF/image analysis.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/ingress.py"
+        ],
+        "tests": [
+          "tests/test_catalog_media_ingress.py::test_uc031_032_034_035_036_binary_media_is_not_analyzed",
+          "tests/test_catalog_media_ingress.py::test_document_json_ingress_requires_utf8"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "HTTP check ingress requires UTF-8 JSON and rejects image, PDF, DICOM, multipart, audio and video media types; no direct document/vision/OCR or image-authenticity capability is present. The tests prove only the transport boundary, not the impossibility of externally supplied extracted JSON."
     },
     {
       "id": "UC033",
@@ -536,21 +560,57 @@
       "title": "Medical scan quality",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented; no DICOM/image quality or clinical validation."
+      "existing_coverage_note": "Not implemented; no DICOM/image quality or clinical validation.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/ingress.py"
+        ],
+        "tests": [
+          "tests/test_catalog_media_ingress.py::test_uc031_032_034_035_036_binary_media_is_not_analyzed",
+          "tests/test_catalog_media_ingress.py::test_document_json_ingress_requires_utf8"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "HTTP check ingress requires UTF-8 JSON and rejects image, PDF, DICOM, multipart, audio and video media types; no direct document/vision/OCR or image-authenticity capability is present. The tests prove only the transport boundary, not the impossibility of externally supplied extracted JSON."
     },
     {
       "id": "UC035",
       "title": "Deepfake detection",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented; no image authenticity model or accuracy claim."
+      "existing_coverage_note": "Not implemented; no image authenticity model or accuracy claim.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/ingress.py"
+        ],
+        "tests": [
+          "tests/test_catalog_media_ingress.py::test_uc031_032_034_035_036_binary_media_is_not_analyzed",
+          "tests/test_catalog_media_ingress.py::test_document_json_ingress_requires_utf8"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "HTTP check ingress requires UTF-8 JSON and rejects image, PDF, DICOM, multipart, audio and video media types; no direct document/vision/OCR or image-authenticity capability is present. The tests prove only the transport boundary, not the impossibility of externally supplied extracted JSON."
     },
     {
       "id": "UC036",
       "title": "Handwriting legibility",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented; no handwriting/OCR confidence pipeline."
+      "existing_coverage_note": "Not implemented; no handwriting/OCR confidence pipeline.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/ingress.py"
+        ],
+        "tests": [
+          "tests/test_catalog_media_ingress.py::test_uc031_032_034_035_036_binary_media_is_not_analyzed",
+          "tests/test_catalog_media_ingress.py::test_document_json_ingress_requires_utf8"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "HTTP check ingress requires UTF-8 JSON and rejects image, PDF, DICOM, multipart, audio and video media types; no direct document/vision/OCR or image-authenticity capability is present. The tests prove only the transport boundary, not the impossibility of externally supplied extracted JSON."
     },
     {
       "id": "UC037",
