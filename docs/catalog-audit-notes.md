@@ -298,3 +298,7 @@ Added `tests/test_catalog_policy_mode_matrix.py` (commit `d2f75db8`): 20 paramet
 ## 2026-10-30 — UC041 structured order contract
 
 Added `tests/test_catalog_ecommerce_contracts.py` with **18 parametrized enforce-mode tests** (nine JSON orders × input/output) in commit `1760981d`. Covers purchase/return enum, required SKU, nonempty/length-constrained SKU, integer quantity bounds, missing fields and extra-field rejection. Explicit `mode="enforce"` prevents the previous observe-mode fixture error. UC041 is `partial` in manifest commit `e2c6c238`: this tests structured order schema, **not** natural-language e-commerce intent, merchant authenticity, payments or fraud. No dedicated saved eval was added. No Director-owned code/deploy files modified. CI pending.
+
+## 2026-10-30 — UC043 symptom intake data contract
+
+Added `tests/test_catalog_symptom_contracts.py` with **16 input/output enforce-mode scenarios** (8 records × 2 stages) in commit `500f65ba`. Existing schema checker in `guardoath/checkers.py` validates required symptom, duration and severity fields, strict types, numeric bounds and rejection of extra fields. UC043 changed from `review_required` to `partial` in manifest commit `7efb50a6`. This is **structured intake validation only**; it does not assess clinical appropriateness, diagnose, triage emergencies or verify symptom context. No dedicated saved eval case was added. CI on these commits is pending. No Director-owned implementation/deployment files changed.
