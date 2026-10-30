@@ -128,3 +128,15 @@ Greg approved adding the architectural recommendations from six public sources (
 **Implementation in this batch:** one new roadmap document and this audit note. **New checkers: 0; new test functions: 0; new eval cases: 0; changed manifest statuses: 0.** No reserved files were touched. The 21 drafted UC051–100 entries and 94 unexecuted API scenarios remain in the external v8 work package; no claim of GitHub integration. UC101–200 remain proposed.
 
 **Verification:** documentation was committed to `main`; latest observed Tests #187 before this commit was failing. Any new CI run must be checked independently. The other agent should use the roadmap as a design backlog, not a claim of delivered capability, and coordinate before modifying the reserved engine, models, app, privacy or dashboard files.
+
+
+## Implementation batch — IV-02 and IV-03 foundations (2026-10-29)
+
+New files `guardoath/effectiveness.py`, `tests/test_effectiveness.py`, `guardoath/untrusted_content.py`, `tests/test_untrusted_content.py`, and `docs/input-validation-implementation-progress.md` were committed. The new implementation progress document records exact functionality, tests, limitations and next integration requirements.
+
+- IV-03: Offline TP/FP/TN/FN and latency percentile accounting with explicit missing denominators; no live effectiveness claim.
+- IV-02: Typed provenance for user, retrieved document and tool response surfaces; no prompt injection detection or host enforcement.
+- New test functions: 7 (one parametrized across 3 trust surfaces); new eval cases: 0.
+- No existing test/eval modifications, no paid provider calls, no edits to reserved files, and no change to UC101–200 implementation status.
+
+**CI:** Pending independent verification on these commits. Earlier baseline CI failures are not addressed by this new isolated foundation. See [implementation progress](input-validation-implementation-progress.md) for the complete agent handoff.
