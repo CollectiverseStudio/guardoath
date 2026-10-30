@@ -1,0 +1,41 @@
+# Atlas handoff: GuardOath 200-use-case catalog audit (2026-10-29)
+
+## Start condition
+Do not start until Greg has pushed "commit A" (privacy pattern checks: 90 more identifier types on by default) to `main`. It is a ~235-file commit made on Greg's PC. Anything you push to `main` before it would make his push fail. Check the latest `main` commit message starts with "Privacy pattern checks:" before you begin.
+
+## Rules (from AGENTS.md and Greg)
+- Work on `main`, small coherent commits, CI green after each push. Never force-push.
+- Never use the words "presidio", "valinator" or "valisentry" anywhere. Say "privacy patterns" / "the copied privacy pattern code". The only exception is the copyright line in `guardoath/privacy_patterns/LICENSE` — do not touch it.
+- Never delete, skip or weaken a test or eval case. GuardOath's purpose is many input/output tests; only add.
+- Every status claim needs evidence: the module, the test function(s) and the eval case id(s). `docs/use-case-manifest.json` says: "Unverified inventory; statuses require audited code/test evidence".
+- Be exact: counts, ids, file names. If unknown, write "unknown", don't guess.
+
+## Files you own (only you edit these)
+- `docs/use-case-coverage.md` (UC001–050)
+- `docs/additional-use-cases.md` (UC051–100)
+- `docs/use-cases-101-200.md` (UC101–200)
+- `docs/use-case-manifest.json`
+- `tests/test_use_case_manifest.py`, `tests/test_additional_use_cases.py`
+- any NEW test files, eval suites (`evals/<new>.json`) and policy batches (`policies/<new>-batch.json`) you create, with new names
+- `docs/catalog-audit-notes.md` (new) — write here anything you need changed in a file you don't own
+
+## Files reserved for Greg's next commit ("commit B") — do NOT edit
+.github/workflows/tests.yml, README.md, deploy/aws/* (new), docs/privacy-coverage.md, docs/privacy-patterns-coverage.md, docs/tenant-overrides-billing.md, docs/user-guide.md, evals/encoded-privacy.json, evals/local.json, evals/privacy-patterns.json, evals/privacy.json, guardoath/accounts.py (new), guardoath/admin.py (new), guardoath/app.py, guardoath/budgets.py, guardoath/demo_tokens.py (new), guardoath/dynamodb_store.py (new), guardoath/hosted.py (new), guardoath/metering.py (new), guardoath/pii.py, guardoath/static/dashboard.css, guardoath/static/dashboard.html, guardoath/static/dashboard.js, pyproject.toml, tests/browser/dashboard.spec.js, tests/test_accounts.py (new), tests/test_admin_cli.py (new), tests/test_configuration.py, tests/test_demo_tokens.py (new), tests/test_dynamodb_store.py (new), tests/test_hosted_api.py (new), tests/test_metering.py (new), tests/test_pii.py, tests/test_privacy_batch.py, tests/test_privacy_overlaps.py (new), tests/test_privacy_patterns.py.
+Also don't change `guardoath/privacy_patterns/`, `guardoath/privacy_catalog.py`, `guardoath/models.py`, `guardoath/engine.py` without asking Greg first (they are new from commit A and commit B builds on them).
+
+## What commit B will change (so your audit doesn't record soon-to-be-wrong results)
+- Duplicate-finding fix: a privacy pattern match inside a value already reported by GuardOath's own checks (email, card, SSN, labeled fields) or by a stronger pattern is dropped. Example: `Email jane@example.com` reports only `pii.email_address`, not also `pii.url`. 73 eval cases lose a duplicate finding id; checker version becomes `...guardoath-patterns-5`.
+- Hosted mode: customer keys, monthly allowances (overage allowed and recorded), demo tokens, AWS deploy. Opt-in; local behavior unchanged.
+So: cite finding ids for privacy cases as "after commit B" only once commit B is on `main`; until then audit non-privacy use cases first.
+
+## Priorities
+1. **UC001–UC100 (100 cases, status `review_required`)** — audit each: set a verified status (supported / partial / not implemented) with evidence (module + test names + eval case ids). Start with the non-privacy groups (prompt injection/text security, secrets, structure/business rules, evidence/citations, tool calls/actions, bias, ledger/timestamps/graph/integrity).
+2. **Close gaps for "partial" cases by adding tests/eval cases** (positive, benign/lookalike, failure/incomplete), in new files you own. Report each added count.
+3. **Privacy-related cases after commit B lands** — UC021 (SSN), UC023 (PHI), UC029 (financial), UC037 (passport), UC048 (financial patterns incl. ABA routing) etc. can now cite the 90 new privacy pattern types (see docs/user-guide.md "Privacy pattern checks", docs/privacy-patterns-coverage.md). Names/locations are NOT detected (no NLP models) — say so.
+4. **UC101–UC200 (100 cases, `proposed`)** — triage only: rank by feasibility with existing checkers vs. needing new components; no new checker implementation without Greg's OK.
+
+## Read first (on `main` after commit A)
+AGENTS.md; README.md; docs/user-guide.md (esp. "Privacy pattern checks"); docs/specification.md; docs/privacy-patterns-coverage.md; docs/privacy-coverage.md; docs/use-case-coverage.md; docs/additional-use-cases.md; docs/use-cases-101-200.md; docs/use-case-manifest.json; docs/backlog.md; evals/*.json and policies/*-batch.json (15 suites, 1,430 cases); tests/.
+
+## Reporting back to Greg
+Per batch: use case ids changed (old status → new status), evidence for each, tests/eval cases added (exact counts and files), CI run number and result.
