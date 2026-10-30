@@ -154,3 +154,10 @@ New `guardoath/evaluation_comparison.py` and `tests/test_evaluation_comparison.p
 Added `guardoath/evaluation_adapter.py` and `tests/test_evaluation_adapter.py` to translate already executed local regression reports into labeled effectiveness observations. The adapter requires separately reviewed boolean attack/benign labels and refuses incomplete, simulated, skipped/error, duplicate or mismatched cases. It is not wired into the CLI or the protected engine. Exact behavior and limitations are in [input-validation-implementation-progress.md](input-validation-implementation-progress.md).
 
 **Change accounting:** one new implementation module, one new test file, four top-level pytest functions (two parametrized), zero saved eval changes, zero checkers, zero manifest status changes. No reserved files edited. The latest CI result must be checked independently; this commit does not claim live detection accuracy.
+
+
+## IV-03 implementation: local suite execution with reviewed labels (2026-10-30)
+
+New `guardoath/labeled_evaluation.py` composes `load_suite`, `load_policies`, the local Engine, `evaluate`, `observations_from_report`, `summarize` and `compare_runs`. New `tests/test_labeled_evaluation.py` runs existing `evals/text-security.json` with `policies/text-security.json` using explicit fixture classifications. Three new test functions were added; zero existing eval cases or checkers changed. Tests are not a live accuracy benchmark.
+
+The new workflow remains opt-in, local-only, and does not modify the protected evaluation runner or the other agent's reserved files. See [implementation progress](input-validation-implementation-progress.md) for exact behavior and remaining verification. Latest baseline CI previously failed in reserved configuration/dashboard tests; verify new workflow status before claiming completion.
