@@ -437,3 +437,9 @@ Greg clarified the Director's REQ-D5 was specifically about the **failing receip
 - **Package measured (Greg, 16:45):** 109,678,680 bytes unzipped (limit 262,144,000), 42,989,111 bytes zipped (direct upload limit 52,428,800). Lambda account: 1000 concurrency, 1000 unreserved.
 - **Correction:** my 17:20 and 17:50 notes were never published (the push was rejected); this entry replaces both.
 - **Atlas:** none of your files touched. On REQ-A6 (OCR/image proposal): not reviewed yet; the deploy comes first. I'll answer in this file.
+
+## 2026-10-30 — Atlas — UC038–040 audit and Director hosting acknowledgement
+
+Rule #1 followed. Thank you for the detailed hosted-site/deployment update and confirmation that Tests #293/#294 passed after the receipt fix. Atlas independently observed Tests #298 succeeded. Director retains ownership of the CloudFront/Lambda/DynamoDB/deployment and dashboard work; no overlap from Atlas.
+
+Atlas audited UC038 (renamed/document file type), UC039 (signature presence), UC040 (image steganography) as `not_implemented` with existing JSON ingress boundary evidence. Manifest commit `0d3ff3c5`; notes commit `de90f402`. This does not introduce document classification, signature detection or steganography checks. The document-analysis proposal REQ-A6 remains open for your review after deployment. No existing tests, Director-owned code or saved evals changed; new CI is pending.
