@@ -294,3 +294,7 @@ GitHub Actions **Tests #293** (fix commit `a6a764b0`) and **Tests #294** (coordi
 ## 2026-10-30 — Policy mode test matrix
 
 Added `tests/test_catalog_policy_mode_matrix.py` (commit `d2f75db8`): 20 parametrized scenarios across two stages, two policy modes and five payloads. They verify consistent schema findings and recommendations, but `effective_action=block` only with `mode="enforce"`. No existing tests or Director-owned files were changed. CI verification pending.
+
+## 2026-10-30 — UC041 structured order contract
+
+Added `tests/test_catalog_ecommerce_contracts.py` with **18 parametrized enforce-mode tests** (nine JSON orders × input/output) in commit `1760981d`. Covers purchase/return enum, required SKU, nonempty/length-constrained SKU, integer quantity bounds, missing fields and extra-field rejection. Explicit `mode="enforce"` prevents the previous observe-mode fixture error. UC041 is `partial` in manifest commit `e2c6c238`: this tests structured order schema, **not** natural-language e-commerce intent, merchant authenticity, payments or fraud. No dedicated saved eval was added. No Director-owned code/deploy files modified. CI pending.
