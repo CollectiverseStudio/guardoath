@@ -49,7 +49,7 @@
     {
       "id": "UC005",
       "title": "System-prompt extraction requests",
-      "status": "not_implemented",
+      "status": "review_required",
       "source": "docs/use-case-coverage.md",
       "existing_coverage_note": "Plain attack wording is deliberately demonstrated as a local coverage gap. Optional semantic service may signal attacks, not a prompt-leak guarantee.",
       "evidence": {
@@ -63,12 +63,13 @@
           "text-security:scope.plain_attack_not_detected.input"
         ]
       },
-      "audit_note": "Local checker explicitly does not detect semantic system-prompt extraction; optional provider contract is not a proven detector."
+      "audit_note": "Local checker explicitly does not detect semantic system-prompt extraction; optional provider contract is not a proven detector.",
+      "audit_classification": "not_implemented"
     },
     {
       "id": "UC006",
       "title": "Sandbox escape commands",
-      "status": "not_implemented",
+      "status": "review_required",
       "source": "docs/use-case-coverage.md",
       "existing_coverage_note": "Not implemented. Code execution and sandbox boundaries belong to the integrating application.",
       "evidence": {
@@ -81,7 +82,8 @@
         ],
         "eval_case_ids": []
       },
-      "audit_note": "Proposed tool schemas are not OS sandbox escape prevention; no affirmative escape enforcement evidence. Empty eval list means no dedicated eval exists."
+      "audit_note": "Proposed tool schemas are not OS sandbox escape prevention; no affirmative escape enforcement evidence. Empty eval list means no dedicated eval exists.",
+      "audit_classification": "not_implemented"
     },
     {
       "id": "UC007",
