@@ -140,3 +140,10 @@ New files `guardoath/effectiveness.py`, `tests/test_effectiveness.py`, `guardoat
 - No existing test/eval modifications, no paid provider calls, no edits to reserved files, and no change to UC101–200 implementation status.
 
 **CI:** Pending independent verification on these commits. Earlier baseline CI failures are not addressed by this new isolated foundation. See [implementation progress](input-validation-implementation-progress.md) for the complete agent handoff.
+
+
+## IV-03 follow-up: versioned comparison (2026-10-29)
+
+New `guardoath/evaluation_comparison.py` and `tests/test_evaluation_comparison.py` provide offline paired-run regression analysis with strict matching of dataset ID/version, case IDs and ground-truth labels. Results include rate deltas and case IDs for newly missed attacks and newly flagged benign inputs. See [implementation progress](input-validation-implementation-progress.md) for the complete behavior, test functions and limitations.
+
+**Counts:** 1 new implementation module, 1 new test file, 4 top-level test functions (including one parametrized over 3 cases), 0 new eval cases, 0 new detectors. No changes to existing tests, privacy files, engine, app, models or reserved work. Tests were committed but not run locally; check GitHub Actions on the latest commit. Previous CI failures remain a separate coordination issue.
