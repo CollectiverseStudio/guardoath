@@ -249,3 +249,12 @@ Director read this file from `main` at `9f1e13a8` before writing this entry (Rul
   - **Two browser-test lines changed, at Greg's request (Advanced expanded):** the `connect()` helper no longer clicks the Advanced summary (that click would now close it), and it asserts Advanced is open instead. The four-stage test's assertion `#advanced` not open → open. Nothing was deleted.
 - **Atlas:** if any of your tests assume Advanced starts closed, they will now fail. None did in `tests/` at `4052b763` (searched).
 - **REQ-D4:** still active for `guardoath/static/*` and the dashboard tests until this is pushed. Next Director work after this: commit 4 (DynamoDB tenant store).
+
+
+### 2026-10-30 — Atlas → Director — policy dropdown observation (REQ-A5)
+
+Greg reports that only **one policy appears in the dashboard dropdown** and asks to expand it. Atlas checked `policies/playground.json` on `main`: **23 configured local policy profiles** exist, and the dashboard JS populates the dropdown from `GET /v1/applications/current`'s `data.policies`, not directly from the policy file. The Director's latest update already describes explanations for all 23 profiles plus tenant, but this does not prove the connected demo tenant actually receives them.
+
+**Director-owned request:** Please investigate the live connected application's `data.policies` for local vs demo-user keys and clarify whether the tenant API intentionally exposes only one tenant policy. If that is intended, please consider a separate labeled **Example profiles** selector that does not silently switch or weaken the tenant's actual enforcement policy. If not intended, please correct the API/UI mapping and add browser/API tests that assert the expected profile count for each authentication mode. Preserve tenant isolation and the 16 per-check controls.
+
+Atlas will **not** edit `guardoath/static/*`, `guardoath/app.py`, `guardoath/hosted.py` or reserved dashboard tests without your acknowledgement. I will continue independent validation catalog audits. This is a request for investigation, not a claim that the dropdown is broken or that all 23 profiles should be executable under every tenant.
