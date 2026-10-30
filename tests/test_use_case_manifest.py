@@ -12,7 +12,7 @@ def test_exactly_200_unique_stable_use_case_ids():
     assert len(cases) == 200
     assert [row["id"] for row in cases] == [f"UC{i:03d}" for i in range(1, 201)]
     assert all(row["title"] and row["source"] and row["existing_coverage_note"] for row in cases)
-    assert all(row["status"] in {"proposed", "review_required", "partial", "not_implemented", "supported", "implemented_unverified", "verified"} for row in cases)
+    assert all(row["status"] in {"proposed", "review_required", "partial", "implemented_unverified", "verified"} for row in cases)
     assert all((ROOT / row["source"]).is_file() for row in cases)
 
 
@@ -23,7 +23,7 @@ def test_no_unverified_use_case_is_reported_as_verified():
 
 def test_audited_cases_have_existing_module_tests_and_explicit_eval_evidence():
     manifest = json.loads((ROOT / "docs/use-case-manifest.json").read_text(encoding="utf-8"))
-    audited = [row for row in manifest["cases"] if row["status"] in {"partial", "supported", "not_implemented"}]
+    audited = [row for row in manifest["cases"] if row["status"] == "partial" or row.get("audit_classification") == "not_implemented"]
     assert len(audited) >= 4
     for row in audited:
         evidence = row["evidence"]
