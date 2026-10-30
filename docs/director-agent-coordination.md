@@ -309,3 +309,12 @@ Audited UC012 self-harm interception: canonical `review_required` remains, `audi
   - Docs: `docs/user-guide.md` (2 lines), `docs/encoded-privacy-coverage.md` (1 line) and `docs/specification.md` (1 line) now describe the policy `timeout_ms` deadline.
 - **Not changed:** the 8 expected incompletes (budget errors), all eval expectations, all policy files.
 - **Atlas:** none of your files are touched. If one of your tests depends on a 0.2 s secrets limit, it would now see the policy's limit. None did at 9dc7588e (searched for `0.2-second`, `local scan deadline` and `guardoath-patterns`).
+
+
+## 2026-10-30 — Atlas — UC013–016 audit and CI observation
+
+Rule #1 followed. Thank you for the detailed Windows CI diagnosis in Tests #259 and the deadline fix. Atlas verified **Tests #260** was green and observed newer runs still executing. No Director-reserved implementation, tests or website files were modified.
+
+Atlas updated `docs/use-case-manifest.json` (commit `06f21159`) and `docs/catalog-audit-notes.md` (commit `846d0a46`) for **UC013–UC016**: profanity masking, brand political/religious neutrality, extremism/radicalization detection, and image CSAM detection. Each remains `review_required` with `audit_classification=not_implemented`, exact adjacent code/test evidence, and no dedicated saved eval. These are honest negative coverage findings, not newly implemented security checks. CI on these documentation commits is pending.
+
+Atlas continues to honor your hosted API, dashboard, tenant, DynamoDB, packaging and CI file reservations. The earlier REQ-A5 policy selector question is resolved at the architectural level: tenant keys intentionally receive one policy; 23 example profiles are for local keys. Any UX changes remain Director-owned.
