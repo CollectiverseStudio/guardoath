@@ -3,13 +3,14 @@
 import hmac
 import os
 from pathlib import Path
+import re
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi import Path as PathParam
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -25,6 +26,51 @@ from guardoath.tenants import TenantRegistry
 from guardoath.hosted import ChangeRejected, CheckChanges, NotADemoUser, TenantService
 from guardoath.tenant_record import TENANT_ID_PATTERN, TenantRecord, usage_month
 from guardoath.tenant_store import TenantConflict, TenantNotFound, UsageLimitReached
+
+
+# Videos are sent in parts of at most this size. The hosted service runs on AWS Lambda, whose buffered
+# responses are limited to 6 MB after base64 encoding, so no single response may carry a whole video.
+MEDIA_PART_BYTES = 3 * 1024 * 1024
+MEDIA_STEM = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}")
+SINGLE_RANGE = re.compile(r"bytes=(\d*)-(\d*)")
+# The API key header. Behind CloudFront with origin access control, CloudFront replaces the Authorization
+# header with its own signature, so hosted clients send the key here; Authorization: Bearer still works.
+KEY_HEADER = "X-GuardOath-Key"
+
+
+def media_part(path: Path, range_header: str | None, head: bool) -> Response:
+    """One response for a video: the whole file when it fits in one part, otherwise the requested byte
+    range, cut to MEDIA_PART_BYTES. Video players request ranges and ask again for the rest."""
+    size = path.stat().st_size
+    headers = {"Accept-Ranges": "bytes", "Cache-Control": "public, max-age=86400"}
+    if range_header is None:
+        if size > MEDIA_PART_BYTES:
+            return Response(f"This video is sent in parts of up to {MEDIA_PART_BYTES} bytes. Request it with a Range header (bytes=start-end).",
+                            status_code=416, media_type="text/plain", headers={**headers, "Content-Range": f"bytes */{size}"})
+        return Response(b"" if head else path.read_bytes(), media_type="video/mp4",
+                        headers={**headers, "Content-Length": str(size)})
+    match = SINGLE_RANGE.fullmatch(range_header.strip())
+    if match is None or match.group(1) == match.group(2) == "":
+        # Several ranges, another unit or a malformed range: refused rather than guessed.
+        return Response("Request one byte range (bytes=start-end).", status_code=416, media_type="text/plain",
+                        headers={**headers, "Content-Range": f"bytes */{size}"})
+    first, last = match.group(1), match.group(2)
+    if first == "":
+        start, end = max(0, size - int(last)), size - 1
+    else:
+        start, end = int(first), size - 1 if last == "" else min(int(last), size - 1)
+    if size == 0 or start >= size or end < start:
+        return Response("Range not satisfiable.", status_code=416, media_type="text/plain",
+                        headers={**headers, "Content-Range": f"bytes */{size}"})
+    end = min(end, start + MEDIA_PART_BYTES - 1)
+    length = end - start + 1
+    body = b""
+    if not head:
+        with path.open("rb") as stream:
+            stream.seek(start)
+            body = stream.read(length)
+    return Response(body, status_code=206, media_type="video/mp4",
+                    headers={**headers, "Content-Range": f"bytes {start}-{end}/{size}", "Content-Length": str(length)})
 
 
 def demo_engine(enable_pii: bool = False, enable_azure: bool = False, content_safety_provider: str = "none") -> Engine:
@@ -86,6 +132,15 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     api.add_middleware(RequestCapacity, budgets=budgets)
     bearer = HTTPBearer(auto_error=False)
     static_dir = Path(__file__).parent / "static"
+
+    # Registered before the /assets mount, which would otherwise serve the whole file in one response.
+    @api.api_route("/assets/{stem}.mp4", methods=["GET", "HEAD"], include_in_schema=False)
+    async def video(stem: str, request: Request):
+        path = static_dir / (stem + ".mp4")
+        if not MEDIA_STEM.fullmatch(stem) or not path.is_file():
+            raise HTTPException(404, "Not Found")
+        return media_part(path, request.headers.get("range"), request.method == "HEAD")
+
     api.mount("/assets", StaticFiles(directory=static_dir), name="assets")
 
     @api.get("/", include_in_schema=False)
@@ -106,10 +161,13 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
 
     async def authenticate(
         auth: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
+        key_header: Annotated[str | None, Header(alias=KEY_HEADER)] = None,
     ) -> str | TenantRecord:
         if not bindings and tenant_registry is None and tenants is None:
             raise HTTPException(503, "Application credentials are not configured")
-        token = auth.credentials if auth else ""
+        # The key header wins; otherwise a bearer token. Any other Authorization scheme (such as the
+        # CloudFront signature) is not a key.
+        token = key_header if key_header is not None else (auth.credentials if auth else "")
         if tenants is not None and token.startswith("gok_"):
             record = tenants.authenticate(token)
             if record is None:
@@ -117,13 +175,13 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             budgets.register(record.tenant_id)
             return record
         if tenant_registry is not None:
-            application = tenant_registry.authenticate(auth.credentials if auth else "")
+            application = tenant_registry.authenticate(token)
             if application is not None:
                 return application.application_id
             raise HTTPException(401, "Invalid application credential", headers={"WWW-Authenticate": "Bearer"})
-        if auth is not None:
-            for token, app_id in bindings.items():
-                if hmac.compare_digest(auth.credentials.encode(), token.encode()):
+        if token:
+            for credential, app_id in bindings.items():
+                if hmac.compare_digest(token.encode(), credential.encode()):
                     return app_id
         raise HTTPException(401, "Invalid application credential", headers={"WWW-Authenticate": "Bearer"})
 

@@ -109,6 +109,11 @@ keeps working alongside it.
 | `POST /v1/tenants/current/checks` (JSON `{"revision": n, "changes": {...}}`) | yes, a tenant key | Changes the tenant's own check fields, check settings and default profile. `null` turns a check off. Refused with 409 if the record changed since revision `n`, and with 422 (and a reason) for an invalid value, an account field, or settings the engine rejects. Nothing is stored when a change is refused. Not counted as a check. |
 | `POST /v1/tenants/current/reset` (JSON `{}`) | yes, a demo key | Sets a demo user's check fields and settings back to the demo defaults. 403 for customers. |
 
+- **Sending the key:** in an `X-GuardOath-Key: <key>` header, or as `Authorization: Bearer <key>`. If both
+  are sent, `X-GuardOath-Key` is used. The hosted site (guardoath.com) runs behind CloudFront, which replaces
+  `Authorization` with its own signature, so use `X-GuardOath-Key` there. Requests with a body (POST) to the
+  hosted site must also send `x-amz-content-sha256` with the lower-case hex SHA-256 of the exact body bytes;
+  CloudFront needs it to sign the request. The dashboard does both.
 - **Keys:** tenant keys look like `gok_<tenant_id>_<secret>` and lead to exactly one record. A demo key is
   derived from `GUARDOATH_DEMO_KEY_SECRET` and the tenant id. Only its hash is on the record. Changing the
   secret changes every demo key.

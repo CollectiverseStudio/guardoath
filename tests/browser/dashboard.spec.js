@@ -1042,3 +1042,20 @@ test("a demo user can save a default profile and reset it", async ({ page }) => 
   await expect(page.locator("#policy")).toHaveValue("tenant");
   await expect(page.locator("#tenant-default-profile")).toHaveValue("tenant");
 });
+test("requests carry the key header and the body hash CloudFront needs", async ({ page }) => {
+  const { createHash } = require("node:crypto");
+  const seen = [];
+  page.on("request", r => { if (r.url().includes("/v1/")) seen.push({url: r.url(), method: r.method(), headers: r.headers(), body: r.postData()}); });
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo7");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo7");
+  await page.locator("#run-input").click();
+  await expect(page.locator("#result-status")).toHaveText("Input checks passed");
+  const posts = seen.filter(r => r.method === "POST"), gets = seen.filter(r => r.method === "GET" && !r.url.endsWith("/v1/demo-users"));
+  expect(posts.length).toBeGreaterThanOrEqual(2);
+  expect(gets.length).toBeGreaterThanOrEqual(1);
+  for (const r of posts) expect(r.headers["x-amz-content-sha256"]).toBe(createHash("sha256").update(r.body || "").digest("hex"));
+  for (const r of [...posts, ...gets]) expect(r.headers["authorization"]).toBeUndefined();
+  for (const r of [...posts.filter(r => !r.url.includes("/v1/demo-users/")), ...gets]) expect(r.headers["x-guardoath-key"]).toMatch(/^gok_demo7_/);
+});

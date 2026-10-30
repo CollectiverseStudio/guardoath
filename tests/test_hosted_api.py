@@ -525,3 +525,43 @@ def test_the_example_profiles_come_from_the_environment(monkeypatch, tmp_path):
 def test_unusable_example_profiles_stop_startup(profiles, message):
     with pytest.raises(ValueError, match=message):
         TenantService(MemoryTenantStore(), CHECKERS, SECRET, profiles)
+
+
+# The X-GuardOath-Key header (CloudFront with origin access control replaces Authorization)
+
+SIGNED = "AWS4-HMAC-SHA256 Credential=EXAMPLE/20261030/us-east-1/lambda/aws4_request, SignedHeaders=host, Signature=" + "0" * 64
+
+
+def keyed(token, signed=True):
+    return {"X-GuardOath-Key": token, **({"Authorization": SIGNED} if signed else {})}
+
+
+def test_a_demo_key_in_the_key_header_works_next_to_a_cloudfront_signature(client, tenants):
+    token = demo_key("demo1", SECRET)
+    assert client.get("/v1/applications/current", headers=keyed(token)).json()["application_id"] == "demo1"
+    result = client.post("/v1/checks/input", headers=keyed(token), json={"application_id": "demo1", "policy_version": "tenant", "content": EMAIL})
+    assert result.status_code == 200 and result.json()["effective_action"] == "block"
+    assert used(tenants, "demo1") == 1
+
+
+def test_a_local_key_in_the_key_header_works(tenants):
+    client = client_for(tenants, credentials={"local-key": "demo"})
+    assert client.get("/v1/applications/current", headers=keyed("local-key")).json()["application_id"] == "demo"
+
+
+def test_the_key_header_wins_over_a_bearer_token(client):
+    headers = {"X-GuardOath-Key": "gok_demo1_" + "x" * 43, "Authorization": "Bearer " + demo_key("demo1", SECRET)}
+    assert client.get("/v1/applications/current", headers=headers).status_code == 401
+
+
+@pytest.mark.parametrize("headers", [{}, {"Authorization": SIGNED}, {"X-GuardOath-Key": ""}, {"X-GuardOath-Key": "not-a-key"}])
+def test_no_usable_key_is_refused(client, headers):
+    response = client.get("/v1/applications/current", headers=headers)
+    assert response.status_code == 401 and response.headers["www-authenticate"] == "Bearer"
+
+
+def test_check_changes_accept_the_key_header(client):
+    token = demo_key("demo1", SECRET)
+    revision = summary(client, token)["revision"]
+    response = client.post("/v1/tenants/current/checks", headers=keyed(token), json={"revision": revision, "changes": {"check_pii": "flag"}})
+    assert response.status_code == 200 and response.json()["checks"]["pii"] == "flag"

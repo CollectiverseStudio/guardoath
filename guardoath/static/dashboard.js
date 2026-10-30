@@ -48,10 +48,20 @@ function reset(keepInput = false) {
   waiting("output");
   $("run-error").textContent = "";
 }
+// Hosted behind CloudFront: the key goes in X-GuardOath-Key (CloudFront replaces Authorization with its own
+// signature), and every request with a body carries the body's SHA-256 in x-amz-content-sha256.
+async function bodyHash(text) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, "0")).join("");
+}
+async function requestHeaders(token, text) {
+  return {...(token ? {"X-GuardOath-Key": token} : {}),
+          ...(text === undefined ? {} : {"Content-Type": "application/json", "x-amz-content-sha256": await bodyHash(text)})};
+}
 async function api(path, body, token = key) {
+  const text = body ? JSON.stringify(body) : undefined;
   const response = await fetch(path, {method: body ? "POST" : "GET", cache: "no-store",
-    headers: {"Authorization": "Bearer " + token, ...(body ? {"Content-Type": "application/json"} : {})},
-    ...(body ? {body: JSON.stringify(body)} : {})});
+    headers: await requestHeaders(token, text), ...(body ? {body: text} : {})});
   if (!response.ok && [429, 503].includes(response.status) && response.headers.has("Retry-After")) {
     const seconds = Number(response.headers.get("Retry-After"));
     throw new Error((response.status === 429 ? "Application limit reached." : "Service capacity reached.") + (Number.isSafeInteger(seconds) && seconds > 0 ? " Retry in " + seconds + (seconds === 1 ? " second." : " seconds.") : " Try again shortly."));
@@ -163,7 +173,8 @@ async function saveTenant(path, body, done) {
   $("tenant-save").disabled = $("tenant-reset").disabled = $("tenant-default-save").disabled = true;
   let message = done;
   try {
-    const response = await fetch(path, {method: "POST", cache: "no-store", headers: {"Authorization": "Bearer " + key, "Content-Type": "application/json"}, body: JSON.stringify(body)});
+    const text = JSON.stringify(body);
+    const response = await fetch(path, {method: "POST", cache: "no-store", headers: await requestHeaders(key, text), body: text});
     const data = await response.json().catch(() => ({}));
     if (!response.ok) message = response.status === 409 ? "Someone else changed this record. It has been reloaded; check the values and save again." : (typeof data.detail === "string" ? data.detail : "The change was not saved (HTTP " + response.status + ").");
     if (response.ok || response.status === 409) {
@@ -218,7 +229,7 @@ $("demo-key").addEventListener("click", async () => {
   const tenant = $("demo-user").value; if (!tenant || busy) return;
   $("demo-key").disabled = true;
   try {
-    const response = await fetch("/v1/demo-users/" + encodeURIComponent(tenant) + "/key", {method: "POST", cache: "no-store", headers: {"Content-Type": "application/json"}, body: "{}"});
+    const response = await fetch("/v1/demo-users/" + encodeURIComponent(tenant) + "/key", {method: "POST", cache: "no-store", headers: await requestHeaders("", "{}"), body: "{}"});
     if (!response.ok) throw new Error(response.status === 404 ? "That demo user is not available." : "The demo key could not be issued (HTTP " + response.status + ").");
     const data = await response.json();
     $("demo-key-value").value = data.api_key; $("api-key").value = data.api_key; $("connect").click();

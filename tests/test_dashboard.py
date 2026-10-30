@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from guardoath.app import create_app
@@ -91,9 +92,13 @@ def test_dashboard_shows_the_demo_video():
     page = client.get("/dashboard").text
     assert '<video id="demo-video"' in page and 'src="/assets/guardoath_ai_final.mp4"' in page
     size = (root / "guardoath" / "static" / "guardoath_ai_final.mp4").stat().st_size
+    # The video is bigger than one part (the hosted service cannot return it in one response), so a
+    # request without a Range header is told to ask for parts.
+    from guardoath.app import MEDIA_PART_BYTES
+    assert size > MEDIA_PART_BYTES
     response = client.get("/assets/guardoath_ai_final.mp4")
-    assert response.status_code == 200 and response.headers["content-type"].startswith("video/mp4")
-    assert int(response.headers["content-length"]) == size and response.headers["accept-ranges"] == "bytes"
+    assert response.status_code == 416 and response.headers["content-range"] == f"bytes */{size}"
+    assert response.headers["accept-ranges"] == "bytes"
     part = client.get("/assets/guardoath_ai_final.mp4", headers={"Range": "bytes=0-1023"})
     assert part.status_code == 206 and len(part.content) == 1024
     assert part.headers["content-range"] == f"bytes 0-1023/{size}"
@@ -174,3 +179,77 @@ def test_tenant_panel_has_a_default_profile_picker_and_a_profile_note():
                    'id="tenant-profile-note"', 'id="tenant-checks"']:
         assert marker in panel, marker
     assert panel.index('id="tenant-default-profile"') < panel.index('id="tenant-checks"')
+
+
+# The demo video is served in parts (guardoath.app.media_part)
+
+VIDEO = "/assets/guardoath_ai_final.mp4"
+
+
+def video_bytes():
+    from pathlib import Path
+    return (Path(__file__).resolve().parents[1] / "guardoath" / "static" / "guardoath_ai_final.mp4").read_bytes()
+
+
+def test_the_video_reassembles_exactly_from_its_parts():
+    from guardoath.app import MEDIA_PART_BYTES
+    client = TestClient(create_app(credentials={"test-key": "demo"}))
+    expected, received, start = video_bytes(), b"", 0
+    while start < len(expected):
+        part = client.get(VIDEO, headers={"Range": f"bytes={start}-"})
+        assert part.status_code == 206 and part.headers["content-type"].startswith("video/mp4")
+        assert 0 < len(part.content) <= MEDIA_PART_BYTES
+        end = start + len(part.content) - 1
+        assert part.headers["content-range"] == f"bytes {start}-{end}/{len(expected)}"
+        assert int(part.headers["content-length"]) == len(part.content)
+        received += part.content
+        start = end + 1
+    assert received == expected
+
+
+@pytest.mark.parametrize("header, status", [
+    ("bytes=-100", 206), ("bytes=10-19", 206), ("bytes=0-0", 206),
+    ("bytes={size}-", 416), ("bytes=20-10", 416), ("bytes=0-1,5-9", 416), ("items=0-1", 416), ("bytes=-", 416),
+    ("bytes=x-1", 416),
+])
+def test_video_range_requests(header, status):
+    client = TestClient(create_app(credentials={"test-key": "demo"}))
+    data = video_bytes()
+    response = client.get(VIDEO, headers={"Range": header.replace("{size}", str(len(data)))})
+    assert response.status_code == status
+    if status == 206:
+        first, last = (int(n) for n in response.headers["content-range"].split(" ")[1].split("/")[0].split("-"))
+        assert response.content == data[first:last + 1]
+        if header == "bytes=-100":
+            assert response.content == data[-100:]
+    else:
+        assert response.headers["content-range"] == f"bytes */{len(data)}"
+
+
+def test_a_video_head_request_sends_headers_only():
+    client = TestClient(create_app(credentials={"test-key": "demo"}))
+    response = client.head(VIDEO, headers={"Range": "bytes=0-1023"})
+    assert response.status_code == 206 and response.content == b""
+    assert response.headers["content-length"] == "1024" and response.headers["content-range"].startswith("bytes 0-1023/")
+
+
+@pytest.mark.parametrize("path", ["/assets/missing.mp4", "/assets/Guardoath_ai_final.mp4"])
+def test_unknown_videos_are_not_found(path):
+    assert TestClient(create_app(credentials={"test-key": "demo"})).get(path, headers={"Range": "bytes=0-1"}).status_code == 404
+
+
+def test_a_video_that_fits_in_one_part_is_sent_whole(tmp_path):
+    from guardoath.app import media_part
+    small = tmp_path / "small.mp4"
+    small.write_bytes(b"0123456789")
+    response = media_part(small, None, head=False)
+    assert response.status_code == 200 and response.body == b"0123456789"
+    assert response.headers["content-length"] == "10" and response.headers["accept-ranges"] == "bytes"
+    assert media_part(small, None, head=True).body == b""
+    assert media_part(small, "bytes=8-", head=False).body == b"89"
+
+
+def test_the_page_offers_no_download_link_that_could_not_be_served():
+    page = TestClient(create_app(credentials={"test-key": "demo"})).get("/dashboard").text
+    video = page[page.index('<video id="demo-video"'):]
+    assert "<a " not in video[:video.index("</video>")]
