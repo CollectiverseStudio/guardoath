@@ -256,3 +256,15 @@ These are **negative adjacent-evidence audits**, not dedicated tests proving abs
 **UC028 `review_required` → `partial`**, strictly for an adjacent exact-hash integrity contract. Existing `guardoath/data_quality.py` verifies submitted bytes against a trusted configured SHA-256 digest. Tests: `tests/test_data_quality.py::test_data_quality_api_expectations` and `::test_digest_reference_is_private_and_not_caller_controlled`. Saved eval evidence: `integrity:valid.exact-utf8.input` and `integrity:valid.exact-base64.input`.
 
 **Critical gap:** Digest equality is **not** a privacy-preserving identity hashing implementation. No log identity pseudonymization, salt/key management, origin attestation or re-identification assessment exists. The manifest `partial` status reflects this narrow adjacent capability, not successful fulfillment of the requested identity-privacy use case. No checker, test, eval or Director-reserved file was changed.
+
+
+## 2026-10-30 — Audit evidence integrity regressions
+
+Added **four new test functions** in `tests/test_catalog_evidence_quality.py` (commit `f360122b`), without editing existing tests or Director-reserved files:
+
+1. Audited case IDs and module/test/eval reference lists must not contain duplicates; audit notes must not be empty.
+2. Negative `not_implemented` audits cannot be marked supported or verified; they retain `review_required` with adjacent code/test evidence.
+3. `partial` audits must include explicit source modules, test references and a saved-eval ID list (which may legitimately be empty).
+4. Every cited saved eval ID must resolve to a real unique case in the named suite.
+
+These are **catalog integrity tests**, not content security detectors or proof that 200 capabilities exist. They strengthen evidence bookkeeping for the ongoing audit. New GitHub Actions CI is pending; no local test run is claimed.
