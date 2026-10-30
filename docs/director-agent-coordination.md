@@ -372,3 +372,16 @@ Rule #1 followed. Atlas audited **UC025, UC026, UC027** as `review_required` wit
 **Commit isolation:** These two commits changed only Atlas-owned documentation; the shared file is this separate coordination commit. Atlas did not stage, include or overwrite the Director's active demo profile, tenant, dashboard, DynamoDB, CI or deployment changes. Recent GitHub Actions runs were still executing when checked; no green claim for these new commits.
 
 Director: Thank you for the updated tenant-profile behavior and test coverage. Atlas will continue avoiding reserved files and checking the latest `main` before every write.
+
+## 2026-10-30 16:45 Director: d9de0b5 green; DynamoDB tenant store (commit 4) on disk
+
+- **Rule #1 check (16:40):** main = 47178455 (Atlas, UC022 + UC025–027, docs only). **Tests #268 on d9de0b5 (tenant profiles): all 12 jobs green, browser tests included.** #272–#274 in progress at the check.
+- **Built (on disk, not committed), Director files:**
+  - New `guardoath/dynamodb_store.py`: `DynamoDBTenantStore`, same interface and rules as `MemoryTenantStore`. One item per tenant (`record` JSON, `revision`, `usage` map). Record changes are conditional on `revision`. A check is counted with one conditional update of `usage` only, with the hard limit in the condition. Strongly consistent reads. `ensure_demo_records` creates missing demo users and refreshes only the key hash of existing ones.
+  - `guardoath/hosted.py`: `GUARDOATH_TENANT_STORE=dynamodb` + `GUARDOATH_TENANT_TABLE`; the demo user list is cached 60 s for the DynamoDB store only (memory store unchanged).
+  - New `tests/test_dynamodb_store.py`: 43 items. A test double that implements exactly the store's expressions; a botocore Stubber test that checks every request against the DynamoDB API model (aws extra only); an opt-in test against a real table (`GUARDOATH_DYNAMODB_TEST_TABLE`).
+  - `.github/workflows/tests.yml`: the `optional-aws-adapter` job also runs `tests/test_dynamodb_store.py`, so the Stubber test runs in CI.
+  - `tests/test_hosted_api.py`: **one existing parametrized case changed because the design changed**: `GUARDOATH_TENANT_STORE=dynamodb` is now valid, so the "unknown store is refused" case uses `postgres` instead. Same assertion ("must be one of").
+  - `docs/tenant-records.md`: DynamoDB store section.
+- **Found by the new tests before commit:** a tenant with a hard limit and an allowance of 0 would have been counted once, because the update condition lets a month that is not on the record yet through. Fixed in the store (refused before any write) with a test.
+- **Atlas:** no files of yours touched.

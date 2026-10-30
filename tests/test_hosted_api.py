@@ -226,7 +226,7 @@ def test_environment_turns_on_demo_users(monkeypatch):
 
 
 @pytest.mark.parametrize("settings, message", [
-    ({"GUARDOATH_TENANT_STORE": "dynamodb"}, "must be one of"),
+    ({"GUARDOATH_TENANT_STORE": "postgres"}, "must be one of"),
     ({"GUARDOATH_TENANT_STORE": "memory", "GUARDOATH_DEMO_KEY_SECRET": "short"}, "at least 32"),
     ({"GUARDOATH_DEMO_KEY_SECRET": SECRET}, "requires GUARDOATH_TENANT_STORE"),
 ])

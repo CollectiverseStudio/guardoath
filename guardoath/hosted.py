@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import re
 from threading import Lock
+from time import monotonic
 from typing import Any
 
 from pydantic import Field, ValidationError
@@ -25,7 +26,9 @@ from guardoath.tenant_record import (EDITABLE_FIELDS, EXTERNAL_CHECK_IDS, MIN_DE
                                      key_matches, tenant_id_from_key)
 from guardoath.tenant_store import MemoryTenantStore, TenantNotFound
 
-TENANT_STORES = ("memory",)
+TENANT_STORES = ("memory", "dynamodb")
+# How long the demo user list is kept before the store is read again (dynamodb only).
+DEMO_LIST_SECONDS = 60.0
 DEFAULT_PROFILE_FILE = Path(__file__).resolve().parents[1] / "policies" / "playground.json"
 
 
@@ -66,7 +69,8 @@ def rejection_message(error: ValidationError) -> str:
 
 
 class TenantService:
-    def __init__(self, store, checkers, demo_key_secret: str | None = None, profiles: tuple[Policy, ...] = ()):
+    def __init__(self, store, checkers, demo_key_secret: str | None = None, profiles: tuple[Policy, ...] = (),
+                 demo_list_seconds: float = 0.0):
         if demo_key_secret is not None and len(demo_key_secret) < MIN_DEMO_KEY_SECRET:
             raise ValueError(f"GUARDOATH_DEMO_KEY_SECRET must be at least {MIN_DEMO_KEY_SECRET} characters")
         versions = [profile.version for profile in profiles]
@@ -80,6 +84,8 @@ class TenantService:
         self._checkers = dict(checkers)
         self._demo_key_secret = demo_key_secret
         self._profiles = tuple(profiles)
+        self._demo_list_seconds = demo_list_seconds
+        self._demo_list: tuple[float, list[dict]] | None = None
         self._engines: dict[str, tuple[int, Engine]] = {}
         self._lock = Lock()
 
@@ -94,9 +100,18 @@ class TenantService:
             return None
         if store_name not in TENANT_STORES:
             raise ValueError("GUARDOATH_TENANT_STORE must be one of: " + ", ".join(TENANT_STORES))
+        if secret is not None and len(secret) < MIN_DEMO_KEY_SECRET:
+            raise ValueError(f"GUARDOATH_DEMO_KEY_SECRET must be at least {MIN_DEMO_KEY_SECRET} characters")
         profiles = load_example_profiles(os.getenv("GUARDOATH_TENANT_PROFILE_FILE"))
-        # The memory store starts with the demo users only; it is for local use and tests.
-        return cls(MemoryTenantStore(demo_records(key_secret=secret) if secret else ()), checkers, secret, profiles)
+        if store_name == "memory":
+            # The memory store starts with the demo users only; it is for local use and tests.
+            return cls(MemoryTenantStore(demo_records(key_secret=secret) if secret else ()), checkers, secret, profiles)
+        from guardoath.dynamodb_store import DynamoDBTenantStore, ensure_demo_records
+        store = DynamoDBTenantStore.from_environment()
+        if secret:
+            # Missing demo users are created; existing ones keep their checks and usage.
+            ensure_demo_records(store, demo_records(key_secret=secret))
+        return cls(store, checkers, secret, profiles, demo_list_seconds=DEMO_LIST_SECONDS)
 
     @property
     def demo_enabled(self) -> bool:
@@ -136,12 +151,18 @@ class TenantService:
     def demo_users(self) -> list[dict]:
         if not self.demo_enabled:
             return []
+        cached = self._demo_list
+        if cached is not None and monotonic() < cached[0]:
+            return list(cached[1])
         users = []
         for tenant_id in self.store.tenant_ids():
             record = self.store.get(tenant_id)
             if record is not None and record.demo and record.status == "active":
                 users.append({"tenant_id": record.tenant_id, "display_name": record.display_name})
-        return sorted(users, key=lambda user: (len(user["tenant_id"]), user["tenant_id"]))
+        users.sort(key=lambda user: (len(user["tenant_id"]), user["tenant_id"]))
+        if self._demo_list_seconds > 0:
+            self._demo_list = (monotonic() + self._demo_list_seconds, users)
+        return list(users)
 
     def demo_key(self, tenant_id: str) -> str | None:
         """The API key of an active demo user, or None."""

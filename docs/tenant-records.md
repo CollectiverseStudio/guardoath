@@ -84,8 +84,19 @@ start if the example profile file is missing.
 
 ## Hosted API
 
-Set `GUARDOATH_TENANT_STORE=memory` to turn on tenant records. The memory store keeps records for the
-life of the server process; it is for local use and tests. Set `GUARDOATH_DEMO_KEY_SECRET` (at least 32
+Set `GUARDOATH_TENANT_STORE` to turn on tenant records:
+
+- `memory`: records live for the life of the server process. For local use and tests.
+- `dynamodb`: records are kept in the DynamoDB table named by `GUARDOATH_TENANT_TABLE` (partition key
+  `tenant_id`, string). Needs the `aws` extra and AWS credentials from the normal SDK chain (on Lambda, the
+  function's role). One item per tenant: `record` (the record's fields as JSON), `revision`, and `usage`
+  (a map of month to count). Every record change is conditional on `revision`, a check is counted with one
+  conditional update of `usage` only (so counts and record changes never overwrite each other), and reads
+  are strongly consistent. With a demo secret, missing demo users are created at startup and existing ones
+  keep their checks and usage (only their key hash is refreshed). The demo user list is read from the table
+  at most once a minute. The table is created by the deployment, not by GuardOath.
+
+The rest of this section applies to both stores. Set `GUARDOATH_DEMO_KEY_SECRET` (at least 32
 characters) to create demo1 to demo10 with demo keys. The local single-key mode (`GUARDOATH_API_KEY`)
 keeps working alongside it.
 
