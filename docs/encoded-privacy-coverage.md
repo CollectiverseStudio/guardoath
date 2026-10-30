@@ -44,7 +44,7 @@ Request context is not scanned or sent anywhere.
 
 Counts and token budgets are shared across the whole submitted document,
 including JSON keys and values. The PII adapter's 64 labeled-field attempt limit
-and 0.2-second scan deadline apply separately to each decoded payload. The engine
+and its scan deadline (the policy's `timeout_ms`) apply separately to each decoded payload. The engine
 also enforces the policy deadline across the entire encoded checker. Calls are
 sequential, not fan-out. Cancellation cannot forcibly stop an already running
 local scanner thread; existing thread/deadline limitations still apply.

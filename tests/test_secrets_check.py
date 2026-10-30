@@ -105,6 +105,23 @@ def test_timeout_is_incomplete_not_a_pass(engine, monkeypatch):
     assert result.checker_results[0].error_code == "checker_timeout"
 
 
+def test_scan_deadline_is_the_policy_timeout(engine, monkeypatch):
+    # policies/secrets.json sets timeout_ms 500. A scan that has used 0.3 s still completes
+    # (the old fixed 0.2 s limit failed it); one that has used 0.6 s stops as a timeout.
+    import guardoath.secrets_check
+    assert load_policies("policies/secrets.json")[0].timeout_ms == 500
+    for elapsed, status in [(0.3, "flagged"), (0.6, "error")]:
+        calls = iter([0.0])
+        monkeypatch.setattr(guardoath.secrets_check, "monotonic", lambda: next(calls, elapsed))
+        result = evaluate(engine, github_sample())
+        assert result.checker_results[0].status == status, elapsed
+        if status == "error":
+            assert result.evaluation_status == "incomplete"
+            assert result.checker_results[0].error_code == "checker_timeout"
+        else:
+            assert "secrets.github_token" in {f.rule_id for f in result.findings}
+
+
 def test_invalid_json_is_incomplete(engine):
     result = evaluate(engine, '{"bad":NaN}', content_format="json")
     assert result.evaluation_status == "incomplete"

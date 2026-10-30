@@ -77,10 +77,11 @@ def build_secret_checker():
                 for name,detector,validate in detectors for p in detector.denylist]
     # Prefix-based candidate coverage; not GitHub credential validity verification.
     patterns.append(('github_token',regex.compile(r'github_pat_[A-Za-z0-9_]{20,255}'),None))
-    checker_version=f'detect-secrets-{version("detect-secrets")}/guardoath-patterns-2'
+    checker_version=f'detect-secrets-{version("detect-secrets")}/guardoath-patterns-3'
 
     def scan(request,policy,stage):
-        deadline=monotonic()+.2
+        # One limit: the policy's timeout_ms (the same budget the engine enforces), not a separate fixed value.
+        deadline=monotonic()+policy.timeout_ms/1000
         parts=((request.content,False),) if request.content_format=='text' else units(parse_json(request.content))
         found=set()
         terms=[(rule.rule_id,normalize(rule.term)) for rule in policy.confidential_terms if stage in rule.stages]

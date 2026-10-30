@@ -352,7 +352,7 @@ The bounded offline adapter now imports selected upstream expressions for sixtee
 credential/identifier families plus a prefix-based fine-grained GitHub candidate
 rule. It does not call plugin verification, file/baseline scans or user-controlled
 suppression filters. Existing checker/finding IDs remain stable; version metadata
-uses guardoath-patterns-2. Private-key/JWT/identifier results do not establish
+uses guardoath-patterns-3 (the scan deadline is the policy's `timeout_ms`). Private-key/JWT/identifier results do not establish
 credential activity or cryptographic validity.
 
 Policy options default off: detect_secret_assignments inspects bounded quoted

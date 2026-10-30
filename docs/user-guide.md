@@ -358,8 +358,8 @@ can still flag benign encoding as a review signal when selected in another polic
 
 Budgets are shared across JSON units. There is no arbitrary unlabeled decoding,
 recursive decoding, compressed-file unpacking, document/OCR scanning, or general
-Unicode token-smuggling detection. The normal request/parser limits and a bounded
-local scan deadline also apply. Errors never become a clean secret-check pass.
+Unicode token-smuggling detection. The normal request/parser limits and a local
+scan deadline equal to the policy's `timeout_ms` also apply. Errors never become a clean secret-check pass.
 
 ### Enforcement, privacy and external routing
 
@@ -546,7 +546,7 @@ send identifiers as strings. Keys are scanned but never renamed, to avoid
 collisions. Recognized labeled-field attempts share a **64-field budget across
 the document**, including empty/invalid candidates. A trimmed value longer than
 128 characters fails before inspection completes. These bounds share the PII
-adapter's 0.2-second local deadline and normal policy deadline.
+adapter's local scan deadline, which is the policy's `timeout_ms`.
 
 Neither `request_context` nor files/images are scanned. Names, postal addresses,
 diagnoses, free-text medical narratives, other identifiers, consent and legal

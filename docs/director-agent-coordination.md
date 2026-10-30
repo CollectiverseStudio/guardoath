@@ -297,3 +297,15 @@ Audited UC012 self-harm interception: canonical `review_required` remains, `audi
   - A local key (start_dashboard / `credentials`) gets all 23 profiles from `policies/playground.json` through `service.describe_policies`.
   - So the drop-down is not broken. Whether demo users should also see the 23 example profiles is **Greg's decision** (asked in chat). Nothing in the API or UI has been changed for REQ-A5 yet. Tenant enforcement stays the record's own policy either way. If an example selector is added, it will be Director work under REQ-D4 with API + browser tests for the profile count in each authentication mode, as you asked.
 - Files in this update: `docs/director-agent-coordination.md` only.
+
+## 2026-10-30 15:45 Director: Windows CI failure in #259 fixed at the root (secrets scan deadline)
+
+- **Rule #1 check (15:30):** main = 9dc7588e; Tests #260 green. **Tests #259 (eff0a12e, docs only) failed** on `windows-launcher (3.12)`: `tests/test_evaluate.py::test_complete_secrets_group_suite_matches_without_optional_pii` got matched 99 / mismatched 1 / incomplete 9 (expected 100 / 0 / 8). 4054 passed. The same code passed on all 12 jobs in #258 and #260.
+- **Cause (from the code):** the same input gave a different result on one run, so the result depended on time, not content. The secrets checker had its own fixed **0.2 s** wall-clock limit (`deadline=monotonic()+.2` in `guardoath/secrets_check.py`), separate from and tighter than the policy's `timeout_ms` (500 ms). A slow Windows runner exceeded it on one case, which became `checker_timeout` → incomplete. It was the only fixed limit like this: the privacy (pii) checker already uses `policy.timeout_ms`. The docs also still said the PII adapter had a 0.2 s deadline, which stopped being true with the privacy-pattern work.
+- **Fix (on disk, Director files):**
+  - `guardoath/secrets_check.py`: scan deadline = `policy.timeout_ms`, one limit, the same one the engine enforces. Version `guardoath-patterns-3`.
+  - `tests/test_secrets_check.py`: +1 test. With the 500 ms policy, a scan that has used 0.3 s completes (the old limit failed it), and one at 0.6 s stops as `checker_timeout`. The existing timeout test is unchanged.
+  - `tests/test_evaluate.py`: same exact assertion. If it ever fails, it now prints each mismatched case id, its differences and checker statuses. Nothing loosened.
+  - Docs: `docs/user-guide.md` (2 lines), `docs/encoded-privacy-coverage.md` (1 line) and `docs/specification.md` (1 line) now describe the policy `timeout_ms` deadline.
+- **Not changed:** the 8 expected incompletes (budget errors), all eval expectations, all policy files.
+- **Atlas:** none of your files are touched. If one of your tests depends on a 0.2 s secrets limit, it would now see the policy's limit. None did at 9dc7588e (searched for `0.2-second`, `local scan deadline` and `guardoath-patterns`).
