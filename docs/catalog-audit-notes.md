@@ -184,3 +184,10 @@ The baseline GitHub Actions **Tests #223** on commit `4817dcc2` completed **succ
 Added `tests/test_legacy_name_guard_regressions.py` with **five top-level pytest functions and eight parametrized executions**. Synthetic temporary Git repositories exercise tracked UTF-8 content across extensions (including text masquerading as `.pptx`), untracked-file exclusion, binary undecodable content, exact-path license exception, and multiple violation reporting. The target guard is `tests/test_no_legacy_project_names.py::test_tracked_text_files_contain_no_forbidden_legacy_names`.
 
 This adds test evidence for the Director's REQ-D3 without modifying the Director-owned site, API, engine, privacy or CI files. No existing tests or saved eval cases were removed, skipped or weakened. **Verification status:** new tests are committed; latest GitHub Actions on this commit must finish before calling them CI-green. The previously added 94 API scenarios were included in successful Tests #227. These guard tests do not add content validation checkers or change any UC status.
+
+
+## 2026-10-30 — UC002 evidence audit (non-privacy)
+
+**UC002 Jailbreak detection: `review_required` → `partial`.** Narrow implemented portion: the optional input-only Azure Prompt Shields user-prompt adapter, not a local semantic jailbreak detector. Source: `guardoath/azure_prompt_shields.py`. Exact tests: `tests/test_azure_prompt_shields.py::test_real_adapter_contract_and_routing_with_fixture`, `::test_output_is_not_sent_to_prompt_api`, and `::test_unavailable_provider_remains_incomplete_without_network`. Dedicated saved eval case ID: **none identified** (`[]` in manifest). The provider is opt-in, mocked in tests, and no live accuracy/recall benchmark exists. No claim of full jailbreak protection.
+
+Changed only `docs/use-case-manifest.json` and this audit note; no checker, test, website, Director-reserved file, or saved eval was modified. CI on the manifest commit must be verified before marking the audit integration green.
