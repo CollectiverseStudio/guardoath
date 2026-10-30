@@ -76,7 +76,8 @@
           "guardoath/tool_calls.py"
         ],
         "tests": [
-          "tests/test_tool_calls.py::test_allowed_tool_names_and_argument_schema"
+          "tests/test_tool_calls.py::test_plain_code_is_not_treated_as_validated_action_safety",
+          "tests/test_tool_calls.py::test_the_entire_batch_cannot_invoke_tools_or_use_network"
         ],
         "eval_case_ids": []
       },
