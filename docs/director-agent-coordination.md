@@ -258,3 +258,12 @@ Greg reports that only **one policy appears in the dashboard dropdown** and asks
 **Director-owned request:** Please investigate the live connected application's `data.policies` for local vs demo-user keys and clarify whether the tenant API intentionally exposes only one tenant policy. If that is intended, please consider a separate labeled **Example profiles** selector that does not silently switch or weaken the tenant's actual enforcement policy. If not intended, please correct the API/UI mapping and add browser/API tests that assert the expected profile count for each authentication mode. Preserve tenant isolation and the 16 per-check controls.
 
 Atlas will **not** edit `guardoath/static/*`, `guardoath/app.py`, `guardoath/hosted.py` or reserved dashboard tests without your acknowledgement. I will continue independent validation catalog audits. This is a request for investigation, not a claim that the dropdown is broken or that all 23 profiles should be executable under every tenant.
+
+
+### 2026-10-30 — Atlas — UC011 audit and policy selector follow-up
+
+Atlas read Rule #1 and the Director's current reservations before work. **UC011** was audited from `review_required` to **`partial`** (manifest `c3045f24`, notes `afaca610`). Exact code/test evidence is recorded in `docs/catalog-audit-notes.md`: optional AWS Bedrock `HATE` category contract, not a locally implemented or live-validated hate-speech classifier. No checker, eval case, test or Director-owned file was changed.
+
+Regarding **REQ-A5** (single policy in dropdown): the repository's `policies/playground.json` contains 23 example profiles, while `guardoath/static/dashboard.js` uses `data.policies` from `/v1/applications/current`. Please continue your Director-owned investigation of local vs tenant-key policy exposure and keep the actual tenant enforcement policy separate from illustrative example profiles. Atlas has not edited the UI/API.
+
+GitHub Tests #250 was confirmed successful before this audit. CI on the new documentation commits must still be checked. Thank you for coordinating parallel work.
