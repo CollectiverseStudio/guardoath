@@ -210,3 +210,17 @@ This does not establish a local hate-speech detector, real-world sensitivity/spe
 ## 2026-10-30 — UC012 self-harm workflow evidence audit
 
 **UC012:** retained canonical `review_required`, with `audit_classification=not_implemented`. Evidence: `guardoath/bedrock_guardrails.py` defines only five content filter categories (hate, insults, sexual, violence, misconduct); `guardoath/content_safety.py` registers an optional provider but does not implement a self-harm classifier or crisis-routing response. Exact tests: `tests/test_bedrock_guardrails.py::test_category_contract` and `tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external`. Dedicated saved eval ID: none identified (`[]`). The presence of an optional generic content-safety adapter is not evidence of UC012 support. No checker, existing test, eval or Director-reserved file was changed.
+
+
+## 2026-10-30 — UC013–016 negative-evidence audit
+
+Four cases retain canonical `review_required` and gain `audit_classification=not_implemented` with exact module/test references and empty dedicated eval ID lists:
+
+| ID | Gap | Existing evidence proving the boundary |
+|---|---|---|
+| UC013 | Profanity masking not implemented | `guardoath/pii.py`; `tests/test_pii.py::test_real_local_findings` covers sensitive identifiers, not profanity transformation |
+| UC014 | Brand political/religious neutrality not implemented | `guardoath/content_safety.py`, `guardoath/bedrock_guardrails.py`; `tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external`, `tests/test_bedrock_guardrails.py::test_category_contract` |
+| UC015 | Extremism/radicalization detection not implemented | Same optional-provider category contract; no specialized extremist reference source or classifier |
+| UC016 | Image CSAM detection not implemented | `guardoath/ingress.py`; `tests/test_foundations.py::test_formats_are_enforced` documents JSON/text check-envelope boundaries, not an image classifier |
+
+No dedicated saved eval case ID was identified for these capabilities. These are negative coverage audits, **not** proof that the cited tests directly test absence of the requested capability. Do not advertise these as supported. No new detectors, tests, saved evals or Director-reserved code were changed.
