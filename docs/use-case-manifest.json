@@ -517,9 +517,19 @@
     {
       "id": "UC033",
       "title": "Receipt completeness",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Schemas can check already extracted fields; no receipt OCR or source legibility verification."
+      "existing_coverage_note": "Schemas can check already extracted fields; no receipt OCR or source legibility verification.",
+      "evidence": {
+        "modules": [
+          "guardoath/checkers.py"
+        ],
+        "tests": [
+          "tests/test_catalog_receipt_contracts.py::test_uc033_extracted_receipt_fields_only"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Configured JSON Schema can validate already extracted receipt fields (merchant/date/total, required fields, types and bounds) on input/output. New 12-case regression tests do not ingest receipt images or PDFs, perform OCR, or establish authenticity/source completeness."
     },
     {
       "id": "UC034",
