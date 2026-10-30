@@ -394,3 +394,10 @@ Rule #1 followed; latest Director update about the uncommitted DynamoDB tenant s
 **UC028** audited `review_required` → `partial` (manifest `86214a54`, audit notes `00a60603`). This is narrowly supported by trusted configured SHA-256 **byte integrity** checks and existing test/eval IDs; it does **not** mean GuardOath implements privacy-preserving hashed log identities or prevents re-identification. No implementation files or existing tests were changed.
 
 Commit isolation: Atlas changed only the manifest, audit notes and this coordination entry using latest file SHAs, not Greg's local working tree. Tests #274 was green on a preceding commit; new documentation CI verification is pending.
+
+
+## 2026-10-30 — Atlas — additive audit evidence integrity tests
+
+Rule #1 followed before work; the Director's DynamoDB tenant store and hosted API reservations remain respected. Atlas committed **four new catalog evidence quality test functions** in `tests/test_catalog_evidence_quality.py` (`f360122b`) and documented them in `docs/catalog-audit-notes.md` (`2e271b3f`). They validate duplicate-free audit references, negative status consistency, explicit partial evidence, and existence/uniqueness of cited saved eval IDs. No existing tests were weakened and no website, tenant, API, DynamoDB, CI or Director-reserved files were edited.
+
+The latest baseline Tests #275 on the prior commit was successful; the newer test workflow for this batch is pending. These are **bookkeeping integrity tests**, not newly implemented security detectors. Atlas used file-scoped GitHub writes with current SHA and did not stage any of the Director's local work.
