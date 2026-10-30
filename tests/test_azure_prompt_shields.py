@@ -109,8 +109,13 @@ def test_transport_errors_are_sanitized(exception,code):
 
 
 def test_engine_deadline_preserves_external_metadata():
+    # The deadline applies to every check, and the external call is only made after the local
+    # checks pass, so it must leave the local checks enough time on a slow runner (10 ms did not
+    # on Windows CI). The external handler never returns, so it still reaches the deadline.
     async def handler(request): await asyncio.Event().wait()
-    result = evaluate(checker(handler),configured=policy().model_copy(update={'timeout_ms':10}))
+    result = evaluate(checker(handler),configured=policy().model_copy(update={'timeout_ms':1000}))
+    assert [(r.checker_id, r.status) for r in result.checker_results if not r.external] == [
+        ('text_security', 'passed'), ('secrets', 'passed')]
     assert result.checker_results[1].error_code == 'checker_timeout'
     assert result.checker_results[1].external is True
     assert result.cost_usd is None

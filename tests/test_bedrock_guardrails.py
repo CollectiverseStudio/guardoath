@@ -205,12 +205,15 @@ def test_timed_out_workers_keep_their_slots():
         assert release.wait(3)
         return data()
     async def scenario():
-        p = policy(timeout_ms=20)
+        # Long enough for the local checks that gate the external call on a slow runner; the
+        # provider call below blocks for up to 3 s, so it still reaches the deadline.
+        p = policy(timeout_ms=1000)
         engine = Engine([p], {**default_checkers(), 'content_safety': adapter(call)})
         request = CheckRequest(application_id='demo', policy_version=p.version, content=SOURCE)
         try:
             first = await asyncio.gather(engine.check(request, Stage.INPUT), engine.check(request, Stage.OUTPUT))
             assert started.is_set()
+            assert all(c.status == 'passed' for r in first for c in r.checker_results if not c.external)
             assert all(check(r).error_code == 'checker_timeout' for r in first)
             third = await engine.check(request, Stage.INPUT)
             assert check(third).error_code == 'bedrock_busy' and len(count) == 2
