@@ -20,9 +20,24 @@
     {
       "id": "UC003",
       "title": "Invisible characters / homoglyphs",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Selected invisible/bidi/control characters detected; no scrubbing or general homoglyph coverage. Legitimate joiners are excluded."
+      "existing_coverage_note": "Selected invisible/bidi/control characters detected; no scrubbing or general homoglyph coverage. Legitimate joiners are excluded.",
+      "evidence": {
+        "modules": [
+          "guardoath/text_security.py"
+        ],
+        "tests": [
+          "tests/test_text_security.py::test_hidden_control_signals",
+          "tests/test_text_security.py::test_legitimate_text_and_unlabeled_data"
+        ],
+        "eval_case_ids": [
+          "text-security:controls.zero_width_space.input",
+          "text-security:controls.bidi_override.input",
+          "text-security:scope.emoji_joiner.input"
+        ]
+      },
+      "audit_note": "Selected control/bidi codepoints detected; general homoglyph detection and scrubbing absent."
     },
     {
       "id": "UC004",
@@ -34,23 +49,60 @@
     {
       "id": "UC005",
       "title": "System-prompt extraction requests",
-      "status": "review_required",
+      "status": "not_implemented",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Plain attack wording is deliberately demonstrated as a local coverage gap. Optional semantic service may signal attacks, not a prompt-leak guarantee."
+      "existing_coverage_note": "Plain attack wording is deliberately demonstrated as a local coverage gap. Optional semantic service may signal attacks, not a prompt-leak guarantee.",
+      "evidence": {
+        "modules": [
+          "guardoath/text_security.py"
+        ],
+        "tests": [
+          "tests/test_text_security.py::test_legitimate_text_and_unlabeled_data"
+        ],
+        "eval_case_ids": [
+          "text-security:scope.plain_attack_not_detected.input"
+        ]
+      },
+      "audit_note": "Local checker explicitly does not detect semantic system-prompt extraction; optional provider contract is not a proven detector."
     },
     {
       "id": "UC006",
       "title": "Sandbox escape commands",
-      "status": "review_required",
+      "status": "not_implemented",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented. Code execution and sandbox boundaries belong to the integrating application."
+      "existing_coverage_note": "Not implemented. Code execution and sandbox boundaries belong to the integrating application.",
+      "evidence": {
+        "modules": [
+          "guardoath/tool_calls.py"
+        ],
+        "tests": [
+          "tests/test_tool_calls.py::test_allowed_tool_names_and_argument_schema"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Proposed tool schemas are not OS sandbox escape prevention; no affirmative escape enforcement evidence. Empty eval list means no dedicated eval exists."
     },
     {
       "id": "UC007",
       "title": "Prompt size / resource caps",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Character/UTF-8 body/depth/field budgets, check quotas and concurrency controls. Not model-token counting or distributed billing quotas."
+      "existing_coverage_note": "Character/UTF-8 body/depth/field budgets, check quotas and concurrency controls. Not model-token counting or distributed billing quotas.",
+      "evidence": {
+        "modules": [
+          "guardoath/ingress.py",
+          "guardoath/budgets.py",
+          "guardoath/json_data.py"
+        ],
+        "tests": [
+          "tests/test_foundations.py::test_http_rejects_oversize_before_request_validation",
+          "tests/test_foundations.py::test_parser_limits",
+          "tests/test_budgets.py::test_token_bucket_refills_caps_and_rounds_retry",
+          "tests/test_budgets.py::test_real_api_concurrency_limits_and_cancellation_cleanup"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Request body/JSON/rate/concurrency limits implemented; model tokenizer and distributed cost ceilings absent. No dedicated saved eval for request admission."
     },
     {
       "id": "UC008",
