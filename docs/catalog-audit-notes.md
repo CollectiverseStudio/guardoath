@@ -99,3 +99,12 @@ At this documentation point, latest Tests #184 on `48ee5a5f` is **failed**. The 
 - **Prepared, not committed:** the 21 IDs above.
 - **Tests actually added to GitHub by the catalog audit:** manifest evidence test changes; **zero** of the 9 draft functions.
 - **No changes to existing eval cases, checkers, reserved privacy files, or test expectations.**
+
+
+## Work package v7 — top-level test evidence check (not integrated)
+
+The offline integration helper `apply_catalog_audit.py` now validates referenced test functions using only module-level Python AST function definitions, rather than every nested definition found by `ast.walk`. A nested helper function can no longer impersonate a pytest test. New `test_nested_function_cannot_impersonate_pytest_test` in `test_audit_apply_strict.py` verifies rejection and byte-for-byte preservation of the manifest. The v7 package is held in the originating conversation as `guardoath_catalog_audit_work_package_v7.zip`; it has **not** been merged into the repository.
+
+**Executed offline:** `python -m unittest discover -s . -p 'test_audit_apply_strict.py' -v`: 13 unittest executions passed (includes inherited methods collected under the subclass; do not count as 13 unique new tests). No GuardOath API tests or full CI were executed for v7. The 94 draft API scenarios remain unverified.
+
+**Next agent:** obtain v7, reconcile current `main`, run the full offline suite and GuardOath pytest, and only then integrate. The previously observed CI blocker in reserved configuration/dashboard tests remains outside this audit's file ownership. No checker, privacy code, or existing test expectation was modified.
