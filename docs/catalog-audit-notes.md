@@ -117,3 +117,14 @@ The offline `apply_catalog_audit.py` helper now checks that the original manifes
 New local package-only test file `test_audit_manifest_integrity.py` adds four scenarios: missing manifest ID, reordered manifest, duplicate eval ID, and malformed eval record. All assert failure without modifying the manifest bytes. The targeted discovery command executed **8 unittest methods** (4 newly added and 4 imported from the fixture module); all passed in 17.124 seconds. These are offline synthetic-checkout tests, not GuardOath pytest or CI. The 94 drafted API scenarios remain unexecuted.
 
 **Integration:** v8 supersedes v7. The helper and its tests are held in the work package, not pushed to GitHub. The latest known Tests workflow on `main` remains red; do not treat this as a product regression fix. The other agent must reconcile the draft with current `main`, run pytest and eval suites, and only then integrate the catalog. No reserved files, existing tests or checkers were changed.
+
+
+## Competitive input-validation research and approved roadmap (2026-10-29)
+
+Greg approved adding the architectural recommendations from six public sources (Nightfall, SnailSploit, AWS Prescriptive Guidance, VibeProd, Cisco AI Defense, ApX). The full design, source URLs, priorities, acceptance criteria, security boundaries and owner coordination are documented in [input-validation-expansion-roadmap.md](input-validation-expansion-roadmap.md).
+
+**New workstream IDs:** IV-01 semantic input assessment (P0), IV-02 RAG/tool-response quarantine (P0), IV-03 continuous effectiveness metrics (P0), IV-04 source-code AST validation (P1), IV-05 tenant-specific policy governance (P1), IV-06 safe transformation/revalidation (P1), IV-07 posture reporting (P2). Existing local deterministic controls are listed as foundations, not as proof these seven capabilities exist.
+
+**Implementation in this batch:** one new roadmap document and this audit note. **New checkers: 0; new test functions: 0; new eval cases: 0; changed manifest statuses: 0.** No reserved files were touched. The 21 drafted UC051–100 entries and 94 unexecuted API scenarios remain in the external v8 work package; no claim of GitHub integration. UC101–200 remain proposed.
+
+**Verification:** documentation was committed to `main`; latest observed Tests #187 before this commit was failing. Any new CI run must be checked independently. The other agent should use the roadmap as a design backlog, not a claim of delivered capability, and coordinate before modifying the reserved engine, models, app, privacy or dashboard files.
