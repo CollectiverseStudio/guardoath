@@ -624,21 +624,54 @@
       "title": "Document type / renamed files",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "JSON request media/encoding is checked. No uploaded-document classification, malware scanning or MIME-content forensics."
+      "existing_coverage_note": "JSON request media/encoding is checked. No uploaded-document classification, malware scanning or MIME-content forensics.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/ingress.py"
+        ],
+        "tests": [
+          "tests/test_catalog_media_ingress.py::test_uc031_032_034_035_036_binary_media_is_not_analyzed"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Ingress validates JSON request media type and charset, not the actual type or safety of an uploaded file; no MIME magic-byte inspection or document malware scanning."
     },
     {
       "id": "UC039",
       "title": "Signature presence",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented; no visual signature detector or legal-execution workflow."
+      "existing_coverage_note": "Not implemented; no visual signature detector or legal-execution workflow.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/ingress.py"
+        ],
+        "tests": [
+          "tests/test_catalog_media_ingress.py::test_uc031_032_034_035_036_binary_media_is_not_analyzed"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "No signature detection or verification from images/PDFs, and no legal execution workflow. JSON ingress checks do not prove signature presence."
     },
     {
       "id": "UC040",
       "title": "Image steganography",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented; no pixel/file payload inspection or guarantee of hidden-payload absence."
+      "existing_coverage_note": "Not implemented; no pixel/file payload inspection or guarantee of hidden-payload absence.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/ingress.py"
+        ],
+        "tests": [
+          "tests/test_catalog_media_ingress.py::test_uc031_032_034_035_036_binary_media_is_not_analyzed"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "No pixel-level or file-payload steganography analysis; rejecting binary media at the check endpoint does not establish absence of hidden content."
     },
     {
       "id": "UC041",
