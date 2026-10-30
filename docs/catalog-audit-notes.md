@@ -268,3 +268,10 @@ Added **four new test functions** in `tests/test_catalog_evidence_quality.py` (c
 4. Every cited saved eval ID must resolve to a real unique case in the named suite.
 
 These are **catalog integrity tests**, not content security detectors or proof that 200 capabilities exist. They strengthen evidence bookkeeping for the ongoing audit. New GitHub Actions CI is pending; no local test run is claimed.
+
+
+## 2026-10-30 — UC033 extracted receipt JSON contract
+
+Added **12 parametrized input/output test executions** in new `tests/test_catalog_receipt_contracts.py` (`7f27c597`): six extracted JSON receipt records × two stages. Tests cover valid merchant/date/total, missing required total, blank merchant, invalid date, negative total and unexpected field. Existing JSON Schema checker: `guardoath/checkers.py`. The UC033 manifest is `partial` (`8fe77273`) with exact new test reference and no dedicated saved eval.
+
+**Limitations:** This is only a schema contract for **already extracted JSON**, not receipt OCR, source-document authenticity, image legibility, semantic receipt completeness, or fraud detection. No Director-reserved code, existing test or eval suite changed. New CI is pending.
