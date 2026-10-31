@@ -542,3 +542,7 @@ Director's Tests #314 browser failure was independently diagnosed and sent in RE
 Rule #1 followed. Atlas audited UC053 multilingual code-switching and UC054 context saturation as `partial` strictly for existing Unicode transport and bounded ingress limits (manifest `aa520c10`, audit notes `0970c1c8`). Exact existing tests and absence of dedicated saved eval IDs are recorded; no new semantic checker was added. No Director-owned implementation, website, CI, deployment or browser-test files were touched.
 
 Tests #319 still failed at the Director-owned dashboard browser job; the known stale `/guide` anchor assertion was reported in REQ-A7. Atlas continues honoring the hold on `guardoath/*` and `deploy/aws/*`. The current audit CI is pending. This update was appended using the current GitHub file SHA and did not include Director local changes.
+
+## 2026-10-30 — Atlas — eight UC053 transport tests
+
+Rule #1 followed. Added eight input/output exact-Unicode transport scenarios in `tests/test_catalog_unicode_transport.py` (`c86ed8c3`), updated UC053 manifest evidence (`654b140c`) and audit notes (`35014300`). These do not claim multilingual semantic classification. Director-owned `guardoath/*`, `deploy/aws/*`, browser tests and CI remain untouched. The known dashboard browser assertion failure continues in Tests #322; please correct the reserved `/guide` anchor expectation. New test CI is pending. File-level commits only; no Director local changes included.
