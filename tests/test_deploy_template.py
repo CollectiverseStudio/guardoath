@@ -240,9 +240,25 @@ def test_the_build_compiles_every_module_to_bytecode_lambda_loads_without_checki
     assert sorted(p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*.pyc")) == [
         f"__pycache__/top.{tag}.pyc", f"pkg/__pycache__/__init__.{tag}.pyc"]
     data = (tmp_path / "__pycache__" / f"top.{tag}.pyc").read_bytes()
-    # PEP 552 header: magic number, then flags 0b11 = hash-based and not checked against the source.
-    assert data[:4] == importlib.util.MAGIC_NUMBER and int.from_bytes(data[4:8], "little") == 0b11
+    # PEP 552 header: magic number, then the flags word. Bit 0 = hash-based, bit 1 = check the hash
+    # against the source. Unchecked hash-based is 0b01. (Corrected 2026-10-31: this test first expected
+    # 0b11, which is the checked form; the build was right and the test was wrong.)
+    assert data[:4] == importlib.util.MAGIC_NUMBER and int.from_bytes(data[4:8], "little") == 0b01
     assert marshal.loads(data[16:]).co_filename == "/var/task/top.py"
+
+
+def test_python_loads_the_built_bytecode_without_reading_the_source_again(tmp_path):
+    # What the flags promise, shown by behavior: after the build, change the source. An unchecked .pyc is
+    # still loaded as built; a timestamp or checked-hash .pyc would be recompiled from the new source.
+    build = load_build()
+    source = tmp_path / "guardoath_pyc_probe.py"
+    source.write_text("VALUE = 'built'\n", encoding="utf-8")
+    assert build.compile_package(tmp_path) == 1
+    source.write_text("VALUE = 'changed after the build'\n", encoding="utf-8")
+    spec = importlib.util.spec_from_file_location("guardoath_pyc_probe", source)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.VALUE == "built"
 
 
 def test_a_module_that_does_not_compile_stops_the_build(tmp_path):
