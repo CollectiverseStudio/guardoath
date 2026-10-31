@@ -5,8 +5,9 @@ events and expects the matching response (statusCode, headers, cookies, body, is
 response is buffered, so it must fit Lambda's 6 MB response limit; the app sends videos in parts
 for that reason (see MEDIA_PART_BYTES in guardoath.app).
 
-The app is created on the first request, from the environment, and reused while the Lambda execution
-environment lives. One event loop is kept for the same lifetime.
+The app is created once per Lambda execution environment, from the environment: index.py builds it
+while Lambda initializes the copy (handler.prepare()), otherwise the first request does. It is reused
+while the environment lives. One event loop is kept for the same lifetime.
 """
 import asyncio
 import base64
@@ -21,11 +22,12 @@ TEXT_TYPES = ("text/", "application/json", "application/javascript", "applicatio
 SINGLE_RANGE = re.compile(r"bytes=\d{0,15}-\d{0,15}")
 
 
-def request_line(scope: dict, status: int, started: float, first: bool) -> str:
+def request_line(scope: dict, status: int, started: float, first: bool, built_app: bool = False) -> str:
     """One JSON log line per request, so traffic can be explained afterwards. It holds only the method,
     the path (no query string), the status, the time taken, a byte range when one was asked for,
-    whether CloudFront itself made the request (cache fill) and whether this was the first request in
-    this copy of the function. Never the body, the query string, keys or any other header."""
+    whether CloudFront itself made the request (cache fill), whether this was the first request in
+    this copy of the function and, when it happened, that this request had to build the app first.
+    Never the body, the query string, keys or any other header."""
     headers = dict(scope["headers"])
     ranged = headers.get(b"range", b"").decode("latin-1")
     return json.dumps({
@@ -34,6 +36,7 @@ def request_line(scope: dict, status: int, started: float, first: bool) -> str:
         **({"range": ranged} if SINGLE_RANGE.fullmatch(ranged) else {"range": "other"} if ranged else {}),
         "cloudfront": headers.get(b"user-agent", b"") == b"Amazon CloudFront",
         "first_in_copy": first,
+        **({"built_app": True} if built_app else {}),
     }, separators=(",", ":"))
 
 
@@ -122,21 +125,38 @@ def lambda_response(status: int, headers: list[tuple[bytes, bytes]], body: bytes
 
 
 def make_handler(app_factory):
-    """A Lambda handler for the ASGI app returned by app_factory (called once, on the first request)."""
-    state: dict = {}
+    """A Lambda handler for the ASGI app returned by app_factory, which is called once per copy.
+
+    index.py calls handler.prepare() while Lambda initializes the copy, so the app is built before the
+    first request arrives. If that did not happen, the first request builds it (and its log line says
+    so with "built_app")."""
+    state: dict = {"requests": 0}
+
+    def build() -> bool:
+        if "app" in state:
+            return False
+        state["loop"] = asyncio.new_event_loop()
+        state["app"] = app_factory()
+        return True
+
+    def prepare():
+        started = time.perf_counter()
+        if build():
+            print(json.dumps({"prepared": "app", "ms": round((time.perf_counter() - started) * 1000, 1)},
+                             separators=(",", ":")), flush=True)
 
     def handler(event, context=None):
         started = time.perf_counter()
-        first = "app" not in state
-        if first:
-            state["loop"] = asyncio.new_event_loop()
-            state["app"] = app_factory()
+        first = state["requests"] == 0
+        state["requests"] += 1
+        built_app = build()
         scope, body = scope_for(event)
         status, headers, payload = state["loop"].run_until_complete(run_app(state["app"], scope, body))
         response = lambda_response(status, headers, payload)
-        print(request_line(scope, response["statusCode"], started, first), flush=True)
+        print(request_line(scope, response["statusCode"], started, first, built_app), flush=True)
         return response
 
+    handler.prepare = prepare
     return handler
 
 

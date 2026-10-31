@@ -144,3 +144,50 @@ def test_the_logged_status_is_the_status_lambda_returns(echo, capsys):
     out = make_handler(lambda: echo)(event("GET", "/huge"))
     logged = json_module.loads(capsys.readouterr().out.strip())
     assert out["statusCode"] == 500 and logged["status"] == 500 and logged["request"] == "GET /huge"
+
+
+# Building the app while Lambda initializes the copy (index.py calls handler.prepare())
+
+def test_prepare_builds_the_app_once_before_the_first_request(echo, capsys):
+    calls = []
+
+    def factory():
+        calls.append(1)
+        return echo
+
+    handler = make_handler(factory)
+    handler.prepare()
+    prepared = json.loads(capsys.readouterr().out.strip())
+    assert calls == [1] and prepared["prepared"] == "app" and prepared["ms"] >= 0 and set(prepared) == {"prepared", "ms"}
+    assert handler(event("GET", "/echo/a"))["statusCode"] == 200
+    assert handler(event("GET", "/echo/b"))["statusCode"] == 200
+    first, second = (json.loads(line) for line in capsys.readouterr().out.strip().splitlines())
+    assert calls == [1]
+    assert first["first_in_copy"] is True and "built_app" not in first
+    assert second["first_in_copy"] is False and "built_app" not in second
+    handler.prepare()
+    assert calls == [1] and capsys.readouterr().out == ""
+
+
+def test_without_prepare_the_first_request_builds_the_app_and_its_log_line_says_so(echo, capsys):
+    handler = make_handler(lambda: echo)
+    handler(event("GET", "/echo/a"))
+    handler(event("GET", "/echo/b"))
+    first, second = (json.loads(line) for line in capsys.readouterr().out.strip().splitlines())
+    assert first["built_app"] is True and first["first_in_copy"] is True
+    assert "built_app" not in second and second["first_in_copy"] is False
+
+
+def test_a_failing_build_is_not_hidden_and_is_tried_again(echo):
+    calls = []
+
+    def factory():
+        calls.append(1)
+        if len(calls) == 1:
+            raise ValueError("bad configuration")
+        return echo
+
+    handler = make_handler(factory)
+    with pytest.raises(ValueError, match="bad configuration"):
+        handler.prepare()
+    assert handler(event("GET", "/echo/a"))["statusCode"] == 200 and calls == [1, 1]

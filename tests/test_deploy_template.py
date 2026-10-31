@@ -7,6 +7,7 @@ a service without an always-free allowance.
 """
 import importlib.util
 import json
+import marshal
 from pathlib import Path
 import sys
 import types
@@ -213,6 +214,50 @@ def test_the_build_bundles_the_dependencies_the_hosted_site_needs():
     assert build.DIRECT_UPLOAD_LIMIT == 50 * 1024 * 1024 and build.UNZIPPED_LIMIT == 250 * 1024 * 1024
 
 
+def load_build():
+    spec = importlib.util.spec_from_file_location("build_lambda", ROOT / "deploy" / "aws" / "build_lambda.py")
+    build = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(build)
+    return build
+
+
+def test_the_package_entry_point_builds_the_app_while_lambda_initializes_the_copy():
+    build = load_build()
+    lines = [line for line in build.INDEX.splitlines() if line and not line.startswith("#")]
+    assert lines[0].startswith("from guardoath.lambda_handler import handler") and lines[1:] == ["handler.prepare()"]
+
+
+def test_the_build_compiles_every_module_to_bytecode_lambda_loads_without_checking_dates(tmp_path):
+    build = load_build()
+    (tmp_path / "pkg").mkdir()
+    (tmp_path / "pkg" / "__init__.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (tmp_path / "top.py").write_text("def fail():\n    raise ValueError('x')\n", encoding="utf-8")
+    stale = tmp_path / "pkg" / "__pycache__"
+    stale.mkdir()
+    (stale / "old.cpython-313.pyc").write_bytes(b"stale")
+    assert build.compile_package(tmp_path) == 2
+    tag = sys.implementation.cache_tag
+    assert sorted(p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*.pyc")) == [
+        f"__pycache__/top.{tag}.pyc", f"pkg/__pycache__/__init__.{tag}.pyc"]
+    data = (tmp_path / "__pycache__" / f"top.{tag}.pyc").read_bytes()
+    # PEP 552 header: magic number, then flags 0b11 = hash-based and not checked against the source.
+    assert data[:4] == importlib.util.MAGIC_NUMBER and int.from_bytes(data[4:8], "little") == 0b11
+    assert marshal.loads(data[16:]).co_filename == "/var/task/top.py"
+
+
+def test_a_module_that_does_not_compile_stops_the_build(tmp_path):
+    import py_compile
+    (tmp_path / "broken.py").write_text("def broken(:\n", encoding="utf-8")
+    with pytest.raises(py_compile.PyCompileError):
+        load_build().compile_package(tmp_path)
+
+
+def test_the_build_refuses_a_python_other_than_the_lambda_runtime():
+    build = load_build()
+    assert build.RUNTIME_PYTHON == (3, 13) and build.check_python((3, 13)) is None
+    assert "3.13" in build.check_python((3, 12)) and "3.13" in build.check_python((3, 14))
+
+
 def test_every_policy_id_in_the_template_is_a_documented_managed_policy():
     import re
     ids = set(re.findall(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", TEMPLATE_FILE.read_text(encoding="utf-8")))
@@ -226,3 +271,8 @@ def test_even_at_full_load_an_hour_uses_a_small_part_of_the_free_compute(templat
     function = resources(template, "AWS::Lambda::Function")["SiteFunction"]
     most = template["Parameters"]["SiteConcurrency"]["MaxValue"] * 3600 * function["MemorySize"] / 1024
     assert most <= 0.05 * FREE_GB_SECONDS
+
+
+def test_the_build_python_matches_the_function_runtime(template):
+    runtime = resources(template, "AWS::Lambda::Function")["SiteFunction"]["Runtime"]
+    assert runtime == "python%d.%d" % load_build().RUNTIME_PYTHON

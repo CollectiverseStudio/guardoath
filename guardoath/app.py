@@ -73,7 +73,11 @@ def media_part(path: Path, range_header: str | None, head: bool) -> Response:
                     headers={**headers, "Content-Range": f"bytes {start}-{end}/{size}", "Content-Length": str(length)})
 
 
-def demo_engine(enable_pii: bool = False, enable_azure: bool = False, content_safety_provider: str = "none") -> Engine:
+def demo_engine(enable_pii: bool = False, enable_azure: bool = False, content_safety_provider: str = "none",
+                checkers: dict | None = None) -> Engine:
+    """The built-in demo policy. checkers: an already built default_checkers() result with the same
+    settings, so an app builds its checkers (the sensitive-data checker takes most of the start-up
+    time) once instead of twice."""
     return Engine([Policy(
         application_id="demo", version="support-v1", timeout_ms=2000 if enable_azure else 100,
         rules=(Rule(checker_id="schema", required=False, on_finding=Action.BLOCK),
@@ -85,7 +89,8 @@ def demo_engine(enable_pii: bool = False, enable_azure: bool = False, content_sa
                       "required": ["message"], "additionalProperties": False},
         output_schema={"type": "object", "properties": {"answer": {"type": "string"}},
                        "required": ["answer"], "additionalProperties": False},
-    )], default_checkers(enable_pii=enable_pii, enable_azure=enable_azure, content_safety_provider=content_safety_provider))
+    )], checkers if checkers is not None else default_checkers(enable_pii=enable_pii, enable_azure=enable_azure,
+                                                                content_safety_provider=content_safety_provider))
 
 
 def create_app(engine: Engine | None = None, credentials: dict[str, str] | None = None,
@@ -110,7 +115,8 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         content_safety_provider = os.getenv("GUARDOATH_CONTENT_SAFETY_PROVIDER", "none")
         checkers = default_checkers(enable_pii=enable_pii, enable_azure=enable_azure, content_safety_provider=content_safety_provider)
         service = (Engine(load_policies(policy_file), checkers, pack_registry=load_pack_registry(pack_file) if pack_file else None)
-                   if policy_file else demo_engine(enable_pii=enable_pii, enable_azure=enable_azure, content_safety_provider=content_safety_provider))
+                   if policy_file else demo_engine(enable_pii=enable_pii, enable_azure=enable_azure, content_safety_provider=content_safety_provider,
+                                  checkers=checkers))
         if tenants is None:
             tenants = TenantService.from_environment(checkers)
     if pack_file and not policy_file and engine is None:

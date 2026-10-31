@@ -618,3 +618,22 @@ Rule #1 checked before work. In the isolated local workspace, hardened `guardoat
 ## 2026-10-31 — Atlas — first source transfer to GitHub (Greg directive)
 
 Rule #1 read before changes. Greg directed that source files must live in GitHub for Director visibility, not remain in a ChatGPT temporary workspace. **Committed to main** new isolated files: `guardoath/semantic_guards.py`, `agent_extended_guards.py`, `data_agent_guards.py`, `agent_workflow_guards.py`, `combined_guards.py`, `lexical_checker.py`, `integrate_lexical_checker.py`, and `tests/test_lexical_guards_integrated.py`. Latest implementation/test commit: `df5b9748`; preceding source commits: `26ae2b4e`, `0a839a69`, `f8aee310`, `d5abd9e3`, `267d030a`, `0577e6e2`, `e3c1db8a`. The new regression test covers 80 unique lexical indicators and the real `CheckRequest`/`Policy` model contract. **CI #346 queued** when checked; no CI-green claim. The checker is **not registered** in `default_checkers`, tenant policies are not configured, and no production deployment was performed. These are 80 lexical indicators, **not 80 complete catalog use cases**. Director: please review the new files and advise on safe registry/policy integration with your current work. The remaining older isolated test files have not yet been transferred; do not interpret this as a complete source-package transfer.
+
+## 2026-10-30 21:00 Director: why a new copy took 13 s to answer; start-up fix (not committed yet)
+
+- **Rule #1 check (20:43 EDT):** main = 145704d7, then Greg pushed 8184d60 (my 20:45 note + follow-up). Tests #327 green.
+- **Measured on Greg's PC** (`.guardoath-reports\startup_timing.py`): the whole start takes 4.08 s (imports 0.86 s; sensitive-data checker 1.54 s, then 0.40 s again; app 0.66 s; first /healthz 0.16 s). The checker is built twice inside create_app: once for the tenant service and once more in `demo_engine()`.
+- **Found in the deployed package** (the zip uploaded at 17:26 EDT): `guardoath/` (150 modules) had **no .pyc files**. The other 1,573 .pyc files are timestamp-checked and record 2026-10-31 00:37 UTC, but the zip stores 2026-01-01 00:00 for every file. Lambda's code folder is read-only, so modules without a usable .pyc are compiled again in every new copy. Whether Lambda keeps the zip dates when it unpacks is not verified, and the fix doesn't depend on it.
+- **Also found:** the app was built on the first request, not while Lambda initializes the copy.
+- **Fix (Director files):**
+  - `deploy/aws/build_lambda.py`: refuses any Python except 3.13 (the runtime). It recompiles every module as an **unchecked-hash .pyc** (PEP 552: loaded without comparing source dates), with `/var/task/...` as the file name in tracebacks. A module that doesn't compile stops the build. `index.py` now calls `handler.prepare()`.
+  - `guardoath/lambda_handler.py`: `handler.prepare()` builds the app once and logs `{"prepared":"app","ms":…}`. A first request that had to build the app itself logs `"built_app": true`.
+  - `guardoath/app.py`: `demo_engine(checkers=…)`, so `create_app` builds the checkers once.
+  - Lambda's Init phase is limited to 10 s; if it runs longer, Lambda retries init at the first invocation with the function timeout (Lambda execution environment docs). So the worst case is the same as before.
+  - Cost: the same work, whether it runs at init or in a request; init has been billed since 2025-08-01.
+- **Tests:**
+  - `tests/test_lambda_handler.py` +3: prepare builds once; without prepare, the first request builds and says so; a failed build raises and is tried again.
+  - `tests/test_deploy_template.py` +5: index calls prepare; unchecked-hash .pyc with flags 0b11 and a `/var/task` file name, stale .pyc removed; a broken module stops the build; only 3.13 allowed; the template runtime matches.
+  - New `tests/test_app_startup.py` (1): create_app builds the sensitive-data checker once.
+  - No existing assertion changed.
+- **Verify after deploy:** `.guardoath-reports\startup_check.py` reads the function log (start-up build ms, REPORT Init Duration, first request per copy).

@@ -69,8 +69,10 @@ Expect `"ConcurrentExecutions": 1000` and `"UnreservedConcurrentExecutions"` of 
 
 ## Deploy
 
-1. Build the package (needs internet; about a minute). Expect the last lines to show the unzipped size
-   under 262,144,000 bytes and the zip under 52,428,800 bytes:
+1. Build the package (needs internet; about a minute). It must run with Python 3.13 (the Lambda
+   runtime): it compiles every module to bytecode Lambda can load as is, so a new copy of the function
+   does not compile them again before it can answer. Expect a "Compiled ... modules" line, then the
+   unzipped size under 262,144,000 bytes and the zip under 52,428,800 bytes:
    ```cmd
    cd /d C:\Users\bellgj\Documents\Personal\collectiverse\guardoath
    C:\Users\bellgj\AppData\Local\Programs\Python\Python313\python.exe deploy\aws\build_lambda.py
