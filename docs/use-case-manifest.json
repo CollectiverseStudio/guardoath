@@ -895,14 +895,36 @@
       "title": "Logical contradictions",
       "status": "review_required",
       "source": "docs/additional-use-cases.md",
-      "existing_coverage_note": "Planned; no premise/logic model"
+      "existing_coverage_note": "Planned; no premise/logic model",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/business.py"
+        ],
+        "tests": [
+          "tests/test_foundations.py::test_business_rules_and_asymmetric_actions"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Deterministic cross-field comparisons are not natural-language premise or logical contradiction detection."
     },
     {
       "id": "UC056",
       "title": "Conversational loops",
       "status": "review_required",
       "source": "docs/additional-use-cases.md",
-      "existing_coverage_note": "Planned; no server conversation ledger"
+      "existing_coverage_note": "Planned; no server conversation ledger",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/ingress.py"
+        ],
+        "tests": [
+          "tests/test_additional_use_cases.py::test_uc054_and_uc097_limits_reject_rather_than_silently_truncate"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Request-size limits do not establish a persistent multi-turn conversation ledger or recursive dialogue-loop detector."
     },
     {
       "id": "UC057",
@@ -916,7 +938,18 @@
       "title": "Stale-context eviction",
       "status": "review_required",
       "source": "docs/additional-use-cases.md",
-      "existing_coverage_note": "Planned; no session freshness engine"
+      "existing_coverage_note": "Planned; no session freshness engine",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/engine.py"
+        ],
+        "tests": [
+          "tests/test_additional_use_cases.py::test_uc072_versioned_schema_changes_do_not_mutate_an_active_policy"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Versioned policy selection does not track conversation freshness or evict stale session context."
     },
     {
       "id": "UC059",
@@ -928,9 +961,25 @@
     {
       "id": "UC060",
       "title": "Compressed-prompt reconstruction",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/additional-use-cases.md",
-      "existing_coverage_note": "Planned beyond the documented single labeled Base64/hex layer"
+      "existing_coverage_note": "Planned beyond the documented single labeled Base64/hex layer",
+      "evidence": {
+        "modules": [
+          "guardoath/text_security.py"
+        ],
+        "tests": [
+          "tests/test_text_security.py::test_labeled_encoded_text_is_review_signal_even_when_benign",
+          "tests/test_text_security.py::test_malformed_or_non_utf8_encoded_data",
+          "tests/test_text_security.py::test_boundary_budgets_and_single_layer_only"
+        ],
+        "eval_case_ids": [
+          "text-security:encoding.base64.input",
+          "text-security:encoding.hex.input",
+          "text-security:scope.unlabeled_base64.input"
+        ]
+      },
+      "audit_note": "Explicitly labeled Base64/hex input is decoded one bounded UTF-8 layer and signaled; no recursive decoding, general compressed-format unpacking, unlabeled detection or semantic prompt reconstruction."
     },
     {
       "id": "UC061",
