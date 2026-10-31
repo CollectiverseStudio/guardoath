@@ -27,7 +27,7 @@ from guardoath.models import (Action, ConfidentialTerm, Contract, EvidencePolicy
 from guardoath.privacy_catalog import DEFAULT_MIN_SCORE
 
 # Every check a tenant can turn on. The simulated "safety" and "bias" checkers are test fixtures only.
-CHECK_IDS = ("pii", "encoded_pii", "secrets", "text_security", "schema", "cross_field", "completeness",
+CHECK_IDS = ("pii", "encoded_pii", "secrets", "text_security", "lexical_guards", "schema", "cross_field", "completeness",
              "matched_outcomes", "evidence", "tool_calls", "ledger", "timestamps", "graph", "integrity",
              "content_safety", "azure_prompt_shields")
 # Checks that call a paid outside provider. They never run for demo users.
@@ -87,6 +87,7 @@ class TenantRecord(Contract):
     check_encoded_pii: Action | None = None
     check_secrets: Action | None = None
     check_text_security: Action | None = None
+    check_lexical_guards: Action | None = None
     check_schema: Action | None = None
     check_cross_field: Action | None = None
     check_completeness: Action | None = None

@@ -2,6 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import re
+import unicodedata
 from .semantic_guards import MAX_CHARS
 
 @dataclass(frozen=True)
@@ -38,4 +39,9 @@ def inspect_extended(content: str) -> tuple[ExtendedSignal, ...]:
         raise TypeError("content must be text")
     if len(content) > MAX_CHARS:
         raise ValueError("content exceeds maximum character budget")
-    return tuple(ExtendedSignal(key) for key, pattern in COMPILED.items() if pattern.search(content))
+    # Same compatibility normalization as the other rule modules, so full-width or other look-alike
+    # forms of a command are matched too.
+    normalized = unicodedata.normalize("NFKC", content)
+    if len(normalized) > MAX_CHARS * 4:
+        raise ValueError("normalized content exceeds maximum character budget")
+    return tuple(ExtendedSignal(key) for key, pattern in COMPILED.items() if pattern.search(normalized))

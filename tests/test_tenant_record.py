@@ -33,7 +33,7 @@ def run(policy, content, stage=Stage.INPUT, checkers=None):
 
 def test_every_check_is_a_field_on_the_record():
     assert CHECK_FIELDS == tuple("check_" + c for c in CHECK_IDS)
-    assert len(CHECK_IDS) == len(set(CHECK_IDS)) == 16
+    assert len(CHECK_IDS) == len(set(CHECK_IDS)) == 17
     for name in CHECK_FIELDS:
         assert TenantRecord.model_fields[name].default is None
 

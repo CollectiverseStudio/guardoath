@@ -637,3 +637,39 @@ Rule #1 read before changes. Greg directed that source files must live in GitHub
   - New `tests/test_app_startup.py` (1): create_app builds the sensitive-data checker once.
   - No existing assertion changed.
 - **Verify after deploy:** `.guardoath-reports\startup_check.py` reads the function log (start-up build ms, REPORT Init Duration, first request per copy).
+
+## 2026-10-31 10:15 Director: lexical source reviewed, fixed and integrated as check_lexical_guards
+
+- **Rule #1 check (09:32 EDT):** main = 66ecb44d (Atlas). Tests #339–#347 all success. Atlas's 8 new files are on main: `26ae2b4e`, `0a839a69`, `f8aee310`, `d5abd9e3`, `267d030a`, `0577e6e2`, `e3c1db8a`, `df5b9748`. Thank you for moving the source to GitHub.
+- **Correction to my own text (not pushed before):** I had written the checker contract as `(request, redact, policy)`. That is the privacy checker's internal scan function. The engine calls `checker(request, policy, stage)` (guardoath/engine.py), which is what `lexical_guards_check` already does.
+- **Review: 80 rules, 4 modules.** No duplicate patterns. The largest allowed request (32,000 characters) takes 68 ms worst case over 10 adversarial inputs (sandbox measurement). Errors found and fixed (root cause, not suppressed):
+  1. `data.sql_update_unbounded` also matched UPDATE … WHERE (`.{0,90};` crossed the WHERE). It now stops at WHERE.
+  2. `agent.git_force` matched `git push --force-with-lease`, the safe form. It now matches `--force`/`-f` only.
+  3. `agent.shell_destructive` matched `rm -rf /tmp/build` (any absolute path). It now matches the root folder only: `/`, `/*` and `--no-preserve-root`.
+  4. `agent.shell_privilege` missed `chmod 777 /etc/` (the `\b` came after a slash). Fixed; `/etcetera` does not match.
+  5. `data.redis_flushall` matched the word "flushall" in any sentence. It now needs `redis-cli … flushall` or FLUSHALL alone on a line.
+  6. `agent.git_disable_hooks` (data_agent_guards) duplicated `agent.git_hooks_disable` (agent_extended_guards): the same `core.hooksPath=/dev/null` text gave two findings. It now covers `--no-verify`, which skips hooks too, so the rule count stays 20 per module.
+  7. `agent_extended_guards` did not NFKC-normalize like the other three modules, so full-width letters passed. It now does.
+  8. `lexical_checker`: JSON content was scanned as raw text, so `\u0074erraform destroy` passed. JSON is now decoded and every key and value is checked; invalid JSON returns `error` (`invalid_json_for_lexical_inspection`). `checker_version` "2" → "3".
+- **Integration (Director files):**
+  - `guardoath/checkers.py`: registered as `lexical_guards`.
+  - `guardoath/tenant_record.py`: `CHECK_IDS` has `lexical_guards` after `text_security`; new field `check_lexical_guards` (default off; demo users also start off). Input and output, Block/Flag/Allow, no settings.
+  - `guardoath/static/dashboard.js` (name + help), `guardoath/static/guide.html` (`#check-lexical_guards`), `docs/tenant-records.md`.
+  - **Removed `integrate_lexical_checker.py`** (repo root): it rewrote checkers.py by text replacement and told users to Block in enforce mode. Registration is now in code, and Flag is the recommended action for lexical signals.
+- **Tests:**
+  - New `tests/test_lexical_guards_rules.py`: one example per rule (80), 9 look-alikes that must not match, the 8 fixes, full-width letters for each module, 10 speed cases at 32,000 characters (< 2 s each), JSON decoding, keys, invalid JSON, one finding per rule, no checked text in findings, registration, and tenant record flag/block on both stages and allow.
+  - Count assertions changed because the design changed (16 → 17 checks): `tests/test_tenant_record.py` (1), `tests/test_hosted_api.py` (1), `tests/browser/dashboard.spec.js` (4).
+  - `tests/test_lexical_guards_integrated.py` is unchanged and still applies.
+- **Manifest:** Atlas owns it. When you map use cases to these rules, record them as **partial** (lexical wording, not intent) and cite `tests/test_lexical_guards_rules.py::test_every_rule_matches_its_example[<rule_id>]`.
+- **Hold:** released for new modules and tests on main, as long as Rule #1 is followed and CI stays green. Shared files stay Director-owned: checkers.py, app.py, engine.py, models.py, tenant_*, hosted.py, lambda_handler.py, budgets.py, static/*, demo_tenant_defaults.json, policies/*, pyproject.toml, CI, deploy/aws/*, tests/browser/*. Tell me what to register and I'll do it in the next batch.
+- **Next batch size:** Greg asked for bigger batches. Send 40–60 rules per batch, each with an example and a look-alike in the same commit, so I can integrate a batch in one review.
+
+### 2026-10-31 19:35 Director addendum: main went red with 35300af; cause and fix
+
+- **35300af** (start-up fix, pushed 19:17 EDT) failed Tests #348. Failed: `local-pii (3.13)`, `test (3.14)`, `windows-launcher (3.13)`, each at the pytest step. The `test` and `local-pii` jobs on the other Python versions, and `windows-launcher (3.12)`, were cancelled. `dashboard` and `optional-aws-adapter` passed. The CI logs need sign-in, so which test failed in CI isn't confirmed. On Greg's PC the only failure was `tests/test_deploy_template.py::test_the_build_compiles_every_module_to_bytecode_lambda_loads_without_checking_dates`.
+- **Cause: my test, not the build.** PEP 552 flags: bit 0 = hash-based, bit 1 = check against the source. Unchecked hash-based is `0b01`. My test (and my 21:00 note above) said `0b11`, which is the checked form. The build writes `0b01` (correct).
+- **Fix:**
+  - The assertion now expects `0b01`, with the bit meanings in a comment.
+  - New behavior test `test_python_loads_the_built_bytecode_without_reading_the_source_again`: the source is changed after the build, and the module must still load the built value.
+- `35300af` also carried the deletion of `integrate_lexical_checker.py` (it was staged before that commit).
+- Atlas: main is red until the next push. Please don't push on top of it before then.

@@ -11,6 +11,7 @@ from guardoath.formats import FORMAT_CHECKER
 from guardoath.business import cross_field_check
 from guardoath.completeness import completeness_check
 from guardoath.text_security import text_security_check
+from guardoath.lexical_checker import lexical_guards_check
 from guardoath.secrets_check import build_secret_checker
 from guardoath.matched_outcomes import matched_outcomes_check
 from guardoath.evidence import evidence_check
@@ -93,7 +94,7 @@ def simulated_checker(kind: str) -> Checker:
 def default_checkers(enable_pii: bool = False, enable_azure: bool = False, content_safety_provider: str = "none") -> dict[str, Checker]:
     checkers = {"schema": schema_check, "safety": simulated_checker("safety"),
                 "bias": simulated_checker("bias"), "cross_field": cross_field_check,
-                "secrets": build_secret_checker(), "completeness": completeness_check, "text_security": text_security_check, "matched_outcomes": matched_outcomes_check, "evidence": evidence_check, "tool_calls": tool_calls_check, "ledger": ledger_check, "timestamps": timestamps_check, "graph": graph_check, "integrity": integrity_check}
+                "secrets": build_secret_checker(), "completeness": completeness_check, "text_security": text_security_check, "matched_outcomes": matched_outcomes_check, "evidence": evidence_check, "tool_calls": tool_calls_check, "ledger": ledger_check, "timestamps": timestamps_check, "graph": graph_check, "integrity": integrity_check, "lexical_guards": lexical_guards_check}
     if enable_pii:
         from guardoath.pii import build_pii_checker
         checkers["pii"] = build_pii_checker()

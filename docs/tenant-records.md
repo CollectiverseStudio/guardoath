@@ -35,6 +35,7 @@ One value covers both the user's message (input) and the AI's answer (output). T
 | `check_encoded_pii` | none |
 | `check_secrets` | none (options: `detect_secret_assignments`, `inspect_encoded_secrets`, `confidential_terms`) |
 | `check_text_security` | none |
+| `check_lexical_guards` | none (80 wording patterns; off for demo users until turned on) |
 | `check_schema` | `input_schema` or `output_schema` |
 | `check_cross_field` | `comparisons` |
 | `check_completeness` | `required_sections` |
@@ -125,7 +126,7 @@ keeps working alongside it.
 - **Dashboard:** when demo users are on, the dashboard shows **Or try a demo user**. Choosing one and
   selecting **Get demo API key** shows the key and connects with it. The check profile drop-down lists every
   profile the tenant can use and starts on its default profile. **Default profile** with **Save default
-  profile** changes the default. The checks panel follows the selected profile: for `tenant` it lists all 16
+  profile** changes the default. The checks panel follows the selected profile: for `tenant` it lists all 17
   check fields (Off, Block, Flag, Allow, and Redact for pii) and **Save checks** saves the changed fields; for
   an example profile it shows that profile's checks and their input and output actions, which cannot be
   changed. **Reset to defaults** (demo users) restores the demo values. Paid outside checks cannot be turned

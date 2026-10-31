@@ -915,7 +915,7 @@ test("a demo user can turn checks off and reset them", async ({ page }) => {
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo3");
   await expect(page.locator("#tenant-panel")).toBeVisible();
-  await expect(page.locator("#tenant-checks select")).toHaveCount(16);
+  await expect(page.locator("#tenant-checks select")).toHaveCount(17);
   await expect(page.locator("#tenant-check-pii")).toHaveValue("block");
   await expect(page.locator("#tenant-check-content_safety")).toBeDisabled();
   await expect(page.locator("#tenant-reset")).toBeVisible();
@@ -942,7 +942,7 @@ test("every check and profile explains what it does and why", async ({ page }) =
   await page.locator("#demo-user").selectOption("demo4");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
-  await expect(page.locator("#tenant-checks .check-help")).toHaveCount(16);
+  await expect(page.locator("#tenant-checks .check-help")).toHaveCount(17);
   await expect(page.locator(".action-legend dt")).toHaveText(["Off", "Block", "Flag", "Allow", "Redact"]);
   const help = page.locator("#tenant-help-schema");
   await help.locator("summary").click();
@@ -1004,7 +1004,7 @@ test("a demo user starts on its default profile and can choose any example profi
   await expect(page.locator('#policy option[value="tenant"]')).toContainText("· default");
   await expect(page.locator('#policy option[value="content-safety-v1"]')).toHaveCount(0);
   await expect(page.locator("#tenant-default-profile")).toHaveValue("tenant");
-  await expect(page.locator("#tenant-checks select")).toHaveCount(16);
+  await expect(page.locator("#tenant-checks select")).toHaveCount(17);
   await expect(page.locator("#tenant-save")).toBeEnabled();
   // Choosing an example profile shows that profile's checks, fixed, and its examples.
   await page.locator("#policy").selectOption("conversation-v1");
@@ -1022,7 +1022,7 @@ test("a demo user starts on its default profile and can choose any example profi
   expect(sent).toEqual(["conversation-v1"]);
   // Back to the record's own checks: editable again.
   await page.locator("#policy").selectOption("tenant");
-  await expect(page.locator("#tenant-checks select")).toHaveCount(16);
+  await expect(page.locator("#tenant-checks select")).toHaveCount(17);
   await expect(page.locator("#tenant-save")).toBeEnabled();
 });
 test("a demo user can save a default profile and reset it", async ({ page }) => {
