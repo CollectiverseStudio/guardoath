@@ -760,14 +760,36 @@
       "title": "Sentiment escalation",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented; no calibrated anger/frustration classifier or human-routing integration."
+      "existing_coverage_note": "Not implemented; no calibrated anger/frustration classifier or human-routing integration.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/content_safety.py"
+        ],
+        "tests": [
+          "tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "No calibrated sentiment/anger classifier, repeated frustration tracking, or human escalation workflow. Generic optional content moderation is not sentiment routing."
     },
     {
       "id": "UC047",
       "title": "UI element layout",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "GuardOath's own dashboard has mobile/browser layout tests. This is not a product endpoint for arbitrary screenshot/layout validation."
+      "existing_coverage_note": "GuardOath's own dashboard has mobile/browser layout tests. This is not a product endpoint for arbitrary screenshot/layout validation.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/app.py"
+        ],
+        "tests": [
+          "tests/test_dashboard.py::test_dashboard_page_is_served"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "The application serves its own dashboard but does not offer arbitrary screenshot layout inspection or a UI geometry validation endpoint; own browser tests are not a customer screenshot checker."
     },
     {
       "id": "UC048",
@@ -781,7 +803,18 @@
       "title": "Shipping barcode quality",
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Not implemented; no barcode/image inspection."
+      "existing_coverage_note": "Not implemented; no barcode/image inspection.",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/ingress.py"
+        ],
+        "tests": [
+          "tests/test_catalog_media_ingress.py::test_uc031_032_034_035_036_binary_media_is_not_analyzed"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "The check API rejects direct image uploads; no barcode decoding, print-quality grading, scan confidence or shipping label image pipeline."
     },
     {
       "id": "UC050",
