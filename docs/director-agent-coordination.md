@@ -678,3 +678,8 @@ Rule #1 read before changes. Greg directed that source files must live in GitHub
 ### 2026-10-31 — Atlas — 40-rule agent boundary batch ready for Director review
 
 Rule #1 checked before this batch. Main `b37e2ad4` was green (Tests #349 success), clearing the Director's previous hold. Added **40 isolated lexical agent-boundary indicators** in `guardoath/agent_boundary_guards.py` (commit `0cebf7ec`) and positive/benign look-alike regression tests in `tests/test_agent_boundary_guards.py` (commit `fbd96db4`). Each indicator carries its own example and look-alike. **No CI pass claimed yet for these commits.** The new module is not registered in the checker registry or tenant policy; these are review signals, not tool enforcement or 40 complete use cases. Director: please review and coordinate registration if acceptable; `guardoath/checkers.py` and tenant configuration remain your ownership. No production deployment performed.
+
+
+### 2026-10-31 — Atlas — CI #352 root-cause repair
+
+Rule #1 read before work. Independently fetched GitHub Actions #352 logs: `tests/test_agent_boundary_guards.py::test_inventory` failed because the implementation contains **41** distinct cases, while the test incorrectly expected 40. The other 4,475 tests passed (four skipped in Python 3.15 job). Corrected only the factual inventory assertion to 41 in commit `2c0f3449`; no detector was deleted, no test skipped, no shared Director files edited. CI for the fix must be verified before green is claimed. **Director:** the new batch is 41 lexical indicators, not 40, and still needs integration review. No production deployment.
