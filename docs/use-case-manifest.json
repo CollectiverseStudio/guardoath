@@ -956,7 +956,18 @@
       "title": "Idiomatic threats",
       "status": "review_required",
       "source": "docs/additional-use-cases.md",
-      "existing_coverage_note": "Planned contextual classifier"
+      "existing_coverage_note": "Planned contextual classifier",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/content_safety.py"
+        ],
+        "tests": [
+          "tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Optional content moderation is not a contextual idiom/threat intent classifier; no dedicated saved eval."
     },
     {
       "id": "UC060",
@@ -986,14 +997,36 @@
       "title": "Keystroke dynamics",
       "status": "review_required",
       "source": "docs/additional-use-cases.md",
-      "existing_coverage_note": "Planned; the API does not collect typing events"
+      "existing_coverage_note": "Planned; the API does not collect typing events",
+      "audit_classification": "not_implemented",
+      "evidence": {
+        "modules": [
+          "guardoath/ingress.py"
+        ],
+        "tests": [
+          "tests/test_additional_use_cases.py::test_uc053_mixed_language_transport_is_not_a_semantic_safety_assessment"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "The API accepts submitted text but not raw keystroke timings, device telemetry, or user-specific typing baselines."
     },
     {
       "id": "UC062",
       "title": "Prompt-frequency anomalies",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/additional-use-cases.md",
-      "existing_coverage_note": "Partial: per-application quota, `uc062`"
+      "existing_coverage_note": "Partial: per-application quota, `uc062`",
+      "evidence": {
+        "modules": [
+          "guardoath/budgets.py",
+          "guardoath/app.py"
+        ],
+        "tests": [
+          "tests/test_additional_use_cases.py::test_uc062_app_quota_is_shared_across_keys_and_stages_not_a_user_behavior_model"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Per-application rate limits and shared key/stage quotas exist. They do not classify anomalous user behavior, build per-user baselines, or provide bot-risk scoring."
     },
     {
       "id": "UC063",
