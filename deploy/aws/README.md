@@ -13,7 +13,7 @@ visitor --HTTPS--> CloudFront (Free plan) --> AWS WAF (1 rate rule, in the plan)
                                                         |
                                                         v
                                                DynamoDB guardoath-tenants (provisioned 10/10)
-alarms (invocations per hour/day, run time per hour) --> guardoath-site-shutoff (sets the site's concurrency to 0)
+alarms (invocations and run time, each per 24 hours) --> guardoath-site-shutoff (sets the site's concurrency to 0)
 ```
 
 - **Caching:** `/assets/*` (page script, styles, logo, video parts) is cached at CloudFront. Everything
@@ -37,11 +37,11 @@ alarms (invocations per hour/day, run time per hour) --> guardoath-site-shutoff 
 | Part | What it is | Cost | Source |
 |---|---|---|---|
 | CloudFront distribution, WAF web ACL + 1 rule + requests, Route 53 zone + records + queries | Flat-rate **Free** plan (`AWS::PricingPlanManager::Subscription`, tier FREE) | $0. Allowance 1M requests / 100 GB a month; above it AWS may slow the site but never charges | CloudFront flat-rate plan docs ("Costs covered by your plan"); CFN resource reference (free subscriptions activate immediately) |
-| Lambda requests and compute | Always-free: 1,000,000 requests and 400,000 GB-seconds a month, shared across the organization | $0 while under the allowance; the alarms stop the site first (1,300/hour, 30,000/day, 900 s of run time/hour at 0.5 GB) | AWS price list for Lambda (`_cost-price-lambda.json`); October organization usage: no Lambda |
+| Lambda requests and compute | Always-free: 1,000,000 requests and 400,000 GB-seconds a month, shared across the organization | $0 while under the allowance; the alarms stop the site first (30,000 invocations or 24,000 s of run time at 0.5 GB in any 24 hours; 31 such days stay under both allowances) | AWS price list for Lambda (`_cost-price-lambda.json`); October organization usage: no Lambda |
 | Lambda function URL | HTTPS endpoint for the function | No extra charge | Lambda function URL pricing docs |
 | Data from Lambda to CloudFront | Origin fetches | $0 (AWS origin to CloudFront) | CloudFront pricing |
 | DynamoDB table | Provisioned 10 read / 10 write units, under 1 GB | $0: the first 25 read and 25 write units (18,600 unit-hours each a month) and 25 GB are free | AWS price list for DynamoDB (`_cost-price-ddb.json`); October organization usage: no DynamoDB |
-| CloudWatch alarms | 3 standard alarms on AWS/Lambda metrics | $0: 10 alarms are free; the organization used 2.45 in October | Free-tier usage report (`_cost-freetier-usage.json`) |
+| CloudWatch alarms | 2 standard alarms on AWS/Lambda metrics | $0: 10 alarms are free; the organization used 2.45 in October | Free-tier usage report (`_cost-freetier-usage.json`) |
 | CloudWatch Logs | 2 log groups, 7-day retention | $0 under 5 GB ingested a month (organization: 0.17 GB in October) | Same report |
 | Custom metrics | None created (WAF metrics are off) | $0. The organization's 10 free custom metrics are already used, so the stack adds none | Same report |
 | ACM certificate | guardoath.com + www | $0 (public certificates) | ACM pricing |
@@ -134,11 +134,23 @@ aws cloudfront create-invalidation --profile collectiverse-prod --distribution-i
 
 ## If an alarm stopped the site
 
-The shutoff sets the site's reserved concurrency to 0, so CloudFront gets an error for every request.
-Find out why (CloudWatch alarm history), then turn the site back on:
+The shutoff sets the site's reserved concurrency to 0, so every request gets HTTP 429
+`ReservedFunctionConcurrentInvocationLimitExceeded`. Find out why first (alarm history, shutoff log,
+invocations and run time per 5 minutes). Then turn the site back on **and** set both alarms back to OK:
+
 ```cmd
 aws lambda put-function-concurrency --region us-east-1 --profile collectiverse-prod --function-name guardoath-site --reserved-concurrent-executions 5
+aws cloudwatch set-alarm-state --region us-east-1 --profile collectiverse-prod --alarm-name guardoath-site-invocations-per-day --state-value OK --state-reason "Site turned back on by hand"
+aws cloudwatch set-alarm-state --region us-east-1 --profile collectiverse-prod --alarm-name guardoath-site-duration-per-day --state-value OK --state-reason "Site turned back on by hand"
 ```
+
+An alarm acts only when its state changes. A 24-hour alarm can stay in ALARM for up to a day after it
+fires; if the site were turned back on during that time, the alarm would not act again. Setting it to OK
+makes CloudWatch evaluate it again at the next minute: if the last 24 hours are still over the limit, it
+goes back to ALARM and stops the site again.
+
+**History:** on 2026-10-30 an hourly alarm (1,300 invocations an hour) stopped the site at 22:02 UTC after
+about 1,400 requests in 40 minutes. The hourly alarms were replaced with these 24-hour ones.
 
 ## Removing the site
 

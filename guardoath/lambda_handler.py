@@ -10,11 +10,31 @@ environment lives. One event loop is kept for the same lifetime.
 """
 import asyncio
 import base64
+import json
+import re
+import time
 from urllib.parse import unquote
 
 # A function URL response, base64 included, must stay under 6 MB; leave room for headers and JSON.
 MAX_RESPONSE_BODY = 5_800_000
 TEXT_TYPES = ("text/", "application/json", "application/javascript", "application/xml", "image/svg+xml")
+SINGLE_RANGE = re.compile(r"bytes=\d{0,15}-\d{0,15}")
+
+
+def request_line(scope: dict, status: int, started: float, first: bool) -> str:
+    """One JSON log line per request, so traffic can be explained afterwards. It holds only the method,
+    the path (no query string), the status, the time taken, a byte range when one was asked for,
+    whether CloudFront itself made the request (cache fill) and whether this was the first request in
+    this copy of the function. Never the body, the query string, keys or any other header."""
+    headers = dict(scope["headers"])
+    ranged = headers.get(b"range", b"").decode("latin-1")
+    return json.dumps({
+        "request": scope["method"] + " " + scope["path"][:200], "status": status,
+        "ms": round((time.perf_counter() - started) * 1000, 1),
+        **({"range": ranged} if SINGLE_RANGE.fullmatch(ranged) else {"range": "other"} if ranged else {}),
+        "cloudfront": headers.get(b"user-agent", b"") == b"Amazon CloudFront",
+        "first_in_copy": first,
+    }, separators=(",", ":"))
 
 
 def scope_for(event: dict) -> tuple[dict, bytes]:
@@ -106,12 +126,16 @@ def make_handler(app_factory):
     state: dict = {}
 
     def handler(event, context=None):
-        if "app" not in state:
+        started = time.perf_counter()
+        first = "app" not in state
+        if first:
             state["loop"] = asyncio.new_event_loop()
             state["app"] = app_factory()
         scope, body = scope_for(event)
         status, headers, payload = state["loop"].run_until_complete(run_app(state["app"], scope, body))
-        return lambda_response(status, headers, payload)
+        response = lambda_response(status, headers, payload)
+        print(request_line(scope, response["statusCode"], started, first), flush=True)
+        return response
 
     return handler
 

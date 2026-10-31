@@ -137,16 +137,21 @@ def test_the_table_stays_within_the_free_capacity(template):
 
 
 def test_the_alarms_stop_the_site_before_the_free_lambda_allowances_run_out(template):
+    # Daily windows only (changed 2026-10-30): an hourly limit of a month's allowance / 744 hours
+    # stopped the site after one busy hour (about 1,400 requests, 0.14% of the free 1,000,000).
     alarms = resources(template, "AWS::CloudWatch::Alarm")
     by_metric = {(a["MetricName"], a["Period"]): a for a in alarms.values()}
-    assert default(template, "InvocationsPerHourLimit") * HOURS < FREE_REQUESTS
     assert default(template, "InvocationsPerDayLimit") * DAYS < FREE_REQUESTS
     memory_gb = resources(template, "AWS::Lambda::Function")["SiteFunction"]["MemorySize"] / 1024
-    assert default(template, "DurationMsPerHourLimit") / 1000 * HOURS * memory_gb < FREE_GB_SECONDS
-    assert set(by_metric) == {("Invocations", 3600), ("Invocations", 86400), ("Duration", 3600)}
+    assert default(template, "DurationMsPerDayLimit") / 1000 * DAYS * memory_gb < FREE_GB_SECONDS
+    assert set(by_metric) == {("Invocations", 86400), ("Duration", 86400)}
+    assert by_metric[("Invocations", 86400)]["Threshold"] == {"Ref": "InvocationsPerDayLimit"}
+    assert by_metric[("Duration", 86400)]["Threshold"] == {"Ref": "DurationMsPerDayLimit"}
     for alarm in alarms.values():
         assert alarm["Namespace"] == "AWS/Lambda" and alarm["AlarmActions"] == [{"Fn::GetAtt": ["ShutoffFunction", "Arn"]}]
-        assert alarm["Statistic"] == "Sum" and alarm["Period"] * alarm["EvaluationPeriods"] <= 86400
+        # One day exactly: CloudWatch evaluates an alarm every minute unless periods x length exceeds one day.
+        assert alarm["Statistic"] == "Sum" and alarm["Period"] * alarm["EvaluationPeriods"] == 86400
+        assert alarm["ComparisonOperator"] == "GreaterThanThreshold" and alarm["TreatMissingData"] == "notBreaching"
         assert alarm["AlarmName"].startswith("guardoath-site-")
 
 

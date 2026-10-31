@@ -46,20 +46,15 @@
    "MinValue": 10,
    "MaxValue": 20000
   },
-  "InvocationsPerHourLimit": {
-   "Type": "Number",
-   "Default": 1300,
-   "Description": "Stop the site above this many function invocations in one hour (1,300 x 744 hours < the 1,000,000 free requests a month)."
-  },
   "InvocationsPerDayLimit": {
    "Type": "Number",
    "Default": 30000,
-   "Description": "Stop the site above this many invocations in one day (30,000 x 31 < 1,000,000)."
+   "Description": "Stop the site above this many invocations in any 24 hours (30,000 x 31 days = 930,000 < the 1,000,000 free requests a month). Evaluated every minute."
   },
-  "DurationMsPerHourLimit": {
+  "DurationMsPerDayLimit": {
    "Type": "Number",
-   "Default": 900000,
-   "Description": "Stop the site above this much function run time (ms) in one hour. 900 s x 744 h x 0.5 GB = 334,800 GB-seconds < the 400,000 free GB-seconds a month."
+   "Default": 24000000,
+   "Description": "Stop the site above this much function run time (ms) in any 24 hours. 24,000 s x 0.5 GB x 31 days = 372,000 GB-seconds < the 400,000 free GB-seconds a month. Evaluated every minute."
   }
  },
  "Rules": {
@@ -654,39 +649,6 @@
     }
    }
   },
-  "InvocationsPerHourAlarm": {
-   "Type": "AWS::CloudWatch::Alarm",
-   "Properties": {
-    "AlarmName": "guardoath-site-invocations-per-hour",
-    "AlarmDescription": "Stops the site: too many invocations in one hour for the free monthly allowance.",
-    "Namespace": "AWS/Lambda",
-    "MetricName": "Invocations",
-    "Dimensions": [
-     {
-      "Name": "FunctionName",
-      "Value": {
-       "Ref": "SiteFunction"
-      }
-     }
-    ],
-    "Statistic": "Sum",
-    "Period": 3600,
-    "EvaluationPeriods": 1,
-    "Threshold": {
-     "Ref": "InvocationsPerHourLimit"
-    },
-    "ComparisonOperator": "GreaterThanThreshold",
-    "TreatMissingData": "notBreaching",
-    "AlarmActions": [
-     {
-      "Fn::GetAtt": [
-       "ShutoffFunction",
-       "Arn"
-      ]
-     }
-    ]
-   }
-  },
   "InvocationsPerDayAlarm": {
    "Type": "AWS::CloudWatch::Alarm",
    "Properties": {
@@ -720,11 +682,11 @@
     ]
    }
   },
-  "DurationPerHourAlarm": {
+  "DurationPerDayAlarm": {
    "Type": "AWS::CloudWatch::Alarm",
    "Properties": {
-    "AlarmName": "guardoath-site-duration-per-hour",
-    "AlarmDescription": "Stops the site: too much run time in one hour for the free monthly compute allowance.",
+    "AlarmName": "guardoath-site-duration-per-day",
+    "AlarmDescription": "Stops the site: too much run time in 24 hours for the free monthly compute allowance.",
     "Namespace": "AWS/Lambda",
     "MetricName": "Duration",
     "Dimensions": [
@@ -736,10 +698,10 @@
      }
     ],
     "Statistic": "Sum",
-    "Period": 3600,
+    "Period": 86400,
     "EvaluationPeriods": 1,
     "Threshold": {
-     "Ref": "DurationMsPerHourLimit"
+     "Ref": "DurationMsPerDayLimit"
     },
     "ComparisonOperator": "GreaterThanThreshold",
     "TreatMissingData": "notBreaching",

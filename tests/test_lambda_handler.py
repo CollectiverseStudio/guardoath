@@ -115,3 +115,32 @@ def test_every_video_part_fits_in_a_lambda_response():
         received += part
         start += len(part)
     assert received == data
+
+
+# The request log line (one per request; never content, query strings, keys or other headers)
+
+def test_each_request_logs_one_line_without_content_or_secrets(echo, capsys):
+    import json as json_module
+    handler = make_handler(lambda: echo)
+    secret_body = b'{"content": "jane@example.com"}'
+    handler(event("POST", "/echo/a", "token=SECRETQUERY", {"x-guardoath-key": "gok_demo1_" + "k" * 43,
+                  "authorization": "Bearer SECRETAUTH", "content-type": "application/json"}, secret_body))
+    handler(event("GET", "/echo/b", headers={"range": "bytes=0-1023", "user-agent": "Amazon CloudFront"}))
+    handler(event("GET", "/echo/c", headers={"range": "bytes=0-1, 5-9"}))
+    lines = capsys.readouterr().out.strip().splitlines()
+    assert len(lines) == 3
+    first, second, third = (json_module.loads(line) for line in lines)
+    assert first["request"] == "POST /echo/a" and first["status"] == 200 and first["first_in_copy"] is True
+    assert first["cloudfront"] is False and "range" not in first and first["ms"] >= 0
+    assert second == {**second, "request": "GET /echo/b", "range": "bytes=0-1023", "cloudfront": True, "first_in_copy": False}
+    assert third["range"] == "other"
+    text = "\n".join(lines)
+    for private in ("SECRETQUERY", "SECRETAUTH", "gok_demo1_", "jane@example.com", "token="):
+        assert private not in text, private
+
+
+def test_the_logged_status_is_the_status_lambda_returns(echo, capsys):
+    import json as json_module
+    out = make_handler(lambda: echo)(event("GET", "/huge"))
+    logged = json_module.loads(capsys.readouterr().out.strip())
+    assert out["statusCode"] == 500 and logged["status"] == 500 and logged["request"] == "GET /huge"

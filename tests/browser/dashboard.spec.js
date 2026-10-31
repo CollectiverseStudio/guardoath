@@ -961,7 +961,7 @@ test("the conversation box holds every step and Advanced starts open", async ({ 
   await expect(page.locator("#policy-help")).toContainText("Conversation: everyday checks");
   await page.locator("#policy").selectOption("structure-v1");
   await expect(page.locator("#policy-help")).toContainText("JSON structure (schema)");
-  await expect(page.locator("#policy-help a")).toHaveAttribute("href", /#structure-and-data-validity-checks$/);
+  await expect(page.locator("#policy-help a")).toHaveAttribute("href", /\/guide#profile-structure-v1$/);
   const widths = await page.locator("section.workspace > .flow-step, section.workspace > .answer-panel").evaluateAll(nodes => nodes.map(n => Math.round(n.getBoundingClientRect().width)));
   expect(widths.length).toBe(5);
   expect(new Set(widths).size).toBe(1);
