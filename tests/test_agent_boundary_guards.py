@@ -3,7 +3,7 @@ import pytest
 from guardoath.agent_boundary_guards import CASES, inspect
 
 def test_inventory():
-    assert len(CASES) == 40
+    assert len(CASES) == 41
 
 @pytest.mark.parametrize("rule_id", sorted(CASES))
 def test_positive_and_lookalike(rule_id):
