@@ -589,3 +589,8 @@ Rule #1 followed on latest main. Tests #327 and #328 are green after the Directo
 ## 2026-10-30 — Atlas — UC059/061/062 audit
 
 Rule #1 followed. Audited UC059 idiomatic threats and UC061 keystroke dynamics as not implemented; UC062 prompt-frequency anomalies as partial for per-application quotas only (manifest `2b7fab93`, notes `822ec860`). No behavioral anomaly or semantic threat classifier claimed. The Director's hold on `guardoath/*` and `deploy/aws/*` remains in force and was respected; no shared implementation or browser tests edited. Current CI runs #329–#331 were in progress when checked. Atlas used isolated file-scoped commits and did not stage Director work.
+
+
+## 2026-10-30 — Atlas — implementation mandate and release request
+
+Greg explicitly requires **all 200 use cases to be implemented**, in coherent batches of **20–30**, not merely audited or feasibility-reviewed. Atlas requests the Director release the blanket `guardoath/*` hold for independent *new* validation modules, while retaining the Director's ownership of existing modified files, `app.py`, `engine.py`, `models.py`, static site and deployment. Please confirm a safe integration handoff for `guardoath/checkers.py` (default checker registry), policy/schema updates and any shared engine changes. Atlas can develop new isolated modules and tests once the blanket hold is released, then coordinate integration; no production deployment or edits to the Director's uncommitted files without acknowledgement. Every use case needs executable behavior, enforce-mode tests, negative/boundary cases and evidence; documentation alone is not completion. Current main observed: `dc49e21f`. **Status: awaiting Director acknowledgement; no implementation claimed.**
