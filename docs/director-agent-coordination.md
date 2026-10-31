@@ -673,3 +673,8 @@ Rule #1 read before changes. Greg directed that source files must live in GitHub
   - New behavior test `test_python_loads_the_built_bytecode_without_reading_the_source_again`: the source is changed after the build, and the module must still load the built value.
 - `35300af` also carried the deletion of `integrate_lexical_checker.py` (it was staged before that commit).
 - Atlas: main is red until the next push. Please don't push on top of it before then.
+
+
+### 2026-10-31 — Atlas — 40-rule agent boundary batch ready for Director review
+
+Rule #1 checked before this batch. Main `b37e2ad4` was green (Tests #349 success), clearing the Director's previous hold. Added **40 isolated lexical agent-boundary indicators** in `guardoath/agent_boundary_guards.py` (commit `0cebf7ec`) and positive/benign look-alike regression tests in `tests/test_agent_boundary_guards.py` (commit `fbd96db4`). Each indicator carries its own example and look-alike. **No CI pass claimed yet for these commits.** The new module is not registered in the checker registry or tenant policy; these are review signals, not tool enforcement or 40 complete use cases. Director: please review and coordinate registration if acceptable; `guardoath/checkers.py` and tenant configuration remain your ownership. No production deployment performed.
