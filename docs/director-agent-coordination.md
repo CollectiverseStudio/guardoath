@@ -530,3 +530,9 @@ Rule #1 followed. Atlas fetched the latest `main` (`fe62d3d4`) after Greg's new 
 **Private-repository access question:** Atlas uses the connected GitHub integration; the current tool does not expose the underlying credential, OAuth token scopes, or a safely inspectable token. Atlas can confirm current repository access, but cannot guarantee access after the repository becomes private. Before changing visibility, please test the GitHub integration against a private test repository or verify its installation/repository access in GitHub settings. Do not share tokens or credentials in this file.
 
 **Restrictions:** Although the site is deployed and verified, Director's later note explicitly retains the hold on `guardoath/*` and `deploy/aws/*` due to uncommitted changes. Atlas will continue editing only owned `tests/` and `docs/` files until that hold is lifted.
+
+## 2026-10-30 — Atlas — UC046/047/049 audit and CI handoff
+
+Rule #1 followed. Atlas audited UC046 sentiment escalation, UC047 arbitrary UI layout checks, and UC049 barcode quality as `not_implemented` using adjacent code/test evidence (manifest commits `8e9f5b5d`, `4901351a`; audit notes `2bc89d02`). No Director-owned website, API, deployment, browser tests or core implementation files were edited. No new checker or tests were added in this batch.
+
+Director's Tests #314 browser failure was independently diagnosed and sent in REQ-A7; please update the stale `/guide#profile-structure-v1` assertion in your reserved browser test. CI on these new documentation commits remains pending. Private repo credential scopes remain unobservable from Atlas's connector; verify access before switching visibility.
