@@ -856,16 +856,38 @@
     {
       "id": "UC053",
       "title": "Multilingual code switching",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/additional-use-cases.md",
-      "existing_coverage_note": "Partial: Unicode transport preserved, `uc053`"
+      "existing_coverage_note": "Partial: Unicode transport preserved, `uc053`",
+      "evidence": {
+        "modules": [
+          "guardoath/ingress.py",
+          "guardoath/json_data.py"
+        ],
+        "tests": [
+          "tests/test_additional_use_cases.py::test_uc053_mixed_language_transport_is_not_a_semantic_safety_assessment"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Mixed-language Unicode is transported without loss in the current input/output contract; no semantic multilingual intent or safety classifier exists."
     },
     {
       "id": "UC054",
       "title": "Context-window saturation flooding",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/additional-use-cases.md",
-      "existing_coverage_note": "Partial: character/byte caps, `uc054_and_uc097`"
+      "existing_coverage_note": "Partial: character/byte caps, `uc054_and_uc097`",
+      "evidence": {
+        "modules": [
+          "guardoath/budgets.py",
+          "guardoath/ingress.py"
+        ],
+        "tests": [
+          "tests/test_additional_use_cases.py::test_uc054_and_uc097_limits_reject_rather_than_silently_truncate"
+        ],
+        "eval_case_ids": []
+      },
+      "audit_note": "Bounded request-size/context limits reject oversized inputs instead of silently truncating; this does not measure model-token context, intent or semantic flooding."
     },
     {
       "id": "UC055",
