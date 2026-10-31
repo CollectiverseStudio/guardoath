@@ -785,7 +785,7 @@
           "guardoath/app.py"
         ],
         "tests": [
-          "tests/test_dashboard.py::test_dashboard_page_is_served"
+          "tests/test_dashboard.py::test_dashboard_and_local_assets_load"
         ],
         "eval_case_ids": []
       },
