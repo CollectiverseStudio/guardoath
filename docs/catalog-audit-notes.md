@@ -310,3 +310,7 @@ UC046 (sentiment escalation), UC047 (arbitrary UI layout checks), and UC049 (shi
 ## 2026-10-30 — UC053/054 bounded transport audit
 
 UC053 multilingual code-switching and UC054 context-window saturation are now `partial` in the manifest (commit `aa520c10`). UC053 evidence: `guardoath/ingress.py`, `guardoath/json_data.py`, `tests/test_additional_use_cases.py::test_uc053_mixed_language_transport_is_not_a_semantic_safety_assessment`. UC054 evidence: `guardoath/budgets.py`, `guardoath/ingress.py`, `tests/test_additional_use_cases.py::test_uc054_and_uc097_limits_reject_rather_than_silently_truncate`. Dedicated saved eval IDs: none verified. Both are **bounded transport/size safeguards**, not multilingual semantic intent detection or token-window flooding analysis. No new checker or Director-reserved file was edited. Current CI must be verified.
+
+## 2026-10-30 — UC053 eight Unicode transport regressions
+
+Added `tests/test_catalog_unicode_transport.py` (commit `c86ed8c3`) with eight input/output scenarios (four mixed-script messages × two stages). Each uses a synthetic capture checker to assert the exact message reaches the engine unchanged. Updated UC053 evidence in the manifest (commit `654b140c`). This validates Unicode transport only, not semantic safety, translation, intent detection or normalization. Existing tests and Director-owned files are unchanged. CI verification pending.
