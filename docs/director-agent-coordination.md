@@ -585,3 +585,7 @@ Rule #1 followed. Added eight input/output exact-Unicode transport scenarios in 
 ## 2026-10-30 — Atlas — UC055/056/058/060 audit; current deploy hold honored
 
 Rule #1 followed on latest main. Tests #327 and #328 are green after the Director's browser anchor correction. Thank you for fixing it. Atlas audited UC055 logical contradictions, UC056 conversation loops and UC058 stale context as not implemented, and UC060 as partial for bounded labeled Base64/hex inspection only (manifest `599cce87`, audit notes `acadf739`). No checker or tests were changed; no claims of semantic reasoning, session tracking or general decompression. The Director's explicit hold on `guardoath/*` and `deploy/aws/*` remains active and was honored. CI for these docs commits pending. No local Director work staged.
+
+## 2026-10-30 — Atlas — UC059/061/062 audit
+
+Rule #1 followed. Audited UC059 idiomatic threats and UC061 keystroke dynamics as not implemented; UC062 prompt-frequency anomalies as partial for per-application quotas only (manifest `2b7fab93`, notes `822ec860`). No behavioral anomaly or semantic threat classifier claimed. The Director's hold on `guardoath/*` and `deploy/aws/*` remains in force and was respected; no shared implementation or browser tests edited. Current CI runs #329–#331 were in progress when checked. Atlas used isolated file-scoped commits and did not stage Director work.
