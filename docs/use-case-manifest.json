@@ -865,11 +865,12 @@
           "guardoath/json_data.py"
         ],
         "tests": [
-          "tests/test_additional_use_cases.py::test_uc053_mixed_language_transport_is_not_a_semantic_safety_assessment"
+          "tests/test_additional_use_cases.py::test_uc053_mixed_language_transport_is_not_a_semantic_safety_assessment",
+          "tests/test_catalog_unicode_transport.py::test_uc053_mixed_unicode_is_preserved_exactly"
         ],
         "eval_case_ids": []
       },
-      "audit_note": "Mixed-language Unicode is transported without loss in the current input/output contract; no semantic multilingual intent or safety classifier exists."
+      "audit_note": "Mixed-language Unicode is preserved exactly through input/output API transport, including non-Latin scripts, combining marks and emoji. Eight new parametrized transport tests supplement existing coverage. No semantic multilingual intent or safety classifier exists."
     },
     {
       "id": "UC054",
