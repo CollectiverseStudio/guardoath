@@ -98,7 +98,8 @@ def test_worker_protocol_uses_stdin_and_suppresses_sensitive_errors(monkeypatch)
     assert seen['args'][:3] == [sys.executable, '-I', '-c']
     assert secret in seen['kwargs']['input']
     assert seen['kwargs']['stderr'] == subprocess.DEVNULL
-    assert seen['kwargs']['timeout'] == bounded_regex.REGEX_TIMEOUT_SECONDS
+    # The shared event deadline can tighten, but never enlarge, this ceiling.
+    assert 0 < seen['kwargs']['timeout'] <= bounded_regex.REGEX_TIMEOUT_SECONDS
 
 
 @pytest.mark.parametrize('failure', ['timeout', 'oserror', 'exit', 'protocol'])

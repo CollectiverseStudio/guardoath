@@ -1592,8 +1592,8 @@ single configured digest; the other examples can use distinct stage data.
 
 ## Isolated SigmaHQ event-rule importer (development only)
 
-The source-only Sigma importer now contains 53 source-identified Windows event
-rules: three process-creation rules and 50 additional PowerShell script rules.
+The source-only Sigma importer now contains 78 source-identified Windows event
+rules: three process-creation rules and 75 additional PowerShell script rules.
 It inspects structured event fields such as `ScriptBlockText`, rather than an AI
 conversation's meaning. For example, the upstream `Get-Process` rule matches a
 PowerShell event containing that command, while a `Get-Service` event does not
@@ -1627,5 +1627,23 @@ and event text to 32,000 characters. A disposable Python worker enforces a
 one-second execution deadline while keeping the existing regex semantics. A
 `SigmaEvaluationError` (including `SigmaRegexTimeout`) means evaluation did not
 complete; handle it as an error, never as evidence that an event is clean. The
-current 53 imported rules do not use regex. Worker overhead and aggregate request
+current 78 imported rules do not use regex. Worker overhead and aggregate request
 budgets still require integration review before enabling this path in a service.
+
+
+Batch 004 expands the isolated inventory to 78 Windows event rules. It retains
+real overlaps: AD replication can match both a specific replication rule and the
+DSInternals rule; a rundll control that is negative for a specific obfuscation
+chain can still match the generic suspicious-keyword rule. Interpret findings
+using each original rule's description and false-positive guidance.
+
+The source-only `guardoath.sigma_rules.events.evaluate_event` helper evaluates a
+caller-routed set of 1–128 imported rules under one shared budget (default: four
+regex worker launches and one second). Budget exhaustion raises
+`SigmaBudgetExceeded`, a `SigmaEvaluationError`, instead of returning partial or
+clean results. Call the helper once for the complete event/check; separate calls
+per rule would start separate budgets. Its event shape, field-size bounds and
+trusted configuration limits are documented in the Sigma package guide. This is
+not an authenticated endpoint or a tenant setting. The host must still enforce
+logsource routing, entitlements, concurrency and an outer request deadline before
+integration; no hosted or deployed Sigma feature is claimed.

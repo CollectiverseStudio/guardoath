@@ -7,6 +7,7 @@ from __future__ import annotations
 import fnmatch
 from collections.abc import Mapping
 from .bounded_regex import bounded_search, validate_pattern
+from .budgets import evaluation_budget
 
 class UnsupportedSigmaRule(ValueError):
     pass
@@ -53,8 +54,12 @@ def validate_selection(selection: object, depth: int = 0) -> None:
                     raise UnsupportedSigmaRule("invalid or oversized regular expression") from None
 
 def match_value(actual: object, expected: object, modifiers: tuple[str, ...] = ()) -> bool:
+    with evaluation_budget():
+        return _match_value(actual, expected, modifiers)
+
+def _match_value(actual: object, expected: object, modifiers: tuple[str, ...] = ()) -> bool:
     if isinstance(expected, list):
-        return any(match_value(actual, item, modifiers) for item in expected)
+        return any(_match_value(actual, item, modifiers) for item in expected)
     supported = {"contains", "startswith", "endswith", "re", "all", "windash"}
     if set(modifiers) - supported:
         raise UnsupportedSigmaRule("unsupported field modifier")
@@ -81,6 +86,10 @@ def match_value(actual: object, expected: object, modifiers: tuple[str, ...] = (
     return left == right
 
 def match_selection(selection: object, event: Mapping[str, object]) -> bool:
+    with evaluation_budget():
+        return _validated_selection(selection, event)
+
+def _validated_selection(selection: object, event: Mapping[str, object]) -> bool:
     if not isinstance(event, Mapping):
         raise UnsupportedSigmaRule("event must be a mapping")
     validate_selection(selection)
@@ -106,6 +115,10 @@ def _match_selection(selection: object, event: Mapping[str, object]) -> bool:
     return True
 
 def match_detection(detection: Mapping[str, object], event: Mapping[str, object]) -> bool:
+    with evaluation_budget():
+        return _match_detection(detection, event)
+
+def _match_detection(detection: Mapping[str, object], event: Mapping[str, object]) -> bool:
     if not isinstance(detection, Mapping) or not isinstance(event, Mapping):
         raise UnsupportedSigmaRule("detection and event must be mappings")
     for name, selection in detection.items():

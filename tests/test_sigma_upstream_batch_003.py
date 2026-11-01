@@ -11,7 +11,8 @@ from guardoath.sigma_rules import UnsupportedSigmaRule, import_rule
 ROOT = Path(__file__).resolve().parents[1] / 'guardoath' / 'sigma_rules'
 DATA = json.loads((ROOT / 'upstream_batch_003.json').read_text(encoding='utf-8'))
 RECORDS = DATA['rules']
-ALL_RECORDS = [r for p in sorted(ROOT.glob('upstream_batch_*.json'))
+# Keep this historical batch contract fixed; batch 004 tests the expanded matrix.
+ALL_RECORDS = [r for p in [ROOT / f'upstream_batch_{n:03d}.json' for n in range(1, 4)]
                for r in json.loads(p.read_text(encoding='utf-8'))['rules']]
 IMPORTED = [import_rule(r, r['source_path']) for r in ALL_RECORDS]
 BY_NAME = {Path(r['source_path']).stem.removeprefix('posh_ps_'): r for r in RECORDS}

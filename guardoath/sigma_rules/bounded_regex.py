@@ -11,18 +11,12 @@ import json
 import re
 import subprocess
 import sys
+from .budgets import (SigmaEvaluationError, SigmaRegexTimeout,
+                      evaluation_budget, remaining_seconds)
 
 MAX_REGEX_PATTERN_CHARS = 512
 MAX_REGEX_INPUT_CHARS = 32_000
 REGEX_TIMEOUT_SECONDS = 1.0
-
-
-class SigmaEvaluationError(RuntimeError):
-    """Evaluation was incomplete; callers must not interpret it as a clean event."""
-
-
-class SigmaRegexTimeout(SigmaEvaluationError):
-    """A worker exceeded the regex execution deadline."""
 
 
 # No caller-controlled source is interpolated into this program.
@@ -39,6 +33,11 @@ def validate_pattern(pattern: object) -> None:
 
 
 def bounded_search(pattern: str, actual: str) -> bool:
+    with evaluation_budget():
+        return _bounded_search(pattern, actual)
+
+
+def _bounded_search(pattern: str, actual: str) -> bool:
     validate_pattern(pattern)
     if not isinstance(actual, str) or len(actual) > MAX_REGEX_INPUT_CHARS:
         raise SigmaEvaluationError('regex event text exceeds supported bounds')
@@ -47,7 +46,7 @@ def bounded_search(pattern: str, actual: str) -> bool:
             [sys.executable, '-I', '-c', _WORKER],
             input=json.dumps([pattern, actual], ensure_ascii=True),
             encoding='utf-8', stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-            timeout=REGEX_TIMEOUT_SECONDS, check=False,
+            timeout=min(REGEX_TIMEOUT_SECONDS, remaining_seconds(launch_worker=True)), check=False,
         )
     except subprocess.TimeoutExpired:
         raise SigmaRegexTimeout('regex execution deadline exceeded') from None
@@ -55,4 +54,5 @@ def bounded_search(pattern: str, actual: str) -> bool:
         raise SigmaEvaluationError('regex worker unavailable') from None
     if result.returncode != 0 or result.stdout not in {'0', '1'}:
         raise SigmaEvaluationError('regex worker failed')
+    remaining_seconds()
     return result.stdout == '1'

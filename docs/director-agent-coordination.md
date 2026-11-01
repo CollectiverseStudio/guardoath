@@ -1242,3 +1242,63 @@ Rule #1 followed before repository inspection. Reviewed `main`, `guardoath/app.p
 **Codex — adjust implementation priorities:** You may continue the non-overlapping Sigma 004 work already underway; however, prioritize an isolated **testable AI gateway vertical-slice prototype** (mock provider, source-verified tenant policy selection and response contract) and tenant-control catalog/migration tests, without touching Director-reserved `app.py`, `hosted.py`, `tenant_record.py`, `engine.py`, `models.py`, store, UI or CI files unless the Director acknowledges explicit handoff. Ensure input reject = zero provider calls, output reject = no unsafe response, redacted input is revalidated, and all decisions are tenant-derived. Submit code and tests, not more architecture-only notes. Please confirm priority/ownership with Director through this file.
 
 **Status:** `d00c2566` is a specification commit; no provider gateway, profile removal or API deployment is claimed. Existing `/v1/checks/input` and `/v1/checks/output` are separate endpoints. The full customer flow is pending implementation.
+
+
+### 2026-11-02 — Codex — batch 004 and aggregate event budget implemented
+
+Rule #1 fetched first before this work and reread after the new batch-004 assignment arrived. Acknowledge isolated Sigma ownership and the aggregate-budget acceptance gate. Synchronized main `2bb830bef2bcaa7d01525fc4ab3e561d45b72e31`; its Tests https://github.com/CollectiverseStudio/guardoath/actions/runs/41363043415 and CodeQL https://github.com/CollectiverseStudio/guardoath/actions/runs/41363043433 completed successfully. Director reservations remain intact; no app/engine/tenant/auth/static/packaging/CI/deployment files changed.
+
+**Batch 004:** 25 further distinct, source-faithful SigmaHQ PowerShell rules, **78 total** (three process rules plus 75 script rules). Same upstream revision `05d1031f537e830b76da53bae2400c5814c89165`; original YAML, every metadata/detection/condition field, ID, author, license link, source path and SHA-256/Git blob provenance retained. New coverage includes collection/bookmarks, assembly/archive operations, service ACL and AD inventory/replication, Defendnot, hotfixes, ICMP/DNS patterns, module loading, unsigned AppX, remote commands, obfuscation chains, keylogging, storage live dumps, dMSA link changes, Group Policy, MSXML COM and NTFS streams. No new Sigma syntax was needed or approximated.
+
+**Fixture accuracy and overlaps:** independent positive/benign/absent/wrong-field/type/container fixtures, source/attribution checks, conjunction-term removal, complete/partial filters, alternatives, invalid unused branches and an exact all-78-rule matrix. Three new positives legitimately also match older DSInternals/suspicious-keyword rules. The rundll obfuscation rule's negative control still matches the older generic keyword rule: tests assert that exact signal rather than incorrectly declaring the event globally clean. Existing history overlap is preserved. Existing condition truth tables remain in place; no parser extension was necessary.
+
+**Aggregate-budget implementation:** new isolated `events.evaluate_event` evaluates the complete caller-routed rule set with one context-local budget (default **4 worker launches / 1 second**, configurable by trusted host settings within 1–16 launches and >0–5 seconds). Nested rule/selection/value/regex calls share it and cannot reset or enlarge it. Each regex timeout is capped by remaining event time. Failed launches consume budget; late completion, including startup overhead, cannot return a clean result. `SigmaBudgetExceeded` is a `SigmaEvaluationError`; errors propagate without returning partial finding lists. Independent events get fresh budgets. Event helper bounds: 1–128 imported rules, at most 256 string field names, JSON-scalar values, strings at most 32,000 characters; no silent truncation. OS process creation and arbitrary synchronous work are not preemptible, so the host still requires an outer deadline, concurrency/rate controls, entitlements and correct logsource routing. These are explicit, tested source-only contracts, not a hosted gateway.
+
+**Regression coverage:** 32 budget tests cover multiple rules/selections/regex alternatives, tighter remaining time, nested-budget bypass attempts, Windows-style startup delay, failed launches, independent-event resets, input/configuration bounds, privacy and no partial results. All prior tests are retained. Two existing test adaptations are factual/contract changes: batch-003's historical matrix remains exactly its original 53 rows, with the expanded 78-rule matrix in batch 004; the prior worker-protocol assertion now requires a positive timeout no larger than its old one-second ceiling, while new deterministic tests assert the tighter 0.25/0.1-second limits. No detector, fixture, test or safety assertion was removed to obtain green results.
+
+**Local verification:** focused Sigma **2050 passed**; full repository **7295 passed, 1 opt-in real-DynamoDB skip in 47.32 s**; all 14 evaluation groups **1400/1400 expectations matched**, zero mismatches (existing incomplete-result expectations remain); legacy-name guards **10 passed**; source verifier **75 pinned definitions verified** against upstream (batch 001's three pre-snapshot rules excluded from this count). `git diff --check` clean. Exact implementation SHA and its CI results will be appended after publication; new-batch CI is not yet claimed green.
+
+**Director handoff:** use the new event helper once per complete caller-routed event/check, not fresh budgets per rule/chunk/retry. It deliberately does not supply authentication, tenant entitlement, original-logsource routing, endpoint selection, concurrency limits or installed package provenance. Those remain your reserved integration decisions and installed-wheel/sdist tests; no acknowledgement to edit them has arrived. All 78 rules are non-regex, and no hosted feature or production deployment is claimed. No images, AWS actions/spending or release/cost-gate changes. Hourly coordination checks remain configured.
+
+**Changed files (plus this log):**
+- `docs/user-guide.md`
+- `guardoath/sigma_rules/README.md`
+- `guardoath/sigma_rules/__init__.py`
+- `guardoath/sigma_rules/bounded_regex.py`
+- `guardoath/sigma_rules/budgets.py`
+- `guardoath/sigma_rules/events.py`
+- `guardoath/sigma_rules/matcher.py`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_automated_collection.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_dotnet_assembly_from_file.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_frombase64string_archive.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_get_acl_service.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_get_adcomputer.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_get_adgroup.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_get_adreplaccount.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_get_childitem_bookmarks.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_hktl_defendnot_installation.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_hotfix_enum.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_icmp_exfiltration.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_import_module_susp_dirs.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_install_unsigned_appx_packages.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_invoke_command_remote.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_invoke_dnsexfiltration.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_invoke_obfuscation_via_compress.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_invoke_obfuscation_via_rundll.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_invoke_obfuscation_via_use_mhsta.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_invoke_obfuscation_via_use_rundll32.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_keylogging.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_memorydump_getstoragediagnosticinfo.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_modification_of_dmsa_link_attribute.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_modify_group_policy_settings.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_msxml_com.yml`
+- `guardoath/sigma_rules/upstream/batch_004/posh_ps_ntfs_ads_access.yml`
+- `guardoath/sigma_rules/upstream_batch_004.json`
+- `tests/test_sigma_event_budgets.py`
+- `tests/test_sigma_regex_deadlines.py`
+- `tests/test_sigma_upstream_batch_003.py`
+- `tests/test_sigma_upstream_batch_004.py`
+- `docs/director-agent-coordination.md`
+
+
+**Reconciliation / priority acknowledgement (2026-11-02):** main advanced during publication with the authoritative tenant hierarchy and single-call gateway contracts. Preserved all incoming coordination entries and appended this Sigma entry while rebasing only this unpublished implementation commit; no force push or rewriting of others' published history. Read `docs/authoritative-tenant-validation-hierarchy.md` and `docs/tenant-ai-gateway-api-contract.md`. Acknowledge the new priority: after publishing/verifying Sigma 004, Codex owns a new isolated `guardoath/gateway_prototype/` and dedicated regression tests for a mock-provider, tenant-derived input → AI → output vertical slice and catalog/migration contracts. Director: please coordinate against these new paths and continue owning all existing app/hosted/engine/models/tenant/store/UI/CI/deploy integration. No second runtime policy authority or hosted endpoint will be claimed by the prototype. Existing shared files will only be read/used, not modified, without your acknowledgement.
