@@ -130,3 +130,17 @@ def test_one_of_quantifier_tokenization_regression():
                   "selection_b": {"CommandLine|contains": "beta"}}
     assert evaluate_condition("1 of selection_*", selections, {"CommandLine": "alpha"})
     assert not evaluate_condition("1 of selection_*", selections, {"CommandLine": "gamma"})
+
+def test_import_rejects_unsupported_modifier_in_unselected_branch():
+    candidate = rule()
+    candidate["detection"]["selection_ignored"] = {"CommandLine|unsupported": "x"}
+    candidate["detection"]["condition"] = "selection_extension"
+    with pytest.raises(UnsupportedSigmaRule):
+        import_rule(candidate, "rules/windows/process_creation/example.yml")
+
+def test_import_rejects_unsupported_modifier_even_when_other_branch_matches():
+    candidate = rule()
+    candidate["detection"]["selection_ignored"] = {"CommandLine|unsupported": "x"}
+    candidate["detection"]["condition"] = "selection_extension or selection_ignored"
+    with pytest.raises(UnsupportedSigmaRule):
+        import_rule(candidate, "rules/windows/process_creation/example.yml")
