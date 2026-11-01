@@ -1589,3 +1589,25 @@ passing. Both stages use the same authenticated check endpoints. See the linked
 data-quality guide for complete requests and error codes. The integrity demo's
 clean buttons intentionally supply identical bytes on both stages to match the
 single configured digest; the other examples can use distinct stage data.
+
+## Isolated SigmaHQ event-rule importer (development only)
+
+The source-only Sigma importer now contains 28 source-identified Windows event
+rules: three process-creation rules and 25 additional PowerShell script rules.
+It inspects structured event fields such as `ScriptBlockText`, rather than an AI
+conversation's meaning. For example, the upstream `Get-Process` rule matches a
+PowerShell event containing that command, while a `Get-Service` event does not
+match that rule. This is an administrative-activity signal, not proof of an attack.
+
+There is currently no tenant setting or dashboard toggle for Sigma. Developers
+can call `import_rule(record, source_path, source_revision=...)` and then
+`matches(event)` using the original rule's Windows logsource routing. Findings
+retain the upstream ID, author, license and source URL. Missing string fields do
+not match; malformed event containers and unsupported rule structures raise an
+explicit error. Wildcard values, windash, temporal/correlation rules and unsupported
+modifiers are rejected rather than approximated. Do not interpret an unsupported
+rule as a clean result. See [the Sigma package guide](../guardoath/sigma_rules/README.md)
+for the exact supported subset, examples, source verification and licensing.
+
+The Director must review registration, event routing, package assets and hosted
+controls before this importer becomes a user-facing check. It is not deployed.
