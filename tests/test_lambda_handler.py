@@ -117,6 +117,15 @@ def test_every_video_part_fits_in_a_lambda_response():
     assert received == data
 
 
+def test_a_full_video_part_fits_in_a_lambda_response():
+    # The largest part the app sends, base64-encoded, must stay under the response limit, or Lambda would
+    # answer 500 instead of the video.
+    from guardoath.app import MEDIA_PART_BYTES
+    out = lambda_response(206, [(b"content-type", b"video/mp4")], bytes(MEDIA_PART_BYTES))
+    assert out["statusCode"] == 206 and out["isBase64Encoded"] is True
+    assert len(out["body"]) <= MAX_RESPONSE_BODY and base64.b64decode(out["body"]) == bytes(MEDIA_PART_BYTES)
+
+
 # The request log line (one per request; never content, query strings, keys or other headers)
 
 def test_each_request_logs_one_line_without_content_or_secrets(echo, capsys):

@@ -21,7 +21,9 @@ alarms (invocations and run time, each per 24 hours) --> guardoath-site-shutoff 
 - **Keys:** CloudFront replaces `Authorization` with its own signature, so the hosted API takes the key in
   `X-GuardOath-Key`. A POST must also send `x-amz-content-sha256` (hex SHA-256 of the body). The dashboard
   does both. See `docs/tenant-records.md`.
-- **Video:** served in parts of at most 3 MiB, because a Lambda function URL response is limited to 6 MB.
+- **Video:** served in parts of at most 4 MiB, because a Lambda function URL response is limited to 6 MB
+  (4 MiB is 5,592,408 characters in base64). The demo video (3,580,895 B) fits in one part, so it is always
+  sent whole.
 - **Demo users:** created in the table on the first request; their keys come from the `DemoKeySecret`
   parameter (kept in the function's environment).
 

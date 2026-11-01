@@ -92,12 +92,13 @@ def test_dashboard_shows_the_demo_video():
     page = client.get("/dashboard").text
     assert '<video id="demo-video"' in page and 'src="/assets/guardoath_ai_final.mp4"' in page
     size = (root / "guardoath" / "static" / "guardoath_ai_final.mp4").stat().st_size
-    # The video is bigger than one part (the hosted service cannot return it in one response), so a
-    # request without a Range header is told to ask for parts.
+    # Since 2026-10-31 the video fits in one part (96 kbit/s audio, 4 MiB parts), so a request without a
+    # Range header gets the whole file. Videos bigger than one part: test_a_video_bigger_than_one_part_*.
     from guardoath.app import MEDIA_PART_BYTES
-    assert size > MEDIA_PART_BYTES
+    assert size <= MEDIA_PART_BYTES
     response = client.get("/assets/guardoath_ai_final.mp4")
-    assert response.status_code == 416 and response.headers["content-range"] == f"bytes */{size}"
+    assert response.status_code == 200 and response.headers["content-length"] == str(size)
+    assert response.content == (root / "guardoath" / "static" / "guardoath_ai_final.mp4").read_bytes()
     assert response.headers["accept-ranges"] == "bytes"
     part = client.get("/assets/guardoath_ai_final.mp4", headers={"Range": "bytes=0-1023"})
     assert part.status_code == 206 and len(part.content) == 1024
@@ -239,6 +240,59 @@ def test_a_video_head_request_sends_headers_only():
 @pytest.mark.parametrize("path", ["/assets/missing.mp4", "/assets/Guardoath_ai_final.mp4"])
 def test_unknown_videos_are_not_found(path):
     assert TestClient(create_app(credentials={"test-key": "demo"})).get(path, headers={"Range": "bytes=0-1"}).status_code == 404
+
+
+def big_video(tmp_path):
+    # A file bigger than two parts, with no repeating 4-byte pattern, for the part-splitting code.
+    from guardoath.app import MEDIA_PART_BYTES
+    import hashlib
+    size = 2 * MEDIA_PART_BYTES + 12_345
+    data = b"".join(hashlib.sha256(i.to_bytes(4, "big")).digest() for i in range(size // 32 + 1))[:size]
+    path = tmp_path / "big.mp4"
+    path.write_bytes(data)
+    return path, data
+
+
+def test_a_video_bigger_than_one_part_reassembles_exactly_from_its_parts(tmp_path):
+    from guardoath.app import MEDIA_PART_BYTES, media_part
+    path, expected = big_video(tmp_path)
+    received, start, parts = b"", 0, 0
+    while start < len(expected):
+        part = media_part(path, f"bytes={start}-", head=False)
+        assert part.status_code == 206 and 0 < len(part.body) <= MEDIA_PART_BYTES
+        end = start + len(part.body) - 1
+        assert part.headers["content-range"] == f"bytes {start}-{end}/{len(expected)}"
+        assert int(part.headers["content-length"]) == len(part.body)
+        received += part.body
+        start = end + 1
+        parts += 1
+    assert received == expected and parts == 3
+
+
+def test_a_video_bigger_than_one_part_is_not_sent_without_a_range(tmp_path):
+    from guardoath.app import media_part
+    path, data = big_video(tmp_path)
+    response = media_part(path, None, head=False)
+    assert response.status_code == 416 and response.headers["content-range"] == f"bytes */{len(data)}"
+    assert response.headers["accept-ranges"] == "bytes"
+
+
+def test_every_served_video_fits_in_one_part_and_starts_with_its_index():
+    # A player's first request (bytes=0-) must get the whole file, so CloudFront never receives a shorter
+    # body than it asked for (the 2026-10-30 defect). The index (moov) before the media (mdat) lets the
+    # browser start playing before the file has fully arrived.
+    from pathlib import Path
+    from guardoath.app import MEDIA_PART_BYTES
+    client = TestClient(create_app(credentials={"test-key": "demo"}))
+    videos = sorted((Path(__file__).resolve().parents[1] / "guardoath" / "static").glob("*.mp4"))
+    assert videos
+    for path in videos:
+        data = path.read_bytes()
+        assert len(data) <= MEDIA_PART_BYTES, path.name
+        assert data.index(b"moov") < data.index(b"mdat"), path.name
+        first = client.get("/assets/" + path.name, headers={"Range": "bytes=0-"})
+        assert first.status_code == 206 and first.content == data
+        assert first.headers["content-range"] == f"bytes 0-{len(data) - 1}/{len(data)}"
 
 
 def test_a_video_that_fits_in_one_part_is_sent_whole(tmp_path):
