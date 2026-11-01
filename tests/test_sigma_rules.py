@@ -47,10 +47,10 @@ def test_all_of_and_one_of():
     d["condition"] = "1 of selection_*"
     assert match_detection(d, {"CommandLine": "alpha"})
 
-def test_unsupported_condition_fails_explicitly():
+def test_unsupported_aggregate_condition_fails_explicitly():
     d = {"selection": {"CommandLine|contains": "x"},
          "filter": {"CommandLine|contains": "safe"},
-         "condition": "selection and not filter"}
+         "condition": "selection | count() > 1"}
     with pytest.raises(UnsupportedSigmaRule):
         match_detection(d, {"CommandLine": "x"})
 
@@ -81,3 +81,33 @@ def test_invalid_selection_key_rejected():
 def test_missing_supported_field_is_not_a_match():
     from guardoath.sigma_rules.matcher import match_selection
     assert not match_selection({"CommandLine|contains": "powershell"}, {})
+
+@pytest.mark.parametrize("condition,expected", [
+    ("selection and not filter", True),
+    ("selection and filter", False),
+    ("selection or filter", True),
+    ("not selection", False),
+    ("(selection and not filter) or filter", True),
+    ("all of selection*", True),
+    ("1 of selection*", True),
+])
+def test_boolean_conditions(condition, expected):
+    detection = {
+        "selection": {"CommandLine|contains": "alpha"},
+        "filter": {"CommandLine|contains": "safe"},
+        "condition": condition,
+    }
+    assert match_detection(detection, {"CommandLine":"alpha"}) is expected
+
+@pytest.mark.parametrize("condition", [
+    "selection and", "(selection", "selection)", "unknown",
+    "selection xor filter", "all of missing_*",
+])
+def test_malformed_conditions_are_rejected(condition):
+    detection = {
+        "selection": {"CommandLine|contains":"alpha"},
+        "filter": {"CommandLine|contains":"safe"},
+        "condition":condition,
+    }
+    with pytest.raises(UnsupportedSigmaRule):
+        match_detection(detection, {"CommandLine":"alpha"})
