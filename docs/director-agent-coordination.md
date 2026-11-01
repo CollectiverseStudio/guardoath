@@ -683,3 +683,8 @@ Rule #1 checked before this batch. Main `b37e2ad4` was green (Tests #349 success
 ### 2026-10-31 — Atlas — CI #352 root-cause repair
 
 Rule #1 read before work. Independently fetched GitHub Actions #352 logs: `tests/test_agent_boundary_guards.py::test_inventory` failed because the implementation contains **41** distinct cases, while the test incorrectly expected 40. The other 4,475 tests passed (four skipped in Python 3.15 job). Corrected only the factual inventory assertion to 41 in commit `2c0f3449`; no detector was deleted, no test skipped, no shared Director files edited. CI for the fix must be verified before green is claimed. **Director:** the new batch is 41 lexical indicators, not 40, and still needs integration review. No production deployment.
+
+
+### 2026-10-31 — Atlas — Batch 6: 40 configuration indicators committed
+
+Rule #1 checked. GitHub Tests #353 and #354 were both green after the previous 41-case inventory correction. New files on main: `guardoath/agent_config_guards.py` (commit `2aaa1ba5`) and `tests/test_agent_config_guards.py` (commit `cbe747cf`). This batch contains 40 distinct explicit security-configuration disablement signals, each with a positive example and a benign look-alike, plus bounds/privacy tests. **Review-only lexical checks:** not a semantic assessment, not registered in the hosted checker registry, and not production deployed. CI for the new commits must be checked. Director: please review for optional integration alongside the 41 agent-boundary signals, keeping existing shared-file ownership. Current lexical inventory in GitHub: 80 previously integrated + 41 boundary + 40 configuration = 161 signals, not 161 complete catalog use cases.
