@@ -1,0 +1,135 @@
+{
+  "source_repository": "https://github.com/SigmaHQ/sigma",
+  "source_branch": "master",
+  "license": "Detection Rule License 1.1 (DRL 1.1)",
+  "rules": [
+    {
+      "source_path": "rules/windows/process_creation/proc_creation_win_7zip_password_compression.yml",
+      "id": "9fbf5927-5261-4284-a71d-f681029ea574",
+      "title": "Compress Data and Lock With Password for Exfiltration With 7-ZIP",
+      "author": "frack113",
+      "status": "test",
+      "level": "medium",
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection_img": [
+          {
+            "Description|contains": "7-Zip"
+          },
+          {
+            "Image|endswith": [
+              "\\7z.exe",
+              "\\7zr.exe",
+              "\\7za.exe"
+            ]
+          },
+          {
+            "OriginalFileName": [
+              "7z.exe",
+              "7za.exe",
+              "7zr.exe"
+            ]
+          }
+        ],
+        "selection_password": {
+          "CommandLine|contains": " -p"
+        },
+        "selection_action": {
+          "CommandLine|contains": [
+            " a ",
+            " u "
+          ]
+        },
+        "condition": "all of selection_*"
+      },
+      "positive_event": {
+        "Image": "C:\\tools\\7z.exe",
+        "CommandLine": "7z a -pTEST archive.zip sample.txt"
+      },
+      "negative_event": {
+        "Image": "C:\\tools\\7z.exe",
+        "CommandLine": "7z a archive.zip sample.txt"
+      }
+    },
+    {
+      "source_path": "rules/windows/process_creation/proc_creation_win_acccheckconsole_execution.yml",
+      "id": "0f6da907-5854-4be6-859a-e9958747b0aa",
+      "title": "Potential DLL Injection Via AccCheckConsole",
+      "author": "Florian Roth (Nextron Systems)",
+      "status": "test",
+      "level": "medium",
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection_img": [
+          {
+            "Image|endswith": "\\AccCheckConsole.exe"
+          },
+          {
+            "OriginalFileName": "AccCheckConsole.exe"
+          }
+        ],
+        "selection_cli": {
+          "CommandLine|contains": [
+            " -hwnd",
+            " -process ",
+            " -window "
+          ]
+        },
+        "condition": "all of selection_*"
+      },
+      "positive_event": {
+        "Image": "C:\\tools\\AccCheckConsole.exe",
+        "CommandLine": "AccCheckConsole.exe -hwnd 123"
+      },
+      "negative_event": {
+        "Image": "C:\\tools\\AccCheckConsole.exe",
+        "CommandLine": "AccCheckConsole.exe -help"
+      }
+    },
+    {
+      "source_path": "rules/windows/process_creation/proc_creation_win_auditpol_susp_execution.yml",
+      "id": "0a13e132-651d-11eb-ae93-0242ac130002",
+      "title": "Audit Policy Tampering Via Auditpol",
+      "author": "Janantha Marasinghe (https://github.com/blueteam0ps)",
+      "status": "test",
+      "level": "high",
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection_img": [
+          {
+            "Image|endswith": "\\auditpol.exe"
+          },
+          {
+            "OriginalFileName": "AUDITPOL.EXE"
+          }
+        ],
+        "selection_cli": {
+          "CommandLine|contains": [
+            "disable",
+            "clear",
+            "remove",
+            "restore"
+          ]
+        },
+        "condition": "all of selection_*"
+      },
+      "positive_event": {
+        "Image": "C:\\Windows\\System32\\auditpol.exe",
+        "CommandLine": "auditpol.exe /clear"
+      },
+      "negative_event": {
+        "Image": "C:\\Windows\\System32\\auditpol.exe",
+        "CommandLine": "auditpol.exe /get"
+      }
+    }
+  ]
+}
