@@ -62,15 +62,5 @@ def match_detection(detection: Mapping[str, object], event: Mapping[str, object]
     if not isinstance(condition, str):
         raise UnsupportedSigmaRule("missing condition")
     selections = {k: v for k, v in detection.items() if k != "condition" and not k.startswith("timeframe")}
-    # Deliberately refuse complex conditions until a proper Sigma parser is added.
-    tokens = condition.split()
-    if len(tokens) == 1 and tokens[0] in selections:
-        return match_selection(selections[tokens[0]], event)
-    if len(tokens) == 3 and tokens[0] in {"all", "1"} and tokens[1] == "of":
-        pattern = tokens[2]
-        names = [name for name in selections if fnmatch.fnmatchcase(name, pattern)]
-        if not names:
-            raise UnsupportedSigmaRule("condition selector matched no selections")
-        results = [match_selection(selections[name], event) for name in names]
-        return all(results) if tokens[0] == "all" else any(results)
-    raise UnsupportedSigmaRule("unsupported condition expression")
+    from .conditions import evaluate_condition
+    return evaluate_condition(condition, selections, event)
