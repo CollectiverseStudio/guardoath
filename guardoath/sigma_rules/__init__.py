@@ -6,7 +6,7 @@ as compatible. Rule files are provided by the caller, never downloaded at runtim
 from __future__ import annotations
 from dataclasses import dataclass
 from collections.abc import Mapping
-from .matcher import match_detection, UnsupportedSigmaRule
+from .matcher import match_detection, match_selection, UnsupportedSigmaRule
 
 LICENSE = "Detection Rule License 1.1 (DRL 1.1)"
 SOURCE_PREFIX = "https://github.com/SigmaHQ/sigma/blob/master/"
@@ -49,8 +49,16 @@ def import_rule(data: Mapping[str, object], source_path: str) -> ImportedRule:
     for field in ("id", "title", "author"):
         if not isinstance(data.get(field), str) or not data[field].strip():
             raise UnsupportedSigmaRule("missing provenance")
-    # Validate expression support with an empty event; semantic fidelity for
-    # each imported rule still requires its own positive/negative fixtures.
+    # Validate every selection, including branches that might otherwise be
+    # skipped by a condition. Unsupported modifiers must fail at import time.
+    for key, selection in detection.items():
+        if key == "condition" or key == "timeframe":
+            continue
+        if not isinstance(key, str) or not key:
+            raise UnsupportedSigmaRule("invalid selection name")
+        match_selection(selection, {})
+    # Validate condition support with an empty event; semantic fidelity still
+    # requires per-rule positive and negative fixtures.
     match_detection(detection, {})
     return ImportedRule(
         rule_id=data["id"], title=data["title"], author=data["author"],
