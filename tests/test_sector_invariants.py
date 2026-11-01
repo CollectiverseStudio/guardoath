@@ -155,3 +155,24 @@ def test_sector_attestations_reject_nonboolean_values(sector, action, trusted, f
     tampered = dict(trusted, **{field: spoof})
     findings = check(sector, action, tampered)
     assert findings[0].rule_id == "sector.invalid_attestation"
+
+@pytest.mark.parametrize("sector,action,trusted,action_field,trusted_field", [
+    ("information", {"operation":"publish_rag_document"}, {"source_access_authorized":True,"document_provenance_verified":True}, "document_id", "approved_document_id"),
+    ("professional", {"operation":"cite_legal_precedent"}, {"citation_verified":True,"jurisdiction_current":True}, "citation_id", "approved_citation_id"),
+    ("administrative", {"operation":"send_it_notice"}, {"sender_authenticated":True,"campaign_authorized":True}, "template_id", "approved_template_id"),
+    ("utilities", {"operation":"operate_breaker"}, {"operator_authenticated":True,"dispatch_approved":True}, "breaker_id", "approved_breaker_id"),
+    ("management", {"operation":"transfer_budget","amount":"10"}, {"initiator_authenticated":True,"dual_approval_verified":True,"approved_transfer_limit":"20"}, "beneficiary_id", "approved_beneficiary_id"),
+    ("real_estate", {"operation":"issue_lease"}, {"contract_approved":True,"signatory_authorized":True}, "escalation_clause_id", "approved_escalation_clause_id"),
+    ("transportation", {"operation":"approve_route"}, {"route_authorized":True,"geofence_verified":True}, "destination_id", "approved_destination_id"),
+    ("public_administration", {"operation":"release_record"}, {"identity_verified":True,"record_access_authorized":True}, "classification", "approved_release_classification"),
+    ("education", {"operation":"publish_grade"}, {"grader_authorized":True,"rubric_evidence_verified":True}, "grade", "rubric_grade"),
+    ("automotive", {"operation":"certify_brakes"}, {"instrument_evidence_verified":True,"technician_authorized":True}, "brake_status", "measured_brake_status"),
+])
+def test_missing_reference_ids_never_pass_as_equal_none(sector, action, trusted, action_field, trusted_field):
+    assert check(sector, action, trusted)[0].rule_id == "sector.invalid_reference"
+    assert check(sector, dict(action, **{action_field: "x"}), trusted)[0].rule_id == "sector.invalid_reference"
+    assert check(sector, action, dict(trusted, **{trusted_field: "x"}))[0].rule_id == "sector.invalid_reference"
+    assert check(sector, dict(action, **{action_field: ""}),
+                 dict(trusted, **{trusted_field: ""}))[0].rule_id == "sector.invalid_reference"
+    assert check(sector, dict(action, **{action_field: "x"}),
+                 dict(trusted, **{trusted_field: "x"})) == ()
