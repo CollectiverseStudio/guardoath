@@ -67,3 +67,17 @@ def test_missing_provenance_rejected():
 def test_no_arbitrary_source_paths():
     with pytest.raises(UnsupportedSigmaRule):
         import_rule(rule(), "../../etc/passwd")
+
+def test_unsupported_modifier_rejected_even_if_field_is_missing():
+    from guardoath.sigma_rules.matcher import match_selection
+    with pytest.raises(UnsupportedSigmaRule):
+        match_selection({"CommandLine|unsupported": "x"}, {})
+
+def test_invalid_selection_key_rejected():
+    from guardoath.sigma_rules.matcher import match_selection
+    with pytest.raises(UnsupportedSigmaRule):
+        match_selection({None: "x"}, {})
+
+def test_missing_supported_field_is_not_a_match():
+    from guardoath.sigma_rules.matcher import match_selection
+    assert not match_selection({"CommandLine|contains": "powershell"}, {})
