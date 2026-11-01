@@ -28,7 +28,7 @@ RULES = {
     "agent.shell_destructive": r"(?<!\w)(?:rm\s+-(?:rf|fr)\s+(?:--no-preserve-root\s+)?/\*?(?![\w./-])|mkfs(?:\.[a-z0-9]+)?\s+/dev/|dd\s+if=/dev/zero\s+of=/dev/)",
     "agent.shell_download_execute": r"\b(?:curl|wget)\b.{0,100}\|\s*(?:sh|bash|zsh)\b",
     "agent.shell_reverse_shell": r"\b(?:bash\s+-i\s+>&\s*/dev/tcp/|nc\s+-e\s+/bin/(?:sh|bash))",
-    "agent.shell_privilege": r"\b(?:chmod\s+(?:-R\s+)?777\s+/etc(?![\w.-])|sudo\s+visudo\b|setenforce\s+0\b)",
+    "agent.shell_privilege": r"\bsudo\s+visudo\b",
     "agent.git_force": r"\bgit\s+push\b[^\n]{0,80}\s(?:--force(?![\w-])|-f\b)",
     "agent.sql_destructive": r"\b(?:drop\s+(?:table|database)|truncate\s+table)\s+[a-z_][a-z0-9_]*\b",
     "agent.cloud_public": r"\b(?:make|set|change)\b.{0,40}\b(?:s3 bucket|storage bucket)\b.{0,35}\bpublic\b",

@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from guardoath import agent_extended_guards, agent_workflow_guards, data_agent_guards, semantic_guards
+from guardoath import agent_boundary_guards, agent_extended_guards, agent_workflow_guards, data_agent_guards, semantic_guards
 from guardoath.checkers import default_checkers
 from guardoath.combined_guards import evaluate
 from guardoath.engine import Engine
@@ -158,9 +158,11 @@ def test_deleting_the_root_folder_is_reported_but_another_folder_is_not():
 
 
 def test_world_writable_etc_is_reported_with_or_without_a_trailing_slash():
+    # Since batch 5 (2026-10-31) this is agent5.chmod_world_write, which also covers /var, /usr and /opt;
+    # agent.shell_privilege now covers sudo visudo only, so one command gives one finding.
     for text in ("chmod 777 /etc/", "chmod 777 /etc", "chmod -R 777 /etc/ssh"):
-        assert "agent.shell_privilege" in rule_ids(text), text
-    assert "agent.shell_privilege" not in rule_ids("chmod 777 /etcetera")
+        assert rule_ids(text) == ("agent5.chmod_world_write",), text
+    assert rule_ids("chmod 777 /etcetera") == ()
 
 
 def test_flushall_is_reported_as_a_command_not_as_a_word_in_a_sentence():
@@ -268,3 +270,64 @@ def test_demo_users_start_with_it_off():
                           .read_text(encoding="utf-8"))["defaults"]
     assert "check_lexical_guards" not in defaults
     assert TenantRecord.model_fields["check_lexical_guards"].default is None
+
+
+# Batch 5: agent_boundary_guards (41 rules, each with its own example and look-alike in the module)
+
+BOUNDARY = agent_boundary_guards.CASES
+
+
+def test_the_five_modules_have_121_rules_with_no_shared_ids():
+    assert len(BOUNDARY) == 41 and not set(BOUNDARY) & set(ALL_RULES)
+    assert len(set(BOUNDARY) | set(ALL_RULES)) == 121
+
+
+@pytest.mark.parametrize("rule_id", sorted(EXAMPLES))
+def test_each_original_example_reports_only_its_own_rule(rule_id):
+    assert rule_ids(EXAMPLES[rule_id]) == (rule_id,)
+
+
+@pytest.mark.parametrize("rule_id", sorted(BOUNDARY))
+def test_each_batch_5_example_reports_only_its_own_rule_and_its_look_alike_none(rule_id):
+    _pattern, example, look_alike = BOUNDARY[rule_id]
+    assert rule_ids(example) == (rule_id,)
+    assert rule_ids(look_alike) == ()
+
+
+def test_selinux_off_is_one_finding():
+    assert rule_ids("setenforce 0") == ("agent5.disable_selinux",)
+    assert rule_ids("sudo visudo") == ("agent.shell_privilege",)
+
+
+def test_redis_commands_and_redis_config_file_lines_are_different_rules():
+    assert rule_ids("CONFIG SET protected-mode no") == ("data.redis_config_public",)
+    assert rule_ids("protected-mode no") == ("agent5.public_redis",)
+    assert rule_ids("port 6379\nbind 0.0.0.0\n") == ("agent5.public_redis",)
+    assert rule_ids("Set bind 0.0.0.0 in the nginx config") == ()
+
+
+def test_jwt_none_is_reported_in_settings_but_not_in_a_sentence():
+    for text in ("algorithm=none", 'algorithms=["none"]', 'jwt.decode(t, algorithms=["none"])', "algorithm: 'none'\n"):
+        assert rule_ids(text) == ("agent5.jwt_none_algorithm",), text
+    assert rule_ids("The algorithm: none of the options worked.") == ()
+
+
+@pytest.mark.parametrize("text", [
+    "docker run " * 2_909, "kubectl get secrets " * 1_600, "curl -u " * 4_000, "https://" * 4_000,
+    "aws rds modify-db-instance " * 1_185, "ssh " * 8_000, "algorithm=" * 3_200,
+])
+def test_the_largest_allowed_request_is_checked_quickly_by_batch_5(text):
+    text = text[:32_000]
+    started = time.perf_counter()
+    rule_ids(text)
+    assert time.perf_counter() - started < 2.0
+
+
+def test_the_registered_checker_reports_batch_5_rules():
+    result = run_checker("aws guardduty delete-detector --detector-id abc")
+    assert result.status == "flagged" and [f.rule_id for f in result.findings] == ["agent5.disable_guardduty"]
+    assert result.checker_version == CHECKER_VERSION == "4"
+
+
+def test_batch_5_matches_full_width_look_alike_letters():
+    assert rule_ids(full_width("aws guardduty delete-detector")) == ("agent5.disable_guardduty",)
