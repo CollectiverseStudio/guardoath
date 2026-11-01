@@ -29,8 +29,10 @@ from guardoath.tenant_store import TenantConflict, TenantNotFound, UsageLimitRea
 
 
 # Videos are sent in parts of at most this size. The hosted service runs on AWS Lambda, whose buffered
-# responses are limited to 6 MB after base64 encoding, so no single response may carry a whole video.
-MEDIA_PART_BYTES = 3 * 1024 * 1024
+# responses are limited to 6 MB after base64 encoding: 4 MiB is 5,592,408 base64 characters, under the
+# 5,800,000 that guardoath.lambda_handler allows. The demo video (3,580,895 B since 2026-10-31, 96 kbit/s
+# audio) fits in one part, so every request for it is answered with the whole file and none is cut short.
+MEDIA_PART_BYTES = 4 * 1024 * 1024
 MEDIA_STEM = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}")
 SINGLE_RANGE = re.compile(r"bytes=(\d*)-(\d*)")
 # The API key header. Behind CloudFront with origin access control, CloudFront replaces the Authorization
