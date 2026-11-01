@@ -4,10 +4,12 @@ Lexical indicators are signals, not proof of malicious intent.
 Registered in guardoath.checkers.default_checkers as "lexical_guards"; tenant records turn it on with
 check_lexical_guards. JSON content is checked string by string (keys and values, after JSON decoding),
 so escaped characters such as \\u0074 cannot hide a command.
+Five rule modules, 121 rules: semantic_guards, agent_extended_guards, data_agent_guards,
+agent_workflow_guards (20 each) and agent_boundary_guards (41). Each example reports only its own rule.
 """
 from __future__ import annotations
 
-from . import semantic_guards, agent_extended_guards, data_agent_guards, agent_workflow_guards
+from . import semantic_guards, agent_extended_guards, data_agent_guards, agent_workflow_guards, agent_boundary_guards
 
 def _signals(content: str):
     if not isinstance(content, str):
@@ -19,9 +21,10 @@ def _signals(content: str):
         + agent_extended_guards.inspect_extended(content)
         + data_agent_guards.inspect_text(content)
         + agent_workflow_guards.inspect_text(content)
+        + agent_boundary_guards.inspect(content)
     )
 
-CHECKER_VERSION = "3"
+CHECKER_VERSION = "4"
 
 
 async def lexical_guards_check(request, policy, stage):

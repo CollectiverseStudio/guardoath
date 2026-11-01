@@ -5,7 +5,7 @@ No tool execution. Host is responsible for enforcing decisions.
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
-from . import semantic_guards, agent_extended_guards, data_agent_guards, agent_workflow_guards
+from . import semantic_guards, agent_extended_guards, data_agent_guards, agent_workflow_guards, agent_boundary_guards
 
 Mode = Literal["observe", "enforce"]
 
@@ -28,6 +28,7 @@ def evaluate(content: str, *, mode: Mode = "observe") -> GuardDecision:
         + agent_extended_guards.inspect_extended(content)
         + data_agent_guards.inspect_text(content)
         + agent_workflow_guards.inspect_text(content)
+        + agent_boundary_guards.inspect(content)
     )
     ids = tuple(dict.fromkeys(item.rule_id for item in found))
     severity = "high" if any(item.severity == "high" for item in found) else ("medium" if found else "none")
