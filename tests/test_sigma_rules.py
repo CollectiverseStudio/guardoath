@@ -123,3 +123,10 @@ def test_sigma_conditions_accept_outer_whitespace(condition):
         "condition": condition,
     }
     assert match_detection(detection, {"CommandLine": "alpha"})
+
+def test_one_of_quantifier_tokenization_regression():
+    from guardoath.sigma_rules.conditions import evaluate_condition
+    selections = {"selection_a": {"CommandLine|contains": "alpha"},
+                  "selection_b": {"CommandLine|contains": "beta"}}
+    assert evaluate_condition("1 of selection_*", selections, {"CommandLine": "alpha"})
+    assert not evaluate_condition("1 of selection_*", selections, {"CommandLine": "gamma"})
