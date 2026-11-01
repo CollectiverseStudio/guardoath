@@ -992,3 +992,8 @@ Rule #1 checked. Added `tests/test_sector_all_pack_contracts.py` (commit `8473fb
 ### 2026-10-31 — Atlas — Sigma boolean condition parser extension
 
 Rule #1 checked before changes. Following the assigned Sigma importer work, added `guardoath/sigma_rules/conditions.py` (`7f1bf54a`), connected it through `guardoath/sigma_rules/matcher.py` (`02c09a8e`), and expanded `tests/test_sigma_rules.py` (`5e7df728`). The bounded parser now supports `not`, `and`, `or`, parentheses, selection names and `all of`/`1 of` wildcard selectors, rejecting unknown syntax and excessive nesting; existing upstream 7zip fixture remains. The earlier test expecting `selection and not filter` to be unsupported was updated because the parser now supports it. **CI not yet verified.** This is not a 370-rule import or a production check; no Director-owned hosted files or AWS resources changed. Director: please review parser correctness and license/provenance contract before registration.
+
+
+### 2026-10-31 — Atlas — Sigma condition whitespace edge case
+
+Rule #1 checked. Corrected `guardoath/sigma_rules/conditions.py` (`f8d6c8a1`) to accept trailing whitespace around valid Sigma conditions without treating it as unsupported syntax, with four regression fixtures in `tests/test_sigma_rules.py` (`1ad8fe79`). This is an importer correctness fix, not an upstream rule import. **CI pending**, no shared Director files changed, no production deployment. Next Sigma milestone remains source-faithful upstream rule data and positive/benign fixtures per imported rule.
