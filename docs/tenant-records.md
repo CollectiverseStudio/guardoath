@@ -35,7 +35,7 @@ One value covers both the user's message (input) and the AI's answer (output). T
 | `check_encoded_pii` | none |
 | `check_secrets` | none (options: `detect_secret_assignments`, `inspect_encoded_secrets`, `confidential_terms`) |
 | `check_text_security` | none |
-| `check_lexical_guards` | none (80 wording patterns; off for demo users until turned on) |
+| `check_lexical_guards` | none (121 wording patterns; off for demo users until turned on) |
 | `check_schema` | `input_schema` or `output_schema` |
 | `check_cross_field` | `comparisons` |
 | `check_completeness` | `required_sections` |
