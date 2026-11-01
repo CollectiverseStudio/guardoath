@@ -81,3 +81,28 @@ def test_construction_rejects_invalid_curing():
     result = check("construction", {"operation":"approve_curing","curing_days":"NaN"},
                    {"engineer_min_curing_days":"10","engineer_approved":True})
     assert result[0].rule_id == "sector.invalid_numeric_value"
+
+@pytest.mark.parametrize("sector,action,trusted,expected", [
+    ("agriculture", {"operation":"record_ndvi","ndvi":"0.65"}, {"sensor_provenance_verified":True}, None),
+    ("agriculture", {"operation":"record_ndvi","ndvi":"10"}, {"sensor_provenance_verified":True}, "agriculture.invalid_ndvi"),
+    ("agriculture", {"operation":"record_ndvi","ndvi":"0.65"}, {"sensor_provenance_verified":False}, "agriculture.untrusted_telemetry"),
+    ("utilities", {"operation":"operate_breaker","breaker_id":"grid-4"}, {"operator_authenticated":True,"dispatch_approved":True,"approved_breaker_id":"grid-4"}, None),
+    ("utilities", {"operation":"operate_breaker","breaker_id":"grid-5"}, {"operator_authenticated":True,"dispatch_approved":True,"approved_breaker_id":"grid-4"}, "utilities.target_mismatch"),
+    ("utilities", {"operation":"operate_breaker","breaker_id":"grid-4"}, {"operator_authenticated":False,"dispatch_approved":True,"approved_breaker_id":"grid-4"}, "utilities.dispatch_denied"),
+    ("mining", {"operation":"set_pressure","pressure_psi":"900"}, {"certified_max_pressure_psi":"1000","safety_interlock_verified":True,"operator_authorized":True}, None),
+    ("mining", {"operation":"set_pressure","pressure_psi":"1500"}, {"certified_max_pressure_psi":"1000","safety_interlock_verified":True,"operator_authorized":True}, "mining.pressure_limit"),
+    ("mining", {"operation":"set_pressure","pressure_psi":"900"}, {"certified_max_pressure_psi":"1000","safety_interlock_verified":False,"operator_authorized":True}, "mining.safety_authorization"),
+    ("management", {"operation":"transfer_budget","beneficiary_id":"vendor-a","amount":"100"}, {"initiator_authenticated":True,"dual_approval_verified":True,"approved_beneficiary_id":"vendor-a","approved_transfer_limit":"200"}, None),
+    ("management", {"operation":"transfer_budget","beneficiary_id":"vendor-b","amount":"100"}, {"initiator_authenticated":True,"dual_approval_verified":True,"approved_beneficiary_id":"vendor-a","approved_transfer_limit":"200"}, "management.beneficiary_mismatch"),
+    ("management", {"operation":"transfer_budget","beneficiary_id":"vendor-a","amount":"300"}, {"initiator_authenticated":True,"dual_approval_verified":True,"approved_beneficiary_id":"vendor-a","approved_transfer_limit":"200"}, "management.transfer_limit"),
+    ("management", {"operation":"transfer_budget","beneficiary_id":"vendor-a","amount":"100"}, {"initiator_authenticated":True,"dual_approval_verified":False,"approved_beneficiary_id":"vendor-a","approved_transfer_limit":"200"}, "management.transfer_authorization"),
+])
+def test_agriculture_utility_mining_management(sector, action, trusted, expected):
+    findings = check(sector, action, trusted)
+    assert tuple(x.rule_id for x in findings) == ((expected,) if expected else ())
+
+@pytest.mark.parametrize("value", [None, "NaN", "Infinity", "-1"])
+def test_mining_invalid_pressure(value):
+    findings = check("mining", {"operation":"set_pressure","pressure_psi":value},
+                     {"certified_max_pressure_psi":"1000","safety_interlock_verified":True,"operator_authorized":True})
+    assert findings[0].rule_id == "sector.invalid_numeric_value"
