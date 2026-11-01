@@ -130,3 +130,28 @@ def test_ticket_quantity_must_be_positive_integer(value):
     findings = check("arts", {"operation":"reserve_tickets","ticket_quantity":value},
                      {"account_authenticated":True,"reservation_token_verified":True,"account_ticket_limit":4})
     assert findings[0].rule_id == "sector.invalid_numeric_value"
+
+@pytest.mark.parametrize("sector,action,trusted,field", [
+    ("healthcare", {"operation":"issue_prescription"}, {"licensed_prescriber_verified":True,"prescription_authorized":True}, "licensed_prescriber_verified"),
+    ("wholesale", {"operation":"verify_receipt","verification_status":"verified"}, {"manifest_signature_valid":True,"physical_receipt_verified":True}, "manifest_signature_valid"),
+    ("education", {"operation":"publish_grade","grade":"A"}, {"grader_authorized":True,"rubric_evidence_verified":True,"rubric_grade":"A"}, "grader_authorized"),
+    ("hospitality", {"operation":"confirm_booking","charged_total":"100"}, {"promo_validated":True,"payment_authorized":True,"server_total":"100"}, "promo_validated"),
+    ("automotive", {"operation":"certify_brakes","brake_status":"pass"}, {"instrument_evidence_verified":True,"technician_authorized":True,"measured_brake_status":"pass"}, "instrument_evidence_verified"),
+    ("construction", {"operation":"approve_curing","curing_days":"10"}, {"engineer_approved":True,"engineer_min_curing_days":"7"}, "engineer_approved"),
+    ("real_estate", {"operation":"issue_lease","escalation_clause_id":"a"}, {"contract_approved":True,"signatory_authorized":True,"approved_escalation_clause_id":"a"}, "contract_approved"),
+    ("transportation", {"operation":"approve_route","destination_id":"a"}, {"route_authorized":True,"geofence_verified":True,"approved_destination_id":"a"}, "route_authorized"),
+    ("public_administration", {"operation":"release_record","classification":"public"}, {"identity_verified":True,"record_access_authorized":True,"approved_release_classification":"public"}, "identity_verified"),
+    ("agriculture", {"operation":"record_ndvi","ndvi":"0.5"}, {"sensor_provenance_verified":True}, "sensor_provenance_verified"),
+    ("utilities", {"operation":"operate_breaker","breaker_id":"a"}, {"operator_authenticated":True,"dispatch_approved":True,"approved_breaker_id":"a"}, "operator_authenticated"),
+    ("mining", {"operation":"set_pressure","pressure_psi":"10"}, {"safety_interlock_verified":True,"operator_authorized":True,"certified_max_pressure_psi":"20"}, "safety_interlock_verified"),
+    ("management", {"operation":"transfer_budget","beneficiary_id":"a","amount":"10"}, {"initiator_authenticated":True,"dual_approval_verified":True,"approved_beneficiary_id":"a","approved_transfer_limit":"20"}, "initiator_authenticated"),
+    ("information", {"operation":"publish_rag_document","document_id":"a"}, {"source_access_authorized":True,"document_provenance_verified":True,"approved_document_id":"a"}, "source_access_authorized"),
+    ("professional", {"operation":"cite_legal_precedent","citation_id":"a"}, {"citation_verified":True,"jurisdiction_current":True,"approved_citation_id":"a"}, "citation_verified"),
+    ("administrative", {"operation":"send_it_notice","template_id":"a"}, {"sender_authenticated":True,"campaign_authorized":True,"approved_template_id":"a"}, "sender_authenticated"),
+    ("arts", {"operation":"reserve_tickets","ticket_quantity":2}, {"account_authenticated":True,"reservation_token_verified":True,"account_ticket_limit":4}, "account_authenticated"),
+])
+@pytest.mark.parametrize("spoof", ["false", "true", 1, 0, None, [], {}])
+def test_sector_attestations_reject_nonboolean_values(sector, action, trusted, field, spoof):
+    tampered = dict(trusted, **{field: spoof})
+    findings = check(sector, action, tampered)
+    assert findings[0].rule_id == "sector.invalid_attestation"
