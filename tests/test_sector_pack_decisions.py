@@ -62,3 +62,18 @@ def test_invalid_entitlement_type_never_authorizes():
     result = evaluate(enabled_sectors={"retail"})
     assert result.status == "block"
     assert result.reason_codes == ("invalid_entitlements",)
+
+@pytest.mark.parametrize("invalid", [None, [], {}, 42, True, ("retail",)])
+def test_malformed_sector_ids_fail_closed(invalid):
+    result = evaluate(sector=invalid)
+    assert result.status == "block"
+    assert result.reason_codes == ("unknown_sector",)
+
+@pytest.mark.parametrize("invalid", [
+    frozenset({None}), frozenset({42}), frozenset({True}),
+    frozenset({"retail", None}), frozenset({"retail", "unrecognized"}),
+])
+def test_malformed_entitlement_elements_fail_closed(invalid):
+    result = evaluate(enabled_sectors=invalid)
+    assert result.status == "block"
+    assert result.reason_codes == ("invalid_entitlements",)
