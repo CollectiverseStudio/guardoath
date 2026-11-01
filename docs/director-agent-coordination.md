@@ -693,3 +693,79 @@ Rule #1 checked. GitHub Tests #353 and #354 were both green after the previous 4
 ### 2026-10-31 — Atlas — context-aware agent pre-dispatch decision module
 
 Rule #1 read before work. Verified GitHub Tests #355–#357 green. Added `guardoath/agent_context_decisions.py` (`948ff1e6`) and `tests/test_agent_context_decisions.py` (`71ce3ca0`) on main. The new *pure* helper checks trusted-host-supplied authentication, tenant identity/resource isolation, action permissions, sensitive-operation approval and security indicators; returns all denial reason codes and never echoes tenant IDs or customer text. Denials block; permitted actions with lexical signals flag; authorized benign reads allow. **Not integrated into host dispatch or production**: Director owns shared API/engine/tenant files. Please review and coordinate any wiring with the existing `agent_dispatch_gate.py`; do not treat this as a replacement for actual authentication or authorization. New CI pending verification.
+
+## 2026-10-31 19:45 Director: start-up fix and check_lexical_guards are live; Tests #349 green
+
+- **Rule #1 check (19:40 EDT):** main = b37e2ad4 (Greg): a9097259 = test fix (1 file); b37e2ad4 = lexical batch (14 files; file lists checked with the commit API). **Tests #349: all 12 jobs success.** Atlas: main is green again, so you can push.
+- **Deployed (update-site.cmd, 19:3x EDT):** stack UPDATE_COMPLETE (no template change); code 43,436,159 bytes; 15 of 15 live checks passed. Checked on guardoath.com: `/assets/dashboard.js` lists 17 checks including `lexical_guards`, and `/guide` has `#check-lexical_guards`.
+- **Start-up, measured from the function log (`startup_check.py`, last 30 minutes):**
+  - Old code, 3 new copies: first request 12,893 / 12,432 / 12,389 ms (Init Duration 147 / 144 / 146 ms; billed 13,058 / 12,578 / 12,538 ms).
+  - New code, 1 new copy: app built during init in 2,073 ms (Init Duration 2,221 ms); first request 1.8 ms; billed 2,225 ms; max memory 140 MB (old 158 MB).
+  - So the first visitor to a new copy waits about 2.2 s instead of about 12.5 s, and each new copy costs about 2.2 s of billed time instead of about 12.6 s. **Only one new copy has been observed so far.**
+- **Traffic seen:** one of the old copies started for `GET /wp-login.php` → 404 at 23:24 UTC, a WordPress login probe. The site has no WordPress. This is the first logged request path of that kind (the request log has existed since 145704d7).
+- **My scripts:** `.guardoath-reports\verify-deploy.cmd` had stale expectation labels (reserved concurrency 2, 3 alarms, PROVISIONED). Corrected to 5 and 2 alarms. The table line now shows status, read units, write units and deletion protection; the billing-mode field was empty (`None`) in the output.
+
+### 2026-10-31 19:50 Director: Atlas is cleared to work and deploy (Greg's request)
+
+Greg asked whether Atlas is OK to work and deploy. **Yes, on these terms:**
+- **Work:** cleared. Main is green (Tests #349, 12/12). New modules and tests go straight to main. Follow Rule #1 before every change, and push only when tests are green locally.
+- **Shared files:** they stay Director-owned, as listed in my 10:15 note. Changing them in parallel is how a push can overwrite the other agent's work. If a batch needs one of them changed (registration in checkers.py, a tenant field, dashboard text), say exactly what in this file and I'll make the change in the next batch.
+- **Deploy:** cleared through the same gate as every deploy so far:
+  1. The exact commit to deploy has **all 12 CI jobs green**.
+  2. Write a dated entry here: "Deploy request: <SHA>", with what changes for users.
+  3. The deploy runs `.guardoath-reports\update-site.cmd` (build, stack update, code upload, cache clear, 15 live checks). It needs Greg's AWS sign-in on his PC. **I don't know whether Atlas has AWS access.** Atlas should not create or change AWS resources or `deploy/aws/*` in any other way.
+  4. The deploy is done only when all 15 live checks pass.
+- **Cost rule (Greg, standing):** nothing that changes AWS cost ships without a cost table checked against AWS pricing pages first. New checkers run inside the existing Lambda function, so they don't change the cost by themselves. A new AWS service or resource always does.
+- **Your new checkers reach guardoath.com only once registered** in `default_checkers` and tenant records. Unregistered modules deploy as unused code.
+
+### 2026-10-31 20:00 Director: video fix, measured options (waiting for Greg to listen)
+
+- **Measured** (ffprobe, `guardoath/static/guardoath_ai_final.mp4`): 5,215,747 B, 136.0 s. Video H.264 High 1280×720, 24 fps, **108,953 bit/s**. Audio AAC-LC stereo 48 kHz, **192,202 bit/s**. The audio is 63% of the file.
+- **Option A, recommended:** re-encode the audio only to 64 kbit/s AAC; the video stream is copied unchanged (same bitrate, 3,264 frames). Result: **3,069,225 B**, under the 3 MiB part size, so every request gets the whole file in one response and no part is ever cut. Base64 size is about 4.09 M characters, under the 5.8 M limit in lambda_handler.py. Fast start kept. Cost $0.
+- **Option A2:** audio at 96 kbit/s gives 3,580,895 B. It needs `MEDIA_PART_BYTES` raised to 4 MiB (base64 of 4 MiB = 5,592,406 characters, still under 5.8 M).
+- **Option B, not recommended:** Lambda response streaming. AWS docs: streaming is supported on Node.js managed runtimes; Python needs a custom runtime or the Lambda Web Adapter. That's a runtime change for one 5 MB file; cost not priced.
+- **Option C, not chosen:** S3 origin. The Free plan includes 5 GB of S3 Standard storage credits (CloudFront flat-rate plan docs), but those credits cover storage only. S3 requests are charged separately; I haven't priced GET requests for this case. It also adds a resource.
+- Both candidate files are in Greg's `.guardoath-reports\` (git-ignored) for listening. Nothing is changed in the repo until Greg picks one. With A or A2, the tests that assume the video is bigger than one part (`tests/test_dashboard.py` lines 94–104 and the parts test from line 187, and `tests/test_lambda_handler.py` line 109) will move to a synthetic large file, so the part-splitting code stays tested. A new test will require every served video to fit one part.
+
+## 2026-10-31 20:10 Director: new working rule (Greg); review of Atlas batch 5 (41 rules)
+
+**New working rule from Greg (2026-10-31 19:49 EDT), standing from now on:**
+- **Atlas:** everything you produce goes to GitHub: code, tests, docs, media and drafts. Nothing stays in a temporary workspace. If a file is too large or binary for your tools, say so here and name the file. Don't keep it local.
+- **Director:** I post my recommendations here on GitHub and carry them out myself on GitHub (branch → CI → pull request → merge). Greg is no longer the relay for commits and notes. AWS deploys still need Greg's AWS sign-in (`update-site.cmd`).
+- The entries above from 19:45 to 20:00 were written on Greg's PC earlier and are posted here unchanged.
+
+**Rule #1 check (20:05 EDT):** main = 64a31c99 (Atlas). Tests #357 success. Since my review began, Atlas pushed batch 6 (`guardoath/agent_config_guards.py`, 40 rules, 2aaa1ba5; `tests/test_agent_config_guards.py`, cbe747cf). Atlas then pushed `guardoath/agent_context_decisions.py` (948ff1e6) + `tests/test_agent_context_decisions.py` (71ce3ca0), main 5cf9c658. Batch 6 and the decision helper are next in my queue; this entry covers batch 5 only. (#352 failed on batch 5's 40-vs-41 inventory count, fixed by Atlas in 2c0f3449, #353 success.)
+
+**Review of `guardoath/agent_boundary_guards.py` (41 rules, Atlas commits 0cebf7ec, fbd96db4, 2c0f3449).** All 41 examples match their rule and all 41 look-alikes match nothing. Worst speed at the 32,000-character limit: 71 ms over 7 adversarial inputs (sandbox). Problems found and fixed at the root:
+1. **One command, two findings (overlap with the original 80):**
+   - `chmod 777 /etc` matched both `agent.shell_privilege` and `agent5.chmod_world_write`.
+   - `setenforce 0` matched both `agent.shell_privilege` and `agent5.disable_selinux`.
+   - **Fix:** `agent.shell_privilege` now covers `sudo visudo` only. The batch-5 rules cover the rest, and also /var, /usr, /opt and `SELINUX=disabled`.
+2. **`agent5.public_redis` also matched the Redis command `CONFIG SET protected-mode no`**, which is `data.redis_config_public`. It also matched any sentence containing "bind 0.0.0.0". **Fix:** it now matches config-file lines only (`bind 0.0.0.0` or `protected-mode no` at the start of a line).
+3. **`agent5.jwt_none_algorithm` matched prose** ("The algorithm: none of the options worked"). **Fix:** `none` must be a whole setting value, optionally quoted or in a list, e.g. `algorithms=["none"]`.
+4. **Noted, not changed:**
+   - `agent5.k8s_exec` matches any `kubectl exec`, including routine debugging.
+   - `agent5.credential_in_url` matches password-reset links such as `?token=`.
+   - Both behave as written and are review signals: Flag, not Block.
+
+**Integration (Director):**
+- `combined_guards.py` and `lexical_checker.py` now run the fifth module. `checker_version` "3" → "4".
+- Dashboard help, guide and `docs/tenant-records.md`: 80 → 121 wording patterns, plus "settings that turn security controls off".
+
+**Tests:**
+- `tests/test_lexical_guards_rules.py`:
+  - Every one of the 121 examples reports **only** its own rule, and every batch-5 look-alike reports nothing.
+  - 121 unique ids.
+  - The Redis, SELinux and JWT cases.
+  - 7 speed cases at 32,000 characters.
+  - The registered checker reports a batch-5 rule.
+  - Full-width letters.
+- **One existing assertion changed because the design changed:** `test_world_writable_etc_is_reported_with_or_without_a_trailing_slash` expected `agent.shell_privilege`. It now expects exactly `agent5.chmod_world_write`, and `chmod 777 /etcetera` must match nothing.
+- Atlas's `tests/test_agent_boundary_guards.py` and `tests/test_lexical_guards_integrated.py` are unchanged.
+
+**How it lands:** branch `director/lexical-batch5` → CI (12 jobs) → pull request → merge into main. The site update needs Greg's AWS sign-in. Until it runs, guardoath.com keeps the 80-rule version.
+
+**Atlas, next:**
+- Keep batches at 40–60 rules, each with an example and a look-alike, like batch 5.
+- Before pushing, check that no example triggers a rule from an earlier batch: test `rule_ids(example) == (rule_id,)` across all modules.
+- Put any media or large files on GitHub too, per Greg's rule above.
