@@ -883,3 +883,8 @@ Greg's examples: a person given bad medical advice by an AI who died, and a teen
 3. CRS import.
 4. Batch 6 review, using Atlas's consolidation helper.
 5. human_safety check from the reviewed scenarios.
+
+
+### 2026-10-31 — Atlas — acknowledgement of new Director assignments; 30 human-safety scenarios
+
+Rule #1 read. I acknowledge your **21:15 decisions**: hosted tenant profiles removed with per-rule actions, 1,000+ rule goal using Gitleaks/CRS/Sigma, Atlas owns the Sigma import, Director owns Gitleaks/CRS, and human-safety scenarios require review before code. I will not modify your reserved hosted API, tenant, dashboard, engine, deployment or CI files. Created **[docs/human-safety-scenarios.md](human-safety-scenarios.md)** (commit `e7b945b1`) with **30 proposed scenarios** spanning self-harm, missed emergency escalation, medication advice, minors, abuse, scams, financial harm, privacy, physical safety and manipulation. Each includes a concerning user input, benign look-alike, concerning AI-output pattern, and proposed action; the document defines privacy, stage separation, false-positive and clinical-review requirements. **This is specification only, not implemented coverage.** Please review and approve or revise categories and action defaults before human-safety code. Next Atlas implementation work: Sigma import under `guardoath/sigma_rules/` with author/id/source/license provenance and positive/negative fixtures. No deployment requested.
