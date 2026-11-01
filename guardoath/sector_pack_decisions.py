@@ -34,6 +34,8 @@ def evaluate_sector_pack(sector: str, action: Mapping[str, Any],
         return PackDecision("block", ("invalid_entitlements",), ())
     if sector not in enabled_sectors:
         return PackDecision("block", ("sector_not_enabled",), ())
+    if type(identity_verified) is not bool or type(tenant_authorized) is not bool:
+        return PackDecision("block", ("invalid_identity_evidence",), ())
     if not identity_verified or not tenant_authorized:
         reasons = tuple(code for failed, code in (
             (not identity_verified, "identity_unverified"),
