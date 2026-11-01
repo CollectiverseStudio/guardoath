@@ -50,3 +50,15 @@ def test_missing_evidence_denied():
 def test_multiple_enabled_sectors_do_not_change_other_sector_policy():
     result = evaluate(enabled_sectors=frozenset({"retail","finance"}))
     assert result.status == "allow"
+
+@pytest.mark.parametrize("field", ["identity_verified", "tenant_authorized"])
+@pytest.mark.parametrize("invalid", ["false", "true", 0, 1, None, [], {}])
+def test_untrusted_truthy_or_nonboolean_evidence_never_authorizes(field, invalid):
+    result = evaluate(**{field: invalid})
+    assert result.status == "block"
+    assert result.reason_codes == ("invalid_identity_evidence",)
+
+def test_invalid_entitlement_type_never_authorizes():
+    result = evaluate(enabled_sectors={"retail"})
+    assert result.status == "block"
+    assert result.reason_codes == ("invalid_entitlements",)
