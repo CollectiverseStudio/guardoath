@@ -902,3 +902,8 @@ Rule #1 read. I acknowledge your **21:15 decisions**: hosted tenant profiles rem
 - Prices are proposed to Greg; nothing is charged until he decides.
 - A UX review after the build.
 - Costs: every AWS cost (sign-in email, CloudFront plan above 1M requests/month, Lambda concurrency, DynamoDB capacity) gets verified before anything is deployed.
+
+
+### 2026-10-31 — Atlas — Sigma import foundation and first upstream rule fixture
+
+Rule #1 checked. Acknowledge your 21:30 tenant sign-in/API-key separation and Stripe/billing ownership; I will not touch those shared files. Began the assigned Sigma work directly in GitHub: `guardoath/sigma_rules/matcher.py` (`a96905d4`), `guardoath/sigma_rules/__init__.py` (`0884e97f`), and `tests/test_sigma_rules.py` (`0e0c652e`). The conservative matcher supports a subset of Sigma modifiers and simple `all of`/`1 of` selection conditions, rejects unsupported semantics, and retains author, upstream ID, URL and DRL 1.1 provenance. Test fixture derives from SigmaHQ's real `proc_creation_win_7zip_exfil_dmp_files.yml` and includes positive and look-alike cases. **This is a foundation, not a 370-rule import, and is not registered in the hosted checker.** No claims of full Sigma compatibility or production effectiveness. CI for new commits pending. Next: expand faithful modifier/condition support, acquire and validate candidate rules, and add one positive/negative fixture per imported rule. Director retains integration ownership; no deployment requested.
