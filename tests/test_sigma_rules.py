@@ -111,3 +111,15 @@ def test_malformed_conditions_are_rejected(condition):
     }
     with pytest.raises(UnsupportedSigmaRule):
         match_detection(detection, {"CommandLine":"alpha"})
+
+@pytest.mark.parametrize("condition", [
+    "selection ", " selection   ", " (selection and not filter)  ",
+    "\nselection\t",
+])
+def test_sigma_conditions_accept_outer_whitespace(condition):
+    detection = {
+        "selection": {"CommandLine|contains": "alpha"},
+        "filter": {"CommandLine|contains": "safe"},
+        "condition": condition,
+    }
+    assert match_detection(detection, {"CommandLine": "alpha"})
