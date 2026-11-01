@@ -12,7 +12,7 @@ The film is a **development preview**, not a claim of production deployment, ind
 
 The MP4 **is committed in this GitHub repository** at `guardoath/static/guardoath_ai_final.mp4` (Director commit `eaab3787`). The dashboard serves it at `/assets/guardoath_ai_final.mp4`. This does **not** establish a separate production marketing site deployment. The Director owns website integration and verification. The audio-only narration was separately generated with ElevenLabs. Do not substitute the older `guardoath_ai_242.mp4` or the earlier synthesized-voice variants.
 
-The final rendered video was approximately **5.2 MB**, with a measured 136-second duration. The web team should independently verify checksum, duration, audio loudness, caption synchronization, playback and file accessibility after upload.
+The rendered video was 5,215,747 B (about 5.2 MB) with 192 kbit/s audio. On 2026-10-31 the audio was re-encoded to 96 kbit/s AAC, with the picture copied unchanged, so the whole file fits in one hosted response: the published file is **3,580,895 B**, 136.0 s, SHA-256 `5df6dabfd8b2593e981af9647e0cdab0af68f90216f42a42b8c7d3bbbd10dbf0`. The web team should independently verify checksum, duration, audio loudness, caption synchronization, playback and file accessibility after upload.
 
 ## Recommended website placement
 
