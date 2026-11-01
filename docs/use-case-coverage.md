@@ -1,5 +1,7 @@
 # Coverage of Greg's 100 example use cases
 
+For a separate explanation of **all 161 lexical security indicators**, their business use cases, example matches, limitations, and integration status, see [Security indicator use cases](security-indicator-use-cases.md). These indicators are not a substitute for the 200-case implementation catalog.
+
 The first 50 examples are mapped below. [Use cases 51–100](additional-use-cases.md)
 contain the second list, concrete acceptance criteria and links to 77 additional
 unit/API/engine tests for currently supported portions. The new list has 17 scoped/
