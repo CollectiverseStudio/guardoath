@@ -41,11 +41,40 @@ def validate_sector_action(sector: str, action: Mapping[str, Any],
         "education": "publish_grade",
         "hospitality": "confirm_booking",
         "automotive": "certify_brakes",
+        "construction": "approve_curing",
+        "real_estate": "issue_lease",
+        "transportation": "approve_route",
+        "public_administration": "release_record",
     }
     if sector not in supported:
         raise ValueError("unsupported sector")
     if action.get("operation") != supported[sector]:
         return (SectorFinding("sector.operation_mismatch", "unapproved operation"),)
+    if sector == "construction":
+        actual, minimum = _decimal(action.get("curing_days")), _decimal(trusted.get("engineer_min_curing_days"))
+        if actual is None or minimum is None or actual < 0 or minimum < 0:
+            return (SectorFinding("sector.invalid_numeric_value", "missing or invalid numeric evidence"),)
+        if not trusted.get("engineer_approved") or actual < minimum:
+            return (SectorFinding("construction.curing_invariant", "engineering curing approval or minimum missing"),)
+        return ()
+    if sector == "real_estate":
+        if not trusted.get("contract_approved") or not trusted.get("signatory_authorized"):
+            return (SectorFinding("real_estate.contract_authorization", "trusted contract approval missing"),)
+        if action.get("escalation_clause_id") != trusted.get("approved_escalation_clause_id"):
+            return (SectorFinding("real_estate.clause_mismatch", "lease clause differs from approved template"),)
+        return ()
+    if sector == "transportation":
+        if not trusted.get("route_authorized") or not trusted.get("geofence_verified"):
+            return (SectorFinding("transportation.route_authorization", "route approval or geofence verification missing"),)
+        if action.get("destination_id") != trusted.get("approved_destination_id"):
+            return (SectorFinding("transportation.destination_mismatch", "destination differs from approved route"),)
+        return ()
+    if sector == "public_administration":
+        if not trusted.get("identity_verified") or not trusted.get("record_access_authorized"):
+            return (SectorFinding("public_administration.access_denied", "verified access authorization missing"),)
+        if action.get("classification") != trusted.get("approved_release_classification"):
+            return (SectorFinding("public_administration.classification_mismatch", "record classification not approved for release"),)
+        return ()
     if sector == "wholesale":
         if not trusted.get("manifest_signature_valid") or not trusted.get("physical_receipt_verified"):
             return (SectorFinding("wholesale.receipt_unverified", "trusted receipt verification missing"),)
