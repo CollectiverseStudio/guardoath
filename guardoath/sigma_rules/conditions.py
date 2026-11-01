@@ -9,7 +9,7 @@ import re
 from collections.abc import Mapping
 from .matcher import UnsupportedSigmaRule, match_selection
 
-TOKEN = re.compile(r"\s*(\(|\)|[A-Za-z_][A-Za-z0-9_*.-]*)")
+TOKEN = re.compile(r"\s*(\(|\)|1(?=\s+of\b)|[A-Za-z_][A-Za-z0-9_*.-]*)")
 
 def evaluate_condition(condition: str, selections: Mapping[str, object],
                        event: Mapping[str, object]) -> bool:
