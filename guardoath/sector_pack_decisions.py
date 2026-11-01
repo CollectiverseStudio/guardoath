@@ -28,9 +28,11 @@ def evaluate_sector_pack(sector: str, action: Mapping[str, Any],
                          enabled_sectors: frozenset[str],
                          identity_verified: bool,
                          tenant_authorized: bool) -> PackDecision:
-    if sector not in SECTORS:
+    if not isinstance(sector, str) or sector not in SECTORS:
         return PackDecision("block", ("unknown_sector",), ())
-    if not isinstance(enabled_sectors, frozenset) or not enabled_sectors <= SECTORS:
+    if (not isinstance(enabled_sectors, frozenset)
+            or any(not isinstance(item, str) for item in enabled_sectors)
+            or not enabled_sectors <= SECTORS):
         return PackDecision("block", ("invalid_entitlements",), ())
     if sector not in enabled_sectors:
         return PackDecision("block", ("sector_not_enabled",), ())
