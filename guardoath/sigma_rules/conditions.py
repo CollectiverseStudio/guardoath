@@ -18,6 +18,8 @@ def evaluate_condition(condition: str, selections: Mapping[str, object],
     tokens = []
     pos = 0
     while pos < len(condition):
+        if condition[pos:].isspace():
+            break
         match = TOKEN.match(condition, pos)
         if not match:
             raise UnsupportedSigmaRule("unsupported condition token")
