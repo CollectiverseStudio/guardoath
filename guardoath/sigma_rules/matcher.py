@@ -14,11 +14,11 @@ class UnsupportedSigmaRule(ValueError):
 def match_value(actual: object, expected: object, modifiers: tuple[str, ...] = ()) -> bool:
     if isinstance(expected, list):
         return any(match_value(actual, item, modifiers) for item in expected)
-    if not isinstance(actual, str) or not isinstance(expected, str):
-        return actual == expected and not modifiers
     supported = {"contains", "startswith", "endswith", "re", "all", "windash"}
     if set(modifiers) - supported:
         raise UnsupportedSigmaRule("unsupported field modifier")
+    if not isinstance(actual, str) or not isinstance(expected, str):
+        return actual == expected and not modifiers
     left, right = actual.casefold(), expected.casefold()
     if "windash" in modifiers:
         left = left.replace("/", "-")
@@ -44,6 +44,8 @@ def match_selection(selection: object, event: Mapping[str, object]) -> bool:
     if not isinstance(selection, Mapping):
         raise UnsupportedSigmaRule("selection must be a mapping or list")
     for field, expected in selection.items():
+        if not isinstance(field, str) or not field:
+            raise UnsupportedSigmaRule("invalid selection field")
         name, *modifiers = field.split("|")
         actual = event.get(name)
         if "all" in modifiers and isinstance(expected, list):
