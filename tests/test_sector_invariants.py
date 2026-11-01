@@ -34,3 +34,27 @@ def test_unsupported_sector_rejected():
 def test_input_types_checked():
     with pytest.raises(TypeError):
         check("retail", "not a mapping", {})
+
+@pytest.mark.parametrize("sector,action,trusted,expected", [
+    ("wholesale", {"operation":"verify_receipt","verification_status":"verified"}, {"manifest_signature_valid":True,"physical_receipt_verified":True}, None),
+    ("wholesale", {"operation":"verify_receipt","verification_status":"force-passed"}, {"manifest_signature_valid":True,"physical_receipt_verified":True}, "wholesale.invalid_receipt_state"),
+    ("wholesale", {"operation":"verify_receipt","verification_status":"verified"}, {"manifest_signature_valid":False,"physical_receipt_verified":True}, "wholesale.receipt_unverified"),
+    ("education", {"operation":"publish_grade","grade":"A"}, {"grader_authorized":True,"rubric_evidence_verified":True,"rubric_grade":"A"}, None),
+    ("education", {"operation":"publish_grade","grade":"A+"}, {"grader_authorized":True,"rubric_evidence_verified":True,"rubric_grade":"B"}, "education.grade_mismatch"),
+    ("education", {"operation":"publish_grade","grade":"A"}, {"grader_authorized":False,"rubric_evidence_verified":True,"rubric_grade":"A"}, "education.grading_authorization"),
+    ("hospitality", {"operation":"confirm_booking","charged_total":"125.00"}, {"promo_validated":True,"payment_authorized":True,"server_total":"125.00"}, None),
+    ("hospitality", {"operation":"confirm_booking","charged_total":"0"}, {"promo_validated":True,"payment_authorized":True,"server_total":"125.00"}, "hospitality.total_mismatch"),
+    ("hospitality", {"operation":"confirm_booking","charged_total":"125"}, {"promo_validated":False,"payment_authorized":True,"server_total":"125"}, "hospitality.booking_authorization"),
+    ("automotive", {"operation":"certify_brakes","brake_status":"pass"}, {"instrument_evidence_verified":True,"technician_authorized":True,"measured_brake_status":"pass"}, None),
+    ("automotive", {"operation":"certify_brakes","brake_status":"pass"}, {"instrument_evidence_verified":True,"technician_authorized":True,"measured_brake_status":"fail"}, "automotive.brake_status_mismatch"),
+    ("automotive", {"operation":"certify_brakes","brake_status":"pass"}, {"instrument_evidence_verified":False,"technician_authorized":True,"measured_brake_status":"pass"}, "automotive.inspection_unverified"),
+])
+def test_additional_sector_actions(sector, action, trusted, expected):
+    findings = check(sector, action, trusted)
+    assert tuple(x.rule_id for x in findings) == ((expected,) if expected else ())
+
+@pytest.mark.parametrize("value", [None, "NaN", "-1", "invalid"])
+def test_hospitality_invalid_amount(value):
+    findings = check("hospitality", {"operation":"confirm_booking","charged_total":value},
+                     {"promo_validated":True,"payment_authorized":True,"server_total":"100"})
+    assert findings[0].rule_id == "sector.invalid_numeric_value"
