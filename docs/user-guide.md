@@ -1592,8 +1592,8 @@ single configured digest; the other examples can use distinct stage data.
 
 ## Isolated SigmaHQ event-rule importer (development only)
 
-The source-only Sigma importer now contains 28 source-identified Windows event
-rules: three process-creation rules and 25 additional PowerShell script rules.
+The source-only Sigma importer now contains 53 source-identified Windows event
+rules: three process-creation rules and 50 additional PowerShell script rules.
 It inspects structured event fields such as `ScriptBlockText`, rather than an AI
 conversation's meaning. For example, the upstream `Get-Process` rule matches a
 PowerShell event containing that command, while a `Get-Service` event does not
@@ -1608,6 +1608,16 @@ explicit error. Wildcard values, windash, temporal/correlation rules and unsuppo
 modifiers are rejected rather than approximated. Do not interpret an unsupported
 rule as a clean result. See [the Sigma package guide](../guardoath/sigma_rules/README.md)
 for the exact supported subset, examples, source verification and licensing.
+
+Batch 003 adds compound detections for scheduled tasks, history clearing,
+credential-vault access, remoting, ETW changes and other Windows activity. A
+scheduled-task event can match `Register-ScheduledTask`; its original upstream
+module-signature exclusion requires all filter terms. Administrative activity
+may still match, so review the preserved upstream false-positive guidance.
+Removing a PowerShell history file can legitimately produce two distinct upstream
+findings; neither is silently suppressed. The 50 rules in batches 002/003 retain
+original YAML snapshots at the same immutable upstream revision. No additional
+tenant control or deployed checker is introduced by these data batches.
 
 The Director must review registration, event routing, package assets and hosted
 controls before this importer becomes a user-facing check. It is not deployed.

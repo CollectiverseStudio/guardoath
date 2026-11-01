@@ -1128,3 +1128,50 @@ This follow-up changes only this log to record verified implementation evidence;
 **Director packaging gate (existing gap, now precise):** `pyproject.toml` currently lists package data for `guardoath` static assets and `guardoath.privacy_patterns`, but no `guardoath.sigma_rules` JSON/YAML/LICENSE assets. Before shipping imported rules through an installed wheel/sdist or enabling hosted Sigma, please own or explicitly delegate adding package-data inclusion plus an **installed-distribution regression test** verifying the exact rule data/license provenance are present and readable. No shared file changes were made in this review; no deployment, AWS actions or new paid services authorized.
 
 **No conflict with Codex:** No Sigma code/test files, app/engine/tenant/UI/CI/deployment files or `pyproject.toml` were edited by ChatGPT. This entry augments the prior assigned Batch 003 implementation, rather than replacing it.
+
+
+### 2026-11-01 — Codex — batch 003 implemented; regex review acknowledged
+
+Rule #1 read first at the start and resumption of this batch. Acknowledge the batch-003 assignment and ownership of isolated `guardoath/sigma_rules/*` and dedicated tests. Synchronized main `5a7a0cdded3eef82c652f3400ef8d0a35cdb620b`; its Tests run https://github.com/CollectiverseStudio/guardoath/actions/runs/41360570248 and CodeQL run https://github.com/CollectiverseStudio/guardoath/actions/runs/41360570134 completed successfully. No Director-reserved app/engine/tenant/static/packaging/CI/deployment path edited.
+
+**Implemented batch 003:** 25 additional distinct SigmaHQ PowerShell rules, **53 total** across three batches. Source revision remains `05d1031f537e830b76da53bae2400c5814c89165`. Original YAML, every metadata and detection/condition field, authors, IDs, paths, source SHA-256/Git blobs and DRL 1.1 provenance retained. Coverage includes compound/conjunction detections and original exclusions for browser-login-data copying, AD modules/accounts/discovery, DNS rules, Windows capabilities/features, AMSI, AS-REP, audio encoding, history clearing, scheduled tasks, COR profiling, shadow copies, VM/directory discovery, COM downloads, credential vaults, remoting, ETW and certificate exports. Selection is based on compatible semantics and varied behaviors, not duplicated definitions or synthetic rules.
+
+**Tests:** Added 651 executions: independent positive/benign/missing fixtures; malformed event containers and field values; source hash and attribution checks; required-term removal cases; alternate branches and complete/partial exclusion controls; invalid unreferenced branches on every new rule; eight condition truth tables across all Boolean inputs; all-53-rule positive/benign matrices. Explicitly retained the real overlap where history-file removal triggers two upstream history rules. No changes to the existing 768 focused Sigma tests or matcher runtime were needed, and no unsupported syntax was approximated.
+
+**Verification before commit:** focused Sigma **1419 passed**; full repository **6664 passed, 1 skipped in 45.68 s**; legacy-name guards **10 passed**; all 14 evaluation groups **1400/1400 expectations matched**, zero mismatches (existing incomplete-result expectations remain); expanded source verifier **50 rules verified** against exact upstream metadata/YAML, including Git blob IDs, for pinned batches 002 and 003. Batch 001 predates immutable snapshots and is explicitly excluded from that verifier count. `git diff --check` clean. Exact implementation SHA and post-push CI will be appended after verification; new batch CI is not yet claimed green.
+
+**New regex review acknowledged:** none of the 25 new rules uses regex. The unbounded standard-library regex path remains an integration gate and will be addressed in a separate isolated safety-hardening sub-batch with adversarial fixtures, size/deadline limits and explicit errors. No broader regex import or hosted execution is introduced here. Director: package-data inclusion plus installed-wheel/sdist provenance tests remain your reserved-file integration request, along with registry/tenant/UI/logsource routing and author attribution review. No hosted integration or deployment claimed, no images, no AWS actions/spending. Release/cost gates unchanged.
+
+**Changed files (plus this log):**
+- `docs/user-guide.md`
+- `guardoath/sigma_rules/README.md`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_access_to_browser_login_data.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_active_directory_module_dll_import.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_add_dnsclient_rule.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_add_windows_capability.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_adsi_create_user.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_amsi_bypass_pattern_nov22.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_as_rep_roasting.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_audio_exfiltration.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_clear_powershell_history.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_clearing_windows_console_history.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_cmdlet_scheduled_task.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_cor_profiler.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_create_new_dmsasvc_account.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_create_volume_shadow_copy.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_detect_vm_env.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_directorysearcher.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_disable_psreadline_command_history.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_disable_windows_optional_feature.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_download_com_cradles.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_dump_password_windows_credential_manager.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_enable_psremoting.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_enable_susp_windows_optional_feature.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_enumerate_password_windows_credential_manager.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_etw_trace_evasion.yml`
+- `guardoath/sigma_rules/upstream/batch_003/posh_ps_export_certificate.yml`
+- `guardoath/sigma_rules/upstream_batch_003.json`
+- `guardoath/sigma_rules/verify_sources.py`
+- `tests/test_sigma_batch_003_contracts.py`
+- `tests/test_sigma_upstream_batch_003.py`
+- `docs/director-agent-coordination.md`
