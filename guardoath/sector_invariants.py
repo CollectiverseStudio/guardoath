@@ -58,6 +58,30 @@ def validate_sector_action(sector: str, action: Mapping[str, Any],
         raise ValueError("unsupported sector")
     if action.get("operation") != supported[sector]:
         return (SectorFinding("sector.operation_mismatch", "unapproved operation"),)
+    # Host attestations must be genuine booleans. Strings such as "false"
+    # are truthy in Python and must never authorize safety-critical actions.
+    attestation_fields = {
+        "healthcare": ("licensed_prescriber_verified", "prescription_authorized"),
+        "wholesale": ("manifest_signature_valid", "physical_receipt_verified"),
+        "education": ("grader_authorized", "rubric_evidence_verified"),
+        "hospitality": ("promo_validated", "payment_authorized"),
+        "automotive": ("instrument_evidence_verified", "technician_authorized"),
+        "construction": ("engineer_approved",),
+        "real_estate": ("contract_approved", "signatory_authorized"),
+        "transportation": ("route_authorized", "geofence_verified"),
+        "public_administration": ("identity_verified", "record_access_authorized"),
+        "agriculture": ("sensor_provenance_verified",),
+        "utilities": ("operator_authenticated", "dispatch_approved"),
+        "mining": ("safety_interlock_verified", "operator_authorized"),
+        "management": ("initiator_authenticated", "dual_approval_verified"),
+        "information": ("source_access_authorized", "document_provenance_verified"),
+        "professional": ("citation_verified", "jurisdiction_current"),
+        "administrative": ("sender_authenticated", "campaign_authorized"),
+        "arts": ("account_authenticated", "reservation_token_verified"),
+    }
+    if any(field in trusted and type(trusted[field]) is not bool
+           for field in attestation_fields.get(sector, ())):
+        return (SectorFinding("sector.invalid_attestation", "trusted attestation must be boolean"),)
     if sector == "information":
         if not trusted.get("source_access_authorized") or not trusted.get("document_provenance_verified"):
             return (SectorFinding("information.untrusted_document", "retrieval source not authorized or verified"),)
