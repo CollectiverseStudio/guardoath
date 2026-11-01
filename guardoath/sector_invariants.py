@@ -49,11 +49,43 @@ def validate_sector_action(sector: str, action: Mapping[str, Any],
         "utilities": "operate_breaker",
         "mining": "set_pressure",
         "management": "transfer_budget",
+        "information": "publish_rag_document",
+        "professional": "cite_legal_precedent",
+        "administrative": "send_it_notice",
+        "arts": "reserve_tickets",
     }
     if sector not in supported:
         raise ValueError("unsupported sector")
     if action.get("operation") != supported[sector]:
         return (SectorFinding("sector.operation_mismatch", "unapproved operation"),)
+    if sector == "information":
+        if not trusted.get("source_access_authorized") or not trusted.get("document_provenance_verified"):
+            return (SectorFinding("information.untrusted_document", "retrieval source not authorized or verified"),)
+        if action.get("document_id") != trusted.get("approved_document_id"):
+            return (SectorFinding("information.document_mismatch", "document differs from approved source"),)
+        return ()
+    if sector == "professional":
+        if not trusted.get("citation_verified") or not trusted.get("jurisdiction_current"):
+            return (SectorFinding("professional.unverified_precedent", "legal citation or jurisdiction not verified"),)
+        if action.get("citation_id") != trusted.get("approved_citation_id"):
+            return (SectorFinding("professional.citation_mismatch", "citation differs from verified reference"),)
+        return ()
+    if sector == "administrative":
+        if not trusted.get("sender_authenticated") or not trusted.get("campaign_authorized"):
+            return (SectorFinding("administrative.notice_authorization", "trusted communication authorization missing"),)
+        if action.get("template_id") != trusted.get("approved_template_id"):
+            return (SectorFinding("administrative.template_mismatch", "message template not approved"),)
+        return ()
+    if sector == "arts":
+        if not trusted.get("account_authenticated") or not trusted.get("reservation_token_verified"):
+            return (SectorFinding("arts.reservation_authorization", "trusted ticket reservation evidence missing"),)
+        quantity = _decimal(action.get("ticket_quantity"))
+        maximum = _decimal(trusted.get("account_ticket_limit"))
+        if quantity is None or maximum is None or quantity != quantity.to_integral_value() or maximum != maximum.to_integral_value() or quantity < 1 or maximum < 1:
+            return (SectorFinding("sector.invalid_numeric_value", "missing or invalid numeric evidence"),)
+        if quantity > maximum:
+            return (SectorFinding("arts.ticket_limit", "ticket quantity exceeds account limit"),)
+        return ()
     if sector == "agriculture":
         value = _decimal(action.get("ndvi"))
         if value is None or value < -1 or value > 1:
