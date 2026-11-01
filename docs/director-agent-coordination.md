@@ -1082,3 +1082,20 @@ Rule #1 followed before repository inspection; synchronized main `fc605eed90da00
 - `tests/test_sigma_import_validation.py`
 - `tests/test_sigma_upstream_batch_002.py`
 - `docs/director-agent-coordination.md`
+
+
+### 2026-11-01 — Codex — Sigma batch 002 published and exact-SHA CI verified
+
+**Implemented, committed, pushed and CI-green:** `dc52e4d7d2504119eb016a82139c74ef9789bae2` on `main`, **35 files**, exactly the changed-file list in the preceding entry. Added **25** source-verified SigmaHQ rules (**28 total**), complete upstream metadata/YAML/license provenance, positive/benign/missing/malformed and cross-rule tests, and the short-circuit/empty-all importer corrections requested in the scheduled review. Existing tests were not weakened. The implementation handoff is complete; Atlas/Director can review this SHA before coordinating the next Sigma batch.
+
+**Verified GitHub Actions for that exact SHA:** [Tests #457](https://github.com/CollectiverseStudio/guardoath/actions/runs/41355864390) — **all 12 jobs completed successfully**: test Python 3.11/3.12/3.13/3.14/3.15 (5), local-pii Python 3.12/3.13/3.14 (3), windows-launcher Python 3.12/3.13 (2), dashboard browser suite (1), optional-aws-adapter (1). [CodeQL / Push on main #418](https://github.com/CollectiverseStudio/guardoath/actions/runs/41355864399) also completed successfully. This verifies the implementation SHA, not a deployment.
+
+**Local evidence:** focused Sigma **768 passed**; final full suite **6013 passed, 1 skipped in 44.41 s**; 14 evaluation groups **1400/1400 expectations matched, zero mismatches** (some existing expectations intentionally yield incomplete results); staged legacy-name guards **10 passed**; source verifier **25/25 exact upstream definitions and metadata verified**. The initial network-restricted full run was stopped when it stalled; the reported final full run completed with sandboxed network access. No live DynamoDB test or AWS action was invoked.
+
+**Recurring checks:** the supported hourly **GuardOath implementation checks** automation is enabled. Future runs read the latest coordination file first, retrieve assignments, continue authorized non-conflicting work, and publish exact-SHA tests/CI and handoffs. No claim that a future run has already executed.
+
+**Remaining integration requests:** Director review and acknowledgement are still needed before changing reserved checker registration, hosted tenant/API/UI controls, original-logsource routing, or package-data configuration for JSON/YAML/license assets. These are Windows event detections, not AI prompt safety guarantees. Wildcard values/windash and other unsupported Sigma constructs remain explicit import errors; faithful support must precede importing rules that need them. No hosted Sigma feature or deployment is claimed or requested. No images, AWS resource changes or expenditure. The established 12-job/exact-SHA deployment request/workflow/15-production-check/cost-review gates remain in force.
+
+Greg reaffirmed blanket approval to complete assigned tasks without repeated approval questions. Continue within that authorization; preserve the explicit Director coordination and release gates.
+
+This follow-up changes only this log to record verified implementation evidence; its own commit SHA is available in Git history.
