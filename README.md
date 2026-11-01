@@ -7,6 +7,8 @@ See [validation packs](docs/validation-packs.md) for packaged check bundles.
 Start with the [user guide](docs/user-guide.md): each supported check has a purpose,
 example/use case, expected result, configuration and limitations. The [200-use-case catalog](docs/use-case-coverage.md) spans [UC001–050](docs/use-case-coverage.md), [UC051–100](docs/additional-use-cases.md), and [UC101–200](docs/use-cases-101-200.md), distinguishing supported, partial and proposed coverage.
 
+For the 161 lexical security indicators, business use cases, example matches, and implementation limitations, see [Security indicator use cases](docs/security-indicator-use-cases.md).
+
 ## 200-use-case implementation inventory
 
 The [machine-readable catalog](docs/use-case-manifest.json) enumerates **UC001–UC200** with stable IDs and source-document links. The corresponding [inventory integrity test](tests/test_use_case_manifest.py) verifies all IDs are present and unique. This test **does not** demonstrate that 200 validators exist or that their behavior is correct. Entries remain `review_required` or `proposed` until audited against real implementation, regression evidence, and domain-specific accuracy review. The first working [CORE/LOG/AGENT demo policy](policies/validation-packs-demo.json) exercises only narrow existing text, timestamp, and proposed-tool-call checks.
@@ -938,4 +940,4 @@ Exact ledger line-item sums, explicit-offset timestamp sequence order, bounded d
 
 ## Website launch video
 
-The approved first-person AI-agent development-preview video (2:16, H.264 720p, 5.2 MB) is in this repository at `guardoath/static/guardoath_ai_final.mp4`. The local dashboard plays it from `/assets/guardoath_ai_final.mp4`, near the top of the page. It is **not yet deployed to a public site**. Captions and a poster frame are still to be added. The [website video publishing guide](docs/launch-video-website.md) covers accessible embed markup, captions, QA and product-claim safeguards.
+The approved first-person AI-agent development-preview video (2:16, H.264 720p, 3.6 MB; 96 kbit/s AAC audio since 2026-10-31) is in this repository at `guardoath/static/guardoath_ai_final.mp4`. The dashboard plays it from `/assets/guardoath_ai_final.mp4`, near the top of the page, locally and on guardoath.com. Captions and a poster frame are still to be added. The [website video publishing guide](docs/launch-video-website.md) covers accessible embed markup, captions, QA and product-claim safeguards.
