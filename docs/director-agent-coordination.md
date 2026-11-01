@@ -819,3 +819,67 @@ Rule #1 checked. Added `tests/test_lexical_cross_module_contracts.py` (commit `0
 - **Batch 6 and the consolidation helper:** next in my queue. Registration stays on hold until I've reviewed `lexical_finding_consolidation.py` and `tests/test_lexical_cross_module_contracts.py`.
 - **Merged:** PR #17 → main **089e7d9** (all 28 PR checks green, no conflicts).
 - **Deploy:** now that it's merged, `update-site.cmd` needs Greg's AWS sign-in. That deploy also makes batch 5 (121 rules) live.
+
+## 2026-10-31 21:15 Director: Greg's decisions: profiles removed, 1,000+ rules from open rule sets, human-safety scenarios
+
+**Rule #1 check (21:00 EDT):** main = 2f72e19a. Tests #387 success. Coordination file unchanged since my 20:50 entry.
+
+### 1. Profiles are removed for tenants (Greg, 20:55 EDT: "Delete them entirely")
+- **Goes away:** the 23 example profiles offered to hosted tenants, the profile picker, `default_profile` on the tenant record, and naming a profile in a tenant request.
+  - Files: `guardoath/hosted.py` (load_example_profiles, profiles_for, profile_versions), `guardoath/app.py`, `guardoath/tenant_record.py`, `guardoath/static/dashboard.*`, `guide.html`, `docs/tenant-records.md`, `guardoath/demo_tenant_defaults.json`.
+- **Stays:** every check is a field on the record (Off / Block / Flag / Allow, plus Redact for pii).
+  - **New: per-rule actions** on the same record (`rule_actions: {rule_id: action}`; unset = the rule follows its check), so each of the 1,000+ rules can be set separately.
+  - A check that doesn't apply to the message format (for example a JSON schema on plain text) will report "not applicable" instead of making the result incomplete.
+- **Not removed:** the engine's policy files (`policies/*-batch.json`, `evals/*`, `policy_version` in the engine). They are the self-hosted configuration format and the input of about 1,400 eval expectations. Deleting them would delete tests, which Greg doesn't allow. `policies/playground.json` stays too: `guardoath.evaluate`, `tests/test_evaluate.py`, `tests/test_compare.py` and `tests/test_launcher.py` use it as an engine policy file. It just stops being offered to hosted tenants.
+- **Reserved for the Director until this lands:** `guardoath/hosted.py`, `app.py`, `tenant_record.py`, `models.py`, `dynamodb_store.py`, `tenant_store.py`, `static/*`, `demo_tenant_defaults.json`, `start_dashboard.py`, `playwright.config.js`, `tests/test_hosted_api.py`, `test_tenant_record.py`, `test_dashboard.py`, `test_dynamodb_store.py`, `tests/browser/*`.
+
+### 2. Rule count and the 1,000+ goal (Greg: "Yes: gitleaks, OWASP CRS and Sigma")
+**Today on main:** 270 rules.
+- 161 lexical; 121 of them are registered.
+- 93 privacy types: 90 pattern types, plus email, card and U.S. SSN.
+- 16 secret providers.
+
+**Measured from the upstream archives (downloaded 2026-10-31):**
+
+| Source | License (read from the repo) | Usable rules | Upstream test examples |
+|---|---|---|---|
+| gitleaks `config/gitleaks.toml` | MIT (keep the copyright and permission notice) | 222 rules; 221 with a regex, all 221 compile with Python `regex`; 130 also use an entropy threshold | rule generators declare 307 `tps` and 83 `fps` |
+| OWASP CRS, attack and leakage families (930–934, 941–944, 950–956) | Apache 2.0 (keep LICENSE and NOTICE, mark changes) | 268 detection rules; 227 `@rx` compile as-is, 8 don't (933180, 934120, 941310, 942420, 942421, 942430, 942431, 942432) | 237 of the 268 have regression test files |
+| SigmaHQ `rules/` | DRL 1.1: keep each rule's author, a link to the rule and the license; **findings must name the rule's author** | 3,607 rules; text-only: 207 CommandLine-only process_creation rules + 163 ScriptBlockText-only PowerShell rules = 370 | none in the rule files; examples have to be written |
+
+- **Total:** 270 + 221 + 268 + 370 = **1,129 before removing duplicates.** I don't know the duplicate count yet. gitleaks overlaps our 16 secret providers; CRS SQL rules may overlap lexical `data.*`.
+- **Faithfulness:** CRS rules depend on ModSecurity transformations (t:urlDecodeUni, t:lowercase, t:cmdLine…) and Sigma on its modifiers (contains, all, startswith, endswith, re, windash…). Both must be reproduced exactly, or the rules don't mean what upstream means. Each imported rule keeps its upstream id, source URL and license.
+- **Work split:**
+  - **Atlas:** the Sigma import. New files only: `guardoath/sigma_rules/` (converter, Sigma modifier matcher, generated rule data with author/id/link) and `tests/test_sigma_rules.py`. Each rule needs one example it matches and one look-alike it doesn't. Every finding carries the rule author (DRL 1.1). Don't register it; I'll do that.
+  - **Director:** gitleaks (inside the secrets check, with upstream tps/fps as tests) and CRS (a new check, with the upstream regression tests).
+
+### 3. Human safety, not only security (Greg, 20:5x EDT)
+Greg's examples: a person given bad medical advice by an AI who died, and a teenager who asked an AI how to kill himself and was told. GuardOath must catch and flag these. Greg also asked us to **be creative about scenarios to watch and flag or stop.**
+- **New check family, `human_safety`** (separate from security). Each scenario has rules for the user's message and for the AI's answer:
+  - **Self-harm and suicide:** the message expresses intent or asks for a method; the answer gives a method, a dose or a means. Default action **Block on the answer, Flag on the message**, and the result carries a crisis-resource referral (U.S. 988 Suicide & Crisis Lifeline).
+  - **Emergency care missed (cross-stage):** the message describes emergency symptoms (chest pain, stroke signs, overdose, a suicidal statement, severe bleeding, an allergic reaction with throat swelling), and the answer does not tell the person to call emergency services. Flag.
+  - **Dangerous medical advice in the answer:** stopping a prescribed drug, doses above a stated maximum, mixing known dangerous combinations, "you don't need a doctor", or advice that replaces emergency care.
+  - **Atlas, please draft more scenarios** (each with message examples, answer examples, look-alikes and a proposed action). For example:
+    - eating disorders (extreme fasting or purging tips);
+    - child safety (grooming patterns, an adult arranging to meet a minor);
+    - poisoning and unsafe household mixtures (bleach + ammonia);
+    - dangerous online challenges;
+    - domestic abuse (tracking a partner's phone, stalking);
+    - elder and romance scams;
+    - financial harm (moving all savings, "guaranteed returns");
+    - an AI claiming to be human or a licensed professional;
+    - emotional dependency ("you only need me");
+    - doxxing a private person;
+    - radicalization or recruitment language;
+    - gambling-loss chasing;
+    - weapons or explosives instructions;
+    - medication doses for children or pets.
+  - Put them in a new `docs/human-safety-scenarios.md` first. I'll review them before any code.
+- **Limits, stated now:** wording rules can't judge whether medical advice is correct, and they miss reworded requests. The existing optional `content_safety` check (Amazon Bedrock Guardrails) is a paid outside provider and doesn't run for demo users. A model-based safety check is a separate decision with a cost table first (Greg's cost rule). So human_safety rules report "concern" findings with the matched scenario. They never claim the advice is safe.
+
+### Next (Director)
+1. Profile removal + per-rule actions, on branch `director/no-profiles`, then CI, PR and merge.
+2. gitleaks import.
+3. CRS import.
+4. Batch 6 review, using Atlas's consolidation helper.
+5. human_safety check from the reviewed scenarios.
