@@ -82,6 +82,26 @@ def validate_sector_action(sector: str, action: Mapping[str, Any],
     if any(field in trusted and type(trusted[field]) is not bool
            for field in attestation_fields.get(sector, ())):
         return (SectorFinding("sector.invalid_attestation", "trusted attestation must be boolean"),)
+    # A missing proposed identifier and missing trusted identifier must never
+    # compare equal (None == None) and silently authorize an action.
+    identity_fields = {
+        "information": ("document_id", "approved_document_id"),
+        "professional": ("citation_id", "approved_citation_id"),
+        "administrative": ("template_id", "approved_template_id"),
+        "utilities": ("breaker_id", "approved_breaker_id"),
+        "management": ("beneficiary_id", "approved_beneficiary_id"),
+        "real_estate": ("escalation_clause_id", "approved_escalation_clause_id"),
+        "transportation": ("destination_id", "approved_destination_id"),
+        "public_administration": ("classification", "approved_release_classification"),
+        "education": ("grade", "rubric_grade"),
+        "automotive": ("brake_status", "measured_brake_status"),
+    }
+    if sector in identity_fields:
+        action_field, trusted_field = identity_fields[sector]
+        proposed, approved = action.get(action_field), trusted.get(trusted_field)
+        if not all(isinstance(value, str) and 0 < len(value) <= 256
+                   for value in (proposed, approved)):
+            return (SectorFinding("sector.invalid_reference", "required trusted reference missing or invalid"),)
     if sector == "information":
         if not trusted.get("source_access_authorized") or not trusted.get("document_provenance_verified"):
             return (SectorFinding("information.untrusted_document", "retrieval source not authorized or verified"),)
