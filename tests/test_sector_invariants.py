@@ -58,3 +58,26 @@ def test_hospitality_invalid_amount(value):
     findings = check("hospitality", {"operation":"confirm_booking","charged_total":value},
                      {"promo_validated":True,"payment_authorized":True,"server_total":"100"})
     assert findings[0].rule_id == "sector.invalid_numeric_value"
+
+@pytest.mark.parametrize("sector,action,trusted,expected", [
+    ("construction", {"operation":"approve_curing","curing_days":"14"}, {"engineer_min_curing_days":"10","engineer_approved":True}, None),
+    ("construction", {"operation":"approve_curing","curing_days":"0"}, {"engineer_min_curing_days":"10","engineer_approved":True}, "construction.curing_invariant"),
+    ("construction", {"operation":"approve_curing","curing_days":"14"}, {"engineer_min_curing_days":"10","engineer_approved":False}, "construction.curing_invariant"),
+    ("real_estate", {"operation":"issue_lease","escalation_clause_id":"approved-v1"}, {"contract_approved":True,"signatory_authorized":True,"approved_escalation_clause_id":"approved-v1"}, None),
+    ("real_estate", {"operation":"issue_lease","escalation_clause_id":"zero-99-years"}, {"contract_approved":True,"signatory_authorized":True,"approved_escalation_clause_id":"approved-v1"}, "real_estate.clause_mismatch"),
+    ("real_estate", {"operation":"issue_lease","escalation_clause_id":"approved-v1"}, {"contract_approved":False,"signatory_authorized":True,"approved_escalation_clause_id":"approved-v1"}, "real_estate.contract_authorization"),
+    ("transportation", {"operation":"approve_route","destination_id":"safe-airport"}, {"route_authorized":True,"geofence_verified":True,"approved_destination_id":"safe-airport"}, None),
+    ("transportation", {"operation":"approve_route","destination_id":"0,0"}, {"route_authorized":True,"geofence_verified":True,"approved_destination_id":"safe-airport"}, "transportation.destination_mismatch"),
+    ("transportation", {"operation":"approve_route","destination_id":"safe-airport"}, {"route_authorized":True,"geofence_verified":False,"approved_destination_id":"safe-airport"}, "transportation.route_authorization"),
+    ("public_administration", {"operation":"release_record","classification":"public"}, {"identity_verified":True,"record_access_authorized":True,"approved_release_classification":"public"}, None),
+    ("public_administration", {"operation":"release_record","classification":"restricted"}, {"identity_verified":True,"record_access_authorized":True,"approved_release_classification":"public"}, "public_administration.classification_mismatch"),
+    ("public_administration", {"operation":"release_record","classification":"public"}, {"identity_verified":True,"record_access_authorized":False,"approved_release_classification":"public"}, "public_administration.access_denied"),
+])
+def test_more_sector_actions(sector, action, trusted, expected):
+    findings = check(sector, action, trusted)
+    assert tuple(x.rule_id for x in findings) == ((expected,) if expected else ())
+
+def test_construction_rejects_invalid_curing():
+    result = check("construction", {"operation":"approve_curing","curing_days":"NaN"},
+                   {"engineer_min_curing_days":"10","engineer_approved":True})
+    assert result[0].rule_id == "sector.invalid_numeric_value"
