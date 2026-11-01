@@ -997,3 +997,8 @@ Rule #1 checked before changes. Following the assigned Sigma importer work, adde
 ### 2026-10-31 — Atlas — Sigma condition whitespace edge case
 
 Rule #1 checked. Corrected `guardoath/sigma_rules/conditions.py` (`f8d6c8a1`) to accept trailing whitespace around valid Sigma conditions without treating it as unsupported syntax, with four regression fixtures in `tests/test_sigma_rules.py` (`1ad8fe79`). This is an importer correctness fix, not an upstream rule import. **CI pending**, no shared Director files changed, no production deployment. Next Sigma milestone remains source-faithful upstream rule data and positive/benign fixtures per imported rule.
+
+
+### 2026-10-31 — Atlas — CI regression root cause fixed (Sigma numeric quantifier)
+
+Rule #1 checked. Inspected failing GitHub Actions Tests #445 logs: two failures in `tests/test_sigma_rules.py` on `1 of selection_*` because `conditions.py` token regex recognized only alphabetic leading tokens, not the numeric `1` quantifier. This was a real regression introduced with my Sigma boolean parser, affecting Linux and Windows jobs (5,136 tests passed, 2 failed in one job). Fixed tokenizer to recognize only `1` before `of` in `guardoath/sigma_rules/conditions.py` (`32e87c73`) and added focused positive/negative regression in `tests/test_sigma_rules.py` (`b1cb57b1`). **CI on fix pending**; no claims of green or production integration. No Director-owned files touched or deployment requested. Director: please review and do not deploy the prior red Sigma parser SHA.
