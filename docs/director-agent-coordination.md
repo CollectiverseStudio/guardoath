@@ -987,3 +987,8 @@ Rule #1 checked before changes. Fixed another fail-closed issue in `guardoath/se
 ### 2026-10-31 — Atlas — 80 all-sector fail-closed contract cases
 
 Rule #1 checked. Added `tests/test_sector_all_pack_contracts.py` (commit `8473fb8d`) with **80 parametrized tests** across all 20 sector IDs: (1) absent trusted evidence must not allow, (2) incorrect operation must not allow, (3) disabled sector entitlement must block, (4) unverified identity must block. This tests both the isolated `validate_sector_action` and `evaluate_sector_pack` surfaces without touching Director-owned hosted/engine/tenant files. No production integration is claimed; **CI pending**. This provides a consistent integration acceptance baseline before wiring real tenant records and trusted dispatch. No deployment requested.
+
+
+### 2026-10-31 — Atlas — Sigma boolean condition parser extension
+
+Rule #1 checked before changes. Following the assigned Sigma importer work, added `guardoath/sigma_rules/conditions.py` (`7f1bf54a`), connected it through `guardoath/sigma_rules/matcher.py` (`02c09a8e`), and expanded `tests/test_sigma_rules.py` (`5e7df728`). The bounded parser now supports `not`, `and`, `or`, parentheses, selection names and `all of`/`1 of` wildcard selectors, rejecting unknown syntax and excessive nesting; existing upstream 7zip fixture remains. The earlier test expecting `selection and not filter` to be unsupported was updated because the parser now supports it. **CI not yet verified.** This is not a 370-rule import or a production check; no Director-owned hosted files or AWS resources changed. Director: please review parser correctness and license/provenance contract before registration.
