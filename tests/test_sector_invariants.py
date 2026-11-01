@@ -106,3 +106,27 @@ def test_mining_invalid_pressure(value):
     findings = check("mining", {"operation":"set_pressure","pressure_psi":value},
                      {"certified_max_pressure_psi":"1000","safety_interlock_verified":True,"operator_authorized":True})
     assert findings[0].rule_id == "sector.invalid_numeric_value"
+
+@pytest.mark.parametrize("sector,action,trusted,expected", [
+    ("information", {"operation":"publish_rag_document","document_id":"doc-1"}, {"source_access_authorized":True,"document_provenance_verified":True,"approved_document_id":"doc-1"}, None),
+    ("information", {"operation":"publish_rag_document","document_id":"doc-2"}, {"source_access_authorized":True,"document_provenance_verified":True,"approved_document_id":"doc-1"}, "information.document_mismatch"),
+    ("information", {"operation":"publish_rag_document","document_id":"doc-1"}, {"source_access_authorized":False,"document_provenance_verified":True,"approved_document_id":"doc-1"}, "information.untrusted_document"),
+    ("professional", {"operation":"cite_legal_precedent","citation_id":"case-1"}, {"citation_verified":True,"jurisdiction_current":True,"approved_citation_id":"case-1"}, None),
+    ("professional", {"operation":"cite_legal_precedent","citation_id":"fake-case"}, {"citation_verified":True,"jurisdiction_current":True,"approved_citation_id":"case-1"}, "professional.citation_mismatch"),
+    ("professional", {"operation":"cite_legal_precedent","citation_id":"case-1"}, {"citation_verified":False,"jurisdiction_current":True,"approved_citation_id":"case-1"}, "professional.unverified_precedent"),
+    ("administrative", {"operation":"send_it_notice","template_id":"training"}, {"sender_authenticated":True,"campaign_authorized":True,"approved_template_id":"training"}, None),
+    ("administrative", {"operation":"send_it_notice","template_id":"fake-reset"}, {"sender_authenticated":True,"campaign_authorized":True,"approved_template_id":"training"}, "administrative.template_mismatch"),
+    ("administrative", {"operation":"send_it_notice","template_id":"training"}, {"sender_authenticated":False,"campaign_authorized":True,"approved_template_id":"training"}, "administrative.notice_authorization"),
+    ("arts", {"operation":"reserve_tickets","ticket_quantity":2}, {"account_authenticated":True,"reservation_token_verified":True,"account_ticket_limit":4}, None),
+    ("arts", {"operation":"reserve_tickets","ticket_quantity":100}, {"account_authenticated":True,"reservation_token_verified":True,"account_ticket_limit":4}, "arts.ticket_limit"),
+    ("arts", {"operation":"reserve_tickets","ticket_quantity":2}, {"account_authenticated":True,"reservation_token_verified":False,"account_ticket_limit":4}, "arts.reservation_authorization"),
+])
+def test_final_four_sector_actions(sector, action, trusted, expected):
+    findings = check(sector, action, trusted)
+    assert tuple(x.rule_id for x in findings) == ((expected,) if expected else ())
+
+@pytest.mark.parametrize("value", [None, "NaN", "-1", "1.5", 0])
+def test_ticket_quantity_must_be_positive_integer(value):
+    findings = check("arts", {"operation":"reserve_tickets","ticket_quantity":value},
+                     {"account_authenticated":True,"reservation_token_verified":True,"account_ticket_limit":4})
+    assert findings[0].rule_id == "sector.invalid_numeric_value"
