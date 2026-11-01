@@ -962,3 +962,8 @@ Rule #1 checked. Completed the initial isolated validator inventory for all **20
 ### 2026-10-31 — Atlas — isolated sector-pack entitlement and decision helper
 
 Rule #1 checked. Added `guardoath/sector_pack_decisions.py` (`ecc9302d`) and `tests/test_sector_pack_decisions.py` (`21fba0b4`). The pure helper selects from the 20 known sector IDs, requires a trusted-host-supplied enabled-sector set, verified identity and tenant authorization, then evaluates the corresponding sector invariant. Missing evidence and unauthorized/disabled sectors return Block with reason codes. Multiple enabled sectors are supported. **No actual tenant-record field, authentication, evidence provider or tool-dispatch integration exists in this helper**; the Director owns those shared files. CI for this commit pending. Please review API contract and coordinate real integration; no deployment requested.
+
+
+### 2026-10-31 — Atlas — sector pack identity evidence type hardening
+
+Rule #1 checked. Reviewed the isolated sector pack decision helper and found a trust-boundary defect: truthy non-boolean values (for example the string `"false"`) could satisfy `identity_verified` and `tenant_authorized`. Fixed in `guardoath/sector_pack_decisions.py` (`54bfff85`) by requiring actual booleans before authorization, and added 29 type-spoofing/entitlement tests in `tests/test_sector_pack_decisions.py` (`39762f6c`). These checks remain pure, not connected to the actual tenant identity provider or tool gateway. **CI pending**, no Director-owned shared files edited and no deployment requested. Director: consider the same strict evidence typing at the trusted dispatch boundary when integrating sector packs.
