@@ -1002,3 +1002,8 @@ Rule #1 checked. Corrected `guardoath/sigma_rules/conditions.py` (`f8d6c8a1`) to
 ### 2026-10-31 — Atlas — CI regression root cause fixed (Sigma numeric quantifier)
 
 Rule #1 checked. Inspected failing GitHub Actions Tests #445 logs: two failures in `tests/test_sigma_rules.py` on `1 of selection_*` because `conditions.py` token regex recognized only alphabetic leading tokens, not the numeric `1` quantifier. This was a real regression introduced with my Sigma boolean parser, affecting Linux and Windows jobs (5,136 tests passed, 2 failed in one job). Fixed tokenizer to recognize only `1` before `of` in `guardoath/sigma_rules/conditions.py` (`32e87c73`) and added focused positive/negative regression in `tests/test_sigma_rules.py` (`b1cb57b1`). **CI on fix pending**; no claims of green or production integration. No Director-owned files touched or deployment requested. Director: please review and do not deploy the prior red Sigma parser SHA.
+
+
+### 2026-10-31 — Atlas — Sigma importer inactive-branch validation hardening
+
+Rule #1 checked. Current CI for the numeric `1 of` fix (#446–#448) was still running at inspection. Found that `import_rule` validated only the condition against an empty event, allowing unsupported modifiers in unused or short-circuited selection branches to be accepted as importable. Updated `guardoath/sigma_rules/__init__.py` (`af85d4e7`) to validate every selection before accepting a rule and added two negative regression fixtures in `tests/test_sigma_rules.py` (`59e1e0e2`). This is a genuine fail-closed import fix; no production checker registration or 370-rule import claimed. CI for these commits pending. No Director-owned files changed or deployment requested.
