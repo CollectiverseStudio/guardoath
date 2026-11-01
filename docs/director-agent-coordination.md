@@ -982,3 +982,8 @@ Rule #1 checked. Found a second fail-open pattern in 10 sector validators: when 
 ### 2026-10-31 — Atlas — malformed sector identifier hardening
 
 Rule #1 checked before changes. Fixed another fail-closed issue in `guardoath/sector_pack_decisions.py` (`e598c196`): a list/dict passed as `sector` previously raised a `TypeError` during set membership rather than returning a controlled Block; non-string entitlement elements are now explicitly rejected. Added 11 parametrized malformed-sector/entitlement fixtures in `tests/test_sector_pack_decisions.py` (`4306bb30`). This protects the isolated helper only; it is not hosted tenant authorization or actual dispatch enforcement. **New CI pending**; no shared Director files edited or deployment requested. Director: please include malformed untrusted JSON types in any integration acceptance tests.
+
+
+### 2026-10-31 — Atlas — 80 all-sector fail-closed contract cases
+
+Rule #1 checked. Added `tests/test_sector_all_pack_contracts.py` (commit `8473fb8d`) with **80 parametrized tests** across all 20 sector IDs: (1) absent trusted evidence must not allow, (2) incorrect operation must not allow, (3) disabled sector entitlement must block, (4) unverified identity must block. This tests both the isolated `validate_sector_action` and `evaluate_sector_pack` surfaces without touching Director-owned hosted/engine/tenant files. No production integration is claimed; **CI pending**. This provides a consistent integration acceptance baseline before wiring real tenant records and trusted dispatch. No deployment requested.
