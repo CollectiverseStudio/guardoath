@@ -5,8 +5,8 @@ never silently pass or silently reinterpret a Sigma rule.
 """
 from __future__ import annotations
 import fnmatch
-import re
 from collections.abc import Mapping
+from .bounded_regex import bounded_search, validate_pattern
 
 class UnsupportedSigmaRule(ValueError):
     pass
@@ -48,9 +48,9 @@ def validate_selection(selection: object, depth: int = 0) -> None:
         if "re" in modifiers:
             for item in values:
                 try:
-                    re.compile(item)
-                except re.error as exc:
-                    raise UnsupportedSigmaRule("invalid regular expression") from exc
+                    validate_pattern(item)
+                except ValueError:
+                    raise UnsupportedSigmaRule("invalid or oversized regular expression") from None
 
 def match_value(actual: object, expected: object, modifiers: tuple[str, ...] = ()) -> bool:
     if isinstance(expected, list):
@@ -67,9 +67,9 @@ def match_value(actual: object, expected: object, modifiers: tuple[str, ...] = (
     if "re" in modifiers:
         try:
             # Sigma regex values are case sensitive unless they specify flags.
-            return re.search(expected, actual) is not None
-        except re.error as exc:
-            raise UnsupportedSigmaRule("invalid regular expression") from exc
+            return bounded_search(expected, actual)
+        except ValueError:
+            raise UnsupportedSigmaRule("invalid or oversized regular expression") from None
     if "contains" in modifiers:
         return right in left
     if "startswith" in modifiers:

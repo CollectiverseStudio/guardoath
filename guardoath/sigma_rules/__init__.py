@@ -9,6 +9,7 @@ from collections.abc import Mapping
 from copy import deepcopy
 import re
 from .matcher import match_detection, UnsupportedSigmaRule
+from .bounded_regex import SigmaEvaluationError, SigmaRegexTimeout
 
 LICENSE = "Detection Rule License 1.1 (DRL 1.1)"
 SOURCE_PREFIX = "https://github.com/SigmaHQ/sigma/blob/master/"

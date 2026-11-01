@@ -1621,3 +1621,11 @@ tenant control or deployed checker is introduced by these data batches.
 
 The Director must review registration, event routing, package assets and hosted
 controls before this importer becomes a user-facing check. It is not deployed.
+
+For source-only regex evaluation, supported patterns are limited to 512 characters
+and event text to 32,000 characters. A disposable Python worker enforces a
+one-second execution deadline while keeping the existing regex semantics. A
+`SigmaEvaluationError` (including `SigmaRegexTimeout`) means evaluation did not
+complete; handle it as an error, never as evidence that an event is clean. The
+current 53 imported rules do not use regex. Worker overhead and aggregate request
+budgets still require integration review before enabling this path in a service.

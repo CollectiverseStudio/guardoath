@@ -45,8 +45,23 @@ Wildcard **values** and `windash` imports are now rejected explicitly: the older
 helper's fnmatch/slash substitution did not reproduce Sigma semantics. Null/numeric
 values, empty selections/lists, timeframe/correlation, unsupported modifiers and
 modifier combinations are also rejected. This is conservative compatibility, not
-full Sigma support. A regex must compile with Python `re`; cross-engine regex
-portability and runtime budgets require review before broader regex imports.
+full Sigma support. A regex must compile with Python `re` and be no longer than
+512 characters. Regex event strings are limited to 32,000 characters. Search runs
+in a disposable isolated Python interpreter with a one-second worker deadline;
+the worker is killed and reaped on timeout. This preserves the exact stdlib `re`
+semantics, including inline flags, Unicode classes and literal syntax that can
+mean something different in another regex engine. Patterns/events travel over
+stdin, not process arguments, and worker stderr is suppressed.
+
+Timeout raises `SigmaRegexTimeout`, a subclass of `SigmaEvaluationError`; size
+violations or unavailable/failed workers also raise `SigmaEvaluationError`.
+These errors mean **incomplete evaluation**, never a clean event or a negative
+detection. Callers must surface that distinction before hosted integration.
+Invalid/oversized rule patterns remain import-time `UnsupportedSigmaRule` errors.
+The deadline includes worker communication/execution after process launch; OS
+process creation itself is subject to platform scheduling. Each regex search
+starts an interpreter, so process overhead and aggregate per-check budgets need
+Director review before deployment. The 53 imported rules do not require regex.
 
 Reproduce the source audit with a SigmaHQ checkout at the pinned revision and the
 optional development dependency PyYAML (not required by runtime or pytest):
