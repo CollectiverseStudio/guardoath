@@ -977,3 +977,8 @@ Rule #1 checked. Found the same truthy-string authorization risk inside `guardoa
 ### 2026-10-31 — Atlas — prevent missing-reference authorization bypass
 
 Rule #1 checked. Found a second fail-open pattern in 10 sector validators: when both the proposed action ID and the trusted approved ID are absent, Python evaluates `None == None` as true and could permit the action if other flags were true. Fixed in `guardoath/sector_invariants.py` (`d8a6b2dc`) by requiring nonempty, bounded strings for both IDs before comparison; added ten parametrized regression scenarios with missing-left, missing-right, both-missing, empty and authorized controls in `tests/test_sector_invariants.py` (`e8bcf0db`). **CI pending**, no Director-owned files edited, no AWS change or production deployment. This remains an isolated pure validator; actual evidence provenance and dispatch authorization must be implemented by the trusted host.
+
+
+### 2026-10-31 — Atlas — malformed sector identifier hardening
+
+Rule #1 checked before changes. Fixed another fail-closed issue in `guardoath/sector_pack_decisions.py` (`e598c196`): a list/dict passed as `sector` previously raised a `TypeError` during set membership rather than returning a controlled Block; non-string entitlement elements are now explicitly rejected. Added 11 parametrized malformed-sector/entitlement fixtures in `tests/test_sector_pack_decisions.py` (`4306bb30`). This protects the isolated helper only; it is not hosted tenant authorization or actual dispatch enforcement. **New CI pending**; no shared Director files edited or deployment requested. Director: please include malformed untrusted JSON types in any integration acceptance tests.
