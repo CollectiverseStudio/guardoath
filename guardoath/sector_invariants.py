@@ -45,11 +45,48 @@ def validate_sector_action(sector: str, action: Mapping[str, Any],
         "real_estate": "issue_lease",
         "transportation": "approve_route",
         "public_administration": "release_record",
+        "agriculture": "record_ndvi",
+        "utilities": "operate_breaker",
+        "mining": "set_pressure",
+        "management": "transfer_budget",
     }
     if sector not in supported:
         raise ValueError("unsupported sector")
     if action.get("operation") != supported[sector]:
         return (SectorFinding("sector.operation_mismatch", "unapproved operation"),)
+    if sector == "agriculture":
+        value = _decimal(action.get("ndvi"))
+        if value is None or value < -1 or value > 1:
+            return (SectorFinding("agriculture.invalid_ndvi", "NDVI must be within physical bounds"),)
+        if not trusted.get("sensor_provenance_verified"):
+            return (SectorFinding("agriculture.untrusted_telemetry", "sensor provenance not verified"),)
+        return ()
+    if sector == "utilities":
+        if not trusted.get("operator_authenticated") or not trusted.get("dispatch_approved"):
+            return (SectorFinding("utilities.dispatch_denied", "operator or dispatch approval missing"),)
+        if action.get("breaker_id") != trusted.get("approved_breaker_id"):
+            return (SectorFinding("utilities.target_mismatch", "breaker differs from approved target"),)
+        return ()
+    if sector == "mining":
+        actual, maximum = _decimal(action.get("pressure_psi")), _decimal(trusted.get("certified_max_pressure_psi"))
+        if actual is None or maximum is None or actual < 0 or maximum <= 0:
+            return (SectorFinding("sector.invalid_numeric_value", "missing or invalid numeric evidence"),)
+        if not trusted.get("safety_interlock_verified") or not trusted.get("operator_authorized"):
+            return (SectorFinding("mining.safety_authorization", "trusted safety authorization missing"),)
+        if actual > maximum:
+            return (SectorFinding("mining.pressure_limit", "pressure exceeds certified maximum"),)
+        return ()
+    if sector == "management":
+        if not trusted.get("initiator_authenticated") or not trusted.get("dual_approval_verified"):
+            return (SectorFinding("management.transfer_authorization", "trusted transfer approval missing"),)
+        if action.get("beneficiary_id") != trusted.get("approved_beneficiary_id"):
+            return (SectorFinding("management.beneficiary_mismatch", "beneficiary differs from approved recipient"),)
+        amount, maximum = _decimal(action.get("amount")), _decimal(trusted.get("approved_transfer_limit"))
+        if amount is None or maximum is None or amount < 0 or maximum < 0:
+            return (SectorFinding("sector.invalid_numeric_value", "missing or invalid numeric evidence"),)
+        if amount > maximum:
+            return (SectorFinding("management.transfer_limit", "amount exceeds approved limit"),)
+        return ()
     if sector == "construction":
         actual, minimum = _decimal(action.get("curing_days")), _decimal(trusted.get("engineer_min_curing_days"))
         if actual is None or minimum is None or actual < 0 or minimum < 0:
