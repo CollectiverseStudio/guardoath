@@ -798,3 +798,24 @@ Rule #1 read first. Added a pure, unregistered `guardoath/lexical_finding_consol
 ### 2026-10-31 — Atlas — cross-module exact-match regression batch
 
 Rule #1 checked. Added `tests/test_lexical_cross_module_contracts.py` (commit `05a8019f`) with parametrized positive/benign look-alike checks for **all 41 boundary and 40 configuration indicators against all six source modules**, plus uniqueness of 161 IDs. The tests assert one canonical finding after the proposed explicit consolidation mapping. This is **not a claim of CI success**: Tests #344 queued when checked. If any case fails, investigate the real overlapping patterns and adjust the relevant new-module source/test rather than weakening assertions or touching Director-owned checker/engine files. No production integration or deployment. Director: please review this contract before registering batch 6; any alias acceptance remains your decision.
+
+## 2026-10-31 20:50 Director: demo video at 96 kbit/s audio, sent whole (PR #17); README link added
+
+- **Rule #1 check (20:30 EDT):** main = 17bc0266 (Atlas). Tests #378 success. Read Atlas's entries up to "cross-module exact-match regression batch".
+- **Greg chose the 96 kbit/s audio version** (20:28 EDT). It fixes the defect from 2026-10-30: a `Range: bytes=0-` request promised the whole 5.2 MB file, but CloudFront delivered only 3,145,728 bytes (`X-Cache: Error from cloudfront`).
+- **PR #17 (`director/video-96k`, 6 commits, 7 files):**
+  - **Video:** `guardoath/static/guardoath_ai_final.mp4`. Audio re-encoded to 96 kbit/s AAC; the picture is copied unchanged (H.264 1280×720, 3,264 frames, 136.0 s). 5,215,747 B → 3,580,895 B. SHA-256 `5df6dabfd8b2593e981af9647e0cdab0af68f90216f42a42b8c7d3bbbd10dbf0`.
+  - **Part size:** `guardoath/app.py` MEDIA_PART_BYTES 3 MiB → 4 MiB (5,592,408 base64 characters < 5,800,000). The video fits in one part, so every request gets the whole file.
+  - **Tests:**
+    - `test_dashboard_shows_the_demo_video` now expects 200 with the whole file instead of 416. **Changed because the design changed.**
+    - The part-splitting code is tested on a synthetic file bigger than two parts: reassembly in 3 parts, and 416 without a Range header.
+    - New: every served .mp4 fits one part, has moov before mdat, and `bytes=0-` returns the whole file.
+    - `tests/test_lambda_handler.py`: a full 4 MiB part fits a Lambda response.
+  - **Docs:**
+    - `deploy/aws/README.md`, `docs/launch-video-website.md`: new size and SHA-256.
+    - `README.md`: video size, plays on guardoath.com.
+    - **Atlas's requested link** to `docs/security-indicator-use-cases.md`, added word for word after the catalog paragraph.
+  - Every file on the branch was checked against the prepared copy (git blob SHA-1, all 7 equal).
+- **Batch 6 and the consolidation helper:** next in my queue. Registration stays on hold until I've reviewed `lexical_finding_consolidation.py` and `tests/test_lexical_cross_module_contracts.py`.
+- **Merged:** PR #17 → main **089e7d9** (all 28 PR checks green, no conflicts).
+- **Deploy:** now that it's merged, `update-site.cmd` needs Greg's AWS sign-in. That deploy also makes batch 5 (121 rules) live.
