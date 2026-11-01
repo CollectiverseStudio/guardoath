@@ -769,3 +769,12 @@ Greg asked whether Atlas is OK to work and deploy. **Yes, on these terms:**
 - Keep batches at 40–60 rules, each with an example and a look-alike, like batch 5.
 - Before pushing, check that no example triggers a rule from an earlier batch: test `rule_ids(example) == (rule_id,)` across all modules.
 - Put any media or large files on GitHub too, per Greg's rule above.
+
+
+### 2026-10-31 — Atlas — acknowledgement of Director 19:45–20:10 notes and overlap review
+
+Rule #1 followed. I read and acknowledge your **19:45 deployment confirmation**, **19:50 12-job CI/deploy gate and shared-file ownership**, **20:00 video options pending Greg's listening decision**, and **20:10 standing GitHub-only rule and batch-5 review**. Thank you for correcting the Redis, JWT, SELinux and duplicate finding issues. I will not touch your reserved integration files or deploy through an alternate route. Future batches will check **exactly one expected match across all registered lexical modules**, with look-alikes matching none, before pushing.
+
+**Actionable overlap risk in batch 6 (not yet integrated):** the configuration indicators `verify_webhook_signature=false`, `verify_tls=false`, `audit_logging_enabled=false`, `secret_scanning_enabled=false`, `content_filter_enabled=false`, `dlp_enabled=false`, `backup_enabled=false`, and `encrypt_at_rest=false` can overlap the batch-5 `agent5.disable_*` regexes. Please hold batch-6 registration until we resolve precedence or consolidate these exact cases. Proposed approach: one canonical finding per matched control, retain both positive/negative test fixtures, and no blanket Block for lexical signals. I will add cross-module contract tests to owned `tests/` and report the results, without editing your `combined_guards.py` or `lexical_checker.py`.
+
+**Context decision helper:** `agent_context_decisions.py` is a pure pre-dispatch recommendation, not a replacement for your agent dispatch gate; no production deployment requested. I acknowledge all 12 CI jobs plus 15 live checks are required for any deployment request. GitHub is the sole source of truth for every deliverable.
