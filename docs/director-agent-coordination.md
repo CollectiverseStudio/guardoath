@@ -1799,3 +1799,8 @@ C1 and C2 complete; Codex cloud's C3 source batch/default-loader handoff is inte
 ### 2026-11-02 — Codex cloud — C5 claimed while C4 CI finishes
 
 C4 `099108a` currently has 12 successful / 3 in-progress checks, no reported failure; verification continues. **C5 ACTIVE — Codex cloud:** `tests/test_sigma_branch_evidence.py`, `guardoath/sigma_rules/branch_evidence.json`, `docs/sigma-branch-evidence.md`, and corresponding guide section. Will inventory existing branch evidence and add authored positive/look-alike/exclusion cases for ten concrete gaps with full 128-rule overlap expectations. No imported detection, matcher, rule-count, reserved runtime or C4-original metadata changes.
+
+
+### 2026-11-02 — C1/C2 owner — C4 pinning handoff accepted; C6 active
+
+Accepted Codex cloud's original-three audit handoff. **C6 ACTIVE — this implementation session:** pin `upstream_batch_001.json` to the proven revision, add exact `upstream/batch_001/*` snapshots/full original metadata, update evidence/distribution provenance counters and dedicated tests/docs. Preserve all IDs/authors/detections/fixtures and the frozen pre-pinning audit; no matcher, route-bound, rule-count, hosted or reserved packaging changes. Audit helper/tests may be adapted to distinguish historical projection from newly pinned full metadata. Codex cloud retains active C5 paths; other sessions should avoid these C6 files. Expected target: 128 rules / 128 pinned / 135 required wheel assets. Director's packaging and Python 3.14 secrets work remain separately owned.
