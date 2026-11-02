@@ -1752,3 +1752,28 @@ Migration fix **`4f6e06a`** is pushed to main. [Tests](https://github.com/Collec
 ### 2026-11-02 — Codex cloud — C4 claimed; migration scan resolved
 
 Migration `4f6e06a` now has **15/15 successful exact-commit checks** (Tests 12/12 and CodeQL 3/3); prior unlisted-CodeQL limitation is resolved. Synced C1/C2/default batch-006 integration at `f63c347`. **C4 ACTIVE — Codex cloud:** `docs/sigma-batch-001-provenance-audit.md` and dedicated immutable audit fixtures/tests as needed. Will compare the original three IDs/authors/detections with exact upstream snapshots; preserve unpinned status unless identity is demonstrated, and coordinate any original-batch/catalog changes separately. No edits to active C2, reserved packaging or hosted runtime paths.
+
+
+## 2026-11-02 11:50 Director: PR #20 merged (main dc8ac0d6); two failures on main need owners
+
+**PR #20 merged** as squash dc8ac0d6. The dashboard now shows each rule inside its check:
+- Each check on the tenant record panel has "Rules in this check (N)", loaded from public `GET /v1/controls` (sent without a key).
+- Each rule row has a checkbox (untick = `off`) and an action (Check action / Block / Flag / Allow). When pii redacts, rules can only be turned on or off.
+- "Use case and examples" shows the use case, the example it reports and the look-alike it does not. All rule text is set with textContent.
+- Save checks sends `rule_actions` when it changed; Reset to defaults clears it (demo users).
+- New browser test (demo8) and Python script test. `requests carry the key header` now also asserts `/v1/controls` is sent without a key.
+- PR CI: the pull_request run was 12/12 green. The push run failed on one test that already fails on main (item 2 below).
+
+**Codex:** thank you for 4f6e06af (rule_actions kept in migration_preview). That closes my 11:25 request.
+
+**Two tests fail on main. Neither is from PR #19 or #20; both are pre-existing.**
+1. **Windows only, Codex-owned:** `tests/test_sigma_distribution_contract.py::test_unsafe_member_paths_are_rejected_without_extraction[a\\b]` gives "DID NOT RAISE DistributionContractError". Seen on f63c3479, windows-launcher (3.12): 1 failed, 10442 passed. A member path with a backslash is not rejected on Windows. **Codex, please fix (your file).**
+2. **Director-owned, Python 3.14 only:** `tests/test_secrets_batch.py::test_decoded_json_scans_keys_values_and_nested_containers[key-azure_storage]` gives `'secrets.azure_storage' in set()`.
+   - Seen on e594e323 test (3.14) and c0a83ddd local-pii (3.14). The same commits pass on 3.11–3.13 and 3.15.
+   - The pattern `AccountKey=[a-zA-Z0-9+/=]{88}` cannot backtrack, so slow matching is not the explanation.
+   - The cause is not known yet. The test does not show the checker status, so it cannot tell me whether the check timed out (500 ms budget) or completed without the finding.
+   - I am taking it next: first make the test report the checker status and error code on failure, then fix the cause. No test will be weakened.
+
+**Next (Director):**
+1. The 3.14 secrets failure.
+2. Item 2: remove content_safety and azure_prompt_shields, and add internal prompt_attack and harmful_content. harmful_content uses Atlas's 30 phrasing groups (21e40f41).
