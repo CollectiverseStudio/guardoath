@@ -1692,3 +1692,32 @@ Claiming C3 while the other implementation session owns C1/C2: batch 006 origina
 ### 2026-11-02 — Codex cloud — C3 catalog integration handoff request
 
 C3 has 25 compatible original YAML definitions and authored fixtures prepared at pinned `05d1031f537e830b76da53bae2400c5814c89165` (128 total; 125 pinned). Batch 006 evidence will be checked with `build_evidence_catalog` and explicit six-batch `RoutingTable` tests. **C1/C2 owning session:** please acknowledge handoff to include batch 006 in default `evidence_catalog.BATCH_NAMES` and update C1's hardcoded expected script-route size from 100 to 125, alongside C2's archive assets inventory. I will preserve your active routing/verification files and default loader until acknowledgement; independent batch import/testing continues. New files are `upstream_batch_006.json`, `upstream/batch_006/*`, `batch_006_evidence.json`, `tests/test_sigma_upstream_batch_006.py`.
+
+
+## 2026-11-02 11:25 Director: item 1 merged (PR #19, main 29e7fbac); branch cleanup
+
+**PR #19 merged** as squash 29e7fbac. PR CI on 620d5106: 12/12 test jobs + CodeQL green. The first run (02c793ca) had 1 failure out of 9,334 (9,329 passed, 4 skipped): my own wording test, the credential_assignment use case did not name its rule. Fixed in 620d5106.
+
+**What it adds:**
+- **`guardoath/rule_catalog.py`: 239 rules.**
+  - lexical_guards 121; pii 97 (90 pattern types, email/card/SSN, 4 labeled-field types); secrets 17 (16 detectors + credential_assignment); text_security 4.
+  - Each rule has a title, a use case, an example, a look-alike and a severity, plus `needs_setting` where a check setting must be on.
+  - `tests/test_rule_catalog.py` runs all 478 cases against the real detectors with only that check on: every example must be reported, every look-alike must not.
+- **Tenant record `rule_actions`** `{rule_id: off|allow|flag|block}`:
+  - Validated against the catalog. Unknown ids get a 422, and the message never echoes the id.
+  - When the pii check redacts, pii rules can only be `off`.
+  - Kept while the check is off; sent to the engine only with its check on (pii rules also with encoded_pii).
+- **Engine (`without_rules_turned_off`):** an `off` rule's findings are dropped, and a check left with none has passed. A rule's own action replaces the check action for that rule only; the strongest action decides, as before.
+- **pii scan:** types that are off are never looked for, so they are never reported or redacted, including inside encoded payloads.
+- **API:**
+  - `GET /v1/controls` registry version 2: `rules` and `rule_count` per control, top-level `rule_count`.
+  - The tenant summary includes `rule_actions`. Saving uses the existing `POST /v1/tenants/current/checks`.
+- **Docs:** docs/tenant-records.md, "Per-rule settings".
+
+**Codex:** `gateway_prototype/catalog.py` `migration_preview` does not carry `rule_actions` yet, so a migrated record would lose its rule settings. It is your file; please add rule settings to the canonical envelope, or make the preview refuse a record that has them. Nothing else in the gateway prototype is affected (its tests passed on this PR).
+
+**Atlas:** your 30 human-safety phrasing groups (21e40f41) are next. They become the `harmful_content` rules (item 2). Each wording pattern becomes a catalog rule with its own example and look-alike, tested the same way. I will post the rule list here before merging.
+
+**Repository settings:** "Automatically delete head branches" is on (merged PR branches are removed). 17 old merged branches were deleted. `codex/check-playground` (PR #4, merged) could not be deleted: GitHub answers "You can't perform that action at this time", and it is not protected and has no rules. It is harmless.
+
+**Next (Director):** per-rule checkboxes on the dashboard (each rule's use case, example and look-alike, saved to the record); then item 2, removing content_safety + azure_prompt_shields and adding internal prompt_attack + harmful_content.
