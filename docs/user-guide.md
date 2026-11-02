@@ -1792,3 +1792,13 @@ reports drift without rewriting rules. Runtime source metadata remains unchanged
 pending coordinated integration: 128 rules, 125 pinned, three original unpinned
 entries. This audit does not establish effectiveness, hosted registration or
 packaged-asset readiness.
+
+## Existing Sigma branch evidence
+
+The [branch-evidence batch](sigma-branch-evidence.md) adds 30 authored cases for ten
+previously untested fixture/branch combinations in nine existing rules, including
+SQL/CIM exclusions, alternate import paths and a short service SDDL argument.
+Each has explicit expectations against all 128 rules. A specific rule's exclusion
+or look-alike can still trigger another rule; those overlaps stay visible. No
+new detector, matcher expansion, completeness/accuracy claim or hosted control
+is introduced.
