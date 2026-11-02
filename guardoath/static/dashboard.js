@@ -67,8 +67,10 @@ async function send(url, options) {
     await new Promise(resolve => setTimeout(resolve, 300 * 2 ** attempt + Math.floor(Math.random() * 200)));
   }
 }
+// A signed-in tenant user sends the Cognito session instead of an API key.
+const SESSION = "session ";
 async function requestHeaders(token, text) {
-  return {...(token ? {"X-GuardOath-Key": token} : {}),
+  return {...(token ? (token.startsWith(SESSION) ? {"X-GuardOath-Session": token.slice(SESSION.length)} : {"X-GuardOath-Key": token}) : {}),
           ...(text === undefined ? {} : {"Content-Type": "application/json", "x-amz-content-sha256": await bodyHash(text)})};
 }
 async function api(path, body, token = key) {
@@ -276,6 +278,8 @@ $("tenant-save").addEventListener("click", () => {
 $("tenant-reset").addEventListener("click", () => saveTenant("/v1/tenants/current/reset", {}, "Reset to the demo defaults."));
 $("connect").addEventListener("click", async () => {
   const token = $("api-key").value.trim(); if (!token || busy) return;
+  // Connecting with an API key leaves any signed-in session.
+  sessionStorage.removeItem("guardoath-session"); if (signIn) signedIn(false);
   reset(); const attempt = revision; $("connect").disabled = true;
   key = ""; application = null; $("tenant-panel").hidden = true; buttons(); $("run").disabled = true; $("policy").disabled = true;
   $("coverage").replaceChildren(); $("execution-mode").textContent = "Local checks"; $("data-routing").textContent = ""; $("resource-limits").textContent = ""; $("disconnect").disabled = true;
@@ -284,6 +288,7 @@ $("connect").addEventListener("click", async () => {
   finally { $("connect").disabled = false; }
 });
 $("disconnect").addEventListener("click", () => {
+  sessionStorage.removeItem("guardoath-session"); if (signIn) signedIn(false);
   key = ""; application = null; $("api-key").value = ""; $("demo-key-value").value = ""; $("tenant-panel").hidden = true; $("resource-limits").textContent = ""; reset(); $("coverage").replaceChildren(); $("profile-status").textContent = "Connect to load the combined conversation profile.";
   $("execution-mode").textContent = "Local checks"; $("data-routing").textContent = "";
   $("policy").replaceChildren(); $("policy").disabled = true; $("run").disabled = true; $("disconnect").disabled = true;
@@ -313,6 +318,72 @@ $("demo-key").addEventListener("click", async () => {
   finally { $("demo-key").disabled = false; }
 });
 loadDemoUsers();
+// Tenant sign-in: the user pool's hosted sign-in page (authorization code with PKCE). The server trades the
+// code for a session; the session stays in this tab (sessionStorage) and is sent only to this server.
+let signIn = null;
+function b64url(buffer) { return btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+function signedIn(on) { $("sign-in").hidden = on; $("sign-out").hidden = !on; $("keys-panel").hidden = !on; if (on) loadKeys(); }
+async function loadSignIn() {
+  let response;
+  try { response = await send("/v1/sign-in", {cache: "no-store"}); } catch (error) { return; }
+  if (!response.ok) return;  // 404 = this server has no tenant sign-in
+  signIn = await response.json().catch(() => null); if (!signIn) return;
+  $("sign-in-box").hidden = false; signedIn(false);
+  const query = new URLSearchParams(location.search), code = query.get("code"), state = query.get("state");
+  if (code || query.get("error")) {
+    history.replaceState(null, "", location.pathname);
+    const expected = sessionStorage.getItem("guardoath-state"), verifier = sessionStorage.getItem("guardoath-verifier");
+    sessionStorage.removeItem("guardoath-state"); sessionStorage.removeItem("guardoath-verifier");
+    if (!code || !expected || state !== expected || !verifier) { $("connection-status").textContent = "Sign-in did not complete. Sign in again."; return; }
+    const text = JSON.stringify({code, code_verifier: verifier});
+    const reply = await send("/v1/sign-in/token", {method: "POST", cache: "no-store", headers: await requestHeaders("", text), body: text});
+    if (!reply.ok) { $("connection-status").textContent = "Sign-in failed. Sign in again."; return; }
+    sessionStorage.setItem("guardoath-session", (await reply.json()).access_token);
+  }
+  const stored = sessionStorage.getItem("guardoath-session");
+  if (!stored) return;
+  reset(); const attempt = revision;
+  try { await loadApplication(SESSION + stored, attempt); signedIn(true); }
+  catch (error) { sessionStorage.removeItem("guardoath-session"); signedIn(false); $("connection-status").textContent = "Your sign-in has ended. Sign in again."; }
+}
+$("sign-in").addEventListener("click", async () => {
+  if (!signIn) return;
+  const verifier = b64url(crypto.getRandomValues(new Uint8Array(32))), state = b64url(crypto.getRandomValues(new Uint8Array(16)));
+  const challenge = b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
+  sessionStorage.setItem("guardoath-verifier", verifier); sessionStorage.setItem("guardoath-state", state);
+  const url = new URL(signIn.authorize_url);
+  for (const [name, value] of Object.entries({response_type: "code", client_id: signIn.client_id, redirect_uri: signIn.redirect_uri,
+      scope: signIn.scope, state, code_challenge: challenge, code_challenge_method: "S256"})) url.searchParams.set(name, value);
+  location.assign(url.toString());
+});
+$("sign-out").addEventListener("click", () => {
+  sessionStorage.removeItem("guardoath-session"); $("disconnect").click();
+  const url = new URL(signIn.logout_url); url.searchParams.set("client_id", signIn.client_id); url.searchParams.set("logout_uri", signIn.redirect_uri);
+  location.assign(url.toString());
+});
+async function loadKeys() {
+  const response = await send("/v1/tenants/current/keys", {cache: "no-store", headers: await requestHeaders(key)});
+  const data = response.ok ? await response.json() : {keys: [], max_keys: 2};
+  const list = $("key-list"); list.replaceChildren();
+  for (const item of data.keys) {
+    const row = document.createElement("li"); row.textContent = "Key " + item.key_id + "\u2026 ";
+    const revoke = document.createElement("button"); revoke.className = "secondary"; revoke.textContent = "Revoke";
+    revoke.addEventListener("click", () => keyAction("/v1/tenants/current/keys/revoke", {key_id: item.key_id}, "Key revoked. Requests that use it are refused from now on."));
+    row.append(revoke); list.append(row);
+  }
+  if (!data.keys.length) { const row = document.createElement("li"); row.textContent = "No API keys yet."; list.append(row); }
+  $("key-create").disabled = data.keys.length >= data.max_keys;
+}
+async function keyAction(path, body, done) {
+  const text = JSON.stringify(body);
+  const response = await send(path, {method: "POST", cache: "no-store", headers: await requestHeaders(key, text), body: text});
+  const data = await response.json().catch(() => ({}));
+  $("key-new").value = response.ok && data.api_key ? data.api_key : "";
+  $("key-message").textContent = response.ok ? done : (typeof data.detail === "string" ? data.detail : "The change was not saved (HTTP " + response.status + ").");
+  await loadKeys();
+}
+$("key-create").addEventListener("click", () => keyAction("/v1/tenants/current/keys", {}, "New API key, shown once: copy it now and keep it on your server."));
+loadSignIn();
 $("policy").addEventListener("change", () => { reset(); coverage(); renderTenant(); });
 for (const id of ["input-content", "input-format", "api-key"]) $(id).addEventListener("input", () => reset());
 for (const id of ["output-content", "output-format"]) $(id).addEventListener("input", () => reset(true));
