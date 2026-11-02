@@ -110,11 +110,13 @@ function coverage() {
 async function loadApplication(token, attempt) {
   const data = await api("/v1/applications/current", null, token); if (attempt !== revision) return;
     key = token; application = data; $("api-key").value = ""; $("policy").replaceChildren();
-    for (const policy of data.policies) { const option = document.createElement("option"); option.value = policy.version; option.textContent = (profileHelp[policy.version] ? profileHelp[policy.version].name + " (" + policy.version + ")" : policy.version) + " · " + policy.mode + " mode" + (data.tenant && policy.version === data.tenant.default_profile ? " · default" : ""); $("policy").append(option); }
-    // A tenant starts on its record's default profile; a local key on the combined conversation profile.
-    const preferred = data.tenant ? data.tenant.default_profile : "conversation-v1";
+    for (const policy of data.policies) { const option = document.createElement("option"); option.value = policy.version; option.textContent = (profileHelp[policy.version] ? profileHelp[policy.version].name + " (" + policy.version + ")" : policy.version) + " · " + policy.mode + " mode"; $("policy").append(option); }
+    // A tenant runs only its record's checks, so it has no profile to choose: the profile choice is for the local
+    // developer key only, which starts on the combined conversation profile.
+    const preferred = data.tenant ? "tenant" : "conversation-v1";
     if (data.policies.some(p => p.version === preferred)) $("policy").value = preferred;
-    $("connection-status").textContent = "Connected to " + data.application_id + ". " + data.policies.length + (data.policies.length === 1 ? " profile" : " profiles") + " available." + (data.tenant ? " " + data.tenant.used + " of " + data.tenant.monthly_allowance + " checks used in " + data.tenant.month + "." : "");
+    $("advanced").hidden = !!data.tenant;
+    $("connection-status").textContent = "Connected to " + data.application_id + ". " + (data.tenant ? "Checks come from " + data.tenant.display_name + "\u2019s record. " + data.tenant.used + " of " + data.tenant.monthly_allowance + " checks used in " + data.tenant.month + "." : data.policies.length + (data.policies.length === 1 ? " profile" : " profiles") + " available.");
     const limits = data.resource_limits;
     $("resource-limits").textContent = limits ? "Per server process: " + limits.checks_per_minute + " checks/minute per application · burst " + limits.burst + " · " + limits.application_concurrency + " concurrent checks per application. Each stage uses one API check; a full sequence uses two checks." : "";
     $("policy").disabled = false; $("disconnect").disabled = false; buttons(); coverage(); renderTenant();
@@ -205,13 +207,8 @@ function renderTenant() {
   const tenant = application?.tenant; $("tenant-panel").hidden = !tenant; $("tenant-message").textContent = "";
   if (!tenant) return;
   const policy = currentPolicy(), own = ownChecksSelected();
-  const choice = $("tenant-default-profile"); choice.replaceChildren();
-  for (const item of application.policies) { const option = document.createElement("option"); option.value = item.version; option.textContent = profileName(item.version) + " (" + item.version + ")"; choice.append(option); }
-  choice.value = tenant.default_profile;
-  $("tenant-default-note").textContent = "Default profile: " + profileName(tenant.default_profile) + ". A check request that does not name a profile (policy_version) uses it, and this page starts with it selected.";
   $("tenant-title").textContent = own ? "Checks on " + tenant.display_name + "\u2019s record" : "Checks in the profile " + profileName(policy.version);
   $("tenant-usage").textContent = tenant.used + " of " + tenant.monthly_allowance + " checks used in " + tenant.month + (tenant.overage === "block" ? " (hard limit)" : "") + " \u00b7 revision " + tenant.revision;
-  $("tenant-profile-note").textContent = own ? "" : "This is an example profile, so its checks are fixed and are shown as they run: the action on the user\u2019s message (input) and on the AI\u2019s answer (output). To choose each check yourself, select \u201c" + profileName("tenant") + "\u201d as the check profile.";
   const box = $("tenant-checks"); box.replaceChildren(); ruleEdits = {...(tenant.rule_actions || {})};
   for (const [id, value] of Object.entries(tenant.checks)) {
     const row = document.createElement("div"); row.className = "tenant-check";
@@ -252,7 +249,7 @@ function renderTenant() {
 async function reloadApplication() { reset(); const attempt = revision; await loadApplication(key, attempt); }
 async function saveTenant(path, body, done) {
   if (!application?.tenant || busy) return;
-  $("tenant-save").disabled = $("tenant-reset").disabled = $("tenant-default-save").disabled = true;
+  $("tenant-save").disabled = $("tenant-reset").disabled = true;
   let message = done;
   try {
     const text = JSON.stringify(body);
@@ -263,7 +260,7 @@ async function saveTenant(path, body, done) {
       try { await reloadApplication(); } catch (error) { message += " The record could not be reloaded; connect again to see the current values."; }
     }
   } catch (error) { message = "The change was not saved."; }
-  finally { $("tenant-reset").disabled = $("tenant-default-save").disabled = false; $("tenant-save").disabled = !ownChecksSelected(); $("tenant-message").textContent = message; }
+  finally { $("tenant-reset").disabled = false; $("tenant-save").disabled = !ownChecksSelected(); $("tenant-message").textContent = message; }
 }
 $("tenant-save").addEventListener("click", () => {
   const tenant = application?.tenant; if (!tenant || !ownChecksSelected()) return;
@@ -277,12 +274,6 @@ $("tenant-save").addEventListener("click", () => {
   saveTenant("/v1/tenants/current/checks", {revision: tenant.revision, changes}, "Saved. The new checks apply from the next check.");
 });
 $("tenant-reset").addEventListener("click", () => saveTenant("/v1/tenants/current/reset", {}, "Reset to the demo defaults."));
-$("tenant-default-save").addEventListener("click", () => {
-  const tenant = application?.tenant; if (!tenant) return;
-  const value = $("tenant-default-profile").value;
-  if (value === tenant.default_profile) { $("tenant-message").textContent = profileName(value) + " is already the default profile."; return; }
-  saveTenant("/v1/tenants/current/checks", {revision: tenant.revision, changes: {default_profile: value}}, "Saved. " + profileName(value) + " is now the default profile.");
-});
 $("connect").addEventListener("click", async () => {
   const token = $("api-key").value.trim(); if (!token || busy) return;
   reset(); const attempt = revision; $("connect").disabled = true;
