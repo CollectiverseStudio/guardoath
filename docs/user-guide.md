@@ -1733,3 +1733,17 @@ The immutable catalog has no action settings and never changes what a tenant run
 Corrupt/missing assets or malformed evidence stop the export; no partial catalog
 is returned. Host event routing, registry/tenant integration and installed package
 asset checks remain Director-owned. This does not add chat or hosted validation.
+
+### Trusted Sigma event routing
+
+The isolated `guardoath.sigma_rules.routing` helper pairs imported rules with
+original Windows process-creation or PowerShell-script logsource metadata. The
+host must supply the verified source and permitted rule IDs from trusted
+configuration; event text cannot select either. Unknown/duplicate IDs, unsupported
+sources, absent configured routes and oversized selections fail explicitly.
+
+All selected rules run once under one shared budget, preserving attribution and
+real overlaps. Budget exhaustion or a later worker failure raises instead of
+returning partial results. This adds no hosted endpoint or tenant permission
+system. Source ingestion/authentication and the pending Sigma wheel-data packaging
+fix remain Director-owned integration requirements.

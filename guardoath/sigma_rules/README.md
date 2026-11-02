@@ -192,3 +192,37 @@ Director owns registry/tenant integration and package-data declarations; a local
 fails closed when imported from that wheel, with no source-checkout fallback.
 Director acknowledgement is requested for the reserved `pyproject.toml` package-data
 fix and installed-distribution tests before any installed/hosted integration.
+
+## Trusted structured-event routing (isolated)
+
+`routing.load_routing_table()` verifies shipped snapshots and prepares copied
+rule detections with original logsource metadata. The trusted host supplies
+`trusted_logsource={"product":"windows","category":"ps_script"}` (or
+`process_creation`) and a nonempty explicit `allowed_rule_ids` sequence. These
+values must come from authenticated host configuration and tenant entitlements,
+never event fields. The helper does not authenticate or authorize a caller.
+
+```python
+from guardoath.sigma_rules.routing import load_routing_table
+
+table = load_routing_table()
+# trusted_source and permitted_ids come from host configuration, not event JSON.
+findings = table.evaluate(event, trusted_logsource=trusted_source,
+                          allowed_rule_ids=permitted_ids)
+```
+
+Selection preserves configured ID order, original product/category and finding
+attribution. Definitions remain available through `source_for()` as prerequisites;
+unknown source selectors such as `service` are rejected rather than ignored.
+Unknown/duplicate IDs, invalid source, no configured matching route and more than
+128 selected rules are explicit errors, not clean events. A larger bounded
+allowlist may include multiple logsources; the 128 ceiling applies after exact
+routing, with no truncation. Event text cannot choose its route or expand the IDs.
+
+Routing validation and one complete `evaluate_event` call share the same outer
+deadline/worker budget. Nested callers cannot enlarge it; late workers and later
+failures never return partial findings. Missing event fields remain nonmatches
+under the original Sigma semantics. The host still needs verified log ingestion,
+permissions, concurrency limits and an outer request deadline. This is not a
+hosted route, tenant action map or chat validator. The existing installed-wheel
+asset blocker must be fixed before distribution-based use.
