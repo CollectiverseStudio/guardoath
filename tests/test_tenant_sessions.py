@@ -238,6 +238,32 @@ def test_a_rotated_key_is_used_after_the_next_refresh(sessions, cognito):
     assert sessions.tenant_for(rotated) == "acme"
 
 
+def test_a_key_the_pool_removed_is_refused_after_the_next_refresh(sessions, cognito):
+    assert sessions.tenant_for(tenant_user(cognito, "acme")) == "acme"
+    cognito.jwks = {"keys": [jwk(OTHER_KEY, kid="key-2")]}
+    old_key = tenant_user(cognito, "acme", sub="user-2")
+    sessions.clock[0] += 299
+    assert sessions.tenant_for(old_key) == "acme" and cognito.count(JWKS_URL) == 1  # keys still fresh
+    sessions.clock[0] += 2
+    assert sessions.tenant_for(tenant_user(cognito, "acme", sub="user-3")) is None
+    assert cognito.count(JWKS_URL) == 2
+    assert sessions.tenant_for(tenant_user(cognito, "acme", sub="user-4")) is None and cognito.count(JWKS_URL) == 2
+
+
+def test_a_failed_refresh_keeps_the_last_keys_and_waits_before_trying_again(sessions, cognito):
+    assert sessions.tenant_for(tenant_user(cognito, "acme")) == "acme"
+    failed = []
+
+    def failing(url):
+        failed.append(url)
+        raise OSError("no network")
+    sessions._get = failing
+    sessions.clock[0] += 301
+    assert sessions.tenant_for(tenant_user(cognito, "acme", sub="user-2")) == "acme"
+    assert sessions.tenant_for(tenant_user(cognito, "acme", sub="user-3")) == "acme"
+    assert failed == [JWKS_URL] and cognito.count(GETUSER_URL) == 3
+
+
 def test_when_the_keys_cannot_be_fetched_every_session_is_refused(cognito):
     calls = []
 
