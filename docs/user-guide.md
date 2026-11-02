@@ -1861,3 +1861,14 @@ misses in 16 candidate rules. Exact overlaps are checked across all 153 reviewed
 definitions; target look-alikes may retain broader findings. Trusted process and
 script routes select 28 and 125 rules respectively, within the unchanged 128 cap.
 No source detection, matcher, release selection or hosted behavior changes.
+
+## Further staged process-rule candidates (C16)
+
+The [batch 008 review](sigma-process-candidates-008.md) stages 25 further original
+process rules with pinned Git-source evidence, authored matching/look-alike pairs,
+metadata/hash alternatives and exact overlap checks. No default detector is added.
+The proposed 178-definition review pool routes 53 process or 125 script rules
+under the unchanged 128-selected-rule cap; direct 178-rule evaluation rejects.
+Source, release fingerprints, archive/installed acceptance and packaging require
+separate coordinated adoption. Legitimate activity may match original patterns;
+these finite fixtures do not measure effectiveness or authorize deployment.
