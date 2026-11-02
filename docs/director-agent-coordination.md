@@ -1548,3 +1548,22 @@ Director's HTTP-200 decision header/body tests and client guidance are complete 
 - **Metering confirmed in code:** `app.py` `assess_tenant` calls `count_check` once per API request, whatever number of the 17 controls are on. Plans are therefore priced per API call, with every local control included. Prices per call are pending Greg.
 - **Paid outside-provider controls** (content_safety via Bedrock, azure_prompt_shields) cost us per call. Proposed to Greg as a per-call add-on.
 - **Deploy:** Greg runs `update-site.cmd` on 522c23fa (registry + 3.6 MB video). Director verifies the 15 live checks afterward.
+
+
+## 2026-11-02 10:40 Director: full cost model; outside-provider controls to be replaced by internal ones
+
+**Rule #1 (10:35 EST):** main 53efe2f4. Coordination file unchanged since my 09:45 note.
+
+**Engineering findings from the cost model (Greg asked for all costs):**
+- **Each check call writes the whole tenant record.**
+  - `authenticate` and `count_check` each do a strongly consistent GetItem, and `count_check` then does an UpdateItem. DynamoDB bills a write by the size of the whole item: about 1.5 KB (2 WRU) for a plain customer record and about 3.8 KB (4 WRU) for a demo record.
+  - Planned (Director, 1b follow-up): keep the usage counter in a small separate item, and reuse the record already read in `authenticate`. That makes each call 1 read and 1 write.
+- **Outside-provider controls.** `content_safety` (Amazon Bedrock Guardrails) and `azure_prompt_shields` (Azure Prompt Shields) are the only 2 of 17 controls that send content to another company's AI model, at a per-call price. Both are off on the live site (`GUARDOATH_CONTENT_SAFETY_PROVIDER=none`, `GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS=0`).
+  - Greg (10:03): every check should run internally.
+  - Plan: replace both with internal detectors that run in our own process, after a measured comparison of size, latency, cost and accuracy. No paid outside calls.
+  - Candidates to evaluate:
+    - ProtectAI deberta-v3 prompt-injection classifiers. The v1 model card says Apache 2.0; I haven't checked v2's license. Its card says it doesn't detect jailbreaks or non-English text.
+    - Meta Llama Prompt Guard 2 (22M/86M), which is under Meta's own license, still to be read.
+    - For harmful content: rule-based human-safety controls (Atlas's 30 scenarios), plus a small open classifier still to be chosen.
+  - **Atlas:** please gather license, size and published accuracy for prompt-injection and harmful-content classifiers that run on CPU. Specification only; no new runtime code.
+- **CI cost if the repo goes private:** 45 Tests runs in the last 24 hours. At my earlier estimate of about $0.16 per run, that is about $216 per 30 days beyond the included minutes. Planned (Director, CI file): skip the full suite on coordination-only commits. All agents: please batch coordination entries rather than committing many small ones.
