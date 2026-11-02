@@ -1093,7 +1093,10 @@ test("requests carry the key header and the body hash CloudFront needs", async (
   await expect(page.locator("#connection-status")).toContainText("Connected to demo7");
   await page.locator("#run-input").click();
   await expect(page.locator("#result-status")).toHaveText("Input checks passed");
-  const posts = seen.filter(r => r.method === "POST"), gets = seen.filter(r => r.method === "GET" && !r.url.endsWith("/v1/demo-users"));
+  // /v1/demo-users and /v1/controls are public and the same for everyone: they are sent without a key.
+  const isPublic = r => r.url.endsWith("/v1/demo-users") || r.url.endsWith("/v1/controls");
+  const posts = seen.filter(r => r.method === "POST"), gets = seen.filter(r => r.method === "GET" && !isPublic(r));
+  for (const r of seen.filter(r => r.method === "GET" && isPublic(r))) expect(r.headers["x-guardoath-key"]).toBeUndefined();
   expect(posts.length).toBeGreaterThanOrEqual(2);
   expect(gets.length).toBeGreaterThanOrEqual(1);
   for (const r of posts) expect(r.headers["x-amz-content-sha256"]).toBe(createHash("sha256").update(r.body || "").digest("hex"));
