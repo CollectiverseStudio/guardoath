@@ -1851,3 +1851,12 @@ event, under the unchanged 128-rule cap and shared budget; direct evaluation of
 all 153 rejects. Source fingerprints, packaging and installed acceptance must be
 coordinated before promotion. Legitimate process activity can match; these
 fixtures are not effectiveness or deployment evidence.
+
+## Process candidate alternate-branch evidence
+
+The [C15 evidence](sigma-candidate-branch-evidence.md) supplies 34 authored cases
+for alternate paths, parent images, process metadata, flags and conjunction near
+misses in 16 candidate rules. Exact overlaps are checked across all 153 reviewed
+definitions; target look-alikes may retain broader findings. Trusted process and
+script routes select 28 and 125 rules respectively, within the unchanged 128 cap.
+No source detection, matcher, release selection or hosted behavior changes.

@@ -1,0 +1,507 @@
+{
+  "format_version": 1,
+  "domain": "security_events",
+  "runtime_registered": false,
+  "fixture_origin": "GuardOath-authored synthetic branch events; not upstream tests or effectiveness evidence",
+  "reviewed_definition_count": 153,
+  "candidate_source": "candidates/batch_007.json",
+  "groups": [
+    {
+      "gap_id": "CP001",
+      "rule_id": "a01b8329-5953-4f73-ae2d-aa01e1f35f00",
+      "source_path": "rules/windows/process_creation/proc_creation_win_aspnet_compiler_exectuion.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "2dd4a36221a8b6c6ec2d64a616606f032a631c87a9ba9d953ae5c1fababf4cdd",
+      "branch": "Image contains Framework64 alternative",
+      "cases": [
+        {
+          "case_id": "positive",
+          "target_matches": true,
+          "event": {
+            "Image": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\aspnet_compiler.exe"
+          },
+          "expected_rule_ids": [
+            "a01b8329-5953-4f73-ae2d-aa01e1f35f00"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "target_matches": false,
+          "event": {
+            "Image": "C:\\Windows\\Microsoft.NET\\Tools\\aspnet_compiler.exe"
+          },
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "CP002",
+      "rule_id": "9f50fe98-fe5c-4a2d-86c7-fad7f63ed622",
+      "source_path": "rules/windows/process_creation/proc_creation_win_aspnet_compiler_susp_paths.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "130b30e44af117be791ee00893a9878c3b3a59c9e07bfa113137de6ad0e0b2bd",
+      "branch": "CommandLine contains AppData Local Temp alternative",
+      "cases": [
+        {
+          "case_id": "positive",
+          "target_matches": true,
+          "event": {
+            "Image": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\aspnet_compiler.exe",
+            "CommandLine": "aspnet_compiler -p C:\\Users\\Lab\\AppData\\Local\\Temp\\Site"
+          },
+          "expected_rule_ids": [
+            "9f50fe98-fe5c-4a2d-86c7-fad7f63ed622",
+            "a01b8329-5953-4f73-ae2d-aa01e1f35f00"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "target_matches": false,
+          "event": {
+            "Image": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\aspnet_compiler.exe",
+            "CommandLine": "aspnet_compiler -p C:\\Trusted\\Site"
+          },
+          "expected_rule_ids": [
+            "a01b8329-5953-4f73-ae2d-aa01e1f35f00"
+          ]
+        }
+      ]
+    },
+    {
+      "gap_id": "CP003",
+      "rule_id": "c6c56ada-612b-42d1-9a29-adad3c5c2c1e",
+      "source_path": "rules/windows/process_creation/proc_creation_win_auditpol_nt_resource_kit_usage.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "887f93bcf0c69ba6d02af492a0c3c5ccfd1e5855e71b92ee9308d4b740a00209",
+      "branch": "CommandLine /process:none alternative",
+      "cases": [
+        {
+          "case_id": "positive",
+          "target_matches": true,
+          "event": {
+            "CommandLine": "auditpol /process:none"
+          },
+          "expected_rule_ids": [
+            "c6c56ada-612b-42d1-9a29-adad3c5c2c1e"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "target_matches": false,
+          "event": {
+            "CommandLine": "auditpol /process:success"
+          },
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "CP004",
+      "rule_id": "9f38c1db-e2ae-40bf-81d0-5b68f73fb512",
+      "source_path": "rules/windows/process_creation/proc_creation_win_baaupdate_susp_child_process.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "0b2b65e9f5691d701d7ccd9a0499d02a9a1791ed112e61038caab55b7f4e9da7",
+      "branch": "wscript Image suffix alternative",
+      "cases": [
+        {
+          "case_id": "positive",
+          "target_matches": true,
+          "event": {
+            "ParentImage": "C:\\Lab\\baaupdate.exe",
+            "Image": "C:\\Windows\\System32\\wscript.exe"
+          },
+          "expected_rule_ids": [
+            "9f38c1db-e2ae-40bf-81d0-5b68f73fb512"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "target_matches": false,
+          "event": {
+            "ParentImage": "C:\\Lab\\baaupdate.exe",
+            "Image": "C:\\Windows\\System32\\notepad.exe"
+          },
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "CP005",
+      "rule_id": "aaf46cdc-934e-4284-b329-34aa701e3771",
+      "source_path": "rules/windows/process_creation/proc_creation_win_bginfo_uncommon_child_process.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "be051512fe532b313a527aa34aa5a67c0838e91115235e22e3ba90ef391d5501",
+      "branch": "bginfo.exe ParentImage suffix alternative",
+      "cases": [
+        {
+          "case_id": "positive",
+          "target_matches": true,
+          "event": {
+            "ParentImage": "C:\\Lab\\bginfo.exe"
+          },
+          "expected_rule_ids": [
+            "aaf46cdc-934e-4284-b329-34aa701e3771"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "target_matches": false,
+          "event": {
+            "ParentImage": "C:\\Lab\\bginfo32.exe"
+          },
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "CP006",
+      "rule_id": "ef9dcfed-690c-4c5d-a9d1-482cd422225c",
+      "source_path": "rules/windows/process_creation/proc_creation_win_browsers_chromium_headless_exec.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "45c33efa86a8de595a80fde45f0c945376b5c2e40923311088927d0d131af7cc",
+      "branch": "vivaldi.exe Image suffix alternative",
+      "cases": [
+        {
+          "case_id": "positive",
+          "target_matches": true,
+          "event": {
+            "Image": "C:\\Lab\\vivaldi.exe",
+            "CommandLine": "vivaldi --headless Lab"
+          },
+          "expected_rule_ids": [
+            "ef9dcfed-690c-4c5d-a9d1-482cd422225c"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "target_matches": false,
+          "event": {
+            "Image": "C:\\Lab\\vivaldi.exe",
+            "CommandLine": "vivaldi --new-window Lab"
+          },
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "CP007",
+      "rule_id": "27ba3207-dd30-4812-abbf-5d20c57d474e",
+      "source_path": "rules/windows/process_creation/proc_creation_win_browsers_chromium_susp_load_extension.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "758b9cd124b80edafa45ea4c84d405bb3f42a5d5a50cff2371e7ab708f0f938a",
+      "branch": "opera.exe Image with pwsh.exe ParentImage alternatives",
+      "cases": [
+        {
+          "case_id": "positive",
+          "target_matches": true,
+          "event": {
+            "Image": "C:\\Lab\\opera.exe",
+            "ParentImage": "C:\\Lab\\pwsh.exe",
+            "CommandLine": "opera --load-extension=C:\\Lab\\Extension"
+          },
+          "expected_rule_ids": [
+            "27ba3207-dd30-4812-abbf-5d20c57d474e",
+            "88d6e60c-759d-4ac1-a447-c0f1466c2d21"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "target_matches": false,
+          "event": {
+            "Image": "C:\\Lab\\opera.exe",
+            "ParentImage": "C:\\Windows\\explorer.exe",
+            "CommandLine": "opera --load-extension=C:\\Lab\\Extension"
+          },
+          "expected_rule_ids": [
+            "88d6e60c-759d-4ac1-a447-c0f1466c2d21"
+          ]
+        }
+      ]
+    },
+    {
+      "gap_id": "CP008",
+      "rule_id": "62f7c9bf-9135-49b2-8aeb-1e54a6ecc13c",
+      "source_path": "rules/windows/process_creation/proc_creation_win_browsers_tor_execution.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "644253272f6fbdce37cd64edecb83610b1ad236d9e249d5f6eb594d237fa82bf",
+      "branch": "Description-only selection alternative",
+      "cases": [
+        {
+          "case_id": "positive",
+          "target_matches": true,
+          "event": {
+            "Description": "Tor Browser"
+          },
+          "expected_rule_ids": [
+            "62f7c9bf-9135-49b2-8aeb-1e54a6ecc13c"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "target_matches": false,
+          "event": {
+            "Description": "Firefox Browser"
+          },
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "CP009",
+      "rule_id": "c7942406-33dd-4377-a564-0f62db0593a3",
+      "source_path": "rules/windows/process_creation/proc_creation_win_chcp_codepage_switch.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "f8e154cb65821a73053668335ac5c9a698dfb803db8f37510e330c7c064595db",
+      "branch": "CommandLine 1258 suffix alternative",
+      "cases": [
+        {
+          "case_id": "positive",
+          "target_matches": true,
+          "event": {
+            "Image": "C:\\Windows\\System32\\chcp.com",
+            "CommandLine": "chcp.com 1258"
+          },
+          "expected_rule_ids": [
+            "c7942406-33dd-4377-a564-0f62db0593a3"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "target_matches": false,
+          "event": {
+            "Image": "C:\\Windows\\System32\\chcp.com",
+            "CommandLine": "chcp.com 1252"
+          },
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "CP010",
+      "rule_id": "ddeff553-5233-4ae9-bbab-d64d2bd634be",
+      "source_path": "rules/windows/process_creation/proc_creation_win_clip_execution.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "254678f691f8678df1d5ec600a58d94156345b071e52ab961dc1fa7eccc63898",
+      "branch": "OriginalFileName-only selection alternative",
+      "cases": [
+        {
+          "case_id": "positive",
+          "target_matches": true,
+          "event": {
+            "OriginalFileName": "clip.exe"
+          },
+          "expected_rule_ids": [
+            "ddeff553-5233-4ae9-bbab-d64d2bd634be"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "target_matches": false,
+          "event": {
+            "OriginalFileName": "write.exe"
+          },
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "CP011",
+      "rule_id": "7050bba1-1aed-454e-8f73-3f46f09ce56a",
+      "source_path": "rules/windows/process_creation/proc_creation_win_cloudflared_tunnel_cleanup.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "f4d04862beb209e1406e71e3b738bdb049a8933d3f5e2f892e9626e0d5e44174",
+      "branch": "-config argument alternative",
+      "cases": [
+        {
+          "case_id": "positive",
+          "target_matches": true,
+          "event": {
+            "CommandLine": "cloudflared tunnel cleanup -config C:\\Lab\\config.yml"
+          },
+          "expected_rule_ids": [
+            "7050bba1-1aed-454e-8f73-3f46f09ce56a"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "target_matches": false,
+          "event": {
+            "CommandLine": "cloudflared tunnel cleanup -configuration C:\\Lab\\config.yml"
+          },
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "CP012",
+      "rule_id": "9a019ffc-3580-4c9d-8d87-079f7e8d3fd4",
+      "source_path": "rules/windows/process_creation/proc_creation_win_cloudflared_tunnel_run.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "537ccfd832d9322aeae597a755d94d161caf81d0514f494a505a21099d6af511",
+      "branch": "-credentials-file argument alternative",
+      "cases": [
+        {
+          "case_id": "positive",
+          "target_matches": true,
+          "event": {
+            "CommandLine": "cloudflared tunnel run -credentials-file C:\\Lab\\fixture.json "
+          },
+          "expected_rule_ids": [
+            "9a019ffc-3580-4c9d-8d87-079f7e8d3fd4"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "target_matches": false,
+          "event": {
+            "CommandLine": "cloudflared tunnel run -credentials-directory C:\\Lab\\Folder"
+          },
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "CP013",
+      "rule_id": "3037d961-21e9-4732-b27a-637bcc7bf539",
+      "source_path": "rules/windows/process_creation/proc_creation_win_conhost_legacy_option.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "6523116c59112f00565d70cee92267740f84a4f90acd35c6c32ec5bca91ad776",
+      "branch": "High-integrity SID alternative",
+      "cases": [
+        {
+          "case_id": "positive",
+          "target_matches": true,
+          "event": {
+            "IntegrityLevel": "S-1-16-12288",
+            "CommandLine": "conhost.exe 0xffffffff -ForceV1"
+          },
+          "expected_rule_ids": [
+            "3037d961-21e9-4732-b27a-637bcc7bf539"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "target_matches": false,
+          "event": {
+            "IntegrityLevel": "S-1-16-8192",
+            "CommandLine": "conhost.exe 0xffffffff -ForceV1"
+          },
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "CP014",
+      "rule_id": "a9e416a8-e613-4f8b-88b8-a7d1d1af2f61",
+      "source_path": "rules/windows/process_creation/proc_creation_win_csi_use_of_csharp_console.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "d012aedb0d4066fc76cd1c118e3e380f73de9db197e0e74ea7e7e6819eaadb6b",
+      "branch": "pwsh.exe ParentImage suffix alternative",
+      "cases": [
+        {
+          "case_id": "positive",
+          "target_matches": true,
+          "event": {
+            "Image": "C:\\Lab\\csi.exe",
+            "ParentImage": "C:\\Lab\\pwsh.exe",
+            "OriginalFileName": "csi.exe"
+          },
+          "expected_rule_ids": [
+            "a9e416a8-e613-4f8b-88b8-a7d1d1af2f61"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "target_matches": false,
+          "event": {
+            "Image": "C:\\Lab\\csi.exe",
+            "ParentImage": "C:\\Windows\\System32\\cmd.exe",
+            "OriginalFileName": "csi.exe"
+          },
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "CP015",
+      "rule_id": "a77c1610-fc73-4019-8e29-0f51efc04a51",
+      "source_path": "rules/windows/process_creation/proc_creation_win_cmd_dosfuscation.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "670b1eedab6319844a0b99a8939f7bdb44a80e1f53b3afb0df918b5c4502aa50",
+      "branch": "se^t caret token alternative",
+      "cases": [
+        {
+          "case_id": "positive",
+          "target_matches": true,
+          "event": {
+            "CommandLine": "cmd.exe /c se^t Lab=1"
+          },
+          "expected_rule_ids": [
+            "a77c1610-fc73-4019-8e29-0f51efc04a51"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "target_matches": false,
+          "event": {
+            "CommandLine": "cmd.exe /c set Lab=1"
+          },
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "CP016",
+      "rule_id": "3e8207c5-fcd2-4ea6-9418-15d45b4890e4",
+      "source_path": "rules/windows/process_creation/proc_creation_win_browsers_chromium_headless_debugging.yml",
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "6bd0a8b10ef3420d2812d8cf779c6bc280900fbe509afe242f51594fb0dc6eff",
+      "branch": "all three CommandLine terms, one-term near misses",
+      "cases": [
+        {
+          "case_id": "positive",
+          "target_matches": true,
+          "event": {
+            "Image": "C:\\Lab\\chrome.exe",
+            "CommandLine": "chrome --remote-debugging-port=9222 --user-data-dir=Lab --headless"
+          },
+          "expected_rule_ids": [
+            "3e8207c5-fcd2-4ea6-9418-15d45b4890e4",
+            "ef9dcfed-690c-4c5d-a9d1-482cd422225c"
+          ]
+        },
+        {
+          "case_id": "lookalike",
+          "target_matches": false,
+          "event": {
+            "Image": "C:\\Lab\\chrome.exe",
+            "CommandLine": "chrome --remote-debugging-port=9222 --user-data-dir=Lab"
+          },
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "missing_profile_term",
+          "target_matches": false,
+          "event": {
+            "Image": "C:\\Lab\\chrome.exe",
+            "CommandLine": "chrome --remote-debugging-port=9222 --headless"
+          },
+          "expected_rule_ids": [
+            "ef9dcfed-690c-4c5d-a9d1-482cd422225c"
+          ]
+        },
+        {
+          "case_id": "missing_remote_term",
+          "target_matches": false,
+          "event": {
+            "Image": "C:\\Lab\\chrome.exe",
+            "CommandLine": "chrome --user-data-dir=Lab --headless"
+          },
+          "expected_rule_ids": [
+            "ef9dcfed-690c-4c5d-a9d1-482cd422225c"
+          ]
+        }
+      ]
+    }
+  ]
+}
