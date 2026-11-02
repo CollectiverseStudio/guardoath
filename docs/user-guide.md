@@ -1802,3 +1802,13 @@ Each has explicit expectations against all 128 rules. A specific rule's exclusio
 or look-alike can still trigger another rule; those overlaps stay visible. No
 new detector, matcher expansion, completeness/accuracy claim or hosted control
 is introduced.
+
+### Previewing trusted Sigma configuration
+
+The isolated routing table can preview a host-supplied source and allowed rule IDs
+with `table.plan(...)`. It returns immutable selected and source-excluded IDs;
+`as_dict()` marks `evaluation_performed=false`. No detector or regex worker runs,
+and the preview is not a permission or validation result. Evaluation still requires
+current trusted host configuration and runs once under its shared deadline/work
+budget. Invalid/unknown/duplicate IDs and unsupported sources remain errors.
+See [the routing-plan guide](sigma-routing-plans.md); no hosted API is added.

@@ -1,5 +1,6 @@
 """Trusted-host routing for isolated Sigma events; no hosted or tenant authority."""
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from importlib.resources import files
 import json
 from types import MappingProxyType
@@ -13,8 +14,23 @@ from .matcher import UnsupportedSigmaRule
 _SUPPORTED = {('windows', 'process_creation'), ('windows', 'ps_script')}
 
 
+@dataclass(frozen=True)
+class RoutingPlan:
+    """Descriptive configuration preview, never an admission/permission token."""
+    product: str
+    category: str
+    selected_rule_ids: tuple[str, ...]
+    excluded_rule_ids: tuple[str, ...]
+
+    def as_dict(self):
+        return {'logsource': {'product': self.product, 'category': self.category},
+                'selected_rule_ids': list(self.selected_rule_ids),
+                'excluded_rule_ids': list(self.excluded_rule_ids),
+                'evaluation_performed': False}
+
+
 def _source(value):
-    if (not isinstance(value, Mapping) or set(value) != {'product', 'category'}
+    if (not isinstance(value, Mapping) or len(value) != 2 or set(value) != {'product', 'category'}
             or any(not isinstance(value[k], str) for k in value)):
         raise UnsupportedSigmaRule('trusted logsource requires product and category only')
     result = value['product'], value['category']
@@ -63,28 +79,42 @@ class RoutingTable:
             raise UnsupportedSigmaRule('unknown source rule')
         return dict(self._descriptors[rule_id])
 
+    def _select(self, trusted_logsource, allowed_rule_ids):
+        # Requires an active budget from plan/evaluate; one selector defines both.
+        source = _source(trusted_logsource)
+        if (not isinstance(allowed_rule_ids,Sequence) or isinstance(allowed_rule_ids,(str,bytes))
+                or not 1 <= len(allowed_rule_ids) <= len(self._rules)):
+            raise UnsupportedSigmaRule('nonempty bounded configured rule IDs required')
+        selected, excluded, seen = [], [], set()
+        for identifier in allowed_rule_ids:
+            remaining_seconds()
+            if not isinstance(identifier,str) or identifier not in self._rules:
+                raise UnsupportedSigmaRule('unknown configured rule ID')
+            if identifier in seen:
+                raise UnsupportedSigmaRule('duplicate configured rule ID')
+            seen.add(identifier)
+            (selected if self._sources[identifier] == source else excluded).append(identifier)
+        if not selected:
+            raise UnsupportedSigmaRule('no configured rules for trusted logsource')
+        if len(selected) > 128:
+            raise UnsupportedSigmaRule('routed event exceeds 128-rule limit')
+        return RoutingPlan(*source,tuple(selected),tuple(excluded))
+
+    def plan(self, *, trusted_logsource, allowed_rule_ids, timeout_seconds=1.0):
+        """Preview current trusted configuration without inspecting any event.
+
+        No detector execution or authority is granted. Evaluation must receive
+        current trusted inputs again; it never accepts a prior plan as admission.
+        """
+        with evaluation_budget(timeout_seconds=timeout_seconds):
+            return self._select(trusted_logsource,allowed_rule_ids)
+
     def evaluate(self, event, *, trusted_logsource, allowed_rule_ids,
                  max_workers=4, timeout_seconds=1.0):
         """One event, one aggregate budget; no empty/partial success on bad routing."""
         with evaluation_budget(max_workers=max_workers,timeout_seconds=timeout_seconds):
-            source = _source(trusted_logsource)
-            if (not isinstance(allowed_rule_ids,Sequence) or isinstance(allowed_rule_ids,(str,bytes))
-                    or not 1 <= len(allowed_rule_ids) <= len(self._rules)):
-                raise UnsupportedSigmaRule('nonempty bounded configured rule IDs required')
-            selected, seen = [], set()
-            for identifier in allowed_rule_ids:
-                remaining_seconds()
-                if not isinstance(identifier,str) or identifier not in self._rules:
-                    raise UnsupportedSigmaRule('unknown configured rule ID')
-                if identifier in seen:
-                    raise UnsupportedSigmaRule('duplicate configured rule ID')
-                seen.add(identifier)
-                if self._sources[identifier] == source:
-                    selected.append(self._rules[identifier])
-            if not selected:
-                raise UnsupportedSigmaRule('no configured rules for trusted logsource')
-            if len(selected) > 128:
-                raise UnsupportedSigmaRule('routed event exceeds 128-rule limit')
+            plan = self._select(trusted_logsource,allowed_rule_ids)
+            selected = tuple(self._rules[identifier] for identifier in plan.selected_rule_ids)
             # The existing evaluator inherits this context. Never loop over
             # separate evaluations or restart a budget for a chunk or retry.
             return evaluate_event(selected,event,max_workers=max_workers,timeout_seconds=timeout_seconds)

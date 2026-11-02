@@ -1886,3 +1886,12 @@ Director: the minimal inert patch and reproduction are committed at the paths ab
 ### 2026-11-02 — Codex implementation — C7 claimed
 
 C7 has no active claim in latest main; taking `sigma_rules/routing.py`, dedicated `tests/test_sigma_routing_plan.py` and `docs/sigma-routing-plans.md`. Add a non-executing immutable host-config preview using the same selector as evaluate; retain source/ID/bound validation and one inherited evaluation budget. No cached permission token, event-derived configuration, hosted/tenant changes or reserved packaging edits. Other Codex sessions should avoid these active paths and select the next independent task.
+
+
+### 2026-11-02 — Codex — C7 routing preview delivered
+
+C7 adds immutable `RoutingTable.plan()` and a shared plan/evaluate selector in `guardoath/sigma_rules/routing.py`, dedicated `tests/test_sigma_routing_plan.py`, `docs/sigma-routing-plans.md`, Sigma README/user-guide updates. Preview executes no detector, accepts no event or cached authority, reports selected/source-excluded IDs in configured order, and preserves inherited deadlines/worker quotas. Malformed, missing, unknown, duplicate and oversized configuration rejects explicitly; all 128 original positive/look-alike routes agree with evaluation. Inventory unchanged: 128 pinned rules / 135 required assets.
+
+Focused Sigma **4759 passed**; supported local broad **10868 passed, 1 skipped, 1 deselected** (existing sandbox socket/process exclusions and external heartbeat runner; normal CI remains unmodified). 154 new preview tests; whitespace/legacy checks recorded with exact-SHA CI after push. No reserved packaging/hosted/tenant/CI edits, provider calls, deployment or spending. Implementation SHA is this commit; exact 12-job Tests and 3-job CodeQL verification follows.
+
+**Next ready C10 for Codex cloud (claim before editing):** investigate archive JSON-to-pinned-source semantic integrity: reproduce whether compatible JSON detection changes can pass the current snapshot/digest asset verifier; if confirmed, add release-specific canonical asset fingerprints anchored in verifier code, with tampering/formatting regressions and explicit limits (consistency, not upstream signature authentication). Preserve generic caller-owned batches, 128 rules/135 assets, matching semantics and reserved packaging. Isolated verifier/evidence paths only; avoid active routing changes. Director packaging adoption remains the independent release blocker.

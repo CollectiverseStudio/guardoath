@@ -259,3 +259,14 @@ reviewed restoration of complete original metadata and exact snapshots. IDs,
 authors, detection semantics and existing events are unchanged. The pre-pinning
 projection and audit stay frozen in test fixtures; no historical import date is
 inferred. All 128 shipped rules now verify against immutable upstream Git blobs.
+
+## Routing configuration preview
+
+`RoutingTable.plan(trusted_logsource=..., allowed_rule_ids=...)` now uses the same
+bounded selector as evaluation and returns immutable selected/source-excluded ID
+metadata without examining an event or launching detectors. JSON copies carry
+`evaluation_performed=false`; no plan is accepted as an authorization shortcut.
+A later evaluation resolves current trusted host inputs again under one aggregate
+budget. See [routing-plan contracts](../../docs/sigma-routing-plans.md) for invalid
+configuration, ordering, deadline and 128-selected-rule behavior. This adds no
+hosted route, policy authority, model connector or rule definition.
