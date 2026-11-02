@@ -6,6 +6,9 @@ Hierarchy (the same for every control):
 - Control: an outcome a tenant chooses to enforce. Each control is exactly one field on the tenant
   record (``check_<control_id>``): no value = off; block, flag, allow or (pii only) redact = on with
   that action. The tenant record is the only runtime authority; this registry is description only.
+- Rule: one finding a control can report, such as ``pii.iban_code``. Each rule has a use case, an
+  example and a look-alike (guardoath.rule_catalog), and can be turned off or given its own action in
+  the tenant record's ``rule_actions``.
 - Detector: the code that runs for the control (``implementation``) and its version, reported by the
   checker itself (``checker_version``).
 - Evidence: examples it flags (``positive_examples``), look-alikes it does not flag
@@ -23,9 +26,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from guardoath.rule_catalog import RULES, rule_payload, rules_for
 from guardoath.tenant_record import CHECK_IDS, EXTERNAL_CHECK_IDS, INPUT_ONLY_CHECK_IDS
 
-REGISTRY_VERSION = "1"
+REGISTRY_VERSION = "2"
 ROOT = Path(__file__).resolve().parents[1]
 Stage = Literal["input", "output"]
 
@@ -580,10 +584,13 @@ def registry_payload(checkers: dict | None = None) -> dict:
                 "evidence": {"unit_tests": list(item.unit_tests), "evaluations": list(item.evaluations)},
                 "maturity": maturity(item, checkers),
                 "guide": "/guide#" + item.guide_anchor,
+                "rule_count": len(rules_for(item.control_id)),
+                "rules": [rule_payload(rule) for rule in rules_for(item.control_id)],
             })
         domains.append({"domain_id": domain.domain_id, "name": domain.name, "description": domain.description,
                         "status": domain.status, "reference": domain.reference, "controls": items})
-    return {"registry_version": REGISTRY_VERSION, "control_count": len(CONTROLS), "domains": domains}
+    return {"registry_version": REGISTRY_VERSION, "control_count": len(CONTROLS), "rule_count": len(RULES),
+            "domains": domains}
 
 
 def _validate():
