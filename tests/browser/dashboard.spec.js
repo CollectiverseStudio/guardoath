@@ -1120,3 +1120,22 @@ test("without tenant sign-in on the server, no sign-in button is shown", async (
   await expect(page.locator("#sign-in-box")).toBeHidden();
   await expect(page.locator("#keys-panel")).toBeHidden();
 });
+test("every check's examples and every rule's example can be picked", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo9");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo9");
+  const check = page.locator("#input-example-check");
+  await expect(check.locator("option")).toHaveCount(18);  // "Choose a check" + the 17 checks that run on input
+  await expect(page.locator("#output-example-check option")).toHaveCount(17);  // 16 checks run on output (prompt shields is input only)
+  await check.selectOption("pii");
+  await expect(page.locator("#input-example optgroup")).toHaveCount(2);
+  // 97 rules (example + look-alike each) plus the check's own 5 examples and 2 look-alikes.
+  await expect(page.locator("#input-example option")).toHaveCount(1 + 5 + 2 + 2 * 97);
+  await page.locator("#input-example").selectOption({ label: "Email address" });
+  await expect(page.locator("#input-content")).toHaveValue("Can you help me update my contact email? jane@example.com");
+  await page.locator("#run-input").click();
+  await expect(page.locator("#input-results")).toContainText("Potential email address");
+  await check.selectOption("lexical_guards");
+  await expect(page.locator("#input-example-note")).toContainText("is off on this record");
+});
