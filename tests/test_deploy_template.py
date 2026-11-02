@@ -49,7 +49,9 @@ def test_only_services_with_a_free_allowance_or_covered_by_the_free_plan_are_use
     assert kinds == {"AWS::DynamoDB::Table", "AWS::Logs::LogGroup", "AWS::IAM::Role", "AWS::Lambda::Function",
                      "AWS::Lambda::Url", "AWS::Lambda::Permission", "AWS::CloudFront::OriginAccessControl",
                      "AWS::CertificateManager::Certificate", "AWS::WAFv2::WebACL", "AWS::CloudFront::Distribution",
-                     "AWS::Route53::RecordSet", "AWS::PricingPlanManager::Subscription", "AWS::CloudWatch::Alarm"}
+                     "AWS::Route53::RecordSet", "AWS::PricingPlanManager::Subscription", "AWS::CloudWatch::Alarm",
+                     # Tenant sign-in: Cognito Lite, free for 10,000 monthly active users per account or organization.
+                     "AWS::Cognito::UserPool", "AWS::Cognito::UserPoolDomain", "AWS::Cognito::UserPoolClient"}
 
 
 def test_the_free_plan_covers_the_distribution_web_acl_and_hosted_zone(template):
@@ -292,3 +294,38 @@ def test_even_at_full_load_an_hour_uses_a_small_part_of_the_free_compute(templat
 def test_the_build_python_matches_the_function_runtime(template):
     runtime = resources(template, "AWS::Lambda::Function")["SiteFunction"]["Runtime"]
     assert runtime == "python%d.%d" % load_build().RUNTIME_PYTHON
+
+
+# Tenant sign-in (Cognito)
+
+
+def test_tenant_sign_in_uses_the_free_lite_plan_with_required_authenticator_mfa(template):
+    (pool,) = resources(template, "AWS::Cognito::UserPool").values()
+    # A new user pool defaults to Essentials; Lite is chosen explicitly.
+    assert pool["UserPoolTier"] == "LITE"
+    assert pool["MfaConfiguration"] == "ON" and pool["EnabledMfas"] == ["SOFTWARE_TOKEN_MFA"]
+    # Only an administrator creates accounts: there is no public sign-up.
+    assert pool["AdminCreateUserConfig"] == {"AllowAdminCreateUserOnly": True}
+    assert pool["EmailConfiguration"] == {"EmailSendingAccount": "COGNITO_DEFAULT"}
+    assert pool["DeletionProtection"] == "ACTIVE" and template["Resources"]["UserPool"]["DeletionPolicy"] == "Retain"
+    (attribute,) = pool["Schema"]
+    assert attribute["Name"] == "tenant_id" and attribute["Mutable"] is False
+    (domain,) = resources(template, "AWS::Cognito::UserPoolDomain").values()
+    assert domain["ManagedLoginVersion"] == 1  # the classic hosted UI, the one Lite includes
+
+
+def test_the_dashboard_client_has_no_secret_and_cannot_change_its_tenant(template):
+    (client,) = resources(template, "AWS::Cognito::UserPoolClient").values()
+    assert client["GenerateSecret"] is False and client["AllowedOAuthFlows"] == ["code"]
+    assert client["AllowedOAuthScopes"] == ["openid", "email", "aws.cognito.signin.user.admin"]
+    assert client["CallbackURLs"] == client["LogoutURLs"] == [{"Fn::Sub": "https://${DomainName}/dashboard"}]
+    assert "custom:tenant_id" in client["ReadAttributes"] and "custom:tenant_id" not in client["WriteAttributes"]
+    assert client["SupportedIdentityProviders"] == ["COGNITO"] and client["PreventUserExistenceErrors"] == "ENABLED"
+
+
+def test_the_site_function_gets_the_sign_in_settings(template):
+    env = template["Resources"]["SiteFunction"]["Properties"]["Environment"]["Variables"]
+    assert env["GUARDOATH_COGNITO_POOL_ID"] == {"Ref": "UserPool"}
+    assert env["GUARDOATH_COGNITO_CLIENT_ID"] == {"Ref": "UserPoolClient"}
+    assert env["GUARDOATH_COGNITO_DOMAIN"] == {"Fn::Sub": "${SignInDomainPrefix}.auth.${AWS::Region}.amazoncognito.com"}
+    assert env["GUARDOATH_COGNITO_REDIRECT_URI"] == {"Fn::Sub": "https://${DomainName}/dashboard"}

@@ -471,3 +471,17 @@ def test_the_dashboard_lists_the_rules_of_each_check_and_saves_rule_actions():
     # Rule texts are shown with textContent only, never as markup.
     start = script.index("function ruleRow"); end = script.index("async function fillRuleSlots")
     assert "innerHTML" not in script[start:end]
+
+
+def test_the_dashboard_signs_in_with_pkce_and_sends_the_session_only_to_this_server():
+    from pathlib import Path
+    script = (Path(__file__).resolve().parents[1] / "guardoath" / "static" / "dashboard.js").read_text(encoding="utf-8")
+    for text in ['code_challenge_method: "S256"', 'crypto.subtle.digest("SHA-256"', "crypto.getRandomValues",
+                 '"/v1/sign-in/token"', '"X-GuardOath-Session"', 'state !== expected', 'history.replaceState(null, "", location.pathname)',
+                 '"/v1/tenants/current/keys"', '"/v1/tenants/current/keys/revoke"']:
+        assert text in script, text
+    # The session is kept in this tab only, never in localStorage or a cookie.
+    assert "localStorage" not in script and "document.cookie" not in script
+    page = TestClient(create_app(credentials={"test-key": "demo"})).get("/dashboard").text
+    for marker in ['id="sign-in-box" class="sign-in-box" hidden', 'id="sign-in"', 'id="sign-out"', 'id="keys-panel"', 'id="key-create"', 'id="key-new"']:
+        assert marker in page, marker
