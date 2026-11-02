@@ -1713,3 +1713,17 @@ legitimate administration; it is not proof of malicious intent. These rules need
 PowerShell script logging and trusted logsource routing. They remain separate
 from chat validation and are not hosted or deployed. The event helper permits at
 most 128 routed rules per evaluation, with shared work/deadline budgets.
+
+### Complete Sigma rule evidence export
+
+Run `python -m guardoath.sigma_rules.evidence_catalog` for an offline JSON handoff
+of all 103 imported rules, each with original attribution/logsource, a use case,
+positive structured event, nonmatching look-alike and limitations. The export
+explicitly marks the rules as unregistered. It verifies 100 pinned source
+snapshots; the first three retain unpinned master URLs and null digests. Unknown
+original false-positive notes remain null rather than an invented clean claim.
+
+The immutable catalog has no action settings and never changes what a tenant runs.
+Corrupt/missing assets or malformed evidence stop the export; no partial catalog
+is returned. Host event routing, registry/tenant integration and installed package
+asset checks remain Director-owned. This does not add chat or hosted validation.

@@ -160,3 +160,35 @@ also matches the specific-path rule's look-alike; local benignity is not global.
 This evidence does not register a hosted control, chat detector or tenant action.
 The existing single-event helper's 128-rule ceiling and shared budgets still apply;
 callers must route the original logsource and handle incomplete evaluation as error.
+
+## Complete rule-level evidence handoff
+
+`evidence_catalog.load_evidence_catalog()` returns 103 immutable `RuleEvidence`
+records for the Director's rule-level registry work. It retains original IDs,
+authors, license, source URLs and logsource; includes original descriptions,
+upstream status/level/false positives, positive events, nonmatching look-alikes
+and explicit limitations; and verifies the 100 pinned Git-text snapshots offline.
+The first three rules keep master URLs and null revision/digest. Missing original
+false-positive metadata is null, not a claim of no false positives. Their missing
+descriptions get an explicitly generated title-based review label.
+
+```sh
+python -m guardoath.sigma_rules.evidence_catalog > sigma-evidence.json
+```
+
+The JSON export marks `runtime_registered=false`. `as_dict()` creates a fresh
+copy; editing it cannot change the evidence or tenant policy. The loader reads
+fixed package resources, rejects duplicate JSON keys, unknown source/license,
+malformed fixtures, duplicate IDs/paths, corrupt snapshots and oversized metadata.
+It fails atomically instead of returning a partial catalog. There is no network,
+checker execution, tenant selection, action map, checkbox or hosted route. The
+metadata bound (4096) is separate from the 128-rule event-evaluation ceiling.
+
+Tests execute each exported positive/look-alike against its original rule and
+check all missing-field contracts. A nonmatch for one rule is not global benignity.
+Full upstream YAML-to-JSON semantic fidelity remains the development source audit
+(`verify_sources` with a pinned upstream checkout), not a new runtime YAML parser.
+Director owns registry/tenant integration and package-data declarations; a local wheel probe found all Sigma JSON/YAML/license assets absent. The module
+fails closed when imported from that wheel, with no source-checkout fallback.
+Director acknowledgement is requested for the reserved `pyproject.toml` package-data
+fix and installed-distribution tests before any installed/hosted integration.
