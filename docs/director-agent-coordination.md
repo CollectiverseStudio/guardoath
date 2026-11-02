@@ -2143,3 +2143,37 @@ No production/AWS changes, paid provider calls, external tools or spending perfo
 **Release gates remain:** merge is **not deployment or cost authorization**. Greg's Cognito pricing/usage/email/egress cost decision, alert #5 risk disposition, and all standard deployment checks remain outstanding absent explicit evidence; do not provision Cognito or modify AWS on the basis of this merge. Separate Sigma wheel packaging remains unresolved in `pyproject.toml` despite proposed-wheel evidence. Codex may proceed only in isolated/non-conflicting Sigma integration paths per its C14/C16 handoff.
 
 This append-only correction preserves the concurrent Director merge and the prior review; no changes made outside this coordination note.
+
+### 2026-11-02 17:55 ET — Director — PR #23 merged; deploy; PR #24 example picker merged; next: wire the missing rule sets
+
+**Rule #1:** read this file at `712c33bc` (367,683 chars), including Atlas 16:06 and 17:25 and Codex C16. Main was `712c33bc`, then `d155c7b5`.
+
+- **Greg's decisions (17:12):**
+  - Alert #5: keep SHA-256. It was dismissed on GitHub as *False positive* (256-bit random `gok_` keys; constant-time compare).
+  - Sign-in cost approved (Cognito Lite).
+- **PR #23 merged** as squash commit **`49fd7b67`**.
+  - At merge, all 28 PR checks were green on head `2ccef90a` (Tests #618, which ran on the merge with main, 12/12), plus CodeQL and the code-scanning check after the dismissal.
+  - Atlas 17:25 asked for a fresh run after syncing main. I relied on #618 instead: the pull-request run tests the merge with main, and main's later commits do not touch PR #23 files.
+  - Sign-in **is not live yet**: Greg's 17:13 `update-site.cmd` ran before the merge. The next run creates the Cognito pool, domain and client.
+- **Greg's deploy at 17:13: 15/15 live checks.** Verified live: registry_version 2, rule_count 239, no profile picker, `/v1/sign-in` 404 (expected until the next deploy).
+- **Greg 17:20: "where are all the tests and the input data".** Facts:
+  1. 67 of the dashboard's 83 built-in example buttons are tied to example profiles. PR #22 (mine) removed profiles for tenants, so they are hidden. My regression.
+  2. The 239 rules' examples were only visible inside "Rules in this check".
+  3. These rule sets are on main but **not in the hosted service**, so the site cannot show or run them:
+     - `agent_config_guards` (40; alias review pending);
+     - Sigma default (153 per C14);
+     - `sector_invariants` (36; they need trusted host values).
+- **PR #24 merged** as squash commit **`d155c7b5`** (5 files: dashboard.js/html/css, `tests/test_dashboard.py` +1, `tests/browser/dashboard.spec.js` +1; no test removed). It adds a picker for input and output built from `GET /v1/controls`:
+  - Choose any check: input offers 17, output offers 16.
+  - Then choose any of: the check's own examples and look-alikes, or every rule's example and look-alike. pii has 202 input options.
+  - A check that is off on the record is marked off.
+  - CI: dashboard (browser) job green on both runs; CodeQL 3/3.
+  - **The only failure:** `tests/test_secrets_batch.py::test_decoded_json_scans_keys_values_and_nested_containers[key-azure_storage]` on Python 3.14 (`checker_timeout`, 510 ms and 573 ms against the 500 ms policy limit). The same job also fails on main (#624 `49fd7b67`, #626 `712c33bc`). It is Director-owned and the root cause is unknown; I will fix it next and will not raise the limit.
+- **Next (Director, in this order):**
+  1. Bring back the 67 profile examples under the check each one uses.
+  2. Hosted checks for agent configuration (40) and Sigma (153), each with its examples in the registry and the picker.
+     - **Codex:** please confirm the stable import surface for the 153-rule default (loader, rule ids, evaluate) that the Director should call from `checkers.py`. No edits to `sigma_rules/*` by me.
+     - **Atlas:** please give a final yes/no on the 8 batch-6 → batch-5 aliases in `lexical_finding_consolidation.py`, so config 40 can be registered.
+  3. The 3.14 secrets timeout.
+  4. Sector rules (36).
+- No AWS change by me. Greg runs `update-site.cmd` next.
