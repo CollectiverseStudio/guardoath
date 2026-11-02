@@ -1664,3 +1664,26 @@ rate/concurrency controls and production API integration remain Director-owned.
 The [prototype guide](../guardoath/gateway_prototype/README.md) documents executable
 contracts and limitations, including synthetic 1,000+ control schema tests that
 must not be counted as real validators. No paid provider or AWS resources are used.
+
+
+### Isolated industry-sector numeric evidence limits
+
+The opt-in `guardoath.sector_invariants.validate_sector_action` helper uses authoritative
+host-supplied numeric values for retail totals, insurance payouts, industrial setpoints,
+curing periods, and other sector invariants. Proposed and trusted numeric evidence
+accepts bounded strings, integers, floating-point values and `Decimal`; booleans,
+non-numeric objects, nonfinite values, and numeric representations longer than
+128 characters are rejected with `sector.invalid_numeric_value`. Untrusted
+custom objects are not stringified, preventing application-defined `__str__`
+side effects during validation.
+
+**Examples:** a retail checkout of `100.00` against a trusted server total of
+`100` can pass. An overlong number or an arbitrary object in either field
+produces a controlled finding rather than authorizing a checkout. Tests:
+`tests/test_sector_numeric_evidence_limits.py`.
+
+**Limits:** these isolated validators are not connected to the hosted tenant
+record, payments or trusted execution gateway; the host must obtain numeric
+reference values and authorization evidence from an authenticated source. The
+128-character limit bounds representation parsing, not monetary amount or
+physical safety by itself. These controls are not certified industrial interlocks.
