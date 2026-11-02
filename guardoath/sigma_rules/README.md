@@ -280,3 +280,12 @@ source claims reject; harmless object ordering, whitespace and Unicode escaping
 remain valid. Generic caller-owned builders retain their existing validation.
 See [release integrity and anchor updates](../../docs/sigma-release-integrity.md).
 This adds no rules, YAML dependency, upstream signature claim or hosted authority.
+
+## Trusted installed-artifact acceptance
+
+`python -I -m guardoath.sigma_rules.verify_installation --expected-root INSTALL_ROOT`
+checks exact imported module/metadata origins and non-editable installed records,
+then all reviewed source assets and 128 routing/positive/benign/missing/malformed
+fixture contracts. It executes trusted installed code only, emits no partial pass,
+and never installs or fetches anything. See [the installed acceptance guide](../../docs/sigma-installed-acceptance.md).
+Director packaging adoption and release gates remain separate.

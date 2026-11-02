@@ -11,12 +11,18 @@ from pathlib import Path
 import pytest
 
 from guardoath.sigma_rules import import_rule
+from guardoath.sigma_rules.evidence_catalog import BATCH_NAMES
+from guardoath.sigma_rules.events import evaluate_event
+from guardoath.sigma_rules.routing import load_routing_table
 
 ROOT = Path(__file__).resolve().parents[1] / "guardoath" / "sigma_rules"
 BATCH = json.loads((ROOT / "upstream_batch_001.json").read_text(encoding="utf-8"))
 EVIDENCE = json.loads((ROOT / "process_branch_evidence.json").read_text(encoding="utf-8"))
 RULES = {rule["id"]: rule for rule in BATCH["rules"]}
 CASES = EVIDENCE["cases"]
+ALL_BATCHES = [json.loads((ROOT / name).read_text(encoding="utf-8")) for name in BATCH_NAMES]
+ALL_RULES = tuple(import_rule(row, row["source_path"], source_revision=batch["source_revision"])
+                  for batch in ALL_BATCHES for row in batch["rules"])
 
 
 def imported(case):
@@ -32,6 +38,10 @@ def test_c11_inventory_and_immutable_source_references():
     assert len({case["case_id"] for case in CASES}) == len(CASES)
     assert {case["rule_id"] for case in CASES} == set(RULES)
     assert all("GuardOath-authored" in case["origin"] for case in CASES)
+    assert len(ALL_RULES) == 128
+    for case in CASES:
+        assert case["expected_positive_rule_ids"] == [case["rule_id"]]
+        assert case["expected_negative_rule_ids"] == []
 
 
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c["case_id"])
@@ -62,12 +72,12 @@ def test_malformed_event_field_fails_closed(case, replacement):
 def test_cross_rule_matches_are_observed_not_silently_suppressed(case):
     # A look-alike for one rule can legitimately trigger another upstream rule.
     # Record the entire match set rather than claiming global nonmalicious intent.
-    imports = {rid: import_rule(row, row["source_path"], source_revision=BATCH["source_revision"])
-               for rid, row in RULES.items()}
-    positive_matches = {rid for rid, rule in imports.items() if rule.matches(case["positive_event"])}
-    benign_matches = {rid for rid, rule in imports.items() if rule.matches(case["negative_event"])}
-    assert case["rule_id"] in positive_matches
-    assert case["rule_id"] not in benign_matches
+    for event_key, expected_key in (("positive_event", "expected_positive_rule_ids"),
+                                    ("negative_event", "expected_negative_rule_ids")):
+        findings = evaluate_event(ALL_RULES, case[event_key])
+        assert {finding["rule_id"] for finding in findings} == set(case[expected_key])
+        assert all(finding == next(rule.finding() for rule in ALL_RULES
+                                   if rule.rule_id == finding["rule_id"]) for finding in findings)
 
 
 def test_branch_inventory_covers_expected_alternates():
@@ -109,7 +119,11 @@ def test_source_routed_complete_128_rule_overlap(case):
                               allowed_rule_ids=table.rule_ids)
     negative = table.evaluate(case["negative_event"], trusted_logsource=source,
                               allowed_rule_ids=table.rule_ids)
-    assert case["rule_id"] in {finding["rule_id"] for finding in positive}
-    assert case["rule_id"] not in {finding["rule_id"] for finding in negative}
+    assert {finding["rule_id"] for finding in positive} == set(case["expected_positive_rule_ids"])
+    assert {finding["rule_id"] for finding in negative} == set(case["expected_negative_rule_ids"])
     # Do not discard other genuine matches or treat the preview as authorization.
     assert all(finding["rule_id"] in selected.selected_rule_ids for finding in positive + negative)
+    table = load_routing_table()
+    for key in ("positive_event", "negative_event"):
+        assert table.evaluate(case[key], trusted_logsource={"product":"windows", "category":"ps_script"},
+                              allowed_rule_ids=table.rule_ids) == []

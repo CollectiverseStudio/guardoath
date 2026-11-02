@@ -14,7 +14,11 @@
         "Description": "7-Zip utility",
         "CommandLine": "7z a archive.7z doc.txt"
       },
-      "origin": "GuardOath authored synthetic evidence; not upstream effectiveness"
+      "origin": "GuardOath-authored synthetic evidence; not upstream tests or effectiveness evidence",
+      "expected_positive_rule_ids": [
+        "9fbf5927-5261-4284-a71d-f681029ea574"
+      ],
+      "expected_negative_rule_ids": []
     },
     {
       "case_id": "7zip_7zr_image",
@@ -27,7 +31,11 @@
         "Image": "C:\\tools\\7zr.exe",
         "CommandLine": "7zr a archive.7z doc.txt"
       },
-      "origin": "GuardOath authored synthetic evidence; not upstream effectiveness"
+      "origin": "GuardOath-authored synthetic evidence; not upstream tests or effectiveness evidence",
+      "expected_positive_rule_ids": [
+        "9fbf5927-5261-4284-a71d-f681029ea574"
+      ],
+      "expected_negative_rule_ids": []
     },
     {
       "case_id": "7zip_7za_image",
@@ -40,7 +48,11 @@
         "Image": "C:\\tools\\7za.exe",
         "CommandLine": "7za a archive.7z doc.txt"
       },
-      "origin": "GuardOath authored synthetic evidence; not upstream effectiveness"
+      "origin": "GuardOath-authored synthetic evidence; not upstream tests or effectiveness evidence",
+      "expected_positive_rule_ids": [
+        "9fbf5927-5261-4284-a71d-f681029ea574"
+      ],
+      "expected_negative_rule_ids": []
     },
     {
       "case_id": "7zip_original_filename",
@@ -53,7 +65,11 @@
         "OriginalFileName": "7zr.exe",
         "CommandLine": "renamed u archive.7z doc.txt"
       },
-      "origin": "GuardOath authored synthetic evidence; not upstream effectiveness"
+      "origin": "GuardOath-authored synthetic evidence; not upstream tests or effectiveness evidence",
+      "expected_positive_rule_ids": [
+        "9fbf5927-5261-4284-a71d-f681029ea574"
+      ],
+      "expected_negative_rule_ids": []
     },
     {
       "case_id": "7zip_update_action",
@@ -66,7 +82,11 @@
         "Image": "C:\\tools\\7z.exe",
         "CommandLine": "7z x -pPASS archive.7z doc.txt"
       },
-      "origin": "GuardOath authored synthetic evidence; not upstream effectiveness"
+      "origin": "GuardOath-authored synthetic evidence; not upstream tests or effectiveness evidence",
+      "expected_positive_rule_ids": [
+        "9fbf5927-5261-4284-a71d-f681029ea574"
+      ],
+      "expected_negative_rule_ids": []
     },
     {
       "case_id": "acccheck_original_name",
@@ -79,7 +99,11 @@
         "OriginalFileName": "AccCheckConsole.exe",
         "CommandLine": "renamed.exe -help"
       },
-      "origin": "GuardOath authored synthetic evidence; not upstream effectiveness"
+      "origin": "GuardOath-authored synthetic evidence; not upstream tests or effectiveness evidence",
+      "expected_positive_rule_ids": [
+        "0f6da907-5854-4be6-859a-e9958747b0aa"
+      ],
+      "expected_negative_rule_ids": []
     },
     {
       "case_id": "acccheck_process",
@@ -92,7 +116,11 @@
         "Image": "C:\\Tools\\AccCheckConsole.exe",
         "CommandLine": "AccCheckConsole.exe -help"
       },
-      "origin": "GuardOath authored synthetic evidence; not upstream effectiveness"
+      "origin": "GuardOath-authored synthetic evidence; not upstream tests or effectiveness evidence",
+      "expected_positive_rule_ids": [
+        "0f6da907-5854-4be6-859a-e9958747b0aa"
+      ],
+      "expected_negative_rule_ids": []
     },
     {
       "case_id": "acccheck_window",
@@ -105,7 +133,11 @@
         "Image": "C:\\Tools\\AccCheckConsole.exe",
         "CommandLine": "AccCheckConsole.exe -help"
       },
-      "origin": "GuardOath authored synthetic evidence; not upstream effectiveness"
+      "origin": "GuardOath-authored synthetic evidence; not upstream tests or effectiveness evidence",
+      "expected_positive_rule_ids": [
+        "0f6da907-5854-4be6-859a-e9958747b0aa"
+      ],
+      "expected_negative_rule_ids": []
     },
     {
       "case_id": "auditpol_original_name",
@@ -118,7 +150,11 @@
         "OriginalFileName": "AUDITPOL.EXE",
         "CommandLine": "renamed.exe /get"
       },
-      "origin": "GuardOath authored synthetic evidence; not upstream effectiveness"
+      "origin": "GuardOath-authored synthetic evidence; not upstream tests or effectiveness evidence",
+      "expected_positive_rule_ids": [
+        "0a13e132-651d-11eb-ae93-0242ac130002"
+      ],
+      "expected_negative_rule_ids": []
     },
     {
       "case_id": "auditpol_disable",
@@ -131,7 +167,11 @@
         "Image": "C:\\Windows\\System32\\auditpol.exe",
         "CommandLine": "auditpol.exe /get"
       },
-      "origin": "GuardOath authored synthetic evidence; not upstream effectiveness"
+      "origin": "GuardOath-authored synthetic evidence; not upstream tests or effectiveness evidence",
+      "expected_positive_rule_ids": [
+        "0a13e132-651d-11eb-ae93-0242ac130002"
+      ],
+      "expected_negative_rule_ids": []
     },
     {
       "case_id": "auditpol_remove",
@@ -144,7 +184,11 @@
         "Image": "C:\\Windows\\System32\\auditpol.exe",
         "CommandLine": "auditpol.exe /get"
       },
-      "origin": "GuardOath authored synthetic evidence; not upstream effectiveness"
+      "origin": "GuardOath-authored synthetic evidence; not upstream tests or effectiveness evidence",
+      "expected_positive_rule_ids": [
+        "0a13e132-651d-11eb-ae93-0242ac130002"
+      ],
+      "expected_negative_rule_ids": []
     },
     {
       "case_id": "auditpol_restore",
@@ -157,7 +201,11 @@
         "Image": "C:\\Windows\\System32\\auditpol.exe",
         "CommandLine": "auditpol.exe /get"
       },
-      "origin": "GuardOath authored synthetic evidence; not upstream effectiveness"
+      "origin": "GuardOath-authored synthetic evidence; not upstream tests or effectiveness evidence",
+      "expected_positive_rule_ids": [
+        "0a13e132-651d-11eb-ae93-0242ac130002"
+      ],
+      "expected_negative_rule_ids": []
     }
   ]
 }

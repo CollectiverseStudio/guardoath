@@ -12,7 +12,14 @@ Run `pytest tests/test_sigma_process_branch_evidence.py -q`.
 
 Each fixture is tested against its unchanged original detection, including
 missing essential fields and malformed values, while cross-rule tests preserve
-real overlaps rather than requiring only one finding. Synthetic evidence can
+real overlaps rather than suppressing extra findings. Every pair now records
+explicit expected finding IDs: these twelve positives each match their intended
+original rule, and the twelve look-alikes match none of the 128 imported rules.
+Tests compare exact full-inventory findings and attribution, process-source
+routing, and exclusion from the script-source route. These are expectations for
+these authored events, not a promise that every look-alike is globally clean.
+The original fixture-attribution spelling mismatch was corrected in the data;
+the provenance assertion remains unchanged. Synthetic evidence can
 show local parser behavior; it does **not** establish a false-positive rate,
 intent, detection effectiveness or production telemetry compatibility.
 

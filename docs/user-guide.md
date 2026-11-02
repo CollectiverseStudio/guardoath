@@ -1825,6 +1825,17 @@ unchanged. Generic caller-owned builders remain separate. See
 anchor-update procedure and limits; upstream authentication, installed acceptance,
 packaging adoption and hosted deployment remain separate requirements.
 
+### Accepting a trusted installed Sigma wheel
+
+After archive inspection and an offline installation outside the checkout,
+`python -I -m guardoath.sigma_rules.verify_installation --expected-root INSTALL_ROOT`
+checks exact module/metadata origins, installed records, reviewed assets and all
+128 original positive/look-alike, missing-event, malformed-event and routing
+contracts. Editable/foreign installations and any failed fixture reject without
+partial success JSON. The command installs nothing and uses no provider or
+network. See [the isolated installation procedure](sigma-installed-acceptance.md)
+for root selection, output and limitations. Packaging adoption stays Director-owned.
+
 
 ### Sigma Windows process rule alternate-branch evidence (C11)
 
