@@ -3,6 +3,7 @@ expressions the store sends (the constants in guardoath.dynamodb_store). With th
 a botocore Stubber test checks every request against the DynamoDB API model. With
 GUARDOATH_DYNAMODB_TEST_TABLE set, one test runs the store against that real table."""
 import copy
+import json
 import os
 import secrets as random_secrets
 
@@ -127,6 +128,20 @@ def test_every_record_survives_the_item_format_unchanged(record):
     assert from_item(item) == record
 
 
+def test_an_item_stored_with_the_retired_default_profile_still_loads():
+    # Items written before 2026-11-02 hold default_profile. Demo users drop any value; "tenant" is dropped
+    # on every record; a customer record naming an example profile is refused (migration review).
+    demo = demo_records(key_secret=SECRET)[0]
+    for record, value in ((demo, "pii-v1"), (customer(), "tenant")):
+        item = to_item(record)
+        item["record"]["S"] = json.dumps({**json.loads(item["record"]["S"]), "default_profile": value})
+        assert from_item(item) == record
+    item = to_item(customer())
+    item["record"]["S"] = json.dumps({**json.loads(item["record"]["S"]), "default_profile": "pii-v1"})
+    with pytest.raises(ValueError, match="needs a migration review"):
+        from_item(item)
+
+
 def test_the_item_keeps_usage_and_revision_out_of_the_record_json():
     item = to_item(customer(usage={MONTH: 3}, revision=4))
     assert '"usage"' not in item["record"]["S"] and '"revision"' not in item["record"]["S"]
@@ -163,8 +178,8 @@ def test_tenant_ids_read_every_page_in_order(store, fake):
 
 def test_a_change_bumps_the_revision_and_keeps_usage(store):
     store.count_check("demo1", MONTH)
-    updated = store.update_checks("demo1", {"check_pii": "flag", "default_profile": "pii-v1"}, 1)
-    assert updated.revision == 2 and updated.check_pii == "flag" and updated.default_profile == "pii-v1"
+    updated = store.update_checks("demo1", {"check_pii": "flag", "rule_actions": {"pii.url": "off"}}, 1)
+    assert updated.revision == 2 and updated.check_pii == "flag" and updated.rule_actions == {"pii.url": "off"}
     assert updated.used(MONTH) == 1 and store.get("demo1") == updated
 
 
@@ -314,9 +329,8 @@ def test_the_hosted_api_runs_on_the_dynamodb_store(store):
     from fastapi.testclient import TestClient
     from guardoath.app import create_app, demo_engine
     from guardoath.checkers import default_checkers
-    from guardoath.config import load_policies
     from guardoath.hosted import TenantService
-    tenants = TenantService(store, default_checkers(enable_pii=True), SECRET, tuple(load_policies("policies/playground.json")))
+    tenants = TenantService(store, default_checkers(enable_pii=True), SECRET)
     client = TestClient(create_app(engine=demo_engine(), credentials={}, tenants=tenants))
     token = client.post("/v1/demo-users/demo2/key", json={}).json()["api_key"]
     headers = {"Authorization": "Bearer " + token}
@@ -325,9 +339,10 @@ def test_the_hosted_api_runs_on_the_dynamodb_store(store):
     tenant = client.get("/v1/applications/current", headers=headers).json()["tenant"]
     assert tenant["used"] == 1 and tenant["revision"] == 1
     saved = client.post("/v1/tenants/current/checks", headers=headers,
-                        json={"revision": 1, "changes": {"default_profile": "secrets-v1"}})
-    assert saved.status_code == 200 and saved.json()["default_profile"] == "secrets-v1" and saved.json()["used"] == 1
-    assert client.post("/v1/checks/input", headers=headers, json=body).json()["policy_version"] == "secrets-v1"
+                        json={"revision": 1, "changes": {"check_pii": None, "check_encoded_pii": None}})
+    assert saved.status_code == 200 and saved.json()["checks"]["pii"] is None and saved.json()["used"] == 1
+    after = client.post("/v1/checks/input", headers=headers, json=body).json()
+    assert after["policy_version"] == "tenant" and after["effective_action"] == "allow"
     stale = client.post("/v1/tenants/current/checks", headers=headers, json={"revision": 1, "changes": {"check_pii": None}})
     assert stale.status_code == 409
     assert store.get("demo2").used(ddb.usage_month()) == 2

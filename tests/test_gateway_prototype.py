@@ -187,11 +187,16 @@ def test_request_cannot_override_tenant_authority_or_provider_configuration(fiel
     assert provider.calls == []
 
 
-@pytest.mark.parametrize('changes', [{'default_profile': 'other-profile'}, {'mode': 'observe'}])
-def test_profile_or_observe_tenant_requires_explicit_migration(changes):
-    client, _, provider, _, _ = setup(record(**changes))
+def test_observe_tenant_requires_explicit_migration():
+    client, _, provider, _, _ = setup(record(mode='observe'))
     assert post(client).status_code == 409
     assert provider.calls == []
+
+
+def test_a_record_naming_a_retired_example_profile_never_reaches_the_gateway():
+    # Example profiles were removed (2026-11-02): such a customer record is refused when it is read.
+    with pytest.raises(ValueError, match='migration review'):
+        record(default_profile='other-profile')
 
 
 @pytest.mark.parametrize('binding', [{'entitled': False}, {'allowed_models': ('other-model',)}])

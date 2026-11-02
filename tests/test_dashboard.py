@@ -175,14 +175,18 @@ def test_proposed_answer_is_locked_until_the_input_test_passes():
     assert "function outputLocked() { return !preparedRun() && !canProceed(inputResult); }" in script
 
 
-def test_tenant_panel_has_a_default_profile_picker_and_a_profile_note():
+def test_tenant_panel_has_no_profile_choice_and_the_profile_box_starts_hidden():
+    # Profiles were removed for tenants (2026-11-02). The profile choice is for the local developer key only.
     page = TestClient(create_app(credentials={"test-key": "demo"})).get("/dashboard").text
     panel = page[page.index('id="tenant-panel"'):]
     panel = panel[:panel.index("</section>")]
-    for marker in ['id="tenant-default-profile"', 'id="tenant-default-save"', 'id="tenant-default-note"',
-                   'id="tenant-profile-note"', 'id="tenant-checks"']:
-        assert marker in panel, marker
-    assert panel.index('id="tenant-default-profile"') < panel.index('id="tenant-checks"')
+    assert 'id="tenant-checks"' in panel
+    for marker in ['tenant-default', 'tenant-profile-note', "Default profile"]:
+        assert marker not in page, marker
+    assert '<details id="advanced" open hidden>' in page
+    from pathlib import Path
+    script = (Path(__file__).resolve().parents[1] / "guardoath" / "static" / "dashboard.js").read_text(encoding="utf-8")
+    assert '$("advanced").hidden = !!data.tenant;' in script and "default_profile" not in script
 
 
 # The demo video is served in parts (guardoath.app.media_part)
