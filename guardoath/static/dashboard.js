@@ -137,6 +137,70 @@ function profileName(version) { return profileHelp[version] ? profileHelp[versio
 function actionName(value) { return value ? value.charAt(0).toUpperCase() + value.slice(1) : "Off"; }
 // The record's own checks can be changed here; an example profile's checks are shown as they are.
 function ownChecksSelected() { const policy = currentPolicy(); return !policy || policy.version === "tenant"; }
+// Rules inside each check (GET /v1/controls). Loaded once; a rule list is filled only when it is opened.
+let controlRules = null, ruleEdits = {};
+async function loadRules() {
+  if (controlRules) return controlRules;
+  const response = await send("/v1/controls", {cache: "default"});
+  if (!response.ok) throw new Error("rules unavailable");
+  const body = await response.json(), map = {};
+  for (const domain of body.domains || []) for (const item of domain.controls || []) map[item.control_id] = item.rules || [];
+  controlRules = map; return map;
+}
+function sortedEntries(value) { return JSON.stringify(Object.entries(value || {}).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)); }
+function ruleRow(rule, redacts) {
+  const row = document.createElement("div"); row.className = "rule-row"; row.dataset.rule = rule.rule_id;
+  const line = document.createElement("div"); line.className = "rule-line";
+  const on = document.createElement("input"); on.type = "checkbox"; on.id = "rule-on-" + rule.rule_id; on.checked = ruleEdits[rule.rule_id] !== "off";
+  const label = document.createElement("label"); label.htmlFor = on.id; label.textContent = rule.title;
+  const action = document.createElement("select"); action.id = "rule-action-" + rule.rule_id; action.dataset.rule = rule.rule_id;
+  action.setAttribute("aria-label", "Action for " + rule.title);
+  for (const [value, text] of [["", "Check action"], ["block", "Block"], ["flag", "Flag"], ["allow", "Allow"]]) {
+    const option = document.createElement("option"); option.value = value; option.textContent = text; action.append(option);
+  }
+  const current = ruleEdits[rule.rule_id]; action.value = current && current !== "off" ? current : "";
+  const update = () => {
+    action.disabled = !on.checked || redacts;
+    const value = !on.checked ? "off" : redacts ? "" : action.value;
+    if (value) ruleEdits[rule.rule_id] = value; else delete ruleEdits[rule.rule_id];
+  };
+  on.addEventListener("change", update); action.addEventListener("change", update); action.disabled = !on.checked || redacts;
+  line.append(on, label, action);
+  const info = document.createElement("details"); info.className = "rule-info";
+  const summary = document.createElement("summary"); summary.textContent = "Use case and examples"; info.append(summary);
+  const lines = [["Use case: ", rule.use_case], ["Reported: ", rule.example], ["Not reported (look-alike): ", rule.look_alike]];
+  if (rule.needs_setting) lines.push(["Needs the setting: ", rule.needs_setting]);
+  for (const [heading, text] of lines) {
+    const p = document.createElement("p"); const b = document.createElement("strong"); b.textContent = heading;
+    const value = document.createElement(heading === "Use case: " ? "span" : "code"); value.textContent = text; p.append(b, value); info.append(p);
+  }
+  const id = document.createElement("p"); id.className = "hint"; id.textContent = "Rule id: " + rule.rule_id + " \u00b7 severity " + rule.severity; info.append(id);
+  row.append(line, info);
+  return row;
+}
+function ruleList(id, rules, redacts) {
+  const details = document.createElement("details"); details.className = "rule-list"; details.id = "tenant-rules-" + id;
+  const summary = document.createElement("summary"); summary.textContent = "Rules in this check (" + rules.length + ")"; details.append(summary);
+  details.addEventListener("toggle", () => {
+    if (!details.open || details.dataset.filled) return;
+    details.dataset.filled = "1";
+    const note = document.createElement("p"); note.className = "hint";
+    note.textContent = redacts ? "This check redacts, so each rule can only be turned on or off." : "Untick a rule to turn it off. \u201cCheck action\u201d uses the action chosen for the check above.";
+    details.append(note);
+    for (const rule of rules) details.append(ruleRow(rule, redacts));
+  });
+  return details;
+}
+async function fillRuleSlots() {
+  const shown = application;
+  let rules; try { rules = await loadRules(); } catch (error) { rules = null; }
+  if (shown !== application) return;
+  for (const slot of $("tenant-checks").querySelectorAll(".rule-slot")) {
+    const id = slot.dataset.check, list = rules ? rules[id] || [] : null;
+    if (list === null) { slot.textContent = "The rule list could not be loaded right now."; slot.className = "rule-slot hint"; continue; }
+    if (list.length) slot.replaceWith(ruleList(id, list, slot.dataset.redacts === "1")); else slot.remove();
+  }
+}
 function renderTenant() {
   const tenant = application?.tenant; $("tenant-panel").hidden = !tenant; $("tenant-message").textContent = "";
   if (!tenant) return;
@@ -148,7 +212,7 @@ function renderTenant() {
   $("tenant-title").textContent = own ? "Checks on " + tenant.display_name + "\u2019s record" : "Checks in the profile " + profileName(policy.version);
   $("tenant-usage").textContent = tenant.used + " of " + tenant.monthly_allowance + " checks used in " + tenant.month + (tenant.overage === "block" ? " (hard limit)" : "") + " \u00b7 revision " + tenant.revision;
   $("tenant-profile-note").textContent = own ? "" : "This is an example profile, so its checks are fixed and are shown as they run: the action on the user\u2019s message (input) and on the AI\u2019s answer (output). To choose each check yourself, select \u201c" + profileName("tenant") + "\u201d as the check profile.";
-  const box = $("tenant-checks"); box.replaceChildren();
+  const box = $("tenant-checks"); box.replaceChildren(); ruleEdits = {...(tenant.rule_actions || {})};
   for (const [id, value] of Object.entries(tenant.checks)) {
     const row = document.createElement("div"); row.className = "tenant-check";
     const line = document.createElement("div"); line.className = "tenant-check-row";
@@ -175,8 +239,13 @@ function renderTenant() {
       const summary = document.createElement("summary"); summary.textContent = "What is this?";
       details.append(summary, helpBlock(help, help.limit)); row.append(details);
     }
+    if (own) {
+      const slot = document.createElement("div"); slot.className = "rule-slot"; slot.dataset.check = id; slot.dataset.redacts = value === "redact" ? "1" : "";
+      row.append(slot);
+    }
     box.append(row);
   }
+  if (own) fillRuleSlots();
   $("tenant-save").disabled = !own;
   $("tenant-reset").hidden = !tenant.demo;
 }
@@ -199,10 +268,11 @@ async function saveTenant(path, body, done) {
 $("tenant-save").addEventListener("click", () => {
   const tenant = application?.tenant; if (!tenant || !ownChecksSelected()) return;
   const changes = {};
-  for (const select of $("tenant-checks").querySelectorAll("select")) {
+  for (const select of $("tenant-checks").querySelectorAll("select[data-check]")) {
     const value = select.value || null;
     if (value !== (tenant.checks[select.dataset.check] || null)) changes["check_" + select.dataset.check] = value;
   }
+  if (sortedEntries(ruleEdits) !== sortedEntries(tenant.rule_actions)) changes.rule_actions = {...ruleEdits};
   if (!Object.keys(changes).length) { $("tenant-message").textContent = "No changes to save."; return; }
   saveTenant("/v1/tenants/current/checks", {revision: tenant.revision, changes}, "Saved. The new checks apply from the next check.");
 });
