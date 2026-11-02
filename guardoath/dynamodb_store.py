@@ -133,10 +133,15 @@ class DynamoDBTenantStore:
                                                "revision": current.revision + 1, "updated_at": _now()})
         return self._replace(tenant_id, current, updated)
 
-    def set_key_hashes(self, tenant_id: str, key_hashes: tuple[str, ...]) -> TenantRecord:
+    def set_key_hashes(self, tenant_id: str, key_hashes: tuple[str, ...],
+                       expected_revision: int | None = None) -> TenantRecord:
+        """Replace the key hashes. With expected_revision, refused (TenantConflict) if the record changed;
+        the write itself is also conditional on the revision that was read."""
         current = self.get(tenant_id)
         if current is None:
             raise TenantNotFound(tenant_id)
+        if expected_revision is not None and current.revision != expected_revision:
+            raise TenantConflict("The tenant record changed; reload it and try again")
         updated = TenantRecord.model_validate({**current.model_dump(), "key_hashes": tuple(key_hashes),
                                                "revision": current.revision + 1, "updated_at": _now()})
         return self._replace(tenant_id, current, updated)
