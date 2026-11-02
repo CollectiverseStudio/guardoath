@@ -1840,3 +1840,14 @@ for root selection, output and limitations. Packaging adoption stays Director-ow
 ### Sigma Windows process rule alternate-branch evidence (C11)
 
 GuardOath includes 12 additional synthetic positive/benign-look-alike event pairs for the original 7-Zip, AccCheckConsole and Auditpol SigmaHQ process-creation rules. Run `pytest tests/test_sigma_process_branch_evidence.py -q` to verify alternate executable/original-filename/command-line branches, missing and malformed fields, and real cross-rule overlaps. The supporting evidence is in `guardoath/sigma_rules/process_branch_evidence.json`; limitations and use cases are described in `docs/sigma-process-branch-evidence.md`. No imported detection, tenant entitlement, hosted event route, AI chat validator or tool permission is created by this evidence set.
+
+## Staged Windows process-rule candidates
+
+The [C13 candidate review](sigma-process-candidates.md) stages 25 compatible,
+source-verified originals with matching/look-alike events and explicit overlap
+checks. They are not enabled in the default 128-rule catalog. A separately
+reviewed 153-rule inventory could route 28 process rules or 125 script rules per
+event, under the unchanged 128-rule cap and shared budget; direct evaluation of
+all 153 rejects. Source fingerprints, packaging and installed acceptance must be
+coordinated before promotion. Legitimate process activity can match; these
+fixtures are not effectiveness or deployment evidence.
