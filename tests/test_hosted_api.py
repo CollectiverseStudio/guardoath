@@ -352,12 +352,13 @@ def test_a_customers_api_key_cannot_change_settings():
     customer = TenantRecord(tenant_id="acme", display_name="Acme", key_hashes=(digest,), check_secrets="flag")
     tenants = service(records=(customer,))
     client = client_for(tenants)
+    stored = tenants.store.get("acme")  # as the store saved it (revision and time set on load)
     refused = {"detail": "Sign in to change this tenant's settings; an API key only runs checks"}
     response = change(client, token, 1, {"check_text_security": "block"})
     assert response.status_code == 403 and response.json() == refused
     response = client.post("/v1/tenants/current/reset", headers=auth(token), json={})
     assert response.status_code == 403 and response.json() == refused
-    assert tenants.store.get("acme") == customer
+    assert tenants.store.get("acme") == stored and stored.check_text_security is None
     assert check(client, token, "acme", CLEAN).status_code == 200
 
 
