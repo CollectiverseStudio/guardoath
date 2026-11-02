@@ -1,6 +1,6 @@
 # GuardOath authoritative tenant validation hierarchy
 
-**Status:** Architecture contract approved in principle by Greg on 2026-11-01; integration changes pending Director-owned file review. This document does **not** claim that additional validation families are currently wired into hosted execution.
+**Status (2026-11-02):** Architecture contract approved in principle by Greg on 2026-11-01. Director PR #22 (`59a5b09e`) **implemented tenant-only runtime profile selection**: an authenticated tenant runs only checks/actions on its record, with no example-profile selection. Additional validation families and the full canonical rule hierarchy are still **proposed/not integrated** into hosted execution. Local developer-launcher/evaluation profiles remain separate from tenant execution.
 
 ## Authoritative source of selection and action
 
@@ -31,7 +31,6 @@ Labels/packs organize and display controls, but only the tenant's authorized fie
 {
   "tenant_id": "clinic_demo",
   "revision": 12,
-  "default_profile": "tenant",
   "mode": "enforce",
   "failure_action": "block",
   "check_pii": "redact",
@@ -46,9 +45,11 @@ Labels/packs organize and display controls, but only the tenant's authorized fie
 
 The last four check fields are **proposed**, not current TenantRecord fields. Define stable ID normalization or a bounded serialized per-validation field mapping before implementation; do not assume arbitrary new keys currently validate. The initial check IDs and action support remain those in `guardoath/tenant_record.py` and `docs/tenant-records.md`.
 
-## Potential authority conflict that must be resolved
+## Runtime profile authority resolved; future selection constraints
 
-The current hosted service permits selecting predefined example profiles through `policy_version` and `default_profile`; their actions can differ from the tenant's own `check_<id>` fields. This is not compatible with a strict reading of “the tenant record determines all validations and actions” unless the record stores/authorizes an immutable resolved profile snapshot or profiles are treated as templates copied into its fields. **Recommended:** preset profiles are initialization/edit templates, never runtime overrides of the tenant's per-check configuration. API-supplied validation codes may only narrow execution within entitled, tenant-enabled controls where safe; they may not turn off mandatory controls or enable checks configured off. Any proposed migration requires Director ownership and compatibility review; do not change hosted behavior silently.
+Director PR #22 (`59a5b09e`, merged 2026-11-02) removed the tenant `default_profile` field and hosted example-profile selection. A tenant API request may omit `policy_version` or supply `tenant`; another value is rejected (HTTP 404, not billed). On read, legacy `default_profile: "tenant"` is dropped; demo records drop any legacy value; a non-demo customer record naming an example profile is refused pending an explicit migration review. `GUARDOATH_TENANT_PROFILE_FILE` prevents hosted startup rather than silently reactivating profiles. Local developer launcher and evaluation policies remain available, but they are **not tenant runtime overrides**.
+
+**Still proposed:** future API-supplied validation codes and optional sector packs may only narrow execution within authorized, tenant-enabled controls where safe; they may not enable a control configured off, change a persisted rule action, or disable platform-mandatory controls. The existing rule-level `rule_actions` mapping is implemented for registered rules, but does not imply that the proposed human-safety/sector/Sigma checks are currently selectable in the tenant record. Preserve Director ownership of any additional tenant migration or shared runtime change.
 
 ## Scale and storage
 
@@ -59,7 +60,7 @@ Greg's requirement is a field for each validation. Preserve field-level independ
 - Two tenants enable different subsets/actions for the same content; execution and decisions remain isolated.
 - Disabled validation does not run; configured `allow` does run and reports a finding.
 - Stages and content types route accurately; disabled/unavailable/not-applicable/incomplete/passed are distinct.
-- Predefined profiles and request validation codes cannot override the stored per-validation action or enable a disabled check.
+- Tenant requests cannot select example profiles: omitted/`tenant` policy versions use only the tenant record; other values return 404, and legacy customer records naming retired profiles are refused for migration review. Future request validation codes cannot override the stored per-validation action or enable a disabled check.
 - Unknown IDs, malformed actions, stale revisions and missing required evidence fail in a controlled way.
 - Trusted tool authorization is never bypassed by a configured `allow` action.
 - Positive, benign, incomplete/timeout and transformation/revalidation cases are exercised for each integrated family.
