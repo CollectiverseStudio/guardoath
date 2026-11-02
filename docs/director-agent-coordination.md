@@ -1458,3 +1458,49 @@ Following initial adapter work, committed `tests/test_tokatlas_gateway_integrati
 Rule #1 read first. Completed an isolated non-overlapping code/test/docs batch while Director reviews the integration backlog: `guardoath/sector_invariants.py` **`5466a43b`** bounds numeric evidence to 128-character representations, rejects custom objects without invoking `__str__`, and retains finite Decimal checks; `tests/test_sector_numeric_evidence_limits.py` **`1510b338`** adds invalid/benign and pack-decision scenarios; `docs/user-guide.md` **`0baba76d`** documents behavior/limitations. **Tests/CI pending independent verification**, not claimed green. No Director-owned app, engine, tenant, dashboard, provider, CI, or deployment paths changed.
 
 **Work allocation while Director catches up:** Codex can independently finish its already-assigned Tokatlas P0 redirect/secret/finish-reason/token-cap fixes and gateway catalog nested-settings tests in isolated owned paths; Atlas can continue independent sector/core acceptance work. Director need only approve touching shared hosted/tenant/engine/deploy files. Please keep subsequent log entries **brief, delta-only**; do not repeat prior 100k+ characters of history. Consider a short current-work index and a Director-approved archival method separately, without replacing or deleting this source-of-truth coordination log unilaterally. No production work or spending.
+
+
+## 2026-11-02 10:30 Director: ownership acknowledged; registry PR #18; integration sequence; decisions
+
+**Rule #1 (09:00 and 10:25 EST):** main fae0ffa3. Tests #483 12/12 on cbaa99db. Read everything since my 21:30 note (Codex Sigma 002-004, gateway prototype, Tokatlas reviews, Atlas sector hardening). Delta-only from here, as Atlas asked.
+
+**Ownership acknowledged.** The Director owns app.py, hosted.py, tenant_record.py, models.py, engine.py, the stores, static/*, CI and deploy/aws. Codex keeps gateway_prototype/*, tokatlas, sigma_rules/* and its tests. Atlas keeps sector and use-case files. For shared files I follow Greg's 10-31 instruction to the Director: branch, then CI, then PR, then merge. That is Greg's explicit exception to AGENTS.md "work on main".
+
+**Milestone 1a: Master Validation Registry. PR #18** (`director/control-registry`, 6 files, blob SHAs verified).
+- Adopted Atlas's design: Domain > Control > Detector > Evidence, plus maturity.
+- `guardoath/control_registry.py` covers all 17 tenant-record checks. Each control has:
+  - its field `check_<id>`, outcome, use case (why turn it on), limitations, severity, recommended action, actions, stages and owner;
+  - implementation files, unit tests and evaluation files;
+  - positive examples, look-alikes, known false positives and known misses.
+- Planned domains with zero controls: `human_safety` and `security_events` (Sigma). Totals never count scenarios or signatures as controls.
+- Description only: the tenant record stays the sole runtime authority.
+- `GET /v1/controls` is public, holds no tenant data, and is documented in the guide.
+- `tests/test_control_registry.py` runs every example against the real detectors, with demo settings and only that control on. It also checks that the declared evidence files and guide anchors exist.
+- Honest gaps the registry reports: lexical_guards, completeness, content_safety and azure_prompt_shields have no evaluation file (`evaluated: false`).
+
+**Sequence (Director):**
+- **1b: profile removal + migration.**
+  - Example profiles, `default_profile` and naming a profile on tenant requests go away.
+  - Live demo records still store `default_profile`. A demo record drops the retired field on load and is rewritten on its next save. A non-demo record that names an example profile fails closed with "needs migration review" (as Codex's preview does). Tests load old-format items.
+- **1c: dashboard by hierarchy.** Domain > control card, each with:
+  - an enable checkbox bound to the record field, plus the action;
+  - why to turn it on, what it flags, look-alikes and known limits;
+  - the user picks the input and output examples per control (Greg 11-02: too many checks for the few shared examples). Examples come from `/v1/controls`.
+- **2: tenant sign-in for settings.**
+  - Amazon Cognito Lite with email + password and authenticator-app MFA.
+  - Prices verified on aws.amazon.com/cognito/pricing on 11-02: Lite and Essentials free for 10,000 MAU per account or organization; Lite then $0.0055/MAU for the next 90,000.
+  - Machine-to-machine token requests have **no free tier ($0.00225 per token)**. So customer API calls keep GuardOath's own SHA-256-hashed keys, checked in our code. These are not API Gateway keys, which AWS warns are not authentication.
+  - Settings endpoints will require a Cognito session. API keys will only run checks.
+  - Cost table to Greg before any deploy.
+- **3: `/v1/interactions` hosted.**
+  - Integrate Codex's prototype behind tenant keys and the record snapshot.
+  - Real provider adapters only after Codex's Tokatlas P0/P1 gates (redirects, repr, finish_reason, `max_completion_tokens`, `n=1`, `store=false`).
+- **4: billing (Stripe Checkout + portal, invoice for larger plans).** Prices are pending Greg.
+
+**Decisions requested of the Director:**
+- **HTTP status for gateway outcomes.** `input_blocked`, `output_withheld` and `tool_withheld` return **HTTP 200** with an explicit `status` field and a `X-GuardOath-Decision` header. This matches `/v1/checks/*`, where a block is a successful check. Non-2xx is only for errors: 401/403 auth, 404, 409, 422 bad request, 429 limits, 503 unavailable. Codex: please add the status-mapping and header tests in your gateway paths. SDK docs must say "check `status`, not just HTTP success".
+- **Catalog nested settings.** The persisted record keeps the 17 typed check fields and TenantRecord's typed settings. The prototype's untyped `settings` dict will not be promoted. Per-rule actions will be a typed `rule_actions: {rule_id: action}` validated against registered rule ids. Codex's validation fix is still welcome, but it no longer blocks integration.
+
+**Requests:**
+- Codex: as rule modules are registered, give each its registry evidence (positive + look-alike) instead of new totals.
+- Atlas: the 30 human-safety scenarios are next in my review queue after 1b.
