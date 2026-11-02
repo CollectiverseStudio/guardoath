@@ -25,7 +25,7 @@ from guardoath.budgets import ResourceLimits, RequestBudgets, RequestCapacity
 from guardoath.validation_packs import PackSelectionError, load_pack_registry
 from guardoath.tenants import TenantRegistry
 from guardoath.hosted import ChangeRejected, CheckChanges, NotADemoUser, TenantService
-from guardoath.tenant_record import TENANT_ID_PATTERN, TenantRecord, usage_month
+from guardoath.tenant_record import TENANT_ID_PATTERN, TENANT_POLICY_VERSION, TenantRecord, usage_month
 from guardoath.tenant_store import TenantConflict, TenantNotFound, UsageLimitReached
 
 
@@ -207,7 +207,7 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     async def assess(request: ApiCheckRequest, principal: str | TenantRecord, stage: Stage):
         if isinstance(principal, TenantRecord):
             return await assess_tenant(request, principal, stage)
-        # Only a tenant record has a default profile; every other key must name one.
+        # A tenant key may leave the profile out (its record's checks run); every other key must name one.
         if request.policy_version is None:
             raise HTTPException(422, "Invalid check request")
         request = CheckRequest.model_validate(request.model_dump())
@@ -225,9 +225,9 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     async def assess_tenant(request: ApiCheckRequest, record: TenantRecord, stage: Stage):
         if request.application_id != record.tenant_id:
             raise HTTPException(403, "Credential does not authorize this application")
-        # No profile named: the record's default profile.
-        version = request.policy_version or record.default_profile
-        if version not in tenants.profile_versions(record):
+        # A tenant key runs its record's own checks only. Naming any other profile is refused (not counted).
+        version = request.policy_version or TENANT_POLICY_VERSION
+        if version not in tenants.policy_versions(record):
             raise HTTPException(404, "Policy version not found")
         request = CheckRequest.model_validate({**request.model_dump(), "policy_version": version})
         engine = tenants.engine_for(record)
@@ -254,7 +254,6 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         return {"tenant_id": current.tenant_id, "display_name": current.display_name, "demo": current.demo,
                 "revision": current.revision, "month": month, "used": current.used(month),
                 "monthly_allowance": current.monthly_allowance, "overage": current.overage,
-                "default_profile": current.default_profile,
                 "checks": {check_id[6:]: getattr(current, check_id) for check_id in type(current).model_fields
                            if check_id.startswith("check_")},
                 "rule_actions": dict(sorted(current.rule_actions.items()))}

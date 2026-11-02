@@ -8,8 +8,10 @@ check back on restores them, and they are passed to the engine only while the ch
 One rule inside a check can be set on its own in rule_actions: "off" stops that rule, and block, flag or
 allow replace the check's action for that rule only. Rule ids are the ones in guardoath.rule_catalog.
 
-The record also names its default profile: "tenant" (the record's own checks, above) or one of the
-example profiles the hosted service offers. A check request that names no profile uses it.
+Every check request runs the checks on its tenant's record. There are no example profiles for tenants
+(removed 2026-11-02). Records stored before then may still hold "default_profile": it is dropped when the
+record is read, except on a customer (non-demo) record that names an example profile: that record is
+refused until it is migrated, so its checks never change without review.
 """
 import base64
 from datetime import datetime, timezone
@@ -53,11 +55,10 @@ SETTINGS_OF = {
 SETTING_FIELDS = tuple(dict.fromkeys(name for names in SETTINGS_OF.values() for name in names))
 CHECK_FIELDS = tuple("check_" + check_id for check_id in CHECK_IDS)
 # Fields a tenant (or a demo visitor, on a demo record) may change. Account fields are admin-only.
-EDITABLE_FIELDS = frozenset({"mode", "timeout_ms", "failure_action", "default_profile", "rule_actions", *CHECK_FIELDS,
-                             *SETTING_FIELDS})
+EDITABLE_FIELDS = frozenset({"mode", "timeout_ms", "failure_action", "rule_actions", *CHECK_FIELDS, *SETTING_FIELDS})
 TENANT_POLICY_VERSION = "tenant"
-# Profile names a record can choose as its default. Which profiles exist is checked by the hosted service.
-PROFILE_PATTERN = r"^[a-z][a-z0-9-]{0,99}$"
+# The retired record field that named a default example profile (removed 2026-11-02).
+RETIRED_PROFILE_FIELD = "default_profile"
 KEY_PREFIX = "gok_"
 TENANT_ID_PATTERN = r"^[a-z][a-z0-9-]{1,39}$"
 MONTH_PATTERN = r"^[0-9]{4}-(0[1-9]|1[0-2])$"
@@ -85,8 +86,6 @@ class TenantRecord(Contract):
     mode: Literal["observe", "enforce"] = "enforce"
     timeout_ms: int = Field(default=1000, ge=1, le=5_000, strict=True)
     failure_action: Literal["block", "flag"] = "block"
-    # The profile used when a check request names none: "tenant" = the check fields below
-    default_profile: str = Field(default=TENANT_POLICY_VERSION, pattern=PROFILE_PATTERN)
     # One field per check: no value = the check does not run
     check_pii: Action | None = None
     check_encoded_pii: Action | None = None
@@ -127,6 +126,21 @@ class TenantRecord(Contract):
     # Per-rule settings: a rule listed here is off, or uses its own action instead of its check's action.
     rule_actions: dict[Annotated[str, Field(pattern=RULE_ID_PATTERN, max_length=100)],
                        Literal["off", "allow", "flag", "block"]] = Field(default_factory=dict, max_length=len(RULES))
+
+    @model_validator(mode="before")
+    @classmethod
+    def retired_profile_field(cls, data):
+        """Records stored before example profiles were removed may hold default_profile. "tenant" (the
+        record's own checks) and any value on a demo record are dropped. A customer record that names an
+        example profile is refused, so it is migrated by review instead of silently changing its checks."""
+        if not isinstance(data, dict) or RETIRED_PROFILE_FIELD not in data:
+            return data
+        data = dict(data)
+        value = data.pop(RETIRED_PROFILE_FIELD)
+        if value != TENANT_POLICY_VERSION and data.get("demo") is not True:
+            raise ValueError("default_profile: example profiles were removed; this customer record names one "
+                             "and needs a migration review")
+        return data
 
     @model_validator(mode="after")
     def consistent(self):
