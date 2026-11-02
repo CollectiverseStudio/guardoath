@@ -102,3 +102,10 @@ Director's denial contract: completed checks return HTTP 200 even when
 Clients must inspect `status`, not just HTTP success. `X-GuardOath-Decision`
 mirrors the result status. Blocked input makes zero provider calls; withheld
 output is absent. Error results retain non-2xx statuses.
+
+The canonical migration preview preserves tenant `rule_actions` as a separate
+map. Registered rule IDs, literal actions and PII-redaction restrictions use the
+persisted TenantRecord validator; unknown or malformed entries fail without
+returning submitted values. Older previews without this optional map normalize
+to an explicit empty map. Control updates retain it and reject incompatible
+redaction changes. This is a pure preview, not a settings persistence endpoint.

@@ -5,7 +5,7 @@ import json
 import re
 
 from guardoath.engine import Engine
-from guardoath.models import Policy
+from guardoath.models import Action, Policy
 from guardoath.tenant_record import (CHECK_IDS, INPUT_ONLY_CHECK_IDS, REQUIRED_SETTINGS,
                                     SETTINGS_OF, TENANT_ID_PATTERN, TenantRecord)
 
@@ -80,8 +80,27 @@ def _validated_settings(control_id, selection, owner):
     return {name: normalized[name] for name in settings}
 
 
+def _validated_rule_actions(actions, controls, owner):
+    """Reuse persisted schema/registry and PII-redaction constraints, without writes."""
+    pii = controls.get('pii')
+    redacts = isinstance(pii, dict) and any(
+        pii.get(stage + '_action') == 'redact' for stage in ('input', 'output'))
+    try:
+        record = TenantRecord.model_validate({
+            'tenant_id': owner, 'display_name': 'Migration preview validation',
+            'check_secrets': Action.ALLOW,
+            'check_pii': Action.REDACT if redacts else None,
+            'rule_actions': actions,
+        }, strict=True)
+    except Exception:
+        raise ValueError('invalid source-derived per-rule settings') from None
+    return dict(record.rule_actions)
+
+
 def validate_payload(payload, catalog):
-    if not isinstance(payload, dict) or set(payload) != {'tenant_id', 'format_version', 'catalog_version', 'record_revision', 'validations'}:
+    required = {'tenant_id', 'format_version', 'catalog_version', 'record_revision', 'validations'}
+    if (not isinstance(payload, dict) or not required.issubset(payload)
+            or set(payload) - required - {'rule_actions'}):
         raise ValueError('invalid canonical envelope')
     if not isinstance(payload['tenant_id'], str) or not re.fullmatch(TENANT_ID_PATTERN, payload['tenant_id']):
         raise ValueError('invalid preview owner')
@@ -92,6 +111,8 @@ def validate_payload(payload, catalog):
     controls = payload['validations']
     if not isinstance(controls, dict) or not 1 <= len(controls) <= MAX_CONTROL_COUNT:
         raise ValueError('invalid control count')
+    # Validate before JSON serialization can coerce non-string object keys.
+    rule_actions = _validated_rule_actions(payload.get('rule_actions', {}), controls, payload['tenant_id'])
     try:
         encoded = json.dumps(payload, sort_keys=True, separators=(',', ':'), allow_nan=False)
     except (ValueError, TypeError, OverflowError, RecursionError):
@@ -100,6 +121,7 @@ def validate_payload(payload, catalog):
         raise ValueError('configuration exceeds supported size')
     # Validate/normalize a bounded copy; caller-owned migration data is immutable.
     normalized = json.loads(encoded)
+    normalized['rule_actions'] = rule_actions
     controls = normalized['validations']
     for control_id, selection in controls.items():
         if not isinstance(control_id, str) or not _ID.fullmatch(control_id) or control_id not in catalog:
@@ -138,7 +160,7 @@ def migration_preview(record_or_payload, catalog):
             'settings': {name: raw[name] for name in SETTINGS_OF.get(control_id, ())},
         }
     return validate_payload({'tenant_id': record.tenant_id, 'format_version': 1, 'catalog_version': CATALOG_VERSION,
-        'record_revision': record.revision, 'validations': controls}, catalog)
+        'record_revision': record.revision, 'validations': controls, 'rule_actions': raw['rule_actions']}, catalog)
 
 
 def update_preview(payload, changes, catalog, *, trusted_tenant_id, expected_revision):

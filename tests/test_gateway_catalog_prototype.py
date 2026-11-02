@@ -250,3 +250,93 @@ def test_empty_structured_settings_normalize_source_defaults(control, enabled):
     assert normalized['validations'][control]['settings'][control] == source.model_dump(mode='json')[control]
     assert normalized == migration_preview(normalized, catalog)
     assert preview['validations'][control]['settings'][control] == {}  # No caller mutation.
+
+
+@pytest.mark.parametrize('action', ['off', 'allow', 'flag', 'block'])
+def test_migration_preserves_registered_rule_actions_and_roundtrips(action):
+    actions = {'prompt.extract_system': action}
+    record = source_record(rule_actions=actions)
+    before = record.model_dump(mode='json')
+    catalog = catalog_for({})
+    preview = migration_preview(record, catalog)
+    assert preview['rule_actions'] == actions
+    assert preview == migration_preview(preview, catalog)
+    assert preview == decode_payload(json.dumps(preview), catalog)
+    assert record.model_dump(mode='json') == before
+    preview['rule_actions']['prompt.extract_system'] = 'off' if action != 'off' else 'block'
+    assert record.rule_actions == actions
+
+
+def test_old_preview_without_per_rule_settings_normalizes_to_explicit_empty_map():
+    catalog = catalog_for({})
+    preview = migration_preview(source_record(), catalog)
+    del preview['rule_actions']
+    original = deepcopy(preview)
+    normalized = validate_payload(preview, catalog)
+    assert normalized['rule_actions'] == {}
+    assert normalized == migration_preview(normalized, catalog)
+    assert preview == original
+
+
+@pytest.mark.parametrize('value', [None, [], 'off', True,
+    {'private-rule-canary': 'off'}, {'prompt.extract_system': 'redact'},
+    {'prompt.extract_system': True}, {'prompt.extract_system': None},
+    {'prompt.extract_system': {}}, {1: 'off'}])
+def test_malformed_or_unknown_rule_actions_are_rejected_without_echo(value):
+    catalog = catalog_for({})
+    preview = migration_preview(source_record(), catalog)
+    preview['rule_actions'] = value
+    before = deepcopy(preview)
+    with pytest.raises(ValueError, match='per-rule settings') as error:
+        validate_payload(preview, catalog)
+    assert 'private-rule-canary' not in str(error.value)
+    assert preview == before
+
+
+@pytest.mark.parametrize('stage', ['input', 'output'])
+@pytest.mark.parametrize('action', ['allow', 'flag', 'block'])
+def test_preview_pii_redaction_cannot_be_overridden_by_per_rule_action(stage, action):
+    from guardoath.rule_catalog import RULES
+    rule_id = next(key for key in RULES if key.startswith('pii.'))
+    catalog = catalog_for({})
+    preview = migration_preview(source_record(), catalog)
+    preview['validations']['pii'][stage + '_action'] = 'redact'
+    preview['rule_actions'] = {rule_id: action}
+    with pytest.raises(ValueError, match='per-rule settings'):
+        validate_payload(preview, catalog)
+
+
+def test_pii_off_and_unrelated_actions_survive_redaction_and_control_updates():
+    from guardoath.rule_catalog import RULES
+    rule_id = next(key for key in RULES if key.startswith('pii.'))
+    actions = {rule_id: 'off', 'prompt.extract_system': 'block'}
+    catalog = catalog_for({})
+    preview = migration_preview(source_record(check_pii='redact', rule_actions=actions), catalog)
+    change = {'secrets': {'input_action': 'flag', 'output_action': 'block', 'settings': {}}}
+    updated = update_preview(preview, change, catalog, trusted_tenant_id='tenant-a', expected_revision=7)
+    assert updated['rule_actions'] == preview['rule_actions'] == actions
+    assert updated['record_revision'] == 8
+    updated['rule_actions'].clear()
+    assert preview['rule_actions'] == actions
+
+
+def test_turning_on_redaction_cannot_invalidate_retained_per_rule_settings_silently():
+    from guardoath.rule_catalog import RULES
+    rule_id = next(key for key in RULES if key.startswith('pii.'))
+    catalog = catalog_for({})
+    preview = migration_preview(source_record(rule_actions={rule_id: 'flag'}), catalog)
+    change = {'pii': {'input_action': 'redact', 'output_action': 'redact', 'settings': {}}}
+    with pytest.raises(ValueError, match='per-rule settings'):
+        update_preview(preview, change, catalog, trusted_tenant_id='tenant-a', expected_revision=7)
+    assert preview['record_revision'] == 7
+    assert preview['validations']['pii']['input_action'] is None
+    assert preview['rule_actions'] == {rule_id: 'flag'}
+
+
+def test_duplicate_rule_action_keys_in_serialized_preview_are_rejected():
+    catalog = catalog_for({})
+    preview = migration_preview(source_record(rule_actions={'prompt.extract_system': 'off'}), catalog)
+    raw = json.dumps(preview).replace('"prompt.extract_system": "off"',
+        '"prompt.extract_system": "off", "prompt.extract_system": "allow"')
+    with pytest.raises(ValueError, match='duplicate'):
+        decode_payload(raw, catalog)

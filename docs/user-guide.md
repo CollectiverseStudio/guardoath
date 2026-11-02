@@ -1760,3 +1760,14 @@ These literal event signals can match legitimate administration; a look-alike fo
 one rule can match another. They require trusted Windows script-log routing and
 do not assess chat safety. The 128-rule event limit and shared budgets remain in
 force; no matcher expansion, hosted registration or deployment is included.
+
+## Per-rule settings in the isolated migration preview
+
+The gateway catalog preview preserves a tenant's `rule_actions` map so migration
+does not lose rule-specific off/allow/flag/block settings. For example,
+`{"prompt.extract_system":"off"}` survives preview serialization and subsequent
+control edits. Registered rule IDs and actions are validated using the tenant
+record's schema; when PII redaction is enabled, PII rules may only be turned off.
+Invalid settings or conflicting redaction edits fail rather than silently dropping
+the map. Earlier preview envelopes without the field normalize to an empty map.
+The preview does not write records, authorize clients, or enable hosted migration.
