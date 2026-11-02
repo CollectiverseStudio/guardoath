@@ -15,7 +15,10 @@ from guardoath.sigma_rules.routing import RoutingTable, load_routing_table
 ROOT = Path(__file__).resolve().parents[1] / 'guardoath/sigma_rules'
 DATA = json.loads((ROOT / 'candidates/batch_007.json').read_text(encoding='utf-8'))
 ROWS = DATA['rules']
-DEFAULT_BATCHES = [json.loads((ROOT / name).read_text(encoding='utf-8')) for name in BATCH_NAMES]
+# Preserve the six-batch candidate-review baseline; the current default now also
+# adopts batch007, so never append the candidate to that default a second time.
+DEFAULT_BATCHES = [json.loads((ROOT / name).read_text(encoding='utf-8')) for name in BATCH_NAMES
+                   if name != 'upstream_batch_007.json']
 DEFAULT_ROWS = [r for b in DEFAULT_BATCHES for r in b['rules']]
 ALL_BATCHES = DEFAULT_BATCHES + [DATA]
 RULES = [import_rule(r, r['source_path'], source_revision=b['source_revision']) for b in ALL_BATCHES for r in b['rules']]
@@ -40,13 +43,13 @@ def expected_ids(row, which):
     return expected
 
 
-def test_staged_inventory_is_distinct_and_default_release_stays_128():
+def test_frozen_candidate_review_is_distinct_and_current_default_adopts_it():
     assert DATA['integration_status'] == 'staged-not-default'
     assert DATA['default_inventory_size_at_review'] == len(DEFAULT_ROWS) == 128
     assert len(ROWS) == len({r['id'] for r in ROWS}) == len({r['source_path'] for r in ROWS}) == 25
     assert not {r['id'] for r in ROWS} & {r['id'] for r in DEFAULT_ROWS}
     assert len(RULES) == len(build_evidence_catalog(ALL_BATCHES)) == 153
-    assert len(DEFAULT_TABLE.rule_ids) == len(load_evidence_catalog()) == 128
+    assert len(DEFAULT_TABLE.rule_ids) == len(load_evidence_catalog()) == 153
     assert all(e.source_revision is not None for e in load_evidence_catalog())
     assert DATA['license'] == LICENSE
     assert DATA['source_revision'] == '05d1031f537e830b76da53bae2400c5814c89165'
@@ -111,9 +114,11 @@ def test_all_default_fixtures_have_no_unreviewed_candidate_overlap(row, which):
 
 
 @pytest.mark.parametrize('row', ROWS, ids=lambda r: r['id'])
-def test_default_route_cannot_select_unpublished_candidate_id(row):
-    with pytest.raises(UnsupportedSigmaRule, match='unknown'):
-        DEFAULT_TABLE.plan(trusted_logsource=PROCESS, allowed_rule_ids=[row['id']])
+def test_default_route_accepts_only_reviewed_adopted_candidate_id(row):
+    plan = DEFAULT_TABLE.plan(trusted_logsource=PROCESS, allowed_rule_ids=[row['id']])
+    assert plan.selected_rule_ids == (row['id'],) and plan.excluded_rule_ids == ()
+    actual = DEFAULT_TABLE.evaluate(row['positive_event'], trusted_logsource=PROCESS, allowed_rule_ids=[row['id']])
+    assert actual == [import_rule(row,row['source_path'],source_revision=DATA['source_revision']).finding()]
 
 
 def test_153_inventory_requires_source_routing_and_never_expands_event_cap(monkeypatch):

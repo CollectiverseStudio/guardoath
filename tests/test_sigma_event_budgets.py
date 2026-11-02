@@ -136,12 +136,18 @@ def test_rule_set_shape_is_bounded(rules):
         evaluate_event(rules, {})
 
 
-def test_all_imported_rules_fit_event_gateway_and_keep_real_overlap():
+def test_growing_inventory_requires_host_source_routing_and_keeps_real_overlap():
     root = Path(__file__).resolve().parents[1] / 'guardoath/sigma_rules'
     records = [r for path in sorted(root.glob('upstream_batch_*.json')) for r in json.loads(path.read_text(encoding='utf-8'))['rules']]
     imported = [import_rule(r, r['source_path']) for r in records]
-    assert 1 <= len(imported) <= 128
-    assert evaluate_event(imported, {'ScriptBlockText': 'Write-Output lab'}) == []
-    findings = evaluate_event(imported, {'ScriptBlockText': 'Get-ADReplAccount -All -Server lab '})
+    assert len(imported) == 153
+    with pytest.raises(UnsupportedSigmaRule, match='128'):
+        evaluate_event(imported, {})
+    from guardoath.sigma_rules.routing import load_routing_table
+    table = load_routing_table()
+    args = {'trusted_logsource':{'product':'windows','category':'ps_script'}, 'allowed_rule_ids':table.rule_ids}
+    assert len(table.plan(**args).selected_rule_ids) == 125
+    assert table.evaluate({'ScriptBlockText': 'Write-Output lab'}, **args) == []
+    findings = table.evaluate({'ScriptBlockText': 'Get-ADReplAccount -All -Server lab '}, **args)
     assert {f['rule_id'] for f in findings} == {'846c7a87-8e14-4569-9d49-ecfd4276a01c', '060c3ef1-fd0a-4091-bf46-e7d625f60b73'}
     assert all(f['author'] and f['license'] and f['source_url'] for f in findings)

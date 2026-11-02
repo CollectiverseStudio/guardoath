@@ -27,7 +27,8 @@ def test_inventory_is_ten_gaps_in_nine_existing_rules_not_new_detectors():
     assert len(GAPS) == len({g['gap_id'] for g in GAPS}) == 10
     assert len({g['rule_id'] for g in GAPS}) == 9
     assert len(CASES) == len(IDS) == len(set(IDS)) == 30
-    assert DATA['rule_inventory_size'] == len(RULES) == len(BY_ID) == 128
+    assert DATA['rule_inventory_size'] == 128  # Frozen C5 review scope.
+    assert len(RULES) == len(BY_ID) == 153
     assert DATA['runtime_registered'] is False
     assert len(DATA['prior_evidence_files']) == 5
     for gap in GAPS:
@@ -63,8 +64,9 @@ def test_target_branch_preserves_expected_match_and_lookalike_without_mutation(g
 
 
 @pytest.mark.parametrize('gap,case', CASES, ids=IDS)
-def test_all_128_rule_overlaps_match_reviewed_explicit_expectations(gap, case):
-    findings = evaluate_event(RULES, case['event'])
+def test_growing_catalog_source_route_keeps_reviewed_explicit_overlaps(gap, case):
+    findings = TABLE.evaluate(case['event'], trusted_logsource={'product':'windows','category':'ps_script'},
+                              allowed_rule_ids=TABLE.rule_ids)
     assert {r['rule_id'] for r in findings} == set(case['expected_rule_ids'])
     assert all(r == next(rule.finding() for rule in RULES if rule.rule_id == r['rule_id']) for r in findings)
 
@@ -81,7 +83,9 @@ def test_trusted_script_route_preserves_all_signals_and_process_isolation(gap, c
 @pytest.mark.parametrize('gap,case', CASES, ids=IDS)
 def test_case_insensitivity_keeps_alternatives_and_exclusions(gap, case):
     event = {key: value.swapcase() for key, value in case['event'].items()}
-    assert {r['rule_id'] for r in evaluate_event(RULES, event)} == set(case['expected_rule_ids'])
+    assert {r['rule_id'] for r in TABLE.evaluate(event,
+        trusted_logsource={'product':'windows','category':'ps_script'},
+        allowed_rule_ids=TABLE.rule_ids)} == set(case['expected_rule_ids'])
 
 
 def test_full_exclusions_do_not_imply_globally_clean_events():

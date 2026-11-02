@@ -1,5 +1,11 @@
 # Staged Windows process-creation candidates (C13)
 
+**C14 update:** These frozen candidate definitions were independently verified and adopted
+into the current 153-rule default source catalog. The original staging counts and
+checks below describe candidate commit `95eca0339f2313690babb83c8d236064d1ee140f`.
+See [default integration and unchanged event limits](sigma-batch-007-integration.md).
+
+
 This review stages **25 original SigmaHQ rules** at immutable revision
 `05d1031f537e830b76da53bae2400c5814c89165`. Complete original YAML, metadata,
 detection logic, authors, source paths and Git/SHA-256 hashes are retained in

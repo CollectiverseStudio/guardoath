@@ -26,8 +26,8 @@ marks `evaluation_performed=false`. Copy edits cannot change the plan or table.
 Rule definitions remain available through the existing copied `source_for()`
 descriptors, including original logging prerequisites.
 
-For the current 128-rule inventory, an all-ID PowerShell-script preview selects
-125 script IDs and excludes three process-creation IDs; a process preview reverses
+For the current 153-rule inventory, an all-ID PowerShell-script preview selects
+125 script IDs and excludes 28 process-creation IDs; a process preview reverses
 those counts. A host may configure a bounded mixed-source list, but no preview or
 evaluation may select more than 128 rules for one source. Invalid source shape,
 unknown/duplicate IDs, missing configured routes and oversized selected sets are
@@ -42,10 +42,10 @@ own existing aggregate context, then calls the event evaluator exactly once;
 it never accepts a prior plan as a shortcut. All prior event bounds, worker caps,
 timeouts, attribution and no-partial-result behavior remain unchanged.
 
-Tests cover all 128 original positive/look-alike pairs, exact source partitions,
+Tests cover all 153 original positive/look-alike pairs, exact source partitions,
 configured order, malformed source/ID/deadline settings, immutable exports, no
 matcher/worker calls, the 128/129 boundary, and inherited time/work budgets. These
-are executable contract fixtures, not detector effectiveness evidence. Source
-snapshots, detections and the rule inventory are unchanged. The Director's pending
+are executable contract fixtures, not detector effectiveness evidence. The original 128 definitions remain unchanged; batch 007 adds 25 exact original
+process rules under the same routing contracts. The Director's pending
 packaging adoption and hosted authentication/routing/tenant integration remain
 separate release requirements.

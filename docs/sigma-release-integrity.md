@@ -1,8 +1,8 @@
 # Sigma release asset consistency
 
 The standalone wheel verifier and default shipped catalog/routing loaders now
-compare all six parsed batch JSON objects with fixed SHA-256 fingerprints in
-`guardoath/sigma_rules/release_assets.py`. The anchors were frozen after the
+compare all seven parsed batch JSON objects with fixed SHA-256 fingerprints in
+`guardoath/sigma_rules/release_assets.py`. The first six anchors were frozen after the
 128-rule immutable source audit at upstream revision
 `05d1031f537e830b76da53bae2400c5814c89165`. All original IDs, authors, paths,
 licenses, detections and authored positive/look-alike events are covered.
@@ -26,8 +26,9 @@ Run the existing archive command against the actual trusted newly built wheel:
 python -m guardoath.sigma_rules.verify_distribution path/to/guardoath.whl
 ```
 
-The contract remains **128 pinned rules / 135 required assets**. Tests cover
-changed detections in every one of the 128 rules, six-batch metadata/fixture
+Batch 007 adds a separately reviewed anchor after independent Git/fixture verification.
+The current contract is **153 pinned rules / 161 required assets**. Tests cover
+changed detections in every one of the 153 rules, seven-batch metadata/fixture
 tampering, self-rehashed snapshots, harmless reformatting, default-loader
 rejection and archive inspection without importing archive modules. Generic
 `build_evidence_catalog(batches)` / `RoutingTable(batches)` remain explicitly

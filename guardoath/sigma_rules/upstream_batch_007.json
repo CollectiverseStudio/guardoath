@@ -1,0 +1,1376 @@
+{
+  "source_repository": "https://github.com/SigmaHQ/sigma",
+  "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+  "license": "Detection Rule License 1.1 (DRL 1.1)",
+  "license_url": "https://github.com/SigmaHQ/Detection-Rule-License/blob/main/LICENSE.Detection.Rules.md",
+  "fixture_origin": "GuardOath-authored synthetic events; not upstream tests or effectiveness evidence",
+  "integration_status": "offline-default-source-only",
+  "default_inventory_size_at_review": 128,
+  "rules": [
+    {
+      "title": "AspNetCompiler Execution",
+      "id": "a01b8329-5953-4f73-ae2d-aa01e1f35f00",
+      "related": [
+        {
+          "id": "9ccba514-7cb6-4c5c-b377-700758f2f120",
+          "type": "similar"
+        },
+        {
+          "id": "4c7f49ee-2638-43bb-b85b-ce676c30b260",
+          "type": "similar"
+        },
+        {
+          "id": "9f50fe98-fe5c-4a2d-86c7-fad7f63ed622",
+          "type": "similar"
+        }
+      ],
+      "status": "test",
+      "description": "Detects execution of \"aspnet_compiler.exe\" which can be abused to compile and execute C# code.",
+      "references": [
+        "https://lolbas-project.github.io/lolbas/Binaries/Aspnet_Compiler/",
+        "https://ijustwannared.team/2020/08/01/the-curious-case-of-aspnet_compiler-exe/"
+      ],
+      "author": "frack113",
+      "date": "2021-11-24",
+      "modified": "2025-02-24",
+      "tags": [
+        "attack.execution",
+        "attack.stealth",
+        "attack.t1127"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|contains": [
+            ":\\Windows\\Microsoft.NET\\Framework\\",
+            ":\\Windows\\Microsoft.NET\\Framework64\\",
+            ":\\Windows\\Microsoft.NET\\FrameworkArm\\",
+            ":\\Windows\\Microsoft.NET\\FrameworkArm64\\"
+          ],
+          "Image|endswith": "\\aspnet_compiler.exe"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_aspnet_compiler_exectuion.yml",
+      "source_sha256": "2dd4a36221a8b6c6ec2d64a616606f032a631c87a9ba9d953ae5c1fababf4cdd",
+      "source_git_blob": "c84ae9809a383f6839449370fdc045e43253f1c2",
+      "positive_event": {
+        "Image": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\aspnet_compiler.exe"
+      },
+      "negative_event": {
+        "Image": "C:\\Lab\\aspnet_compiler.exe"
+      }
+    },
+    {
+      "title": "Potentially Suspicious ASP.NET Compilation Via AspNetCompiler",
+      "id": "9f50fe98-fe5c-4a2d-86c7-fad7f63ed622",
+      "related": [
+        {
+          "id": "9ccba514-7cb6-4c5c-b377-700758f2f120",
+          "type": "similar"
+        },
+        {
+          "id": "4c7f49ee-2638-43bb-b85b-ce676c30b260",
+          "type": "similar"
+        },
+        {
+          "id": "a01b8329-5953-4f73-ae2d-aa01e1f35f00",
+          "type": "similar"
+        }
+      ],
+      "status": "test",
+      "description": "Detects execution of \"aspnet_compiler.exe\" with potentially suspicious paths for compilation.",
+      "references": [
+        "https://lolbas-project.github.io/lolbas/Binaries/Aspnet_Compiler/",
+        "https://ijustwannared.team/2020/08/01/the-curious-case-of-aspnet_compiler-exe/"
+      ],
+      "author": "Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2023-08-14",
+      "modified": "2025-02-24",
+      "tags": [
+        "attack.execution",
+        "attack.stealth",
+        "attack.t1127"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|contains": [
+            ":\\Windows\\Microsoft.NET\\Framework\\",
+            ":\\Windows\\Microsoft.NET\\Framework64\\",
+            ":\\Windows\\Microsoft.NET\\FrameworkArm\\",
+            ":\\Windows\\Microsoft.NET\\FrameworkArm64\\"
+          ],
+          "Image|endswith": "\\aspnet_compiler.exe",
+          "CommandLine|contains": [
+            "\\Users\\Public\\",
+            "\\AppData\\Local\\Temp\\",
+            "\\AppData\\Local\\Roaming\\",
+            ":\\Temp\\",
+            ":\\Windows\\Temp\\",
+            ":\\Windows\\System32\\Tasks\\",
+            ":\\Windows\\Tasks\\"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_aspnet_compiler_susp_paths.yml",
+      "source_sha256": "130b30e44af117be791ee00893a9878c3b3a59c9e07bfa113137de6ad0e0b2bd",
+      "source_git_blob": "b4296b132f68782bba74cdffd011e336d043eb5c",
+      "positive_event": {
+        "Image": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\aspnet_compiler.exe",
+        "CommandLine": "aspnet_compiler -p C:\\Users\\Public\\Lab"
+      },
+      "negative_event": {
+        "Image": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\aspnet_compiler.exe",
+        "CommandLine": "aspnet_compiler -p C:\\Trusted\\Lab"
+      }
+    },
+    {
+      "title": "Interactive AT Job",
+      "id": "60fc936d-2eb0-4543-8a13-911c750a1dfc",
+      "status": "test",
+      "description": "Detects an interactive AT job, which may be used as a form of privilege escalation.",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1053.002/T1053.002.md",
+        "https://eqllib.readthedocs.io/en/latest/analytics/d8db43cf-ed52-4f5c-9fb3-c9a4b95a0b56.html"
+      ],
+      "author": "E.M. Anhaus (originally from Atomic Blue Detections, Endgame), oscd.community",
+      "date": "2019-10-24",
+      "modified": "2021-11-27",
+      "tags": [
+        "attack.persistence",
+        "attack.execution",
+        "attack.privilege-escalation",
+        "attack.t1053.002"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": "\\at.exe",
+          "CommandLine|contains": "interactive"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unlikely (at.exe deprecated as of Windows 8)"
+      ],
+      "level": "high",
+      "simulation": [
+        {
+          "type": "atomic-red-team",
+          "name": "At.exe Scheduled task",
+          "technique": "T1053.002",
+          "atomic_guid": "4a6c0dc4-0f2a-4203-9298-a5a9bdc21ed8"
+        }
+      ],
+      "regression_tests_path": "regression_data/rules/windows/process_creation/proc_creation_win_at_interactive_execution/info.yml",
+      "source_path": "rules/windows/process_creation/proc_creation_win_at_interactive_execution.yml",
+      "source_sha256": "a2ebd67a3f1acace23dd4a32275b3d6327ad6b3f8aa90c5418c66f2ac27af7e6",
+      "source_git_blob": "3e634c09d0e7ec215b7df6219e58fde7f994ae72",
+      "positive_event": {
+        "Image": "C:\\Windows\\System32\\at.exe",
+        "CommandLine": "at 12:00 /interactive Lab.exe"
+      },
+      "negative_event": {
+        "Image": "C:\\Windows\\System32\\at.exe",
+        "CommandLine": "at 12:00 /every:M Lab.exe"
+      }
+    },
+    {
+      "title": "Audit Policy Tampering Via NT Resource Kit Auditpol",
+      "id": "c6c56ada-612b-42d1-9a29-adad3c5c2c1e",
+      "related": [
+        {
+          "id": "0a13e132-651d-11eb-ae93-0242ac130002",
+          "type": "similar"
+        }
+      ],
+      "status": "test",
+      "description": "Threat actors can use an older version of the auditpol binary available inside the NT resource kit to change audit policy configuration to impair detection capability.\nThis can be carried out by selectively disabling/removing certain audit policies as well as restoring a custom policy owned by the threat actor.\n",
+      "references": [
+        "https://github.com/3CORESec/MAL-CL/tree/master/Descriptors/Windows%202000%20Resource%20Kit%20Tools/AuditPol"
+      ],
+      "author": "Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2021-12-18",
+      "modified": "2023-02-21",
+      "tags": [
+        "attack.defense-impairment",
+        "attack.t1685.001"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains": [
+            "/logon:none",
+            "/system:none",
+            "/sam:none",
+            "/privilege:none",
+            "/object:none",
+            "/process:none",
+            "/policy:none"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "The old auditpol utility isn't available by default on recent versions of Windows as it was replaced by a newer version. The FP rate should be very low except for tools that use a similar flag structure"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_auditpol_nt_resource_kit_usage.yml",
+      "source_sha256": "887f93bcf0c69ba6d02af492a0c3c5ccfd1e5855e71b92ee9308d4b740a00209",
+      "source_git_blob": "b9e2582057b89c1fcbf5f6300eeed1c7ca4e04b5",
+      "positive_event": {
+        "Image": "C:\\Lab\\auditpol.exe",
+        "CommandLine": "auditpol /logon:none"
+      },
+      "negative_event": {
+        "Image": "C:\\Lab\\auditpol.exe",
+        "CommandLine": "auditpol /logon:success"
+      }
+    },
+    {
+      "title": "Suspicious BitLocker Access Agent Update Utility Execution",
+      "id": "9f38c1db-e2ae-40bf-81d0-5b68f73fb512",
+      "related": [
+        {
+          "id": "6e8fe0a8-ba0b-4a93-8f9e-82657e7a5984",
+          "type": "similar"
+        }
+      ],
+      "status": "experimental",
+      "description": "Detects the execution of the BitLocker Access Agent Update Utility (baaupdate.exe) which is not a common parent process for other processes.\nSuspicious child processes spawned by baaupdate.exe could indicate an attempt at lateral movement via BitLocker DCOM & COM Hijacking.\n",
+      "references": [
+        "https://github.com/rtecCyberSec/BitlockMove"
+      ],
+      "author": "andrewdanis, Swachchhanda Shrawan Poudel (Nextron Systems)",
+      "date": "2025-10-18",
+      "tags": [
+        "attack.stealth",
+        "attack.t1218",
+        "attack.lateral-movement",
+        "attack.t1021.003"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "ParentImage|endswith": "\\baaupdate.exe",
+          "Image|endswith": [
+            "\\bitsadmin.exe",
+            "\\cmd.exe",
+            "\\cscript.exe",
+            "\\mshta.exe",
+            "\\powershell_ise.exe",
+            "\\powershell.exe",
+            "\\regsvr32.exe",
+            "\\rundll32.exe",
+            "\\schtasks.exe",
+            "\\wmic.exe",
+            "\\wscript.exe"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_baaupdate_susp_child_process.yml",
+      "source_sha256": "0b2b65e9f5691d701d7ccd9a0499d02a9a1791ed112e61038caab55b7f4e9da7",
+      "source_git_blob": "0d64757a52acbbb415ca52c412f8ae57f28afae7",
+      "positive_event": {
+        "ParentImage": "C:\\Lab\\baaupdate.exe",
+        "Image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+      },
+      "negative_event": {
+        "ParentImage": "C:\\Lab\\baaupdate.exe",
+        "Image": "C:\\Windows\\System32\\notepad.exe"
+      }
+    },
+    {
+      "title": "Uncommon Child Process Of BgInfo.EXE",
+      "id": "aaf46cdc-934e-4284-b329-34aa701e3771",
+      "related": [
+        {
+          "id": "811f459f-9231-45d4-959a-0266c6311987",
+          "type": "similar"
+        }
+      ],
+      "status": "test",
+      "description": "Detects uncommon child processes of \"BgInfo.exe\" which could be a sign of potential abuse of the binary to proxy execution via external VBScript",
+      "references": [
+        "https://lolbas-project.github.io/lolbas/OtherMSBinaries/Bginfo/",
+        "https://oddvar.moe/2017/05/18/bypassing-application-whitelisting-with-bginfo/"
+      ],
+      "author": "Nasreddine Bencherchali (Nextron Systems), Beyu Denis, oscd.community",
+      "date": "2019-10-26",
+      "modified": "2023-08-16",
+      "tags": [
+        "attack.execution",
+        "attack.stealth",
+        "attack.t1059.005",
+        "attack.t1218",
+        "attack.t1202"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "ParentImage|endswith": [
+            "\\bginfo.exe",
+            "\\bginfo64.exe"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_bginfo_uncommon_child_process.yml",
+      "source_sha256": "be051512fe532b313a527aa34aa5a67c0838e91115235e22e3ba90ef391d5501",
+      "source_git_blob": "ac933cfe5b7b12570869f5ebece6964d1dff553d",
+      "positive_event": {
+        "ParentImage": "C:\\Lab\\bginfo64.exe",
+        "Image": "C:\\Windows\\System32\\notepad.exe"
+      },
+      "negative_event": {
+        "ParentImage": "C:\\Windows\\explorer.exe",
+        "Image": "C:\\Windows\\System32\\notepad.exe"
+      }
+    },
+    {
+      "title": "BitLockerTogo.EXE Execution",
+      "id": "7f2376f9-42ee-4dfc-9360-fecff9a88fc8",
+      "status": "test",
+      "description": "Detects the execution of \"BitLockerToGo.EXE\".\nBitLocker To Go is BitLocker Drive Encryption on removable data drives. This feature includes the encryption of, USB flash drives, SD cards, External hard disk drives, Other drives that are formatted by using the NTFS, FAT16, FAT32, or exFAT file system.\nThis is a rarely used application and usage of it at all is worth investigating.\nMalware such as Lumma stealer has been seen using this process as a target for process hollowing.\n",
+      "references": [
+        "https://tria.ge/240521-ynezpagf56/behavioral1",
+        "https://any.run/report/6eea2773c1b4b5c6fb7c142933e220c96f9a4ec89055bf0cf54accdcde7df535/a407f006-ee45-420d-b576-f259094df091",
+        "https://bazaar.abuse.ch/sample/8c75f8e94486f5bbf461505823f5779f328c5b37f1387c18791e0c21f3fdd576/",
+        "https://bazaar.abuse.ch/sample/64e6605496919cd76554915cbed88e56fdec10dec6523918a631754664b8c8d3/"
+      ],
+      "author": "Josh Nickels, mttaggart",
+      "date": "2024-07-11",
+      "tags": [
+        "attack.stealth",
+        "attack.t1218"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": "\\BitLockerToGo.exe"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate usage of BitLockerToGo.exe to encrypt portable devices."
+      ],
+      "level": "low",
+      "source_path": "rules/windows/process_creation/proc_creation_win_bitlockertogo_execution.yml",
+      "source_sha256": "b00c8fcc1460bedc25d8d54f578eaf3fe4aa365495fae65759eb977ec172d592",
+      "source_git_blob": "695b2a63cc64be5b22d12dafdd08a7bfb1589f11",
+      "positive_event": {
+        "Image": "C:\\Lab\\BitLockerToGo.exe"
+      },
+      "negative_event": {
+        "Image": "C:\\Windows\\explorer.exe"
+      }
+    },
+    {
+      "title": "Potential Data Stealing Via Chromium Headless Debugging",
+      "id": "3e8207c5-fcd2-4ea6-9418-15d45b4890e4",
+      "related": [
+        {
+          "id": "b3d34dc5-2efd-4ae3-845f-8ec14921f449",
+          "type": "derived"
+        }
+      ],
+      "status": "test",
+      "description": "Detects chromium based browsers starting in headless and debugging mode and pointing to a user profile. This could be a sign of data stealing or remote control",
+      "references": [
+        "https://github.com/defaultnamehere/cookie_crimes/",
+        "https://mango.pdf.zone/stealing-chrome-cookies-without-a-password",
+        "https://embracethered.com/blog/posts/2020/cookie-crimes-on-mirosoft-edge/",
+        "https://embracethered.com/blog/posts/2020/chrome-spy-remote-control/"
+      ],
+      "author": "Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2022-12-23",
+      "tags": [
+        "attack.credential-access",
+        "attack.collection",
+        "attack.stealth",
+        "attack.t1185",
+        "attack.t1564.003"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains|all": [
+            "--remote-debugging-",
+            "--user-data-dir",
+            "--headless"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_browsers_chromium_headless_debugging.yml",
+      "source_sha256": "6bd0a8b10ef3420d2812d8cf779c6bc280900fbe509afe242f51594fb0dc6eff",
+      "source_git_blob": "d3781462a59b1eb6b7f8dadc9ec9637697b79953",
+      "positive_event": {
+        "Image": "C:\\Lab\\chrome.exe",
+        "CommandLine": "chrome --remote-debugging-port=9222 --user-data-dir=C:\\Lab\\Browser --headless"
+      },
+      "negative_event": {
+        "Image": "C:\\Lab\\chrome.exe",
+        "CommandLine": "chrome --remote-debugging-port=9222 --headless"
+      }
+    },
+    {
+      "title": "Browser Execution In Headless Mode",
+      "id": "ef9dcfed-690c-4c5d-a9d1-482cd422225c",
+      "related": [
+        {
+          "id": "0e8cfe08-02c9-4815-a2f8-0d157b7ed33e",
+          "type": "derived"
+        }
+      ],
+      "status": "test",
+      "description": "Detects execution of Chromium based browser in headless mode",
+      "references": [
+        "https://twitter.com/mrd0x/status/1478234484881436672?s=12",
+        "https://www.trendmicro.com/en_us/research/23/e/managed-xdr-investigation-of-ducktail-in-trend-micro-vision-one.html"
+      ],
+      "author": "Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2023-09-12",
+      "tags": [
+        "attack.command-and-control",
+        "attack.stealth",
+        "attack.t1105",
+        "attack.t1564.003"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": [
+            "\\brave.exe",
+            "\\chrome.exe",
+            "\\msedge.exe",
+            "\\opera.exe",
+            "\\vivaldi.exe"
+          ],
+          "CommandLine|contains": "--headless"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "low",
+      "source_path": "rules/windows/process_creation/proc_creation_win_browsers_chromium_headless_exec.yml",
+      "source_sha256": "45c33efa86a8de595a80fde45f0c945376b5c2e40923311088927d0d131af7cc",
+      "source_git_blob": "315706a40409247bb9e85d5b72ca540feb115b38",
+      "positive_event": {
+        "Image": "C:\\Lab\\msedge.exe",
+        "CommandLine": "msedge --headless https://example.invalid"
+      },
+      "negative_event": {
+        "Image": "C:\\Lab\\msedge.exe",
+        "CommandLine": "msedge --new-window https://example.invalid"
+      }
+    },
+    {
+      "title": "Chromium Browser Instance Executed With Custom Extension",
+      "id": "88d6e60c-759d-4ac1-a447-c0f1466c2d21",
+      "related": [
+        {
+          "id": "27ba3207-dd30-4812-abbf-5d20c57d474e",
+          "type": "similar"
+        }
+      ],
+      "status": "test",
+      "description": "Detects a Chromium based browser process with the 'load-extension' flag to start a instance with a custom extension",
+      "references": [
+        "https://redcanary.com/blog/chromeloader/",
+        "https://emkc.org/s/RJjuLa",
+        "https://www.mandiant.com/resources/blog/lnk-between-browsers"
+      ],
+      "author": "Aedan Russell, frack113, X__Junior (Nextron Systems)",
+      "date": "2022-06-19",
+      "modified": "2023-11-28",
+      "tags": [
+        "attack.persistence",
+        "attack.t1176.001"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": [
+            "\\brave.exe",
+            "\\chrome.exe",
+            "\\msedge.exe",
+            "\\opera.exe",
+            "\\vivaldi.exe"
+          ],
+          "CommandLine|contains": "--load-extension="
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Usage of Chrome Extensions in testing tools such as BurpSuite will trigger this alert"
+      ],
+      "level": "medium",
+      "regression_tests_path": "regression_data/rules/windows/process_creation/proc_creation_win_browsers_chromium_load_extension/info.yml",
+      "source_path": "rules/windows/process_creation/proc_creation_win_browsers_chromium_load_extension.yml",
+      "source_sha256": "cac7f07b1334d7e66fcfeea535d7243fb547b3ac09cd292e6f4effb68c9ddbc2",
+      "source_git_blob": "b0cf531115f98e49e6eb2014becf396dd109eab6",
+      "positive_event": {
+        "Image": "C:\\Lab\\chrome.exe",
+        "ParentImage": "C:\\Windows\\explorer.exe",
+        "CommandLine": "chrome --load-extension=C:\\Lab\\Extension"
+      },
+      "negative_event": {
+        "Image": "C:\\Lab\\chrome.exe",
+        "ParentImage": "C:\\Windows\\explorer.exe",
+        "CommandLine": "chrome --disable-extensions"
+      }
+    },
+    {
+      "title": "Suspicious Chromium Browser Instance Executed With Custom Extension",
+      "id": "27ba3207-dd30-4812-abbf-5d20c57d474e",
+      "related": [
+        {
+          "id": "88d6e60c-759d-4ac1-a447-c0f1466c2d21",
+          "type": "similar"
+        }
+      ],
+      "status": "test",
+      "description": "Detects a suspicious process spawning a Chromium based browser process with the 'load-extension' flag to start an instance with a custom extension",
+      "references": [
+        "https://redcanary.com/blog/chromeloader/",
+        "https://emkc.org/s/RJjuLa",
+        "https://www.mandiant.com/resources/blog/lnk-between-browsers"
+      ],
+      "author": "Aedan Russell, frack113, X__Junior (Nextron Systems)",
+      "date": "2022-06-19",
+      "modified": "2023-11-28",
+      "tags": [
+        "attack.persistence",
+        "attack.t1176.001"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "ParentImage|endswith": [
+            "\\cmd.exe",
+            "\\cscript.exe",
+            "\\mshta.exe",
+            "\\powershell.exe",
+            "\\pwsh.exe",
+            "\\regsvr32.exe",
+            "\\rundll32.exe",
+            "\\wscript.exe"
+          ],
+          "Image|endswith": [
+            "\\brave.exe",
+            "\\chrome.exe",
+            "\\msedge.exe",
+            "\\opera.exe",
+            "\\vivaldi.exe"
+          ],
+          "CommandLine|contains": "--load-extension="
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "high",
+      "regression_tests_path": "regression_data/rules/windows/process_creation/proc_creation_win_browsers_chromium_susp_load_extension/info.yml",
+      "source_path": "rules/windows/process_creation/proc_creation_win_browsers_chromium_susp_load_extension.yml",
+      "source_sha256": "758b9cd124b80edafa45ea4c84d405bb3f42a5d5a50cff2371e7ab708f0f938a",
+      "source_git_blob": "ef74b8967f5fa8364fad634e371ed01fe75d2c4c",
+      "positive_event": {
+        "Image": "C:\\Lab\\chrome.exe",
+        "ParentImage": "C:\\Windows\\System32\\cmd.exe",
+        "CommandLine": "chrome --load-extension=C:\\Lab\\Extension"
+      },
+      "negative_event": {
+        "Image": "C:\\Lab\\chrome.exe",
+        "ParentImage": "C:\\Windows\\explorer.exe",
+        "CommandLine": "chrome --load-extension=C:\\Lab\\Extension"
+      }
+    },
+    {
+      "title": "Tor Client/Browser Execution",
+      "id": "62f7c9bf-9135-49b2-8aeb-1e54a6ecc13c",
+      "status": "test",
+      "description": "Detects the use of Tor or Tor-Browser to connect to onion routing networks",
+      "references": [
+        "https://www.logpoint.com/en/blog/detecting-tor-use-with-logpoint/"
+      ],
+      "author": "frack113",
+      "date": "2022-02-20",
+      "modified": "2025-10-27",
+      "tags": [
+        "attack.command-and-control",
+        "attack.t1090.003"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": [
+          {
+            "Description": "Tor Browser"
+          },
+          {
+            "Product": "Tor Browser"
+          },
+          {
+            "Image|endswith": [
+              "\\tor.exe",
+              "\\Tor Browser\\Browser\\firefox.exe"
+            ]
+          }
+        ],
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "high",
+      "regression_tests_path": "regression_data/rules/windows/process_creation/proc_creation_win_browsers_tor_execution/info.yml",
+      "source_path": "rules/windows/process_creation/proc_creation_win_browsers_tor_execution.yml",
+      "source_sha256": "644253272f6fbdce37cd64edecb83610b1ad236d9e249d5f6eb594d237fa82bf",
+      "source_git_blob": "c3f817c6bb7b65c44ec41145793f21b3985c683f",
+      "positive_event": {
+        "Image": "C:\\Lab\\Tor Browser\\Browser\\firefox.exe"
+      },
+      "negative_event": {
+        "Image": "C:\\Lab\\Firefox\\firefox.exe"
+      }
+    },
+    {
+      "title": "Suspicious CodePage Switch Via CHCP",
+      "id": "c7942406-33dd-4377-a564-0f62db0593a3",
+      "status": "test",
+      "description": "Detects a code page switch in command line or batch scripts to a rare language",
+      "references": [
+        "https://learn.microsoft.com/en-us/windows/win32/intl/code-page-identifiers",
+        "https://twitter.com/cglyer/status/1183756892952248325"
+      ],
+      "author": "Florian Roth (Nextron Systems), Jonhnathan Ribeiro, oscd.community",
+      "date": "2019-10-14",
+      "modified": "2023-03-07",
+      "tags": [
+        "attack.stealth",
+        "attack.t1036"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": "\\chcp.com",
+          "CommandLine|endswith": [
+            " 936",
+            " 1258"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Administrative activity (adjust code pages according to your organization's region)"
+      ],
+      "level": "medium",
+      "regression_tests_path": "regression_data/rules/windows/process_creation/proc_creation_win_chcp_codepage_switch/info.yml",
+      "source_path": "rules/windows/process_creation/proc_creation_win_chcp_codepage_switch.yml",
+      "source_sha256": "f8e154cb65821a73053668335ac5c9a698dfb803db8f37510e330c7c064595db",
+      "source_git_blob": "2c23dd278b17a75159aaacf836df13f5dfca840f",
+      "positive_event": {
+        "Image": "C:\\Windows\\System32\\chcp.com",
+        "CommandLine": "chcp.com 936"
+      },
+      "negative_event": {
+        "Image": "C:\\Windows\\System32\\chcp.com",
+        "CommandLine": "chcp.com 1252"
+      }
+    },
+    {
+      "title": "Data Copied To Clipboard Via Clip.EXE",
+      "id": "ddeff553-5233-4ae9-bbab-d64d2bd634be",
+      "status": "test",
+      "description": "Detects the execution of clip.exe in order to copy data to the clipboard. Adversaries may collect data stored in the clipboard from users copying information within or between applications.",
+      "references": [
+        "https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/clip",
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1115/T1115.md"
+      ],
+      "author": "frack113",
+      "date": "2021-07-27",
+      "modified": "2023-02-21",
+      "tags": [
+        "attack.collection",
+        "attack.t1115"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": [
+          {
+            "Image|endswith": "\\clip.exe"
+          },
+          {
+            "OriginalFileName": "clip.exe"
+          }
+        ],
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "low",
+      "regression_tests_path": "regression_data/rules/windows/process_creation/proc_creation_win_clip_execution/info.yml",
+      "simulation": [
+        {
+          "type": "atomic-red-team",
+          "name": "Utilize Clipboard to store or execute commands from",
+          "technique": "T1115",
+          "atomic_guid": "0cd14633-58d4-4422-9ede-daa2c9474ae7"
+        }
+      ],
+      "source_path": "rules/windows/process_creation/proc_creation_win_clip_execution.yml",
+      "source_sha256": "254678f691f8678df1d5ec600a58d94156345b071e52ab961dc1fa7eccc63898",
+      "source_git_blob": "da97a7b3150a3942cbb53f5ecf02ba0b8e68e974",
+      "positive_event": {
+        "Image": "C:\\Windows\\System32\\clip.exe"
+      },
+      "negative_event": {
+        "Image": "C:\\Windows\\System32\\write.exe"
+      }
+    },
+    {
+      "title": "Cloudflared Tunnel Connections Cleanup",
+      "id": "7050bba1-1aed-454e-8f73-3f46f09ce56a",
+      "status": "test",
+      "description": "Detects execution of the \"cloudflared\" tool with the tunnel \"cleanup\" flag in order to cleanup tunnel connections.",
+      "references": [
+        "https://github.com/cloudflare/cloudflared",
+        "https://developers.cloudflare.com/cloudflare-one/connections/connect-apps"
+      ],
+      "author": "Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2023-05-17",
+      "modified": "2023-12-21",
+      "tags": [
+        "attack.command-and-control",
+        "attack.t1102",
+        "attack.t1090",
+        "attack.t1572"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains|all": [
+            " tunnel ",
+            "cleanup "
+          ],
+          "CommandLine|contains": [
+            "-config ",
+            "-connector-id "
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate usage of Cloudflared."
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_cloudflared_tunnel_cleanup.yml",
+      "source_sha256": "f4d04862beb209e1406e71e3b738bdb049a8933d3f5e2f892e9626e0d5e44174",
+      "source_git_blob": "c7a705d7676716dd320c05f25c1be11698f26648",
+      "positive_event": {
+        "CommandLine": "cloudflared tunnel cleanup -connector-id offline-lab"
+      },
+      "negative_event": {
+        "CommandLine": "cloudflared tunnel list -connector-id offline-lab"
+      }
+    },
+    {
+      "title": "Cloudflared Tunnel Execution",
+      "id": "9a019ffc-3580-4c9d-8d87-079f7e8d3fd4",
+      "status": "test",
+      "description": "Detects execution of the \"cloudflared\" tool to connect back to a tunnel. This was seen used by threat actors to maintain persistence and remote access to compromised networks.",
+      "references": [
+        "https://blog.reconinfosec.com/emergence-of-akira-ransomware-group",
+        "https://github.com/cloudflare/cloudflared",
+        "https://developers.cloudflare.com/cloudflare-one/connections/connect-apps"
+      ],
+      "author": "Janantha Marasinghe, Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2023-05-17",
+      "modified": "2023-12-20",
+      "tags": [
+        "attack.command-and-control",
+        "attack.t1102",
+        "attack.t1090",
+        "attack.t1572"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains|all": [
+            " tunnel ",
+            " run "
+          ],
+          "CommandLine|contains": [
+            "-config ",
+            "-credentials-contents ",
+            "-credentials-file ",
+            "-token "
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate usage of Cloudflared tunnel."
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_cloudflared_tunnel_run.yml",
+      "source_sha256": "537ccfd832d9322aeae597a755d94d161caf81d0514f494a505a21099d6af511",
+      "source_git_blob": "5ceeda7a53bf9c55371a07817ab11dc2ea83a5ff",
+      "positive_event": {
+        "CommandLine": "cloudflared tunnel run -config C:\\Lab\\config.yml "
+      },
+      "negative_event": {
+        "CommandLine": "cloudflared tunnel info -config C:\\Lab\\config.yml "
+      }
+    },
+    {
+      "title": "Potential Dosfuscation Activity",
+      "id": "a77c1610-fc73-4019-8e29-0f51efc04a51",
+      "status": "test",
+      "description": "Detects possible payload obfuscation via the commandline",
+      "references": [
+        "https://www.fireeye.com/content/dam/fireeye-www/blog/pdfs/dosfuscation-report.pdf",
+        "https://github.com/danielbohannon/Invoke-DOSfuscation"
+      ],
+      "author": "frack113, Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2022-02-15",
+      "modified": "2023-03-06",
+      "tags": [
+        "attack.execution",
+        "attack.t1059"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains": [
+            "^^",
+            "^|^",
+            ",;,",
+            ";;;;",
+            ";; ;;",
+            "(,(,",
+            "%COMSPEC:~",
+            " c^m^d",
+            "^c^m^d",
+            " c^md",
+            " cm^d",
+            "^cm^d",
+            " s^et ",
+            " s^e^t ",
+            " se^t "
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_cmd_dosfuscation.yml",
+      "source_sha256": "670b1eedab6319844a0b99a8939f7bdb44a80e1f53b3afb0df918b5c4502aa50",
+      "source_git_blob": "10b14b51cabf6afa9068e7a4f88971bd9f3f3037",
+      "positive_event": {
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "CommandLine": "cmd.exe /c echo lab ^^ tail"
+      },
+      "negative_event": {
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "CommandLine": "cmd.exe /c echo lab ^ tail"
+      }
+    },
+    {
+      "title": "VolumeShadowCopy Symlink Creation Via Mklink",
+      "id": "40b19fa6-d835-400c-b301-41f3a2baacaf",
+      "status": "stable",
+      "description": "Shadow Copies storage symbolic link creation using operating systems utilities",
+      "references": [
+        "https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment"
+      ],
+      "author": "Teymur Kheirkhabarov, oscd.community",
+      "date": "2019-10-22",
+      "modified": "2023-03-06",
+      "tags": [
+        "attack.credential-access",
+        "attack.t1003.002",
+        "attack.t1003.003"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains|all": [
+            "mklink",
+            "HarddiskVolumeShadowCopy"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate administrator working with shadow copies, access for backup purposes"
+      ],
+      "level": "high",
+      "regression_tests_path": "regression_data/rules/windows/process_creation/proc_creation_win_cmd_mklink_shadow_copies_access_symlink/info.yml",
+      "source_path": "rules/windows/process_creation/proc_creation_win_cmd_mklink_shadow_copies_access_symlink.yml",
+      "source_sha256": "a1481d9a897d9b09d39af87f1eb76510bbfd0aa3ad14aa423e557a26559abdaa",
+      "source_git_blob": "3b3746a3f28a82630b74d4a3c6ff95fc94a144dc",
+      "positive_event": {
+        "CommandLine": "cmd /c mklink C:\\Lab\\shadow \\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy1"
+      },
+      "negative_event": {
+        "CommandLine": "cmd /c mklink C:\\Lab\\alias C:\\Lab\\target"
+      }
+    },
+    {
+      "title": "NtdllPipe Like Activity Execution",
+      "id": "bbc865e4-7fcd-45a6-8ff1-95ced28ec5b2",
+      "status": "test",
+      "description": "Detects command that type the content of ntdll.dll to a different file or a pipe in order to evade AV / EDR detection. As seen being used in the POC NtdllPipe",
+      "references": [
+        "https://web.archive.org/web/20220306121156/https://www.x86matthew.com/view_post?id=ntdll_pipe"
+      ],
+      "author": "Florian Roth (Nextron Systems)",
+      "date": "2022-03-05",
+      "modified": "2023-03-07",
+      "tags": [
+        "attack.defense-impairment"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains": [
+            "type %windir%\\system32\\ntdll.dll",
+            "type %systemroot%\\system32\\ntdll.dll",
+            "type c:\\windows\\system32\\ntdll.dll",
+            "\\\\ntdll.dll > \\\\\\\\.\\\\pipe\\\\"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_cmd_ntdllpipe_redirect.yml",
+      "source_sha256": "0451be34823f430ee4cb2716e56208e967761988b484583eebb0d160ebd2341d",
+      "source_git_blob": "fa8116232d09367db46c996c84f545c66b605a79",
+      "positive_event": {
+        "CommandLine": "cmd.exe /c type %windir%\\system32\\ntdll.dll"
+      },
+      "negative_event": {
+        "CommandLine": "cmd.exe /c type C:\\Lab\\sample.dll"
+      }
+    },
+    {
+      "title": "Sticky Key Like Backdoor Execution",
+      "id": "2fdefcb3-dbda-401e-ae23-f0db027628bc",
+      "related": [
+        {
+          "id": "baca5663-583c-45f9-b5dc-ea96a22ce542",
+          "type": "derived"
+        }
+      ],
+      "status": "test",
+      "description": "Detects the usage and installation of a backdoor that uses an option to register a malicious debugger for built-in tools that are accessible in the login screen",
+      "references": [
+        "https://learn.microsoft.com/en-us/archive/blogs/jonathantrull/detecting-sticky-key-backdoors"
+      ],
+      "author": "Florian Roth (Nextron Systems), @twjackomo, Jonhnathan Ribeiro, oscd.community",
+      "date": "2018-03-15",
+      "modified": "2023-03-07",
+      "tags": [
+        "attack.privilege-escalation",
+        "attack.persistence",
+        "attack.t1546.008",
+        "car.2014-11-003",
+        "car.2014-11-008"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "ParentImage|endswith": "\\winlogon.exe",
+          "Image|endswith": [
+            "\\cmd.exe",
+            "\\cscript.exe",
+            "\\mshta.exe",
+            "\\powershell.exe",
+            "\\pwsh.exe",
+            "\\regsvr32.exe",
+            "\\rundll32.exe",
+            "\\wscript.exe",
+            "\\wt.exe"
+          ],
+          "CommandLine|contains": [
+            "sethc.exe",
+            "utilman.exe",
+            "osk.exe",
+            "Magnify.exe",
+            "Narrator.exe",
+            "DisplaySwitch.exe"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unlikely"
+      ],
+      "level": "critical",
+      "source_path": "rules/windows/process_creation/proc_creation_win_cmd_sticky_key_like_backdoor_execution.yml",
+      "source_sha256": "c93d12212bd750be2c2e932e0a75cbdc503ee98cb4a926ac0652eb0c976e3d8d",
+      "source_git_blob": "f74847d335287450badd559f6cd99c2d076abbc4",
+      "positive_event": {
+        "ParentImage": "C:\\Windows\\System32\\winlogon.exe",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "CommandLine": "cmd.exe /c sethc.exe"
+      },
+      "negative_event": {
+        "ParentImage": "C:\\Windows\\System32\\winlogon.exe",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "CommandLine": "cmd.exe /c echo Lab"
+      }
+    },
+    {
+      "title": "Unusual Parent Process For Cmd.EXE",
+      "id": "4b991083-3d0e-44ce-8fc4-b254025d8d4b",
+      "status": "test",
+      "description": "Detects suspicious parent process for cmd.exe",
+      "references": [
+        "https://www.elastic.co/guide/en/security/current/unusual-parent-process-for-cmd.exe.html"
+      ],
+      "author": "Tim Rauch, Elastic (idea)",
+      "date": "2022-09-21",
+      "modified": "2023-12-05",
+      "tags": [
+        "attack.execution",
+        "attack.t1059"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": "\\cmd.exe",
+          "ParentImage|endswith": [
+            "\\csrss.exe",
+            "\\ctfmon.exe",
+            "\\dllhost.exe",
+            "\\epad.exe",
+            "\\FlashPlayerUpdateService.exe",
+            "\\GoogleUpdate.exe",
+            "\\jucheck.exe",
+            "\\jusched.exe",
+            "\\LogonUI.exe",
+            "\\lsass.exe",
+            "\\regsvr32.exe",
+            "\\SearchIndexer.exe",
+            "\\SearchProtocolHost.exe",
+            "\\SIHClient.exe",
+            "\\sihost.exe",
+            "\\slui.exe",
+            "\\spoolsv.exe",
+            "\\sppsvc.exe",
+            "\\taskhostw.exe",
+            "\\unsecapp.exe",
+            "\\WerFault.exe",
+            "\\wermgr.exe",
+            "\\wlanext.exe",
+            "\\WUDFHost.exe"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_cmd_unusual_parent.yml",
+      "source_sha256": "d71f842397675e466f86dbd93c57e6771a29e9b1e9407afd6d78f72b18ac0f3a",
+      "source_git_blob": "b8e5ddd2df16a9de55f39c6d7f26be93612e9b61",
+      "positive_event": {
+        "ParentImage": "C:\\Windows\\System32\\lsass.exe",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "CommandLine": "cmd.exe /c echo Lab"
+      },
+      "negative_event": {
+        "ParentImage": "C:\\Windows\\explorer.exe",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "CommandLine": "cmd.exe /c echo Lab"
+      }
+    },
+    {
+      "title": "CMSTP Execution Process Creation",
+      "id": "7d4cdc5a-0076-40ca-aac8-f7e714570e47",
+      "status": "stable",
+      "description": "Detects various indicators of Microsoft Connection Manager Profile Installer execution",
+      "references": [
+        "https://web.archive.org/web/20190720093911/http://www.endurant.io/cmstp/detecting-cmstp-enabled-code-execution-and-uac-bypass-with-sysmon/"
+      ],
+      "author": "Nik Seetharaman",
+      "date": "2018-07-16",
+      "modified": "2020-12-23",
+      "tags": [
+        "attack.execution",
+        "attack.stealth",
+        "attack.t1218.003",
+        "attack.g0069",
+        "car.2019-04-001"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "ParentImage|endswith": "\\cmstp.exe"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate CMSTP use (unlikely in modern enterprise environments)"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_cmstp_execution_by_creation.yml",
+      "source_sha256": "bf996988a325bbf86725b2e8e01d859133abb7868fe81a584baef94c5ace8ace",
+      "source_git_blob": "87f26d0b6099406e03fa4a78d68f56af2863301e",
+      "positive_event": {
+        "ParentImage": "C:\\Windows\\System32\\cmstp.exe",
+        "Image": "C:\\Windows\\System32\\notepad.exe"
+      },
+      "negative_event": {
+        "ParentImage": "C:\\Windows\\explorer.exe",
+        "Image": "C:\\Windows\\System32\\notepad.exe"
+      }
+    },
+    {
+      "title": "Suspicious High IntegrityLevel Conhost Legacy Option",
+      "id": "3037d961-21e9-4732-b27a-637bcc7bf539",
+      "status": "test",
+      "description": "ForceV1 asks for information directly from the kernel space. Conhost connects to the console application. High IntegrityLevel means the process is running with elevated privileges, such as an Administrator context.",
+      "references": [
+        "https://cybercryptosec.medium.com/covid-19-cyber-infection-c615ead7c29",
+        "https://thedfirreport.com/2022/04/04/stolen-images-campaign-ends-in-conti-ransomware/",
+        "https://learn.microsoft.com/en-us/windows/win32/secauthz/mandatory-integrity-control"
+      ],
+      "author": "frack113",
+      "date": "2022-12-09",
+      "modified": "2024-12-01",
+      "tags": [
+        "attack.stealth",
+        "attack.t1202"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "process_creation"
+      },
+      "detection": {
+        "selection": {
+          "IntegrityLevel": [
+            "High",
+            "S-1-16-12288"
+          ],
+          "CommandLine|contains|all": [
+            "conhost.exe",
+            "0xffffffff",
+            "-ForceV1"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Very Likely, including launching cmd.exe via Run As Administrator"
+      ],
+      "level": "informational",
+      "source_path": "rules/windows/process_creation/proc_creation_win_conhost_legacy_option.yml",
+      "source_sha256": "6523116c59112f00565d70cee92267740f84a4f90acd35c6c32ec5bca91ad776",
+      "source_git_blob": "45673419f59b44a34e70eb48e2f495183b4994c3",
+      "positive_event": {
+        "Image": "C:\\Windows\\System32\\conhost.exe",
+        "IntegrityLevel": "High",
+        "CommandLine": "conhost.exe 0xffffffff -ForceV1"
+      },
+      "negative_event": {
+        "Image": "C:\\Windows\\System32\\conhost.exe",
+        "IntegrityLevel": "Medium",
+        "CommandLine": "conhost.exe 0xffffffff -ForceV1"
+      }
+    },
+    {
+      "title": "Conhost.exe CommandLine Path Traversal",
+      "id": "ee5e119b-1f75-4b34-add8-3be976961e39",
+      "status": "test",
+      "description": "detects the usage of path traversal in conhost.exe indicating possible command/argument confusion/hijacking",
+      "references": [
+        "https://pentestlab.blog/2020/07/06/indirect-command-execution/"
+      ],
+      "author": "Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2022-06-14",
+      "tags": [
+        "attack.execution",
+        "attack.t1059.003"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "ParentCommandLine|contains": "conhost",
+          "CommandLine|contains": "/../../"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unlikely"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_conhost_path_traversal.yml",
+      "source_sha256": "4f70fa71b2b03619a80bfd775557451b538fc1bbb2e2a29ac16c8b4251e98c99",
+      "source_git_blob": "2bc8b3ce8578d7f0805ec8a001f6126e1437b8ef",
+      "positive_event": {
+        "ParentCommandLine": "conhost.exe Lab",
+        "CommandLine": "Lab /../../Lab/fixture"
+      },
+      "negative_event": {
+        "ParentCommandLine": "conhost.exe Lab",
+        "CommandLine": "Lab /../Lab/fixture"
+      }
+    },
+    {
+      "title": "Suspicious Use of CSharp Interactive Console",
+      "id": "a9e416a8-e613-4f8b-88b8-a7d1d1af2f61",
+      "status": "test",
+      "description": "Detects the execution of CSharp interactive console by PowerShell",
+      "references": [
+        "https://redcanary.com/blog/detecting-attacks-leveraging-the-net-framework/"
+      ],
+      "author": "Michael R. (@nahamike01)",
+      "date": "2020-03-08",
+      "modified": "2022-07-14",
+      "tags": [
+        "attack.execution",
+        "attack.stealth",
+        "attack.t1127"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": "\\csi.exe",
+          "ParentImage|endswith": [
+            "\\powershell.exe",
+            "\\pwsh.exe",
+            "\\powershell_ise.exe"
+          ],
+          "OriginalFileName": "csi.exe"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Possible depending on environment. Pair with other factors such as net connections, command-line args, etc."
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_csi_use_of_csharp_console.yml",
+      "source_sha256": "d012aedb0d4066fc76cd1c118e3e380f73de9db197e0e74ea7e7e6819eaadb6b",
+      "source_git_blob": "062bb3be1a5235d4107345342be030e048773ecc",
+      "positive_event": {
+        "Image": "C:\\Lab\\csi.exe",
+        "ParentImage": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "OriginalFileName": "csi.exe"
+      },
+      "negative_event": {
+        "Image": "C:\\Lab\\csi.exe",
+        "ParentImage": "C:\\Windows\\explorer.exe",
+        "OriginalFileName": "csi.exe"
+      }
+    }
+  ],
+  "candidate_origin_commit": "95eca0339f2313690babb83c8d236064d1ee140f"
+}

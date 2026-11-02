@@ -1,6 +1,11 @@
 # Sigma package-data handoff to the Director
 
 **Proposed only.** The repository's reserved `pyproject.toml` is unchanged.
+The current C14 source inventory is **153 pinned rules / 161 required assets**.
+The historical C6 proof below remains unchanged; the same proposed glob entry was
+rebuilt with batch007 and the repeatable installed-acceptance command passed 153
+positive/benign/empty/malformed/routing cases each in a fresh offline venv. Actual
+repository packaging adoption remains Director-owned and unimplemented.
 [The inert patch](patches/sigma-package-data.patch) adds one package-data entry:
 
 ```toml

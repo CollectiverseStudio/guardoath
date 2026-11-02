@@ -23,6 +23,9 @@ CASES = EVIDENCE["cases"]
 ALL_BATCHES = [json.loads((ROOT / name).read_text(encoding="utf-8")) for name in BATCH_NAMES]
 ALL_RULES = tuple(import_rule(row, row["source_path"], source_revision=batch["source_revision"])
                   for batch in ALL_BATCHES for row in batch["rules"])
+TABLE = load_routing_table()
+PROCESS_IDS = {row['id'] for batch in ALL_BATCHES for row in batch['rules']
+               if row['logsource']['category'] == 'process_creation'}
 
 
 def imported(case):
@@ -38,7 +41,7 @@ def test_c11_inventory_and_immutable_source_references():
     assert len({case["case_id"] for case in CASES}) == len(CASES)
     assert {case["rule_id"] for case in CASES} == set(RULES)
     assert all("GuardOath-authored" in case["origin"] for case in CASES)
-    assert len(ALL_RULES) == 128
+    assert len(ALL_RULES) == 153
     for case in CASES:
         assert case["expected_positive_rule_ids"] == [case["rule_id"]]
         assert case["expected_negative_rule_ids"] == []
@@ -74,7 +77,8 @@ def test_cross_rule_matches_are_observed_not_silently_suppressed(case):
     # Record the entire match set rather than claiming global nonmalicious intent.
     for event_key, expected_key in (("positive_event", "expected_positive_rule_ids"),
                                     ("negative_event", "expected_negative_rule_ids")):
-        findings = evaluate_event(ALL_RULES, case[event_key])
+        findings = TABLE.evaluate(case[event_key],
+            trusted_logsource={'product':'windows','category':'process_creation'},allowed_rule_ids=TABLE.rule_ids)
         assert {finding["rule_id"] for finding in findings} == set(case[expected_key])
         assert all(finding == next(rule.finding() for rule in ALL_RULES
                                    if rule.rule_id == finding["rule_id"]) for finding in findings)
@@ -90,31 +94,32 @@ def test_branch_inventory_covers_expected_alternates():
     }
 
 
-def test_all_128_rules_have_trusted_route_previews():
+def test_all_153_rules_have_trusted_route_previews():
     from guardoath.sigma_rules.routing import RoutingTable
     batches = [json.loads((ROOT / f"upstream_batch_{n:03d}.json").read_text(encoding="utf-8"))
-               for n in range(1, 7)]
+               for n in range(1, 8)]
     table = RoutingTable(batches)
     ids = table.rule_ids
-    assert len(ids) == 128 and len(set(ids)) == 128
+    assert len(ids) == 153 and len(set(ids)) == 153
     plan = table.plan(
         trusted_logsource={"product": "windows", "category": "process_creation"},
         allowed_rule_ids=ids,
     )
-    assert set(plan.selected_rule_ids) == set(RULES)
+    assert set(plan.selected_rule_ids) == PROCESS_IDS
+    assert len(PROCESS_IDS) == 28 and set(RULES).issubset(PROCESS_IDS)
     assert len(plan.excluded_rule_ids) == 125
     assert plan.as_dict()["evaluation_performed"] is False
 
 
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c["case_id"])
-def test_source_routed_complete_128_rule_overlap(case):
+def test_source_routed_complete_153_rule_inventory_overlap(case):
     from guardoath.sigma_rules.routing import RoutingTable
     batches = [json.loads((ROOT / f"upstream_batch_{n:03d}.json").read_text(encoding="utf-8"))
-               for n in range(1, 7)]
+               for n in range(1, 8)]
     table = RoutingTable(batches)
     source = {"product": "windows", "category": "process_creation"}
     selected = table.plan(trusted_logsource=source, allowed_rule_ids=table.rule_ids)
-    assert set(selected.selected_rule_ids) == set(RULES)
+    assert set(selected.selected_rule_ids) == PROCESS_IDS
     positive = table.evaluate(case["positive_event"], trusted_logsource=source,
                               allowed_rule_ids=table.rule_ids)
     negative = table.evaluate(case["negative_event"], trusted_logsource=source,
