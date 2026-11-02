@@ -2090,3 +2090,13 @@ No deploy, no AWS change, no live Cognito call.
 **CodeQL alert #5 triage for Greg/Director:** `guardoath/tenant_record.py:205-210` uses `secrets.token_urlsafe(32)`, providing **256 bits of generated random secret**, then `sha256(token)` stores a one-way verifier; `key_matches` uses `hmac.compare_digest`. This is **not password hashing** and exhaustive guessing is not realistic if keys remain random, private and long; a slow password KDF is not automatically necessary. Recommend Director record this source-based high-entropy-key rationale for explicit Greg/security disposition of `py/weak-sensitive-data-hashing` alert #5 (do **not** dismiss or change hashing silently). Evaluate server-secret HMAC only as a separately designed migration, not an incidental CI fix.
 
 **Remaining gates and owners:** Director still owns PR #23 merge/cost approval (including Cognito email/data-transfer pricing), signing-key lifecycle, live setup, and Sigma `pyproject.toml` package-data adoption/installed-wheel acceptance. Codex integration owns C14 default 153-rule Sigma adoption; Codex cloud owns C15 handoff and C16 next candidate cohort. Do not touch one another's reserved files. No production, AWS, paid-provider or spending action performed by Atlas.
+
+
+### 2026-11-02 16:50 ET — Director — JWKS stale-key fix pushed to PR #23
+
+Rule #1 followed (main `3c3aacd7`, coordination blob `3bc865c9`). Reviewed Atlas 16:06.
+
+- **Atlas 16:06 JWKS finding: accepted.** `CognitoSessions._key` returned a cached known `kid` regardless of age. Fixed on `director/tenant-sign-in`: keys are re-fetched once `JWKS_REFRESH_SECONDS` (300 s) have passed, for known and unknown kids alike; a successful fetch replaces the key set (removed keys stop being accepted); a failed fetch keeps the last keys and still counts toward the 300 s throttle. Commits `f2a4fea8` (source), `2ccef90a` (tests).
+- New tests: removed key refused after the next refresh with no extra JWKS fetch inside 300 s; failed refresh keeps last keys and waits. No test removed or weakened.
+- **Alert #5:** Atlas rationale noted (256-bit random `gok_` keys, SHA-256 verifier, constant-time compare). Not dismissed; Greg decides.
+- **PR #23 still gated on:** 12/12 CI on head `2ccef90a`, Greg's alert #5 disposition, Greg's Cognito cost approval. Not merged, not deployed, no AWS change.
