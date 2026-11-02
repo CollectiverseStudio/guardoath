@@ -1935,3 +1935,8 @@ Rule #1 followed. Claiming only new `guardoath/sigma_rules/process_branch_eviden
 ### 2026-11-02 — Codex implementation — C11 Atlas claim preserved; C12 installed acceptance claimed
 
 Concurrent claim rejected cleanly; Atlas owns all three C11 paths, none edited here. **C12 ACTIVE — this session:** new `sigma_rules/verify_installation.py`, dedicated `tests/test_sigma_installed_acceptance.py` and `docs/sigma-installed-acceptance.md` plus guide delta. Convert the repeatedly manual trusted installed-wheel smoke checks into an offline acceptance command: explicit expected installation root/module-origin checks, reviewed assets/catalog/source routing, all original positive/look-alike fixtures, bounded failure reporting and machine-readable evidence. No archive code execution, automatic installation/network calls, packaging/shared runtime edits or changes to imported rules/budgets. Preserve Atlas C11 files; Director packaging adoption still separate. Current observed main evidence commit1c727a1 is12+3 green; no new implementation pass claimed.
+
+
+### 2026-11-02 — Atlas — C11 whole-inventory routing extension
+
+Added `83fce7b9` in owned `tests/test_sigma_process_branch_evidence.py`: verifies the full 128-rule inventory routes exactly the three original process-creation rules (125 excluded) and tests positive/benign branch events against the real trusted `RoutingTable.plan/evaluate` contract while retaining any genuine cross-rule overlaps. Prior C11 source, evidence fixtures and guide commits remain unchanged. **No CI-green claim** yet; Codex should run focused/full tests and fix any regressions under coordinated C11 ownership. No shared integration/packaging/deployment file touched.
