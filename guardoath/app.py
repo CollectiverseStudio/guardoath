@@ -31,7 +31,7 @@ from guardoath.hosted import ChangeRejected, CheckChanges, NotADemoUser, TenantS
 from guardoath.tenant_record import TENANT_ID_PATTERN, TENANT_POLICY_VERSION, TenantRecord, usage_month
 from guardoath.tenant_store import TenantConflict, TenantNotFound, UsageLimitReached
 from guardoath.tenant_record import new_key
-from guardoath.tenant_sessions import SESSION_HEADER, CognitoSessions
+from guardoath.tenant_sessions import SESSION_HEADER, CognitoSessions, SignInBusy
 
 
 # Videos are sent in parts of at most this size. The hosted service runs on AWS Lambda, whose buffered
@@ -206,8 +206,11 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         request.state.signed_in = False
         if session_header is not None:
             # A signed-in tenant user (Cognito). Only customer records have accounts; demo users do not.
-            # Cognito is asked over the network, so off the event loop.
-            tenant_id = await run_in_threadpool(sessions.tenant_for, session_header) if sessions is not None else None
+            # The signature is checked locally; Cognito is asked over the network, so off the event loop.
+            try:
+                tenant_id = await run_in_threadpool(sessions.tenant_for, session_header) if sessions is not None else None
+            except SignInBusy:
+                raise HTTPException(503, "Sign-in checks are busy; try again shortly", headers={"Retry-After": "5"}) from None
             record = tenants.store.get(tenant_id) if tenant_id is not None else None
             if record is None or record.status != "active" or record.demo:
                 raise HTTPException(401, "Sign-in expired or not valid; sign in again")
@@ -380,7 +383,10 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     async def sign_in_token(body: SignInCode):
         if sessions is None:
             raise HTTPException(404, "Tenant sign-in is not available")
-        result = await run_in_threadpool(sessions.exchange, body.code, body.code_verifier)
+        try:
+            result = await run_in_threadpool(sessions.exchange, body.code, body.code_verifier)
+        except SignInBusy:
+            raise HTTPException(503, "Sign-in checks are busy; try again shortly", headers={"Retry-After": "5"}) from None
         if result is None:
             raise HTTPException(401, "Sign-in failed; try again")
         return JSONResponse(result, headers={"Cache-Control": "no-store"})
