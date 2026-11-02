@@ -937,6 +937,47 @@ test("a demo user can turn checks off and reset them", async ({ page }) => {
   await page.locator("#run-input").click();
   await expect(page.locator("#input-results")).toContainText("Potential email address");
 });
+test("a demo user can turn single rules off and give one its own action", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo8");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
+  const pii = page.locator("#tenant-rules-pii");
+  await expect(page.locator("#tenant-rules-pii > summary")).toHaveText("Rules in this check (97)");
+  await expect(page.locator("#tenant-rules-secrets > summary")).toHaveText("Rules in this check (17)");
+  await expect(page.locator("#tenant-checks select")).toHaveCount(17);
+  await page.locator("#tenant-rules-pii > summary").click();
+  await expect(pii.locator(".rule-row")).toHaveCount(97);
+  const email = page.locator('[id="rule-on-pii.email_address"]');
+  await expect(email).toBeChecked();
+  const info = pii.locator('.rule-row[data-rule="pii.email_address"] .rule-info');
+  await info.locator("summary").click();
+  await expect(info).toContainText("It catches: Email address.");
+  await expect(info).toContainText("Not reported (look-alike):");
+  // The domain inside an email address is also a URL, so both rules are turned off.
+  await email.uncheck();
+  await page.locator('[id="rule-on-pii.url"]').uncheck();
+  await expect(page.locator('[id="rule-action-pii.email_address"]')).toBeDisabled();
+  await page.locator("#tenant-rules-secrets > summary").click();
+  await page.locator('[id="rule-action-secrets.jwt"]').selectOption("flag");
+  await page.getByRole("button", { name: "Save checks", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toHaveText("Saved. The new checks apply from the next check.");
+  await page.locator("#input-content").fill("Please email jane@example.com about my order.");
+  await page.locator("#run-input").click();
+  await expect(page.locator("#result-status")).toHaveText("Input checks passed");
+  await page.locator("#tenant-rules-pii > summary").click();
+  await expect(page.locator('[id="rule-on-pii.email_address"]')).not.toBeChecked();
+  await expect(page.locator('[id="rule-on-pii.iban_code"]')).toBeChecked();
+  await page.locator("#tenant-rules-secrets > summary").click();
+  await expect(page.locator('[id="rule-action-secrets.jwt"]')).toHaveValue("flag");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+  await page.locator("#tenant-rules-pii > summary").click();
+  await expect(page.locator('[id="rule-on-pii.email_address"]')).toBeChecked();
+  await page.locator("#input-content").fill("Please email jane@example.com about my order.");
+  await page.locator("#run-input").click();
+  await expect(page.locator("#input-results")).toContainText("Potential email address");
+});
 test("every check and profile explains what it does and why", async ({ page }) => {
   await page.goto("/dashboard");
   await page.locator("#demo-user").selectOption("demo4");
