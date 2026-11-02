@@ -114,6 +114,11 @@ class TenantService:
         return cls(store, checkers, secret, profiles, demo_list_seconds=DEMO_LIST_SECONDS)
 
     @property
+    def checkers(self) -> dict:
+        """The detectors this service runs, by control id (a copy)."""
+        return dict(self._checkers)
+
+    @property
     def demo_enabled(self) -> bool:
         return self._demo_key_secret is not None
 
