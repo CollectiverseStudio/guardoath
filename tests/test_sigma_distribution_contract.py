@@ -27,7 +27,12 @@ def wheel(tmp_path,assets=None,*,extra=()):
         for name,data in (ASSETS if assets is None else assets).items():archive.writestr(name,data)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore',UserWarning)
-            for name,data in extra:archive.writestr(name,data)
+            for name,data in extra:
+                # ZipInfo normally rewrites os.sep on Windows. Preserve the
+                # malformed raw header name so every platform tests the same ZIP.
+                info=zipfile.ZipInfo('fixture')
+                info.filename=info.orig_filename=name
+                archive.writestr(info,data)
     return path
 
 
@@ -73,10 +78,13 @@ def test_inconsistent_metadata_cannot_be_accepted(tmp_path,field,value):
     with pytest.raises(distribution.DistributionContractError):distribution.verify_wheel(wheel(tmp_path,assets))
 
 
-@pytest.mark.parametrize('name',['../escape','/absolute','C:/absolute','a\\b','a/./b','a//b'])
+@pytest.mark.parametrize('name',['../escape','/absolute','C:/absolute','a\\b','a/./b','a//b','a\x00b'])
 def test_unsafe_member_paths_are_rejected_without_extraction(tmp_path,name):
+    path=wheel(tmp_path,extra=[(name,b'ignored')])
+    with zipfile.ZipFile(path) as archive:
+        assert archive.infolist()[-1].orig_filename==name
     with pytest.raises(distribution.DistributionContractError,match='member'):
-        distribution.verify_wheel(wheel(tmp_path,extra=[(name,b'ignored')]))
+        distribution.verify_wheel(path)
 
 
 @pytest.mark.parametrize('name',[PREFIX+BATCH_NAMES[0],(PREFIX+BATCH_NAMES[0]).upper()])

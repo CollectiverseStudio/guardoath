@@ -54,8 +54,8 @@ def verify_wheel(path):
                 raise DistributionContractError('wheel exceeds member count limit')
             names={};folded=set()
             for info in infos:
-                name=info.filename;parts=name.rstrip('/').split('/')
-                if ('\\' in name or ':' in name or any(p in ('','.','..') for p in parts)
+                name=info.orig_filename;parts=name.rstrip('/').split('/')
+                if (name!=info.filename or '\\' in name or ':' in name or any(p in ('','.','..') for p in parts)
                         or name.rstrip('/').casefold() in folded):
                     raise DistributionContractError('ambiguous or unsafe wheel member names')
                 folded.add(name.rstrip('/').casefold());names[name]=info
