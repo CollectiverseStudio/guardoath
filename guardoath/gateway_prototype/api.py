@@ -64,5 +64,6 @@ def create_prototype_app(gateway, authenticate):
                   'gateway_busy': 429, 'provider_unavailable': 403, 'configuration_error': 409,
                   'provider_error': 502, 'provider_timeout': 504, 'gateway_timeout': 504,
                   'validation_incomplete': 503, 'operation_cancelled': 409}.get(result.status, 200)
-        return JSONResponse(result.model_dump(mode='json'), status_code=status)
+        return JSONResponse(result.model_dump(mode='json'), status_code=status,
+                            headers={'X-GuardOath-Decision': result.status})
     return app

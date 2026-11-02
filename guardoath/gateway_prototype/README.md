@@ -70,8 +70,10 @@ for a bounded canonical map on a future tenant record. They preserve off/allow a
 disabled settings, require known IDs and supported stages/actions, bind owner and
 revision, reject duplicate JSON keys and retain catalog/source revision. Repeated
 migration is idempotent. The preview is never accepted by `PrototypeGateway` or
-compiled into an alternate runtime policy. Setting-specific validation in a real
-new record schema and storage transactions remain Director-owned.
+compiled into an alternate runtime policy. Nested settings now reject unknown
+keys and use the real Policy schema and Engine configuration validation, even
+when disabled. Source defaults normalize without mutating the submitted map.
+Persisted tenant schema changes and storage transactions remain Director-owned.
 
 Synthetic schema tests at 1,000, 1,500 and 2,048 controls measure serialization and
 updates under a 350,000-byte envelope. These are **not 2,048 published checks** or
@@ -94,3 +96,9 @@ AWS resources, real model calls or production deployment were performed. Existin
 release/cost gates remain mandatory.
 
 Run: `pytest tests/test_gateway_prototype.py tests/test_gateway_catalog_prototype.py -q`.
+
+Director's denial contract: completed checks return HTTP 200 even when
+`status` is `input_blocked`, `output_withheld` or `tool_withheld`.
+Clients must inspect `status`, not just HTTP success. `X-GuardOath-Decision`
+mirrors the result status. Blocked input makes zero provider calls; withheld
+output is absent. Error results retain non-2xx statuses.

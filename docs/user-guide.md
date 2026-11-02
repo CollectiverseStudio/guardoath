@@ -1687,3 +1687,11 @@ record, payments or trusted execution gateway; the host must obtain numeric
 reference values and authorization evidence from an authenticated source. The
 128-character limit bounds representation parsing, not monetary amount or
 physical safety by itself. These controls are not certified industrial interlocks.
+
+The isolated catalog preview validates nested settings with the existing Policy
+schema and Engine configuration rules, including disabled controls. Unknown keys,
+invalid types, nonfinite scores and unsupported schemas are rejected. Valid
+settings survive idempotent migration. The isolated Tokatlas adapter rejects
+redirects, hides credential representations, validates completion status and
+uses trusted model-specific generation caps with n=1 and store=false. Live
+transport remains disabled pending production spend and cancellation controls.

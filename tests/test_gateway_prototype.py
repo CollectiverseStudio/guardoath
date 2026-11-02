@@ -356,3 +356,20 @@ def test_changed_tenant_policy_cannot_release_cached_old_policy_output(revision)
     assert retry.json()['tenant_policy_revision'] == revision
     assert 'PRIVATE reply' not in retry.text
     assert len(provider.calls) == 1
+
+@pytest.mark.parametrize('outcome,message,answer,tools,expected_calls', [
+    ('input_blocked', 'PRIVATE input', 'safe', (), 0),
+    ('output_withheld', 'safe', 'PRIVATE output', (), 1),
+    ('tool_withheld', 'safe', 'safe', ('opaque-tool',), 1),
+    ('completed', 'safe', 'safe', (), 1),
+])
+def test_director_decision_http_contract(outcome, message, answer, tools, expected_calls):
+    client, _, provider, _, _ = setup(provider=Provider(text=answer, tools=tools))
+    response = post(client, message=message)
+    assert response.status_code == 200
+    assert response.headers['X-GuardOath-Decision'] == outcome
+    assert response.json()['status'] == outcome
+    assert len(provider.calls) == expected_calls
+    if outcome != 'completed':
+        assert response.json()['response'] is None
+        assert 'PRIVATE' not in response.text

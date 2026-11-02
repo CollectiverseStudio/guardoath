@@ -4,7 +4,10 @@ from dataclasses import dataclass
 import json
 import re
 
-from guardoath.tenant_record import CHECK_IDS, INPUT_ONLY_CHECK_IDS, SETTINGS_OF, TENANT_ID_PATTERN, TenantRecord
+from guardoath.engine import Engine
+from guardoath.models import Policy
+from guardoath.tenant_record import (CHECK_IDS, INPUT_ONLY_CHECK_IDS, REQUIRED_SETTINGS,
+                                    SETTINGS_OF, TENANT_ID_PATTERN, TenantRecord)
 
 CATALOG_VERSION = 'prototype-1'
 MAX_CONTROL_COUNT = 2048
@@ -46,6 +49,37 @@ def decode_payload(raw, catalog):
     return validate_payload(json.loads(raw, object_pairs_hook=_unique_object), catalog)
 
 
+def _validated_settings(control_id, selection, owner):
+    settings = selection['settings']
+    allowed = SETTINGS_OF.get(control_id, ())
+    if set(settings) - set(allowed):
+        raise ValueError('unknown settings for validation control')
+    if control_id not in CHECK_IDS:
+        # Synthetic schema-scale descriptors do not publish a settings schema.
+        return {}
+    required = REQUIRED_SETTINGS.get(control_id, ())
+    enabled = any(selection[stage + '_action'] is not None for stage in ('input', 'output'))
+    # This ephemeral policy checks configuration only. No checker is executed,
+    # and it is never used as runtime selection/action authority.
+    rules = [{'checker_id': control_id,
+              'stages': ['input'] if control_id in INPUT_ONLY_CHECK_IDS else ['input', 'output']}]
+    try:
+        policy = Policy.model_validate_json(json.dumps({
+            'application_id': owner, 'version': 'catalog-settings-validation',
+            'rules': rules, **settings,
+        }, allow_nan=False), strict=True)
+        configured = any(getattr(policy, name) for name in required)
+        if enabled and required and not configured:
+            raise ValueError('required settings absent')
+        if required and not configured:
+            policy = policy.model_copy(update={'rules': ()})
+        Engine([policy], {})  # Source schema/reference/format and consistency checks.
+    except Exception:
+        raise ValueError('invalid source-derived validation settings') from None
+    normalized = policy.model_dump(mode='json')
+    return {name: normalized[name] for name in settings}
+
+
 def validate_payload(payload, catalog):
     if not isinstance(payload, dict) or set(payload) != {'tenant_id', 'format_version', 'catalog_version', 'record_revision', 'validations'}:
         raise ValueError('invalid canonical envelope')
@@ -58,6 +92,15 @@ def validate_payload(payload, catalog):
     controls = payload['validations']
     if not isinstance(controls, dict) or not 1 <= len(controls) <= MAX_CONTROL_COUNT:
         raise ValueError('invalid control count')
+    try:
+        encoded = json.dumps(payload, sort_keys=True, separators=(',', ':'), allow_nan=False)
+    except (ValueError, TypeError, OverflowError, RecursionError):
+        raise ValueError('configuration must contain finite JSON data') from None
+    if len(encoded.encode('utf-8')) > MAX_RECORD_BYTES:
+        raise ValueError('configuration exceeds supported size')
+    # Validate/normalize a bounded copy; caller-owned migration data is immutable.
+    normalized = json.loads(encoded)
+    controls = normalized['validations']
     for control_id, selection in controls.items():
         if not isinstance(control_id, str) or not _ID.fullmatch(control_id) or control_id not in catalog:
             raise ValueError('unknown validation control')
@@ -70,10 +113,10 @@ def validate_payload(payload, catalog):
                 raise ValueError('unsupported stage or action')
         if not isinstance(selection['settings'], dict):
             raise ValueError('settings must be an object')
-    encoded = json.dumps(payload, sort_keys=True, separators=(',', ':'), allow_nan=False)
-    if len(encoded.encode('utf-8')) > MAX_RECORD_BYTES:
-        raise ValueError('configuration exceeds supported size')
-    return json.loads(encoded)
+        selection['settings'] = _validated_settings(control_id, selection, payload['tenant_id'])
+    if len(json.dumps(normalized, separators=(',', ':'), allow_nan=False).encode('utf-8')) > MAX_RECORD_BYTES:
+        raise ValueError('normalized configuration exceeds supported size')
+    return normalized
 
 
 def migration_preview(record_or_payload, catalog):

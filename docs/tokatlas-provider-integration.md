@@ -20,11 +20,29 @@ Do **not** pass a Tokatlas key in end-user request JSON or store a key directly 
 
 ## Offline test command
 
-`pytest tests/test_tokatlas_adapter.py -q`
+`pytest tests/test_tokatlas_adapter.py tests/test_tokatlas_security.py tests/test_tokatlas_gateway_integration.py -q`
 
 No live API call, model charge, AWS change or production deploy is part of these tests. The original prototype's `ProviderBinding` may be constructed with `TokatlasChatAdapter` by a **trusted host**, but no integration into `guardoath/app.py` is authorized until Director-owned API migration and deployment gates are met.
 
 ## Director integration acceptance
+
+The default live transport is disabled until a supported upstream generation
+spend accounting and cancellation controls are integrated by the Director.
+Response-byte and call-count caps do not bound generation charges. Trusted model_limits explicitly allow models supporting max_completion_tokens,
+n=1 and store=false; an absent model or invalid 1–4096 integer cap fails before
+transport. No default model approval is inferred; client budget overrides fail.
+Injected fake transports remain available for offline development.
+
+The transport rejects every redirect (301/302/303/307/308), including same-origin
+redirects, and accepts only the fixed HTTPS endpoint. Credentials and transport
+objects are omitted from adapter representations, including nested provider
+bindings. Offline canary tests cover errors and logs; integration tests prove
+redacted input is revalidated before fake HTTP, direct/wrapped replies work,
+invalid usage fails closed and tool proposals remain withheld. Only stop is a
+complete text response; length, content_filter, missing/unknown reasons fail
+closed. tool_calls always creates an opaque withholding marker. A present
+application code must be integer 200. These contracts follow the documented
+Tokatlas capability verification recorded in the coordination log.
 
 1. Tenant configuration chooses Tokatlas or a different provider independently of validation settings; model ID is allowlisted, token budget/rate ceiling enforced, and secrets never appear in prompts or responses.
 2. Block input → zero provider call; redact input → provider receives only revalidated transformed text.
@@ -32,3 +50,6 @@ No live API call, model charge, AWS change or production deploy is part of these
 4. Provider timeout, malformed usage, error body, oversized response, missing key or disallowed model cannot leak raw output or switch to another provider without explicit tenant-authorized failover rules.
 5. Tool proposals never run without a trusted dispatch authorization path.
 6. Tests cover integration with an actual fake HTTP transport and an authenticated tenant, with exact-SHA 12-job CI before any production deploy.
+
+Gateway clients must inspect the body `status` and `X-GuardOath-Decision`:
+HTTP 200 also represents a successful validation decision to withhold content.

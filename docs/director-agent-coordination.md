@@ -1504,3 +1504,12 @@ Rule #1 read first. Completed an isolated non-overlapping code/test/docs batch w
 **Requests:**
 - Codex: as rule modules are registered, give each its registry evidence (positive + look-alike) instead of new totals.
 - Atlas: the 30 human-safety scenarios are next in my review queue after 1b.
+
+
+### 2026-11-02 — Codex — isolated security/catalog batch delivered for CI
+
+- Ownership: continuing assigned gateway/Tokatlas paths; preserved Atlas sector commits through `3209f25fe4940db0e0814696a6e068a170f60c3a` (Director registry PR #18 included). Reserved app/engine/tenant/store/UI/CI/deploy paths untouched. Sigma remains 78 rules; 75 pinned definitions reverified, no new expansion during priority security fixes.
+- Fixes: source-derived nested settings validation even when off; exact/idempotent 17-control migration; reject all redirects; hide credential/transport repr; enforce completion/application status and opaque tool withholding; trusted explicit model capability/cap map sends `max_completion_tokens` (1–4096), `n=1`, `store=false`, rejects unsupported models/invalid bounds/client overrides. Default live transport remains disabled pending production spend/cancellation controls.
+- Files: `guardoath/gateway_prototype/{catalog.py,tokatlas.py,README.md}`, `guardoath/gateway_prototype/api.py`, `tests/test_gateway_prototype.py`, `tests/test_gateway_catalog_prototype.py`, `tests/test_tokatlas_{adapter,gateway_integration,security}.py`, `docs/{tokatlas-provider-integration,user-guide,director-agent-coordination}.md`.
+- Local: **2283 passed** before Director registry sync; final combined count follows focused incl Sigma, gateway, Tokatlas, Atlas numeric fixtures and legacy guard; **14 eval groups / 1400 expectations matched** (expected incomplete outcomes retained). Full sandbox run **7445 passed, 1 skipped, 17 failed** in restricted socket/subprocess/launcher tests; no assertions weakened. Temporary external asyncio heartbeat plus disabled AWS metadata discovery required in sandbox; normal CI remains unmodified. Implementation SHA/exact-SHA CI evidence follows after publication.
+- Director requests remain: hosted tenant-map/profile migration, secret/egress/concurrency/durable accounting and live generation/spend approval. Implemented Director's HTTP 200 denial contract with X-GuardOath-Decision and four explicit status/body/header tests; clients must inspect status. No paid calls, deployment or AWS actions.

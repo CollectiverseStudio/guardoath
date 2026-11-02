@@ -14,12 +14,12 @@ def make_adapter(reply, recorder):
     def transport(url, headers, body, timeout):
         recorder.append((url, headers, json.loads(body), timeout))
         return json.dumps(reply).encode()
-    return TokatlasChatAdapter(api_key="test-secret-without-network", transport=transport)
+    return TokatlasChatAdapter(model_limits=(('gpt-5', 128),), api_key="test-secret-without-network", transport=transport)
 
 
 def sample_reply(content="safe reply", *, wrapped=False):
     result = {
-        "choices": [{"message": {"role": "assistant", "content": content}}],
+        "choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": content}}],
         "usage": {"prompt_tokens": 7, "completion_tokens": 3},
     }
     return {"data": result} if wrapped else result
@@ -38,7 +38,7 @@ def test_documented_chat_protocol_and_measured_usage(wrapped):
     assert url == ENDPOINT
     assert url.startswith("https://api.tokatlas.com/")
     assert headers["Authorization"] == "Bearer test-secret-without-network"
-    assert payload == {"model": "gpt-5", "messages": [{"role": "user", "content": "Hello"}], "stream": False}
+    assert payload == {"model": "gpt-5", "messages": [{"role": "user", "content": "Hello"}], "stream": False, "max_completion_tokens": 128, "n": 1, "store": False}
     assert 0 < timeout <= 120
 
 
@@ -54,10 +54,10 @@ def test_tool_calls_are_never_executed_and_marked_for_gateway_withholding():
 
 @pytest.mark.parametrize("reply", [
     {}, {"choices": []},
-    {"choices": [{"message": {"content": ""}}], "usage": {"prompt_tokens": 1, "completion_tokens": 1}},
-    {"choices": [{"message": {"content": "ok"}}], "usage": {"prompt_tokens": True, "completion_tokens": 1}},
-    {"choices": [{"message": {"content": "ok"}}], "usage": None},
-    {"choices": [{"message": {"content": ["unvalidated"]}}], "usage": {"prompt_tokens": 1, "completion_tokens": 1}},
+    {"choices": [{"finish_reason": "stop", "message": {"content": ""}}], "usage": {"prompt_tokens": 1, "completion_tokens": 1}},
+    {"choices": [{"finish_reason": "stop", "message": {"content": "ok"}}], "usage": {"prompt_tokens": True, "completion_tokens": 1}},
+    {"choices": [{"finish_reason": "stop", "message": {"content": "ok"}}], "usage": None},
+    {"choices": [{"finish_reason": "stop", "message": {"content": ["unvalidated"]}}], "usage": {"prompt_tokens": 1, "completion_tokens": 1}},
 ])
 def test_malformed_responses_fail_closed_without_echo(reply):
     adapter = make_adapter(reply, [])
@@ -69,7 +69,7 @@ def test_malformed_responses_fail_closed_without_echo(reply):
 def test_response_size_limit_and_no_body_leakage():
     def transport(*args):
         return b"x" * (MAX_RESPONSE_BYTES + 1)
-    adapter = TokatlasChatAdapter(api_key="test-secret-without-network", transport=transport)
+    adapter = TokatlasChatAdapter(model_limits=(('gpt-5', 128),), api_key="test-secret-without-network", transport=transport)
     with pytest.raises(TokatlasProviderError):
         asyncio.run(adapter.generate(message="Hi", model="gpt-5"))
 
@@ -88,7 +88,7 @@ def test_invalid_request_never_reaches_provider(message, model):
 def test_transport_errors_are_sanitized():
     def broken(*args):
         raise RuntimeError("secret-key-and-private-response")
-    adapter = TokatlasChatAdapter(api_key="test-secret-without-network", transport=broken)
+    adapter = TokatlasChatAdapter(model_limits=(('gpt-5', 128),), api_key="test-secret-without-network", transport=broken)
     with pytest.raises(TokatlasProviderError) as error:
         asyncio.run(adapter.generate(message="Hi", model="gpt-5"))
     assert "secret-key" not in str(error.value)
@@ -96,6 +96,6 @@ def test_transport_errors_are_sanitized():
 
 def test_key_and_timeout_validate_before_use():
     with pytest.raises(ValueError):
-        TokatlasChatAdapter(api_key="bad\nkey-unsafe")
+        TokatlasChatAdapter(model_limits=(('gpt-5', 128),), api_key="bad\nkey-unsafe")
     with pytest.raises(ValueError):
-        TokatlasChatAdapter(api_key="test-secret-without-network", timeout_seconds=0)
+        TokatlasChatAdapter(model_limits=(('gpt-5', 128),), api_key="test-secret-without-network", timeout_seconds=0)

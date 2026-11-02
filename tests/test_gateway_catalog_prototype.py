@@ -146,3 +146,107 @@ def test_revision_owner_and_catalog_version_are_strict(field, value):
     payload[field] = value
     with pytest.raises(ValueError):
         validate_payload(payload, catalog)
+
+
+@pytest.mark.parametrize('control,settings', [
+    ('pii', {'unexpected': 'private-canary'}),
+    ('pii', {'privacy_min_score': '0.5'}),
+    ('pii', {'privacy_min_score': True}),
+    ('pii', {'privacy_min_score': -0.01}),
+    ('pii', {'privacy_min_score': 1.01}),
+    ('secrets', {'confidential_terms': 'private-canary'}),
+    ('secrets', {'confidential_terms': [{'rule_id': 'term', 'term': 'xx'}]}),
+    ('secrets', {'confidential_terms': [{'rule_id': 'term', 'term': 'private-canary', 'unknown': True}]}),
+    ('secrets', {'confidential_terms': [{'rule_id': 'term', 'term': 'private-canary', 'stages': ['event']}]}),
+    ('schema', {'input_schema': 'private-canary'}),
+    ('schema', {'input_schema': {'type': 17}}),
+    ('schema', {'input_schema': {'properties': []}}),
+    ('schema', {'input_schema': {'$ref': 'https://example.invalid/private-canary'}}),
+    ('completeness', {'required_sections': [{'rule_id': 'r', 'label': 'Summary', 'min_characters': '1'}]}),
+    ('matched_outcomes', {'matched_outcomes': {'attributes': ['age', 'Age']}}),
+    ('ledger', {'ledger': {'currency': 'bad'}}),
+    ('timestamps', {'timestamps': {'max_samples': True}}),
+])
+@pytest.mark.parametrize('enabled', [False, True])
+def test_control_settings_use_source_schema_even_when_disabled(control, settings, enabled):
+    catalog = catalog_for({})
+    preview = migration_preview(source_record(), catalog)
+    preview['validations'][control] = {'input_action': 'allow' if enabled else None,
+        'output_action': 'allow' if enabled else None, 'settings': settings}
+    with pytest.raises(ValueError) as error:
+        validate_payload(preview, catalog)
+    assert 'private-canary' not in str(error.value)
+
+
+@pytest.mark.parametrize('score', [float('nan'), float('inf'), -float('inf')])
+def test_nonfinite_disabled_privacy_setting_is_rejected(score):
+    catalog = catalog_for({})
+    preview = migration_preview(source_record(), catalog)
+    preview['validations']['pii']['settings']['privacy_min_score'] = score
+    with pytest.raises(ValueError):
+        validate_payload(preview, catalog)
+
+
+def test_valid_disabled_settings_are_typed_and_roundtrip_without_becoming_active():
+    catalog = catalog_for({})
+    source = source_record(input_schema={'type': 'object', 'properties': {'name': {'type': 'string'}}},
+        required_sections=(), privacy_min_score=0.75)
+    preview = migration_preview(source, catalog)
+    assert preview['validations']['schema']['input_action'] is None
+    assert preview['validations']['schema']['settings']['input_schema'] == source.input_schema
+    assert preview == validate_payload(preview, catalog)
+    assert preview == migration_preview(preview, catalog)
+    assert source.check_schema is None
+
+
+def test_enabled_required_control_needs_source_required_settings():
+    catalog = catalog_for({})
+    preview = migration_preview(source_record(), catalog)
+    preview['validations']['ledger']['input_action'] = 'block'
+    with pytest.raises(ValueError):
+        validate_payload(preview, catalog)
+
+
+def test_control_cannot_borrow_settings_from_another_checker():
+    catalog = catalog_for({})
+    preview = migration_preview(source_record(), catalog)
+    preview['validations']['pii']['settings']['confidential_terms'] = []
+    with pytest.raises(ValueError):
+        validate_payload(preview, catalog)
+
+
+def test_all_seventeen_source_controls_migrate_exactly_with_valid_settings():
+    from guardoath.engine import Engine
+    from guardoath.tenant_record import SETTINGS_OF
+    source = TenantRecord(tenant_id='tenant-a', display_name='Tenant A', revision=8,
+        **{'check_'+control: 'flag' for control in CHECK_IDS},
+        input_schema={'type': 'object'}, output_schema={'type': 'object'},
+        comparisons=[{'rule_id': 'comparison', 'left': '/a', 'right': '/b', 'operator': 'eq'}],
+        required_sections=[{'rule_id': 'section', 'label': 'Summary'}],
+        matched_outcomes={'attributes': ['group']},
+        evidence={'sources': [{'source_id': 'approved', 'text': 'Approved source material for testing.'}]},
+        tool_calls={'tools': [{'name': 'read_record', 'arguments_schema': {'type': 'object'}}]},
+        ledger={'currency': 'USD'}, timestamps={}, graph={}, integrity={'sha256': 'a'*64})
+    Engine([source.to_policy()], {})  # Configuration verification only; no adapter runs.
+    preview = migration_preview(source, catalog_for({}))
+    assert len(preview['validations']) == len(CHECK_IDS) == 17
+    raw = source.model_dump(mode='json')
+    for control, selection in preview['validations'].items():
+        assert selection['input_action'] == 'flag'
+        assert selection['output_action'] == (None if control == 'azure_prompt_shields' else 'flag')
+        assert selection['settings'] == {key: raw[key] for key in SETTINGS_OF.get(control, ())}
+    assert preview == migration_preview(preview, catalog_for({}))
+
+
+@pytest.mark.parametrize('control', ['timestamps', 'graph'])
+@pytest.mark.parametrize('enabled', [False, True])
+def test_empty_structured_settings_normalize_source_defaults(control, enabled):
+    source = source_record(**{'check_'+control: 'flag', control: {}})
+    catalog = catalog_for({})
+    preview = migration_preview(source, catalog)
+    preview['validations'][control] = {'input_action': 'flag' if enabled else None,
+        'output_action': 'flag' if enabled else None, 'settings': {control: {}}}
+    normalized = validate_payload(preview, catalog)
+    assert normalized['validations'][control]['settings'][control] == source.model_dump(mode='json')[control]
+    assert normalized == migration_preview(normalized, catalog)
+    assert preview['validations'][control]['settings'][control] == {}  # No caller mutation.
