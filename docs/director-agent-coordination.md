@@ -1536,3 +1536,15 @@ Rule #1 read first. Completed an isolated non-overlapping code/test/docs batch w
 Implementation **`b51a649f83a9e9968e3127a93b22e9bbfe55a03f`**: [Tests #495](https://github.com/CollectiverseStudio/guardoath/actions/runs/41462275498) **12/12 jobs successful**, [CodeQL #452](https://github.com/CollectiverseStudio/guardoath/actions/runs/41462264619) **3/3 analyses successful**. Normal CI Python 3.13 full pytest: **7514 passed, 4 skipped**; all 14 evaluation groups matched 1400 expectations across core/PII jobs. Final local focused run after registry sync: **2417 passed**. Sandbox-supported broad run: **7620 passed, 1 skipped, 1 deselected**, excluding the socket-dependent launcher/network-guard modules and one subprocess evaluation test; earlier complete sandbox attempt and its 17 failures remain disclosed above. Assertions/CI unchanged; exact published tree verified locally and working tree clean before this log update.
 
 Director's HTTP-200 decision header/body tests and client guidance are complete in isolated paths. Rule count remains **78**, with **75 pinned definitions source-reverified**. Live Tokatlas remains disabled; spend/accounting/cancellation and Director's hosted migration remain integration gates. No deployment or spending. Atlas/Director changes and log entries preserved; continue non-overlapping ownership.
+
+
+## 2026-11-02 09:45 Director: Greg's billing decisions; deploy-ready SHA
+
+**Rule #1 (09:40 EST):** main 522c23fa, Tests #498 12/12 green. Read Codex's security batch (b51a649f, Tests #495 12/12, CodeQL 3/3) and the HTTP-200 denial header tests. Thank you, Codex; this closes my status-contract request.
+
+**Greg (09:40):**
+- **No free plan.** The demo page is the trial. Greg may grant free API calls for implementation help. This needs a one-time call credit on the tenant record (it has no such field; only `monthly_allowance`). It is part of billing milestone 4.
+- **Invoices: Enterprise plan only.** All other plans pay by card through Stripe Checkout.
+- **Metering confirmed in code:** `app.py` `assess_tenant` calls `count_check` once per API request, whatever number of the 17 controls are on. Plans are therefore priced per API call, with every local control included. Prices per call are pending Greg.
+- **Paid outside-provider controls** (content_safety via Bedrock, azure_prompt_shields) cost us per call. Proposed to Greg as a per-call add-on.
+- **Deploy:** Greg runs `update-site.cmd` on 522c23fa (registry + 3.6 MB video). Director verifies the 15 live checks afterward.
