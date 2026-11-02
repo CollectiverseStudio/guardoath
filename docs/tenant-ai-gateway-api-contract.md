@@ -2,17 +2,45 @@
 
 **Architecture decision:** Greg, 2026-11-01. **Status:** approved product direction / implementation contract, not a declaration that the end-to-end gateway is deployed.
 
-## Product behavior
+**Current status:** The provider-calling flow below is a historical isolated/mock
+prototype contract, not authorization for a live outside AI connector. Greg's
+latest instruction forbids outside AI connectors and ML models. Hosted validation
+continues to use the tenant record; no provider-calling customer endpoint is
+claimed here. Tenant example profiles were retired on main in Director PR #22;
+production deployment must be verified separately.
+
+## Historical prototype behavior
 
 A customer application makes **one authenticated HTTPS API request** to GuardOath with an end-user message. GuardOath (a) resolves the authenticated tenant record, (b) checks user input according to the tenant's enabled validation controls and their stage-specific responses, (c) **only after input is permitted**, forwards the approved/transformed content to the configured AI provider, (d) checks the returned AI output against the same tenant's output-stage configuration, then (e) returns only the authorized safe output and decision metadata to the customer. Input block or incomplete-required-check fails *before* any AI call; output block withholds the generated text. This is a gateway product, not simply two separate caller-managed validation operations.
 
-**Existing state (verified from source):** `guardoath/app.py` exposes `POST /v1/checks/input` and `POST /v1/checks/output`; the source does **not** implement this full provider-calling gateway sequence. `guardoath/tenant_record.py` stores 17 individual `check_<id>` action fields and builds `to_policy()`, with `null` disabling. `guardoath/hosted.py` currently loads externally defined example profiles which bypass tenant-field action choices when selected. Do not claim the new gateway is already integrated or publicly available until authenticated end-to-end verification.
+**Existing state on main (PR #22):** `guardoath/app.py` exposes the separate
+`POST /v1/checks/input` and `POST /v1/checks/output` operations. Tenant keys use only
+the record's compiled policy, typed check fields/settings and registered
+`rule_actions`; hosted example-profile loaders and editable `default_profile`
+were removed. Tenant `policy_version` may be omitted or equal `tenant`; other
+values return 404 and are not counted. `GUARDOATH_TENANT_PROFILE_FILE` is rejected
+at startup. Stored legacy `tenant` values and any demo profile value are dropped
+on read; a customer record naming an example profile fails closed for migration
+review. Local-launcher/evaluation policies remain local examples, not tenant
+runtime authority. No full provider-calling gateway is hosted by this change.
 
 ## Architectural authority: one tenant, one policy
 
-**Remove the hosted example-profile concept.** No runtime example policy selection, default profile choice or separate profile authority. An authenticated tenant record is the sole mutable source of optional validation selection and finding actions. Deprecate or reject `policy_version` profile selection on customer endpoints explicitly and document the migration; do not silently honor stale profile names. Demonstration examples may be input samples or explicit new-tenant onboarding defaults persisted into the tenant record, never alternative profiles at runtime. Preserve a stable internal policy revision derived from the tenant-record revision and control catalog version for audit; it is **not** a customer-selectable policy.
+**Hosted example-profile retirement is implemented on main.** An authenticated
+tenant record is the sole mutable source of optional validation selection and
+finding actions. Stale stored customer profiles require explicit migration review;
+clients cannot restore profile authority by naming one in a request. Demonstration
+samples and persisted onboarding defaults do not become alternative runtime
+policies. Internal policy revision/catalog metadata supports audit and is not a
+customer-selectable profile.
 
-Do not conflate validation checkers, imported signatures, documented scenarios and test executions. Store one independent action configuration per **published executable validation ID**; families and sectors are labels, not implicit wildcard execution. A stable versioned control catalog (code-defined registry) enumerates available IDs, supported stages, content types, action capabilities, dependencies, cost class and maturity. It cannot override the tenant's configured selection. A tenant record holds a typed, size-bounded map `validations: {<stable-id>: {input_action?, output_action?, ...}}`, one individually addressable field per validation *inside the same record*, supporting expansion without schema changes for each new ID. Off is explicit `null`/disabled; `allow` still executes and reports findings; `flag` reports; `block` denies upon a finding; `redact` is only permitted for validators with tested transformations and must revalidate before forwarding/releasing. Enforce action/stage compatibility at write time. Apply updates using optimistic revision concurrency; reject unknown IDs, duplicate IDs, unsupported stages/actions, invalid/missing settings and unauthorized tenant changes.
+Do not conflate validation checkers, imported signatures, documented scenarios and test executions. Store one independent action configuration per **published executable validation ID**; families and sectors are labels, not implicit wildcard execution. A stable versioned control catalog (code-defined registry) enumerates available IDs, supported stages, content types, action capabilities, dependencies, cost class and maturity. It cannot override the tenant's configured selection. The persisted tenant record keeps its typed `check_<id>` fields/settings plus a
+bounded `rule_actions` map validated against registered rule IDs. Per-rule `off`
+disables that rule; rule-specific allow/flag/block overrides remain subject to
+check/stage and PII-redaction restrictions. The canonical `validations` map in the
+isolated gateway catalog is a nonpersisting preview, not a second runtime policy
+or a deployed tenant schema. Preserve revision concurrency, known IDs, typed
+settings and tenant authorization on every settings write.
 
 **Immutable platform security boundaries** such as authentication, tenant isolation, provider credential access, rate limits, trusted dispatch authorization and cost caps operate independent of per-validation tenant choices. Optional checks may be disabled; privileged tool execution must never become authorized solely because a text checker was set to `allow`. `mode=observe` may record recommendations but cannot weaken platform security or leak blocked content.
 
@@ -72,7 +100,7 @@ Human-safety emergency assistance must follow clinically reviewed, non-punitive,
 
 ## Explicit architectural ownership
 
-**Director (reserved shared files):** own the migration/removal of example profiles from `guardoath/hosted.py`, `tenant_record.py`, `models.py`, `app.py`, `engine.py`, tenant stores and dashboard; decide provider credential storage and egress; wire a secure end-to-end gateway and API documentation. Existing checker-only endpoints may remain but must use the authoritative tenant policy for tenant keys.
+**Director (reserved shared files):** completed hosted profile retirement and continues to own `guardoath/hosted.py`, `tenant_record.py`, `models.py`, `app.py`, `engine.py`, tenant stores and dashboard; retains authentication, settings, storage and current product/API integration responsibilities. No live outside-provider connection is authorized by this historical prototype document. Existing checker-only endpoints may remain but must use the authoritative tenant policy for tenant keys.
 
 **Codex (initial isolated work):** while reserving shared files for Director, write isolated provider-adapter contract, compiled-tenant-plan prototype and end-to-end mock-provider regression tests and API spec. Do not alter shared files until coordination acknowledgement. Defer additional broad Sigma rule expansion if needed to deliver an actual tested gateway vertical slice.
 
@@ -92,4 +120,4 @@ Human-safety emergency assistance must follow clinically reviewed, non-punitive,
 - API authentication, rate/usage limits, provider credential isolation, egress allowlisting, request size limits, input/output stage results, error status contracts and idempotent retry behavior have tests.
 - Full CI plus deployment gates still require 12 jobs on exact SHA, Director release acknowledgement/workflow, 15 production checks and cost review before any production cutover.
 
-This document replaces any suggestion that example profiles should remain active or that external callers should orchestrate two separate checks around their own AI call.
+The current hosted contract is the tenant-authoritative checking API described above. The historical provider-calling proposal does not authorize outside AI connections or a production gateway cutover.
