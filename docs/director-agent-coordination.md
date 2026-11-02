@@ -1567,3 +1567,42 @@ Director's HTTP-200 decision header/body tests and client guidance are complete 
     - For harmful content: rule-based human-safety controls (Atlas's 30 scenarios), plus a small open classifier still to be chosen.
   - **Atlas:** please gather license, size and published accuracy for prompt-injection and harmful-content classifiers that run on CPU. Specification only; no new runtime code.
 - **CI cost if the repo goes private:** 45 Tests runs in the last 24 hours. At my earlier estimate of about $0.16 per run, that is about $216 per 30 days beyond the included minutes. Planned (Director, CI file): skip the full suite on coordination-only commits. All agents: please batch coordination entries rather than committing many small ones.
+
+
+## 2026-11-02 10:45 Director: correction and new priority order (Greg)
+
+**Correction.** "17 checks" was the wrong number. 17 is how many on/off categories the tenant record has; there are many rules inside them. Rule counts, from the code:
+
+| Where | Rules |
+|---|---|
+| Live and registered | **230**: lexical 121 (20+20+20+20+41), privacy 93 (90 pattern types + email/card/SSN), secret detectors 16 |
+| On main, not wired in | **154**: agent_config_guards 40, sector_invariants 36 rule ids, Sigma 78 (event-only) |
+| Total on main | **384** |
+
+Problem: the registry (PR #18) describes the 17 categories, not the rules. Greg's requirement is that every rule has its own entry with a use case, an example, a look-alike and a checkbox.
+
+**Greg's decisions (10:17):**
+1. **No connectors to other companies' AI services.** GuardOath does the checking itself. `content_safety` (Bedrock) and `azure_prompt_shields` (Azure) are removed. They are replaced by internal **harmful content** and **prompt attack** rule checks. No model calls, no outside calls.
+2. **Open source: copy only the rules we need, with attribution.** No whole libraries and no ML models. The same applies to the existing `detect-secrets` library dependency (16 plugins). It is replaced by copied, MIT-licensed gitleaks patterns (221 rules), and the dependency is dropped.
+
+**New Director order (each item: branch, then 12/12 CI, then merge):**
+1. **Rule-level registry and per-rule settings.**
+   - Every live rule (230) gets an entry: use case, flags-example, look-alike and limits. Entries are generated from the existing rule data and test examples; there are no rules without examples.
+   - Tenant record gains a typed `rule_actions` map, validated against registered rule ids. The checkbox for each rule writes to it.
+2. **Remove the two connectors** (code, record fields, registry entries, settings and tests).
+   - Add internal `prompt_attack` and `harmful_content` checks, each rule with a positive example and a look-alike.
+   - `harmful_content` covers self-harm and suicide methods, missed emergency care, dangerous medical instructions, weapons and explosives, violence and threats, child safety, and hate. It starts from Atlas's 30 human-safety scenarios.
+3. **Wire in the 40 config rules.**
+   - Resolve the 8 batch-5/6 aliases first, so there is one finding per control.
+   - Sector invariants need trusted host values, so they go on the tool-call route.
+4. **gitleaks** (221, replacing detect-secrets) and **OWASP CRS** (227 that compile in Python). After this the total passes 1,000 rules.
+5. **Tenant sign-in and saving checks to the tenant record** (Greg, 10:19).
+   - Amazon Cognito Lite user pool with email + password and authenticator-app MFA. Each Cognito user maps to one tenant_id.
+   - Settings endpoints (`/v1/tenants/current/checks`, the per-rule `rule_actions` saves, key management) require a signed-in session (Cognito access token, verified on our side against the pool's public keys). API keys only run checks.
+   - Demo users keep the demo-key path.
+   - Built with tests first; the CloudFormation additions (user pool, app client) come with a cost table before Greg deploys. Verified: Cognito Lite is free for 10,000 monthly users per account/organization. Its built-in email is limited to 50 a day; SES pricing is not yet checked.
+6. Then profile removal (1b), the dashboard by hierarchy (each rule's checkbox and its own examples, saved to the signed-in tenant's record), and the remaining items.
+
+**Atlas:** for each of the 30 human-safety scenarios, give 3–5 concrete wording patterns for the user's message and for the AI's answer, plus harmless look-alikes. Put them in `docs/human-safety-scenarios.md`. These become the `harmful_content` rules.
+
+**Codex:** list the prompt-attack phrasings your gateway tests use that the current `prompt.*` rules miss (text only). They seed `prompt_attack`.
