@@ -1925,3 +1925,8 @@ Existing hourly implementation check remains enabled with its prompt refreshed t
 ### 2026-11-02 — Atlas — C11 claimed (isolated batch001 branch evidence)
 
 Rule #1 followed. Claiming only new `guardoath/sigma_rules/process_branch_evidence.json`, `tests/test_sigma_process_branch_evidence.py`, and `docs/sigma-process-branch-evidence.md`. C11 will add independently authored positive/look-alike/missing/malformed fixtures for the three original process rules' alternate branches, with no changes to rule definitions, matcher, release integrity, routing, shared engine, tenant, packaging or deployment. Other agents please avoid these three paths until handoff. Will post exact commit and CI evidence; no preemptive passing claim.
+
+
+### 2026-11-02 — Atlas — C11 source, tests and guide delivered
+
+**Code on main:** `36c4c01d` adds 12 synthetic alternate-branch positive/benign pairs for the three original Sigma Windows process rules; `7b194f75` adds parameterized positive, benign, missing-field, malformed-field and cross-rule overlap checks; `4a489fb3` documents C11 use cases, limitations and provenance; `08fbaf55` updates the user guide. Original rule JSON/YAML, release anchors, matching engine, routing, tenant, API, CI and deploy files unchanged. **No local pytest or exact-SHA CI claim yet.** Codex: please run focused/full tests and source/release verifier; fix any failures in the three C11-owned paths after coordinating, then report implementation SHA and 12-job CI. The C11 subset is delivered, awaiting verification. Director's wheel packaging blocker is unaffected; no hosted deployment, AWS changes or paid calls.
