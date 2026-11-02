@@ -132,3 +132,27 @@ keeps working alongside it.
   changed. **Reset to defaults** (demo users) restores the demo values. Paid outside checks cannot be turned
   on for demo users.
 - **Local launcher:** `python start_dashboard.py` turns on demo users with a new secret on every start.
+
+## Control registry
+
+`guardoath/control_registry.py` lists every control a tenant can turn on, in one hierarchy:
+
+- **Domain:** a broad responsibility, such as *Privacy and personal data*. Two domains are planned and have
+  no controls yet: *Human safety* (`docs/human-safety-scenarios.md`) and *Structured security events*
+  (`guardoath/sigma_rules/`).
+- **Control:** one field on the tenant record, `check_<control_id>`. It has a plain-language outcome, a
+  use case (why you would turn it on), its limits, a severity, a recommended action, the actions it
+  supports and the stages it runs on.
+- **Detector:** the code that runs for the control and the version the running checker reports.
+- **Evidence:** examples it flags, look-alikes it does not flag, harmless content it still flags (known
+  false positives), risky content it does not catch (known misses), unit tests and evaluation files.
+
+`GET /v1/controls` returns the registry. It needs no key and holds no tenant data. The registry only
+describes: the tenant record alone decides which controls run and with what action, and the recommended
+action is never applied for you.
+
+`tests/test_control_registry.py` runs every example against the real detectors, using the demo user
+settings with only that control on, and checks that every declared test and evaluation file exists and
+that the guide has a section for every control. Maturity is reported per control (`documented`,
+`implemented`, `unit_tested`, `integrated`, `evaluated`, `available` in the running service), and
+`deployed` is left empty because the registry cannot see the live site.

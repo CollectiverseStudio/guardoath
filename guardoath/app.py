@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from guardoath.checkers import default_checkers
+from guardoath.control_registry import registry_payload
 from guardoath.config import load_policies
 from guardoath.engine import Engine
 from guardoath.models import Action, ApiCheckRequest, CheckRequest, CheckResponse, Policy, Rule, Stage
@@ -105,6 +106,8 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         if pack_file:
             raise ValueError("Pack registry must be configured on the supplied engine")
         service = engine
+        # Only for the control registry's detector versions; the supplied engine has its own checkers.
+        checkers = tenants.checkers if tenants is not None else None
     else:
         pii_setting = os.getenv("GUARDOATH_ENABLE_PII", "0")
         if pii_setting not in {"0", "1"}:
@@ -296,6 +299,15 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         if token is None:
             raise HTTPException(404, "Demo user not found")
         return JSONResponse({"tenant_id": tenant_id, "api_key": token}, headers={"Cache-Control": "no-store"})
+
+    # Built once: the registry is description only, and the same for every caller.
+    controls_body = registry_payload(checkers)
+
+    @api.get("/v1/controls")
+    async def controls():
+        # Public: it describes the controls a tenant can turn on. It holds no tenant data and decides
+        # nothing; each tenant's record alone decides which controls run and with what action.
+        return JSONResponse(controls_body, headers={"Cache-Control": "public, max-age=300"})
 
     @api.get("/healthz")
     async def health():
