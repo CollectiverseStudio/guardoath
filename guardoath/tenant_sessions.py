@@ -191,10 +191,11 @@ class CognitoSessions:
         with self._lock:
             key = self._keys.get(kid)
             now = self._clock()
-            if key is not None or (self._keys_checked_at is not None
-                                   and now - self._keys_checked_at < JWKS_REFRESH_SECONDS):
+            if self._keys_checked_at is not None and now - self._keys_checked_at < JWKS_REFRESH_SECONDS:
                 return key
-            # Unknown key id: look again, at most once per JWKS_REFRESH_SECONDS (a failed fetch counts too).
+            # Unknown key id, or keys older than JWKS_REFRESH_SECONDS: look again, at most once per
+            # JWKS_REFRESH_SECONDS (a failed fetch counts too). A successful fetch replaces the keys, so a key the
+            # pool has removed stops being accepted; a failed fetch keeps the last keys (Cognito GetUser still decides).
             self._keys_checked_at = now
         try:
             status, raw = self._get(self.jwks_url)
