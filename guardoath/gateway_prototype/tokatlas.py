@@ -23,6 +23,19 @@ class TokatlasProviderError(RuntimeError):
     """Provider failure; never include credentials, prompts or response bodies."""
 
 
+def _unique_object(pairs):
+    result = {}
+    for name, value in pairs:
+        if name in result:
+            raise ValueError('Ambiguous provider JSON object')
+        result[name] = value
+    return result
+
+
+def _reject_constant(value):
+    raise ValueError('Invalid provider JSON constant')
+
+
 class _RejectRedirects(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, request, response, code, message, headers, newurl):
         # urllib otherwise preserves Authorization on cross-origin/downgrade
@@ -97,7 +110,8 @@ class TokatlasChatAdapter:
             raw = await asyncio.to_thread(self.transport, ENDPOINT, headers, body, float(self.timeout_seconds))
             if not isinstance(raw, bytes) or len(raw) > MAX_RESPONSE_BYTES:
                 raise TokatlasProviderError("Tokatlas response exceeds limit")
-            result = json.loads(raw)
+            result = json.loads(raw, object_pairs_hook=_unique_object,
+                                parse_constant=_reject_constant)
             if not isinstance(result, dict):
                 raise ValueError("not object")
             if 'code' in result and (type(result['code']) is not int or result['code'] != 200):
@@ -107,7 +121,7 @@ class TokatlasChatAdapter:
             if not isinstance(result, dict):
                 raise ValueError("invalid envelope")
             choices = result.get("choices")
-            if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
+            if not isinstance(choices, list) or len(choices) != 1 or not isinstance(choices[0], dict):
                 raise ValueError("missing choices")
             choice = choices[0]
             reason = choice.get('finish_reason')

@@ -1666,3 +1666,10 @@ Catalog covers unchanged **103 rules / 100 pinned snapshots**, with no hosted se
 ### 2026-11-02 — Codex — C1 started
 
 Claimed C1: `guardoath/sigma_rules/routing.py`, `tests/test_sigma_routing.py` and matching Sigma documentation. Implementing trusted-host product/category and allowed-ID routing over the existing single aggregate-budget evaluator; no hosted/tenant/registry/shared-file edits. C2 remains ready next; packaging handoff is still awaiting Director acknowledgement. Other Codex/Atlas sessions should take a different unclaimed task.
+
+
+### 2026-11-02 — Codex cloud — Tokatlas response ambiguity hardening (implementation batch)
+
+- Greg selected Tokatlas adapter security fixes. Fast-forwarded the clean existing checkout to `398614325de6b43cdcd99a65a5015d8c9276042b`; prior redirect/repr/completion/budget fixes were already present. Offline committed-source probes confirmed conflicting duplicate error/success codes and an ignored second tool completion were accepted.
+- Changed only `guardoath/gateway_prototype/tokatlas.py`, `tests/test_tokatlas_security.py`, `docs/tokatlas-provider-integration.md`, `docs/user-guide.md`, and this log. Reject duplicate JSON names at every object depth (including escaped aliases), nonstandard constants and any completion count other than one. Added 15 regressions/benign cases; preserved literal response text and independent-object field names. No shared app/tenant/UI/CI/deploy edits.
+- Validation: baseline adapter tests 78 passed; final focused adapter/gateway/catalog 213 passed; normal full Python suite **8469 passed, 4 skipped**; diff whitespace check passed. Implementation commit contains this entry; exact-SHA CI verification pending. GitHub Actions API request was denied by proxy (403); remote CI unverified. Live transport remains disabled; no provider calls, deployment or spending.

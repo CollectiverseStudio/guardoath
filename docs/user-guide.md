@@ -1695,6 +1695,12 @@ settings survive idempotent migration. The isolated Tokatlas adapter rejects
 redirects, hides credential representations, validates completion status and
 uses trusted model-specific generation caps with n=1 and store=false. Live
 transport remains disabled pending production spend and cancellation controls.
+Provider response objects must have unique JSON member names at every depth,
+contain no NaN/Infinity constants, and return exactly one completion. For example,
+an envelope containing both `"code":500` and `"code":200` is rejected rather than
+interpreted by whichever value appears last. Duplicate fields inside response
+text remain ordinary text for the output validators; these checks validate the
+provider envelope and do not assess the truth or safety of its content.
 
 ## Sigma administration-pattern batch 005 (isolated structured events)
 

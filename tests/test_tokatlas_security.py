@@ -150,3 +150,63 @@ def test_trusted_generation_bounds_are_sent_and_overreported_usage_rejected(limi
         asyncio.run(adapter.generate(message='hello', model='gpt-5'))
     assert captured[0]['max_completion_tokens'] == limit
     assert captured[0]['n'] == 1 and captured[0]['store'] is False
+
+
+def _raw_adapter(raw):
+    return tokatlas.TokatlasChatAdapter(
+        api_key=CANARY, model_limits=(('gpt-5', 128),),
+        transport=lambda *args: raw.encode())
+
+
+_VALID_CHOICE = '{"finish_reason":"stop","message":{"content":"safe"}}'
+_VALID_USAGE = '{"prompt_tokens":1,"completion_tokens":2}'
+_VALID_COMPLETION = '{"choices":[' + _VALID_CHOICE + '],"usage":' + _VALID_USAGE + '}'
+
+
+@pytest.mark.parametrize('raw', [
+    '{"code":500,"code":200,"data":' + _VALID_COMPLETION + '}',
+    '{"code":200,"code":200,"data":' + _VALID_COMPLETION + '}',
+    '{"choices":[],"choices":[' + _VALID_CHOICE + '],"usage":' + _VALID_USAGE + '}',
+    '{"choices":[{"finish_reason":"length","finish_reason":"stop",'
+    '"message":{"content":"safe"}}],"usage":' + _VALID_USAGE + '}',
+    '{"choices":[{"finish_reason":"stop","message":{'
+    '"tool_calls":[{}],"tool_calls":[],"content":"safe"}}],"usage":' + _VALID_USAGE + '}',
+    '{"choices":[' + _VALID_CHOICE + '],"usage":{'
+    '"prompt_tokens":1,"completion_tokens":129,"completion_tokens":2}}',
+    '{"code":200,"data":{},"d\\u0061ta":' + _VALID_COMPLETION + '}',
+    _VALID_COMPLETION[:-1] + ',"private-output-canary":1,"private-output-canary":2}',
+])
+def test_duplicate_response_members_fail_closed_at_every_depth(raw, caplog):
+    with pytest.raises(tokatlas.TokatlasProviderError) as error:
+        asyncio.run(_raw_adapter(raw).generate(message='private-prompt-canary', model='gpt-5'))
+    for value in [CANARY, 'private-output-canary', 'private-prompt-canary']:
+        assert value not in str(error.value) + caplog.text
+
+
+@pytest.mark.parametrize('constant', ['NaN', 'Infinity', '-Infinity'])
+def test_non_json_constants_rejected_even_in_extra_metadata(constant):
+    raw = _VALID_COMPLETION[:-1] + ',"metadata":' + constant + '}'
+    with pytest.raises(tokatlas.TokatlasProviderError):
+        asyncio.run(_raw_adapter(raw).generate(message='hello', model='gpt-5'))
+
+
+@pytest.mark.parametrize('second', [_VALID_CHOICE,
+    '{"finish_reason":"tool_calls","message":{"content":null,"tool_calls":[{}]}}'])
+def test_multiple_completions_cannot_hide_unexamined_choices(second):
+    raw = '{"choices":[' + _VALID_CHOICE + ',' + second + '],"usage":' + _VALID_USAGE + '}'
+    with pytest.raises(tokatlas.TokatlasProviderError):
+        asyncio.run(_raw_adapter(raw).generate(message='hello', model='gpt-5'))
+
+
+@pytest.mark.parametrize('wrapped', [False, True])
+def test_unique_json_members_allow_same_names_in_separate_objects(wrapped):
+    # Object-level uniqueness must not reject ordinary repeated field names
+    # in independent metadata objects, or literal JSON-looking response text.
+    reply = json.loads(_VALID_COMPLETION)
+    reply['metadata'] = [{'name': 'one'}, {'name': 'two'}]
+    reply['choices'][0]['message']['content'] = '{"code":500,"code":200}'
+    if wrapped:
+        reply = {'code': 200, 'data': reply}
+    result = asyncio.run(_raw_adapter(json.dumps(reply)).generate(message='hello', model='gpt-5'))
+    assert result.text == '{"code":500,"code":200}'
+    assert result.output_tokens == 2

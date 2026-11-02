@@ -44,6 +44,13 @@ closed. tool_calls always creates an opaque withholding marker. A present
 application code must be integer 200. These contracts follow the documented
 Tokatlas capability verification recorded in the coordination log.
 
+Response JSON rejects duplicate object member names at every depth (including
+escaped aliases), nonstandard NaN/Infinity constants, and multiple choices despite
+the requested `n=1`. Ambiguous error/success codes or hidden tool proposals cannot
+be resolved by silently selecting the last field or first completion. Errors stay
+sanitized. Repeated names in separate objects and JSON-looking strings inside
+completion text are valid; output validation still applies to that text.
+
 1. Tenant configuration chooses Tokatlas or a different provider independently of validation settings; model ID is allowlisted, token budget/rate ceiling enforced, and secrets never appear in prompts or responses.
 2. Block input → zero provider call; redact input → provider receives only revalidated transformed text.
 3. Provider reply is buffered, output-validated and blocked when tenant policy requires. Never enable unbuffered streaming by accident.
