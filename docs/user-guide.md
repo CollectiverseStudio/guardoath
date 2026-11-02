@@ -1647,3 +1647,20 @@ trusted configuration limits are documented in the Sigma package guide. This is
 not an authenticated endpoint or a tenant setting. The host must still enforce
 logsource routing, entitlements, concurrency and an outer request deadline before
 integration; no hosted or deployed Sigma feature is claimed.
+
+## Isolated AI gateway prototype (not hosted)
+
+`guardoath/gateway_prototype/` contains a separate test ASGI application for the
+proposed single-call input → AI → output flow. It uses the real authenticated
+`TenantRecord.to_policy()` compiler and existing engine; its catalog never
+selects actions. Tests use a mock provider, preserve the same policy snapshot
+across both stages, revalidate redactions, and withhold blocked/incomplete output.
+Provider configuration, entitlements and limits come from trusted host bindings;
+client profile, validation-code, tenant or provider overrides are rejected.
+
+This does not add `/v1/interactions` to the hosted site. Profile removal, persisted
+map migration, real provider/credential/egress setup, durable retry/billing state,
+rate/concurrency controls and production API integration remain Director-owned.
+The [prototype guide](../guardoath/gateway_prototype/README.md) documents executable
+contracts and limitations, including synthetic 1,000+ control schema tests that
+must not be counted as real validators. No paid provider or AWS resources are used.
