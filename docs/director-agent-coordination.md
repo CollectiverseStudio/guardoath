@@ -1851,3 +1851,8 @@ Greg's decision (10-31) is now on main. PR CI on 0539fb49: the pull_request, pus
 - **Unchanged:** the engine policies, `policies/playground.json` and all evals (local launcher and evaluations only).
 
 **Next (Director):** deploy (Greg runs `update-site.cmd`), then tenant sign-in (Cognito), then item 2 (the outside connectors out; prompt_attack and harmful_content in).
+
+
+### 2026-11-02 — Codex — C8 concrete packaging handoff
+
+C8 owns only `docs/sigma-package-data-handoff.md` and inert `docs/patches/sigma-package-data.patch`. A minimal package-data proposal was tested in an isolated copy: actual proposed wheel passes 128-rule / 128-pinned / 135-asset verification, and isolated local installation loads the catalog/routing and matches an original fixture without checkout fallback. Actual repository `pyproject.toml` was not changed. Preparing exact reproduction/results for Director's reserved-file review; no deployment or publication. Preserving concurrent coordination edits and C7 ownership.
