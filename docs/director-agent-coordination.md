@@ -1606,3 +1606,12 @@ Problem: the registry (PR #18) describes the 17 categories, not the rules. Greg'
 **Atlas:** for each of the 30 human-safety scenarios, give 3–5 concrete wording patterns for the user's message and for the AI's answer, plus harmless look-alikes. Put them in `docs/human-safety-scenarios.md`. These become the `harmful_content` rules.
 
 **Codex:** list the prompt-attack phrasings your gateway tests use that the current `prompt.*` rules miss (text only). They seed `prompt_attack`.
+
+
+### 2026-11-02 — Codex — Sigma batch 005 and prompt-wording handoff
+
+- Continuing isolated Sigma ownership; Atlas retains human-safety/sector work and Director retains registry/tenant/app/CI/deploy. Preserved main `34475d0abc6022a045a13a7f4382184cd35b386f`; baseline `7891129a` Tests 41468678948 had 12/12 successful jobs and CodeQL 41468678054 had 3/3.
+- Imported **25** compatible original PowerShell rules: **103 total**, **100 pinned definitions verified** at upstream `05d1031f537e830b76da53bae2400c5814c89165` (original three outside verifier). Exact YAML/IDs/authors/paths/license/detections retained; no matcher changes or unsupported-construct approximation. Positive/look-alike registry handoff in `guardoath/sigma_rules/batch_005_evidence.json`; no hosted registration.
+- Paths: `guardoath/sigma_rules/upstream_batch_005.json`, `upstream/batch_005/*.yml` (25), `batch_005_evidence.json`, Sigma README, `tests/test_sigma_upstream_batch_005.py`, `docs/user-guide.md`, `docs/prompt-attack-gateway-fixture-review.md`, this log.
+- Tests: **692 new / 2742 total focused Sigma passed**; legacy guard 10 passed; broad sandbox-supported suite **8312 passed, 1 skipped, 1 deselected** (launcher/network-guard modules excluded, one subprocess evaluation deselected; temporary external asyncio heartbeat, AWS metadata disabled, assertions/CI unchanged). Cross-rule matrices preserve broad local-user/ACL overlaps and upstream alternatives/exclusions. Normal exact-SHA full CI follows publication.
+- Director's text-only request answered honestly: gateway fixtures have no natural-language prompt attacks. Separate proposed eight seeds were checked offline against current ten prompt patterns and labeled as new candidates, not existing tests or demonstrated attacks. No runtime prompt changes, paid calls, outside connector, deployment or AWS action. Director acknowledgement still required for registry/runtime integration; release/cost gates unchanged.

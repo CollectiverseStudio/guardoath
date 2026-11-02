@@ -1592,8 +1592,8 @@ single configured digest; the other examples can use distinct stage data.
 
 ## Isolated SigmaHQ event-rule importer (development only)
 
-The source-only Sigma importer now contains 78 source-identified Windows event
-rules: three process-creation rules and 75 additional PowerShell script rules.
+The source-only Sigma importer now contains 103 source-identified Windows event
+rules: three process-creation rules and 100 additional PowerShell script rules.
 It inspects structured event fields such as `ScriptBlockText`, rather than an AI
 conversation's meaning. For example, the upstream `Get-Process` rule matches a
 PowerShell event containing that command, while a `Get-Service` event does not
@@ -1627,7 +1627,7 @@ and event text to 32,000 characters. A disposable Python worker enforces a
 one-second execution deadline while keeping the existing regex semantics. A
 `SigmaEvaluationError` (including `SigmaRegexTimeout`) means evaluation did not
 complete; handle it as an error, never as evidence that an event is clean. The
-current 78 imported rules do not use regex. Worker overhead and aggregate request
+current 103 imported rules do not use regex. Worker overhead and aggregate request
 budgets still require integration review before enabling this path in a service.
 
 
@@ -1695,3 +1695,21 @@ settings survive idempotent migration. The isolated Tokatlas adapter rejects
 redirects, hides credential representations, validates completion status and
 uses trusted model-specific generation caps with n=1 and store=false. Live
 transport remains disabled pending production spend and cancellation controls.
+
+## Sigma administration-pattern batch 005 (isolated structured events)
+
+The isolated Sigma importer now includes 103 rules, including 25 additional pinned
+PowerShell script rules for local-user operations, remote sessions, certificate
+installs, ACL changes, script uploads and related administration patterns. For
+example, an upstream `New-PSSession -ComputerName` pattern matches a ScriptBlockText
+event, while `Get-PSSession -ComputerName` is its nonmatching look-alike. Fields are
+case-sensitive; text matching follows upstream case-insensitive string semantics.
+Missing or malformed event fields cannot produce a match; unsupported Sigma
+constructs are rejected. No source detection or exclusion was simplified.
+
+The [Sigma guide](../guardoath/sigma_rules/README.md) links exact source snapshots
+and per-rule positive/look-alike evidence for registry handoff. A match can be
+legitimate administration; it is not proof of malicious intent. These rules need
+PowerShell script logging and trusted logsource routing. They remain separate
+from chat validation and are not hosted or deployed. The event helper permits at
+most 128 routed rules per evaluation, with shared work/deadline budgets.

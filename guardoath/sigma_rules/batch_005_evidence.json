@@ -1,0 +1,308 @@
+{
+  "format_version": 1,
+  "domain": "security_events",
+  "runtime_registered": false,
+  "fixture_origin": "GuardOath-authored synthetic structured events; not upstream tests or measured effectiveness",
+  "rules": [
+    {
+      "rule_id": "4fdc44df-bfe9-4fcc-b041-68f5a2d3031c",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_localuser.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "Get-LocalUser -Name LabUser"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Get-LocalGroup -Name Administrators"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "4a241dea-235b-4a7e-8d76-50d817b146c4",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_mailboxexport_share.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "New-MailboxExportRequest -Mailbox Lab -FilePath \\\\\\\\fileserver\\archive\\lab.pst"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Get-MailboxExportRequest -Mailbox Lab"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "36fbec91-fa1b-4d5d-8df1-8d8edcb632ad",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_office_comobject_registerxll.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "New-Object -ComObject Excel.Application; $excel.RegisterXLL(\"lab.xll\")"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "New-Object -ComObject Excel.Application; $excel.Workbooks.Add()"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "189e3b02-82b2-4b90-9662-411eb64486d4",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_potential_invoke_mimikatz.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "sekurlsa::logonpasswords"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Get-Credential -Message Lab"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "a0edd39f-a0c6-4c17-8141-261f958e8d8f",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_remote_session_creation.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "New-PSSession -ComputerName lab-host"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Get-PSSession -ComputerName lab-host"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "cacef8fc-9d3d-41f7-956d-455c6e881bc5",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_remotefxvgpudisablement_abuse.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "function Get-VMRemoteFXPhysicalVideoAdapter { Write-Output lab }"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Get-VMRemoteFXPhysicalVideoAdapter"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "fbc5e92f-3044-4e73-a5c6-1c4359b539de",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_resolve_list_of_ip_from_file.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "Get-Content hosts.txt | foreach { [System.Net.Dns]::GetHostEntry($_) } | Out-File lab.txt"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Get-Content hosts.txt | foreach { Write-Output $_ } | Out-File lab.txt"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "42821614-9264-4761-acfc-5772c3286f76",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_root_certificate_installed.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "Import-Certificate -FilePath lab.cer -CertStoreLocation Cert:\\LocalMachine\\Root"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Import-Certificate -FilePath lab.cer -CertStoreLocation Cert:\\CurrentUser\\My"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "902cedee-0398-4e3a-8183-6f3a89773a96",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_run_from_mount_diskimage.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "Mount-DiskImage -ImagePath lab.iso | Get-Volume; invoke-item ($volume.DriveLetter):\\\\"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Get-DiskImage -ImagePath lab.iso | Get-Volume"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "d2e3f2f6-7e09-4bf2-bc5d-90186809e7fb",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_script_with_upload_capabilities.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "Invoke-WebRequest -Uri https://example.invalid/upload -Method POST"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Invoke-WebRequest -Uri https://example.invalid/file -Method GET"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "cae80281-ef23-44c5-873b-fd48d2666f49",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_set_acl.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "Set-Acl -AclObject $acl -Path C:\\Lab"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Get-Acl -Path C:\\Lab"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "3bf1d859-3a7e-44cb-8809-a99e066d3478",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_set_acl_susp_location.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "Set-Acl -AclObject $acl -Path C:/Windows; FullControl"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Set-Acl -AclObject $acl -Path C:/Lab; Read"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "61d0475c-173f-4844-86f7-f3eebae1c66b",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_set_policies_to_unsecure_level.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "Set-ExecutionPolicy Bypass"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Set-ExecutionPolicy RemoteSigned"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "2650dd1a-eb2a-412d-ac36-83f06c4f2282",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_software_discovery.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "Get-ItemProperty HKLM:\\software\\Lab | Select-Object Name | Format-Table"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Get-ItemProperty HKLM:\\hardware\\Lab | Select-Object Name | Format-Table"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "a699b30e-d010-46c8-bbd1-ee2e26765fe9",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_store_file_in_alternate_data_stream.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "Start-Process -FilePath \"$env:comspec\" -ArgumentList \"/c echo lab > target:hidden\""
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Start-Process -FilePath \"$env:comspec\" -ArgumentList \"/c echo lab\""
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "2f77047c-e6e9-4c11-b088-a3de399524cd",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_ace_tampering.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "win32_Trustee win32_Ace .AccessMask .AceType .SetSecurityDescriptor \\Lsa\\JD"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "win32_Trustee win32_Ace .AccessMask .AceType .GetSecurityDescriptor \\Lsa\\JD"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "88f0884b-331d-403d-a3a1-b668cf035603",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_ad_group_reco.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "Get-ADPrincipalGroupMembership -Identity LabUser"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Get-ADGroup -Identity LabGroup"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "e8314f79-564d-4f79-bc13-fbc0bf2660d8",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_alias_obfscuation.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "Set-Alias -Alias lab -Value (-join(\"i\",\"e\",\"x\"))"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Set-Alias -Alias lab -Value Get-Item"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "0f017df3-8f5a-414f-ad6b-24aff1128278",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_clear_eventlog.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "Clear-EventLog -LogName Application"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Get-EventLog -LogName Application"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "162e69a7-7981-4344-84a9-0f1c9a217a52",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_directory_enum.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "foreach ($x in Get-ChildItem -Path C:/Lab -ErrorAction SilentlyContinue) { $x | Out-File lab.txt -Append }"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "foreach ($x in Get-ChildItem -Path C:/Lab -ErrorAction Stop) { $x | Out-File lab.txt -Append }"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "403c2cc0-7f6b-4925-9423-bfa573bed7eb",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_download.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "(New-Object System.Net.WebClient).DownloadFile(\"https://example.invalid/lab\", \"lab.txt\")"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "(New-Object System.Net.WebClient).Dispose()"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "b5522a23-82da-44e5-9c8b-e10ed8955f88",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_execute_batch_script.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "Start-Process C:/Lab/maintenance.cmd"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Start-Process C:/Lab/maintenance.exe"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "bd5971a7-626d-46ab-8176-ed643f694f68",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_extracting.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "ls C:/Lab -R | Select-String -Pattern Lab"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "ls C:/Lab | Select-String -Pattern Lab"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "03409c93-a7c7-49ba-9a4c-a00badf2a153",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_follina_execution.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "Invoke-TroubleshootingPack C:\\Windows\\Diagnostics\\System\\PCW -AnswerFile lab.xml -Unattended"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Get-TroubleshootingPack C:\\Windows\\Diagnostics\\System\\PCW"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    },
+    {
+      "rule_id": "bbb9495b-58fc-4016-b9df-9a3a1b67ca82",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_get_addefaultdomainpasswordpolicy.yml",
+      "maturity": "offline-fixture-tested",
+      "positive_event": {
+        "ScriptBlockText": "Get-ADDefaultDomainPasswordPolicy -Identity lab.invalid"
+      },
+      "lookalike_event": {
+        "ScriptBlockText": "Get-ADDomain -Identity lab.invalid"
+      },
+      "limitations": "Lexical ScriptBlockText pattern; requires PowerShell script logging. Legitimate administration can match. No malicious-intent, recall or effectiveness claim."
+    }
+  ]
+}

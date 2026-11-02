@@ -6,8 +6,8 @@ do not establish AI prompt safety or production effectiveness.
 
 Batch 001 contains three process rules. Batch 002 adds 25 PowerShell rules from
 SigmaHQ commit `05d1031f537e830b76da53bae2400c5814c89165`. Batch 003 adds another
-25 PowerShell rules at the same revision. Batch 004 adds 25 more (**78 total**). All original
-batch-002/003/004 YAML, metadata, detections, authors and false-positive notes are retained;
+25 PowerShell rules at the same revision. Batch 004 adds 25 more and batch 005 adds another 25 (**103 total**). All original
+batch-002/003/004/005 YAML, metadata, detections, authors and false-positive notes are retained;
 the batch JSON files add source paths, Git blob IDs, SHA-256 digests and
 GuardOath-authored synthetic positive/benign events. These fixtures are not upstream
 tests. Several rules detect legitimate administrative behavior; a finding is not
@@ -62,7 +62,7 @@ Invalid/oversized rule patterns remain import-time `UnsupportedSigmaRule` errors
 The deadline includes worker communication/execution after process launch; OS
 process creation itself is subject to platform scheduling. Each regex search
 starts an interpreter, so process overhead and aggregate per-check budgets need
-Director review before deployment. The 78 imported rules do not require regex.
+Director review before deployment. The 103 imported rules do not require regex.
 
 Reproduce the source audit with a SigmaHQ checkout at the pinned revision and the
 optional development dependency PyYAML (not required by runtime or pytest):
@@ -73,7 +73,7 @@ pytest tests/test_sigma_rules.py tests/test_sigma_import_validation.py tests/tes
 ```
 
 Use `pytest tests/test_sigma*.py -q` for all batches and condition contracts.
-The verifier audits all pinned batches (002/003/004: 75 rules), including every original
+The verifier audits all pinned batches (002/003/004/005: 100 rules), including every original
 metadata and detection field and original Git blob ID. Batch 001 predates the
 immutable snapshots and is explicitly outside that verifier's count.
 
@@ -138,3 +138,25 @@ process creation or arbitrary non-regex Python work. A production gateway still
 needs an outer request deadline, concurrency/rate limits, original-logsource
 routing, tenant entitlement checks and installed-distribution provenance tests.
 None of those Director-owned integrations is implemented by this isolated API.
+
+## Batch 005: administration-pattern evidence
+
+`upstream_batch_005.json` adds 25 source-verified PowerShell script rules from
+SigmaHQ revision `05d1031f537e830b76da53bae2400c5814c89165`, bringing the imported
+inventory to 103 rules. Original YAML, IDs, authors, paths, licensing and detection
+semantics are preserved. No new Sigma constructs are approximated or enabled.
+`upstream/batch_005/` contains exact source bytes; `verify_sources` now verifies
+100 pinned rules (the original three predate immutable snapshots).
+
+`batch_005_evidence.json` supplies each new rule's positive structured-event fixture
+and nonmatching look-alike for a future Director-owned registry integration. These
+are synthetic fixtures, not upstream tests or measured effectiveness. Legitimate
+administration can match: local-user changes, remote sessions, certificate installs,
+ACL changes, log clearing and downloads all require operational context. Tests
+exercise source exclusions, alternatives, conjunction removal, malformed input,
+missing fields and explicit overlaps across all 103 rules. The broader ACL rule
+also matches the specific-path rule's look-alike; local benignity is not global.
+
+This evidence does not register a hosted control, chat detector or tenant action.
+The existing single-event helper's 128-rule ceiling and shared budgets still apply;
+callers must route the original logsource and handle incomplete evaluation as error.
