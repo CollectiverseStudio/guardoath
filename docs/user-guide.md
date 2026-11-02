@@ -1752,9 +1752,9 @@ fix remain Director-owned integration requirements.
 
 The isolated [batch 006](sigma-batch-006.md) adds 25 original Windows PowerShell
 script rules, with one matching event and one look-alike each, upstream attribution
-and immutable source hashes. The explicit six-batch inventory contains 128 rules
-(125 pinned snapshots); default-loader integration is coordinated separately with
-the routing/distribution session. Examples include LSASS process lookup, local
+and immutable source hashes. The default six-batch inventory contains 128 rules
+(125 pinned snapshots), integrated with the routing/distribution work.
+Examples include LSASS process lookup, local
 group/share discovery, shadow-copy deletion and firewall/profile/WMI changes.
 These literal event signals can match legitimate administration; a look-alike for
 one rule can match another. They require trusted Windows script-log routing and
@@ -1781,3 +1781,14 @@ asset fixture passes; the current actual wheel correctly fails because the
 reserved packaging configuration omits these assets. The verifier provides a
 concrete acceptance gate for the Director's package-data fix; it does not declare
 the archive safe to execute, installed runtime verified, or deployment authorized.
+
+## Original Sigma rule provenance audit
+
+The [batch 001 audit](sigma-batch-001-provenance-audit.md) confirms that the original
+7-Zip, AccCheckConsole and Auditpol imports retain the exact detection logic and
+attribution at a verified immutable SigmaHQ commit. Their omitted descriptions,
+references and other metadata are listed explicitly. The offline audit command
+reports drift without rewriting rules. Runtime source metadata remains unchanged
+pending coordinated integration: 128 rules, 125 pinned, three original unpinned
+entries. This audit does not establish effectiveness, hosted registration or
+packaged-asset readiness.

@@ -1,0 +1,65 @@
+{
+  "source_repository": "https://github.com/SigmaHQ/sigma",
+  "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+  "runtime_metadata_changed": false,
+  "rules": [
+    {
+      "rule_id": "9fbf5927-5261-4284-a71d-f681029ea574",
+      "source_path": "rules/windows/process_creation/proc_creation_win_7zip_password_compression.yml",
+      "identical_imported_fields": true,
+      "changed_fields": [],
+      "omitted_upstream_fields": [
+        "date",
+        "description",
+        "falsepositives",
+        "modified",
+        "references",
+        "tags"
+      ],
+      "full_metadata_identical": false,
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "877998e61870667b675653f3b74cbaabc7b0120c71fb80e26f7b27b198ff64c0",
+      "source_git_blob": "08f75d9922d9dffb27e3480139fe95c689cc6b5d",
+      "source_url": "https://github.com/SigmaHQ/sigma/blob/05d1031f537e830b76da53bae2400c5814c89165/rules/windows/process_creation/proc_creation_win_7zip_password_compression.yml"
+    },
+    {
+      "rule_id": "0f6da907-5854-4be6-859a-e9958747b0aa",
+      "source_path": "rules/windows/process_creation/proc_creation_win_acccheckconsole_execution.yml",
+      "identical_imported_fields": true,
+      "changed_fields": [],
+      "omitted_upstream_fields": [
+        "date",
+        "description",
+        "falsepositives",
+        "modified",
+        "references",
+        "tags"
+      ],
+      "full_metadata_identical": false,
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "d14e6d24ebefe314324f8b5612177ca42940382493b080b75578d9b9c2bc267b",
+      "source_git_blob": "94019b6ce65c1886c95b87a494b821f6119d0903",
+      "source_url": "https://github.com/SigmaHQ/sigma/blob/05d1031f537e830b76da53bae2400c5814c89165/rules/windows/process_creation/proc_creation_win_acccheckconsole_execution.yml"
+    },
+    {
+      "rule_id": "0a13e132-651d-11eb-ae93-0242ac130002",
+      "source_path": "rules/windows/process_creation/proc_creation_win_auditpol_susp_execution.yml",
+      "identical_imported_fields": true,
+      "changed_fields": [],
+      "omitted_upstream_fields": [
+        "date",
+        "description",
+        "falsepositives",
+        "modified",
+        "references",
+        "related",
+        "tags"
+      ],
+      "full_metadata_identical": false,
+      "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+      "source_sha256": "7f8cb4a8250f361f33bec9eb5d20e83d04de438338eca2d6dc611236ba6a4152",
+      "source_git_blob": "484b02a5de2f8ee421d7c7bdae4cc1b8b4f9d669",
+      "source_url": "https://github.com/SigmaHQ/sigma/blob/05d1031f537e830b76da53bae2400c5814c89165/rules/windows/process_creation/proc_creation_win_auditpol_susp_execution.yml"
+    }
+  ]
+}

@@ -61,9 +61,10 @@ choose trusted source or allowed IDs. Direct evaluation accepts at most 128
 rules, rejects 129 explicitly, and shares one evaluation budget. Routed script
 events select 125 rules; the three process-creation rules stay isolated.
 
-Default catalog/loader integration and artifact verification are coordinated
-with the session implementing C1/C2. Until that integration lands, the default
-loader still includes batches 001–005 (103 rules); the explicit six-batch tests
-and batch 006 handoff cover 128 originals, 125 with pinned snapshots. The original
-three rules retain unpinned source status. No hosted rule registration, tenant
-settings, packaged-asset fix or deployment is claimed by this import.
+Default catalog/loader integration landed with the C1/C2 distribution verifier:
+the default loader now includes batches 001–006, covering 128 originals,
+125 with pinned snapshots. The original three rules retain unpinned runtime
+source status; their separate provenance audit does not alter these counters.
+The verifier checks archive assets without executing archive code. The actual
+wheel's missing data/license assets still require the Director's packaging fix.
+No hosted rule registration, tenant settings or deployment is claimed here.
