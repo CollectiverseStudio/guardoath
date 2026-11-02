@@ -763,6 +763,7 @@ function updateSampleButtons() {
     button.hidden = !available;
     button.title = sample.profiles ? "Requires profile: " + sample.profiles.join(", ") + ". Changes only " + stage + " data." : "Changes only " + stage + " data." + (locked ? " Run the input checks first; output examples unlock when the input test passes." : "");
   }
+  refreshExamplePickers();
 }
 for (const stage of ["input","output"]) {
   const title = document.createElement("span"); title.textContent = "Try an " + stage + " example"; $(stage+"-samples").append(title);
@@ -779,6 +780,83 @@ for (const stage of ["input","output"]) {
     $(stage+"-samples").append(button);
   }
 }
+// Every example in the control list (GET /v1/controls, public): for each check, the examples it reports and the
+// look-alikes it does not, and for each rule in it, the rule's example and look-alike. Picking one replaces only
+// that box's text and format. A check that is off on the record does not report its examples.
+var examplePickers = {};
+let exampleCatalog = null;
+async function loadExampleCatalog() {
+  if (exampleCatalog) return exampleCatalog;
+  const response = await send("/v1/controls", {cache: "default"});
+  if (!response.ok) throw new Error("examples unavailable");
+  const body = await response.json(), list = [];
+  for (const domain of body.domains || []) for (const item of domain.controls || []) list.push(item);
+  if (!controlRules) { const map = {}; for (const item of list) map[item.control_id] = item.rules || []; controlRules = map; }
+  return exampleCatalog = list;
+}
+function examplesFor(item, stage) {
+  if (!(item.stages || []).includes(stage)) return [];
+  const own = (list, kind) => (list || []).filter(e => e.stage === stage && e.text)
+    .map(e => ({kind, label: e.label, format: e.format || "text", text: e.text}));
+  const rules = [];
+  for (const rule of item.rules || []) {
+    const name = rule.title + " \u00b7 " + rule.rule_id + (rule.needs_setting ? " (needs " + rule.needs_setting + ")" : "");
+    if (rule.example) rules.push({kind: "reported", label: name, format: "text", text: rule.example});
+    if (rule.look_alike) rules.push({kind: "look-alike", label: name, format: "text", text: rule.look_alike});
+  }
+  return [...own(item.positive_examples, "reported"), ...own(item.look_alikes, "look-alike"), ...rules];
+}
+function checkIsOn(id) { const policy = currentPolicy(); return !!policy && policy.checks.some(c => c.id === id); }
+function buildExamplePicker(stage, list) {
+  const box = document.createElement("div"); box.className = "example-picker"; box.id = stage + "-example-picker";
+  const usable = list.filter(item => examplesFor(item, stage).length);
+  const total = usable.reduce((n, item) => n + examplesFor(item, stage).length, 0);
+  const heading = document.createElement("label"); heading.htmlFor = stage + "-example-check";
+  heading.textContent = "Every " + stage + " example, by check (" + usable.length + " checks, " + total + " examples)";
+  const check = document.createElement("select"); check.id = stage + "-example-check";
+  check.append(new Option("Choose a check\u2026", ""));
+  for (const item of usable) {
+    const option = new Option(item.name, item.control_id);
+    option.dataset.name = item.name; option.dataset.count = String(examplesFor(item, stage).length); check.append(option);
+  }
+  const pick = document.createElement("select"); pick.id = stage + "-example"; pick.setAttribute("aria-label", "Example in this check");
+  pick.append(new Option("Choose an example\u2026", ""));
+  const note = document.createElement("p"); note.className = "hint"; note.id = stage + "-example-note";
+  const fill = () => {
+    pick.replaceChildren(new Option("Choose an example\u2026", "")); note.textContent = "";
+    const item = usable.find(i => i.control_id === check.value); if (!item) return;
+    const entries = examplesFor(item, stage);
+    for (const [kind, title] of [["reported", "Reported: the check finds it"], ["look-alike", "Not reported: a look-alike"]]) {
+      const group = document.createElement("optgroup"); group.label = title;
+      entries.forEach((entry, index) => { if (entry.kind === kind) group.append(new Option(entry.label, String(index))); });
+      if (group.children.length) pick.append(group);
+    }
+    if (currentPolicy() && !checkIsOn(item.control_id)) note.textContent = item.name + " is off on this record: turn it on under Checks to see it report these examples.";
+  };
+  check.addEventListener("change", fill);
+  pick.addEventListener("change", () => {
+    const item = usable.find(i => i.control_id === check.value); if (!item || pick.value === "") return;
+    if (busy || (stage === "output" && outputLocked())) { pick.value = ""; return; }
+    const entry = examplesFor(item, stage)[Number(pick.value)];
+    reset(stage === "output");
+    $(stage + "-format").value = entry.format; $(stage + "-content").value = entry.text;
+  });
+  box.append(heading, check, pick, note);
+  $(stage + "-samples").after(box);
+  examplePickers[stage] = {check, pick, fill};
+}
+function refreshExamplePickers() {
+  for (const stage of ["input", "output"]) {
+    const picker = (examplePickers || {})[stage]; if (!picker) continue;
+    const locked = stage === "output" && outputLocked();
+    picker.check.disabled = picker.pick.disabled = busy || locked;
+    for (const option of picker.check.options) if (option.value)
+      option.textContent = option.dataset.name + " (" + option.dataset.count + ")" + (currentPolicy() && !checkIsOn(option.value) ? " \u2014 off" : "");
+    if (picker.check.value) { const kept = picker.pick.value; picker.fill(); picker.pick.value = kept; }
+  }
+}
+loadExampleCatalog().then(list => { for (const stage of ["input", "output"]) buildExamplePicker(stage, list); refreshExamplePickers(); })
+  .catch(() => { for (const stage of ["input", "output"]) { const note = document.createElement("p"); note.className = "hint"; note.textContent = "The full example list could not be loaded right now. Reload the page to try again."; $(stage + "-samples").after(note); } });
 function render(stage, result) {
   const box = $(stage + "-results"); box.replaceChildren(); const title = document.createElement("h3"); title.textContent = stage === "input" ? "Input checks" : "Output checks"; box.append(title);
   const summary = document.createElement("p"); summary.textContent = "Recommended: " + result.recommended_action + " · Effective: " + result.effective_action + " · " + result.total_latency_ms.toFixed(1) + " ms" + (result.cost_basis === "provider_unpriced" ? " · Provider cost not estimated" : ""); box.append(summary);
