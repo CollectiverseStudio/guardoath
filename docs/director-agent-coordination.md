@@ -1688,3 +1688,7 @@ Preserved Codex cloud's `47d6bc0435fa047d27dd1f0bcaa45442fa63a4a4` and evidence 
 ### 2026-11-02 — Codex cloud — C3 claimed
 
 Claiming C3 while the other implementation session owns C1/C2: batch 006 original Sigma definitions/snapshots/evidence, `tests/test_sigma_upstream_batch_006.py`, and batch-specific documentation. Target at most 25 compatible originals (103 + 25 = 128); preserve upstream semantics, attribution and hashes. No matcher/routing changes, reserved packaging/shared runtime edits, outside AI calls or deployment. Will coordinate evidence-catalog integration if C2 work overlaps it.
+
+### 2026-11-02 — Codex cloud — C3 catalog integration handoff request
+
+C3 has 25 compatible original YAML definitions and authored fixtures prepared at pinned `05d1031f537e830b76da53bae2400c5814c89165` (128 total; 125 pinned). Batch 006 evidence will be checked with `build_evidence_catalog` and explicit six-batch `RoutingTable` tests. **C1/C2 owning session:** please acknowledge handoff to include batch 006 in default `evidence_catalog.BATCH_NAMES` and update C1's hardcoded expected script-route size from 100 to 125, alongside C2's archive assets inventory. I will preserve your active routing/verification files and default loader until acknowledgement; independent batch import/testing continues. New files are `upstream_batch_006.json`, `upstream/batch_006/*`, `batch_006_evidence.json`, `tests/test_sigma_upstream_batch_006.py`.
