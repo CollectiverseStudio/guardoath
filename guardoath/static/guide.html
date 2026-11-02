@@ -48,11 +48,10 @@ API = &quot;https://guardoath.com&quot;
 KEY = &quot;gok_demo1_...&quot;          # your API key; keep it on your server
 APPLICATION_ID = &quot;demo1&quot;       # your tenant id: the part of the key after &quot;gok_&quot;
 
-def check(stage, content, profile=None):
-    &quot;&quot;&quot;stage is &quot;input&quot; (the user&#x27;s message) or &quot;output&quot; (the AI&#x27;s answer).&quot;&quot;&quot;
+def check(stage, content):
+    &quot;&quot;&quot;stage is &quot;input&quot; (the user&#x27;s message) or &quot;output&quot; (the AI&#x27;s answer).
+    The checks that run are the ones on your record.&quot;&quot;&quot;
     request = {&quot;application_id&quot;: APPLICATION_ID, &quot;content&quot;: content}
-    if profile:
-        request[&quot;policy_version&quot;] = profile   # optional: only "tenant" is accepted
     body = json.dumps(request).encode(&quot;utf-8&quot;)
     call = urllib.request.Request(API + &quot;/v1/checks/&quot; + stage, data=body, method=&quot;POST&quot;, headers={
         &quot;X-GuardOath-Key&quot;: KEY,
@@ -73,8 +72,8 @@ const API = &quot;https://guardoath.com&quot;;
 const KEY = process.env.GUARDOATH_KEY;      // keep the key on your server
 const APPLICATION_ID = &quot;demo1&quot;;
 
-async function check(stage, content, profile) {
-  const body = JSON.stringify({ application_id: APPLICATION_ID, content, ...(profile ? { policy_version: profile } : {}) });
+async function check(stage, content) {   // the checks that run are the ones on your record
+  const body = JSON.stringify({ application_id: APPLICATION_ID, content });
   const response = await fetch(`${API}/v1/checks/${stage}`, {
     method: &quot;POST&quot;,
     headers: {
