@@ -485,3 +485,22 @@ def test_the_dashboard_signs_in_with_pkce_and_sends_the_session_only_to_this_ser
     page = TestClient(create_app(credentials={"test-key": "demo"})).get("/dashboard").text
     for marker in ['id="sign-in-box" class="sign-in-box" hidden', 'id="sign-in"', 'id="sign-out"', 'id="keys-panel"', 'id="key-create"', 'id="key-new"']:
         assert marker in page, marker
+
+
+def test_every_check_and_rule_example_can_be_picked_on_the_dashboard():
+    """The example picker is built from GET /v1/controls: each check's own examples and look-alikes, and the
+    example and look-alike of every rule. Every check with examples is offered for each stage it runs on."""
+    from pathlib import Path
+    from guardoath.control_registry import registry_payload
+    script = (Path(__file__).resolve().parents[1] / "guardoath" / "static" / "dashboard.js").read_text(encoding="utf-8")
+    for text in ['send("/v1/controls"', "buildExamplePicker(stage, list)", 'item.positive_examples, "reported"',
+                 'item.look_alikes, "look-alike"', "rule.example", "rule.look_alike", 'stage + "-example-check"']:
+        assert text in script, text
+    controls = [item for domain in registry_payload()["domains"] for item in domain["controls"]]
+    assert len(controls) == 17
+    for stage in ("input", "output"):
+        offered = [item for item in controls if stage in item["stages"]
+                   and ([e for e in item["positive_examples"] + item["look_alikes"] if e["stage"] == stage] or item["rules"])]
+        assert {item["control_id"] for item in offered} == {item["control_id"] for item in controls if stage in item["stages"]}
+    rule_examples = sum(bool(rule["example"]) + bool(rule["look_alike"]) for item in controls for rule in item["rules"])
+    assert rule_examples == 2 * sum(len(item["rules"]) for item in controls)
