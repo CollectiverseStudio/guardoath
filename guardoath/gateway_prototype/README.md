@@ -41,9 +41,11 @@ a keyed request fingerprint, stores only final safe envelopes, and prevents
 in-process duplicate provider calls/retries, including safe cancellation envelopes
 after a started provider attempt. Cancellation still propagates to the cancelled
 caller; a same-ID retry receives the stored failure and never restarts that attempt.
-Replays retain the original policy
-snapshot/usage and set `replayed=true`. Same-tenant same-ID different bodies
-conflict. Provider error/timeout usage remains unknown (`null`), not fabricated.
+Replays require the same current tenant revision, compiled-policy digest and
+catalog version, retain original usage and set `replayed=true`. A changed policy
+or same-tenant same-ID different body conflicts without returning cached output
+or repeating the provider call. Thus the cache cannot override newly stored
+tenant actions. Provider error/timeout usage remains unknown (`null`), not fabricated.
 This is **not durable idempotency, a billing ledger, quota reservation in tenant
 storage, credential storage, a real provider adapter, or a cross-process service**.
 Cache eviction/restarts require a production retry/retention design. Approved

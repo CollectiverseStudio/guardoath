@@ -342,3 +342,17 @@ def test_cancelled_operation_does_not_repeat_provider_on_same_id_retry():
         assert provider.calls == 1
     started = None
     asyncio.run(run())
+
+
+@pytest.mark.parametrize('revision', [2, 3])
+def test_changed_tenant_policy_cannot_release_cached_old_policy_output(revision):
+    records = {'key-a': record(check_secrets='allow')}
+    client, _, provider, _, _ = setup(records['key-a'], provider=Provider('PRIVATE reply'), records=records)
+    assert post(client).json()['response'] == 'PRIVATE reply'
+    records['key-a'] = record(revision=revision, check_secrets='block')
+    retry = post(client)
+    assert retry.status_code == 409
+    assert retry.json()['response'] is None
+    assert retry.json()['tenant_policy_revision'] == revision
+    assert 'PRIVATE reply' not in retry.text
+    assert len(provider.calls) == 1

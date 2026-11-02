@@ -138,7 +138,8 @@ class PrototypeGateway:
         try:
             key = (snapshot.tenant_id, request.request_id)
             fingerprint = hmac.new(self._digest_key,
-                json.dumps([request.model, request.message], ensure_ascii=True).encode(), hashlib.sha256).digest()
+                json.dumps([request.model, request.message, snapshot.revision, digest, CATALOG_VERSION],
+                           ensure_ascii=True).encode(), hashlib.sha256).digest()
             previous = self._cache.get(key)
             if previous is not None:
                 if not hmac.compare_digest(previous[0], fingerprint):
