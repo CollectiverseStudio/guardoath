@@ -143,6 +143,8 @@ keeps working alongside it.
 - **Control:** one field on the tenant record, `check_<control_id>`. It has a plain-language outcome, a
   use case (why you would turn it on), its limits, a severity, a recommended action, the actions it
   supports and the stages it runs on.
+- **Rule:** one finding a control can report, such as `pii.iban_code` or `agent.git_force`. Each rule has
+  a title, a use case, an example it reports and a look-alike it does not (`guardoath/rule_catalog.py`).
 - **Detector:** the code that runs for the control and the version the running checker reports.
 - **Evidence:** examples it flags, look-alikes it does not flag, harmless content it still flags (known
   false positives), risky content it does not catch (known misses), unit tests and evaluation files.
@@ -156,3 +158,29 @@ settings with only that control on, and checks that every declared test and eval
 that the guide has a section for every control. Maturity is reported per control (`documented`,
 `implemented`, `unit_tested`, `integrated`, `evaluated`, `available` in the running service), and
 `deployed` is left empty because the registry cannot see the live site.
+
+## Per-rule settings
+
+A check runs many rules. 239 rules can be set one by one today: 121 lexical rules (`lexical_guards`),
+97 privacy types (`pii`, 4 of them only with `detect_labeled_sensitive_data`), 17 secret rules (`secrets`,
+1 of them only with `detect_secret_assignments`) and 4 text-security rules (`text_security`).
+`GET /v1/controls` lists every rule under its control, with its title, use case, severity, example and
+look-alike.
+
+The record field `rule_actions` maps a rule id to one of:
+
+| Value | Effect |
+|---|---|
+| `off` | The rule's findings are dropped. A check left with no findings has passed. Privacy types that are off are not looked for at all, so they are never redacted, including inside encoded payloads (`encoded_pii`). |
+| `block`, `flag`, `allow` | The rule's findings use this action instead of the check's action. The strongest action of all findings decides, as before. |
+
+A rule that is not listed uses its check's action. Rule settings are kept while their check is off and
+apply again when it is turned back on. Rules are saved like any other check setting, with
+`POST /v1/tenants/current/checks` and a `revision`; for example
+`{"revision": 4, "changes": {"rule_actions": {"pii.ip_address": "off", "agent.git_force": "block"}}}`
+replaces the whole map. An unknown rule id is refused (422). When the `pii` check redacts, its rules can
+only be turned `off`, because redaction replaces every value the check finds.
+
+`tests/test_rule_catalog.py` runs every rule's example (it must be reported) and look-alike (it must not
+be) against the real detectors. `tests/test_rule_actions.py` covers saving, refusing and applying rule
+settings.
