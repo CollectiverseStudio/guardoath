@@ -50,6 +50,9 @@ alarms (invocations and run time, each per 24 hours) --> guardoath-site-shutoff 
 | CloudFormation, IAM, origin access control | | $0 | CloudFormation pricing (AWS::* resources), IAM |
 | CloudFront invalidations | `/assets/*` after a code change (one path) | $0: the first 1,000 paths a month are free per account | CloudFront docs, "Pay for file invalidation" |
 | Lambda code storage | ~40 MB zip, uploaded directly (no S3 bucket) | $0: the Lambda price list has no code-storage charge | `run_python_output_999.txt` (price-list usage types) |
+| Cognito user pool (tenant sign-in) | Lite plan, classic hosted sign-in page, required authenticator-app MFA, users created by an administrator | $0 up to 10,000 monthly active users per account or organization (the Lite free tier does not expire); then $0.0055 per user up to 100,000 | Cognito pricing page, "Free Tier" and the Lite example (checked 2026-11-02) |
+| Cognito email (invitations, password reset) | Cognito's built-in email (`COGNITO_DEFAULT`), limited to a small number of emails a day | **Not verified:** the pricing page says email is sent through SES and points to SES pricing, but does not say whether the built-in option is charged. Only an administrator creates users, so there is one invitation per customer user | Cognito pricing page; Cognito developer guide, "Email settings" |
+| Session checks | Each session's signature is checked locally with the pool's public keys (fetched at most once every 5 minutes). Only a correctly signed token reaches Cognito (GetUser): at most once a minute per session, at most 60 calls a minute and 4 at a time per copy of the function | No per-request charge is listed for user-pool sign-in calls; the outbound bytes are a few KB per call (**data transfer price not re-checked**) | Cognito pricing page |
 | Already paid | Domain $16/year; hosted zone $0.50/month until it is attached to the Free plan | unchanged / then $0 | Route 53 billing |
 
 **Small amounts that can happen once:**
@@ -128,6 +131,19 @@ table is empty (the app never ran), so:
 
 While it exists the kept table costs $0 (10/10 provisioned units, inside the 25/25 always-free units).
 If the table has items, do not delete it: the stack was live before, and the data must be kept.
+
+## Tenant sign-in: add a customer user
+
+There is no public sign-up. Create each user with their tenant id (it cannot be changed later). Cognito
+emails a temporary password; at first sign-in the user sets a password and adds an authenticator app.
+Replace `owner@example.com` and `acme` (the tenant record must already exist):
+```cmd
+cd /d C:\Users\bellgj\Documents\Personal\collectiverse\guardoath
+for /f %i in ('aws cloudformation describe-stacks --region us-east-1 --profile collectiverse-prod --stack-name guardoath-site --query "Stacks[0].Outputs[?OutputKey=='UserPoolId'].OutputValue" --output text') do set POOL=%i
+aws cognito-idp admin-create-user --region us-east-1 --profile collectiverse-prod --user-pool-id %POOL% --username owner@example.com --user-attributes Name=email,Value=owner@example.com Name=email_verified,Value=true Name=custom:tenant_id,Value=acme --query "User.UserStatus" --output text
+```
+Expect `FORCE_CHANGE_PASSWORD`. The sign-in page is at the stack output `SignInDomain`; the dashboard's
+**Sign in** button goes there.
 
 ## After a code change
 

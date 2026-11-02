@@ -345,13 +345,21 @@ def test_each_demo_user_changes_only_its_own_record(client, tenants):
     assert tenants.store.get("demo1").check_pii is None and tenants.store.get("demo2").check_pii == "block"
 
 
-def test_customers_can_change_their_checks_but_not_reset():
+def test_a_customers_api_key_cannot_change_settings():
+    # Since 2026-11-02 a customer's settings change only through a signed-in session
+    # (tests/test_tenant_sessions.py); a leaked production key cannot change them.
     token, digest = new_key("acme")
     customer = TenantRecord(tenant_id="acme", display_name="Acme", key_hashes=(digest,), check_secrets="flag")
-    client = client_for(service(records=(customer,)))
-    assert change(client, token, 1, {"check_text_security": "block"}).json()["checks"]["text_security"] == "block"
+    tenants = service(records=(customer,))
+    client = client_for(tenants)
+    stored = tenants.store.get("acme")  # as the store saved it (revision and time set on load)
+    refused = {"detail": "Sign in to change this tenant's settings; an API key only runs checks"}
+    response = change(client, token, 1, {"check_text_security": "block"})
+    assert response.status_code == 403 and response.json() == refused
     response = client.post("/v1/tenants/current/reset", headers=auth(token), json={})
-    assert response.status_code == 403 and response.json() == {"detail": "Only demo users can be reset to the demo defaults"}
+    assert response.status_code == 403 and response.json() == refused
+    assert tenants.store.get("acme") == stored and stored.check_text_security is None
+    assert check(client, token, "acme", CLEAN).status_code == 200
 
 
 def test_check_changes_need_a_tenant_key(tenants):

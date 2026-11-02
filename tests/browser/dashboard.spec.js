@@ -1069,8 +1069,8 @@ test("requests carry the key header and the body hash CloudFront needs", async (
   await expect(page.locator("#connection-status")).toContainText("Connected to demo7");
   await page.locator("#run-input").click();
   await expect(page.locator("#result-status")).toHaveText("Input checks passed");
-  // /v1/demo-users and /v1/controls are public and the same for everyone: they are sent without a key.
-  const isPublic = r => r.url.endsWith("/v1/demo-users") || r.url.endsWith("/v1/controls");
+  // /v1/demo-users, /v1/controls and /v1/sign-in are public and the same for everyone: they are sent without a key.
+  const isPublic = r => r.url.endsWith("/v1/demo-users") || r.url.endsWith("/v1/controls") || r.url.endsWith("/v1/sign-in");
   const posts = seen.filter(r => r.method === "POST"), gets = seen.filter(r => r.method === "GET" && !isPublic(r));
   for (const r of seen.filter(r => r.method === "GET" && isPublic(r))) expect(r.headers["x-guardoath-key"]).toBeUndefined();
   expect(posts.length).toBeGreaterThanOrEqual(2);
@@ -1113,4 +1113,10 @@ test("the developer guide opens at a check's section from its What is this? link
   await expect(page.locator("#check-schema h3")).toContainText("JSON structure (schema)");
   await expect(page.locator("a[href*='github.com']")).toHaveCount(0);
   await expect(page.locator("#profiles tbody tr")).toHaveCount(24);
+});
+test("without tenant sign-in on the server, no sign-in button is shown", async ({ page }) => {
+  await page.goto("/dashboard");
+  await expect(page.locator("#demo-users")).toBeVisible();
+  await expect(page.locator("#sign-in-box")).toBeHidden();
+  await expect(page.locator("#keys-panel")).toBeHidden();
 });

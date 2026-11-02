@@ -186,3 +186,32 @@ only be turned `off`, because redaction replaces every value the check finds.
 `tests/test_rule_catalog.py` runs every rule's example (it must be reported) and look-alike (it must not
 be) against the real detectors. `tests/test_rule_actions.py` covers saving, refusing and applying rule
 settings.
+
+## Tenant sign-in
+
+Since 2026-11-02 a customer record's settings change only through a signed-in session; its API keys only
+run checks, so a leaked production key cannot change settings or keys.
+
+- Accounts are users of an Amazon Cognito user pool (Lite plan): email, password and a required
+  authenticator app. There is no public sign-up; an administrator creates each user with the read-only
+  attribute `custom:tenant_id`. One user belongs to one tenant.
+- The dashboard signs in with the pool's hosted sign-in page (authorization code with PKCE) and keeps the
+  session in the browser tab (sessionStorage). It sends the session in `X-GuardOath-Session`.
+- `guardoath/tenant_sessions.py` checks every session in two steps:
+  1. **Locally, with no network call:** an RS256 token signed by one of the pool's published keys (JWKS),
+     for this pool and app client, an access token, unexpired, with the `aws.cognito.signin.user.admin`
+     scope. A forged or altered token stops here. The keys are fetched at most once every 5 minutes, even
+     when tokens name keys that do not exist (so a new Cognito key is used within 5 minutes).
+  2. **Cognito GetUser**, for a token that passed step 1: confirms that the user still exists and the token
+     was not revoked, and gives the tenant. A result is kept for at most 60 seconds per token (never past
+     its expiry); a refusal is kept for 60 seconds. At most 60 calls to Cognito a minute and 4 at a time per
+     copy of the app (trading sign-in codes counts too); over that the request gets 503 with
+     `Retry-After: 5`, never let through.
+  The tenant must exist, be active and not be a demo user. The sign-in domain must be the pool's prefix
+  domain in the pool's region, and sign-in requests to Cognito never follow redirects.
+- Signed in, a user can change the record's checks (`POST /v1/tenants/current/checks`) and manage its API
+  keys: `GET /v1/tenants/current/keys`, `POST /v1/tenants/current/keys` (at most 2; the key is shown once)
+  and `POST /v1/tenants/current/keys/revoke`.
+- Demo users have no accounts. Their demo key still changes their own demo record.
+- Settings: `GUARDOATH_COGNITO_POOL_ID`, `GUARDOATH_COGNITO_CLIENT_ID`, `GUARDOATH_COGNITO_DOMAIN`,
+  `GUARDOATH_COGNITO_REDIRECT_URI` (all four or none). The deploy template sets them.

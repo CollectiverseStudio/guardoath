@@ -12,13 +12,16 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from guardoath.checkers import default_checkers
 from guardoath.control_registry import registry_payload
 from guardoath.config import load_policies
 from guardoath.engine import Engine
-from guardoath.models import Action, ApiCheckRequest, CheckRequest, CheckResponse, Policy, Rule, Stage
+from pydantic import Field
+
+from guardoath.models import Action, ApiCheckRequest, CheckRequest, CheckResponse, Contract, Policy, Rule, Stage
 from guardoath.ingress import JsonIngressLimits
 from guardoath.groups import GROUPS
 from guardoath.budgets import ResourceLimits, RequestBudgets, RequestCapacity
@@ -27,6 +30,8 @@ from guardoath.tenants import TenantRegistry
 from guardoath.hosted import ChangeRejected, CheckChanges, NotADemoUser, TenantService
 from guardoath.tenant_record import TENANT_ID_PATTERN, TENANT_POLICY_VERSION, TenantRecord, usage_month
 from guardoath.tenant_store import TenantConflict, TenantNotFound, UsageLimitReached
+from guardoath.tenant_record import new_key
+from guardoath.tenant_sessions import SESSION_HEADER, CognitoSessions, SignInBusy
 
 
 # Videos are sent in parts of at most this size. The hosted service runs on AWS Lambda, whose buffered
@@ -96,10 +101,20 @@ def demo_engine(enable_pii: bool = False, enable_azure: bool = False, content_sa
                                                                 content_safety_provider=content_safety_provider))
 
 
+class KeyRevocation(Contract):
+    key_id: str = Field(pattern=r"^[0-9a-f]{12}$")
+
+
+class SignInCode(Contract):
+    code: str = Field(min_length=1, max_length=256)
+    code_verifier: str = Field(min_length=43, max_length=128)
+
+
 def create_app(engine: Engine | None = None, credentials: dict[str, str] | None = None,
                limits: ResourceLimits | None = None,
                tenant_registry: TenantRegistry | None = None,
-               tenants: TenantService | None = None) -> FastAPI:
+               tenants: TenantService | None = None,
+               sessions: CognitoSessions | None = None) -> FastAPI:
     policy_file = os.getenv("GUARDOATH_POLICY_FILE")
     pack_file = os.getenv("GUARDOATH_PACK_FILE")
     if engine is not None:
@@ -124,6 +139,8 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                                   checkers=checkers))
         if tenants is None:
             tenants = TenantService.from_environment(checkers)
+        if sessions is None:
+            sessions = CognitoSessions.from_environment()
     if pack_file and not policy_file and engine is None:
         raise ValueError("Pack configuration requires a policy file")
     # No embedded credential. Without configuration, checks fail closed with 503.
@@ -136,6 +153,8 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     resource_limits = limits if limits is not None else ResourceLimits.from_environment()
     if tenants is not None and tenant_registry is not None:
         raise ValueError("Use tenant records or a tenant registry, not both")
+    if sessions is not None and tenants is None:
+        raise ValueError("Tenant sign-in needs tenant records (GUARDOATH_TENANT_STORE)")
     budget_apps = set(bindings.values()) if tenant_registry is None else set(tenant_registry.application_ids())
     budgets = RequestBudgets(resource_limits, budget_apps)
     api = FastAPI(title="GuardOath", version="0.25.0")
@@ -179,9 +198,25 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         return JSONResponse(status_code=422, content={"detail": "Invalid check request"})
 
     async def authenticate(
+        request: Request,
         auth: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
         key_header: Annotated[str | None, Header(alias=KEY_HEADER)] = None,
+        session_header: Annotated[str | None, Header(alias=SESSION_HEADER)] = None,
     ) -> str | TenantRecord:
+        request.state.signed_in = False
+        if session_header is not None:
+            # A signed-in tenant user (Cognito). Only customer records have accounts; demo users do not.
+            # The signature is checked locally; Cognito is asked over the network, so off the event loop.
+            try:
+                tenant_id = await run_in_threadpool(sessions.tenant_for, session_header) if sessions is not None else None
+            except SignInBusy:
+                raise HTTPException(503, "Sign-in checks are busy; try again shortly", headers={"Retry-After": "5"}) from None
+            record = tenants.store.get(tenant_id) if tenant_id is not None else None
+            if record is None or record.status != "active" or record.demo:
+                raise HTTPException(401, "Sign-in expired or not valid; sign in again")
+            budgets.register(record.tenant_id)
+            request.state.signed_in = True
+            return record
         if not bindings and tenant_registry is None and tenants is None:
             raise HTTPException(503, "Application credentials are not configured")
         # The key header wins; otherwise a bearer token. Any other Authorization scheme (such as the
@@ -263,6 +298,25 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             raise HTTPException(403, "This endpoint needs a tenant API key")
         return principal
 
+    def settings_owner(request: Request, principal: str | TenantRecord) -> TenantRecord:
+        """Who may change a tenant's settings: a signed-in user of that tenant. A demo user's own demo key
+        may change its demo record (demo users have no accounts). A customer's API key only runs checks,
+        so a leaked production key cannot change settings or keys."""
+        record = tenant_only(principal)
+        if not record.demo and not getattr(request.state, "signed_in", False):
+            raise HTTPException(403, "Sign in to change this tenant's settings; an API key only runs checks")
+        return record
+
+    def signed_in_owner(request: Request, principal: str | TenantRecord) -> TenantRecord:
+        record = tenant_only(principal)
+        if not getattr(request.state, "signed_in", False):
+            raise HTTPException(403, "Sign in to manage API keys")
+        return record
+
+    def key_list(record: TenantRecord) -> dict:
+        # A key is shown by the start of its hash only; the key itself is never stored.
+        return {"keys": [{"key_id": digest[:12]} for digest in record.key_hashes], "max_keys": 2}
+
     def saved(update):
         try:
             record = update()
@@ -277,14 +331,65 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         return JSONResponse(tenant_summary(record), headers={"Cache-Control": "no-store"})
 
     @api.post("/v1/tenants/current/checks")
-    async def change_checks(body: CheckChanges, principal: Annotated[str | TenantRecord, Depends(authenticate)]):
-        record = tenant_only(principal)
+    async def change_checks(request: Request, body: CheckChanges,
+                            principal: Annotated[str | TenantRecord, Depends(authenticate)]):
+        record = settings_owner(request, principal)
         return saved(lambda: tenants.change_checks(record.tenant_id, body.changes, body.revision))
 
     @api.post("/v1/tenants/current/reset")
-    async def reset_checks(principal: Annotated[str | TenantRecord, Depends(authenticate)]):
-        record = tenant_only(principal)
+    async def reset_checks(request: Request, principal: Annotated[str | TenantRecord, Depends(authenticate)]):
+        record = settings_owner(request, principal)
         return saved(lambda: tenants.reset_demo(record.tenant_id))
+
+    @api.get("/v1/tenants/current/keys")
+    async def list_keys(request: Request, principal: Annotated[str | TenantRecord, Depends(authenticate)]):
+        current = tenants.store.get(signed_in_owner(request, principal).tenant_id)
+        return JSONResponse(key_list(current), headers={"Cache-Control": "no-store"})
+
+    @api.post("/v1/tenants/current/keys")
+    async def create_key(request: Request, principal: Annotated[str | TenantRecord, Depends(authenticate)]):
+        current = tenants.store.get(signed_in_owner(request, principal).tenant_id)
+        if len(current.key_hashes) >= 2:
+            raise HTTPException(409, "A tenant has at most 2 API keys; revoke one first")
+        token, digest = new_key(current.tenant_id)
+        try:
+            updated = tenants.store.set_key_hashes(current.tenant_id, (*current.key_hashes, digest), current.revision)
+        except TenantConflict:
+            raise HTTPException(409, "The tenant record changed; reload it and try again") from None
+        # The key is shown once, here; only its hash is stored.
+        return JSONResponse({"api_key": token, "key_id": digest[:12], **key_list(updated)}, headers={"Cache-Control": "no-store"})
+
+    @api.post("/v1/tenants/current/keys/revoke")
+    async def revoke_key(request: Request, body: KeyRevocation,
+                         principal: Annotated[str | TenantRecord, Depends(authenticate)]):
+        current = tenants.store.get(signed_in_owner(request, principal).tenant_id)
+        kept = tuple(digest for digest in current.key_hashes if digest[:12] != body.key_id)
+        if len(kept) == len(current.key_hashes):
+            raise HTTPException(404, "Key not found")
+        try:
+            updated = tenants.store.set_key_hashes(current.tenant_id, kept, current.revision)
+        except TenantConflict:
+            raise HTTPException(409, "The tenant record changed; reload it and try again") from None
+        return JSONResponse(key_list(updated), headers={"Cache-Control": "no-store"})
+
+    @api.get("/v1/sign-in")
+    async def sign_in_config():
+        # Public: where the dashboard sends a user to sign in. The app client has no secret.
+        if sessions is None:
+            raise HTTPException(404, "Tenant sign-in is not available")
+        return JSONResponse(sessions.public_config(), headers={"Cache-Control": "no-store"})
+
+    @api.post("/v1/sign-in/token")
+    async def sign_in_token(body: SignInCode):
+        if sessions is None:
+            raise HTTPException(404, "Tenant sign-in is not available")
+        try:
+            result = await run_in_threadpool(sessions.exchange, body.code, body.code_verifier)
+        except SignInBusy:
+            raise HTTPException(503, "Sign-in checks are busy; try again shortly", headers={"Retry-After": "5"}) from None
+        if result is None:
+            raise HTTPException(401, "Sign-in failed; try again")
+        return JSONResponse(result, headers={"Cache-Control": "no-store"})
 
     @api.get("/v1/demo-users")
     async def demo_users():
