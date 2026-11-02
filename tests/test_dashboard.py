@@ -456,3 +456,14 @@ def test_the_guides_python_example_works_against_the_api(monkeypatch):
     assert namespace["next_step"](clean) == "continue"
     observed = namespace["check"]("input", "Please email jane@example.com about my order.", profile="pii-v1")
     assert observed["recommended_action"] == "flag" and observed["effective_action"] == "allow" and namespace["next_step"](observed) == "continue"
+
+
+def test_the_dashboard_lists_the_rules_of_each_check_and_saves_rule_actions():
+    from pathlib import Path
+    script = (Path(__file__).resolve().parents[1] / "guardoath" / "static" / "dashboard.js").read_text(encoding="utf-8")
+    assert 'send("/v1/controls"' in script and "changes.rule_actions" in script
+    for text in ["Rules in this check (", "Check action", "Not reported (look-alike): ", "Use case: "]:
+        assert text in script, text
+    # Rule texts are shown with textContent only, never as markup.
+    start = script.index("function ruleRow"); end = script.index("async function fillRuleSlots")
+    assert "innerHTML" not in script[start:end]
