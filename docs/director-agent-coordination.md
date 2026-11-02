@@ -1830,3 +1830,24 @@ Current **128 rules / 128 pinned / 135 required wheel assets**. Source verifier 
 Rule #1 read first. Reviewed main `8d374a05531efab941c1b6339861d4ce5d38dce0`, recent Director/Codex changes, assignments, AGENTS.md, source and available Actions. Independently parsed all six committed Sigma batch JSON files: **3+25+25+25+25+25 = 128 unique rule IDs**, all 128 carry well-formed pinned revision/Git-blob/SHA-256 metadata at `05d1031f537e830b76da53bae2400c5814c89165`; no duplicate IDs. This **does not independently verify YAML bytes, detection effectiveness or installed wheel**. C5 [Tests 41486992376](https://github.com/CollectiverseStudio/guardoath/actions/runs/41486992376) **12/12 successful** and [CodeQL 41486991796](https://github.com/CollectiverseStudio/guardoath/actions/runs/41486991796) **3/3 successful**, independently checked job lists. C6 exact-commit CI for `8d374a0` **unverified**: available workflow lookup returned no runs (it only indexes PR-triggered workflows); do not infer a pass/fail.
 
 **Director — existing packaging handoff remains a release blocker, with updated acceptance count:** `pyproject.toml` currently lacks `guardoath.sigma_rules` package-data, so verify the *actual newly built wheel* contains all **135** required assets (six batch JSON, 128 original YAML, DRL license). Add minimal package-data in your reserved file, run `python -m guardoath.sigma_rules.verify_distribution <wheel>` plus clean installed-wheel smoke tests and exact-SHA CI/CodeQL; preserve all source/asset rejection tests. Please resolve/trace the intermittent Python 3.14 secrets candidate failure separately; a later green run alone does not establish root cause. **Codex cloud:** C7 non-executing trusted routing plan is already READY/assigned above; claim before editing and avoid C6 files. No duplicate task, reserved edit, outside AI, deployment or spend from this review.
+
+
+## 2026-11-02 12:25 Director: PR #22 merged (main 59a5b09e), example profiles removed for tenants
+
+Greg's decision (10-31) is now on main. PR CI on 0539fb49: the pull_request, push and CodeQL runs were all green. The first run had 1 failure out of 10,596: the guide example test still used `profile="pii-v1"`. Fixed in 0539fb49 by removing the profile argument from the guide examples; observe mode is now set on the record.
+
+- **Tenant record:** `default_profile` removed and no longer editable (422 "Only check fields and check settings can be changed"). Stored records that still hold the field are handled when read:
+  - `"tenant"` is dropped.
+  - Any value on a demo record is dropped.
+  - A **customer** record naming an example profile is refused ("needs a migration review").
+- **Hosted service and app:**
+  - A tenant key runs only its record (`policy_versions()` returns `("tenant",)`).
+  - `policy_version` may be omitted or sent as `tenant`; any other value gets 404 and is not counted.
+  - `GUARDOATH_TENANT_PROFILE_FILE` stops startup with an error.
+  - `load_example_profiles`, `profiles_for` and `profile_versions` are removed. `TenantService(store, checkers, demo_key_secret=None, demo_list_seconds=0.0)`.
+- **Dashboard:** the "Check profile (policy)" box (`#advanced`) is hidden for tenants and shown only for a local developer key. The default-profile picker and profile note are removed.
+- **Guide:** policy_version row, endpoints, settings example (now `rule_actions`), the 404 row and the code examples are updated. The Profiles section is marked local-launcher only.
+- **Codex:** in your `gateway_prototype/catalog.py` and `service.py` I removed only the two `default_profile` checks. The record loader now refuses such records, and `test_gateway_prototype` asserts that. `test_gateway_catalog_prototype` passes unchanged. Your docs `tenant-ai-gateway-api-contract.md` and Atlas's `authoritative-tenant-validation-hierarchy.md` still mention default_profile; please update them in your next pass.
+- **Unchanged:** the engine policies, `policies/playground.json` and all evals (local launcher and evaluations only).
+
+**Next (Director):** deploy (Greg runs `update-site.cmd`), then tenant sign-in (Cognito), then item 2 (the outside connectors out; prompt_attack and harmful_content in).
