@@ -1725,9 +1725,9 @@ most 128 routed rules per evaluation, with shared work/deadline budgets.
 Run `python -m guardoath.sigma_rules.evidence_catalog` for an offline JSON handoff
 of all 128 imported rules, each with original attribution/logsource, a use case,
 positive structured event, nonmatching look-alike and limitations. The export
-explicitly marks the rules as unregistered. It verifies 125 pinned source
-snapshots; the first three retain unpinned master URLs and null digests. Unknown
-original false-positive notes remain null rather than an invented clean claim.
+explicitly marks the rules as unregistered. It verifies all 128 pinned source
+snapshots. The original three now have full metadata and immutable URLs after a
+separate reviewed pinning update; historical audit evidence remains frozen.
 
 The immutable catalog has no action settings and never changes what a tenant runs.
 Corrupt/missing assets or malformed evidence stop the export; no partial catalog
@@ -1753,7 +1753,7 @@ fix remain Director-owned integration requirements.
 The isolated [batch 006](sigma-batch-006.md) adds 25 original Windows PowerShell
 script rules, with one matching event and one look-alike each, upstream attribution
 and immutable source hashes. The default six-batch inventory contains 128 rules
-(125 pinned snapshots), integrated with the routing/distribution work.
+(128 pinned snapshots after original-three pinning), integrated with routing/distribution work.
 Examples include LSASS process lookup, local
 group/share discovery, shadow-copy deletion and firewall/profile/WMI changes.
 These literal event signals can match legitimate administration; a look-alike for
@@ -1788,9 +1788,9 @@ The [batch 001 audit](sigma-batch-001-provenance-audit.md) confirms that the ori
 7-Zip, AccCheckConsole and Auditpol imports retain the exact detection logic and
 attribution at a verified immutable SigmaHQ commit. Their omitted descriptions,
 references and other metadata are listed explicitly. The offline audit command
-reports drift without rewriting rules. Runtime source metadata remains unchanged
-pending coordinated integration: 128 rules, 125 pinned, three original unpinned
-entries. This audit does not establish effectiveness, hosted registration or
+reports drift without rewriting rules. The subsequent [pinning update](sigma-batch-001-pinning.md) restored full metadata
+and original snapshots without changing detections: all 128 rules are now pinned.
+Neither audit nor pinning establishes effectiveness, hosted registration or
 packaged-asset readiness.
 
 ## Existing Sigma branch evidence

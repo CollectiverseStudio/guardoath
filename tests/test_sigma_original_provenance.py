@@ -14,7 +14,8 @@ from guardoath.sigma_rules.evidence_catalog import load_evidence_catalog
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / 'tests/fixtures/sigma_batch_001_provenance'
-BATCH = json.loads((ROOT / 'guardoath/sigma_rules/upstream_batch_001.json').read_text(encoding='utf-8'))
+BATCH = json.loads((FIXTURES / 'imported_projection.json').read_text(encoding='utf-8'))
+CURRENT_BATCH = json.loads((ROOT / 'guardoath/sigma_rules/upstream_batch_001.json').read_text(encoding='utf-8'))
 REPORT = json.loads((FIXTURES / 'audit.json').read_text(encoding='utf-8'))
 ROWS = BATCH['rules']
 
@@ -74,16 +75,19 @@ def test_added_or_altered_descriptive_fields_are_not_ignored(record):
     assert 'private-description-canary' not in json.dumps(result)
 
 
-def test_audit_evidence_does_not_upgrade_runtime_provenance_or_change_inventory():
+def test_historical_audit_stays_frozen_while_separate_pinning_preserves_identity():
     assert REPORT['runtime_metadata_changed'] is False
     assert REPORT['source_revision'] == '05d1031f537e830b76da53bae2400c5814c89165'
     assert 'source_revision' not in BATCH
     evidence = load_evidence_catalog()
     assert len(evidence) == 128
-    assert sum(r.source_revision is not None for r in evidence) == 125
+    assert sum(r.source_revision is not None for r in evidence) == 128
     originals = [r for r in evidence if r.rule_id in {row['id'] for row in ROWS}]
     assert len(originals) == 3
-    assert all(r.source_revision is None and r.snapshot_sha256 is None for r in originals)
+    assert CURRENT_BATCH['source_revision'] == REPORT['source_revision']
+    assert all(r.source_revision == REPORT['source_revision'] and r.snapshot_sha256 for r in originals)
+    for prior,current in zip(ROWS,CURRENT_BATCH['rules']):
+        assert all(current[key] == value for key,value in prior.items())
 
 
 @pytest.mark.parametrize('revision', ['master', 'HEAD', '', '0'*39, '0'*41, 'z'*40, 'a'*40+';anything', None])

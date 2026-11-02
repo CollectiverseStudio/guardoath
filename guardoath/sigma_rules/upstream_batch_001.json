@@ -1,15 +1,22 @@
 {
   "source_repository": "https://github.com/SigmaHQ/sigma",
-  "source_branch": "master",
   "license": "Detection Rule License 1.1 (DRL 1.1)",
   "rules": [
     {
-      "source_path": "rules/windows/process_creation/proc_creation_win_7zip_password_compression.yml",
-      "id": "9fbf5927-5261-4284-a71d-f681029ea574",
       "title": "Compress Data and Lock With Password for Exfiltration With 7-ZIP",
-      "author": "frack113",
+      "id": "9fbf5927-5261-4284-a71d-f681029ea574",
       "status": "test",
-      "level": "medium",
+      "description": "An adversary may compress or encrypt data that is collected prior to exfiltration using 3rd party utilities",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1560.001/T1560.001.md"
+      ],
+      "author": "frack113",
+      "date": "2021-07-27",
+      "modified": "2026-06-05",
+      "tags": [
+        "attack.collection",
+        "attack.t1560.001"
+      ],
       "logsource": {
         "category": "process_creation",
         "product": "windows"
@@ -45,6 +52,13 @@
         },
         "condition": "all of selection_*"
       },
+      "falsepositives": [
+        "Legitimate activity is expected since compressing files with a password is common."
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_7zip_password_compression.yml",
+      "source_sha256": "877998e61870667b675653f3b74cbaabc7b0120c71fb80e26f7b27b198ff64c0",
+      "source_git_blob": "08f75d9922d9dffb27e3480139fe95c689cc6b5d",
       "positive_event": {
         "Image": "C:\\tools\\7z.exe",
         "CommandLine": "7z a -pTEST archive.zip sample.txt"
@@ -55,12 +69,22 @@
       }
     },
     {
-      "source_path": "rules/windows/process_creation/proc_creation_win_acccheckconsole_execution.yml",
-      "id": "0f6da907-5854-4be6-859a-e9958747b0aa",
       "title": "Potential DLL Injection Via AccCheckConsole",
-      "author": "Florian Roth (Nextron Systems)",
+      "id": "0f6da907-5854-4be6-859a-e9958747b0aa",
       "status": "test",
-      "level": "medium",
+      "description": "Detects the execution \"AccCheckConsole\" a command-line tool for verifying the accessibility implementation of an application's UI.\nOne of the tests that this checker can run are called \"verification routine\", which tests for things like Consistency, Navigation, etc.\nThe tool allows a user to provide a DLL that can contain a custom \"verification routine\". An attacker can build such DLLs and pass it via the CLI, which would then be loaded in the context of the \"AccCheckConsole\" utility.\n",
+      "references": [
+        "https://gist.github.com/bohops/2444129419c8acf837aedda5f0e7f340",
+        "https://twitter.com/bohops/status/1477717351017680899?s=12",
+        "https://lolbas-project.github.io/lolbas/OtherMSBinaries/AccCheckConsole/"
+      ],
+      "author": "Florian Roth (Nextron Systems)",
+      "date": "2022-01-06",
+      "modified": "2024-08-29",
+      "tags": [
+        "attack.execution",
+        "detection.threat-hunting"
+      ],
       "logsource": {
         "category": "process_creation",
         "product": "windows"
@@ -83,6 +107,13 @@
         },
         "condition": "all of selection_*"
       },
+      "falsepositives": [
+        "Legitimate use of the UI Accessibility Checker"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_acccheckconsole_execution.yml",
+      "source_sha256": "d14e6d24ebefe314324f8b5612177ca42940382493b080b75578d9b9c2bc267b",
+      "source_git_blob": "94019b6ce65c1886c95b87a494b821f6119d0903",
       "positive_event": {
         "Image": "C:\\tools\\AccCheckConsole.exe",
         "CommandLine": "AccCheckConsole.exe -hwnd 123"
@@ -93,12 +124,26 @@
       }
     },
     {
-      "source_path": "rules/windows/process_creation/proc_creation_win_auditpol_susp_execution.yml",
-      "id": "0a13e132-651d-11eb-ae93-0242ac130002",
       "title": "Audit Policy Tampering Via Auditpol",
-      "author": "Janantha Marasinghe (https://github.com/blueteam0ps)",
+      "id": "0a13e132-651d-11eb-ae93-0242ac130002",
+      "related": [
+        {
+          "id": "c6c56ada-612b-42d1-9a29-adad3c5c2c1e",
+          "type": "similar"
+        }
+      ],
       "status": "test",
-      "level": "high",
+      "description": "Threat actors can use auditpol binary to change audit policy configuration to impair detection capability.\nThis can be carried out by selectively disabling/removing certain audit policies as well as restoring a custom policy owned by the threat actor.\n",
+      "references": [
+        "https://www.microsoft.com/security/blog/2021/01/20/deep-dive-into-the-solorigate-second-stage-activation-from-sunburst-to-teardrop-and-raindrop/"
+      ],
+      "author": "Janantha Marasinghe (https://github.com/blueteam0ps)",
+      "date": "2021-02-02",
+      "modified": "2023-02-22",
+      "tags": [
+        "attack.defense-impairment",
+        "attack.t1685.001"
+      ],
       "logsource": {
         "category": "process_creation",
         "product": "windows"
@@ -122,6 +167,13 @@
         },
         "condition": "all of selection_*"
       },
+      "falsepositives": [
+        "Administrator or administrator scripts might leverage the flags mentioned in the detection section. Either way, it should always be monitored"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_auditpol_susp_execution.yml",
+      "source_sha256": "7f8cb4a8250f361f33bec9eb5d20e83d04de438338eca2d6dc611236ba6a4152",
+      "source_git_blob": "484b02a5de2f8ee421d7c7bdae4cc1b8b4f9d669",
       "positive_event": {
         "Image": "C:\\Windows\\System32\\auditpol.exe",
         "CommandLine": "auditpol.exe /clear"
@@ -131,5 +183,8 @@
         "CommandLine": "auditpol.exe /get"
       }
     }
-  ]
+  ],
+  "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+  "license_url": "https://github.com/SigmaHQ/Detection-Rule-License/blob/main/LICENSE.Detection.Rules.md",
+  "fixture_origin": "GuardOath-authored synthetic events; not upstream tests or effectiveness evidence"
 }

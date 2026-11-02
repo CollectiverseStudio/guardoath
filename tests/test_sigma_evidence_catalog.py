@@ -19,7 +19,7 @@ BY_ID = {row.rule_id: row for row in EVIDENCE}
 
 def test_complete_inventory_counts_sources_without_claiming_runtime_registration():
     assert len(EVIDENCE) == len(BY_ID) == 128
-    assert sum(row.source_revision is not None for row in EVIDENCE) == 125
+    assert sum(row.source_revision is not None for row in EVIDENCE) == 128
     assert len({row.source_path for row in EVIDENCE}) == 128
     assert all(row.maturity == 'offline-fixture-tested' for row in EVIDENCE)
     assert all('other rules may flag it' in row.limitations for row in EVIDENCE)
@@ -54,11 +54,19 @@ def test_exported_positive_and_lookalike_execute_against_original_rule(batch,sou
     assert not rule.matches({key:None for key,_ in row.positive_event})
 
 
-def test_no_false_pinned_claim_for_original_three():
+def test_original_three_are_pinned_only_after_exact_source_audit():
     rows=[BY_ID[r['id']] for r in BATCHES[0]['rules']]
+    assert all(r.source_revision == BATCHES[0]['source_revision'] and r.snapshot_sha256 for r in rows)
+    assert all(r.upstream_false_positives is not None for r in rows)
+    assert all('/blob/'+BATCHES[0]['source_revision']+'/' in r.source_url for r in rows)
+
+
+def test_historical_unpinned_projection_still_cannot_fabricate_provenance():
+    old=json.loads((ROOT.parents[1]/'tests/fixtures/sigma_batch_001_provenance/imported_projection.json').read_text(encoding='utf-8'))
+    rows=catalog.build_evidence_catalog([old])
+    assert len(rows)==3
     assert all(r.source_revision is None and r.snapshot_sha256 is None for r in rows)
-    assert all(r.upstream_false_positives is None for r in rows)
-    assert all('/blob/master/' in r.source_url for r in rows)
+    assert all(r.upstream_false_positives is None and '/blob/master/' in r.source_url for r in rows)
 
 
 def test_evidence_is_immutable_and_json_exports_are_independent():
@@ -116,7 +124,7 @@ def test_duplicate_identity_fails_atomically(field):
 
 
 def test_unpinned_digest_and_oversized_inventory_fail():
-    batch=deepcopy(BATCHES[0]);batch['rules'][0]['source_sha256']='a'*64
+    batch=deepcopy(BATCHES[0]);batch.pop('source_revision');batch['rules'][0]['source_sha256']='a'*64
     with pytest.raises(catalog.EvidenceCatalogError,match='pinned'):
         catalog.build_evidence_catalog([batch])
     batch=deepcopy(BATCHES[0]);batch['rules']=[batch['rules'][0]]*4097

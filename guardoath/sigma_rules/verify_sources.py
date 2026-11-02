@@ -18,7 +18,7 @@ def verify(upstream: Path) -> int:
     root = Path(__file__).resolve().parent
     revision = subprocess.check_output(['git', '-C', str(upstream), 'rev-parse', 'HEAD'], text=True).strip()
     total = 0
-    # Batch 001 predates immutable snapshots; never imply it was verified here.
+    # Every currently shipped batch now has independently verified snapshots.
     for batch_path in sorted(root.glob('upstream_batch_*.json')):
         batch = json.loads(batch_path.read_text(encoding='utf-8'))
         if 'source_revision' not in batch:

@@ -145,8 +145,8 @@ def _unique(pairs):
 def load_evidence_catalog():
     """Load fixed shipped assets and verify pinned Git-text snapshots offline.
 
-    Original three rules lack immutable source snapshots. They retain master URLs
-    and null revision/digest, never a manufactured pinned-verification claim.
+    All shipped rules now have immutable snapshots. Generic unpinned input to
+    the builder still retains null provenance rather than a fabricated claim.
     """
     root = files('guardoath.sigma_rules')
     batches = []

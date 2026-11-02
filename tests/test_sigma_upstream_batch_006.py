@@ -37,7 +37,7 @@ def test_exact_inventory_and_full_six_batch_evidence():
     assert DATA['source_revision'] == '05d1031f537e830b76da53bae2400c5814c89165'
     catalog = build_evidence_catalog(BATCHES)
     assert len(catalog) == 128
-    assert sum(r.source_revision is not None for r in catalog) == 125
+    assert sum(r.source_revision is not None for r in catalog) == 128
     handoff = json.loads((ROOT / 'batch_006_evidence.json').read_text(encoding='utf-8'))
     assert handoff['runtime_registered'] is False
     assert handoff['rules'] == [r.as_dict() for r in build_evidence_catalog([DATA])]

@@ -44,7 +44,7 @@ def audit(upstream, revision):
 
     This establishes equivalence at the supplied revision, not when the original
     import occurred, author identity beyond upstream metadata or source ownership.
-    It never upgrades the runtime catalog's unpinned status.
+    It never changes runtime provenance; pinning is a separate reviewed update.
     """
     if not isinstance(revision, str) or not re.fullmatch('[a-f0-9]{40}', revision):
         raise ValueError('full immutable upstream revision required')

@@ -61,3 +61,11 @@ snapshots into the shipped batch assets, adding the immutable revision/digests,
 and updating evidence/distribution counters is a separate coordinated handoff.
 Do not silently count this audit as completing that integration or the pending
 wheel-packaging fix. No hosted registration or deployment is included.
+
+### Subsequent coordinated pinning
+
+The status above describes the audit delivery at `099108a`. The separate
+[C6 pinning update](sigma-batch-001-pinning.md) restores full metadata and ships
+these exact snapshots. All 128 rules are now pinned; the original audit report and
+pre-pinning JSON projection remain immutable regression fixtures. The audit
+command still only reads Git objects and never performs that metadata update.

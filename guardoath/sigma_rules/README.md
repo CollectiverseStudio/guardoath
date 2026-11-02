@@ -7,7 +7,7 @@ do not establish AI prompt safety or production effectiveness.
 Batch 001 contains three process rules. Batch 002 adds 25 PowerShell rules from
 SigmaHQ commit `05d1031f537e830b76da53bae2400c5814c89165`. Batch 003 adds another
 25 PowerShell rules at the same revision. Batches 004 and 005 add 25 each; batch 006 adds another 25 (**128 total**). All original
-batch-002/003/004/005/006 YAML, metadata, detections, authors and false-positive notes are retained;
+batch-001/002/003/004/005/006 YAML, metadata, detections, authors and false-positive notes are retained;
 the batch JSON files add source paths, Git blob IDs, SHA-256 digests and
 GuardOath-authored synthetic positive/benign events. These fixtures are not upstream
 tests. Several rules detect legitimate administrative behavior; a finding is not
@@ -73,9 +73,9 @@ pytest tests/test_sigma_rules.py tests/test_sigma_import_validation.py tests/tes
 ```
 
 Use `pytest tests/test_sigma*.py -q` for all batches and condition contracts.
-The verifier audits all pinned batches (002/003/004/005/006: 125 rules), including every original
-metadata and detection field and original Git blob ID. Batch 001 predates the
-immutable snapshots and is explicitly outside that verifier's count.
+The verifier audits all pinned batches (001/002/003/004/005/006: 128 rules), including every original
+metadata and detection field and original Git blob ID. Batch 001 was added to the pinned audit after its exact source projection was
+independently proved; all 128 are now covered.
 
 Batch 003 covers browser-login-data copying, Active Directory module loading,
 DNS NRPT configuration, Windows capability/feature changes, ADSI/dMSA account
@@ -167,10 +167,10 @@ callers must route the original logsource and handle incomplete evaluation as er
 records for the Director's rule-level registry work. It retains original IDs,
 authors, license, source URLs and logsource; includes original descriptions,
 upstream status/level/false positives, positive events, nonmatching look-alikes
-and explicit limitations; and verifies the 125 pinned Git-text snapshots offline.
-The first three rules keep master URLs and null revision/digest. Missing original
-false-positive metadata is null, not a claim of no false positives. Their missing
-descriptions get an explicitly generated title-based review label.
+and explicit limitations; and verifies all 128 pinned Git-text snapshots offline.
+The original three now retain full metadata and immutable source URLs after the
+separate C6 pinning handoff. Generic unpinned inputs still retain null provenance
+and missing notes rather than fabricated source evidence.
 
 ```sh
 python -m guardoath.sigma_rules.evidence_catalog > sigma-evidence.json
@@ -235,8 +235,8 @@ assets as a fallback. Success emits JSON with rule/pinned-source/required-asset
 counts, source revisions and the canonical retained DRL license digest; exit codes
 are 0 for asset-contract success, 1 for verification failure and 2 for bad usage.
 
-The current contract requires all six source-batch JSON files, all 125 referenced
-original YAML snapshots and the exact DRL license (132 assets). It rejects missing
+The current contract requires all six source-batch JSON files, all 128 referenced
+original YAML snapshots and the exact DRL license (135 assets). It rejects missing
 or changed assets, duplicate JSON names, nonfinite JSON, unindexed batches/YAML,
 ambiguous/case-colliding/traversal member names and bounded resource violations.
 UTF-8 Git text is canonicalized for Windows checkout line endings. There is no
@@ -250,4 +250,12 @@ verify the actual built wheel with this command, then test trusted installed
 `load_evidence_catalog()` and `load_routing_table()` outside the checkout with no
 PYTHONPATH fallback. Until those pass, installed/hosted integration remains blocked.
 
-Batch 006 adds 25 further compatible originals. See [its source/evidence handoff](../../docs/sigma-batch-006.md). The default catalog and trusted routing now include all 128 rules (125 pinned); evaluation still rejects more than 128 selected rules.
+Batch 006 adds 25 further compatible originals. See [its source/evidence handoff](../../docs/sigma-batch-006.md). The default catalog and trusted routing now include all 128 rules (128 pinned); evaluation still rejects more than 128 selected rules.
+
+## Original-three pinning (C6)
+
+[Pinning evidence](../../docs/sigma-batch-001-pinning.md) records the separate
+reviewed restoration of complete original metadata and exact snapshots. IDs,
+authors, detection semantics and existing events are unchanged. The pre-pinning
+projection and audit stay frozen in test fixtures; no historical import date is
+inferred. All 128 shipped rules now verify against immutable upstream Git blobs.

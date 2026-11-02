@@ -40,7 +40,7 @@ def test_complete_assets_are_verified_without_executing_code_or_using_checkout(t
     from guardoath.sigma_rules import evidence_catalog
     monkeypatch.setattr(evidence_catalog,'load_evidence_catalog',lambda:pytest.fail('checkout fallback used'))
     report=distribution.verify_wheel(wheel(tmp_path))
-    assert (report.rule_count,report.pinned_rule_count,report.required_asset_count)==(128,125,132)
+    assert (report.rule_count,report.pinned_rule_count,report.required_asset_count)==(128,128,135)
     assert report.source_revisions==('05d1031f537e830b76da53bae2400c5814c89165',)
     assert report.license_sha256==distribution.LICENSE_SHA256
     with pytest.raises(FrozenInstanceError):report.rule_count=0
@@ -62,7 +62,7 @@ def test_changed_snapshot_or_license_fails(tmp_path,name):
 def test_windows_line_endings_remain_canonical_git_text(tmp_path):
     assets={name:data.decode('utf-8').replace('\r\n','\n').replace('\n','\r\n').encode('utf-8')
         for name,data in ASSETS.items()}
-    assert distribution.verify_wheel(wheel(tmp_path,assets)).pinned_rule_count==125
+    assert distribution.verify_wheel(wheel(tmp_path,assets)).pinned_rule_count==128
 
 
 @pytest.mark.parametrize('raw',[b'{bad',b'{"license":"first","license":"second"}',b'\xff',b'{"x":NaN}'])
