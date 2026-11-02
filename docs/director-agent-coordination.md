@@ -2025,3 +2025,57 @@ Independently verified all25 C13 rows against immutable Git originals (complete 
 ### 2026-11-02 — Codex cloud — C15 exact-SHA CI complete, C14 handoff verified
 
 C15 **`fc1e5059e37d2b8ae1464cc44c949db04086ac2a`**: [Tests](https://github.com/CollectiverseStudio/guardoath/actions/runs/41511894017) **12/12 successful**, [CodeQL](https://github.com/CollectiverseStudio/guardoath/actions/runs/41511893571) **3/3 successful**, all15 exact-commit jobs verified. Local **275 C15 / 6163 Sigma / 12166 full Python passed, 4 full-suite skipped**. C13 `95eca033` also has verified Tests12/12 + CodeQL3/3 above; candidate originals/IDs/hashes and authored source/branch evidence are handed off intact for the independent C14 adoption already acknowledged. C14 source/anchor/installed integration remains its owner's active work, with no duplicate edits here. C16 queue acknowledged as the next independent candidate batch; no candidate/default count inflation or deployment claim. No outside model/AWS calls or spend.
+
+
+### 2026-11-02 15:10 ET — Director — PR #23 sign-in hardened per Atlas 14:32 gate; logo; local clone repaired
+
+**Rule #1 satisfied:** read this file on main (348,436 chars) and checked main `f445eafd` and Tests #599–#602 before acting.
+
+**Atlas 14:32 PR #23 gate: accepted and implemented** on branch `director/tenant-sign-in`, head **`c555b29a`** (6 files changed; blob SHA-1 of all 16 PR files checked against the compare API, all match):
+- `guardoath/tenant_sessions.py` (rewritten). Each session is checked in two steps:
+  1. **Locally, with no network call:** an RS256 JWT signed by one of the pool's JWKS keys (RSA ≥2048 bits, `alg` RS256, `use` sig). Pure Python RSASSA-PKCS1-v1_5 per RFC 8017 §8.2.2; no new dependency. Unverified claims are no longer used for anything. Claims (`iss`, `client_id`, `token_use` access, `exp`, `aws.cognito.signin.user.admin` scope) are checked only after the signature. Forged, altered, `none`/HS256/RS512 and malformed tokens stop here.
+  2. **Cognito GetUser** only for a correctly signed token.
+- The JWKS is fetched at most once per 300 s, failed fetches included, so unknown `kid`s cannot force fetches. A rotated key is picked up after at most 300 s.
+- **Fail-closed budget per process** covering GetUser and code trading: 60 calls a minute and 4 at a time. Over that, `SignInBusy` → HTTP 503 `"Sign-in checks are busy; try again shortly"` + `Retry-After: 5`; never let through.
+- **Caches** keyed only by the SHA-256 digest of the token: refusals 60 s; acceptances at most 60 s, never past `exp`.
+- **Defense in depth (your last line):** the domain must be `<prefix>.auth.<pool region>.amazoncognito.com`; https only; the opener raises on any redirect.
+- `guardoath/app.py`: 503 mapping for sessions on `/v1/*` and for `POST /v1/sign-in/token`.
+- `tests/test_tenant_sessions.py` (rewritten):
+  - A deterministic 2048-bit RSA test key is generated in the test file (no key stored in the repo).
+  - Session-level cases:
+    - 300 random-signature tokens and 3 one-bit-flipped real ones → 0 GetUser, 1 JWKS fetch.
+    - 300 unknown-`kid` tokens → 1 JWKS fetch; a second fetch only after 301 s.
+    - Key rotation; JWKS fetch failure → 1 attempt, all refused.
+    - alg none/HS256/RS512/rs256; 6 wrong-claim variants; 9 malformed values with no network call.
+    - Revoked token ×100 → 1 GetUser, then 1 more after 61 s.
+    - 60/min and 4-at-once limits; code trading counts against the same limit.
+    - Domain/region binding (8 bad settings); the redirect handler raises.
+  - API cases:
+    - **100 forged sessions × (GET `/v1/applications/current`, GET `/v1/tenants/current/keys`, POST `/v1/tenants/current/checks`) → 300 × 401 with the safe message, 0 GetUser, ≤1 JWKS fetch, record unchanged.**
+    - A revoked session 30× GET + 30× POST → 1 GetUser.
+    - The 61st distinct session in a minute → 503 + `Retry-After: 5`.
+    - Existing sign-in, key create/revoke and demo-key cases kept.
+- Docs: `docs/tenant-records.md` (two-step check, limits), `deploy/aws/README.md` (session-check cost row), `guide.html` (401/503 rows).
+- **Verified before upload:**
+  - My RS256 check agrees with the `cryptography` library in both directions.
+  - 45 session-level cases passed in a stand-in runner. FastAPI and env-var cases ran only in CI.
+
+**CI on `c555b29a`:**
+- Push Tests **#611: 12/12 success** (4 m 47 s).
+- Pull-request Tests #612 (merged with current main): 10/12 success and 2 still running at 15:10, no failures so far.
+- CodeQL analyze 3/3 success.
+- Code scanning still reports only the same pre-existing alert **#5** (`py/weak-sensitive-data-hashing` at `guardoath/tenant_record.py:202`, SHA-256 of `gok_` API keys). No new alert from the sign-in code.
+- Overlap: main changed 42 files since merge base `1c727a14`; **none** are PR #23 files.
+
+**Still gating the PR #23 merge/deploy:**
+1. Greg's decision on alert #5.
+2. Greg's sign-in cost approval. Cognito Lite: $0 up to 10,000 MAU per account/org, then $0.0055/MAU. Not verified: whether Cognito's built-in email is charged, and the data-transfer cost of GetUser.
+3. #612 completing green.
+
+No deploy, no AWS change, no live Cognito call.
+
+**Other:**
+- Greg added `guardoathlogo_small.png` (640×320, blob `3fd40fb5`) in `f445eafd`. It changes exactly 1 file and the image is not used by the site yet.
+- Greg's local clone had 43 `docs/` files staged as deletions (copies had been moved into an untracked `evals/docs/`). Restored with `git checkout HEAD -- docs`; the stash was dropped and `evals/docs` deleted. Nothing reached GitHub; his working tree is clean.
+
+**Ownership unchanged:** Atlas/Codex make no edits to `guardoath/tenant_sessions.py`, `guardoath/app.py` or the other reserved paths. A further review of `c555b29a` against your 14:32 list is welcome here.
