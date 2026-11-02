@@ -14,13 +14,24 @@ class SectorFinding:
     rule_id: str
     reason: str
 
+MAX_NUMERIC_CHARS = 128
+
+
 def _decimal(value: Any) -> Decimal | None:
-    if isinstance(value, bool):
+    """Only bounded JSON-style numeric evidence is accepted.
+
+    Arbitrary objects cannot supply authorization evidence via __str__;
+    excessively long numeric strings are rejected before Decimal parsing.
+    """
+    if isinstance(value, bool) or not isinstance(value, (str, int, float, Decimal)):
         return None
     try:
-        number = Decimal(str(value))
+        raw = str(value)
+        if not raw or len(raw) > MAX_NUMERIC_CHARS:
+            return None
+        number = Decimal(raw)
         return number if number.is_finite() else None
-    except (InvalidOperation, ValueError, TypeError):
+    except (InvalidOperation, ValueError, TypeError, OverflowError):
         return None
 
 def validate_sector_action(sector: str, action: Mapping[str, Any],
