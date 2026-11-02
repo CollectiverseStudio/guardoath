@@ -121,8 +121,9 @@ class PrototypeGateway:
             return InteractionResponse(status=status, **{**state, **fields})
         if snapshot.status != 'active':
             return response('unauthorized')
-        # Existing example-profile/observe tenants need an explicit Director migration.
-        if snapshot.default_profile != 'tenant' or snapshot.mode != 'enforce':
+        # Observe tenants need an explicit Director migration. (Records naming a retired example profile
+        # are already refused when read: TenantRecord.retired_profile_field.)
+        if snapshot.mode != 'enforce':
             return response('configuration_error')
         binding = self.bindings.get(snapshot.tenant_id)
         if binding is None or binding.entitled is not True or request.model not in binding.allowed_models:
