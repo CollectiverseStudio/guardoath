@@ -5,6 +5,9 @@ redact (pii only). A check field with no value means the check does not run. The
 checks need are fields on the same record. They are kept while a check is off, so turning the
 check back on restores them, and they are passed to the engine only while the check is on.
 
+One rule inside a check can be set on its own in rule_actions: "off" stops that rule, and block, flag or
+allow replace the check's action for that rule only. Rule ids are the ones in guardoath.rule_catalog.
+
 The record also names its default profile: "tenant" (the record's own checks, above) or one of the
 example profiles the hosted service offers. A check request that names no profile uses it.
 """
@@ -25,6 +28,7 @@ from guardoath.models import (Action, ConfidentialTerm, Contract, EvidencePolicy
                               IntegrityPolicy, LedgerPolicy, MatchedOutcomes, Policy, RequiredSection, Rule,
                               Stage, TimestampPolicy, ToolPolicy)
 from guardoath.privacy_catalog import DEFAULT_MIN_SCORE
+from guardoath.rule_catalog import RULE_ID_PATTERN, RULES
 
 # Every check a tenant can turn on. The simulated "safety" and "bias" checkers are test fixtures only.
 CHECK_IDS = ("pii", "encoded_pii", "secrets", "text_security", "lexical_guards", "schema", "cross_field", "completeness",
@@ -49,7 +53,8 @@ SETTINGS_OF = {
 SETTING_FIELDS = tuple(dict.fromkeys(name for names in SETTINGS_OF.values() for name in names))
 CHECK_FIELDS = tuple("check_" + check_id for check_id in CHECK_IDS)
 # Fields a tenant (or a demo visitor, on a demo record) may change. Account fields are admin-only.
-EDITABLE_FIELDS = frozenset({"mode", "timeout_ms", "failure_action", "default_profile", *CHECK_FIELDS, *SETTING_FIELDS})
+EDITABLE_FIELDS = frozenset({"mode", "timeout_ms", "failure_action", "default_profile", "rule_actions", *CHECK_FIELDS,
+                             *SETTING_FIELDS})
 TENANT_POLICY_VERSION = "tenant"
 # Profile names a record can choose as its default. Which profiles exist is checked by the hosted service.
 PROFILE_PATTERN = r"^[a-z][a-z0-9-]{0,99}$"
@@ -119,6 +124,9 @@ class TenantRecord(Contract):
     timestamps: TimestampPolicy | None = None
     graph: GraphPolicy | None = None
     integrity: IntegrityPolicy | None = None
+    # Per-rule settings: a rule listed here is off, or uses its own action instead of its check's action.
+    rule_actions: dict[Annotated[str, Field(pattern=RULE_ID_PATTERN, max_length=100)],
+                       Literal["off", "allow", "flag", "block"]] = Field(default_factory=dict, max_length=len(RULES))
 
     @model_validator(mode="after")
     def consistent(self):
@@ -131,6 +139,12 @@ class TenantRecord(Contract):
         for check_id, names in REQUIRED_SETTINGS.items():
             if check_id in on and not any(getattr(self, name) for name in names):
                 raise ValueError(f"The {check_id} check needs its settings before it can run: {', '.join(names)}")
+        # Messages never repeat submitted values, so an unknown rule id is not echoed back.
+        if any(rule_id not in RULES for rule_id in self.rule_actions):
+            raise ValueError("Unknown rule id; GET /v1/controls lists every rule")
+        if on.get("pii") == Action.REDACT and any(rule_id.startswith("pii.") and action != "off"
+                                                   for rule_id, action in self.rule_actions.items()):
+            raise ValueError("When the pii check redacts, its rules can only be turned off")
         if self.demo:
             if on.keys() & EXTERNAL_CHECK_IDS:
                 raise ValueError("Demo users cannot run checks that call a paid outside provider")
@@ -153,10 +167,14 @@ class TenantRecord(Contract):
         rules = tuple(Rule(checker_id=check_id, on_finding=action,
                            stages=(Stage.INPUT,) if check_id in INPUT_ONLY_CHECK_IDS else (Stage.INPUT, Stage.OUTPUT))
                       for check_id, action in on.items())
+        # Rule settings go with their check; the pii ones also apply to encoded_pii, which reuses the pii scan.
+        running = on.keys() | ({"pii"} if "encoded_pii" in on else set())
+        rule_actions = {rule_id: action for rule_id, action in self.rule_actions.items()
+                        if RULES[rule_id].control_id in running}
         return Policy(application_id=self.tenant_id, version=TENANT_POLICY_VERSION, mode=self.mode,
                       timeout_ms=self.timeout_ms, failure_action=self.failure_action, rules=rules,
                       external_checks="after_local_pass" if on.keys() & EXTERNAL_CHECK_IDS else "disabled",
-                      **settings)
+                      rule_actions=rule_actions, **settings)
 
     def used(self, month: str) -> int:
         return self.usage.get(month, 0)

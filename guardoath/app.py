@@ -256,7 +256,8 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 "monthly_allowance": current.monthly_allowance, "overage": current.overage,
                 "default_profile": current.default_profile,
                 "checks": {check_id[6:]: getattr(current, check_id) for check_id in type(current).model_fields
-                           if check_id.startswith("check_")}}
+                           if check_id.startswith("check_")},
+                "rule_actions": dict(sorted(current.rule_actions.items()))}
 
     def tenant_only(principal: str | TenantRecord) -> TenantRecord:
         if not isinstance(principal, TenantRecord):

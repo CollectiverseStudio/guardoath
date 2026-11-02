@@ -180,7 +180,10 @@ def build_pii_checker():
         field_budget = [0]
         sensitive_key = False
         disabled = set(policy.disabled_privacy_entities)
-        active = [item for item in extra if item[0] not in disabled] if policy.privacy_patterns else []
+        # Types whose rule the tenant turned off (rule_actions) are not looked for: never reported or redacted.
+        off = {rule_id.removeprefix("pii.").upper() for rule_id, action in policy.rule_actions.items()
+               if action == "off" and rule_id.startswith("pii.")}
+        active = [item for item in extra if item[0] not in disabled | off] if policy.privacy_patterns else []
         minimum = policy.privacy_min_score
 
         def check_deadline():
@@ -193,7 +196,8 @@ def build_pii_checker():
             candidates = []
 
             def found(entity, source, tier, start, end, score=1.0):
-                candidates.append((start, end, entity, source, tier, score))
+                if entity not in off:
+                    candidates.append((start, end, entity, source, tier, score))
             for recognizer, pattern in patterns:
                 remaining = check_deadline()
                 for match in pattern.finditer(text, timeout=remaining):

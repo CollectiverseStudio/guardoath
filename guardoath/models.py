@@ -8,6 +8,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from guardoath.privacy_catalog import DEFAULT_MIN_SCORE, PATTERN_ENTITIES
 
 
+# Finding rule ids, such as "pii.iban_code" or "agent.git_force".
+RULE_ID_PATTERN = r"^[a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+$"
+
+
 class Contract(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -222,6 +226,10 @@ class Policy(Contract):
     timestamps: TimestampPolicy | None = None
     graph: GraphPolicy | None = None
     integrity: IntegrityPolicy | None = None
+    # Per-rule settings (from a tenant record's rule_actions): "off" drops that rule's findings; any other
+    # value replaces the check's action for that rule's findings. The record checks ids against the catalog.
+    rule_actions: dict[Annotated[str, Field(pattern=RULE_ID_PATTERN, max_length=100)],
+                       Literal["off", "allow", "flag", "block"]] = Field(default_factory=dict, max_length=1000)
 
     @field_validator("privacy_min_score", mode="before")
     @classmethod
@@ -243,6 +251,15 @@ class Policy(Contract):
     def consistent_privacy_patterns(self):
         if not self.privacy_patterns and self.disabled_privacy_entities:
             raise ValueError("disabled_privacy_entities has no effect when privacy_patterns is false")
+        return self
+
+    @model_validator(mode="after")
+    def rule_actions_with_redaction(self):
+        # Redaction replaces every value the pii check finds; a pii rule can then only be turned off.
+        redacts = any(Action.REDACT in (rule.on_finding, rule.on_input_finding, rule.on_output_finding)
+                      for rule in self.rules if rule.checker_id == "pii")
+        if redacts and any(rule_id.startswith("pii.") and action != "off" for rule_id, action in self.rule_actions.items()):
+            raise ValueError("When the pii check redacts, its rules can only be turned off")
         return self
 
 

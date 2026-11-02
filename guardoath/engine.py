@@ -17,6 +17,16 @@ from guardoath.validation_packs import PackRegistry, PackSelectionError
 PRIORITY = {Action.ALLOW: 0, Action.FLAG: 1, Action.REDACT: 2, Action.BLOCK: 3}
 
 
+def without_rules_turned_off(result: CheckerResult, policy: Policy) -> CheckerResult:
+    """Findings of rules turned off in rule_actions are dropped; a result left with none has passed."""
+    if result.status != "flagged" or not policy.rule_actions:
+        return result
+    kept = tuple(finding for finding in result.findings if policy.rule_actions.get(finding.rule_id) != "off")
+    if len(kept) == len(result.findings):
+        return result
+    return result.model_copy(update={"findings": kept, "status": "flagged" if kept else "passed"})
+
+
 class Engine:
     def __init__(self, policies: list[Policy], checkers: dict[str, Checker], pack_registry: PackRegistry | None = None):
         self._policies: dict[tuple[str, str], Policy] = {}
@@ -155,6 +165,7 @@ class Engine:
                 if (result.status == "flagged") != bool(result.findings):
                     raise ValueError("Adapter returned inconsistent findings")
                 result = result.model_copy(update={"simulated": simulated or result.simulated, "external": external or result.external})
+                result = without_rules_turned_off(result, policy)
                 if (result.simulated and policy.mode == "enforce"
                         and not policy.allow_simulated_enforcement):
                     result = result.model_copy(update={
@@ -193,7 +204,10 @@ class Engine:
         for rule, result in zip(rules, results):
             if result.status == "flagged":
                 override = rule.on_input_finding if stage == Stage.INPUT else rule.on_output_finding
-                actions.append(override or rule.on_finding)
+                # A rule with its own action (rule_actions) uses it; the others use the check's action.
+                for finding in result.findings:
+                    own = policy.rule_actions.get(finding.rule_id)
+                    actions.append(Action(own) if own else override or rule.on_finding)
             elif rule.required and result.status != "passed":
                 incomplete = True
                 actions.append(Action(policy.failure_action))
