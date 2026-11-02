@@ -10,9 +10,9 @@ import pytest
 from guardoath.sigma_rules import LICENSE, UnsupportedSigmaRule, import_rule
 
 ROOT = Path(__file__).resolve().parents[1] / 'guardoath/sigma_rules'
-DATA = json.loads((ROOT / 'upstream_batch_005.json').read_text())
+DATA = json.loads((ROOT / 'upstream_batch_005.json').read_text(encoding='utf-8'))
 ROWS = DATA['rules']
-OLD = [r for n in range(1, 5) for r in json.loads((ROOT / f'upstream_batch_{n:03}.json').read_text())['rules']]
+OLD = [r for n in range(1, 5) for r in json.loads((ROOT / f'upstream_batch_{n:03}.json').read_text(encoding='utf-8'))['rules']]
 ALL = OLD + ROWS
 RULES = [import_rule(r, r['source_path']) for r in ALL]
 NEW_RULES = RULES[len(OLD):]
@@ -26,7 +26,7 @@ def test_inventory_and_source_license_are_exact():
     assert len(ALL) == len({r['id'] for r in ALL}) == len({r['source_path'] for r in ALL}) == 103
     assert DATA['license'] == LICENSE
     assert DATA['source_revision'] == '05d1031f537e830b76da53bae2400c5814c89165'
-    evidence = json.loads((ROOT / 'batch_005_evidence.json').read_text())
+    evidence = json.loads((ROOT / 'batch_005_evidence.json').read_text(encoding='utf-8'))
     assert {r['rule_id'] for r in evidence['rules']} == {r['id'] for r in ROWS}
     assert evidence['runtime_registered'] is False
     for entry in evidence['rules']:
@@ -38,7 +38,7 @@ def test_inventory_and_source_license_are_exact():
 
 @pytest.mark.parametrize('row', ROWS, ids=lambda r:r['id'])
 def test_immutable_yaml_and_pinned_attribution(row):
-    raw = (ROOT / 'upstream/batch_005' / Path(row['source_path']).name).read_bytes()
+    raw = (ROOT / 'upstream/batch_005' / Path(row['source_path']).name).read_text(encoding='utf-8').encode('utf-8')
     assert hashlib.sha256(raw).hexdigest() == row['source_sha256']
     assert hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest() == row['source_git_blob']
     rule = import_rule(row, row['source_path'], source_revision=DATA['source_revision'])
