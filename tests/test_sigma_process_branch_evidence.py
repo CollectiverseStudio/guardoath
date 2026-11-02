@@ -78,3 +78,38 @@ def test_branch_inventory_covers_expected_alternates():
         "auditpol_original_name", "auditpol_disable", "auditpol_remove",
         "auditpol_restore",
     }
+
+
+def test_all_128_rules_have_trusted_route_previews():
+    from guardoath.sigma_rules.routing import RoutingTable
+    batches = [json.loads((ROOT / f"upstream_batch_{n:03d}.json").read_text(encoding="utf-8"))
+               for n in range(1, 7)]
+    table = RoutingTable(batches)
+    ids = table.rule_ids
+    assert len(ids) == 128 and len(set(ids)) == 128
+    plan = table.plan(
+        trusted_logsource={"product": "windows", "category": "process_creation"},
+        allowed_rule_ids=ids,
+    )
+    assert set(plan.selected_rule_ids) == set(RULES)
+    assert len(plan.excluded_rule_ids) == 125
+    assert plan.as_dict()["evaluation_performed"] is False
+
+
+@pytest.mark.parametrize("case", CASES, ids=lambda c: c["case_id"])
+def test_source_routed_complete_128_rule_overlap(case):
+    from guardoath.sigma_rules.routing import RoutingTable
+    batches = [json.loads((ROOT / f"upstream_batch_{n:03d}.json").read_text(encoding="utf-8"))
+               for n in range(1, 7)]
+    table = RoutingTable(batches)
+    source = {"product": "windows", "category": "process_creation"}
+    selected = table.plan(trusted_logsource=source, allowed_rule_ids=table.rule_ids)
+    assert set(selected.selected_rule_ids) == set(RULES)
+    positive = table.evaluate(case["positive_event"], trusted_logsource=source,
+                              allowed_rule_ids=table.rule_ids)
+    negative = table.evaluate(case["negative_event"], trusted_logsource=source,
+                              allowed_rule_ids=table.rule_ids)
+    assert case["rule_id"] in {finding["rule_id"] for finding in positive}
+    assert case["rule_id"] not in {finding["rule_id"] for finding in negative}
+    # Do not discard other genuine matches or treat the preview as authorization.
+    assert all(finding["rule_id"] in selected.selected_rule_ids for finding in positive + negative)
