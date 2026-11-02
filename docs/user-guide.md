@@ -1824,3 +1824,8 @@ unchanged. Generic caller-owned builders remain separate. See
 [release integrity](sigma-release-integrity.md) for the archive command, deliberate
 anchor-update procedure and limits; upstream authentication, installed acceptance,
 packaging adoption and hosted deployment remain separate requirements.
+
+
+### Sigma Windows process rule alternate-branch evidence (C11)
+
+GuardOath includes 12 additional synthetic positive/benign-look-alike event pairs for the original 7-Zip, AccCheckConsole and Auditpol SigmaHQ process-creation rules. Run `pytest tests/test_sigma_process_branch_evidence.py -q` to verify alternate executable/original-filename/command-line branches, missing and malformed fields, and real cross-rule overlaps. The supporting evidence is in `guardoath/sigma_rules/process_branch_evidence.json`; limitations and use cases are described in `docs/sigma-process-branch-evidence.md`. No imported detection, tenant entitlement, hosted event route, AI chat validator or tool permission is created by this evidence set.
