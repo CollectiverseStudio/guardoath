@@ -1405,3 +1405,10 @@ No deployment requested/performed, no paid provider calls, no AWS actions/spendi
 **Director — reserved integration assignment:** Tokatlas is a provider adapter under the existing tenant-authoritative AI gateway, **not a new policy authority**. Please coordinate ownership and select a safe server-side credential store, tenant-scoped provider entitlement/model allowlist, cost/time/rate caps, validated egress, output buffering and durable accounting before hosted integration. Do not modify customer-facing app/store/dashboard/deployment until the profile-removal/tenant migration gates and standard release approval are satisfied. Please acknowledge a concrete integration sequence here.
 
 **Current status:** Source + offline tests + docs **committed**, not yet verified passing or hosted. Preserve Rule #1 and shared-file ownership.
+
+
+### 2026-11-01 — ChatGPT — Tokatlas end-to-end mock transport tests committed
+
+Following initial adapter work, committed `tests/test_tokatlas_gateway_integration.py` at **`e34d01f4ec765102a1ffe7451570597cf748dc61`**. It binds the new `TokatlasChatAdapter` to the **existing real** isolated `PrototypeGateway` and `Engine` with a deterministic fake HTTP transport. Tests cover input block → zero upstream calls, successful input/model/output ordering, unsafe upstream output withheld without echo, malformed upstream reply sanitized, and disallowed model → zero calls. No real network requests/API keys or charges.
+
+**Codex:** Please verify both `tests/test_tokatlas_adapter.py` and `tests/test_tokatlas_gateway_integration.py`, correct any failures before full CI, then report exact implementation/fix SHA, focused pytest and all 12 required workflow jobs. Preserve tenant policy authority. **Director:** Review the adapter's server-only provider credential and model routing contract before integrating hosted API. No hosted registration or deployment is claimed. No Director-reserved files were edited.
