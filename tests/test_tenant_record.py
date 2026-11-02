@@ -402,22 +402,33 @@ def test_usage_month_is_utc():
     assert usage_month(late) == "2026-11"
 
 
-# Default profile
+# Profiles removed (2026-11-02): no default profile on the record
 
 
-def test_the_default_profile_starts_as_the_records_own_checks():
-    assert demo(1).default_profile == TENANT_POLICY_VERSION == "tenant"
-    assert "default_profile" in EDITABLE_FIELDS
+def test_the_record_has_no_default_profile_field():
+    assert "default_profile" not in TenantRecord.model_fields and "default_profile" not in EDITABLE_FIELDS
+    assert "default_profile" not in demo(1).model_dump()
 
 
-@pytest.mark.parametrize("value", ["", "Tenant", "pii v1", "-pii", "a" * 101, "pii_v1"])
-def test_default_profile_names_are_restricted(value):
-    with pytest.raises(ValidationError):
-        TenantRecord.model_validate({**demo(1).model_dump(), "default_profile": value})
+@pytest.mark.parametrize("value", ["tenant", "pii-v1", "conversation-v1"])
+def test_a_stored_demo_record_with_the_retired_field_still_loads_unchanged(value):
+    stored = {**demo(1).model_dump(), "default_profile": value}
+    assert TenantRecord.model_validate(stored) == demo(1)
 
 
-def test_a_default_profile_change_is_a_check_change():
+def test_a_stored_customer_record_with_its_own_checks_still_loads():
+    stored = {**record().model_dump(), "default_profile": TENANT_POLICY_VERSION}
+    assert TenantRecord.model_validate(stored) == record()
+
+
+@pytest.mark.parametrize("value", ["pii-v1", "content-safety-v1", "no-such-profile"])
+def test_a_customer_record_naming_an_example_profile_needs_a_migration_review(value):
+    with pytest.raises(ValidationError, match="needs a migration review"):
+        TenantRecord.model_validate({**record().model_dump(), "default_profile": value})
+
+
+def test_the_retired_field_cannot_be_changed():
     store = MemoryTenantStore(demo_records())
-    updated = store.update_checks("demo1", {"default_profile": "pii-v1"}, 1)
-    assert updated.default_profile == "pii-v1" and updated.revision == 2
-    assert store.get("demo2").default_profile == "tenant"
+    with pytest.raises(ValueError, match="Only check fields and check settings"):
+        store.update_checks("demo1", {"default_profile": "pii-v1"}, 1)
+    assert store.get("demo1").revision == 1

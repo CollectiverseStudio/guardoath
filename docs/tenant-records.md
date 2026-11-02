@@ -55,21 +55,23 @@ Rules:
 - A record with an invalid setting is rejected, even if that setting's check is off.
 - `mode` (`enforce` or `observe`), `timeout_ms` and `failure_action` apply to all of the tenant's checks.
 
-## Profiles
+## Profiles (removed for tenants, 2026-11-02)
 
-A profile is a named set of checks. Every tenant can use:
+A tenant key runs the record's own check fields, rule settings and check settings, and nothing else.
+There are no example profiles and no default profile to choose: a check request leaves `policy_version`
+out or sends `tenant`, and any other value is refused (404, not counted). `default_profile` is no longer
+a field and cannot be changed (422).
 
-- **`tenant`**: the record's own check fields and settings. These are the only checks a tenant changes
-  one by one.
-- **The example profiles** in `policies/playground.json` (23 profiles; `GUARDOATH_TENANT_PROFILE_FILE`
-  chooses another file). Each runs exactly as it is defined there, including its own mode, deadline and
-  actions per stage. Demo users do not get `content-safety-v1`, which calls a paid outside provider.
+Records stored before the change may still contain `default_profile`. When such a record is read:
 
-A check request can name a profile in `policy_version`. If it names none, the record's
-`default_profile` is used. A tenant changes its default profile like a check field
-(`{"default_profile": "pii-v1"}`); only a profile the tenant can use is accepted. The server does not
-start if the example profile file is missing.
+- `"tenant"` (the record's own checks) is dropped; nothing changes.
+- On a demo user any value is dropped; the demo user runs its record's checks.
+- On a customer record any other value stops the record from loading ("needs a migration review"), so a
+  customer's checks never change without review.
 
+Setting `GUARDOATH_TENANT_PROFILE_FILE` stops startup with an error, so an old configuration is not
+silently ignored. The example profiles in `policies/playground.json` remain for the local developer
+launcher and the evaluations only.
 ## Demo users
 
 `demo1` to `demo10` are ordinary tenant records. Their starting values are in

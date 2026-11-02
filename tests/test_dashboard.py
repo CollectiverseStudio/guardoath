@@ -175,14 +175,18 @@ def test_proposed_answer_is_locked_until_the_input_test_passes():
     assert "function outputLocked() { return !preparedRun() && !canProceed(inputResult); }" in script
 
 
-def test_tenant_panel_has_a_default_profile_picker_and_a_profile_note():
+def test_tenant_panel_has_no_profile_choice_and_the_profile_box_starts_hidden():
+    # Profiles were removed for tenants (2026-11-02). The profile choice is for the local developer key only.
     page = TestClient(create_app(credentials={"test-key": "demo"})).get("/dashboard").text
     panel = page[page.index('id="tenant-panel"'):]
     panel = panel[:panel.index("</section>")]
-    for marker in ['id="tenant-default-profile"', 'id="tenant-default-save"', 'id="tenant-default-note"',
-                   'id="tenant-profile-note"', 'id="tenant-checks"']:
-        assert marker in panel, marker
-    assert panel.index('id="tenant-default-profile"') < panel.index('id="tenant-checks"')
+    assert 'id="tenant-checks"' in panel
+    for marker in ['tenant-default', 'tenant-profile-note', "Default profile"]:
+        assert marker not in page, marker
+    assert '<details id="advanced" open hidden>' in page
+    from pathlib import Path
+    script = (Path(__file__).resolve().parents[1] / "guardoath" / "static" / "dashboard.js").read_text(encoding="utf-8")
+    assert '$("advanced").hidden = !!data.tenant;' in script and "default_profile" not in script
 
 
 # The demo video is served in parts (guardoath.app.media_part)
@@ -420,9 +424,7 @@ def test_the_guides_python_example_works_against_the_api(monkeypatch):
     import pytest
     pytest.importorskip("tldextract")
     secret = "guide-example-secret-" + "g" * 32
-    from guardoath.config import load_policies
-    tenants = TenantService(MemoryTenantStore(demo_records(key_secret=secret)), default_checkers(enable_pii=True), secret,
-                            tuple(load_policies("policies/playground.json")))
+    tenants = TenantService(MemoryTenantStore(demo_records(key_secret=secret)), default_checkers(enable_pii=True), secret)
     client = TestClient(create_app(credentials={}, tenants=tenants))
     guide = html.unescape(guide_text())
     blocks = re.findall(r"<pre><code>(.*?)</code></pre>", guide, re.S)
@@ -454,8 +456,10 @@ def test_the_guides_python_example_works_against_the_api(monkeypatch):
     assert blocked["effective_action"] == "block" and namespace["next_step"](blocked) == "stop"
     clean = namespace["check"]("output", "Can you explain your return policy?")
     assert namespace["next_step"](clean) == "continue"
-    observed = namespace["check"]("input", "Please email jane@example.com about my order.", profile="pii-v1")
-    assert observed["recommended_action"] == "flag" and observed["effective_action"] == "allow" and namespace["next_step"](observed) == "continue"
+    # Observe mode is set on the record (example profiles were removed for tenants on 2026-11-02).
+    tenants.store.update_checks("demo1", {"mode": "observe"}, tenants.store.get("demo1").revision)
+    observed = namespace["check"]("input", "Please email jane@example.com about my order.")
+    assert observed["recommended_action"] == "block" and observed["effective_action"] == "allow" and namespace["next_step"](observed) == "continue"
 
 
 def test_the_dashboard_lists_the_rules_of_each_check_and_saves_rule_actions():

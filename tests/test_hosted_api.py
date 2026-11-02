@@ -370,161 +370,55 @@ def test_malformed_change_requests_are_refused(client, body):
     assert response.status_code == 422 and response.json() == {"detail": "Invalid check request"}
 
 
-# Profiles: the record's own checks ("tenant") plus the example profiles. A request that names no
-# profile uses the record's default_profile.
-
-from guardoath.config import load_policies
-from guardoath.hosted import load_example_profiles
-
-PROFILES = tuple(load_policies("policies/playground.json"))
-OUTSIDE = {"content-safety-v1"}  # the only example profile that calls a paid outside provider
+# Profiles were removed for tenants (2026-11-02): a tenant key runs its record's checks only.
 
 
-def profiled(records=None):
-    return TenantService(MemoryTenantStore(demo_records(key_secret=SECRET) if records is None else records),
-                         CHECKERS, SECRET, PROFILES)
-
-
-@pytest.fixture
-def pclient():
-    tenants = profiled()
-    return client_for(tenants), tenants
-
-
-def unnamed(client, token, tenant_id, content, stage="input"):
-    return client.post("/v1/checks/" + stage, headers=auth(token), json={"application_id": tenant_id, "content": content})
-
-
-def test_the_example_profile_file_has_23_profiles_and_one_calls_an_outside_provider():
-    from guardoath.hosted import calls_outside_provider
-    assert len(PROFILES) == 23
-    assert {p.version for p in PROFILES if calls_outside_provider(p)} == OUTSIDE
-
-
-def test_a_demo_user_gets_its_record_and_every_local_example_profile(pclient):
-    client, _ = pclient
+def test_a_demo_user_gets_only_its_records_checks(client):
     data = client.get("/v1/applications/current", headers=auth(demo_key("demo1", SECRET))).json()
-    assert [p["version"] for p in data["policies"]] == ["tenant"] + [p.version for p in PROFILES if p.version not in OUTSIDE]
-    assert data["tenant"]["default_profile"] == "tenant"
+    assert [p["version"] for p in data["policies"]] == ["tenant"]
+    assert "default_profile" not in data["tenant"]
     assert [c["id"] for c in data["policies"][0]["checks"]] == ["pii", "encoded_pii", "secrets", "text_security"]
+    assert all(c["actions"] == {"input": "block", "output": "block"} for c in data["policies"][0]["checks"])
 
 
-def test_customers_also_get_the_profile_that_calls_an_outside_provider():
-    token, digest = new_key("acme")
-    customer = TenantRecord(tenant_id="acme", display_name="Acme", key_hashes=(digest,), check_secrets="flag")
-    client = client_for(profiled(records=(customer,)))
-    versions = [p["version"] for p in client.get("/v1/applications/current", headers=auth(token)).json()["policies"]]
-    assert versions == ["tenant"] + [p.version for p in PROFILES]
-
-
-def test_profile_checks_are_described_with_the_action_on_each_stage(pclient):
-    client, _ = pclient
-    policies = {p["version"]: p for p in client.get("/v1/applications/current", headers=auth(demo_key("demo1", SECRET))).json()["policies"]}
-    pii = next(c for c in policies["conversation-v1"]["checks"] if c["id"] == "pii")
-    assert pii["actions"] == {"input": "flag", "output": "block"}
-    assert next(c for c in policies["redaction-v1"]["checks"] if c["id"] == "pii")["actions"] == {"input": "redact", "output": "redact"}
-    assert all(c["actions"] == {"input": "block", "output": "block"} for c in policies["tenant"]["checks"])
-
-
-def test_a_request_without_a_profile_uses_the_default_profile(pclient):
-    client, tenants = pclient
+def test_a_request_without_a_profile_runs_the_records_checks(client, tenants):
     token = demo_key("demo1", SECRET)
-    result = unnamed(client, token, "demo1", EMAIL)
+    result = client.post("/v1/checks/input", headers=auth(token), json={"application_id": "demo1", "content": EMAIL})
     assert result.status_code == 200
     assert result.json()["policy_version"] == "tenant" and result.json()["effective_action"] == "block"
-    response = change(client, token, summary(client, token)["revision"], {"default_profile": "secrets-v1"})
-    assert response.status_code == 200 and response.json()["default_profile"] == "secrets-v1"
-    result = unnamed(client, token, "demo1", EMAIL).json()
-    assert result["policy_version"] == "secrets-v1"
-    assert {c["checker_id"] for c in result["checker_results"]} == {"secrets"} and result["effective_action"] == "allow"
+    assert check(client, token, "demo1", EMAIL, version="tenant").json()["effective_action"] == "block"
     assert used(tenants, "demo1") == 2
 
 
-def test_a_named_profile_applies_to_that_request_only(pclient):
-    client, _ = pclient
-    token = demo_key("demo1", SECRET)
-    named = check(client, token, "demo1", EMAIL, version="pii-v1").json()
-    assert named["policy_version"] == "pii-v1" and {c["checker_id"] for c in named["checker_results"]} == {"pii"}
-    # pii-v1 runs in observe mode: the finding is recommended for flagging but the message is allowed.
-    assert named["recommended_action"] == "flag" and named["effective_action"] == "allow"
-    after = unnamed(client, token, "demo1", EMAIL).json()
-    assert after["policy_version"] == "tenant"
-    assert {c["checker_id"] for c in after["checker_results"]} == {"pii", "encoded_pii", "secrets", "text_security"}
-
-
-@pytest.mark.parametrize("version", ["no-such-profile", "content-safety-v1"])
-def test_a_profile_the_tenant_cannot_use_is_refused_and_not_counted(pclient, version):
-    client, tenants = pclient
+@pytest.mark.parametrize("version", ["pii-v1", "conversation-v1", "content-safety-v1", "no-such-profile"])
+def test_naming_an_example_profile_is_refused_and_not_counted(client, tenants, version):
     response = check(client, demo_key("demo1", SECRET), "demo1", CLEAN, version=version)
     assert response.status_code == 404 and response.json() == {"detail": "Policy version not found"}
     assert used(tenants, "demo1") == 0
 
 
-@pytest.mark.parametrize("value, message", [
-    ("content-safety-v1", "default_profile: choose one of the profiles available to this tenant"),
-    ("no-such-profile", "default_profile: choose one of the profiles available to this tenant"),
-    ("Not A Profile", "default_profile: String should match pattern"),
-])
-def test_a_default_profile_must_be_one_the_tenant_can_use(pclient, value, message):
-    client, tenants = pclient
+def test_the_default_profile_can_no_longer_be_changed(client, tenants):
     before = tenants.store.get("demo1")
-    response = change(client, demo_key("demo1", SECRET), before.revision, {"default_profile": value})
-    assert response.status_code == 422 and message in response.json()["detail"]
+    response = change(client, demo_key("demo1", SECRET), before.revision, {"default_profile": "pii-v1"})
+    assert response.status_code == 422 and "Only check fields and check settings" in response.json()["detail"]
     assert tenants.store.get("demo1") == before
 
 
-def test_reset_restores_the_default_profile(pclient):
-    client, tenants = pclient
-    token = demo_key("demo1", SECRET)
-    change(client, token, summary(client, token)["revision"], {"default_profile": "pii-v1"})
-    assert client.post("/v1/tenants/current/reset", headers=auth(token), json={}).json()["default_profile"] == "tenant"
-    assert tenants.store.get("demo1").default_profile == "tenant"
-
-
-def test_one_demo_users_default_profile_does_not_change_another(pclient):
-    client, tenants = pclient
-    token = demo_key("demo1", SECRET)
-    change(client, token, summary(client, token)["revision"], {"default_profile": "pii-v1"})
-    assert tenants.store.get("demo2").default_profile == "tenant"
-    assert unnamed(client, demo_key("demo2", SECRET), "demo2", EMAIL).json()["policy_version"] == "tenant"
-
-
-def test_local_keys_must_still_name_a_profile(pclient):
-    _, tenants = pclient
+def test_local_keys_must_still_name_a_profile(tenants):
     client = client_for(tenants, credentials={"local-key": "support"})
     response = client.post("/v1/checks/input", headers=auth("local-key"), json={"application_id": "support", "content": CLEAN})
     assert response.status_code == 422 and response.json() == {"detail": "Invalid check request"}
 
 
-def test_a_profile_change_applies_to_the_next_check(pclient):
-    client, _ = pclient
-    token = demo_key("demo1", SECRET)
-    first = unnamed(client, token, "demo1", EMAIL).json()["policy_version"]
-    change(client, token, summary(client, token)["revision"], {"default_profile": "redaction-v1"})
-    assert (first, unnamed(client, token, "demo1", EMAIL).json()["policy_version"]) == ("tenant", "redaction-v1")
-
-
-def test_the_example_profiles_come_from_the_environment(monkeypatch, tmp_path):
+def test_the_retired_profile_file_setting_stops_startup(monkeypatch, tmp_path):
     monkeypatch.setenv("GUARDOATH_TENANT_STORE", "memory")
     monkeypatch.setenv("GUARDOATH_DEMO_KEY_SECRET", SECRET)
     monkeypatch.delenv("GUARDOATH_TENANT_PROFILE_FILE", raising=False)
     tenants = TenantService.from_environment(CHECKERS)
-    assert len(tenants.profile_versions(tenants.store.get("demo1"))) == 1 + 22
-    monkeypatch.setenv("GUARDOATH_TENANT_PROFILE_FILE", str(tmp_path / "missing.json"))
-    with pytest.raises(ValueError, match="Example profile file not found"):
+    assert tenants.policy_versions(tenants.store.get("demo1")) == ("tenant",)
+    monkeypatch.setenv("GUARDOATH_TENANT_PROFILE_FILE", str(tmp_path / "playground.json"))
+    with pytest.raises(ValueError, match="no longer used"):
         TenantService.from_environment(CHECKERS)
-    with pytest.raises(ValueError, match="Example profile file not found"):
-        load_example_profiles(tmp_path / "missing.json")
-
-
-@pytest.mark.parametrize("profiles, message", [
-    (PROFILES[:1] * 2, "must be distinct"),
-    ((PROFILES[0].model_copy(update={"version": "tenant"}),), "No example profile may be called tenant"),
-    ((PROFILES[0].model_copy(update={"version": "Upper_Case"}),), "lower-case letters"),
-])
-def test_unusable_example_profiles_stop_startup(profiles, message):
-    with pytest.raises(ValueError, match=message):
-        TenantService(MemoryTenantStore(), CHECKERS, SECRET, profiles)
 
 
 # The X-GuardOath-Key header (CloudFront with origin access control replaces Authorization)

@@ -147,9 +147,9 @@ def migration_preview(record_or_payload, catalog):
         return validate_payload(deepcopy(record_or_payload), catalog)
     if not isinstance(record_or_payload, TenantRecord):
         raise ValueError('validated tenant record or canonical preview required')
+    # A customer record that still names a retired example profile is refused when it is read
+    # (TenantRecord.retired_profile_field), so it reaches review instead of a silent migration.
     record = TenantRecord.model_validate(record_or_payload.model_dump())
-    if record.default_profile != 'tenant':
-        raise ValueError('example-profile tenant requires explicit migration review')
     raw = record.model_dump(mode='json')
     controls = {}
     for control_id in CHECK_IDS:
