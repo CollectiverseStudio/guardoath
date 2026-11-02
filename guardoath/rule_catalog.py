@@ -359,8 +359,9 @@ def _build() -> dict[str, RuleInfo]:
                               "high"))
     password = "correct-horse-" + "battery"
     rules.append(RuleInfo("secrets.credential_assignment", "secrets", "Password or token assigned in code or config",
-                          "Turn this on so a password or token written into code or a config file is caught before "
-                          "it is committed, logged or shown.", f'db_password = "{password}"',
+                          "Turn this on so passwords or tokens written into code or config files are caught before "
+                          "they are committed, logged or shown. It catches: Password or token assigned in code or "
+                          "config.", f'db_password = "{password}"',
                           'db_password = "${DB_PASSWORD}"', "high", "detect_secret_assignments"))
     for name, (title, example, look_alike, use_case) in TEXT_SECURITY.items():
         rules.append(RuleInfo("text_security." + name, "text_security", title, f"{use_case} It catches: {title}.",
