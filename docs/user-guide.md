@@ -1747,3 +1747,16 @@ real overlaps. Budget exhaustion or a later worker failure raises instead of
 returning partial results. This adds no hosted endpoint or tenant permission
 system. Source ingestion/authentication and the pending Sigma wheel-data packaging
 fix remain Director-owned integration requirements.
+
+## Sigma batch 006: administration and persistence events
+
+The isolated [batch 006](sigma-batch-006.md) adds 25 original Windows PowerShell
+script rules, with one matching event and one look-alike each, upstream attribution
+and immutable source hashes. The explicit six-batch inventory contains 128 rules
+(125 pinned snapshots); default-loader integration is coordinated separately with
+the routing/distribution session. Examples include LSASS process lookup, local
+group/share discovery, shadow-copy deletion and firewall/profile/WMI changes.
+These literal event signals can match legitimate administration; a look-alike for
+one rule can match another. They require trusted Windows script-log routing and
+do not assess chat safety. The 128-rule event limit and shared budgets remain in
+force; no matcher expansion, hosted registration or deployment is included.

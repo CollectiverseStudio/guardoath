@@ -1,0 +1,1278 @@
+{
+  "source_repository": "https://github.com/SigmaHQ/sigma",
+  "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+  "license": "Detection Rule License 1.1 (DRL 1.1)",
+  "license_url": "https://github.com/SigmaHQ/Detection-Rule-License/blob/main/LICENSE.Detection.Rules.md",
+  "fixture_origin": "GuardOath-authored synthetic events; not upstream tests or effectiveness evidence",
+  "rules": [
+    {
+      "title": "PowerShell Get-Process LSASS in ScriptBlock",
+      "id": "84c174ab-d3ef-481f-9c86-a50d0b8e3edb",
+      "status": "test",
+      "description": "Detects a Get-Process command on lsass process, which is in almost all cases a sign of malicious activity",
+      "references": [
+        "https://web.archive.org/web/20220205033028/https://twitter.com/PythonResponder/status/1385064506049630211"
+      ],
+      "author": "Florian Roth (Nextron Systems)",
+      "date": "2021-04-23",
+      "modified": "2022-12-25",
+      "tags": [
+        "attack.credential-access",
+        "attack.t1003.001"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection": {
+          "ScriptBlockText|contains": "Get-Process lsass"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate certificate exports invoked by administrators or users (depends on processes in the environment - filter if unusable)"
+      ],
+      "level": "high",
+      "regression_tests_path": "regression_data/rules/windows/powershell/powershell_script/posh_ps_susp_getprocess_lsass/info.yml",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_getprocess_lsass.yml",
+      "source_sha256": "02cca5fd8bc6e19d1ae61582bd3a0be51e03f5269455fb3cf2dcde56449bfc67",
+      "source_git_blob": "f05a8231ad16cd5e1195799c5194f84ee9c2b096",
+      "positive_event": {
+        "ScriptBlockText": "Get-Process lsass"
+      },
+      "negative_event": {
+        "ScriptBlockText": "Get-Process spoolsv"
+      }
+    },
+    {
+      "title": "Suspicious GetTypeFromCLSID ShellExecute",
+      "id": "8bc063d5-3a3a-4f01-a140-bc15e55e8437",
+      "status": "test",
+      "description": "Detects suspicious Powershell code that execute COM Objects",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1546.015/T1546.015.md#atomic-test-2---powershell-execute-com-object"
+      ],
+      "author": "frack113",
+      "date": "2022-04-02",
+      "tags": [
+        "attack.privilege-escalation",
+        "attack.persistence",
+        "attack.t1546.015"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection": {
+          "ScriptBlockText|contains|all": [
+            "::GetTypeFromCLSID(",
+            ".ShellExecute("
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate PowerShell scripts"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_gettypefromclsid.yml",
+      "source_sha256": "3e601566547d89cec7ac3e64d72c9d3001e6ff8cbb4169560f638fb8c200c9f9",
+      "source_git_blob": "c0c3b0969f32b4ecc3b10922632009ab9ea0a32c",
+      "positive_event": {
+        "ScriptBlockText": "[type]::GetTypeFromCLSID($lab).ShellExecute(\"lab.exe\")"
+      },
+      "negative_event": {
+        "ScriptBlockText": "[type]::GetTypeFromCLSID($lab).ToString()"
+      }
+    },
+    {
+      "title": "Suspicious PowerShell Invocations - Generic",
+      "id": "ed965133-513f-41d9-a441-e38076a0798f",
+      "related": [
+        {
+          "id": "3d304fda-78aa-43ed-975c-d740798a49c1",
+          "type": "derived"
+        },
+        {
+          "id": "bbb80e91-5746-4fbe-8898-122e2cafdbf4",
+          "type": "similar"
+        }
+      ],
+      "status": "test",
+      "description": "Detects suspicious PowerShell invocation command parameters",
+      "references": [
+        "Internal Research"
+      ],
+      "author": "Florian Roth (Nextron Systems)",
+      "date": "2017-03-12",
+      "modified": "2023-01-03",
+      "tags": [
+        "attack.execution",
+        "attack.t1059.001"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection_encoded": {
+          "ScriptBlockText|contains": [
+            " -enc ",
+            " -EncodedCommand ",
+            " -ec "
+          ]
+        },
+        "selection_hidden": {
+          "ScriptBlockText|contains": [
+            " -w hidden ",
+            " -window hidden ",
+            " -windowstyle hidden ",
+            " -w 1 "
+          ]
+        },
+        "selection_noninteractive": {
+          "ScriptBlockText|contains": [
+            " -noni ",
+            " -noninteractive "
+          ]
+        },
+        "condition": "all of selection*"
+      },
+      "falsepositives": [
+        "Very special / sneaky PowerShell scripts"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_invocation_generic.yml",
+      "source_sha256": "54a102facc7b98c18a7bd9165a54653fa308684cc03a1cdc7e664b1cc717c872",
+      "source_git_blob": "ef64da6697b0af4eae13567349257339d5bbe31e",
+      "positive_event": {
+        "ScriptBlockText": "powershell -enc LAB -w hidden -noni lab"
+      },
+      "negative_event": {
+        "ScriptBlockText": "powershell -enc LAB -w normal -noni lab"
+      }
+    },
+    {
+      "title": "Change User Agents with WebRequest",
+      "id": "d4488827-73af-4f8d-9244-7b7662ef046e",
+      "status": "test",
+      "description": "Adversaries may communicate using application layer protocols associated with web traffic to avoid detection/network filtering by blending in with existing traffic.\nCommands to the remote system, and often the results of those commands, will be embedded within the protocol traffic between the client and server.\n",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1071.001/T1071.001.md#t1071001---web-protocols"
+      ],
+      "author": "frack113",
+      "date": "2022-01-23",
+      "modified": "2025-07-18",
+      "tags": [
+        "attack.command-and-control",
+        "attack.t1071.001"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection_webrequest": {
+          "ScriptBlockText|contains": [
+            "Invoke-WebRequest",
+            "Invoke-RestMethod",
+            " irm ",
+            "iwr "
+          ]
+        },
+        "selection_useragent": {
+          "ScriptBlockText|contains": "-UserAgent "
+        },
+        "condition": "all of selection_*"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "regression_tests_path": "regression_data/rules/windows/powershell/powershell_script/posh_ps_susp_invoke_webrequest_useragent/info.yml",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_invoke_webrequest_useragent.yml",
+      "source_sha256": "3ce2cc7239bd2ab3731a04d6f62a331be21a84539589cba52e36c0fc9de48f10",
+      "source_git_blob": "b9cdc11b18ffb19dea6547b077efaf59db7cd62e",
+      "positive_event": {
+        "ScriptBlockText": "Invoke-WebRequest -Uri https://example.invalid -UserAgent LabAgent"
+      },
+      "negative_event": {
+        "ScriptBlockText": "Invoke-WebRequest -Uri https://example.invalid -Headers @{}"
+      }
+    },
+    {
+      "title": "Suspicious Get Local Groups Information - PowerShell",
+      "id": "fa6a5a45-3ee2-4529-aa14-ee5edc9e29cb",
+      "related": [
+        {
+          "id": "cef24b90-dddc-4ae1-a09a-8764872f69fc",
+          "type": "similar"
+        }
+      ],
+      "status": "test",
+      "description": "Detects the use of PowerShell modules and cmdlets to gather local group information.\nAdversaries may use local system permission groups to determine which groups exist and which users belong to a particular group such as the local administrators group.\n",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1069.001/T1069.001.md"
+      ],
+      "author": "frack113",
+      "date": "2021-12-12",
+      "modified": "2025-08-22",
+      "tags": [
+        "attack.discovery",
+        "attack.t1069.001"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection_localgroup": {
+          "ScriptBlockText|contains": [
+            "get-localgroup ",
+            "get-localgroupmember "
+          ]
+        },
+        "selection_wmi_module": {
+          "ScriptBlockText|contains": [
+            "get-wmiobject ",
+            "gwmi ",
+            "get-ciminstance ",
+            "gcim "
+          ]
+        },
+        "selection_wmi_class": {
+          "ScriptBlockText|contains": "win32_group"
+        },
+        "condition": "selection_localgroup or all of selection_wmi_*"
+      },
+      "falsepositives": [
+        "Inventory scripts or admin tasks"
+      ],
+      "level": "low",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_local_group_reco.yml",
+      "source_sha256": "1cf1b2a00aa28996b954b06fa03201b9d432f1cae9bb17392dde1f5067905bf4",
+      "source_git_blob": "55be977a5a29336d81196a560ad42cf6f5659d9d",
+      "positive_event": {
+        "ScriptBlockText": "Get-LocalGroup -Name Administrators"
+      },
+      "negative_event": {
+        "ScriptBlockText": "Get-LocalUser -Name LabUser"
+      }
+    },
+    {
+      "title": "Powershell Local Email Collection",
+      "id": "2837e152-93c8-43d2-85ba-c3cd3c2ae614",
+      "status": "test",
+      "description": "Adversaries may target user email on local systems to collect sensitive information.\nFiles containing email data can be acquired from a users local system, such as Outlook storage or cache files.\n",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1114.001/T1114.001.md"
+      ],
+      "author": "frack113",
+      "date": "2021-07-21",
+      "modified": "2022-12-25",
+      "tags": [
+        "attack.collection",
+        "attack.t1114.001"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection": {
+          "ScriptBlockText|contains": [
+            "Get-Inbox.ps1",
+            "Microsoft.Office.Interop.Outlook",
+            "Microsoft.Office.Interop.Outlook.olDefaultFolders",
+            "-comobject outlook.application"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "regression_tests_path": "regression_data/rules/windows/powershell/powershell_script/posh_ps_susp_mail_acces/info.yml",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_mail_acces.yml",
+      "source_sha256": "64c2b31822d93b111eb3b0de5191e16595703af414f7cdc554382a417a4f77af",
+      "source_git_blob": "2f39341cd937ee10c32ee3e90b253713dfffcb4e",
+      "positive_event": {
+        "ScriptBlockText": "New-Object -ComObject Outlook.Application"
+      },
+      "negative_event": {
+        "ScriptBlockText": "New-Object -ComObject Excel.Application"
+      }
+    },
+    {
+      "title": "Suspicious Mount-DiskImage",
+      "id": "29e1c216-6408-489d-8a06-ee9d151ef819",
+      "status": "test",
+      "description": "Adversaries may abuse container files such as disk image (.iso, .vhd) file formats to deliver malicious payloads that may not be tagged with MOTW.",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1553.005/T1553.005.md#atomic-test-1---mount-iso-image",
+        "https://learn.microsoft.com/en-us/powershell/module/storage/mount-diskimage?view=windowsserver2022-ps"
+      ],
+      "author": "frack113",
+      "date": "2022-02-01",
+      "tags": [
+        "attack.defense-impairment",
+        "attack.t1553.005"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection": {
+          "ScriptBlockText|contains|all": [
+            "Mount-DiskImage ",
+            "-ImagePath "
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate PowerShell scripts"
+      ],
+      "level": "low",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_mount_diskimage.yml",
+      "source_sha256": "a5a76b2e30b34519efe68a65f5683f16a6521bcec8628b080b070b35557aa14f",
+      "source_git_blob": "933be2a849a7614533bd2571bd7d0f047af0c5ea",
+      "positive_event": {
+        "ScriptBlockText": "Mount-DiskImage -ImagePath C:\\Lab\\disk.iso"
+      },
+      "negative_event": {
+        "ScriptBlockText": "Get-DiskImage -ImagePath C:\\Lab\\disk.iso"
+      }
+    },
+    {
+      "title": "PowerShell Deleted Mounted Share",
+      "id": "66a4d409-451b-4151-94f4-a55d559c49b0",
+      "status": "test",
+      "description": "Detects when when a mounted share is removed. Adversaries may remove share connections that are no longer useful in order to clean up traces of their operation",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.005/T1070.005.md"
+      ],
+      "author": "oscd.community, @redcanary, Zach Stanford @svch0st",
+      "date": "2020-10-08",
+      "modified": "2025-10-07",
+      "tags": [
+        "attack.stealth",
+        "attack.t1070.005"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection": {
+          "ScriptBlockText|contains": [
+            "Remove-SmbShare",
+            "Remove-FileShare"
+          ]
+        },
+        "filter_main_module_load": {
+          "ScriptBlockText|contains|all": [
+            "FileShare.cdxml",
+            "Microsoft.PowerShell.Core\\Export-ModuleMember",
+            "ROOT/Microsoft/Windows/Storage/MSFT_FileShare",
+            "ObjectModelWrapper",
+            "Cmdletization.MethodParameter"
+          ]
+        },
+        "condition": "selection and not 1 of filter_main_*"
+      },
+      "falsepositives": [
+        "Administrators or Power users may remove their shares via cmd line"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_mounted_share_deletion.yml",
+      "source_sha256": "fbfd77c7f2d239f9b3bde720ef09c58063bf80d0ea56173c325ebfb38c2bbd37",
+      "source_git_blob": "b8373ee1b58a720538be232a6a83f57497cc48bd",
+      "positive_event": {
+        "ScriptBlockText": "Remove-SmbShare -Name LabShare"
+      },
+      "negative_event": {
+        "ScriptBlockText": "Get-SmbShare -Name LabShare"
+      }
+    },
+    {
+      "title": "Suspicious Get Information for SMB Share",
+      "id": "95f0643a-ed40-467c-806b-aac9542ec5ab",
+      "status": "test",
+      "description": "Adversaries may look for folders and drives shared on remote systems as a means of identifying sources of information to gather as\na precursor for Collection and to identify potential systems of interest for Lateral Movement.\nNetworks often contain shared network drives and folders that enable users to access file directories on various systems across a network.\n",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1069.002/T1069.002.md"
+      ],
+      "author": "frack113",
+      "date": "2021-12-15",
+      "modified": "2022-12-25",
+      "tags": [
+        "attack.discovery",
+        "attack.t1069.001"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection": {
+          "ScriptBlockText|contains": "get-smbshare"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "low",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_smb_share_reco.yml",
+      "source_sha256": "230a4d90b9a777a88ac2202155c452972b7da74c872753eb10531c1635e92f62",
+      "source_git_blob": "25f9a78a5d42b31e7029dbbebe096dc8fa905794",
+      "positive_event": {
+        "ScriptBlockText": "Get-SmbShare -Name LabShare"
+      },
+      "negative_event": {
+        "ScriptBlockText": "Get-SmbConnection -ServerName lab"
+      }
+    },
+    {
+      "title": "Suspicious Start-Process PassThru",
+      "id": "0718cd72-f316-4aa2-988f-838ea8533277",
+      "status": "test",
+      "description": "Powershell use PassThru option to start in background",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1036.003/T1036.003.md",
+        "https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/start-process?view=powershell-7.6"
+      ],
+      "author": "frack113",
+      "date": "2022-01-15",
+      "modified": "2026-05-18",
+      "tags": [
+        "attack.stealth",
+        "attack.t1036.003"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection_cmdlet": {
+          "ScriptBlockText|contains": [
+            "Start-Process ",
+            "saps "
+          ]
+        },
+        "selection_param": {
+          "ScriptBlockText|contains|all": [
+            "-PassThru ",
+            "-FilePath "
+          ]
+        },
+        "condition": "all of selection_*"
+      },
+      "falsepositives": [
+        "Legitimate PowerShell scripts"
+      ],
+      "level": "medium",
+      "regression_tests_path": "regression_data/rules/windows/powershell/powershell_script/posh_ps_susp_start_process/info.yml",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_start_process.yml",
+      "source_sha256": "24a7ab09817ba949832190b6ae6b995b258b2eeec5be20888e4b620d76cdaafb",
+      "source_git_blob": "3df0418c58685f3fc59083bd7234563fbe752f61",
+      "positive_event": {
+        "ScriptBlockText": "Start-Process -PassThru -FilePath C:\\Lab\\app.exe"
+      },
+      "negative_event": {
+        "ScriptBlockText": "Start-Process -FilePath C:\\Lab\\app.exe"
+      }
+    },
+    {
+      "title": "Suspicious Unblock-File",
+      "id": "5947497f-1aa4-41dd-9693-c9848d58727d",
+      "status": "test",
+      "description": "Remove the Zone.Identifier alternate data stream which identifies the file as downloaded from the internet.",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1553.005/T1553.005.md#atomic-test-3---remove-the-zoneidentifier-alternate-data-stream",
+        "https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/unblock-file?view=powershell-7.2"
+      ],
+      "author": "frack113",
+      "date": "2022-02-01",
+      "tags": [
+        "attack.defense-impairment",
+        "attack.t1553.005"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection": {
+          "ScriptBlockText|contains|all": [
+            "Unblock-File ",
+            "-Path "
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate PowerShell scripts"
+      ],
+      "level": "medium",
+      "regression_tests_path": "regression_data/rules/windows/powershell/powershell_script/posh_ps_susp_unblock_file/info.yml",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_unblock_file.yml",
+      "source_sha256": "8e47f38e8d37b358410cf64078cafe08fba078ec9a8cd76c250795893821eec3",
+      "source_git_blob": "4cf1d0407cd0f59e0bfa3322e45946c54d1ef2eb",
+      "positive_event": {
+        "ScriptBlockText": "Unblock-File -Path C:\\Lab\\download.ps1"
+      },
+      "negative_event": {
+        "ScriptBlockText": "Get-FileHash -Path C:\\Lab\\download.ps1"
+      }
+    },
+    {
+      "title": "Powershell Suspicious Win32_PnPEntity",
+      "id": "b26647de-4feb-4283-af6b-6117661283c5",
+      "status": "test",
+      "description": "Adversaries may attempt to gather information about attached peripheral devices and components connected to a computer system.",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1120/T1120.md"
+      ],
+      "author": "frack113",
+      "date": "2021-08-23",
+      "modified": "2022-12-25",
+      "tags": [
+        "attack.discovery",
+        "attack.t1120"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection": {
+          "ScriptBlockText|contains": "Win32_PnPEntity"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Admin script"
+      ],
+      "level": "low",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_win32_pnpentity.yml",
+      "source_sha256": "d2574fc14bf5d1e94cecc738f5840591cc2a80dcad3123cb7a4d24080a69c6c5",
+      "source_git_blob": "c72ca7b6d20179d8d9a9e5cb5384d462c66b0ad3",
+      "positive_event": {
+        "ScriptBlockText": "Get-CimInstance Win32_PnPEntity"
+      },
+      "negative_event": {
+        "ScriptBlockText": "Get-CimInstance Win32_OperatingSystem"
+      }
+    },
+    {
+      "title": "Deletion of Volume Shadow Copies via WMI with PowerShell - PS Script",
+      "id": "c1337eb8-921a-4b59-855b-4ba188ddcc42",
+      "related": [
+        {
+          "id": "e17121b4-ef2a-4418-8a59-12fb1631fa9e",
+          "type": "derived"
+        },
+        {
+          "id": "21ff4ca9-f13a-41ad-b828-0077b2af2e40",
+          "type": "similar"
+        }
+      ],
+      "status": "test",
+      "description": "Detects deletion of Windows Volume Shadow Copies with PowerShell code and Get-WMIObject. This technique is used by numerous ransomware families such as Sodinokibi/REvil",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1490/T1490.md#atomic-test-5---windows---delete-volume-shadow-copies-via-wmi-with-powershell",
+        "https://www.elastic.co/guide/en/security/current/volume-shadow-copy-deletion-via-powershell.html"
+      ],
+      "author": "Tim Rauch, frack113",
+      "date": "2022-09-20",
+      "modified": "2022-12-02",
+      "tags": [
+        "attack.impact",
+        "attack.t1490"
+      ],
+      "logsource": {
+        "category": "ps_script",
+        "product": "windows"
+      },
+      "detection": {
+        "selection_get": {
+          "ScriptBlockText|contains": [
+            "Get-WmiObject",
+            "gwmi",
+            "Get-CimInstance",
+            "gcim"
+          ]
+        },
+        "selection_shadowcopy": {
+          "ScriptBlockText|contains": "Win32_ShadowCopy"
+        },
+        "selection_delete": {
+          "ScriptBlockText|contains": [
+            ".Delete()",
+            "Remove-WmiObject",
+            "rwmi",
+            "Remove-CimInstance",
+            "rcim"
+          ]
+        },
+        "condition": "all of selection*"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "high",
+      "regression_tests_path": "regression_data/rules/windows/powershell/powershell_script/posh_ps_susp_win32_shadowcopy_deletion/info.yml",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_win32_shadowcopy_deletion.yml",
+      "source_sha256": "bfdfb814422c0b977157c8bbc5ce2a767bad930c1848c7f90ed6d141340fc894",
+      "source_git_blob": "97574e800b839f421239db3c2f909f4aec059da0",
+      "positive_event": {
+        "ScriptBlockText": "Get-CimInstance Win32_ShadowCopy | Remove-CimInstance"
+      },
+      "negative_event": {
+        "ScriptBlockText": "Get-CimInstance Win32_ShadowCopy | Select-Object ID"
+      }
+    },
+    {
+      "title": "PowerShell Write-EventLog Usage",
+      "id": "35f41cd7-c98e-469f-8a02-ec4ba0cc7a7e",
+      "status": "test",
+      "description": "Detects usage of the \"Write-EventLog\" cmdlet with 'RawData' flag. The cmdlet can be levreage to write malicious payloads to the EventLog and then retrieve them later for later use",
+      "references": [
+        "https://www.blackhillsinfosec.com/windows-event-logs-for-red-teams/"
+      ],
+      "author": "Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2022-08-16",
+      "tags": [
+        "attack.defense-impairment"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection": {
+          "ScriptBlockText|contains|all": [
+            "Write-EventLog",
+            "-RawData "
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate applications writing events via this cmdlet. Investigate alerts to determine if the action is benign"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_susp_write_eventlog.yml",
+      "source_sha256": "ea191e0bad42e5c60a0fe1fcf8ed8fb9c828cee39092b592f1d4e1606126255f",
+      "source_git_blob": "4227b62825876b5b30f7bb4023db01304bd058e9",
+      "positive_event": {
+        "ScriptBlockText": "Write-EventLog -LogName Application -RawData $bytes"
+      },
+      "negative_event": {
+        "ScriptBlockText": "Write-EventLog -LogName Application -Message Lab"
+      }
+    },
+    {
+      "title": "SyncAppvPublishingServer Execution to Bypass Powershell Restriction",
+      "id": "dddfebae-c46f-439c-af7a-fdb6bde90218",
+      "related": [
+        {
+          "id": "fde7929d-8beb-4a4c-b922-be9974671667",
+          "type": "derived"
+        },
+        {
+          "id": "9f7aa113-9da6-4a8d-907c-5f1a4b908299",
+          "type": "derived"
+        }
+      ],
+      "status": "test",
+      "description": "Detects SyncAppvPublishingServer process execution which usually utilized by adversaries to bypass PowerShell execution restrictions.",
+      "references": [
+        "https://lolbas-project.github.io/lolbas/Binaries/Syncappvpublishingserver/"
+      ],
+      "author": "Ensar Şamil, @sblmsrsn, OSCD Community",
+      "date": "2020-10-05",
+      "modified": "2022-12-25",
+      "tags": [
+        "attack.stealth",
+        "attack.t1218"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection": {
+          "ScriptBlockText|contains": "SyncAppvPublishingServer.exe"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "App-V clients"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_syncappvpublishingserver_exe.yml",
+      "source_sha256": "682118f1317ad09783c5d5e05f985248b9a03bb84a9f6d3eda1bb3881292b2b6",
+      "source_git_blob": "90bff7e756748ca3a626271afa90727f2b3fcf27",
+      "positive_event": {
+        "ScriptBlockText": "SyncAppvPublishingServer.exe lab"
+      },
+      "negative_event": {
+        "ScriptBlockText": "SyncAppvPublishingServer.ps1 lab"
+      }
+    },
+    {
+      "title": "Tamper Windows Defender Remove-MpPreference - ScriptBlockLogging",
+      "id": "ae2bdd58-0681-48ac-be7f-58ab4e593458",
+      "related": [
+        {
+          "id": "07e3cb2c-0608-410d-be4b-1511cb1a0448",
+          "type": "similar"
+        }
+      ],
+      "status": "test",
+      "description": "Detects attempts to remove Windows Defender configuration using the 'MpPreference' cmdlet",
+      "references": [
+        "https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/windows-10-controlled-folder-access-event-search/ba-p/2326088"
+      ],
+      "author": "Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2022-08-05",
+      "tags": [
+        "attack.defense-impairment",
+        "attack.t1685"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection_remove": {
+          "ScriptBlockText|contains": "Remove-MpPreference"
+        },
+        "selection_tamper": {
+          "ScriptBlockText|contains": [
+            "-ControlledFolderAccessProtectedFolders ",
+            "-AttackSurfaceReductionRules_Ids ",
+            "-AttackSurfaceReductionRules_Actions ",
+            "-CheckForSignaturesBeforeRunningScan "
+          ]
+        },
+        "condition": "all of selection_*"
+      },
+      "falsepositives": [
+        "Legitimate PowerShell scripts"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_tamper_windows_defender_rem_mp.yml",
+      "source_sha256": "daa8de010f8a177b4e29735bdc9c5137809084c2b022041a290146dfcbe8d170",
+      "source_git_blob": "26dd86379a4d990ccd9bbf4be217b7cdb96c9e53",
+      "positive_event": {
+        "ScriptBlockText": "Remove-MpPreference -ControlledFolderAccessProtectedFolders C:\\Lab"
+      },
+      "negative_event": {
+        "ScriptBlockText": "Get-MpPreference -ControlledFolderAccessProtectedFolders C:\\Lab"
+      }
+    },
+    {
+      "title": "Testing Usage of Uncommonly Used Port",
+      "id": "adf876b3-f1f8-4aa9-a4e4-a64106feec06",
+      "status": "test",
+      "description": "Adversaries may communicate using a protocol and port paring that are typically not associated.\nFor example, HTTPS over port 8088(Citation: Symantec Elfin Mar 2019) or port 587(Citation: Fortinet Agent Tesla April 2018) as opposed to the traditional port 443.\n",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1571/T1571.md#atomic-test-1---testing-usage-of-uncommonly-used-port-with-powershell",
+        "https://learn.microsoft.com/en-us/powershell/module/nettcpip/test-netconnection?view=windowsserver2022-ps"
+      ],
+      "author": "frack113",
+      "date": "2022-01-23",
+      "tags": [
+        "attack.command-and-control",
+        "attack.t1571"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection": {
+          "ScriptBlockText|contains|all": [
+            "Test-NetConnection",
+            "-ComputerName ",
+            "-port "
+          ]
+        },
+        "filter": {
+          "ScriptBlockText|contains": [
+            " 443 ",
+            " 80 "
+          ]
+        },
+        "condition": "selection and not filter"
+      },
+      "falsepositives": [
+        "Legitimate administrative script"
+      ],
+      "level": "medium",
+      "regression_tests_path": "regression_data/rules/windows/powershell/powershell_script/posh_ps_test_netconnection/info.yml",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_test_netconnection.yml",
+      "source_sha256": "02fddb51885cb37077bce658b4cc5669f65974c6c6e19d6101d2ad7a54b8445d",
+      "source_git_blob": "396a22befec06ea6e85b33427fbdb7fef99bfd01",
+      "positive_event": {
+        "ScriptBlockText": "Test-NetConnection -ComputerName lab -port 445 "
+      },
+      "negative_event": {
+        "ScriptBlockText": "Test-NetConnection -ComputerName lab -port 443 "
+      }
+    },
+    {
+      "title": "Powershell Timestomp",
+      "id": "c6438007-e081-42ce-9483-b067fbef33c3",
+      "status": "test",
+      "description": "Adversaries may modify file time attributes to hide new or changes to existing files.\nTimestomping is a technique that modifies the timestamps of a file (the modify, access, create, and change times), often to mimic files that are in the same folder.\n",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.006/T1070.006.md",
+        "https://www.offensive-security.com/metasploit-unleashed/timestomp/"
+      ],
+      "author": "frack113",
+      "date": "2021-08-03",
+      "modified": "2022-12-25",
+      "tags": [
+        "attack.stealth",
+        "attack.t1070.006"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection_ioc": {
+          "ScriptBlockText|contains": [
+            ".CreationTime =",
+            ".LastWriteTime =",
+            ".LastAccessTime =",
+            "[IO.File]::SetCreationTime",
+            "[IO.File]::SetLastAccessTime",
+            "[IO.File]::SetLastWriteTime"
+          ]
+        },
+        "condition": "selection_ioc"
+      },
+      "falsepositives": [
+        "Legitimate admin script"
+      ],
+      "level": "medium",
+      "regression_tests_path": "regression_data/rules/windows/powershell/powershell_script/posh_ps_timestomp/info.yml",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_timestomp.yml",
+      "source_sha256": "3cdfc8ea504987cd5003045e68006fafb3677c60cd0686f37f684f2174f853a0",
+      "source_git_blob": "80d412c0fdd2af731efe88804606b5704f61569a",
+      "positive_event": {
+        "ScriptBlockText": "[IO.File]::SetLastWriteTime($lab,$time)"
+      },
+      "negative_event": {
+        "ScriptBlockText": "[IO.File]::GetLastWriteTime($lab)"
+      }
+    },
+    {
+      "title": "Potential Persistence Via PowerShell User Profile Using Add-Content",
+      "id": "05b3e303-faf0-4f4a-9b30-46cc13e69152",
+      "status": "test",
+      "description": "Detects calls to \"Add-Content\" cmdlet in order to modify the content of the user profile and potentially adding suspicious commands for persistence",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1546.013/T1546.013.md"
+      ],
+      "author": "frack113, Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2021-08-18",
+      "modified": "2023-05-04",
+      "tags": [
+        "attack.persistence",
+        "attack.privilege-escalation",
+        "attack.t1546.013"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection_add": {
+          "ScriptBlockText|contains": "Add-Content $profile"
+        },
+        "selection_options": {
+          "ScriptBlockText|contains": [
+            "-Value \"IEX ",
+            "-Value \"Invoke-Expression",
+            "-Value \"Invoke-WebRequest",
+            "-Value \"Start-Process",
+            "-Value 'IEX ",
+            "-Value 'Invoke-Expression",
+            "-Value 'Invoke-WebRequest",
+            "-Value 'Start-Process"
+          ]
+        },
+        "condition": "all of selection_*"
+      },
+      "falsepositives": [
+        "Legitimate administration and tuning scripts that aim to add functionality to a user PowerShell session"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_user_profile_tampering.yml",
+      "source_sha256": "d6834f8e36c8cdfa2aaddbdec0a3ec097e91bebbb2ef7cfd1f50364c47f82e58",
+      "source_git_blob": "e30da0ae3c594b914c8bcd047a1857bc25d00006",
+      "positive_event": {
+        "ScriptBlockText": "Add-Content $profile -Value \"IEX lab\""
+      },
+      "negative_event": {
+        "ScriptBlockText": "Add-Content $profile -Value \"Write-Output lab\""
+      }
+    },
+    {
+      "title": "Abuse of Service Permissions to Hide Services Via Set-Service - PS",
+      "id": "953945c5-22fe-4a92-9f8a-a9edc1e522da",
+      "related": [
+        {
+          "id": "514e4c3a-c77d-4cde-a00f-046425e2301e",
+          "type": "similar"
+        }
+      ],
+      "status": "test",
+      "description": "Detects usage of the \"Set-Service\" powershell cmdlet to configure a new SecurityDescriptor that allows a service to be hidden from other utilities such as \"sc.exe\", \"Get-Service\"...etc. (Works only in powershell 7)",
+      "references": [
+        "https://twitter.com/Alh4zr3d/status/1580925761996828672",
+        "https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/set-service?view=powershell-7.2"
+      ],
+      "author": "Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2022-10-17",
+      "tags": [
+        "attack.persistence",
+        "attack.privilege-escalation",
+        "attack.execution",
+        "attack.stealth",
+        "attack.t1574.011"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection": {
+          "ScriptBlockText|contains|all": [
+            "Set-Service ",
+            "DCLCWPDTSD"
+          ],
+          "ScriptBlockText|contains": [
+            "-SecurityDescriptorSddl ",
+            "-sd "
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Rare intended use of hidden services",
+        "Rare FP could occur due to the non linearity of the ScriptBlockText log"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_using_set_service_to_hide_services.yml",
+      "source_sha256": "01f577345197230c21bfe5fc09bd0f07adc74898cf2630fd0778faf87183f8ec",
+      "source_git_blob": "4c7ef020465d1ce69c6abe3e7f7f857186951266",
+      "positive_event": {
+        "ScriptBlockText": "Set-Service Lab -SecurityDescriptorSddl DCLCWPDTSD"
+      },
+      "negative_event": {
+        "ScriptBlockText": "Set-Service Lab -Description LabService"
+      }
+    },
+    {
+      "title": "Registry Modification Attempt Via VBScript - PowerShell",
+      "id": "2a0a169d-cc66-43ce-9ae2-6e678e54e46a",
+      "related": [
+        {
+          "id": "921aa10f-2e74-4cca-9498-98f9ca4d6fdf",
+          "type": "similar"
+        },
+        {
+          "id": "7f4c43f9-b1a5-4c7d-b24a-b41bf3a3ebf2",
+          "type": "similar"
+        }
+      ],
+      "status": "experimental",
+      "description": "Detects attempts to modify the registry using VBScript's CreateObject(\"Wscript.shell\") and RegWrite methods embedded within PowerShell scripts or commands.\nThreat actors commonly embed VBScript code within PowerShell to perform registry modifications, attempting to evade detection that monitors for direct registry access through traditional tools.\nThis technique can be used for persistence, defense evasion, and privilege escalation by modifying registry keys without using regedit.exe, reg.exe, or PowerShell's native registry cmdlets.\n",
+      "references": [
+        "https://www.linkedin.com/posts/mauricefielenbach_livingofftheland-redteam-persistence-activity-7344801774182051843-TE00/",
+        "https://www.nextron-systems.com/2025/07/29/detecting-the-most-popular-mitre-persistence-method-registry-run-keys-startup-folder/",
+        "https://detect.fyi/hunting-fileless-malware-in-the-windows-registry-1339ccde00ad"
+      ],
+      "date": "2025-08-13",
+      "author": "Swachchhanda Shrawan Poudel (Nextron Systems)",
+      "tags": [
+        "attack.persistence",
+        "attack.execution",
+        "attack.defense-impairment",
+        "attack.t1112",
+        "attack.t1059.005"
+      ],
+      "logsource": {
+        "category": "ps_script",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "ScriptBlockText|contains|all": [
+            "CreateObject",
+            "Wscript.shell",
+            ".RegWrite"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Some legitimate admin or install scripts may use these processes for registry modifications."
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_vbscript_registry_modification.yml",
+      "source_sha256": "03a27cb4427ec5fb1f9abbf24e776e4f31cc3e85909e17c9625525c3f7b6e187",
+      "source_git_blob": "048f1e399814c5a4fdfa9aca59b14107dfacdfeb",
+      "positive_event": {
+        "ScriptBlockText": "CreateObject(\"Wscript.shell\").RegWrite(\"HKCU\\Lab\", 1)"
+      },
+      "negative_event": {
+        "ScriptBlockText": "CreateObject(\"Wscript.shell\").RegRead(\"HKCU\\Lab\")"
+      }
+    },
+    {
+      "title": "PowerShell WMI Win32_Product Install MSI",
+      "id": "91109523-17f0-4248-a800-f81d9e7c081d",
+      "status": "test",
+      "description": "Detects the execution of an MSI file using PowerShell and the WMI Win32_Product class",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.007/T1218.007.md"
+      ],
+      "author": "frack113",
+      "date": "2022-04-24",
+      "tags": [
+        "attack.stealth",
+        "attack.t1218.007"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection": {
+          "ScriptBlockText|contains|all": [
+            "Invoke-CimMethod ",
+            "-ClassName ",
+            "Win32_Product ",
+            "-MethodName ",
+            ".msi"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "regression_tests_path": "regression_data/rules/windows/powershell/powershell_script/posh_ps_win32_product_install_msi/info.yml",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_win32_product_install_msi.yml",
+      "source_sha256": "570b873fbf89d75bbdeb438fe83126074e2247a4a9e8d2d6a2d6fdd1e32bdc40",
+      "source_git_blob": "bb2f382c85fd133b1dc1d4750e6d7f5969a047f9",
+      "positive_event": {
+        "ScriptBlockText": "Invoke-CimMethod -ClassName Win32_Product -MethodName Install -Arguments lab.msi"
+      },
+      "negative_event": {
+        "ScriptBlockText": "Invoke-CimMethod -ClassName Win32_Product -MethodName Repair -Arguments lab.txt"
+      }
+    },
+    {
+      "title": "Windows Firewall Profile Disabled",
+      "id": "488b44e7-3781-4a71-888d-c95abfacf44d",
+      "related": [
+        {
+          "id": "12f6b752-042d-483e-bf9c-915a6d06ad75",
+          "type": "similar"
+        }
+      ],
+      "status": "test",
+      "description": "Detects when a user disables the Windows Firewall via a Profile to help evade defense.",
+      "references": [
+        "https://learn.microsoft.com/en-us/powershell/module/netsecurity/set-netfirewallprofile?view=windowsserver2022-ps",
+        "https://www.tutorialspoint.com/how-to-get-windows-firewall-profile-settings-using-powershell",
+        "https://web.archive.org/web/20230929023836/http://powershellhelp.space/commands/set-netfirewallrule-psv5.php",
+        "http://woshub.com/manage-windows-firewall-powershell/",
+        "https://www.elastic.co/guide/en/security/current/windows-firewall-disabled-via-powershell.html"
+      ],
+      "author": "Austin Songer @austinsonger",
+      "date": "2021-10-12",
+      "modified": "2022-12-30",
+      "tags": [
+        "attack.defense-impairment",
+        "attack.t1686.003"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection_args": {
+          "ScriptBlockText|contains|all": [
+            "Set-NetFirewallProfile ",
+            " -Enabled ",
+            " False"
+          ]
+        },
+        "selection_opt": {
+          "ScriptBlockText|contains": [
+            " -All ",
+            "Public",
+            "Domain",
+            "Private"
+          ]
+        },
+        "condition": "all of selection*"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_windows_firewall_profile_disabled.yml",
+      "source_sha256": "f943e179cd5ada26fce27930357291b831aaada90cfa754517b6cc9de519609a",
+      "source_git_blob": "3da8e7947dd416318e5a9e002f71b1ca25be9ba3",
+      "positive_event": {
+        "ScriptBlockText": "Set-NetFirewallProfile -All -Enabled False"
+      },
+      "negative_event": {
+        "ScriptBlockText": "Set-NetFirewallProfile -All -Enabled True"
+      }
+    },
+    {
+      "title": "Winlogon Helper DLL",
+      "id": "851c506b-6b7c-4ce2-8802-c703009d03c0",
+      "status": "test",
+      "description": "Winlogon.exe is a Windows component responsible for actions at logon/logoff as well as the secure attention sequence (SAS) triggered by Ctrl-Alt-Delete.\nRegistry entries in HKLM\\Software[Wow6432Node]Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\ and HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\ are\nused to manage additional helper programs and functionalities that support Winlogon. Malicious modifications to these Registry keys may cause Winlogon to\nload and execute malicious DLLs and/or executables.\n",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1547.004/T1547.004.md"
+      ],
+      "author": "Timur Zinniatullin, oscd.community",
+      "date": "2019-10-21",
+      "modified": "2022-07-07",
+      "tags": [
+        "attack.privilege-escalation",
+        "attack.persistence",
+        "attack.t1547.004"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection": {
+          "ScriptBlockText|contains": "CurrentVersion\\Winlogon"
+        },
+        "selection2": {
+          "ScriptBlockText|contains": [
+            "Set-ItemProperty",
+            "New-Item"
+          ]
+        },
+        "condition": "all of selection*"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_winlogon_helper_dll.yml",
+      "source_sha256": "5190e979ce23b2e8c1eb1b89ae21531d672d829ace0bb76764a44e85bddcd691",
+      "source_git_blob": "4903991ca26902df1ea1bdc88e040abcaa19e042",
+      "positive_event": {
+        "ScriptBlockText": "Set-ItemProperty HKLM:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon Lab"
+      },
+      "negative_event": {
+        "ScriptBlockText": "Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon Lab"
+      }
+    },
+    {
+      "title": "Powershell WMI Persistence",
+      "id": "9e07f6e7-83aa-45c6-998e-0af26efd0a85",
+      "status": "test",
+      "description": "Adversaries may establish persistence and elevate privileges by executing malicious content triggered by a Windows Management Instrumentation (WMI) event subscription.",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1546.003/T1546.003.md",
+        "https://github.com/EmpireProject/Empire/blob/08cbd274bef78243d7a8ed6443b8364acd1fc48b/data/module_source/persistence/Persistence.psm1#L545"
+      ],
+      "author": "frack113",
+      "date": "2021-08-19",
+      "modified": "2022-12-25",
+      "tags": [
+        "attack.persistence",
+        "attack.privilege-escalation",
+        "attack.t1546.003"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "ps_script",
+        "definition": "Requirements: Script Block Logging must be enabled"
+      },
+      "detection": {
+        "selection_ioc": [
+          {
+            "ScriptBlockText|contains|all": [
+              "New-CimInstance ",
+              "-Namespace root/subscription ",
+              "-ClassName __EventFilter ",
+              "-Property "
+            ]
+          },
+          {
+            "ScriptBlockText|contains|all": [
+              "New-CimInstance ",
+              "-Namespace root/subscription ",
+              "-ClassName CommandLineEventConsumer ",
+              "-Property "
+            ]
+          }
+        ],
+        "condition": "selection_ioc"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "regression_tests_path": "regression_data/rules/windows/powershell/powershell_script/posh_ps_wmi_persistence/info.yml",
+      "source_path": "rules/windows/powershell/powershell_script/posh_ps_wmi_persistence.yml",
+      "source_sha256": "fccbdd21e1d84f97d772eb251a7bf9b5a91a1f5ede7c5bd0acde8316034c8e57",
+      "source_git_blob": "30d8b13c4af8ef6ce4b09392d22849bb789b8624",
+      "positive_event": {
+        "ScriptBlockText": "New-CimInstance -Namespace root/subscription -ClassName __EventFilter -Property @{Name=\"Lab\"}"
+      },
+      "negative_event": {
+        "ScriptBlockText": "Get-CimInstance -Namespace root/subscription -ClassName __EventFilter -Property Name"
+      }
+    }
+  ]
+}
