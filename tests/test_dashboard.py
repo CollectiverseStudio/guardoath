@@ -424,9 +424,7 @@ def test_the_guides_python_example_works_against_the_api(monkeypatch):
     import pytest
     pytest.importorskip("tldextract")
     secret = "guide-example-secret-" + "g" * 32
-    from guardoath.config import load_policies
-    tenants = TenantService(MemoryTenantStore(demo_records(key_secret=secret)), default_checkers(enable_pii=True), secret,
-                            tuple(load_policies("policies/playground.json")))
+    tenants = TenantService(MemoryTenantStore(demo_records(key_secret=secret)), default_checkers(enable_pii=True), secret)
     client = TestClient(create_app(credentials={}, tenants=tenants))
     guide = html.unescape(guide_text())
     blocks = re.findall(r"<pre><code>(.*?)</code></pre>", guide, re.S)
@@ -458,8 +456,10 @@ def test_the_guides_python_example_works_against_the_api(monkeypatch):
     assert blocked["effective_action"] == "block" and namespace["next_step"](blocked) == "stop"
     clean = namespace["check"]("output", "Can you explain your return policy?")
     assert namespace["next_step"](clean) == "continue"
-    observed = namespace["check"]("input", "Please email jane@example.com about my order.", profile="pii-v1")
-    assert observed["recommended_action"] == "flag" and observed["effective_action"] == "allow" and namespace["next_step"](observed) == "continue"
+    # Observe mode is set on the record (example profiles were removed for tenants on 2026-11-02).
+    tenants.store.update_checks("demo1", {"mode": "observe"}, tenants.store.get("demo1").revision)
+    observed = namespace["check"]("input", "Please email jane@example.com about my order.")
+    assert observed["recommended_action"] == "block" and observed["effective_action"] == "allow" and namespace["next_step"](observed) == "continue"
 
 
 def test_the_dashboard_lists_the_rules_of_each_check_and_saves_rule_actions():
