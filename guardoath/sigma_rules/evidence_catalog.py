@@ -148,6 +148,7 @@ def load_evidence_catalog():
     All shipped rules now have immutable snapshots. Generic unpinned input to
     the builder still retains null provenance rather than a fabricated claim.
     """
+    from .release_assets import verify_release_batch
     root = files('guardoath.sigma_rules')
     batches = []
     for name in BATCH_NAMES:
@@ -156,6 +157,7 @@ def load_evidence_catalog():
             raise EvidenceCatalogError('source batch exceeds size limit')
         try:
             batch = json.loads(raw.decode('utf-8'), object_pairs_hook=_unique)
+            verify_release_batch(name,batch)
         except (UnicodeError, ValueError, RecursionError):
             raise EvidenceCatalogError('invalid source JSON') from None
         batches.append(batch)

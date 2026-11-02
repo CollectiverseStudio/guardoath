@@ -10,6 +10,7 @@ from .budgets import evaluation_budget, remaining_seconds
 from .evidence_catalog import BATCH_NAMES, MAX_BATCH_BYTES, build_evidence_catalog, _unique
 from .events import evaluate_event
 from .matcher import UnsupportedSigmaRule
+from .release_assets import verify_release_batch
 
 _SUPPORTED = {('windows', 'process_creation'), ('windows', 'ps_script')}
 
@@ -131,5 +132,7 @@ def load_routing_table():
         raw = root.joinpath(name).read_bytes()
         if len(raw) > MAX_BATCH_BYTES:
             raise UnsupportedSigmaRule('source batch exceeds size limit')
-        batches.append(json.loads(raw.decode('utf-8'),object_pairs_hook=_unique))
+        batch = json.loads(raw.decode('utf-8'),object_pairs_hook=_unique)
+        verify_release_batch(name,batch)
+        batches.append(batch)
     return RoutingTable(batches)

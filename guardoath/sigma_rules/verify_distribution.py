@@ -7,6 +7,7 @@ import sys
 import zipfile
 
 from .evidence_catalog import BATCH_NAMES, build_evidence_catalog, _unique
+from .release_assets import verify_release_batch
 
 PREFIX='guardoath/sigma_rules/'
 LICENSE_SHA256='d5f4c36a0528e01cfdd9e4fc60879201d3af49b41c520200643d321fe53da5f9'
@@ -41,7 +42,7 @@ def _constant(value):
 def verify_wheel(path):
     """Inspect only this artifact. Never use checkout files to fill missing assets.
 
-    This proves asset presence/self-consistency, not upstream authenticity,
+    This proves asset consistency with reviewed release anchors, not upstream authenticity,
     installed runtime behavior, archive-code safety or deployment readiness.
     """
     path=Path(path)
@@ -84,7 +85,10 @@ def verify_wheel(path):
                 except DistributionContractError:raise
                 except (ValueError,RecursionError):
                     raise DistributionContractError('invalid Sigma evidence JSON') from None
-            try:evidence=build_evidence_catalog(batches)
+            try:
+                for filename,batch in zip(BATCH_NAMES,batches):
+                    verify_release_batch(filename,batch)
+                evidence=build_evidence_catalog(batches)
             except ValueError:raise DistributionContractError('invalid Sigma evidence metadata') from None
             snapshots=set()
             for filename,batch in zip(BATCH_NAMES,batches):

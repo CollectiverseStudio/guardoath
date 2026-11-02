@@ -1812,3 +1812,15 @@ and the preview is not a permission or validation result. Evaluation still requi
 current trusted host configuration and runs once under its shared deadline/work
 budget. Invalid/unknown/duplicate IDs and unsupported sources remain errors.
 See [the routing-plan guide](sigma-routing-plans.md); no hosted API is added.
+
+### Verifying reviewed Sigma release data
+
+The default isolated catalog/routing loaders and standalone wheel inspection now
+reject changes to any of the six reviewed batch JSON objects, including detection
+semantics, authors and example events, against fixed canonical code fingerprints.
+Reformatting JSON is allowed; a changed snapshot with newly supplied self-digests
+cannot redefine this release. All 128 originals and 135 required assets remain
+unchanged. Generic caller-owned builders remain separate. See
+[release integrity](sigma-release-integrity.md) for the archive command, deliberate
+anchor-update procedure and limits; upstream authentication, installed acceptance,
+packaging adoption and hosted deployment remain separate requirements.

@@ -270,3 +270,13 @@ A later evaluation resolves current trusted host inputs again under one aggregat
 budget. See [routing-plan contracts](../../docs/sigma-routing-plans.md) for invalid
 configuration, ordering, deadline and 128-selected-rule behavior. This adds no
 hosted route, policy authority, model connector or rule definition.
+
+## Reviewed release data integrity
+
+The wheel verifier and default shipped catalog/routing loaders check fixed
+canonical fingerprints for all six source batches, in addition to original
+snapshot digests and license checks. Altered JSON detections or self-rehashed
+source claims reject; harmless object ordering, whitespace and Unicode escaping
+remain valid. Generic caller-owned builders retain their existing validation.
+See [release integrity and anchor updates](../../docs/sigma-release-integrity.md).
+This adds no rules, YAML dependency, upstream signature claim or hosted authority.
