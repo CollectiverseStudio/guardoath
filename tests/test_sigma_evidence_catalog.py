@@ -18,9 +18,9 @@ BY_ID = {row.rule_id: row for row in EVIDENCE}
 
 
 def test_complete_inventory_counts_sources_without_claiming_runtime_registration():
-    assert len(EVIDENCE) == len(BY_ID) == 103
-    assert sum(row.source_revision is not None for row in EVIDENCE) == 100
-    assert len({row.source_path for row in EVIDENCE}) == 103
+    assert len(EVIDENCE) == len(BY_ID) == 128
+    assert sum(row.source_revision is not None for row in EVIDENCE) == 125
+    assert len({row.source_path for row in EVIDENCE}) == 128
     assert all(row.maturity == 'offline-fixture-tested' for row in EVIDENCE)
     assert all('other rules may flag it' in row.limitations for row in EVIDENCE)
     assert all('chat-safety control' in row.limitations for row in EVIDENCE)
@@ -139,7 +139,7 @@ def test_missing_asset_cannot_return_partial_catalog(assets):
 
 def test_corrupt_last_snapshot_cannot_return_partial_catalog(assets):
     source=BATCHES[-1]['rules'][-1]['source_path'].rsplit('/',1)[-1]
-    (assets/'upstream/batch_005'/source).write_text('changed',encoding='utf-8')
+    (assets/'upstream'/catalog.BATCH_NAMES[-1].removeprefix('upstream_').removesuffix('.json')/source).write_text('changed',encoding='utf-8')
     with pytest.raises(catalog.EvidenceCatalogError,match='digest'):
         catalog.load_evidence_catalog()
 

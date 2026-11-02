@@ -6,8 +6,8 @@ do not establish AI prompt safety or production effectiveness.
 
 Batch 001 contains three process rules. Batch 002 adds 25 PowerShell rules from
 SigmaHQ commit `05d1031f537e830b76da53bae2400c5814c89165`. Batch 003 adds another
-25 PowerShell rules at the same revision. Batch 004 adds 25 more and batch 005 adds another 25 (**103 total**). All original
-batch-002/003/004/005 YAML, metadata, detections, authors and false-positive notes are retained;
+25 PowerShell rules at the same revision. Batches 004 and 005 add 25 each; batch 006 adds another 25 (**128 total**). All original
+batch-002/003/004/005/006 YAML, metadata, detections, authors and false-positive notes are retained;
 the batch JSON files add source paths, Git blob IDs, SHA-256 digests and
 GuardOath-authored synthetic positive/benign events. These fixtures are not upstream
 tests. Several rules detect legitimate administrative behavior; a finding is not
@@ -62,7 +62,7 @@ Invalid/oversized rule patterns remain import-time `UnsupportedSigmaRule` errors
 The deadline includes worker communication/execution after process launch; OS
 process creation itself is subject to platform scheduling. Each regex search
 starts an interpreter, so process overhead and aggregate per-check budgets need
-Director review before deployment. The 103 imported rules do not require regex.
+Director review before deployment. The 128 imported rules do not require regex.
 
 Reproduce the source audit with a SigmaHQ checkout at the pinned revision and the
 optional development dependency PyYAML (not required by runtime or pytest):
@@ -73,7 +73,7 @@ pytest tests/test_sigma_rules.py tests/test_sigma_import_validation.py tests/tes
 ```
 
 Use `pytest tests/test_sigma*.py -q` for all batches and condition contracts.
-The verifier audits all pinned batches (002/003/004/005: 100 rules), including every original
+The verifier audits all pinned batches (002/003/004/005/006: 125 rules), including every original
 metadata and detection field and original Git blob ID. Batch 001 predates the
 immutable snapshots and is explicitly outside that verifier's count.
 
@@ -163,11 +163,11 @@ callers must route the original logsource and handle incomplete evaluation as er
 
 ## Complete rule-level evidence handoff
 
-`evidence_catalog.load_evidence_catalog()` returns 103 immutable `RuleEvidence`
+`evidence_catalog.load_evidence_catalog()` returns 128 immutable `RuleEvidence`
 records for the Director's rule-level registry work. It retains original IDs,
 authors, license, source URLs and logsource; includes original descriptions,
 upstream status/level/false positives, positive events, nonmatching look-alikes
-and explicit limitations; and verifies the 100 pinned Git-text snapshots offline.
+and explicit limitations; and verifies the 125 pinned Git-text snapshots offline.
 The first three rules keep master URLs and null revision/digest. Missing original
 false-positive metadata is null, not a claim of no false positives. Their missing
 descriptions get an explicitly generated title-based review label.
@@ -226,3 +226,28 @@ under the original Sigma semantics. The host still needs verified log ingestion,
 permissions, concurrency limits and an outer request deadline. This is not a
 hosted route, tenant action map or chat validator. The existing installed-wheel
 asset blocker must be fixed before distribution-based use.
+
+## Wheel asset acceptance contract
+
+`python -m guardoath.sigma_rules.verify_distribution PATH.whl` inspects only that
+archive, without importing archive modules, extracting files or using checkout
+assets as a fallback. Success emits JSON with rule/pinned-source/required-asset
+counts, source revisions and the canonical retained DRL license digest; exit codes
+are 0 for asset-contract success, 1 for verification failure and 2 for bad usage.
+
+The current contract requires all six source-batch JSON files, all 125 referenced
+original YAML snapshots and the exact DRL license (132 assets). It rejects missing
+or changed assets, duplicate JSON names, nonfinite JSON, unindexed batches/YAML,
+ambiguous/case-colliding/traversal member names and bounded resource violations.
+UTF-8 Git text is canonicalized for Windows checkout line endings. There is no
+partial success. Complete test archives contain deliberately non-executable
+module sentinels, proving that acceptance does not run wheel code.
+
+This is a data/licensing consistency gate, not proof of upstream authenticity,
+archive-code safety, installed runtime behavior or release approval. Run the
+separate pinned-upstream source audit as well. After Director fixes package-data,
+verify the actual built wheel with this command, then test trusted installed
+`load_evidence_catalog()` and `load_routing_table()` outside the checkout with no
+PYTHONPATH fallback. Until those pass, installed/hosted integration remains blocked.
+
+Batch 006 adds 25 further compatible originals. See [its source/evidence handoff](../../docs/sigma-batch-006.md). The default catalog and trusted routing now include all 128 rules (125 pinned); evaluation still rejects more than 128 selected rules.

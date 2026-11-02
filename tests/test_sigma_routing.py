@@ -116,7 +116,7 @@ def test_entire_selected_set_uses_one_evaluation_and_one_inherited_budget(monkey
         return real(rules,event,**kwargs)
     monkeypatch.setattr(routing,'evaluate_event',spy)
     TABLE.evaluate({},trusted_logsource=SCRIPT,allowed_rule_ids=TABLE.rule_ids)
-    assert len(calls)==1 and len(calls[0])==100
+    assert len(calls)==1 and len(calls[0])==125
 
 
 def fake_worker(monkeypatch,*,elapsed=0,answer='1',error=False):

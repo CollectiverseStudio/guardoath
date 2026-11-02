@@ -1592,8 +1592,8 @@ single configured digest; the other examples can use distinct stage data.
 
 ## Isolated SigmaHQ event-rule importer (development only)
 
-The source-only Sigma importer now contains 103 source-identified Windows event
-rules: three process-creation rules and 100 additional PowerShell script rules.
+The source-only Sigma importer now contains 128 source-identified Windows event
+rules: three process-creation rules and 125 additional PowerShell script rules.
 It inspects structured event fields such as `ScriptBlockText`, rather than an AI
 conversation's meaning. For example, the upstream `Get-Process` rule matches a
 PowerShell event containing that command, while a `Get-Service` event does not
@@ -1627,7 +1627,7 @@ and event text to 32,000 characters. A disposable Python worker enforces a
 one-second execution deadline while keeping the existing regex semantics. A
 `SigmaEvaluationError` (including `SigmaRegexTimeout`) means evaluation did not
 complete; handle it as an error, never as evidence that an event is clean. The
-current 103 imported rules do not use regex. Worker overhead and aggregate request
+current 128 imported rules do not use regex. Worker overhead and aggregate request
 budgets still require integration review before enabling this path in a service.
 
 
@@ -1723,9 +1723,9 @@ most 128 routed rules per evaluation, with shared work/deadline budgets.
 ### Complete Sigma rule evidence export
 
 Run `python -m guardoath.sigma_rules.evidence_catalog` for an offline JSON handoff
-of all 103 imported rules, each with original attribution/logsource, a use case,
+of all 128 imported rules, each with original attribution/logsource, a use case,
 positive structured event, nonmatching look-alike and limitations. The export
-explicitly marks the rules as unregistered. It verifies 100 pinned source
+explicitly marks the rules as unregistered. It verifies 125 pinned source
 snapshots; the first three retain unpinned master URLs and null digests. Unknown
 original false-positive notes remain null rather than an invented clean claim.
 
@@ -1771,3 +1771,13 @@ record's schema; when PII redaction is enabled, PII rules may only be turned off
 Invalid settings or conflicting redaction edits fail rather than silently dropping
 the map. Earlier preview envelopes without the field normalize to an empty map.
 The preview does not write records, authorize clients, or enable hosted migration.
+
+### Sigma wheel data and license verification
+
+`python -m guardoath.sigma_rules.verify_distribution PATH.whl` checks the wheel's
+Sigma JSON, referenced YAML snapshots and retained DRL license without executing
+archive code. It cannot borrow missing files from a developer checkout. A complete
+asset fixture passes; the current actual wheel correctly fails because the
+reserved packaging configuration omits these assets. The verifier provides a
+concrete acceptance gate for the Director's package-data fix; it does not declare
+the archive safe to execute, installed runtime verified, or deployment authorized.
