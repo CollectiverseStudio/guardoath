@@ -1,0 +1,714 @@
+{
+  "format_version": 1,
+  "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+  "default_inventory_at_review": 203,
+  "proposed_inventory": 228,
+  "runtime_registered": false,
+  "fixture_origin": "GuardOath-authored synthetic string events; not executed commands, upstream tests or effectiveness evidence",
+  "candidate_outcomes": {
+    "0d34ed8b-1c12-4ff2-828c-16fc860b766d": {
+      "positive_event": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ],
+      "negative_event": []
+    },
+    "60bfeac3-0d35-4302-8efb-1dd16f715bc6": {
+      "positive_event": [
+        "60bfeac3-0d35-4302-8efb-1dd16f715bc6"
+      ],
+      "negative_event": []
+    },
+    "0ed99dda-6a35-11ef-8c99-0242ac120002": {
+      "positive_event": [
+        "0ed99dda-6a35-11ef-8c99-0242ac120002"
+      ],
+      "negative_event": []
+    },
+    "cc268ac1-42d9-40fd-9ed3-8c4e1a5b87e6": {
+      "positive_event": [
+        "cc268ac1-42d9-40fd-9ed3-8c4e1a5b87e6"
+      ],
+      "negative_event": []
+    },
+    "185d7418-f250-42d0-b72e-0c8b70661e93": {
+      "positive_event": [
+        "185d7418-f250-42d0-b72e-0c8b70661e93"
+      ],
+      "negative_event": []
+    },
+    "646bc99f-6682-4b47-a73a-17b1b64c9d34": {
+      "positive_event": [
+        "646bc99f-6682-4b47-a73a-17b1b64c9d34"
+      ],
+      "negative_event": []
+    },
+    "cec8e918-30f7-4e2d-9bfa-a59cc97ae60f": {
+      "positive_event": [
+        "cec8e918-30f7-4e2d-9bfa-a59cc97ae60f"
+      ],
+      "negative_event": []
+    },
+    "0955e4e1-c281-4fb9-9ee1-5ee7b4b754d2": {
+      "positive_event": [
+        "0955e4e1-c281-4fb9-9ee1-5ee7b4b754d2"
+      ],
+      "negative_event": []
+    },
+    "b97cd4b1-30b8-4a9d-bd72-6293928d52bc": {
+      "positive_event": [
+        "b97cd4b1-30b8-4a9d-bd72-6293928d52bc"
+      ],
+      "negative_event": []
+    },
+    "6004abd0-afa4-4557-ba90-49d172e0a299": {
+      "positive_event": [
+        "6004abd0-afa4-4557-ba90-49d172e0a299"
+      ],
+      "negative_event": []
+    },
+    "cafeeba3-01da-4ab4-b6c4-a31b1d9730c7": {
+      "positive_event": [
+        "cafeeba3-01da-4ab4-b6c4-a31b1d9730c7"
+      ],
+      "negative_event": []
+    },
+    "1fb76ab8-fa60-4b01-bddd-71e89bf555da": {
+      "positive_event": [
+        "1fb76ab8-fa60-4b01-bddd-71e89bf555da"
+      ],
+      "negative_event": []
+    },
+    "1c8774a0-44d4-4db0-91f8-e792359c70bd": {
+      "positive_event": [
+        "1c8774a0-44d4-4db0-91f8-e792359c70bd"
+      ],
+      "negative_event": []
+    },
+    "cd71385d-fd9b-4691-9b98-2b1f7e508714": {
+      "positive_event": [
+        "cd71385d-fd9b-4691-9b98-2b1f7e508714"
+      ],
+      "negative_event": []
+    },
+    "eca49c87-8a75-4f13-9c73-a5a29e845f03": {
+      "positive_event": [
+        "eca49c87-8a75-4f13-9c73-a5a29e845f03"
+      ],
+      "negative_event": []
+    },
+    "a85ffc3a-e8fd-4040-93bf-78aff284d801": {
+      "positive_event": [
+        "a85ffc3a-e8fd-4040-93bf-78aff284d801"
+      ],
+      "negative_event": []
+    },
+    "a2ea3ae7-d3d0-40a0-a55c-25a45c87cac1": {
+      "positive_event": [
+        "a2ea3ae7-d3d0-40a0-a55c-25a45c87cac1"
+      ],
+      "negative_event": []
+    },
+    "f14e169e-9978-4c69-acb3-1cff8200bc36": {
+      "positive_event": [
+        "f14e169e-9978-4c69-acb3-1cff8200bc36"
+      ],
+      "negative_event": []
+    },
+    "23ceaf5c-b6f1-4a32-8559-f2ff734be516": {
+      "positive_event": [
+        "23ceaf5c-b6f1-4a32-8559-f2ff734be516"
+      ],
+      "negative_event": []
+    },
+    "36475a7d-0f6d-4dce-9b01-6aeb473bbaf1": {
+      "positive_event": [
+        "36475a7d-0f6d-4dce-9b01-6aeb473bbaf1"
+      ],
+      "negative_event": []
+    },
+    "0b4ae027-2a2d-4b93-8c7e-962caaba5b2a": {
+      "positive_event": [
+        "0b4ae027-2a2d-4b93-8c7e-962caaba5b2a"
+      ],
+      "negative_event": []
+    },
+    "0403d67d-6227-4ea8-8145-4e72db7da120": {
+      "positive_event": [
+        "0403d67d-6227-4ea8-8145-4e72db7da120"
+      ],
+      "negative_event": []
+    },
+    "7b10f171-7f04-47c7-9fa2-5be43c76e535": {
+      "positive_event": [
+        "7b10f171-7f04-47c7-9fa2-5be43c76e535"
+      ],
+      "negative_event": []
+    },
+    "c8da0dfd-4ed0-4b68-962d-13c9c884384e": {
+      "positive_event": [
+        "c8da0dfd-4ed0-4b68-962d-13c9c884384e"
+      ],
+      "negative_event": []
+    },
+    "3d48c9d3-1aa6-418d-98d3-8fd3c01a564e": {
+      "positive_event": [
+        "3d48c9d3-1aa6-418d-98d3-8fd3c01a564e"
+      ],
+      "negative_event": []
+    }
+  },
+  "prior_fixture_new_matches": {},
+  "additional_cases": [
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-1",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\bitsadmin.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-2",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\certutil.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-3",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\cscript.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-4",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\curl.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-5",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\forfiles.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-6",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\hh.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-7",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\mftrace.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-8",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\mshta.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-9",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\net.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-10",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\net1.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-11",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\query.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-12",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\reg.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-13",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\regsvr32.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-14",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\rundll32.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-15",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\schtasks.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-16",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\scrcons.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-17",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\scriptrunner.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-18",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\sh.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-19",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\systeminfo.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-20",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\whoami.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-21",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\wmic.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "case_id": "Image-alternative-22",
+      "event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\wscript.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0d34ed8b-1c12-4ff2-828c-16fc860b766d"
+      ]
+    },
+    {
+      "rule_id": "60bfeac3-0d35-4302-8efb-1dd16f715bc6",
+      "case_id": "ParentImage-alternative-1",
+      "event": {
+        "ParentImage": "C:\\fixtures\\javaw.exe",
+        "ParentCommandLine": "fixture.exe SysAidServer"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "60bfeac3-0d35-4302-8efb-1dd16f715bc6"
+      ]
+    },
+    {
+      "rule_id": "0ed99dda-6a35-11ef-8c99-0242ac120002",
+      "case_id": "CommandLine-without-term-0",
+      "event": {
+        "CommandLine": "fixture.exe  BAAAA"
+      },
+      "target_matches": false,
+      "expected_rule_ids": []
+    },
+    {
+      "rule_id": "0ed99dda-6a35-11ef-8c99-0242ac120002",
+      "case_id": "CommandLine-without-term-1",
+      "event": {
+        "CommandLine": "fixture.exe UWhRCA "
+      },
+      "target_matches": false,
+      "expected_rule_ids": []
+    },
+    {
+      "rule_id": "185d7418-f250-42d0-b72e-0c8b70661e93",
+      "case_id": "CommandLine-without-term-0",
+      "event": {
+        "CommandLine": "fixture.exe   \\\\\\\\ .cab"
+      },
+      "target_matches": false,
+      "expected_rule_ids": []
+    },
+    {
+      "rule_id": "185d7418-f250-42d0-b72e-0c8b70661e93",
+      "case_id": "CommandLine-without-term-1",
+      "event": {
+        "CommandLine": "fixture.exe diantz.exe  .cab"
+      },
+      "target_matches": false,
+      "expected_rule_ids": []
+    },
+    {
+      "rule_id": "185d7418-f250-42d0-b72e-0c8b70661e93",
+      "case_id": "CommandLine-without-term-2",
+      "event": {
+        "CommandLine": "fixture.exe diantz.exe  \\\\\\\\ "
+      },
+      "target_matches": false,
+      "expected_rule_ids": []
+    },
+    {
+      "rule_id": "646bc99f-6682-4b47-a73a-17b1b64c9d34",
+      "case_id": "CommandLine-without-term-0",
+      "event": {
+        "CommandLine": "fixture.exe  -source:RunCommand -dest:runCommand",
+        "Image": "C:\\fixtures\\msdeploy.exe"
+      },
+      "target_matches": false,
+      "expected_rule_ids": []
+    },
+    {
+      "rule_id": "646bc99f-6682-4b47-a73a-17b1b64c9d34",
+      "case_id": "CommandLine-without-term-1",
+      "event": {
+        "CommandLine": "fixture.exe verb:sync  -dest:runCommand",
+        "Image": "C:\\fixtures\\msdeploy.exe"
+      },
+      "target_matches": false,
+      "expected_rule_ids": []
+    },
+    {
+      "rule_id": "646bc99f-6682-4b47-a73a-17b1b64c9d34",
+      "case_id": "CommandLine-without-term-2",
+      "event": {
+        "CommandLine": "fixture.exe verb:sync -source:RunCommand ",
+        "Image": "C:\\fixtures\\msdeploy.exe"
+      },
+      "target_matches": false,
+      "expected_rule_ids": []
+    },
+    {
+      "rule_id": "cafeeba3-01da-4ab4-b6c4-a31b1d9730c7",
+      "case_id": "CommandLine-without-term-0",
+      "event": {
+        "Image": "C:\\fixtures\\PrintBrm.exe",
+        "CommandLine": "fixture.exe  .zip"
+      },
+      "target_matches": false,
+      "expected_rule_ids": []
+    },
+    {
+      "rule_id": "cafeeba3-01da-4ab4-b6c4-a31b1d9730c7",
+      "case_id": "CommandLine-without-term-1",
+      "event": {
+        "Image": "C:\\fixtures\\PrintBrm.exe",
+        "CommandLine": "fixture.exe  -f "
+      },
+      "target_matches": false,
+      "expected_rule_ids": []
+    },
+    {
+      "rule_id": "1fb76ab8-fa60-4b01-bddd-71e89bf555da",
+      "case_id": "CommandLine-without-term-0",
+      "event": {
+        "CommandLine": "fixture.exe  script:"
+      },
+      "target_matches": false,
+      "expected_rule_ids": []
+    },
+    {
+      "rule_id": "1fb76ab8-fa60-4b01-bddd-71e89bf555da",
+      "case_id": "CommandLine-without-term-1",
+      "event": {
+        "CommandLine": "fixture.exe \\pubprn.vbs "
+      },
+      "target_matches": false,
+      "expected_rule_ids": []
+    },
+    {
+      "rule_id": "1c8774a0-44d4-4db0-91f8-e792359c70bd",
+      "case_id": "CommandLine-without-term-0",
+      "event": {
+        "CommandLine": "fixture.exe  -register"
+      },
+      "target_matches": false,
+      "expected_rule_ids": []
+    },
+    {
+      "rule_id": "1c8774a0-44d4-4db0-91f8-e792359c70bd",
+      "case_id": "CommandLine-without-term-1",
+      "event": {
+        "CommandLine": "fixture.exe \\register_app.vbs "
+      },
+      "target_matches": false,
+      "expected_rule_ids": []
+    },
+    {
+      "rule_id": "a85ffc3a-e8fd-4040-93bf-78aff284d801",
+      "case_id": "CommandLine-alternative-1",
+      "event": {
+        "Image": "C:\\fixtures\\sftp.exe",
+        "CommandLine": "fixture.exe  -D C:\\"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "a85ffc3a-e8fd-4040-93bf-78aff284d801"
+      ]
+    },
+    {
+      "rule_id": "a2ea3ae7-d3d0-40a0-a55c-25a45c87cac1",
+      "case_id": "CommandLine-alternative-1",
+      "event": {
+        "CommandLine": "fixture.exe /install",
+        "Image": "C:\\fixtures\\pnputil.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "a2ea3ae7-d3d0-40a0-a55c-25a45c87cac1"
+      ]
+    },
+    {
+      "rule_id": "a2ea3ae7-d3d0-40a0-a55c-25a45c87cac1",
+      "case_id": "CommandLine-alternative-2",
+      "event": {
+        "CommandLine": "fixture.exe -a",
+        "Image": "C:\\fixtures\\pnputil.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "a2ea3ae7-d3d0-40a0-a55c-25a45c87cac1"
+      ]
+    },
+    {
+      "rule_id": "a2ea3ae7-d3d0-40a0-a55c-25a45c87cac1",
+      "case_id": "CommandLine-alternative-3",
+      "event": {
+        "CommandLine": "fixture.exe /add-driver",
+        "Image": "C:\\fixtures\\pnputil.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "a2ea3ae7-d3d0-40a0-a55c-25a45c87cac1"
+      ]
+    },
+    {
+      "rule_id": "a2ea3ae7-d3d0-40a0-a55c-25a45c87cac1",
+      "case_id": "CommandLine-alternative-4",
+      "event": {
+        "CommandLine": "fixture.exe .inf",
+        "Image": "C:\\fixtures\\pnputil.exe"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "a2ea3ae7-d3d0-40a0-a55c-25a45c87cac1"
+      ]
+    },
+    {
+      "rule_id": "f14e169e-9978-4c69-acb3-1cff8200bc36",
+      "case_id": "CommandLine-alternative-1",
+      "event": {
+        "CommandLine": "fixture.exe grpconv -o"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "f14e169e-9978-4c69-acb3-1cff8200bc36"
+      ]
+    },
+    {
+      "rule_id": "23ceaf5c-b6f1-4a32-8559-f2ff734be516",
+      "case_id": "CommandLine-alternative-1",
+      "event": {
+        "Image": "C:\\fixtures\\sqldumper.exe",
+        "CommandLine": "fixture.exe 0x01100:40"
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "23ceaf5c-b6f1-4a32-8559-f2ff734be516"
+      ]
+    },
+    {
+      "rule_id": "36475a7d-0f6d-4dce-9b01-6aeb473bbaf1",
+      "case_id": "CommandLine-without-term-0",
+      "event": {
+        "CommandLine": "fixture.exe  ;"
+      },
+      "target_matches": false,
+      "expected_rule_ids": []
+    },
+    {
+      "rule_id": "36475a7d-0f6d-4dce-9b01-6aeb473bbaf1",
+      "case_id": "CommandLine-without-term-1",
+      "event": {
+        "CommandLine": "fixture.exe \\SyncAppvPublishingServer.vbs "
+      },
+      "target_matches": false,
+      "expected_rule_ids": []
+    },
+    {
+      "rule_id": "0403d67d-6227-4ea8-8145-4e72db7da120",
+      "case_id": "CommandLine-alternative-1",
+      "event": {
+        "CommandLine": "fixture.exe RegSnapin "
+      },
+      "target_matches": true,
+      "expected_rule_ids": [
+        "0403d67d-6227-4ea8-8145-4e72db7da120"
+      ]
+    }
+  ],
+  "screening_exclusions": [
+    {
+      "id": "6c96fc76-0eb1-11eb-adc1-0242ac120002",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hktl_invoke_obfuscation_stdin.yml",
+      "reason": "Regex excluded from this literal-only batch; original not rewritten or approximated"
+    },
+    {
+      "id": "27aec9c9-dbb0-4939-8422-1742242471d0",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hktl_invoke_obfuscation_var.yml",
+      "reason": "Regex excluded from this literal-only batch; original not rewritten or approximated"
+    },
+    {
+      "id": "9c14c9fa-1a63-4a64-8e57-d19280559490",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hktl_invoke_obfuscation_via_stdin.yml",
+      "reason": "Regex excluded from this literal-only batch; original not rewritten or approximated"
+    },
+    {
+      "id": "e1561947-b4e3-4a74-9bdd-83baed21bdb5",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hktl_invoke_obfuscation_via_use_clip.yml",
+      "reason": "Regex excluded from this literal-only batch; original not rewritten or approximated"
+    },
+    {
+      "id": "6b369ced-4b1d-48f1-b427-fdc0de0790bd",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_diantz_ads.yml",
+      "reason": "Regex excluded from this literal-only batch; original not rewritten or approximated"
+    },
+    {
+      "id": "4b13db67-0c45-40f1-aba8-66a1a7198a1e",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_extrac32_ads.yml",
+      "reason": "Regex excluded from this literal-only batch; original not rewritten or approximated"
+    }
+  ]
+}

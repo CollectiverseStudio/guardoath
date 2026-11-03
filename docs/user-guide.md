@@ -1908,3 +1908,14 @@ Tests freeze exact findings against the prior178 and current203-rule catalogs.
 Use explicit trusted Windows process-creation source and original rule IDs;
 these synthetic fixtures add no hosted registration or tenant authority and
 preserve the 128-selected-rule event limit. See the linked guide for scope.
+
+### Staged Sigma process batch010
+
+[Candidate batch010](sigma-process-candidates-010.md) preserves 25 additional
+pinned SigmaHQ originals and explicit matching evidence. For example,
+devtoolslauncher.exe with LaunchForDeploy matches its original detection; an
+ordinary executable does not. Missing fields and malformed events fail closed.
+These are synthetic Windows event fixtures, not executed commands or chat
+checks. The default remains203/213; the proposed228 definitions route103 process
+or125 script rules within the unchanged128-selected-rule event budget. No default,
+installed-package, hosted or tenant adoption is implied by staging.
