@@ -14,7 +14,7 @@ Each fixture is tested against its unchanged original detection, including
 missing essential fields and malformed values, while cross-rule tests preserve
 real overlaps rather than suppressing extra findings. Every pair now records
 explicit expected finding IDs: these twelve positives each match their intended
-original rule, and the twelve look-alikes match none of the current 153 imported rules.
+original rule, and the twelve look-alikes match none of the current 178 imported rules.
 Tests compare exact full-inventory findings and attribution, process-source
 routing, and exclusion from the script-source route. These are expectations for
 these authored events, not a promise that every look-alike is globally clean.
