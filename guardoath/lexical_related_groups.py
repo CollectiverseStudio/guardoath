@@ -8,6 +8,9 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
+import re
+
+from .models import RULE_ID_PATTERN
 
 from .lexical_finding_consolidation import ALIASES
 
@@ -33,8 +36,9 @@ def related_groups(rule_ids: Iterable[str]) -> tuple[RelatedFindingGroup, ...]:
     for position, identifier in enumerate(rule_ids):
         if position >= 4096:
             raise ValueError("too many rule identifiers")
-        if not isinstance(identifier, str) or not identifier or len(identifier) > 128:
-            raise ValueError("invalid rule ID")
+        if (not isinstance(identifier, str) or len(identifier) > 100
+                or re.fullmatch(RULE_ID_PATTERN, identifier) is None):
+            raise ValueError("invalid tenant rule ID")
         canonical = ALIASES.get(identifier, identifier)
         # The colon is intentionally outside valid tenant rule-ID syntax.
         concept = "display:" + canonical
