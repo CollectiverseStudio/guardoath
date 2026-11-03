@@ -2352,3 +2352,39 @@ Actual isolated *proposal* wheel and fresh noneditable outside-checkout installe
 ### 2026-11-03 — Codex primary — C18 ACTIVE claim
 
 Reserve new guardoath/sigma_rules/candidates/branch_008_evidence.json, tests/test_sigma_batch_008_branch_evidence.py, docs/sigma-batch-008-branch-evidence.md and own user-guide delta. IDs67bc0e75-c0a9-4cfc-8754-84a505b63c04,9f546b25-5f12-4c8d-8532-5893dcb1e4b8,52cad028-0ff0-4854-8f67-d25dfcbc78b4:37 uncovered original child-image branches; positive/lookalike/missing/malformed/full203 overlaps and original178 baseline. No originals/anchors/runtime/budget/reserved changes. C21/C22 remain next ready. Previous stale-head claim update was rejected; no overwrite performed.
+
+
+### 2026-11-03 — Codex primary — C18 delivered; C22 ownership claimed
+
+C18 final implementation **ae48e56896431b94abafc36e78cbdc18576bd8f2** (initiala61cd391 plus UTF-8 portability correction): four changed paths — `guardoath/sigma_rules/candidates/branch_008_evidence.json`, `tests/test_sigma_batch_008_branch_evidence.py`, `docs/sigma-batch-008-branch-evidence.md`, own `docs/user-guide.md` section.37 original ClickOnce/DiskShadow/HTML Help alternatives,185 explicit events,631 tests including per-branch/per-field malformed inputs, exact findings/provenance/case behavior and original178/full203 trusted routes. No originals, default counts, nine release anchors, runtime matcher/engine or budgets changed. Default203 pinned/213 assets,78 process/125 script.
+
+Exact [Tests41642541083](https://github.com/CollectiverseStudio/guardoath/actions/runs/41642541083) **12/12 successful** and [CodeQL41642541292](https://github.com/CollectiverseStudio/guardoath/actions/runs/41642541292) **3/3 successful**, each job SHA independently checked. Normal Python3.13 **16505 passed,4 skipped**. Local631 new/10384 Sigma/16611 supported broad passed,1 skipped/1 deselected with existing documented sandbox exclusions/heartbeat;203 pinned sources verified; legacy10/whitespace pass. Initial exacta61cd391 Windows jobs failed collection because my new test omitted explicit UTF-8. Corrected without skips or weaker assertions; canonical LF text hashes preserve existing cross-platform Git provenance convention. Focused631 re-passed with default-encoding warnings enabled, and corrected exact full CI is green. No claim that the unrelated secrets deadline issue is fixed.
+
+**C22 ACTIVE primary**, new candidate010 manifest/review/25 YAML snapshots/README, dedicated `tests/test_sigma_process_candidates_010.py`, `docs/sigma-process-candidates-010.md` and own guide delta only. Independently source-screened unused originals at pinned05d1031f537e830b76da53bae2400c5814c89165, retaining complete metadata/detections/IDs/authors/license/path/digests; six regex candidates explicitly excluded from this literal-only batch without rewriting. Exact reserved upstream paths (all under `rules/windows/process_creation/`):
+- 0d34ed8b-1c12-4ff2-828c-16fc860b766d — `proc_creation_win_java_susp_child_process.yml`
+- 60bfeac3-0d35-4302-8efb-1dd16f715bc6 — `proc_creation_win_java_sysaidserver_susp_child_process.yml`
+- 0ed99dda-6a35-11ef-8c99-0242ac120002 — `proc_creation_win_kerberos_coercion_via_dns_spn_spoofing.yml`
+- cc268ac1-42d9-40fd-9ed3-8c4e1a5b87e6 — `proc_creation_win_lolbin_devtoolslauncher.yml`
+- 185d7418-f250-42d0-b72e-0c8b70661e93 — `proc_creation_win_lolbin_diantz_remote_cab.yml`
+- 646bc99f-6682-4b47-a73a-17b1b64c9d34 — `proc_creation_win_lolbin_msdeploy.yml`
+- cec8e918-30f7-4e2d-9bfa-a59cc97ae60f — `proc_creation_win_lolbin_openwith.yml`
+- 0955e4e1-c281-4fb9-9ee1-5ee7b4b754d2 — `proc_creation_win_lolbin_pcalua.yml`
+- b97cd4b1-30b8-4a9d-bd72-6293928d52bc — `proc_creation_win_lolbin_pcwrun.yml`
+- 6004abd0-afa4-4557-ba90-49d172e0a299 — `proc_creation_win_lolbin_pcwrun_follina.yml`
+- cafeeba3-01da-4ab4-b6c4-a31b1d9730c7 — `proc_creation_win_lolbin_printbrm.yml`
+- 1fb76ab8-fa60-4b01-bddd-71e89bf555da — `proc_creation_win_lolbin_pubprn.yml`
+- 1c8774a0-44d4-4db0-91f8-e792359c70bd — `proc_creation_win_lolbin_register_app.yml`
+- cd71385d-fd9b-4691-9b98-2b1f7e508714 — `proc_creation_win_lolbin_runexehelper.yml`
+- eca49c87-8a75-4f13-9c73-a5a29e845f03 — `proc_creation_win_lolbin_runscripthelper.yml`
+- a85ffc3a-e8fd-4040-93bf-78aff284d801 — `proc_creation_win_lolbin_sftp.yml`
+- a2ea3ae7-d3d0-40a0-a55c-25a45c87cac1 — `proc_creation_win_lolbin_susp_driver_installed_by_pnputil.yml`
+- f14e169e-9978-4c69-acb3-1cff8200bc36 — `proc_creation_win_lolbin_susp_grpconv.yml`
+- 23ceaf5c-b6f1-4a32-8559-f2ff734be516 — `proc_creation_win_lolbin_susp_sqldumper_activity.yml`
+- 36475a7d-0f6d-4dce-9b01-6aeb473bbaf1 — `proc_creation_win_lolbin_syncappvpublishingserver_vbs_execute_psh.yml`
+- 0b4ae027-2a2d-4b93-8c7e-962caaba5b2a — `proc_creation_win_lolbin_tttracer_mod_load.yml`
+- 0403d67d-6227-4ea8-8145-4e72db7da120 — `proc_creation_win_lolbin_utilityfunctions.yml`
+- 7b10f171-7f04-47c7-9fa2-5be43c76e535 — `proc_creation_win_lolbin_visual_basic_compiler.yml`
+- c8da0dfd-4ed0-4b68-962d-13c9c884384e — `proc_creation_win_lsass_process_clone.yml`
+- 3d48c9d3-1aa6-418d-98d3-8fd3c01a564e — `proc_creation_win_mftrace_child_process.yml`
+
+Keep current203 originals/anchors and all historical candidate reviews frozen; staging only. Proposed228 metadata selects103 process/125 script, <=128 per-event/one inherited budget; no raw228 evaluation, chunk/reset/truncation. C21 independent branch evidence remains READY for a free worker; C23 separately reviewed default adoption will be next primary after C22 exact CI. Director packaging acknowledgement/adoption still blocked: actual reserved pyproject has no Sigma package-data; source/editable CI/proposed wheel is not actual installed or hosted readiness. Trusted ingestion, tenant authority, shared deadline integration, CI/deployment gates remain Director-owned. No reserved edits, outside AI/provider calls, AWS spending or deployment.
