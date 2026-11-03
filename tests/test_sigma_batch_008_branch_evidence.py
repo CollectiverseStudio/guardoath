@@ -12,8 +12,8 @@ from guardoath.sigma_rules.routing import RoutingTable
 from guardoath.sigma_rules.events import evaluate_event
 
 ROOT = Path(__file__).resolve().parents[1] / 'guardoath/sigma_rules'
-DATA = json.loads((ROOT / 'candidates/branch_008_evidence.json').read_text())
-BATCHES = [json.loads((ROOT / n).read_text()) for n in BATCH_NAMES]
+DATA = json.loads((ROOT / 'candidates/branch_008_evidence.json').read_text(encoding='utf-8'))
+BATCHES = [json.loads((ROOT / n).read_text(encoding='utf-8')) for n in BATCH_NAMES]
 ROWS = {r['id']: r for b in BATCHES for r in b['rules']}
 RULES = [import_rule(r, r['source_path'], source_revision=b['source_revision'])
          for b in BATCHES for r in b['rules']]
@@ -44,7 +44,7 @@ def test_exact_uncovered_original_alternatives_and_frozen_inventory():
         assert DATA['source_revision'] == BATCHES[7]['source_revision']
         for key in ('source_path', 'source_sha256', 'source_git_blob'):
             assert g[key] == row[key]
-        raw = (ROOT / 'upstream/batch_008' / Path(row['source_path']).name).read_bytes()
+        raw = (ROOT / 'upstream/batch_008' / Path(row['source_path']).name).read_text(encoding='utf-8').encode('utf-8')
         assert hashlib.sha256(raw).hexdigest() == g['source_sha256']
         assert hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest() == g['source_git_blob']
         for b in g['branches']:
