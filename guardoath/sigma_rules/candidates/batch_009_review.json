@@ -1,0 +1,2265 @@
+{
+  "format_version": 1,
+  "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+  "default_inventory_at_review": 178,
+  "proposed_inventory": 203,
+  "runtime_registered": false,
+  "fixture_origin": "GuardOath-authored synthetic string events; not executed commands, upstream tests or effectiveness evidence",
+  "candidate_outcomes": {
+    "1ac8666b-046f-4201-8aba-1951aaec03a3": {
+      "positive_event": [
+        "1ac8666b-046f-4201-8aba-1951aaec03a3"
+      ],
+      "negative_event": []
+    },
+    "1070db9a-3e5d-412e-8e7b-7183b616e1b3": {
+      "positive_event": [
+        "1070db9a-3e5d-412e-8e7b-7183b616e1b3"
+      ],
+      "negative_event": []
+    },
+    "3268b746-88d8-4cd3-bffc-30077d02c787": {
+      "positive_event": [
+        "3268b746-88d8-4cd3-bffc-30077d02c787"
+      ],
+      "negative_event": []
+    },
+    "a197e378-d31b-41c0-9635-cfdf1c1bb423": {
+      "positive_event": [
+        "a197e378-d31b-41c0-9635-cfdf1c1bb423"
+      ],
+      "negative_event": []
+    },
+    "24e3e58a-646b-4b50-adef-02ef935b9fc8": {
+      "positive_event": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ],
+      "negative_event": []
+    },
+    "37c1333a-a0db-48be-b64b-7393b2386e3b": {
+      "positive_event": [
+        "37c1333a-a0db-48be-b64b-7393b2386e3b"
+      ],
+      "negative_event": []
+    },
+    "85d23b42-9a9d-4f8f-b3d7-d2733c1d58f5": {
+      "positive_event": [
+        "85d23b42-9a9d-4f8f-b3d7-d2733c1d58f5"
+      ],
+      "negative_event": []
+    },
+    "aaafa146-074c-11eb-adc1-0242ac120002": {
+      "positive_event": [
+        "aaafa146-074c-11eb-adc1-0242ac120002"
+      ],
+      "negative_event": []
+    },
+    "b222df08-0e07-11eb-adc1-0242ac120002": {
+      "positive_event": [
+        "b222df08-0e07-11eb-adc1-0242ac120002"
+      ],
+      "negative_event": []
+    },
+    "7eedcc9d-9fdb-4d94-9c54-474e8affc0c7": {
+      "positive_event": [
+        "7eedcc9d-9fdb-4d94-9c54-474e8affc0c7"
+      ],
+      "negative_event": []
+    },
+    "ac20ae82-8758-4f38-958e-b44a3140ca88": {
+      "positive_event": [
+        "ac20ae82-8758-4f38-958e-b44a3140ca88"
+      ],
+      "negative_event": []
+    },
+    "e9f55347-2928-4c06-88e5-1a7f8169942e": {
+      "positive_event": [
+        "e9f55347-2928-4c06-88e5-1a7f8169942e"
+      ],
+      "negative_event": []
+    },
+    "7638e5fe-600c-4289-a968-f49dd537ec7d": {
+      "positive_event": [
+        "7638e5fe-600c-4289-a968-f49dd537ec7d"
+      ],
+      "negative_event": []
+    },
+    "56c217c3-2de2-479b-990f-5c109ba8458f": {
+      "positive_event": [
+        "56c217c3-2de2-479b-990f-5c109ba8458f"
+      ],
+      "negative_event": []
+    },
+    "a29808fd-ef50-49ff-9c7a-59a9b040b404": {
+      "positive_event": [
+        "a29808fd-ef50-49ff-9c7a-59a9b040b404"
+      ],
+      "negative_event": []
+    },
+    "95022b85-ff2a-49fa-939a-d7b8f56eeb9b": {
+      "positive_event": [
+        "95022b85-ff2a-49fa-939a-d7b8f56eeb9b"
+      ],
+      "negative_event": []
+    },
+    "03552375-cc2c-4883-bbe4-7958d5a980be": {
+      "positive_event": [
+        "03552375-cc2c-4883-bbe4-7958d5a980be"
+      ],
+      "negative_event": []
+    },
+    "42333b2c-b425-441c-b70e-99404a17170f": {
+      "positive_event": [
+        "42333b2c-b425-441c-b70e-99404a17170f"
+      ],
+      "negative_event": []
+    },
+    "d557dc06-62e8-4468-a8e8-7984124908ce": {
+      "positive_event": [
+        "d557dc06-62e8-4468-a8e8-7984124908ce"
+      ],
+      "negative_event": []
+    },
+    "022eaba8-f0bf-4dd9-9217-4604b0bb3bb0": {
+      "positive_event": [
+        "022eaba8-f0bf-4dd9-9217-4604b0bb3bb0"
+      ],
+      "negative_event": []
+    },
+    "7be5fb68-f9ef-476d-8b51-0256ebece19e": {
+      "positive_event": [
+        "7be5fb68-f9ef-476d-8b51-0256ebece19e"
+      ],
+      "negative_event": []
+    },
+    "023394c4-29d5-46ab-92b8-6a534c6f447b": {
+      "positive_event": [
+        "023394c4-29d5-46ab-92b8-6a534c6f447b"
+      ],
+      "negative_event": []
+    },
+    "ce7cf472-6fcc-490a-9481-3786840b5d9b": {
+      "positive_event": [
+        "ce7cf472-6fcc-490a-9481-3786840b5d9b"
+      ],
+      "negative_event": []
+    },
+    "d042284c-a296-4988-9be5-f424fadcc28c": {
+      "positive_event": [
+        "d042284c-a296-4988-9be5-f424fadcc28c"
+      ],
+      "negative_event": []
+    },
+    "90fb5e62-ca1f-4e22-b42e-cc521874c938": {
+      "positive_event": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ],
+      "negative_event": []
+    }
+  },
+  "prior_fixture_new_matches": {},
+  "additional_cases": [
+    {
+      "case_id": "1ac8666b-046f-4201-8aba-1951aaec03a3.CommandLine|contains|all.missing0",
+      "rule_id": "1ac8666b-046f-4201-8aba-1951aaec03a3",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "CommandLine": "cmd.exe /c curl fixture-safes://example.invalid/fixture -o \"%AppData%\\fixture.txt\""
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "1ac8666b-046f-4201-8aba-1951aaec03a3.CommandLine|contains|all.missing1",
+      "rule_id": "1ac8666b-046f-4201-8aba-1951aaec03a3",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "CommandLine": "cmd.exe /c curl httpsfixture-safeexample.invalid/fixture -o \"%AppData%\\fixture.txt\""
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "1ac8666b-046f-4201-8aba-1951aaec03a3.CommandLine|contains|all.missing2",
+      "rule_id": "1ac8666b-046f-4201-8aba-1951aaec03a3",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "CommandLine": "cmd.exe /c curl https://example.invalid/fixture -o \"fixture-safe\\fixture.txt\""
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "1070db9a-3e5d-412e-8e7b-7183b616e1b3.CommandLine|contains|all.missing0",
+      "rule_id": "1070db9a-3e5d-412e-8e7b-7183b616e1b3",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "cmd.exe /c fixture-safe/y C:\\windows\\system32\\cmd.exe C:\\windows\\system32\\sethc.exe"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "1070db9a-3e5d-412e-8e7b-7183b616e1b3.CommandLine|contains|all.missing1",
+      "rule_id": "1070db9a-3e5d-412e-8e7b-7183b616e1b3",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "cmd.exe /c copy fixture-safeC:\\windows\\system32\\cmd.exe C:\\windows\\system32\\sethc.exe"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "1070db9a-3e5d-412e-8e7b-7183b616e1b3.CommandLine|contains|all.missing2",
+      "rule_id": "1070db9a-3e5d-412e-8e7b-7183b616e1b3",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "cmd.exe /c copy /y fixture-safe"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "3268b746-88d8-4cd3-bffc-30077d02c787.CommandLine|contains.1",
+      "rule_id": "3268b746-88d8-4cd3-bffc-30077d02c787",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "CommandLine": "fixture.exe  -NoP -NonI -c $x=$((gp HKCU:Software\\Microsoft\\Windows Update).Update);"
+      },
+      "expected_rule_ids": [
+        "3268b746-88d8-4cd3-bffc-30077d02c787"
+      ]
+    },
+    {
+      "case_id": "a197e378-d31b-41c0-9635-cfdf1c1bb423.CommandLine|contains|all.missing0",
+      "rule_id": "a197e378-d31b-41c0-9635-cfdf1c1bb423",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "Image": "C:\\fixtures\\ruby.exe",
+        "CommandLine": "fixture.exe fixture-safe -u  -p "
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "a197e378-d31b-41c0-9635-cfdf1c1bb423.CommandLine|contains|all.missing1",
+      "rule_id": "a197e378-d31b-41c0-9635-cfdf1c1bb423",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "Image": "C:\\fixtures\\ruby.exe",
+        "CommandLine": "fixture.exe -i  fixture-safe -p "
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "a197e378-d31b-41c0-9635-cfdf1c1bb423.CommandLine|contains|all.missing2",
+      "rule_id": "a197e378-d31b-41c0-9635-cfdf1c1bb423",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "Image": "C:\\fixtures\\ruby.exe",
+        "CommandLine": "fixture.exe -i  -u  fixture-safe"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.1",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=3A19059BD7688CB88E70005F18EFC439"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.2",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=bf6223a49e45d99094406777eb6004ba"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.3",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=23867A89C2B8FC733BE6CF5EF902F2D1"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.4",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=A37FF327F8D48E8A4D2F757E1B6E70BC"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.5",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=F9A28C458284584A93B14216308D31BD"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.6",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=6118619783FC175BC7EBECFF0769B46E"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.7",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=959A83047E80AB68B368FDB3F4C6E4EA"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.8",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=563233BFA169ACC7892451F71AD5850A"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.9",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=87575CB7A0E0700EB37F2E3668671A08"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.10",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=13F08707F759AF6003837A150A371BA1"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.11",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=1781F06048A7E58B323F0B9259BE798B"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.12",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=233F85F2D4BC9D6521A6CAAE11A1E7F5"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.13",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=24AF2584CBF4D60BBE5C6D1B31B3BE6D"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.14",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=632969DDF6DBF4E0F53424B75E4B91F2"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.15",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=713C29B396B907ED71A72482759ED757"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.16",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=749A7BB1F0B4C4455949C0B2BF7F9E9F"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.17",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=8628B2608957A6B0C6330AC3DE28CE2E"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.18",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=8B114550386E31895DFAB371E741123D"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.19",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=94CB940A1A6B65BED4D5A8F849CE9793"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.20",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=9D68781980370E00E0BD939EE5E6C141"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.21",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=B18A1401FF8F444056D29450FBC0A6CE"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.22",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=CB567F9498452721D77A451374955F5F"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.23",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=730073214094CD328547BF1F72289752"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.24",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=17B461A082950FC6332228572138B80C"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.25",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=DC25EE78E2EF4D36FAA0BADF1E7461C9"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.26",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=819B19D53CA6736448F9325A85736792"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.27",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=829DA329CE140D873B4A8BDE2CBFAA7E"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.28",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=C547F2E66061A8DFFB6F5A3FF63C0A74"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.29",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=0588081AB0E63BA785938467E1B10CCA"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.30",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=0D9EC08BAC6C07D9987DFD0F1506587C"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.31",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=BC129092B71C89B4D4C8CDF8EA590B29"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.32",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=4DA924CF622D039D58BCE71CDF05D242"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.33",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=E7A3A5C377E2D29324093377D7DB1C66"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.34",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=9A9DBEC5C62F0380B4FA5FD31DEFFEDF"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.35",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=AF8A3976AD71E5D5FDFB67DDB8DADFCE"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.36",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=0C477898BBF137BBD6F2A54E3B805FF4"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.37",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=0CA9F02B537BCEA20D4EA5EB1A9FE338"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.38",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=3AB3655E5A14D4EEFC547F4781BF7F9E"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.39",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=E6F9D5152DA699934B30DAAB206471F6"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.40",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=3AD59991CCF1D67339B319B15A41B35D"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.41",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=FFDD59E0318B85A3E480874D9796D872"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.42",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=0CF479628D7CC1EA25EC7998A92F5051"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.43",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=07A2D4DCBD6CB2C6A45E6B101F0B6D51"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.44",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=D6D0F80386E1380D05CB78E871BC72B1"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.45",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=38D9E015591BBFD4929E0D0F47FA0055"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.46",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=0E2216679CA6E1094D63322E3412D650"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.47",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=ADA161BF41B8E5E9132858CB54CAB5FB"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.48",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=2A1BC4913CD5ECB0434DF07CB675B798"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.49",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=11083E75553BAAE21DC89CE8F9A195E4"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.50",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=A23D29C9E566F2FA8FFBB79267F5DF80"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.51",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=4A07F944A83E8A7C2525EFA35DD30E2F"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+        "36d88494-1d43-4dc0-b3fa-35c8fea0ca9d"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.52",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=767637C23BB42CD5D7397CF58B0BE688"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.53",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=14C4E4C72BA075E9069EE67F39188AD8"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.54",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=3C782813D4AFCE07BBFC5A9772ACDBDC"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.55",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=7D010C6BB6A3726F327F7E239166D127"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.56",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=89159BA4DD04E4CE5559F132A9964EB3"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.57",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=6F33F4A5FC42B8CEC7314947BD13F30F"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.58",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=5834ED4291BDEB928270428EBBAF7604"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.59",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=5A8A8A43F25485E7EE1B201EDCBC7A38"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.60",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=DC7D30B90B2D8ABF664FBED2B1B59894"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.61",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=41923EA1F824FE63EA5BEB84DB7A3E74"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.62",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=3DE09703C8E79ED2CA3F01074719906B"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.63",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=A53A02B997935FD8EEDCB5F7ABAB9B9F"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.64",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=E96A73C7BF33A464C510EDE582318BF2"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.65",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=32089B8851BBF8BC2D014E9F37288C83"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.66",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=09D278F9DE118EF09163C6140255C690"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+        "2704ab9e-afe2-4854-a3b1-0c0706d03578"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.67",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=03866661686829d806989e2fc5a72606"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.68",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=e57401fbdadcd4571ff385ab82bd5d6d"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.69",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=84B763C45C0E4A3E7CA5548C710DB4EE"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.70",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=19584675D94829987952432E018D5056"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.71",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=330768A4F172E10ACB6287B87289D83B"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.72",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=885C99CCFBE77D1CBFCB9C4E7C1A3313"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.73",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=22A22BC9E4E0D2F189F1EA01748816AC"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.74",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=7FA30E6BB7E8E8A69155636E50BF1B28"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.75",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=96DF3A3731912449521F6F8D183279B1"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.76",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=7E6CF3FF4576581271AC8A313B2AAB46"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.77",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=51791678F351C03A0EB4E2A7B05C6E17"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.78",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=25CE42B079282632708FC846129E98A5"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.79",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=021BCCA20BA3381B11BDDE26B4E62F20"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.80",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=59223B5F52D8799D38E0754855CBDF42"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.81",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=81E75D8F1D276C156653D3D8813E4A43"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.82",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=17244E8B6B8227E57FE709CCAD421420"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.83",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=5B76DA3ACDEDC8A5CDF23A798B5936B4"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.84",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=CB2B65BB77D995CC1C0E5DF1C860133C"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.85",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=40445337761D80CF465136FAFB1F63E6"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.86",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=8A790F401B29FA87BC1E56F7272B3AA6"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8.Hashes|contains.87",
+      "rule_id": "24e3e58a-646b-4b50-adef-02ef935b9fc8",
+      "source_field": "Hashes|contains",
+      "kind": "alternative",
+      "event": {
+        "Hashes": "IMPHASH=B50199E952C875241B9CE06C971CE3C1"
+      },
+      "expected_rule_ids": [
+        "24e3e58a-646b-4b50-adef-02ef935b9fc8"
+      ]
+    },
+    {
+      "case_id": "aaafa146-074c-11eb-adc1-0242ac120002.CommandLine|contains.1",
+      "rule_id": "aaafa146-074c-11eb-adc1-0242ac120002",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "CommandLine": "fixture.exe -u  -p  ^PASS^"
+      },
+      "expected_rule_ids": [
+        "aaafa146-074c-11eb-adc1-0242ac120002"
+      ]
+    },
+    {
+      "case_id": "aaafa146-074c-11eb-adc1-0242ac120002.CommandLine|contains|all.missing0",
+      "rule_id": "aaafa146-074c-11eb-adc1-0242ac120002",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe fixture-safe -p  ^USER^"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "aaafa146-074c-11eb-adc1-0242ac120002.CommandLine|contains|all.missing1",
+      "rule_id": "aaafa146-074c-11eb-adc1-0242ac120002",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe -u  fixture-safe ^USER^"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "b222df08-0e07-11eb-adc1-0242ac120002.CommandLine|contains.1",
+      "rule_id": "b222df08-0e07-11eb-adc1-0242ac120002",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "CommandLine": "fixture.exe cmd && clipboard]:: -f /r"
+      },
+      "expected_rule_ids": [
+        "b222df08-0e07-11eb-adc1-0242ac120002"
+      ]
+    },
+    {
+      "case_id": "b222df08-0e07-11eb-adc1-0242ac120002.CommandLine|contains|all.missing0",
+      "rule_id": "b222df08-0e07-11eb-adc1-0242ac120002",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe fixture-safe && clipboard]:: -f /c"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "b222df08-0e07-11eb-adc1-0242ac120002.CommandLine|contains|all.missing1",
+      "rule_id": "b222df08-0e07-11eb-adc1-0242ac120002",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe cmd fixture-safe clipboard]:: -f /c"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "b222df08-0e07-11eb-adc1-0242ac120002.CommandLine|contains|all.missing2",
+      "rule_id": "b222df08-0e07-11eb-adc1-0242ac120002",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe cmd && fixture-safe -f /c"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "b222df08-0e07-11eb-adc1-0242ac120002.CommandLine|contains|all.missing3",
+      "rule_id": "b222df08-0e07-11eb-adc1-0242ac120002",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe cmd && clipboard]:: fixture-safe /c"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "7eedcc9d-9fdb-4d94-9c54-474e8affc0c7.CommandLine|contains.1",
+      "rule_id": "7eedcc9d-9fdb-4d94-9c54-474e8affc0c7",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "CommandLine": "fixture.exe new-object text.encoding]::ascii system.io.streamreader"
+      },
+      "expected_rule_ids": [
+        "7eedcc9d-9fdb-4d94-9c54-474e8affc0c7"
+      ]
+    },
+    {
+      "case_id": "7eedcc9d-9fdb-4d94-9c54-474e8affc0c7.CommandLine|contains.2",
+      "rule_id": "7eedcc9d-9fdb-4d94-9c54-474e8affc0c7",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "CommandLine": "fixture.exe new-object text.encoding]::ascii readtoend("
+      },
+      "expected_rule_ids": [
+        "7eedcc9d-9fdb-4d94-9c54-474e8affc0c7"
+      ]
+    },
+    {
+      "case_id": "7eedcc9d-9fdb-4d94-9c54-474e8affc0c7.CommandLine|contains|all.missing0",
+      "rule_id": "7eedcc9d-9fdb-4d94-9c54-474e8affc0c7",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe fixture-safe text.encoding]::ascii system.io.compression.deflatestream"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "7eedcc9d-9fdb-4d94-9c54-474e8affc0c7.CommandLine|contains|all.missing1",
+      "rule_id": "7eedcc9d-9fdb-4d94-9c54-474e8affc0c7",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe new-object fixture-safe system.io.compression.deflatestream"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "ac20ae82-8758-4f38-958e-b44a3140ca88.CommandLine|contains|all.missing0",
+      "rule_id": "ac20ae82-8758-4f38-958e-b44a3140ca88",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe fixture-safe && mshta vbscript:createobject .run (window.close)"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "ac20ae82-8758-4f38-958e-b44a3140ca88.CommandLine|contains|all.missing1",
+      "rule_id": "ac20ae82-8758-4f38-958e-b44a3140ca88",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe set fixture-safe mshta vbscript:createobject .run (window.close)"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "ac20ae82-8758-4f38-958e-b44a3140ca88.CommandLine|contains|all.missing2",
+      "rule_id": "ac20ae82-8758-4f38-958e-b44a3140ca88",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe set && fixture-safe vbscript:createobject .run (window.close)"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "ac20ae82-8758-4f38-958e-b44a3140ca88.CommandLine|contains|all.missing3",
+      "rule_id": "ac20ae82-8758-4f38-958e-b44a3140ca88",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe set && mshta fixture-safe .run (window.close)"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "ac20ae82-8758-4f38-958e-b44a3140ca88.CommandLine|contains|all.missing4",
+      "rule_id": "ac20ae82-8758-4f38-958e-b44a3140ca88",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe set && mshta vbscript:createobject fixture-safe (window.close)"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "ac20ae82-8758-4f38-958e-b44a3140ca88.CommandLine|contains|all.missing5",
+      "rule_id": "ac20ae82-8758-4f38-958e-b44a3140ca88",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe set && mshta vbscript:createobject .run fixture-safe"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "e9f55347-2928-4c06-88e5-1a7f8169942e.CommandLine|contains.1",
+      "rule_id": "e9f55347-2928-4c06-88e5-1a7f8169942e",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "CommandLine": "fixture.exe &&set cmd /c -f {1}"
+      },
+      "expected_rule_ids": [
+        "e9f55347-2928-4c06-88e5-1a7f8169942e"
+      ]
+    },
+    {
+      "case_id": "e9f55347-2928-4c06-88e5-1a7f8169942e.CommandLine|contains.2",
+      "rule_id": "e9f55347-2928-4c06-88e5-1a7f8169942e",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "CommandLine": "fixture.exe &&set cmd /c -f {2}"
+      },
+      "expected_rule_ids": [
+        "e9f55347-2928-4c06-88e5-1a7f8169942e"
+      ]
+    },
+    {
+      "case_id": "e9f55347-2928-4c06-88e5-1a7f8169942e.CommandLine|contains.3",
+      "rule_id": "e9f55347-2928-4c06-88e5-1a7f8169942e",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "CommandLine": "fixture.exe &&set cmd /c -f {3}"
+      },
+      "expected_rule_ids": [
+        "e9f55347-2928-4c06-88e5-1a7f8169942e"
+      ]
+    },
+    {
+      "case_id": "e9f55347-2928-4c06-88e5-1a7f8169942e.CommandLine|contains.4",
+      "rule_id": "e9f55347-2928-4c06-88e5-1a7f8169942e",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "CommandLine": "fixture.exe &&set cmd /c -f {4}"
+      },
+      "expected_rule_ids": [
+        "e9f55347-2928-4c06-88e5-1a7f8169942e"
+      ]
+    },
+    {
+      "case_id": "e9f55347-2928-4c06-88e5-1a7f8169942e.CommandLine|contains.5",
+      "rule_id": "e9f55347-2928-4c06-88e5-1a7f8169942e",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "CommandLine": "fixture.exe &&set cmd /c -f {5}"
+      },
+      "expected_rule_ids": [
+        "e9f55347-2928-4c06-88e5-1a7f8169942e"
+      ]
+    },
+    {
+      "case_id": "e9f55347-2928-4c06-88e5-1a7f8169942e.CommandLine|contains|all.missing0",
+      "rule_id": "e9f55347-2928-4c06-88e5-1a7f8169942e",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe fixture-safe cmd /c -f {0}"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "e9f55347-2928-4c06-88e5-1a7f8169942e.CommandLine|contains|all.missing1",
+      "rule_id": "e9f55347-2928-4c06-88e5-1a7f8169942e",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe &&set fixture-safe /c -f {0}"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "e9f55347-2928-4c06-88e5-1a7f8169942e.CommandLine|contains|all.missing2",
+      "rule_id": "e9f55347-2928-4c06-88e5-1a7f8169942e",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe &&set cmd fixture-safe -f {0}"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "e9f55347-2928-4c06-88e5-1a7f8169942e.CommandLine|contains|all.missing3",
+      "rule_id": "e9f55347-2928-4c06-88e5-1a7f8169942e",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe &&set cmd /c fixture-safe {0}"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "7638e5fe-600c-4289-a968-f49dd537ec7d.CommandLine|contains.1",
+      "rule_id": "7638e5fe-600c-4289-a968-f49dd537ec7d",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "Image": "C:\\fixtures\\nxc.exe",
+        "CommandLine": "fixture.exe  ldap "
+      },
+      "expected_rule_ids": [
+        "7638e5fe-600c-4289-a968-f49dd537ec7d"
+      ]
+    },
+    {
+      "case_id": "7638e5fe-600c-4289-a968-f49dd537ec7d.CommandLine|contains.2",
+      "rule_id": "7638e5fe-600c-4289-a968-f49dd537ec7d",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "Image": "C:\\fixtures\\nxc.exe",
+        "CommandLine": "fixture.exe  mssql "
+      },
+      "expected_rule_ids": [
+        "7638e5fe-600c-4289-a968-f49dd537ec7d"
+      ]
+    },
+    {
+      "case_id": "7638e5fe-600c-4289-a968-f49dd537ec7d.CommandLine|contains.3",
+      "rule_id": "7638e5fe-600c-4289-a968-f49dd537ec7d",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "Image": "C:\\fixtures\\nxc.exe",
+        "CommandLine": "fixture.exe  nfs "
+      },
+      "expected_rule_ids": [
+        "7638e5fe-600c-4289-a968-f49dd537ec7d"
+      ]
+    },
+    {
+      "case_id": "7638e5fe-600c-4289-a968-f49dd537ec7d.CommandLine|contains.4",
+      "rule_id": "7638e5fe-600c-4289-a968-f49dd537ec7d",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "Image": "C:\\fixtures\\nxc.exe",
+        "CommandLine": "fixture.exe  rdp "
+      },
+      "expected_rule_ids": [
+        "7638e5fe-600c-4289-a968-f49dd537ec7d"
+      ]
+    },
+    {
+      "case_id": "7638e5fe-600c-4289-a968-f49dd537ec7d.CommandLine|contains.5",
+      "rule_id": "7638e5fe-600c-4289-a968-f49dd537ec7d",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "Image": "C:\\fixtures\\nxc.exe",
+        "CommandLine": "fixture.exe  smb "
+      },
+      "expected_rule_ids": [
+        "7638e5fe-600c-4289-a968-f49dd537ec7d"
+      ]
+    },
+    {
+      "case_id": "7638e5fe-600c-4289-a968-f49dd537ec7d.CommandLine|contains.6",
+      "rule_id": "7638e5fe-600c-4289-a968-f49dd537ec7d",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "Image": "C:\\fixtures\\nxc.exe",
+        "CommandLine": "fixture.exe  ssh "
+      },
+      "expected_rule_ids": [
+        "7638e5fe-600c-4289-a968-f49dd537ec7d"
+      ]
+    },
+    {
+      "case_id": "7638e5fe-600c-4289-a968-f49dd537ec7d.CommandLine|contains.7",
+      "rule_id": "7638e5fe-600c-4289-a968-f49dd537ec7d",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "Image": "C:\\fixtures\\nxc.exe",
+        "CommandLine": "fixture.exe  vnc "
+      },
+      "expected_rule_ids": [
+        "7638e5fe-600c-4289-a968-f49dd537ec7d"
+      ]
+    },
+    {
+      "case_id": "7638e5fe-600c-4289-a968-f49dd537ec7d.CommandLine|contains.8",
+      "rule_id": "7638e5fe-600c-4289-a968-f49dd537ec7d",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "Image": "C:\\fixtures\\nxc.exe",
+        "CommandLine": "fixture.exe  winrm "
+      },
+      "expected_rule_ids": [
+        "7638e5fe-600c-4289-a968-f49dd537ec7d"
+      ]
+    },
+    {
+      "case_id": "7638e5fe-600c-4289-a968-f49dd537ec7d.CommandLine|contains.9",
+      "rule_id": "7638e5fe-600c-4289-a968-f49dd537ec7d",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "Image": "C:\\fixtures\\nxc.exe",
+        "CommandLine": "fixture.exe  wmi "
+      },
+      "expected_rule_ids": [
+        "7638e5fe-600c-4289-a968-f49dd537ec7d"
+      ]
+    },
+    {
+      "case_id": "56c217c3-2de2-479b-990f-5c109ba8458f.ParentImage|endswith.1",
+      "rule_id": "56c217c3-2de2-479b-990f-5c109ba8458f",
+      "source_field": "ParentImage|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\pwsh.exe",
+        "Image": "C:\\fixtures\\schtasks.exe",
+        "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC ONLOGON"
+      },
+      "expected_rule_ids": [
+        "56c217c3-2de2-479b-990f-5c109ba8458f"
+      ]
+    },
+    {
+      "case_id": "56c217c3-2de2-479b-990f-5c109ba8458f.CommandLine|contains.1",
+      "rule_id": "56c217c3-2de2-479b-990f-5c109ba8458f",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\powershell.exe",
+        "Image": "C:\\fixtures\\schtasks.exe",
+        "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC DAILY /ST"
+      },
+      "expected_rule_ids": [
+        "56c217c3-2de2-479b-990f-5c109ba8458f"
+      ]
+    },
+    {
+      "case_id": "56c217c3-2de2-479b-990f-5c109ba8458f.CommandLine|contains.2",
+      "rule_id": "56c217c3-2de2-479b-990f-5c109ba8458f",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\powershell.exe",
+        "Image": "C:\\fixtures\\schtasks.exe",
+        "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC ONIDLE"
+      },
+      "expected_rule_ids": [
+        "56c217c3-2de2-479b-990f-5c109ba8458f"
+      ]
+    },
+    {
+      "case_id": "56c217c3-2de2-479b-990f-5c109ba8458f.CommandLine|contains.3",
+      "rule_id": "56c217c3-2de2-479b-990f-5c109ba8458f",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\powershell.exe",
+        "Image": "C:\\fixtures\\schtasks.exe",
+        "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC HOURLY"
+      },
+      "expected_rule_ids": [
+        "56c217c3-2de2-479b-990f-5c109ba8458f"
+      ]
+    },
+    {
+      "case_id": "56c217c3-2de2-479b-990f-5c109ba8458f.CommandLine|contains|all.missing0",
+      "rule_id": "56c217c3-2de2-479b-990f-5c109ba8458f",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "ParentImage": "C:\\fixtures\\powershell.exe",
+        "Image": "C:\\fixtures\\schtasks.exe",
+        "CommandLine": "fixture.exe fixture-safe powershell.exe -NonI /TN Updater /TR /SC ONLOGON"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "56c217c3-2de2-479b-990f-5c109ba8458f.CommandLine|contains|all.missing1",
+      "rule_id": "56c217c3-2de2-479b-990f-5c109ba8458f",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "ParentImage": "C:\\fixtures\\powershell.exe",
+        "Image": "C:\\fixtures\\schtasks.exe",
+        "CommandLine": "fixture.exe /Create fixture-safe /TN Updater /TR /SC ONLOGON"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "56c217c3-2de2-479b-990f-5c109ba8458f.CommandLine|contains|all.missing2",
+      "rule_id": "56c217c3-2de2-479b-990f-5c109ba8458f",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "ParentImage": "C:\\fixtures\\powershell.exe",
+        "Image": "C:\\fixtures\\schtasks.exe",
+        "CommandLine": "fixture.exe /Create powershell.exe -NonI fixture-safe /SC ONLOGON"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "a29808fd-ef50-49ff-9c7a-59a9b040b404.Image|endswith.1",
+      "rule_id": "a29808fd-ef50-49ff-9c7a-59a9b040b404",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "Image": "C:\\fixtures\\python.exe",
+        "CommandLine": "fixture.exe live registry"
+      },
+      "expected_rule_ids": [
+        "a29808fd-ef50-49ff-9c7a-59a9b040b404"
+      ]
+    },
+    {
+      "case_id": "a29808fd-ef50-49ff-9c7a-59a9b040b404.CommandLine|contains|all.missing0",
+      "rule_id": "a29808fd-ef50-49ff-9c7a-59a9b040b404",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "Image": "C:\\fixtures\\pypykatz.exe",
+        "CommandLine": "fixture.exe fixture-safe registry"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "a29808fd-ef50-49ff-9c7a-59a9b040b404.CommandLine|contains|all.missing1",
+      "rule_id": "a29808fd-ef50-49ff-9c7a-59a9b040b404",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "Image": "C:\\fixtures\\pypykatz.exe",
+        "CommandLine": "fixture.exe live fixture-safe"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "95022b85-ff2a-49fa-939a-d7b8f56eeb9b.Image|endswith.1",
+      "rule_id": "95022b85-ff2a-49fa-939a-d7b8f56eeb9b",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "Image": "C:\\fixtures\\cmd.exe",
+        "CommandLine": "fixture.exe gthread-3.6.dll"
+      },
+      "expected_rule_ids": [
+        "95022b85-ff2a-49fa-939a-d7b8f56eeb9b"
+      ]
+    },
+    {
+      "case_id": "95022b85-ff2a-49fa-939a-d7b8f56eeb9b.CommandLine|contains.1",
+      "rule_id": "95022b85-ff2a-49fa-939a-d7b8f56eeb9b",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "Image": "C:\\fixtures\\rundll32.exe",
+        "CommandLine": "fixture.exe \\Windows\\Temp\\tmp.bat"
+      },
+      "expected_rule_ids": [
+        "95022b85-ff2a-49fa-939a-d7b8f56eeb9b"
+      ]
+    },
+    {
+      "case_id": "95022b85-ff2a-49fa-939a-d7b8f56eeb9b.CommandLine|contains.2",
+      "rule_id": "95022b85-ff2a-49fa-939a-d7b8f56eeb9b",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "Image": "C:\\fixtures\\rundll32.exe",
+        "CommandLine": "fixture.exe sigcmm-2.4.dll"
+      },
+      "expected_rule_ids": [
+        "95022b85-ff2a-49fa-939a-d7b8f56eeb9b"
+      ]
+    },
+    {
+      "case_id": "d557dc06-62e8-4468-a8e8-7984124908ce.CommandLine|contains.1",
+      "rule_id": "d557dc06-62e8-4468-a8e8-7984124908ce",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "CommandLine": "fixture.exe WinPwn "
+      },
+      "expected_rule_ids": [
+        "d557dc06-62e8-4468-a8e8-7984124908ce"
+      ]
+    },
+    {
+      "case_id": "d557dc06-62e8-4468-a8e8-7984124908ce.CommandLine|contains.2",
+      "rule_id": "d557dc06-62e8-4468-a8e8-7984124908ce",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "CommandLine": "fixture.exe WinPwn.exe"
+      },
+      "expected_rule_ids": [
+        "d557dc06-62e8-4468-a8e8-7984124908ce"
+      ]
+    },
+    {
+      "case_id": "d557dc06-62e8-4468-a8e8-7984124908ce.CommandLine|contains.3",
+      "rule_id": "d557dc06-62e8-4468-a8e8-7984124908ce",
+      "source_field": "CommandLine|contains",
+      "kind": "alternative",
+      "event": {
+        "CommandLine": "fixture.exe WinPwn.ps1"
+      },
+      "expected_rule_ids": [
+        "d557dc06-62e8-4468-a8e8-7984124908ce"
+      ]
+    },
+    {
+      "case_id": "ce7cf472-6fcc-490a-9481-3786840b5d9b.CommandLine|contains|all.missing0",
+      "rule_id": "ce7cf472-6fcc-490a-9481-3786840b5d9b",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe fixture-safe .inf"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "ce7cf472-6fcc-490a-9481-3786840b5d9b.CommandLine|contains|all.missing1",
+      "rule_id": "ce7cf472-6fcc-490a-9481-3786840b5d9b",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "CommandLine": "fixture.exe InfDefaultInstall.exe  fixture-safe"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "d042284c-a296-4988-9be5-f424fadcc28c.CommandLine|contains|all.missing0",
+      "rule_id": "d042284c-a296-4988-9be5-f424fadcc28c",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "Image": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\InstallUtil.exe",
+        "CommandLine": "fixture.exe fixture-safe /LogToConsole=false"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "d042284c-a296-4988-9be5-f424fadcc28c.CommandLine|contains|all.missing1",
+      "rule_id": "d042284c-a296-4988-9be5-f424fadcc28c",
+      "source_field": "CommandLine|contains|all",
+      "kind": "conjunction-near-miss",
+      "event": {
+        "Image": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\InstallUtil.exe",
+        "CommandLine": "fixture.exe /logfile=  fixture-safe"
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.1",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\sh.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.2",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\bash.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.3",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\powershell.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.4",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\pwsh.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.5",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\schtasks.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.6",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\certutil.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.7",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\whoami.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.8",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\bitsadmin.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.9",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\wscript.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.10",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\cscript.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.11",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\scrcons.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.12",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\regsvr32.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.13",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\hh.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.14",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\wmic.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.15",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\mshta.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.16",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\rundll32.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.17",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\forfiles.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.18",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\scriptrunner.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.19",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\mftrace.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.20",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\AppVLP.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.21",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\systeminfo.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.22",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\reg.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    },
+    {
+      "case_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938.Image|endswith.23",
+      "rule_id": "90fb5e62-ca1f-4e22-b42e-cc521874c938",
+      "source_field": "Image|endswith",
+      "kind": "alternative",
+      "event": {
+        "ParentImage": "C:\\fixtures\\keytool.exe",
+        "Image": "C:\\fixtures\\query.exe"
+      },
+      "expected_rule_ids": [
+        "90fb5e62-ca1f-4e22-b42e-cc521874c938"
+      ]
+    }
+  ]
+}

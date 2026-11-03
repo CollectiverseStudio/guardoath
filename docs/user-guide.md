@@ -1883,3 +1883,17 @@ The eight related `config6.*` and `agent5.*` security-setting indicators have **
 ### Related lexical findings for display only
 
 Eight batch-6 configuration indicators and batch-5 agent indicators have related security concepts but **are not semantically equivalent**. `guardoath.lexical_related_groups.related_groups(rule_ids)` groups these pairs only for a presentation view while retaining each distinct original `rule_id` in `RelatedFindingGroup.rule_ids`. It does **not** select, authorize, suppress, replace or deduplicate different rule identities; tenant rule-level `off`/`allow`/`flag`/`block` decisions must be applied to the original findings before display grouping. For example, `verify_tls=off` can trigger `config6.verify_tls` alone, while `verify_tls=false` may trigger both config6 and agent5. Tests: `tests/test_lexical_related_groups.py`. No hosted UI adoption or new production enforcement is claimed.
+
+
+### Further Sigma process-source screening (C19)
+
+The [candidate009 review](sigma-process-candidates-009.md) stages 25 original
+Windows process rules and 176 authored alternatives/near misses with full source
+provenance and exact overlap findings. Two imphash alternatives also report the
+existing CreateMiniDump or Dumpert detector; both original IDs remain visible.
+Default inventory stays 178 pinned rules/187 assets. The proposed 203-definition
+review table routes 78 process or 125 script rules under the unchanged 128-rule
+selected-event cap and shared budget. Fixtures are non-executed strings, not
+chat validators, authorization, effectiveness evidence or deployed controls.
+Separate source adoption, Director packaging/installed acceptance and exact-SHA
+release gates remain required.
