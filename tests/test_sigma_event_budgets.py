@@ -140,7 +140,7 @@ def test_growing_inventory_requires_host_source_routing_and_keeps_real_overlap()
     root = Path(__file__).resolve().parents[1] / 'guardoath/sigma_rules'
     records = [r for path in sorted(root.glob('upstream_batch_*.json')) for r in json.loads(path.read_text(encoding='utf-8'))['rules']]
     imported = [import_rule(r, r['source_path']) for r in records]
-    assert len(imported) == 153
+    assert len(imported) == 178
     with pytest.raises(UnsupportedSigmaRule, match='128'):
         evaluate_event(imported, {})
     from guardoath.sigma_rules.routing import load_routing_table

@@ -2,7 +2,8 @@
 
 The first six digests were frozen after the 128-rule immutable Git-source audit
 (C6/C7); batch007 follows the independent 153-rule C14 audit at the same revision
-05d1031f537e830b76da53bae2400c5814c89165. Update only with a
+05d1031f537e830b76da53bae2400c5814c89165. Batch008 follows the independent 178-rule
+C17 audit at that same revision. Update only with a
 reviewed source/fixture change and a fresh full-source audit. Never derive the
 expected digest from the artifact being inspected.
 """
@@ -19,6 +20,7 @@ BATCH_FINGERPRINTS = MappingProxyType({
     'upstream_batch_005.json': 'ef582fb36112bc76e3753fbf5c6556a153086b4301f41c475a9e6d946202b436',
     'upstream_batch_006.json': '466eaf0d4eb6fe6aff3989399ba70f6e83b09a31b5ef1d09d1bf075cc8a274dc',
     'upstream_batch_007.json': '63839db9ceee4a414a19cd23edc208b80861875a7a29810aa4a7ed5fbd02b4f0',
+    'upstream_batch_008.json': '129ecd233dd5988ed41a8d2b3681fae258a07de46d24a86b4117f692f50f3b51',
 })
 
 

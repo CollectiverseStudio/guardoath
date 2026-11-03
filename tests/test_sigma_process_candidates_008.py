@@ -15,7 +15,7 @@ from guardoath.sigma_rules.routing import RoutingTable, load_routing_table
 ROOT = Path(__file__).resolve().parents[1] / 'guardoath/sigma_rules'
 DATA = json.loads((ROOT / 'candidates/batch_008.json').read_text(encoding='utf-8'))
 ROWS = DATA['rules']
-BASE_BATCHES = [json.loads((ROOT / name).read_text(encoding='utf-8')) for name in BATCH_NAMES]
+BASE_BATCHES = [json.loads((ROOT / name).read_text(encoding='utf-8')) for name in BATCH_NAMES[:7]]
 CURRENT_ROWS = {r['id']: r for b in BASE_BATCHES for r in b['rules']}
 PRIOR = json.loads((ROOT / 'candidates/batch_007.json').read_text(encoding='utf-8'))
 remaining = []
@@ -39,14 +39,15 @@ PROCESS = {'product': 'windows', 'category': 'process_creation'}
 SCRIPT = {'product': 'windows', 'category': 'ps_script'}
 
 
-def test_25_unused_candidates_do_not_extend_current_release_or_reuse_identities():
+def test_frozen_153_predecessor_and_current_default_adoption_preserve_identities():
     assert DATA['integration_status'] == 'staged-not-default'
     assert DATA['reviewed_predecessor_count'] == len(BASE_ROWS) == 153
     assert len(ROWS) == len({r['id'] for r in ROWS}) == len({r['source_path'] for r in ROWS}) == 25
     assert not {r['id'] for r in ROWS} & {r['id'] for r in BASE_ROWS}
     assert len(RULES) == len(build_evidence_catalog(ALL_BATCHES)) == 178
-    assert len(load_evidence_catalog()) == len(CURRENT_ROWS) == len(DEFAULT.rule_ids)
-    assert not {r['id'] for r in ROWS} & set(DEFAULT.rule_ids)
+    assert len(load_evidence_catalog()) == len(DEFAULT.rule_ids) == 178
+    assert len(CURRENT_ROWS) == 153
+    assert {r['id'] for r in ROWS}.issubset(DEFAULT.rule_ids)
     assert DATA['license'] == LICENSE
     assert DATA['source_revision'] == '05d1031f537e830b76da53bae2400c5814c89165'
 
@@ -109,9 +110,9 @@ def test_all_153_predecessor_pairs_have_no_unreviewed_new_overlap(row, which):
 
 
 @pytest.mark.parametrize('row', ROWS, ids=lambda r: r['id'])
-def test_default_loader_rejects_staged_candidate_id(row):
-    with pytest.raises(UnsupportedSigmaRule, match='unknown'):
-        DEFAULT.plan(trusted_logsource=PROCESS, allowed_rule_ids=[row['id']])
+def test_default_loader_selects_exact_reviewed_adopted_id(row):
+    plan = DEFAULT.plan(trusted_logsource=PROCESS, allowed_rule_ids=[row['id']])
+    assert plan.selected_rule_ids == (row['id'],) and plan.excluded_rule_ids == ()
 
 
 def test_178_review_pool_still_requires_one_source_specific_bounded_evaluation(monkeypatch):

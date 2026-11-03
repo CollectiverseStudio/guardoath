@@ -1,5 +1,10 @@
 # Staged Windows process candidates: batch 008 (C16)
 
+**C17 update:** This frozen candidate cohort is independently verified and adopted
+into the current 178-rule default source catalog. Original staging statements
+below describe the reviewed C16 handoff; see [default adoption](sigma-batch-008-integration.md).
+
+
 This cohort stages **25 further compatible originals** from SigmaHQ revision
 `05d1031f537e830b76da53bae2400c5814c89165`, excluding all 128 initial defaults and
 25 C13 candidates. Complete original YAML, metadata, authors, IDs, references,

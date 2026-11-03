@@ -33,10 +33,10 @@ def installation(tmp_path, monkeypatch):
 def test_complete_layout_executes_all_source_fixtures_with_immutable_evidence(installation):
     site,_,_ = installation
     report = acceptance.verify_installation(site)
-    assert report.rule_count == report.pinned_rule_count == 153
-    assert report.required_asset_count == 161
-    assert report.positive_cases == report.benign_cases == report.missing_event_cases == 153
-    assert report.malformed_event_rejections == report.routing_previews == 153
+    assert report.rule_count == report.pinned_rule_count == 178
+    assert report.required_asset_count == 187
+    assert report.positive_cases == report.benign_cases == report.missing_event_cases == 178
+    assert report.malformed_event_rejections == report.routing_previews == 178
     assert report.source_revisions == ('05d1031f537e830b76da53bae2400c5814c89165',)
     with pytest.raises(FrozenInstanceError): report.rule_count = 0
 
@@ -79,7 +79,7 @@ def test_editable_or_malformed_direct_url_is_not_artifact_acceptance(installatio
 def test_noneditable_local_wheel_direct_url_is_allowed(installation):
     site,_,info = installation
     (info/'direct_url.json').write_text('{"url":"file:///trusted.whl","archive_info":{}}',encoding='utf-8')
-    assert acceptance.verify_installation(site).rule_count == 153
+    assert acceptance.verify_installation(site).rule_count == 178
 
 
 @pytest.mark.parametrize('missing',['guardoath/sigma_rules/'+name+'.py' for name in acceptance._MODULES]+
@@ -129,7 +129,7 @@ def test_invalid_preview_cannot_be_accepted(installation,monkeypatch):
 def test_cli_usage_success_failure_and_no_partial_json(installation,capsys):
     site,_,_ = installation
     assert acceptance.main(['--expected-root',str(site)]) == 0
-    assert json.loads(capsys.readouterr().out)['positive_cases'] == 153
+    assert json.loads(capsys.readouterr().out)['positive_cases'] == 178
     assert acceptance.main(['--expected-root',str(site/'private-canary')]) == 1
     output = capsys.readouterr()
     assert output.out == '' and 'private-canary' not in output.err

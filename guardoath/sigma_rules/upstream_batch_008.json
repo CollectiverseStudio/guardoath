@@ -1,0 +1,1280 @@
+{
+  "source_repository": "https://github.com/SigmaHQ/sigma",
+  "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+  "license": "Detection Rule License 1.1 (DRL 1.1)",
+  "license_url": "https://github.com/SigmaHQ/Detection-Rule-License/blob/main/LICENSE.Detection.Rules.md",
+  "fixture_origin": "GuardOath-authored synthetic events; not upstream tests or effectiveness evidence",
+  "integration_status": "offline-default-source-only",
+  "reviewed_predecessor_count": 153,
+  "rules": [
+    {
+      "title": "Uncommon Child Process Of Defaultpack.EXE",
+      "id": "b2309017-4235-44fe-b5af-b15363011957",
+      "status": "test",
+      "description": "Detects uncommon child processes of \"DefaultPack.EXE\" binary as a proxy to launch other programs",
+      "references": [
+        "https://lolbas-project.github.io/lolbas/OtherMSBinaries/DefaultPack/",
+        "https://www.echotrail.io/insights/search/defaultpack.exe"
+      ],
+      "author": "frack113",
+      "date": "2022-12-31",
+      "modified": "2024-04-22",
+      "tags": [
+        "attack.stealth",
+        "attack.t1218",
+        "attack.execution"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "ParentImage|endswith": "\\DefaultPack.exe"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_defaultpack_uncommon_child_process.yml",
+      "source_sha256": "185139f84bee688440c3102cb5feaf2feff11b0a8559f90336e9616c79a5869c",
+      "source_git_blob": "b5dd17aec6e0fbdc2f46d2449418de6684cab02c",
+      "positive_event": {
+        "ParentImage": "C:\\Lab\\DefaultPack.exe",
+        "Image": "C:\\Windows\\System32\\notepad.exe"
+      },
+      "negative_event": {
+        "ParentImage": "C:\\Windows\\explorer.exe",
+        "Image": "C:\\Windows\\System32\\notepad.exe"
+      }
+    },
+    {
+      "title": "Remote File Download Via Desktopimgdownldr Utility",
+      "id": "214641c2-c579-4ecb-8427-0cf19df6842e",
+      "status": "test",
+      "description": "Detects the desktopimgdownldr utility being used to download a remote file. An adversary may use desktopimgdownldr to download arbitrary files as an alternative to certutil.",
+      "references": [
+        "https://www.elastic.co/guide/en/security/current/remote-file-download-via-desktopimgdownldr-utility.html"
+      ],
+      "author": "Tim Rauch, Elastic (idea)",
+      "date": "2022-09-27",
+      "tags": [
+        "attack.command-and-control",
+        "attack.t1105"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": "\\desktopimgdownldr.exe",
+          "ParentImage|endswith": "\\desktopimgdownldr.exe",
+          "CommandLine|contains": "/lockscreenurl:http"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_desktopimgdownldr_remote_file_download.yml",
+      "source_sha256": "e94c5d4fd053ac15551bbf14aae878c0be5f1c96a422b114e68164f0c87df824",
+      "source_git_blob": "1ff0da2c88f49c4378049570b320a260c6b4ddff",
+      "positive_event": {
+        "Image": "C:\\Windows\\System32\\desktopimgdownldr.exe",
+        "ParentImage": "C:\\Windows\\System32\\desktopimgdownldr.exe",
+        "CommandLine": "desktopimgdownldr /lockscreenurl:https://example.invalid/Lab.jpg"
+      },
+      "negative_event": {
+        "Image": "C:\\Windows\\System32\\desktopimgdownldr.exe",
+        "ParentImage": "C:\\Windows\\explorer.exe",
+        "CommandLine": "desktopimgdownldr /lockscreenurl:https://example.invalid/Lab.jpg"
+      }
+    },
+    {
+      "title": "DeviceCredentialDeployment Execution",
+      "id": "b8b1b304-a60f-4999-9a6e-c547bde03ffd",
+      "status": "test",
+      "description": "Detects the execution of DeviceCredentialDeployment to hide a process from view.\n",
+      "references": [
+        "https://github.com/LOLBAS-Project/LOLBAS/pull/147"
+      ],
+      "author": "Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2022-08-19",
+      "tags": [
+        "attack.stealth",
+        "attack.t1218"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": "\\DeviceCredentialDeployment.exe"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unlikely"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_device_credential_deployment.yml",
+      "source_sha256": "544c29d7d49abbadedd642c54d56267cdc3b1c0e3a3e5f2c5ed6b585f655d3f1",
+      "source_git_blob": "a9b80b6211316a45a6c8c195a9cc19103ea5a387",
+      "positive_event": {
+        "Image": "C:\\Windows\\System32\\DeviceCredentialDeployment.exe"
+      },
+      "negative_event": {
+        "Image": "C:\\Lab\\DeviceConfiguration.exe"
+      }
+    },
+    {
+      "title": "Arbitrary MSI Download Via Devinit.EXE",
+      "id": "90d50722-0483-4065-8e35-57efaadd354d",
+      "status": "test",
+      "description": "Detects a certain command line flag combination used by \"devinit.exe\", which can be abused as a LOLBIN to download arbitrary MSI packages on a Windows system",
+      "references": [
+        "https://twitter.com/mrd0x/status/1460815932402679809",
+        "https://lolbas-project.github.io/lolbas/OtherMSBinaries/Devinit/"
+      ],
+      "author": "Florian Roth (Nextron Systems)",
+      "date": "2022-01-11",
+      "modified": "2023-04-06",
+      "tags": [
+        "attack.execution",
+        "attack.stealth",
+        "attack.t1218"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains|all": [
+            " -t msi-install ",
+            " -i http"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_devinit_lolbin_usage.yml",
+      "source_sha256": "dfc71a27ece387e1dea6b88483a494ec43d2b96a36236249a54ffed8a5e57471",
+      "source_git_blob": "d4b3c9ea9de203e22681d9223396154f2aa40ed3",
+      "positive_event": {
+        "CommandLine": "devinit.exe -t msi-install -i https://example.invalid/Lab.msi "
+      },
+      "negative_event": {
+        "CommandLine": "devinit.exe -t zip-install -i https://example.invalid/Lab.zip "
+      }
+    },
+    {
+      "title": "Potentially Suspicious Child Process Of ClickOnce Application",
+      "id": "67bc0e75-c0a9-4cfc-8754-84a505b63c04",
+      "status": "test",
+      "description": "Detects potentially suspicious child processes of a ClickOnce deployment application",
+      "references": [
+        "https://posts.specterops.io/less-smartscreen-more-caffeine-ab-using-clickonce-for-trusted-code-execution-1446ea8051c5"
+      ],
+      "author": "Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2023-06-12",
+      "tags": [
+        "attack.execution",
+        "attack.stealth"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "ParentImage|contains": "\\AppData\\Local\\Apps\\2.0\\",
+          "Image|endswith": [
+            "\\calc.exe",
+            "\\cmd.exe",
+            "\\cscript.exe",
+            "\\explorer.exe",
+            "\\mshta.exe",
+            "\\net.exe",
+            "\\net1.exe",
+            "\\nltest.exe",
+            "\\notepad.exe",
+            "\\powershell.exe",
+            "\\pwsh.exe",
+            "\\reg.exe",
+            "\\regsvr32.exe",
+            "\\rundll32.exe",
+            "\\schtasks.exe",
+            "\\werfault.exe",
+            "\\wscript.exe"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_dfsvc_suspicious_child_processes.yml",
+      "source_sha256": "76c32a0579f287f8902c62065e545a2b721f4ab1bf5cd7eae80e7539b070c9ff",
+      "source_git_blob": "ccd230b221f51cee551b16584a46194bacdef084",
+      "positive_event": {
+        "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+        "Image": "C:\\Windows\\System32\\cmd.exe"
+      },
+      "negative_event": {
+        "ParentImage": "C:\\Trusted\\Apps\\Lab\\dfsvc.exe",
+        "Image": "C:\\Windows\\System32\\cmd.exe"
+      }
+    },
+    {
+      "title": "DirLister Execution",
+      "id": "b4dc61f5-6cce-468e-a608-b48b469feaa2",
+      "status": "test",
+      "description": "Detect the usage of \"DirLister.exe\" a utility for quickly listing folder or drive contents. It was seen used by BlackCat ransomware to create a list of accessible directories and files.",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/40b77d63808dd4f4eafb83949805636735a1fd15/atomics/T1083/T1083.md",
+        "https://news.sophos.com/en-us/2022/07/14/blackcat-ransomware-attacks-not-merely-a-byproduct-of-bad-luck/"
+      ],
+      "author": "frack113",
+      "date": "2022-08-20",
+      "modified": "2023-02-04",
+      "tags": [
+        "attack.discovery",
+        "attack.t1083"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": [
+          {
+            "OriginalFileName": "DirLister.exe"
+          },
+          {
+            "Image|endswith": "\\DirLister.exe"
+          }
+        ],
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate use by users"
+      ],
+      "level": "low",
+      "regression_tests_path": "regression_data/rules/windows/process_creation/proc_creation_win_dirlister_execution/info.yml",
+      "simulation": [
+        {
+          "type": "atomic-red-team",
+          "name": "Launch DirLister Executable",
+          "technique": "T1083",
+          "atomic_guid": "c5bec457-43c9-4a18-9a24-fe151d8971b7"
+        }
+      ],
+      "source_path": "rules/windows/process_creation/proc_creation_win_dirlister_execution.yml",
+      "source_sha256": "cc4949b49dc16a29ed91ca12f38d09a24673330d3341a3c7c35f00780d1cc5b4",
+      "source_git_blob": "05cbc5bbf62a798a9dd620dc3177667e77622d53",
+      "positive_event": {
+        "Image": "C:\\Lab\\DirLister.exe"
+      },
+      "negative_event": {
+        "Image": "C:\\Lab\\DirList.exe"
+      }
+    },
+    {
+      "title": "Potentially Suspicious Child Process Of DiskShadow.EXE",
+      "id": "9f546b25-5f12-4c8d-8532-5893dcb1e4b8",
+      "related": [
+        {
+          "id": "fa1a7e52-3d02-435b-81b8-00da14dd66c1",
+          "type": "similar"
+        },
+        {
+          "id": "1dde5376-a648-492e-9e54-4241dd9b0c7f",
+          "type": "similar"
+        },
+        {
+          "id": "56b1dde8-b274-435f-a73a-fb75eb81262a",
+          "type": "similar"
+        },
+        {
+          "id": "0c2f8629-7129-4a8a-9897-7e0768f13ff2",
+          "type": "similar"
+        }
+      ],
+      "status": "test",
+      "description": "Detects potentially suspicious child processes of \"Diskshadow.exe\". This could be an attempt to bypass parent/child relationship detection or application whitelisting rules.",
+      "references": [
+        "https://bohops.com/2018/03/26/diskshadow-the-return-of-vss-evasion-persistence-and-active-directory-database-extraction/",
+        "https://www.ired.team/offensive-security/credential-access-and-credential-dumping/ntds.dit-enumeration",
+        "https://medium.com/@cyberjyot/lolbin-execution-via-diskshadow-f6ff681a27a4",
+        "https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/diskshadow",
+        "https://www.lifars.com/wp-content/uploads/2022/01/GriefRansomware_Whitepaper-2.pdf",
+        "https://www.zscaler.com/blogs/security-research/technical-analysis-crytox-ransomware",
+        "https://research.checkpoint.com/2022/evilplayout-attack-against-irans-state-broadcaster/"
+      ],
+      "author": "Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2023-09-15",
+      "tags": [
+        "attack.stealth",
+        "attack.t1218"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "ParentImage|endswith": "\\diskshadow.exe",
+          "Image|endswith": [
+            "\\certutil.exe",
+            "\\cscript.exe",
+            "\\mshta.exe",
+            "\\powershell.exe",
+            "\\pwsh.exe",
+            "\\regsvr32.exe",
+            "\\rundll32.exe",
+            "\\wscript.exe"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "False postitve can occur in cases where admin scripts levreage the \"exec\" flag to execute applications"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_diskshadow_child_process_susp.yml",
+      "source_sha256": "9610044de5fbd1628e7489b5a171add3717e7ee591f55007e583780541449b88",
+      "source_git_blob": "04889c408c4f0d65f2072e97f588eb9af39338a6",
+      "positive_event": {
+        "ParentImage": "C:\\Windows\\System32\\diskshadow.exe",
+        "Image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+      },
+      "negative_event": {
+        "ParentImage": "C:\\Windows\\System32\\diskshadow.exe",
+        "Image": "C:\\Windows\\System32\\notepad.exe"
+      }
+    },
+    {
+      "title": "DNS Exfiltration and Tunneling Tools Execution",
+      "id": "98a96a5a-64a0-4c42-92c5-489da3866cb0",
+      "status": "test",
+      "description": "Well-known DNS Exfiltration tools execution",
+      "references": [
+        "https://github.com/iagox86/dnscat2",
+        "https://github.com/yarrick/iodine"
+      ],
+      "author": "Daniil Yugoslavskiy, oscd.community",
+      "date": "2019-10-24",
+      "modified": "2021-11-27",
+      "tags": [
+        "attack.exfiltration",
+        "attack.t1048.001",
+        "attack.command-and-control",
+        "attack.t1071.004",
+        "attack.t1132.001"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": [
+          {
+            "Image|endswith": "\\iodine.exe"
+          },
+          {
+            "Image|contains": "\\dnscat2"
+          }
+        ],
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unlikely"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_dns_exfiltration_tools_execution.yml",
+      "source_sha256": "d3dea25464811728a353cd68d47093684772398007aa7c58cf0be17d6b3e84dd",
+      "source_git_blob": "ca0d6d52c00aeb651978334637bff6dd7bea4467",
+      "positive_event": {
+        "Image": "C:\\Lab\\iodine.exe"
+      },
+      "negative_event": {
+        "Image": "C:\\Lab\\dnsclient.exe"
+      }
+    },
+    {
+      "title": "New DNS ServerLevelPluginDll Installed Via Dnscmd.EXE",
+      "id": "f63b56ee-3f79-4b8a-97fb-5c48007e8573",
+      "related": [
+        {
+          "id": "e61e8a88-59a9-451c-874e-70fcc9740d67",
+          "type": "derived"
+        },
+        {
+          "id": "cbe51394-cd93-4473-b555-edf0144952d9",
+          "type": "derived"
+        }
+      ],
+      "status": "test",
+      "description": "Detects the installation of a DNS plugin DLL via ServerLevelPluginDll parameter in registry, which can be used to execute code in context of the DNS server (restart required)",
+      "references": [
+        "https://medium.com/@esnesenon/feature-not-bug-dnsadmin-to-dc-compromise-in-one-line-a0f779b8dc83",
+        "https://blog.3or.de/hunting-dns-server-level-plugin-dll-injection.html"
+      ],
+      "author": "Florian Roth (Nextron Systems)",
+      "date": "2017-05-08",
+      "modified": "2023-02-05",
+      "tags": [
+        "attack.privilege-escalation",
+        "attack.persistence",
+        "attack.execution",
+        "attack.stealth",
+        "attack.defense-impairment",
+        "attack.t1574.001",
+        "attack.t1112"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": "\\dnscmd.exe",
+          "CommandLine|contains|all": [
+            "/config",
+            "/serverlevelplugindll"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_dnscmd_install_new_server_level_plugin_dll.yml",
+      "source_sha256": "57df00bae673b19926462e888f6ca09541cb68384ab8fff5ea2691a674a0de02",
+      "source_git_blob": "12abd020ad27741746329c5dd2ddfdeed88d0b73",
+      "positive_event": {
+        "Image": "C:\\Windows\\System32\\dnscmd.exe",
+        "CommandLine": "dnscmd.exe /config /serverlevelplugindll C:\\Lab\\fixture.dll"
+      },
+      "negative_event": {
+        "Image": "C:\\Windows\\System32\\dnscmd.exe",
+        "CommandLine": "dnscmd.exe /info"
+      }
+    },
+    {
+      "title": "Potential Application Whitelisting Bypass via Dnx.EXE",
+      "id": "81ebd28b-9607-4478-bf06-974ed9d53ed7",
+      "status": "test",
+      "description": "Detects the execution of Dnx.EXE. The Dnx utility allows for the execution of C# code.\nAttackers might abuse this in order to bypass application whitelisting.\n",
+      "references": [
+        "https://lolbas-project.github.io/lolbas/OtherMSBinaries/Csi/",
+        "https://enigma0x3.net/2016/11/17/bypassing-application-whitelisting-by-using-dnx-exe/"
+      ],
+      "author": "Beyu Denis, oscd.community",
+      "date": "2019-10-26",
+      "modified": "2024-04-24",
+      "tags": [
+        "attack.stealth",
+        "attack.t1218",
+        "attack.t1027.004"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": "\\dnx.exe"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate use of dnx.exe by legitimate user"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_dnx_execute_csharp_code.yml",
+      "source_sha256": "5dbe6e226a98a8ecf194ef25b934dec3f859539cfbb87d56c0a12a86196aa19b",
+      "source_git_blob": "6bc56ab4aaeaa71d5ba48ef03ddec06f395ecc1e",
+      "positive_event": {
+        "Image": "C:\\Lab\\dnx.exe"
+      },
+      "negative_event": {
+        "Image": "C:\\Lab\\dotnet.exe"
+      }
+    },
+    {
+      "title": "Esentutl Gather Credentials",
+      "id": "7df1713a-1a5b-4a4b-a071-dc83b144a101",
+      "status": "test",
+      "description": "Conti recommendation to its affiliates to use esentutl to access NTDS dumped file. Trickbot also uses this utilities to get MSEdge info via its module pwgrab.",
+      "references": [
+        "https://twitter.com/vxunderground/status/1423336151860002816",
+        "https://thedfirreport.com/2021/08/01/bazarcall-to-conti-ransomware-via-trickbot-and-cobalt-strike/"
+      ],
+      "author": "sam0x90",
+      "date": "2021-08-06",
+      "modified": "2022-10-09",
+      "tags": [
+        "attack.credential-access",
+        "attack.t1003",
+        "attack.t1003.003",
+        "attack.s0404"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains|all": [
+            "esentutl",
+            " /p"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "To be determined"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_esentutl_params.yml",
+      "source_sha256": "91b63dcc1c4b5b915324e472b3583c62d21072c95b174da46c86baf90ba748b6",
+      "source_git_blob": "2ea452d659de81bb96b691bee73ffcb3f4f93e96",
+      "positive_event": {
+        "CommandLine": "esentutl.exe /p C:\\Lab\\database.edb"
+      },
+      "negative_event": {
+        "CommandLine": "esentutl.exe /g C:\\Lab\\database.edb"
+      }
+    },
+    {
+      "title": "File Explorer Folder Opened Using Explorer Folder Shortcut Via Shell",
+      "id": "c3d76afc-93df-461e-8e67-9b2bad3f2ac4",
+      "status": "test",
+      "description": "Detects the initial execution of \"cmd.exe\" which spawns \"explorer.exe\" with the appropriate command line arguments for opening the \"My Computer\" folder.\n",
+      "author": "@Kostastsale",
+      "references": [
+        "https://ss64.com/nt/shell.html"
+      ],
+      "date": "2022-12-22",
+      "modified": "2024-08-23",
+      "tags": [
+        "attack.discovery",
+        "attack.t1135"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "process_creation"
+      },
+      "detection": {
+        "selection": {
+          "ParentImage|endswith": [
+            "\\cmd.exe",
+            "\\powershell.exe",
+            "\\pwsh.exe"
+          ],
+          "Image|endswith": "\\explorer.exe",
+          "CommandLine|contains": "shell:mycomputerfolder"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "high",
+      "regression_tests_path": "regression_data/rules/windows/process_creation/proc_creation_win_explorer_folder_shortcut_via_shell_binary/info.yml",
+      "source_path": "rules/windows/process_creation/proc_creation_win_explorer_folder_shortcut_via_shell_binary.yml",
+      "source_sha256": "946cfbe21c0d285db84e8536798b58aad86ce709d0baeac4c8c6547d65c795a9",
+      "source_git_blob": "f4164e66d8fb82f4b43e558fb88b6b11c28cca1e",
+      "positive_event": {
+        "ParentImage": "C:\\Windows\\System32\\cmd.exe",
+        "Image": "C:\\Windows\\explorer.exe",
+        "CommandLine": "explorer.exe shell:mycomputerfolder"
+      },
+      "negative_event": {
+        "ParentImage": "C:\\Windows\\System32\\cmd.exe",
+        "Image": "C:\\Windows\\explorer.exe",
+        "CommandLine": "explorer.exe shell:downloads"
+      }
+    },
+    {
+      "title": "Finger.EXE Execution",
+      "id": "af491bca-e752-4b44-9c86-df5680533dbc",
+      "related": [
+        {
+          "id": "c082c2b0-525b-4dbc-9a26-a57dc4692074",
+          "type": "similar"
+        },
+        {
+          "id": "2fdaf50b-9fd5-449f-ba69-f17248119af6",
+          "type": "similar"
+        }
+      ],
+      "status": "test",
+      "description": "Detects execution of the \"finger.exe\" utility.\nFinger.EXE or \"TCPIP Finger Command\" is an old utility that is still present on modern Windows installation. It Displays information about users on a specified remote computer (typically a UNIX computer) that is running the finger service or daemon.\nDue to the old nature of this utility and the rareness of machines having the finger service. Any execution of \"finger.exe\" can be considered \"suspicious\" and worth investigating.\n",
+      "references": [
+        "https://twitter.com/bigmacjpg/status/1349727699863011328?s=12",
+        "https://app.any.run/tasks/40115012-a919-4208-bfed-41e82cb3dadf/",
+        "http://hyp3rlinx.altervista.org/advisories/Windows_TCPIP_Finger_Command_C2_Channel_and_Bypassing_Security_Software.txt"
+      ],
+      "author": "Florian Roth (Nextron Systems), omkar72, oscd.community",
+      "date": "2021-02-24",
+      "modified": "2024-06-27",
+      "tags": [
+        "attack.command-and-control",
+        "attack.t1105"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": [
+          {
+            "OriginalFileName": "finger.exe"
+          },
+          {
+            "Image|endswith": "\\finger.exe"
+          }
+        ],
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Admin activity (unclear what they do nowadays with finger.exe)"
+      ],
+      "level": "high",
+      "regression_tests_path": "regression_data/rules/windows/process_creation/proc_creation_win_finger_execution/info.yml",
+      "source_path": "rules/windows/process_creation/proc_creation_win_finger_execution.yml",
+      "source_sha256": "0c50cac3cc6a96ad9b064d2d5e98e15f769174d457d88ba0f7b1841e27364745",
+      "source_git_blob": "ff38678f9f0046cb60605c7ea132d9b8a69f7563",
+      "positive_event": {
+        "Image": "C:\\Windows\\System32\\finger.exe"
+      },
+      "negative_event": {
+        "Image": "C:\\Windows\\System32\\find.exe"
+      }
+    },
+    {
+      "title": "Use of FSharp Interpreters",
+      "id": "b96b2031-7c17-4473-afe7-a30ce714db29",
+      "status": "test",
+      "description": "Detects the execution of FSharp Interpreters \"FsiAnyCpu.exe\" and \"FSi.exe\"\nBoth can be used for AWL bypass and to execute F# code via scripts or inline.\n",
+      "references": [
+        "https://learn.microsoft.com/en-us/windows/security/application-security/application-control/windows-defender-application-control/design/applications-that-can-bypass-wdac",
+        "https://bohops.com/2020/11/02/exploring-the-wdac-microsoft-recommended-block-rules-part-ii-wfc-fsi/",
+        "https://lolbas-project.github.io/lolbas/OtherMSBinaries/FsiAnyCpu/",
+        "https://lolbas-project.github.io/lolbas/OtherMSBinaries/Fsi/"
+      ],
+      "author": "Christopher Peacock @SecurePeacock, SCYTHE @scythe_io",
+      "date": "2022-06-02",
+      "modified": "2024-04-23",
+      "tags": [
+        "attack.execution",
+        "attack.t1059"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": [
+          {
+            "Image|endswith": [
+              "\\fsi.exe",
+              "\\fsianycpu.exe"
+            ]
+          },
+          {
+            "OriginalFileName": [
+              "fsi.exe",
+              "fsianycpu.exe"
+            ]
+          }
+        ],
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate use by a software developer."
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_fsi_fsharp_code_execution.yml",
+      "source_sha256": "bef3302765f6b2bb6e29b89aecb9a2279ae2f3c9e3587d692db7650a4f5c1f18",
+      "source_git_blob": "8cebaf1e4a114e9b8418f02003e72fbfbc09e0d9",
+      "positive_event": {
+        "Image": "C:\\Lab\\fsi.exe"
+      },
+      "negative_event": {
+        "Image": "C:\\Lab\\fsc.exe"
+      }
+    },
+    {
+      "title": "Gpresult Display Group Policy Information",
+      "id": "e56d3073-83ff-4021-90fe-c658e0709e72",
+      "status": "test",
+      "description": "Detects cases in which a user uses the built-in Windows utility gpresult to display the Resultant Set of Policy (RSoP) information",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1615/T1615.md",
+        "https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/gpresult",
+        "https://unit42.paloaltonetworks.com/emissary-trojan-changelog-did-operation-lotus-blossom-cause-it-to-evolve/",
+        "https://www.welivesecurity.com/wp-content/uploads/2020/05/ESET_Turla_ComRAT.pdf"
+      ],
+      "author": "frack113",
+      "date": "2022-05-01",
+      "tags": [
+        "attack.discovery",
+        "attack.t1615"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "process_creation"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": "\\gpresult.exe",
+          "CommandLine|contains": [
+            "/z",
+            "/v"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "simulation": [
+        {
+          "type": "atomic-red-team",
+          "name": "Display group policy information via gpresult",
+          "technique": "T1615",
+          "atomic_guid": "0976990f-53b1-4d3f-a185-6df5be429d3b"
+        }
+      ],
+      "regression_tests_path": "regression_data/rules/windows/process_creation/proc_creation_win_gpresult_execution/info.yml",
+      "source_path": "rules/windows/process_creation/proc_creation_win_gpresult_execution.yml",
+      "source_sha256": "b8bda339b93e260e7f2e2b6bc82e5d18d130eaf3efb768642b3789e80598296c",
+      "source_git_blob": "47ed747fe628244ee7a1c7966de42288140bd5c8",
+      "positive_event": {
+        "Image": "C:\\Windows\\System32\\gpresult.exe",
+        "CommandLine": "gpresult.exe /v"
+      },
+      "negative_event": {
+        "Image": "C:\\Windows\\System32\\gpresult.exe",
+        "CommandLine": "gpresult.exe /r"
+      }
+    },
+    {
+      "title": "HTML Help HH.EXE Suspicious Child Process",
+      "id": "52cad028-0ff0-4854-8f67-d25dfcbc78b4",
+      "status": "test",
+      "description": "Detects a suspicious child process of a Microsoft HTML Help (HH.exe)",
+      "references": [
+        "https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/chm-badness-delivers-a-banking-trojan/",
+        "https://github.com/elastic/protections-artifacts/commit/746086721fd385d9f5c6647cada1788db4aea95f#diff-27939090904026cc396b0b629c8e4314acd6f5dac40a676edbc87f4567b47eb7",
+        "https://www.ptsecurity.com/ww-en/analytics/pt-esc-threat-intelligence/higaisa-or-winnti-apt-41-backdoors-old-and-new/",
+        "https://www.zscaler.com/blogs/security-research/unintentional-leak-glimpse-attack-vectors-apt37"
+      ],
+      "author": "Maxim Pavlunin, Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2020-04-01",
+      "modified": "2023-04-12",
+      "tags": [
+        "attack.execution",
+        "attack.initial-access",
+        "attack.stealth",
+        "attack.t1047",
+        "attack.t1059.001",
+        "attack.t1059.003",
+        "attack.t1059.005",
+        "attack.t1059.007",
+        "attack.t1218",
+        "attack.t1218.001",
+        "attack.t1218.010",
+        "attack.t1218.011",
+        "attack.t1566",
+        "attack.t1566.001"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "ParentImage|endswith": "\\hh.exe",
+          "Image|endswith": [
+            "\\CertReq.exe",
+            "\\CertUtil.exe",
+            "\\cmd.exe",
+            "\\cscript.exe",
+            "\\installutil.exe",
+            "\\MSbuild.exe",
+            "\\MSHTA.EXE",
+            "\\msiexec.exe",
+            "\\powershell.exe",
+            "\\pwsh.exe",
+            "\\regsvr32.exe",
+            "\\rundll32.exe",
+            "\\schtasks.exe",
+            "\\wmic.exe",
+            "\\wscript.exe"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hh_html_help_susp_child_process.yml",
+      "source_sha256": "4cb721eccb6e2a63e399b6a54b687ddc739985dbcc0d525fa6f9fb534dd8cd72",
+      "source_git_blob": "43d7ac3fc5fb8a1ac6db0a158c95b30bdee84e59",
+      "positive_event": {
+        "ParentImage": "C:\\Windows\\hh.exe",
+        "Image": "C:\\Windows\\System32\\cmd.exe"
+      },
+      "negative_event": {
+        "ParentImage": "C:\\Windows\\hh.exe",
+        "Image": "C:\\Windows\\System32\\notepad.exe"
+      }
+    },
+    {
+      "title": "HackTool - ADCSPwn Execution",
+      "id": "cd8c163e-a19b-402e-bdd5-419ff5859f12",
+      "status": "test",
+      "description": "Detects command line parameters used by ADCSPwn, a tool to escalate privileges in an active directory network by coercing authenticate from machine accounts and relaying to the certificate service",
+      "references": [
+        "https://github.com/bats3c/ADCSPwn"
+      ],
+      "author": "Florian Roth (Nextron Systems)",
+      "date": "2021-07-31",
+      "modified": "2023-02-04",
+      "tags": [
+        "attack.collection",
+        "attack.credential-access",
+        "attack.t1557.001"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains|all": [
+            " --adcs ",
+            " --port "
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unlikely"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hktl_adcspwn.yml",
+      "source_sha256": "0682ca91a0fb64e850703fca4cdddac009d2b3278177a604a467b474df157145",
+      "source_git_blob": "f4d861da3bc8ad7de416508f6e6d4ee5de10bb9b",
+      "positive_event": {
+        "CommandLine": "Lab.exe --adcs offline-lab --port 443 "
+      },
+      "negative_event": {
+        "CommandLine": "Lab.exe --adcs offline-lab --verbose "
+      }
+    },
+    {
+      "title": "HackTool - F-Secure C3 Load by Rundll32",
+      "id": "b18c9d4c-fac9-4708-bd06-dd5bfacf200f",
+      "status": "test",
+      "description": "F-Secure C3 produces DLLs with a default exported StartNodeRelay function.",
+      "references": [
+        "https://github.com/FSecureLABS/C3/blob/11a081fd3be2aaf2a879f6b6e9a96ecdd24966ef/Src/NodeRelayDll/NodeRelayDll.cpp#L12"
+      ],
+      "author": "Alfie Champion (ajpc500)",
+      "date": "2021-06-02",
+      "modified": "2023-03-05",
+      "tags": [
+        "attack.stealth",
+        "attack.t1218.011"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains|all": [
+            "rundll32.exe",
+            ".dll",
+            "StartNodeRelay"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "critical",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hktl_c3_rundll32_pattern.yml",
+      "source_sha256": "ac8341241bbe26f57479b3ecc491d6a17c6f9ad7c87c353f3f453dd3a1c63b65",
+      "source_git_blob": "3400cb9a558fef5460d6f1286324099dbeb25153",
+      "positive_event": {
+        "CommandLine": "rundll32.exe C:\\Lab\\fixture.dll StartNodeRelay"
+      },
+      "negative_event": {
+        "CommandLine": "rundll32.exe C:\\Lab\\fixture.dll StartLab"
+      }
+    },
+    {
+      "title": "HackTool - CreateMiniDump Execution",
+      "id": "36d88494-1d43-4dc0-b3fa-35c8fea0ca9d",
+      "status": "test",
+      "description": "Detects the use of CreateMiniDump hack tool used to dump the LSASS process memory for credential extraction on the attacker's machine",
+      "references": [
+        "https://ired.team/offensive-security/credential-access-and-credential-dumping/dumping-lsass-passwords-without-mimikatz-minidumpwritedump-av-signature-bypass"
+      ],
+      "author": "Florian Roth (Nextron Systems)",
+      "date": "2019-12-22",
+      "modified": "2024-11-23",
+      "tags": [
+        "attack.credential-access",
+        "attack.t1003.001"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": [
+          {
+            "Image|endswith": "\\CreateMiniDump.exe"
+          },
+          {
+            "Hashes|contains": "IMPHASH=4a07f944a83e8a7c2525efa35dd30e2f"
+          }
+        ],
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hktl_createminidump.yml",
+      "source_sha256": "90376199433943441ce826038404996ca779aa49ee55729a920bcc9bc121bc1a",
+      "source_git_blob": "3ce12edb2f52ad1dc8d2fb19c876fb0fe6ae49f1",
+      "positive_event": {
+        "Image": "C:\\Lab\\CreateMiniDump.exe"
+      },
+      "negative_event": {
+        "Image": "C:\\Lab\\LabDump.exe"
+      }
+    },
+    {
+      "title": "HackTool - Defendnot Execution",
+      "id": "0aaa9689-9f38-491d-bd4d-a9af6eb43138",
+      "related": [
+        {
+          "id": "50b159ba-a147-40f7-9d11-561e724b8a2e",
+          "type": "similar"
+        }
+      ],
+      "status": "experimental",
+      "description": "Detects the execution of the hacktool Defendnot. Defendnot is a hacktool that abuses Microsoft undocumented WSC (Windows Security Center) API\nto disable Windows Defender by registering itself as a fake antivirus product. Threat actors often use these kind of tools to bypass security measures.\n",
+      "references": [
+        "https://github.com/es3n1n/defendnot/blob/525176a37721ead27d3f9f77f59b58abfc305988/README.md"
+      ],
+      "author": "Swachchhanda Shrawan Poudel (Nextron Systems)",
+      "date": "2026-09-27",
+      "tags": [
+        "attack.defense-impairment",
+        "attack.t1685"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": [
+          {
+            "Image|contains": "defendnot"
+          },
+          {
+            "CommandLine|contains": [
+              "defendnot",
+              "https://dnot.sh/"
+            ]
+          },
+          {
+            "Hashes|contains": [
+              "IMPHASH=1FAAED26690A9455A795E2215661726F",
+              "IMPHASH=304786466DE25780347A9DCFAF381EF7",
+              "IMPHASH=55B10396EA722770E51BC288E62179DB",
+              "IMPHASH=59D65F5EFACBDB1AA2A6CF745B07C058",
+              "IMPHASH=6CEDEC3562FEF2DC2F959A1D0BF54DB8",
+              "IMPHASH=75002197E0D24AAF0B8C6A1BF68513D6",
+              "IMPHASH=7EC4023C85149450AB388F0837192FE0",
+              "IMPHASH=CA4A3E08E9410A6AEF018424C64C2641"
+            ]
+          }
+        ],
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unlikely"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hktl_defendnot_execution.yml",
+      "source_sha256": "7f738af37ee5da52d1062636eb47fd57f9f6412d9de6ad2107aeb19b925a5fdc",
+      "source_git_blob": "da5f545b76e9cd791645decdfe9dc8b342a4c79c",
+      "positive_event": {
+        "Image": "C:\\Lab\\defendnot.exe"
+      },
+      "negative_event": {
+        "Image": "C:\\Lab\\Defender.exe"
+      }
+    },
+    {
+      "title": "HackTool - DInjector PowerShell Cradle Execution",
+      "id": "d78b5d61-187d-44b6-bf02-93486a80de5a",
+      "status": "test",
+      "description": "Detects the use of the Dinject PowerShell cradle based on the specific flags",
+      "references": [
+        "https://web.archive.org/web/20211001064856/https://github.com/snovvcrash/DInjector"
+      ],
+      "author": "Florian Roth (Nextron Systems)",
+      "date": "2021-12-07",
+      "modified": "2023-02-04",
+      "tags": [
+        "attack.privilege-escalation",
+        "attack.stealth",
+        "attack.t1055"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains|all": [
+            " /am51",
+            " /password"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unlikely"
+      ],
+      "level": "critical",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hktl_dinjector.yml",
+      "source_sha256": "4f962c01ba3324c83d7d4d4047a595a003c52f9f69ed0f26604c6e82cf5c5306",
+      "source_git_blob": "7764f95ff4a8c37de939f0f5ac337d31184ab246",
+      "positive_event": {
+        "CommandLine": "Lab.exe /am51 /password offline-placeholder"
+      },
+      "negative_event": {
+        "CommandLine": "Lab.exe /password offline-placeholder"
+      }
+    },
+    {
+      "title": "HackTool - Doppelanger LSASS Dumper Execution",
+      "id": "d474c8fe-bb69-4ea0-b7d9-f682b56d52d3",
+      "status": "experimental",
+      "description": "Detects the execution of the Doppelanger hacktool which is used to dump LSASS memory via process cloning while evading common detection methods",
+      "references": [
+        "https://labs.yarix.com/2025/06/doppelganger-an-advanced-lsass-dumper-with-process-cloning/",
+        "https://github.com/vari-sh/RedTeamGrimoire/tree/668e0357072546065729ad623f8c02f7be21bb08/Doppelganger"
+      ],
+      "author": "Swachchhanda Shrawan Poudel (Nextron Systems)",
+      "date": "2025-07-01",
+      "tags": [
+        "attack.credential-access",
+        "attack.t1003.001"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": [
+          {
+            "Image|endswith": "\\Doppelganger.exe"
+          },
+          {
+            "Hashes|contains": [
+              "IMPHASH=AB94D5217896ADCD765A06B2D52F0AEB",
+              "IMPHASH=65F0EA61156EE0C2A35421926F0C7F78"
+            ]
+          }
+        ],
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hktl_doppelganger.yml",
+      "source_sha256": "352b7e92db0fed84443da106a9b33f3172661ad4974cffe75029e223f85941cb",
+      "source_git_blob": "ed9ff60c889532871befa41860aa2fdc75e3d62c",
+      "positive_event": {
+        "Image": "C:\\Lab\\Doppelganger.exe"
+      },
+      "negative_event": {
+        "Image": "C:\\Lab\\LabHelper.exe"
+      }
+    },
+    {
+      "title": "HackTool - Dumpert Process Dumper Execution",
+      "id": "2704ab9e-afe2-4854-a3b1-0c0706d03578",
+      "status": "test",
+      "description": "Detects the use of Dumpert process dumper, which dumps the lsass.exe process memory",
+      "references": [
+        "https://github.com/outflanknl/Dumpert",
+        "https://unit42.paloaltonetworks.com/actors-still-exploiting-sharepoint-vulnerability/"
+      ],
+      "author": "Florian Roth (Nextron Systems)",
+      "date": "2020-02-04",
+      "modified": "2026-09-16",
+      "tags": [
+        "attack.credential-access",
+        "attack.t1003.001"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": [
+          {
+            "Hashes|contains": "IMPHASH=09D278F9DE118EF09163C6140255C690"
+          },
+          {
+            "CommandLine|contains": [
+              "Dumpert.dll",
+              "Dumpert.exe"
+            ]
+          }
+        ],
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Very unlikely"
+      ],
+      "level": "critical",
+      "regression_tests_path": "regression_data/rules/windows/process_creation/proc_creation_win_hktl_dumpert/info.yml",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hktl_dumpert.yml",
+      "source_sha256": "9015cb4c23109b6d33d4d26d6a395c26bb0366abe05e75807ab56845c664aabb",
+      "source_git_blob": "1897322ec2c09594909af9c2a83c848827a55cc7",
+      "positive_event": {
+        "CommandLine": "Dumpert.exe --offline-fixture"
+      },
+      "negative_event": {
+        "CommandLine": "LabDump.exe --offline-fixture"
+      }
+    },
+    {
+      "title": "HackTool - EDRSilencer Execution",
+      "id": "eb2d07d4-49cb-4523-801a-da002df36602",
+      "status": "test",
+      "description": "Detects the execution of EDRSilencer, a tool that leverages Windows Filtering Platform (WFP) to block Endpoint Detection and Response (EDR) agents from reporting security events to the server based on PE metadata information.\n",
+      "references": [
+        "https://github.com/netero1010/EDRSilencer"
+      ],
+      "author": "@gott_cyber",
+      "date": "2024-01-02",
+      "tags": [
+        "attack.defense-impairment",
+        "attack.t1685"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": [
+          {
+            "Image|endswith": "\\EDRSilencer.exe"
+          },
+          {
+            "OriginalFileName": "EDRSilencer.exe"
+          },
+          {
+            "Description|contains": "EDRSilencer"
+          }
+        ],
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unlikely"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hktl_edrsilencer.yml",
+      "source_sha256": "a50b675a6c02852f8dd4fd0a64358322ce5b880cc6baccc9c757b26222ee214b",
+      "source_git_blob": "428823b869b12e983d7f50ab5c09d13de61f7d23",
+      "positive_event": {
+        "Image": "C:\\Lab\\EDRSilencer.exe"
+      },
+      "negative_event": {
+        "Image": "C:\\Lab\\LabSilencer.exe"
+      }
+    },
+    {
+      "title": "HackTool - Empire PowerShell Launch Parameters",
+      "id": "79f4ede3-402e-41c8-bc3e-ebbf5f162581",
+      "status": "test",
+      "description": "Detects suspicious powershell command line parameters used in Empire",
+      "references": [
+        "https://github.com/EmpireProject/Empire/blob/c2ba61ca8d2031dad0cfc1d5770ba723e8b710db/lib/common/helpers.py#L165",
+        "https://github.com/EmpireProject/Empire/blob/e37fb2eef8ff8f5a0a689f1589f424906fe13055/lib/modules/powershell/persistence/powerbreach/deaduser.py#L191",
+        "https://github.com/EmpireProject/Empire/blob/e37fb2eef8ff8f5a0a689f1589f424906fe13055/lib/modules/powershell/persistence/powerbreach/resolver.py#L178",
+        "https://github.com/EmpireProject/Empire/blob/e37fb2eef8ff8f5a0a689f1589f424906fe13055/data/module_source/privesc/Invoke-EventVwrBypass.ps1#L64"
+      ],
+      "author": "Florian Roth (Nextron Systems)",
+      "date": "2019-04-20",
+      "modified": "2023-02-21",
+      "tags": [
+        "attack.execution",
+        "attack.t1059.001"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains": [
+            " -NoP -sta -NonI -W Hidden -Enc ",
+            " -noP -sta -w 1 -enc ",
+            " -NoP -NonI -W Hidden -enc ",
+            " -noP -sta -w 1 -enc",
+            " -enc  SQB",
+            " -nop -exec bypass -EncodedCommand "
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Other tools that incidentally use the same command line parameters"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hktl_empire_powershell_launch.yml",
+      "source_sha256": "c07f78a61ca91483c50399e74bab4793f5d5d49e872c413c62fe3e728cc17806",
+      "source_git_blob": "33df633ea2f5bfaae46336213957caebd23207d4",
+      "positive_event": {
+        "CommandLine": "powershell.exe -NoP -sta -NonI -W Hidden -Enc OFFLINE"
+      },
+      "negative_event": {
+        "CommandLine": "powershell.exe -NoProfile -File C:\\Lab\\safe.ps1"
+      }
+    }
+  ],
+  "candidate_origin_commit": "d8e1052cdcadf44ad469655418ba2153ceba730c"
+}

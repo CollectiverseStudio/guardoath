@@ -85,12 +85,12 @@ def test_formatting_key_order_unicode_escaping_and_crlf_preserve_release(tmp_pat
     # Reorder every object recursively via sorted serialization; arrays retain order.
     raw = json.dumps(BATCHES[name], sort_keys=True, ensure_ascii=True, indent=4).replace('\n','\r\n').encode()
     changed = {name:raw}
-    assert verify_distribution.verify_wheel(wheel(tmp_path,changed)).rule_count == 153
+    assert verify_distribution.verify_wheel(wheel(tmp_path,changed)).rule_count == 178
     view = View(changed)
     monkeypatch.setattr(evidence_catalog,'files',lambda _:view)
     monkeypatch.setattr(routing,'files',lambda _:view)
-    assert len(evidence_catalog.load_evidence_catalog()) == 153
-    assert len(routing.load_routing_table().rule_ids) == 153
+    assert len(evidence_catalog.load_evidence_catalog()) == 178
+    assert len(routing.load_routing_table().rule_ids) == 178
 
 
 @pytest.mark.parametrize('name,index', [(name,i) for name,b in BATCHES.items() for i in range(len(b['rules']))])

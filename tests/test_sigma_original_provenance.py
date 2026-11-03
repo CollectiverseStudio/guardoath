@@ -80,8 +80,8 @@ def test_historical_audit_stays_frozen_while_separate_pinning_preserves_identity
     assert REPORT['source_revision'] == '05d1031f537e830b76da53bae2400c5814c89165'
     assert 'source_revision' not in BATCH
     evidence = load_evidence_catalog()
-    assert len(evidence) == 153
-    assert sum(r.source_revision is not None for r in evidence) == 153
+    assert len(evidence) == 178
+    assert sum(r.source_revision is not None for r in evidence) == 178
     originals = [r for r in evidence if r.rule_id in {row['id'] for row in ROWS}]
     assert len(originals) == 3
     assert CURRENT_BATCH['source_revision'] == REPORT['source_revision']

@@ -17,8 +17,7 @@ DATA = json.loads((ROOT / 'candidates/batch_007.json').read_text(encoding='utf-8
 ROWS = DATA['rules']
 # Preserve the six-batch candidate-review baseline; the current default now also
 # adopts batch007, so never append the candidate to that default a second time.
-DEFAULT_BATCHES = [json.loads((ROOT / name).read_text(encoding='utf-8')) for name in BATCH_NAMES
-                   if name != 'upstream_batch_007.json']
+DEFAULT_BATCHES = [json.loads((ROOT / name).read_text(encoding='utf-8')) for name in BATCH_NAMES[:6]]
 DEFAULT_ROWS = [r for b in DEFAULT_BATCHES for r in b['rules']]
 ALL_BATCHES = DEFAULT_BATCHES + [DATA]
 RULES = [import_rule(r, r['source_path'], source_revision=b['source_revision']) for b in ALL_BATCHES for r in b['rules']]
@@ -49,7 +48,7 @@ def test_frozen_candidate_review_is_distinct_and_current_default_adopts_it():
     assert len(ROWS) == len({r['id'] for r in ROWS}) == len({r['source_path'] for r in ROWS}) == 25
     assert not {r['id'] for r in ROWS} & {r['id'] for r in DEFAULT_ROWS}
     assert len(RULES) == len(build_evidence_catalog(ALL_BATCHES)) == 153
-    assert len(DEFAULT_TABLE.rule_ids) == len(load_evidence_catalog()) == 153
+    assert len(DEFAULT_TABLE.rule_ids) == len(load_evidence_catalog()) == 178
     assert all(e.source_revision is not None for e in load_evidence_catalog())
     assert DATA['license'] == LICENSE
     assert DATA['source_revision'] == '05d1031f537e830b76da53bae2400c5814c89165'
