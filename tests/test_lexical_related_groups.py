@@ -36,7 +36,7 @@ def test_distinct_risks_original_order_and_duplicates_are_lossless():
     assert recovered == original
 
 
-@pytest.mark.parametrize("invalid", ["identifier", b"bytes", ("",), (None,), ("x"*129,)])
+@pytest.mark.parametrize("invalid", ["identifier", b"bytes", ("",), (None,), ("x"*129,), ("display:agent5.disable_tls_cert",), ("bad id",), ("CONFIG6.verify_tls",), ("config6.verify_tls\n",), ("a.b\x00",), ("a." + "b"*99,), ("a." + "b"*98 + "!",)])
 def test_invalid_ids_rejected(invalid):
     with pytest.raises((TypeError, ValueError)):
         related_groups(invalid)
@@ -54,3 +54,20 @@ def test_immutable_result_keeps_original_identities_and_positions():
     values.append("new.rule")
     assert groups[0].rule_ids == ("config6.verify_tls", "agent5.disable_tls_cert")
     assert groups[0].source_positions == (0, 1)
+
+
+def test_full_tenant_id_length_boundary_and_unknown_valid_id():
+    valid = "a." + "b" * 98
+    assert len(valid) == 100
+    group = related_groups((valid, "custom.security_rule"))
+    assert tuple(item.rule_ids for item in group) == ((valid,), ("custom.security_rule",))
+    with pytest.raises(ValueError, match="invalid tenant rule ID"):
+        related_groups((valid + "c",))
+
+
+def test_4096_occurrences_preserve_last_position():
+    values = ("config6.verify_tls",) * 4096
+    group, = related_groups(iter(values))
+    assert len(group.rule_ids) == 4096
+    assert group.source_positions[0] == 0
+    assert group.source_positions[-1] == 4095
