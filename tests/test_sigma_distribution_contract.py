@@ -40,7 +40,7 @@ def test_complete_assets_are_verified_without_executing_code_or_using_checkout(t
     from guardoath.sigma_rules import evidence_catalog
     monkeypatch.setattr(evidence_catalog,'load_evidence_catalog',lambda:pytest.fail('checkout fallback used'))
     report=distribution.verify_wheel(wheel(tmp_path))
-    assert (report.rule_count,report.pinned_rule_count,report.required_asset_count)==(178,178,187)
+    assert (report.rule_count,report.pinned_rule_count,report.required_asset_count)==(203,203,213)
     assert report.source_revisions==('05d1031f537e830b76da53bae2400c5814c89165',)
     assert report.license_sha256==distribution.LICENSE_SHA256
     with pytest.raises(FrozenInstanceError):report.rule_count=0
@@ -62,7 +62,7 @@ def test_changed_snapshot_or_license_fails(tmp_path,name):
 def test_windows_line_endings_remain_canonical_git_text(tmp_path):
     assets={name:data.decode('utf-8').replace('\r\n','\n').replace('\n','\r\n').encode('utf-8')
         for name,data in ASSETS.items()}
-    assert distribution.verify_wheel(wheel(tmp_path,assets)).pinned_rule_count==178
+    assert distribution.verify_wheel(wheel(tmp_path,assets)).pinned_rule_count==203
 
 
 @pytest.mark.parametrize('raw',[b'{bad',b'{"license":"first","license":"second"}',b'\xff',b'{"x":NaN}'])
@@ -93,7 +93,7 @@ def test_duplicate_or_case_colliding_members_fail(tmp_path,name):
         distribution.verify_wheel(wheel(tmp_path,extra=[(name,b'ignored')]))
 
 
-@pytest.mark.parametrize('name',[PREFIX+'upstream_batch_009.json',PREFIX+'upstream/batch_005/orphan.yml'])
+@pytest.mark.parametrize('name',[PREFIX+'upstream_batch_010.json',PREFIX+'upstream/batch_005/orphan.yml'])
 def test_new_unindexed_batches_or_snapshots_are_not_silently_omitted(tmp_path,name):
     with pytest.raises(distribution.DistributionContractError):
         distribution.verify_wheel(wheel(tmp_path,extra=[(name,b'{}')]))
@@ -121,7 +121,7 @@ def test_missing_or_invalid_archive_is_sanitized(tmp_path,exists):
 def test_cli_contract_complete_failure_and_usage(tmp_path,capsys):
     path=wheel(tmp_path)
     assert distribution.main([str(path)])==0
-    assert json.loads(capsys.readouterr().out)['rule_count']==178
+    assert json.loads(capsys.readouterr().out)['rule_count']==203
     path.write_bytes(b'bad archive')
     assert distribution.main([str(path)])==1
     captured=capsys.readouterr();assert captured.out=='' and 'verification failed' in captured.err

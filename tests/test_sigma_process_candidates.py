@@ -48,7 +48,7 @@ def test_frozen_candidate_review_is_distinct_and_current_default_adopts_it():
     assert len(ROWS) == len({r['id'] for r in ROWS}) == len({r['source_path'] for r in ROWS}) == 25
     assert not {r['id'] for r in ROWS} & {r['id'] for r in DEFAULT_ROWS}
     assert len(RULES) == len(build_evidence_catalog(ALL_BATCHES)) == 153
-    assert len(DEFAULT_TABLE.rule_ids) == len(load_evidence_catalog()) == 178
+    assert len(DEFAULT_TABLE.rule_ids) == len(load_evidence_catalog()) == 203
     assert all(e.source_revision is not None for e in load_evidence_catalog())
     assert DATA['license'] == LICENSE
     assert DATA['source_revision'] == '05d1031f537e830b76da53bae2400c5814c89165'

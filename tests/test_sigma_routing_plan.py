@@ -30,7 +30,7 @@ def test_all_real_rule_previews_agree_with_original_positive_and_lookalike(row):
     assert TABLE.evaluate(row['negative_event'],trusted_logsource=source,allowed_rule_ids=[row['id']])==[]
 
 
-@pytest.mark.parametrize('source,selected_count,excluded_count',[(SCRIPT,125,53),(PROCESS,53,125)])
+@pytest.mark.parametrize('source,selected_count,excluded_count',[(SCRIPT,125,78),(PROCESS,78,125)])
 def test_exact_source_partition_preserves_host_order_and_full_definitions(source,selected_count,excluded_count):
     allowed=list(reversed(TABLE.rule_ids));before=deepcopy(allowed)
     plan=TABLE.plan(trusted_logsource=source,allowed_rule_ids=allowed)

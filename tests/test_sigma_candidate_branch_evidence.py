@@ -41,7 +41,7 @@ def test_sixteen_branch_groups_are_evidence_not_extra_rules_or_default_selection
     assert len(CASES) == len(IDS) == len(set(IDS)) == 34
     assert DATA['runtime_registered'] is False
     assert DATA['reviewed_definition_count'] == 153  # Frozen C15 review scope.
-    assert len(ROWS) == len(RULES) == 178
+    assert len(ROWS) == len(RULES) == 203
     assert {g['rule_id'] for g in GROUPS}.issubset({r['id'] for r in CANDIDATES['rules']})
     for group in GROUPS:
         assert {'positive', 'lookalike'}.issubset({c['case_id'] for c in group['cases']})
@@ -127,7 +127,7 @@ def test_headless_debugging_near_misses_retain_only_expected_broader_signals():
     assert by_case['lookalike']['expected_rule_ids'] == []  # No --headless.
     assert by_case['missing_profile_term']['expected_rule_ids'] == [headless]
     assert by_case['missing_remote_term']['expected_rule_ids'] == [headless]
-    assert len(TABLE.plan(trusted_logsource=PROCESS, allowed_rule_ids=TABLE.rule_ids).selected_rule_ids) == 53
+    assert len(TABLE.plan(trusted_logsource=PROCESS, allowed_rule_ids=TABLE.rule_ids).selected_rule_ids) == 78
     assert len(TABLE.plan(trusted_logsource=SCRIPT, allowed_rule_ids=TABLE.rule_ids).selected_rule_ids) == 125
     from guardoath.sigma_rules import UnsupportedSigmaRule
     with pytest.raises(UnsupportedSigmaRule, match='128'):

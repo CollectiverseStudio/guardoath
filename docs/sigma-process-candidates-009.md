@@ -1,5 +1,10 @@
 # C19 process-source screening: candidate batch009
 
+**C20 update:** The exact reviewed rows/snapshots are independently adopted in
+the 203-rule default source catalog. Original staging statements below describe
+the frozen C19 review. See [default adoption](sigma-batch-009-integration.md).
+
+
 This review stages 25 unused SigmaHQ Windows process-creation originals at
 `05d1031f537e830b76da53bae2400c5814c89165`. Candidate JSON, 25 exact YAML files
 and reviewed outcomes are under `guardoath/sigma_rules/candidates/batch_009*`.

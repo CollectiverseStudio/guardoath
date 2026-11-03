@@ -1,7 +1,9 @@
 # Sigma package-data handoff to the Director
 
 **Proposed only.** The repository's reserved `pyproject.toml` is unchanged.
-The current C17 source inventory is **178 pinned rules / 187 required assets**.
+The current C20 source inventory is **203 pinned rules / 213 required assets**.
+The C20 proposal was rebuilt and verified at 203/203/213, with 203 cases in each
+fresh offline installed-acceptance category; [proof](sigma-batch-009-integration.md).
 The C17 proposed wheel and fresh offline installed-acceptance command were also
 verified at 178/178/187 with 178 cases in each acceptance category; see
 [batch008 adoption](sigma-batch-008-integration.md). Actual packaging stays reserved.

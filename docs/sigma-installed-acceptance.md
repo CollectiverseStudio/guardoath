@@ -25,15 +25,15 @@ module/asset paths and installed file records. A broad ancestor root does not
 authorize imports from another location. Missing/foreign origins fail before
 fixture execution. Run with `-I` to exclude current-directory/PYTHONPATH fallback.
 
-It then checks the eight reviewed release fingerprints, all 178 original snapshot
+It then checks the nine reviewed release fingerprints, all 203 original snapshot
 digests and the retained license. For each original rule it verifies the trusted
 source routing preview, exact positive finding attribution, benign and empty-event
 outcomes, and explicit malformed-event rejection. Each fixture is a separate
 event with the existing bounded event evaluator; no event budget is reset or
 split to evade limits. No new rule or hosted registration is introduced.
 
-Success emits one JSON record: distribution version, **178 rules / 178 pinned /
-187 required assets**, 178 each of positive, benign, missing-event,
+Success emits one JSON record: distribution version, **203 rules / 203 pinned /
+213 required assets**, 203 each of positive, benign, missing-event,
 malformed-rejection and routing-preview checks, and immutable source revisions.
 Exit codes are 0 for complete acceptance, 1 for failure and 2 for usage. Failure
 emits a bounded generic diagnostic to stderr, no partial success JSON, event

@@ -16,13 +16,14 @@ ROOT=Path(__file__).resolve().parents[1]/'guardoath/sigma_rules'
 DATA=json.loads((ROOT/'candidates/batch_009.json').read_text(encoding='utf-8'))
 REVIEW=json.loads((ROOT/'candidates/batch_009_review.json').read_text(encoding='utf-8'))
 ROWS=DATA['rules']
-BASE=[json.loads((ROOT/n).read_text(encoding='utf-8')) for n in BATCH_NAMES]
+BASE=[json.loads((ROOT/n).read_text(encoding='utf-8')) for n in BATCH_NAMES[:8]]
 OLD=[r for b in BASE for r in b['rules']]
 ALL=BASE+[DATA]
 RULES=tuple(import_rule(r,r['source_path'],source_revision=b['source_revision']) for b in ALL for r in b['rules'])
 BY_ID={r.rule_id:r for r in RULES}
 TABLE=routing.RoutingTable(ALL)
 DEFAULT=routing.load_routing_table()
+PRIOR=routing.RoutingTable(BASE)
 PROCESS={'product':'windows','category':'process_creation'}
 SCRIPT={'product':'windows','category':'ps_script'}
 EXTRA=REVIEW['additional_cases']
@@ -38,13 +39,14 @@ def findings(event,expected):
     assert event==before
 
 
-def test_exact_source_cohort_is_staged_and_does_not_expand_default_authority():
+def test_frozen_review_and_separate_default_adoption_retain_exact_source():
     assert DATA['integration_status']=='staged-not-default'
-    assert DATA['reviewed_predecessor_count']==len(OLD)==len(DEFAULT.rule_ids)==178
+    assert DATA['reviewed_predecessor_count']==len(OLD)==178
+    assert len(DEFAULT.rule_ids)==203
     assert len(ROWS)==len({r['id'] for r in ROWS})==len({r['source_path'] for r in ROWS})==25
-    assert not {r['id'] for r in ROWS}&set(DEFAULT.rule_ids)
+    assert {r['id'] for r in ROWS}.issubset(DEFAULT.rule_ids)
     assert len(RULES)==len(BY_ID)==len(build_evidence_catalog(ALL))==203
-    assert len(load_evidence_catalog())==178 and len(BATCH_NAMES)==8
+    assert len(load_evidence_catalog())==203 and len(BATCH_NAMES)==9
     assert DATA['license']==LICENSE
     assert DATA['source_revision']==REVIEW['source_revision']=='05d1031f537e830b76da53bae2400c5814c89165'
     assert REVIEW['runtime_registered'] is False
@@ -110,15 +112,15 @@ def test_each_alternative_and_conjunction_near_miss_keeps_explicit_outcome(case)
 @pytest.mark.parametrize('key',['positive_event','negative_event'])
 def test_all_178_predecessor_fixture_findings_are_preserved(row,key):
     source={k:row['logsource'][k] for k in ('product','category')}
-    expected=DEFAULT.evaluate(row[key],trusted_logsource=source,allowed_rule_ids=DEFAULT.rule_ids)
+    expected=PRIOR.evaluate(row[key],trusted_logsource=source,allowed_rule_ids=PRIOR.rule_ids)
     assert REVIEW['prior_fixture_new_matches'].get(row['id']+'.'+key,[])==[]
     assert TABLE.evaluate(row[key],trusted_logsource=source,allowed_rule_ids=TABLE.rule_ids)==expected
 
 
 @pytest.mark.parametrize('row',ROWS,ids=lambda r:r['id'])
-def test_staging_does_not_authorize_unpublished_ids(row):
-    with pytest.raises(UnsupportedSigmaRule,match='unknown'):
-        DEFAULT.plan(trusted_logsource=PROCESS,allowed_rule_ids=[row['id']])
+def test_default_adoption_selects_exact_reviewed_id(row):
+    plan=DEFAULT.plan(trusted_logsource=PROCESS,allowed_rule_ids=[row['id']])
+    assert plan.selected_rule_ids==(row['id'],) and plan.excluded_rule_ids==()
 
 
 def test_hash_aliases_retain_both_upstream_signals_instead_of_merging_ids():

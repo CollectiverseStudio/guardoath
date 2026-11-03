@@ -1592,8 +1592,8 @@ single configured digest; the other examples can use distinct stage data.
 
 ## Isolated SigmaHQ event-rule importer (development only)
 
-The source-only Sigma importer now contains 178 source-identified Windows event
-rules: 53 process-creation rules and 125 PowerShell script rules.
+The source-only Sigma importer now contains 203 source-identified Windows event
+rules: 78 process-creation rules and 125 PowerShell script rules.
 It inspects structured event fields such as `ScriptBlockText`, rather than an AI
 conversation's meaning. For example, the upstream `Get-Process` rule matches a
 PowerShell event containing that command, while a `Get-Service` event does not
@@ -1627,7 +1627,7 @@ and event text to 32,000 characters. A disposable Python worker enforces a
 one-second execution deadline while keeping the existing regex semantics. A
 `SigmaEvaluationError` (including `SigmaRegexTimeout`) means evaluation did not
 complete; handle it as an error, never as evidence that an event is clean. The
-current 178 imported rules do not use regex. Worker overhead and aggregate request
+current 203 imported rules do not use regex. Worker overhead and aggregate request
 budgets still require integration review before enabling this path in a service.
 
 
@@ -1723,9 +1723,9 @@ most 128 routed rules per evaluation, with shared work/deadline budgets.
 ### Complete Sigma rule evidence export
 
 Run `python -m guardoath.sigma_rules.evidence_catalog` for an offline JSON handoff
-of all 178 imported rules, each with original attribution/logsource, a use case,
+of all 203 imported rules, each with original attribution/logsource, a use case,
 positive structured event, nonmatching look-alike and limitations. The export
-explicitly marks the rules as unregistered. It verifies all 178 pinned source
+explicitly marks the rules as unregistered. It verifies all 203 pinned source
 snapshots. The original three now have full metadata and immutable URLs after a
 separate reviewed pinning update; historical audit evidence remains frozen.
 
@@ -1753,7 +1753,7 @@ fix remain Director-owned integration requirements.
 The isolated [batch 006](sigma-batch-006.md) adds 25 original Windows PowerShell
 script rules, with one matching event and one look-alike each, upstream attribution
 and immutable source hashes. The historical six-batch inventory contained 128 rules; batch 007 expands the
-current default to eight batches and 178 pinned rules with source routing.
+current default to nine batches and 203 pinned rules with source routing.
 Examples include LSASS process lookup, local
 group/share discovery, shadow-copy deletion and firewall/profile/WMI changes.
 These literal event signals can match legitimate administration; a look-alike for
@@ -1789,7 +1789,7 @@ The [batch 001 audit](sigma-batch-001-provenance-audit.md) confirms that the ori
 attribution at a verified immutable SigmaHQ commit. Their omitted descriptions,
 references and other metadata are listed explicitly. The offline audit command
 reports drift without rewriting rules. The subsequent [pinning update](sigma-batch-001-pinning.md) restored full metadata
-and original snapshots without changing detections: all 178 current rules are pinned.
+and original snapshots without changing detections: all 203 current rules are pinned.
 Neither audit nor pinning establishes effectiveness, hosted registration or
 packaged-asset readiness.
 
@@ -1816,10 +1816,10 @@ See [the routing-plan guide](sigma-routing-plans.md); no hosted API is added.
 ### Verifying reviewed Sigma release data
 
 The default isolated catalog/routing loaders and standalone wheel inspection now
-reject changes to any of the eight reviewed batch JSON objects, including detection
+reject changes to any of the nine reviewed batch JSON objects, including detection
 semantics, authors and example events, against fixed canonical code fingerprints.
 Reformatting JSON is allowed; a changed snapshot with newly supplied self-digests
-cannot redefine this release. All 178 originals and 187 required assets remain
+cannot redefine this release. All 203 originals and 213 required assets remain
 unchanged. Generic caller-owned builders remain separate. See
 [release integrity](sigma-release-integrity.md) for the archive command, deliberate
 anchor-update procedure and limits; upstream authentication, installed acceptance,
@@ -1830,7 +1830,7 @@ packaging adoption and hosted deployment remain separate requirements.
 After archive inspection and an offline installation outside the checkout,
 `python -I -m guardoath.sigma_rules.verify_installation --expected-root INSTALL_ROOT`
 checks exact module/metadata origins, installed records, reviewed assets and all
-178 original positive/look-alike, missing-event, malformed-event and routing
+203 original positive/look-alike, missing-event, malformed-event and routing
 contracts. Editable/foreign installations and any failed fixture reject without
 partial success JSON. The command installs nothing and uses no provider or
 network. See [the isolated installation procedure](sigma-installed-acceptance.md)
@@ -1846,9 +1846,9 @@ GuardOath includes 12 additional synthetic positive/benign-look-alike event pair
 The [C13 candidate review](sigma-process-candidates.md) stages 25 compatible,
 source-verified originals with matching/look-alike events and explicit overlap
 checks. The independently verified [C14 adoption](sigma-batch-007-integration.md)
-includes its 25; subsequent batch008 brings the current default to 178 rules: 53 process rules or
+includes its 25; subsequent batch008 brings the current default to 203 rules: 78 process rules or
 125 script rules per trusted event source, under the unchanged 128-selected-rule
-cap and shared budget. Direct evaluation of all 178 rejects. Source fingerprints
+cap and shared budget. Direct evaluation of all 203 rejects. Source fingerprints
 are reviewed; Director packaging adoption and installed release acceptance stay
 separate gates. Legitimate process activity can match; these
 fixtures are not effectiveness or deployment evidence.
@@ -1858,8 +1858,8 @@ fixtures are not effectiveness or deployment evidence.
 The [C15 evidence](sigma-candidate-branch-evidence.md) supplies 34 authored cases
 for alternate paths, parent images, process metadata, flags and conjunction near
 misses in 16 candidate rules. The original 153-definition review expectations also hold against the current
-178-rule default; target look-alikes may retain broader findings. Trusted process and
-script routes select 53 and 125 rules respectively, within the unchanged 128 cap.
+203-rule default; target look-alikes may retain broader findings. Trusted process and
+script routes select 78 and 125 rules respectively, within the unchanged 128 cap.
 No source detection, matcher, release selection or hosted behavior changes.
 
 ## Further staged process-rule candidates (C16)
@@ -1868,8 +1868,8 @@ The [batch 008 review](sigma-process-candidates-008.md) stages 25 further origin
 process rules with pinned Git-source evidence, authored matching/look-alike pairs,
 metadata/hash alternatives and exact overlap checks. The separately verified
 [C17 adoption](sigma-batch-008-integration.md) now includes all 25 in the default
-178-definition source catalog, routing 53 process or 125 script rules
-under the unchanged 128-selected-rule cap; direct 178-rule evaluation rejects.
+203-definition source catalog, routing 78 process or 125 script rules
+under the unchanged 128-selected-rule cap; direct 203-rule evaluation rejects.
 Release fingerprints and source contracts are reviewed; Director packaging
 adoption and actual installed acceptance remain separate release gates. Legitimate activity may match original patterns;
 these finite fixtures do not measure effectiveness or authorize deployment.
@@ -1891,9 +1891,9 @@ The [candidate009 review](sigma-process-candidates-009.md) stages 25 original
 Windows process rules and 176 authored alternatives/near misses with full source
 provenance and exact overlap findings. Two imphash alternatives also report the
 existing CreateMiniDump or Dumpert detector; both original IDs remain visible.
-Default inventory stays 178 pinned rules/187 assets. The proposed 203-definition
-review table routes 78 process or 125 script rules under the unchanged 128-rule
+The separately reviewed [C20 adoption](sigma-batch-009-integration.md) now brings
+the default to 203 pinned rules/213 assets, routing 78 process or 125 script rules under the unchanged 128-rule
 selected-event cap and shared budget. Fixtures are non-executed strings, not
 chat validators, authorization, effectiveness evidence or deployed controls.
-Separate source adoption, Director packaging/installed acceptance and exact-SHA
+Director packaging/installed acceptance and exact-SHA
 release gates remain required.

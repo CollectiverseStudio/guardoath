@@ -18,9 +18,9 @@ BY_ID = {row.rule_id: row for row in EVIDENCE}
 
 
 def test_complete_inventory_counts_sources_without_claiming_runtime_registration():
-    assert len(EVIDENCE) == len(BY_ID) == 178
-    assert sum(row.source_revision is not None for row in EVIDENCE) == 178
-    assert len({row.source_path for row in EVIDENCE}) == 178
+    assert len(EVIDENCE) == len(BY_ID) == 203
+    assert sum(row.source_revision is not None for row in EVIDENCE) == 203
+    assert len({row.source_path for row in EVIDENCE}) == 203
     assert all(row.maturity == 'offline-fixture-tested' for row in EVIDENCE)
     assert all('other rules may flag it' in row.limitations for row in EVIDENCE)
     assert all('chat-safety control' in row.limitations for row in EVIDENCE)
