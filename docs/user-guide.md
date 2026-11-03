@@ -1872,3 +1872,8 @@ under the unchanged 128-selected-rule cap; direct 178-rule evaluation rejects.
 Source, release fingerprints, archive/installed acceptance and packaging require
 separate coordinated adoption. Legitimate activity may match original patterns;
 these finite fixtures do not measure effectiveness or authorize deployment.
+
+
+### Independent agent-configuration rule actions (batch 5 and batch 6)
+
+The eight related `config6.*` and `agent5.*` security-setting indicators have **distinct emitted rule IDs and potentially different match sets**, so they must not be consolidated before enforcement. For example, `verify_tls=off` matches `config6.verify_tls` but not `agent5.disable_tls_cert`; `verify_tls=false` may match both. Each tenant's `rule_actions` applies independently to each original finding ID (`off`, `allow`, `flag`, `block`), and presentation grouping must not override the per-rule action. This is lexical review evidence, not trusted authorization for a tool or configuration change. The source-aware engine acceptance tests in `tests/test_config6_independent_tenant_actions.py` cover eight overlap pairs, actual independent engine decision outcomes, benign and Unicode examples, and cross-tenant isolation. **Hosted inclusion of the 40 config6 detectors remains Director-owned**; these acceptance tests do not register them.
