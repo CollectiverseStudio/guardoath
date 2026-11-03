@@ -1897,3 +1897,14 @@ selected-event cap and shared budget. Fixtures are non-executed strings, not
 chat validators, authorization, effectiveness evidence or deployed controls.
 Director packaging/installed acceptance and exact-SHA
 release gates remain required.
+
+### Sigma batch008 alternate child-process fixtures
+
+[Batch008 branch evidence](sigma-batch-008-branch-evidence.md) adds 37 original
+ClickOnce, DiskShadow and HTML Help child-image alternatives with positive,
+look-alike, missing-field and malformed-event contracts. A ClickOnce Apps/2.0
+parent launching calc.exe matches its original rule; calc.exe.bak does not.
+Tests freeze exact findings against the prior178 and current203-rule catalogs.
+Use explicit trusted Windows process-creation source and original rule IDs;
+these synthetic fixtures add no hosted registration or tenant authority and
+preserve the 128-selected-rule event limit. See the linked guide for scope.

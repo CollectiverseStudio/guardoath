@@ -1,0 +1,1734 @@
+{
+  "runtime_registered": false,
+  "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+  "reviewed_definition_count": 203,
+  "baseline_definition_count": 178,
+  "groups": [
+    {
+      "id": "67bc0e75-c0a9-4cfc-8754-84a505b63c04",
+      "source_path": "rules/windows/process_creation/proc_creation_win_dfsvc_suspicious_child_processes.yml",
+      "source_sha256": "76c32a0579f287f8902c62065e545a2b721f4ab1bf5cd7eae80e7539b070c9ff",
+      "source_git_blob": "ccd230b221f51cee551b16584a46194bacdef084",
+      "branches": [
+        {
+          "branch_id": "calc.exe",
+          "original_alternative": "\\calc.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\calc.exe"
+              },
+              "expected_rule_ids": [
+                "67bc0e75-c0a9-4cfc-8754-84a505b63c04"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\calc.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\calc.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\calc.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "cscript.exe",
+          "original_alternative": "\\cscript.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\cscript.exe"
+              },
+              "expected_rule_ids": [
+                "67bc0e75-c0a9-4cfc-8754-84a505b63c04"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\cscript.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\cscript.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\cscript.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "explorer.exe",
+          "original_alternative": "\\explorer.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\explorer.exe"
+              },
+              "expected_rule_ids": [
+                "67bc0e75-c0a9-4cfc-8754-84a505b63c04"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\explorer.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\explorer.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\explorer.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "mshta.exe",
+          "original_alternative": "\\mshta.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\mshta.exe"
+              },
+              "expected_rule_ids": [
+                "67bc0e75-c0a9-4cfc-8754-84a505b63c04"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\mshta.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\mshta.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\mshta.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "net.exe",
+          "original_alternative": "\\net.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\net.exe"
+              },
+              "expected_rule_ids": [
+                "67bc0e75-c0a9-4cfc-8754-84a505b63c04"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\net.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\net.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\net.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "net1.exe",
+          "original_alternative": "\\net1.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\net1.exe"
+              },
+              "expected_rule_ids": [
+                "67bc0e75-c0a9-4cfc-8754-84a505b63c04"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\net1.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\net1.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\net1.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "nltest.exe",
+          "original_alternative": "\\nltest.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\nltest.exe"
+              },
+              "expected_rule_ids": [
+                "67bc0e75-c0a9-4cfc-8754-84a505b63c04"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\nltest.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\nltest.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\nltest.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "notepad.exe",
+          "original_alternative": "\\notepad.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\notepad.exe"
+              },
+              "expected_rule_ids": [
+                "67bc0e75-c0a9-4cfc-8754-84a505b63c04"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\notepad.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\notepad.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\notepad.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "powershell.exe",
+          "original_alternative": "\\powershell.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\powershell.exe"
+              },
+              "expected_rule_ids": [
+                "67bc0e75-c0a9-4cfc-8754-84a505b63c04"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\powershell.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\powershell.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\powershell.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "pwsh.exe",
+          "original_alternative": "\\pwsh.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\pwsh.exe"
+              },
+              "expected_rule_ids": [
+                "67bc0e75-c0a9-4cfc-8754-84a505b63c04"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\pwsh.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\pwsh.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\pwsh.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "reg.exe",
+          "original_alternative": "\\reg.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\reg.exe"
+              },
+              "expected_rule_ids": [
+                "67bc0e75-c0a9-4cfc-8754-84a505b63c04"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\reg.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\reg.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\reg.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "regsvr32.exe",
+          "original_alternative": "\\regsvr32.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\regsvr32.exe"
+              },
+              "expected_rule_ids": [
+                "67bc0e75-c0a9-4cfc-8754-84a505b63c04"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\regsvr32.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\regsvr32.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\regsvr32.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "rundll32.exe",
+          "original_alternative": "\\rundll32.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\rundll32.exe"
+              },
+              "expected_rule_ids": [
+                "67bc0e75-c0a9-4cfc-8754-84a505b63c04"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\rundll32.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\rundll32.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\rundll32.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "schtasks.exe",
+          "original_alternative": "\\schtasks.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\schtasks.exe"
+              },
+              "expected_rule_ids": [
+                "67bc0e75-c0a9-4cfc-8754-84a505b63c04"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\schtasks.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\schtasks.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\schtasks.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "werfault.exe",
+          "original_alternative": "\\werfault.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\werfault.exe"
+              },
+              "expected_rule_ids": [
+                "67bc0e75-c0a9-4cfc-8754-84a505b63c04"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\werfault.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\werfault.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\werfault.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "wscript.exe",
+          "original_alternative": "\\wscript.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\wscript.exe"
+              },
+              "expected_rule_ids": [
+                "67bc0e75-c0a9-4cfc-8754-84a505b63c04"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe",
+                "Image": "C:\\Windows\\System32\\wscript.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\wscript.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\wscript.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Users\\Lab\\AppData\\Local\\Apps\\2.0\\Lab\\dfsvc.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "9f546b25-5f12-4c8d-8532-5893dcb1e4b8",
+      "source_path": "rules/windows/process_creation/proc_creation_win_diskshadow_child_process_susp.yml",
+      "source_sha256": "9610044de5fbd1628e7489b5a171add3717e7ee591f55007e583780541449b88",
+      "source_git_blob": "04889c408c4f0d65f2072e97f588eb9af39338a6",
+      "branches": [
+        {
+          "branch_id": "certutil.exe",
+          "original_alternative": "\\certutil.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe",
+                "Image": "C:\\Windows\\System32\\certutil.exe"
+              },
+              "expected_rule_ids": [
+                "9f546b25-5f12-4c8d-8532-5893dcb1e4b8"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe",
+                "Image": "C:\\Windows\\System32\\certutil.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\certutil.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\certutil.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "cscript.exe",
+          "original_alternative": "\\cscript.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe",
+                "Image": "C:\\Windows\\System32\\cscript.exe"
+              },
+              "expected_rule_ids": [
+                "9f546b25-5f12-4c8d-8532-5893dcb1e4b8"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe",
+                "Image": "C:\\Windows\\System32\\cscript.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\cscript.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\cscript.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "mshta.exe",
+          "original_alternative": "\\mshta.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe",
+                "Image": "C:\\Windows\\System32\\mshta.exe"
+              },
+              "expected_rule_ids": [
+                "9f546b25-5f12-4c8d-8532-5893dcb1e4b8"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe",
+                "Image": "C:\\Windows\\System32\\mshta.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\mshta.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\mshta.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "pwsh.exe",
+          "original_alternative": "\\pwsh.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe",
+                "Image": "C:\\Windows\\System32\\pwsh.exe"
+              },
+              "expected_rule_ids": [
+                "9f546b25-5f12-4c8d-8532-5893dcb1e4b8"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe",
+                "Image": "C:\\Windows\\System32\\pwsh.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\pwsh.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\pwsh.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "regsvr32.exe",
+          "original_alternative": "\\regsvr32.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe",
+                "Image": "C:\\Windows\\System32\\regsvr32.exe"
+              },
+              "expected_rule_ids": [
+                "9f546b25-5f12-4c8d-8532-5893dcb1e4b8"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe",
+                "Image": "C:\\Windows\\System32\\regsvr32.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\regsvr32.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\regsvr32.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "rundll32.exe",
+          "original_alternative": "\\rundll32.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe",
+                "Image": "C:\\Windows\\System32\\rundll32.exe"
+              },
+              "expected_rule_ids": [
+                "9f546b25-5f12-4c8d-8532-5893dcb1e4b8"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe",
+                "Image": "C:\\Windows\\System32\\rundll32.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\rundll32.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\rundll32.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "wscript.exe",
+          "original_alternative": "\\wscript.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe",
+                "Image": "C:\\Windows\\System32\\wscript.exe"
+              },
+              "expected_rule_ids": [
+                "9f546b25-5f12-4c8d-8532-5893dcb1e4b8"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe",
+                "Image": "C:\\Windows\\System32\\wscript.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\wscript.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\wscript.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\System32\\diskshadow.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "52cad028-0ff0-4854-8f67-d25dfcbc78b4",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hh_html_help_susp_child_process.yml",
+      "source_sha256": "4cb721eccb6e2a63e399b6a54b687ddc739985dbcc0d525fa6f9fb534dd8cd72",
+      "source_git_blob": "43d7ac3fc5fb8a1ac6db0a158c95b30bdee84e59",
+      "branches": [
+        {
+          "branch_id": "certreq.exe",
+          "original_alternative": "\\CertReq.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\CertReq.exe"
+              },
+              "expected_rule_ids": [
+                "52cad028-0ff0-4854-8f67-d25dfcbc78b4"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\CertReq.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\CertReq.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\CertReq.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "certutil.exe",
+          "original_alternative": "\\CertUtil.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\CertUtil.exe"
+              },
+              "expected_rule_ids": [
+                "52cad028-0ff0-4854-8f67-d25dfcbc78b4"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\CertUtil.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\CertUtil.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\CertUtil.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "cscript.exe",
+          "original_alternative": "\\cscript.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\cscript.exe"
+              },
+              "expected_rule_ids": [
+                "52cad028-0ff0-4854-8f67-d25dfcbc78b4"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\cscript.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\cscript.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\cscript.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "installutil.exe",
+          "original_alternative": "\\installutil.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\installutil.exe"
+              },
+              "expected_rule_ids": [
+                "52cad028-0ff0-4854-8f67-d25dfcbc78b4"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\installutil.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\installutil.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\installutil.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "msbuild.exe",
+          "original_alternative": "\\MSbuild.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\MSbuild.exe"
+              },
+              "expected_rule_ids": [
+                "52cad028-0ff0-4854-8f67-d25dfcbc78b4"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\MSbuild.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\MSbuild.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\MSbuild.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "mshta.exe",
+          "original_alternative": "\\MSHTA.EXE",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\MSHTA.EXE"
+              },
+              "expected_rule_ids": [
+                "52cad028-0ff0-4854-8f67-d25dfcbc78b4"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\MSHTA.EXE.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\MSHTA.EXE"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\MSHTA.EXE"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "msiexec.exe",
+          "original_alternative": "\\msiexec.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\msiexec.exe"
+              },
+              "expected_rule_ids": [
+                "52cad028-0ff0-4854-8f67-d25dfcbc78b4"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\msiexec.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\msiexec.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\msiexec.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "powershell.exe",
+          "original_alternative": "\\powershell.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\powershell.exe"
+              },
+              "expected_rule_ids": [
+                "52cad028-0ff0-4854-8f67-d25dfcbc78b4"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\powershell.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\powershell.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\powershell.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "pwsh.exe",
+          "original_alternative": "\\pwsh.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\pwsh.exe"
+              },
+              "expected_rule_ids": [
+                "52cad028-0ff0-4854-8f67-d25dfcbc78b4"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\pwsh.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\pwsh.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\pwsh.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "regsvr32.exe",
+          "original_alternative": "\\regsvr32.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\regsvr32.exe"
+              },
+              "expected_rule_ids": [
+                "52cad028-0ff0-4854-8f67-d25dfcbc78b4"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\regsvr32.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\regsvr32.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\regsvr32.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "rundll32.exe",
+          "original_alternative": "\\rundll32.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\rundll32.exe"
+              },
+              "expected_rule_ids": [
+                "52cad028-0ff0-4854-8f67-d25dfcbc78b4"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\rundll32.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\rundll32.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\rundll32.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "schtasks.exe",
+          "original_alternative": "\\schtasks.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\schtasks.exe"
+              },
+              "expected_rule_ids": [
+                "52cad028-0ff0-4854-8f67-d25dfcbc78b4"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\schtasks.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\schtasks.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\schtasks.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "wmic.exe",
+          "original_alternative": "\\wmic.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\wmic.exe"
+              },
+              "expected_rule_ids": [
+                "52cad028-0ff0-4854-8f67-d25dfcbc78b4"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\wmic.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\wmic.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\wmic.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        },
+        {
+          "branch_id": "wscript.exe",
+          "original_alternative": "\\wscript.exe",
+          "cases": [
+            {
+              "case_id": "positive",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\wscript.exe"
+              },
+              "expected_rule_ids": [
+                "52cad028-0ff0-4854-8f67-d25dfcbc78b4"
+              ]
+            },
+            {
+              "case_id": "image-lookalike",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe",
+                "Image": "C:\\Windows\\System32\\wscript.exe.bak"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "parent-lookalike",
+              "event": {
+                "ParentImage": "C:\\Trusted\\parent.exe",
+                "Image": "C:\\Windows\\System32\\wscript.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-parent",
+              "event": {
+                "Image": "C:\\Windows\\System32\\wscript.exe"
+              },
+              "expected_rule_ids": []
+            },
+            {
+              "case_id": "missing-image",
+              "event": {
+                "ParentImage": "C:\\Windows\\hh.exe"
+              },
+              "expected_rule_ids": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
