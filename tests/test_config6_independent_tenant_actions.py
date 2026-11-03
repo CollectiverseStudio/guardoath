@@ -90,13 +90,45 @@ def test_off_only_config6_finding_cannot_be_substituted_with_agent5_id():
 
 
 def test_tenant_rule_override_does_not_leak_to_second_tenant():
-    text = "verify_tls=false"
-    blocked = run_engine(text, {"config6.verify_tls": "block"}, "tenant-block")
-    allowed = run_engine(text, {"config6.verify_tls": "allow",
-                                "agent5.disable_tls_cert": "allow"}, "tenant-allow")
+    # One shared Engine, one checker and concurrent requests: exercise the actual
+    # tenant-policy lookup rather than two independently constructed engines.
+    async def lexical(request, policy, stage):
+        matches = tuple(
+            Finding(rule_id=s.rule_id, category="lexical_security",
+                    severity="high", explanation="Lexical indicator matched")
+            for s in (*inspect_config(request.content), *inspect_boundary(request.content))
+            if s.rule_id in ("config6.verify_tls", "agent5.disable_tls_cert")
+        )
+        return CheckerResult(
+            checker_id="lexical_guards", checker_version="fixture",
+            status="flagged" if matches else "passed", findings=matches,
+        )
+
+    lexical.checker_version = "fixture"
+    shared_rule = Rule(checker_id="lexical_guards", on_finding=Action.ALLOW)
+    engine = Engine([
+        Policy(application_id="tenant-block", version="tenant", mode="enforce",
+               rules=(shared_rule,), rule_actions={"config6.verify_tls": "block",
+                                                   "agent5.disable_tls_cert": "allow"}),
+        Policy(application_id="tenant-allow", version="tenant", mode="enforce",
+               rules=(shared_rule,), rule_actions={"config6.verify_tls": "allow",
+                                                   "agent5.disable_tls_cert": "allow"}),
+    ], {"lexical_guards": lexical})
+
+    async def check_tenants():
+        return await asyncio.gather(*(
+            engine.check(CheckRequest(application_id=owner, policy_version="tenant",
+                                      content="verify_tls=false"), Stage.INPUT)
+            for owner in ("tenant-block", "tenant-allow")
+        ))
+
+    blocked, allowed = asyncio.run(check_tenants())
+    assert blocked.evaluation_status == allowed.evaluation_status == "complete"
     assert blocked.effective_action == Action.BLOCK
     assert allowed.effective_action == Action.ALLOW
-    assert {f.rule_id for f in blocked.findings} == {f.rule_id for f in allowed.findings}
+    assert {f.rule_id for f in blocked.findings} == {f.rule_id for f in allowed.findings} == {
+        "config6.verify_tls", "agent5.disable_tls_cert"
+    }
 
 
 def test_benign_and_unicode_safety_boundaries():
