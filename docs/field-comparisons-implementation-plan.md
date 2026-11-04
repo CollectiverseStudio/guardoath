@@ -51,7 +51,7 @@ All 30 specific case records are in the JSON inventory, rather than duplicating 
 
 ### Baseline synthetic test matrix
 
-Current standalone `tests/test_field_comparisons_inventory.py` defines **181 parametrized executions**: 1 inventory contract, 60 positive, 60 benign, 30 missing-left and 30 wrong-type? Plus 2 global tests yields **183** total. Verify collected count from pytest rather than treating arithmetic as executed proof. The eventual implementation should also test missing right, two simultaneous failures, `off/flag/allow/block` per tenant, parallel tenants, hostile JSON and stage scoping.
+Current standalone `tests/test_field_comparisons_inventory.py` defines **182 expected collected cases**: 60 positive, 60 benign, 30 missing-left, 30 wrong-type and 2 inventory/scope contract tests. Verify the actual collected count from pytest rather than treating this count as executed proof. The eventual implementation should also test missing right, two simultaneous failures, `off/flag/allow/block` per tenant, parallel tenants, hostile JSON and stage scoping.
 
 **Note on trustworthy right-hand values:** comparing `refund_amount` to a `purchase_amount` within the same untrusted JSON can detect inconsistency, but not whether either amount is genuine. Healthcare, legal, compliance and financial examples are synthetic integrity constraints only. This validator alone does not prove medical correctness, regulatory compliance, fiscal authorization, source authenticity, or fraud prevention.
 
