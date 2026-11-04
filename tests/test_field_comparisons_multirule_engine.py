@@ -126,3 +126,60 @@ def test_contradictory_strict_comparisons_both_report_on_equal_input():
     result = run({"a": 1, "b": 1}, comparisons=rules)
     assert {f.rule_id for f in result.findings} == {"business.a_b", "business.b_a"}
     assert result.recommended_action == Action.BLOCK
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+@pytest.mark.parametrize("missing,expected", [
+    ("shipped_qty", {"business.shipped", "business.delivered"}),
+    ("refund_amount", {"business.refund"}),
+    ("ordered_qty", {"business.shipped"}),
+    ("purchase_amount", {"business.refund"}),
+])
+def test_missing_field_reports_every_affected_rule_without_suppressing_others(stage, missing, expected):
+    payload = {key: value for key, value in BENIGN.items() if key != missing}
+    result = run(payload, stage=stage)
+    assert {finding.rule_id for finding in result.findings} == expected
+    assert result.evaluation_status == "complete"
+
+
+@pytest.mark.parametrize("invalid", [None, True, "8", [], {}])
+def test_invalid_shared_left_does_not_mask_both_dependent_rules(invalid):
+    payload = {**BENIGN, "shipped_qty": invalid}
+    result = run(payload)
+    assert {finding.rule_id for finding in result.findings} == {
+        "business.shipped", "business.delivered"
+    }
+    assert result.recommended_action == Action.BLOCK
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_shared_engine_tenant_isolation_during_concurrent_requests(stage):
+    policies = (
+        Policy(application_id="alpha", version="multi-rule-v1", mode="enforce",
+               rules=(Rule(checker_id="cross_field", on_finding="flag"),),
+               comparisons=CHAIN,
+               input_rule_actions={"business.refund": "block"},
+               output_rule_actions={"business.refund": "block"}),
+        Policy(application_id="beta", version="multi-rule-v1", mode="enforce",
+               rules=(Rule(checker_id="cross_field", on_finding="flag"),),
+               comparisons=CHAIN,
+               input_rule_actions={"business.refund": "off"},
+               output_rule_actions={"business.refund": "off"}),
+    )
+    engine = Engine(policies, default_checkers())
+    content = json.dumps({**BENIGN, "refund_amount": 101})
+
+    async def parallel():
+        requests = [
+            engine.check(CheckRequest(application_id=owner, policy_version="multi-rule-v1",
+                                      content=content, content_format="json"), stage)
+            for owner in ("alpha", "beta") for _ in range(4)
+        ]
+        return await asyncio.gather(*requests)
+
+    results = asyncio.run(parallel())
+    first, second = results[:4], results[4:]
+    assert all({finding.rule_id for finding in result.findings} == {"business.refund"}
+               and result.recommended_action == Action.BLOCK for result in first)
+    assert all(result.findings == () and result.recommended_action == Action.ALLOW
+               for result in second)
