@@ -88,13 +88,13 @@ def _validated_rule_actions(actions, controls, owner):
     try:
         record = TenantRecord.model_validate({
             'tenant_id': owner, 'display_name': 'Migration preview validation',
-            'check_secrets': Action.ALLOW,
-            'check_pii': Action.REDACT if redacts else None,
-            'rule_actions': actions,
+            'input_check_secrets': Action.ALLOW,
+            'input_check_pii': Action.REDACT if redacts else None,
+            'input_rule_actions': actions,
         }, strict=True)
     except Exception:
         raise ValueError('invalid source-derived per-rule settings') from None
-    return dict(record.rule_actions)
+    return dict(record.input_rule_actions)
 
 
 def validate_payload(payload, catalog):
@@ -153,14 +153,18 @@ def migration_preview(record_or_payload, catalog):
     raw = record.model_dump(mode='json')
     controls = {}
     for control_id in CHECK_IDS:
-        action = getattr(record, 'check_' + control_id)
+        actions = {stage: record.action(control_id, stage) for stage in ('input', 'output')}
         controls[control_id] = {
-            'input_action': action.value if action is not None else None,
-            'output_action': action.value if action is not None and control_id not in INPUT_ONLY_CHECK_IDS else None,
+            'input_action': actions['input'].value if actions['input'] is not None else None,
+            'output_action': actions['output'].value if actions['output'] is not None else None,
             'settings': {name: raw[name] for name in SETTINGS_OF.get(control_id, ())},
         }
+    # The preview carries one rule map. Records whose input and output rule settings differ (possible since
+    # 2026-11-04) are refused rather than previewed with one stage's settings silently dropped.
+    if raw['input_rule_actions'] != raw['output_rule_actions']:
+        raise ValueError('per-stage rule settings differ; the preview format carries one rule map')
     return validate_payload({'tenant_id': record.tenant_id, 'format_version': 1, 'catalog_version': CATALOG_VERSION,
-        'record_revision': record.revision, 'validations': controls, 'rule_actions': raw['rule_actions']}, catalog)
+        'record_revision': record.revision, 'validations': controls, 'rule_actions': raw['input_rule_actions']}, catalog)
 
 
 def update_preview(payload, changes, catalog, *, trusted_tenant_id, expected_revision):

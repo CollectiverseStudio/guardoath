@@ -40,7 +40,7 @@ def checker(identifier, events, *, redact=False, error=False):
 
 
 def record(owner='tenant-a', **changes):
-    return TenantRecord(**{'tenant_id': owner, 'display_name': owner, 'revision': 2, 'check_secrets': 'block', **changes})
+    return TenantRecord(**{'tenant_id': owner, 'display_name': owner, 'revision': 2, 'input_check_secrets': 'block', 'output_check_secrets': 'block', **changes})
 
 
 def setup(record_a=None, provider=None, *, records=None, checkers=None, binding_changes=None, **kwargs):
@@ -152,7 +152,7 @@ def test_required_unavailable_or_failed_check_blocks_before_provider_even_failur
 def test_immutable_snapshot_survives_record_change_mid_provider_call():
     records = {'key-a': record()}
     def mutate():
-        records['key-a'] = TenantRecord.model_validate({**records['key-a'].model_dump(), 'revision': 3, 'check_secrets': 'allow'})
+        records['key-a'] = TenantRecord.model_validate({**records['key-a'].model_dump(), 'revision': 3, 'input_check_secrets': 'allow', 'output_check_secrets': 'allow'})
     client, _, _, _, _ = setup(records=records, provider=Provider('PRIVATE reply', mutate=mutate))
     result = post(client).json()
     assert records['key-a'].revision == 3

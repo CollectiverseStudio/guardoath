@@ -1,9 +1,14 @@
 "use strict";
 const $ = id => document.getElementById(id);
 let key = "", application = null, revision = 0, busy = false, inputResult = null;
-const canProceed = r => r && r.evaluation_status === "complete" && !r.simulated && r.recommended_action === "allow" && r.effective_action === "allow" && r.checker_results.length > 0 && r.checker_results.every(c => ["passed", "flagged"].includes(c.status) && !c.simulated);
-// The decision decides, not whether something was found: a finding whose action is Allow is reported and the message
-// goes through (the legend's "Allow"). Block, Flag, Redact, an incomplete or simulated check still hold it.
+// Only Block stops a message or answer (Greg, 2026-11-04). The decision decides, not whether something was found: Allow
+// goes through; Flag goes through and its findings are reported for review; Redact goes through as the cleaned text once
+// it has been checked again (redaction ready). A check that did not finish gets the record's failure action, so it
+// stops only when that is Block. Both the recommended and the effective action are read, so observe mode shows what
+// enforce mode would do. Simulated checks (local launcher only) are never a pass.
+const goesThrough = (action, r) => ["allow", "flag"].includes(action) || (action === "redact" && r.redaction?.status === "ready");
+const canProceed = r => Boolean(r) && !r.simulated && r.checker_results.length > 0 && !r.checker_results.some(c => c.simulated)
+  && goesThrough(r.recommended_action, r) && goesThrough(r.effective_action, r);
 function buttons() {
   $("run").disabled = $("run-input").disabled = busy || !application?.policies.length;
   $("run-output").disabled = busy || !application || !canProceed(inputResult);
@@ -32,7 +37,7 @@ function waiting(stage) { const box = $(stage + "-results"); box.replaceChildren
 function gateText(result) {
   if (!result) return "Complete the input test first.";
   return canProceed(result) ? "Input checks passed. Paste your AI’s answer, then run output checks."
-    : "Input held. The input checks found issues or did not complete, so in your application this message would not be sent to the AI model and there is no answer to check. Change the user message (for example, choose Clean question) and run the input checks again.";
+    : "Input held. A check set to Block found something (or a check did not finish and the record\u2019s failure action is Block), so in your application this message would not be sent to the AI model and there is no answer to check. Change the user message (for example, choose Clean question) and run the input checks again.";
 }
 const currentPolicy = () => application?.policies.find(p => p.version === $("policy").value);
 const groupLabels = {passed:"Passed", findings:"Findings", incomplete:"Incomplete", simulated:"Simulated", partial:"Partial coverage", disabled:"Disabled", not_applicable:"Not applicable", not_implemented:"Not implemented"};
@@ -100,7 +105,7 @@ function coverage() {
     const tag = document.createElement("span"); tag.textContent = group.name + " · " + state; tag.title = group.limitations; $("coverage").append(tag);
   }
   delete $("profile-status").dataset.saved;
-  $("profile-status").textContent = policy ? (policy.version === "conversation-v1" ? "Combined conversation checks are active on both stages." : policy.version === "tenant" ? "Checks set on " + (application.tenant ? application.tenant.display_name : application.application_id) + "\u2019s tenant record: " + policy.checks.map(c => c.id).join(", ") + ". They run on both stages." : "Focused example profile: " + policy.version + ". Only its configured checks run.") : "Connect to load the combined conversation profile.";
+  $("profile-status").textContent = policy ? (policy.version === "conversation-v1" ? "Combined conversation checks are active on both stages." : policy.version === "tenant" ? "Checks set on " + (application.tenant ? application.tenant.display_name : application.application_id) + "\u2019s tenant record. " + ["input", "output"].map(stage => stageNames[stage] + ": " + (policy.checks.filter(c => c.stages.includes(stage)).map(c => c.id).join(", ") || "none")).join(". ") + "." : "Focused example profile: " + policy.version + ". Only its configured checks run.") : "Connect to load the combined conversation profile.";
   if (policy?.version === "text-security-v1") $("profile-status").textContent += " Local formatting/encoding signals only. Plain-language attacks, indirect instructions and multi-turn manipulation are not assessed.";
   if (policy?.version === "content-safety-v1") {
     const check = policy.checks.find(c => c.id === "content_safety");
@@ -128,7 +133,7 @@ async function loadApplication(token, attempt) {
 }
 const guideUrl = "/guide#";
 const checkHelp = {"pii": {"what": "Finds personal identifiers: email addresses, card numbers (with a checksum), U.S. Social Security numbers, and 90 more types of bank, tax, health, ID-document, network, phone and postal identifiers for the U.S. and 17 other countries. It can also look for labeled phone, birth date, medical record, health plan and bank account fields.", "why": "Stop customers’ personal data from being sent to an AI model, or from leaking out in an AI answer. Redact replaces what it finds and checks the result again.", "limit": "Does not detect names, places or other free-text personal details.", "anchor": "check-pii"}, "encoded_pii": {"what": "Looks for the same personal identifiers inside one labeled Base64 or hex layer, such as “base64: …”.", "why": "Someone can encode an email or card number to slip it past a plain-text filter.", "limit": "One labeled layer only; unlabeled or nested encodings are not decoded.", "anchor": "check-encoded_pii"}, "secrets": {"what": "Finds credentials from selected providers, JWTs, private keys and passwords inside URLs. Optionally also quoted password assignments, labeled encoded secrets and your own confidential phrases (for example an internal project name).", "why": "Stop API keys, passwords or confidential names from being pasted into a model or shown in an answer.", "limit": "Selected formats only; credentials are never verified with the provider.", "anchor": "check-secrets"}, "text_security": {"what": "Finds selected invisible and control characters, characters that reverse text direction, and labeled Base64/hex text.", "why": "Hidden characters and encodings are used to smuggle instructions past people reviewing a conversation.", "limit": "Not a prompt-injection detector: a plainly worded attack passes.", "anchor": "check-text_security"}, "lexical_guards": {"what": "Looks for 161 wording patterns of risky instructions: requests to reveal a system prompt or secrets, to ignore instructions or get around safety, approval and audit steps, destructive or data-exposing commands for shells, databases, Git, Kubernetes and cloud accounts, and settings that turn security controls off.", "why": "Report a message that asks an AI agent to do something dangerous, or an AI answer that proposes it, so a person can review it before anything runs.", "limit": "Matches wording, not intent: harmless text that uses the same words is reported too, and reworded requests pass. Flag suits it better than Block.", "anchor": "check-lexical_guards"}, "schema": {"what": "Checks that JSON content matches your JSON Schema: required fields, data types, formats such as dates and emails, and size limits.", "why": "When your application expects structured data, reject a malformed request or AI answer before your code uses it.", "limit": "Needs JSON content and a schema on the record. It checks shape, not whether the values are true.", "anchor": "check-schema"}, "cross_field": {"what": "Compares two fields in the submitted JSON, for example a start date before an end date, or a refund no larger than the purchase.", "why": "Catch inconsistent values, such as an AI offering a refund bigger than the order.", "limit": "Both values come from the submission, so it is a consistency check, not an authoritative limit.", "anchor": "check-cross_field"}, "completeness": {"what": "Checks that required labeled sections are present and long enough. The demo requires “Summary:” in the message, and “Summary:” and “Next steps:” in the answer.", "why": "Make sure an AI answer includes the parts your process needs, such as next steps in a support reply.", "limit": "Checks that a section exists and its length, not whether its content is good.", "anchor": "check-completeness"}, "matched_outcomes": {"what": "Compares submitted decision records. If two records match except for a group attribute (in the demo, “group”) but got different decisions, it reports a finding.", "why": "Spot inconsistent decisions between groups, for example in loan or hiring recommendations.", "limit": "Needs structured records. It does not judge free-text bias or certify fairness.", "anchor": "check-matched_outcomes"}, "evidence": {"what": "Checks that an answer’s [[source]] citations and quotations match a source catalog on the record, word for word.", "why": "Catch made-up citations and misquoted policy text before an answer reaches your user.", "limit": "Not a fact checker: it does not judge whether a quote supports the claim.", "anchor": "check-evidence"}, "tool_calls": {"what": "Checks that tool calls proposed by an AI use allowed tool names and that their arguments match each tool’s schema. The demo allows lookup_order and request_refund.", "why": "Stop an AI agent from calling a tool it should not use, or passing it bad arguments.", "limit": "Nothing is run or authorized; your application still decides whether to make the call.", "anchor": "check-tool_calls"}, "ledger": {"what": "Checks that debit and credit entries add up exactly, in a set currency and number of decimal places (demo: USD, 2 places).", "why": "Catch arithmetic mistakes in financial summaries an AI produces.", "limit": "Exact arithmetic only; no fraud or accounting-rule checks.", "anchor": "check-ledger"}, "timestamps": {"what": "Checks that a list of timestamps is in order, with no earlier time after a later one.", "why": "Catch out-of-order event logs and timelines.", "limit": "No sorting, freshness checks or memory between requests.", "anchor": "check-timestamps"}, "graph": {"what": "Checks a declared directed graph for cycles, self-loops, duplicate edges and links to unknown nodes.", "why": "Validate workflow or dependency graphs before they are used.", "limit": "Checks the declared structure only, not whether the relationships are true.", "anchor": "check-graph"}, "integrity": {"what": "Checks that content’s SHA-256 fingerprint matches an approved reference stored on the record.", "why": "Confirm that a template, policy text or file has not changed by even one character.", "limit": "A match shows the bytes are unchanged, not that the content is safe.", "anchor": "check-integrity"}, "content_safety": {"what": "Sends content to an outside provider (Amazon Bedrock Guardrails) to review hate, insults, sexual content, violence and misconduct.", "why": "Review harmful content that local pattern checks cannot judge.", "limit": "Paid outside service, not available for demo users. Runs only after all local checks pass.", "anchor": "check-content_safety"}, "azure_prompt_shields": {"what": "Sends the user’s message to an outside provider (Azure Prompt Shields) to look for prompt-attack attempts. Input only.", "why": "Add a model-based review of jailbreak attempts on top of the local checks.", "limit": "Paid outside service, not available for demo users. Runs only after all local checks pass.", "anchor": "check-azure_prompt_shields"}};
-const profileHelp = {"conversation-v1": {"name": "Conversation: everyday checks", "what": "Personal data, encoded personal data, secrets and hidden text, on both the user’s message and the AI’s answer.", "why": "The starting point for a chat assistant.", "anchor": "profile-conversation-v1"}, "pii-v1": {"name": "Personal data: email, card, SSN", "what": "Email, card and U.S. SSN rules plus the 90 privacy pattern types.", "why": "Focus on personal data only.", "anchor": "profile-pii-v1"}, "pii-extended-v1": {"name": "Personal data: labeled fields too", "what": "Adds labeled phone, birth date, medical record, health plan and bank account fields.", "why": "Forms and records where fields are labeled.", "anchor": "profile-pii-extended-v1"}, "redaction-v1": {"name": "Personal data: redact", "what": "Replaces found identifiers and runs the checks again on the cleaned text.", "why": "See what a cleaned message or answer would look like.", "anchor": "profile-redaction-v1"}, "privacy-encoded-v1": {"name": "Personal data: inside encodings", "what": "Personal data in plain text and inside one labeled Base64/hex layer.", "why": "Catch identifiers hidden by encoding.", "anchor": "profile-privacy-encoded-v1"}, "privacy-encoded-redact-v1": {"name": "Personal data: inside encodings, redact", "what": "Redacts plain identifiers and blocks encoded ones.", "why": "Clean what can be cleaned and stop what cannot.", "anchor": "profile-privacy-encoded-redact-v1"}, "secrets-v1": {"name": "Secrets: credential patterns", "what": "Selected provider keys, JWTs, private keys and passwords in URLs.", "why": "Stop credentials from leaking.", "anchor": "profile-secrets-v1"}, "secrets-extended-v1": {"name": "Secrets: extended", "what": "Adds quoted password assignments, labeled encoded secrets and confidential phrases.", "why": "Also protect internal project names and configuration.", "anchor": "profile-secrets-extended-v1"}, "text-security-v1": {"name": "Hidden text and encodings", "what": "Invisible and direction-changing characters, and labeled Base64/hex text.", "why": "Find text crafted to hide instructions.", "anchor": "profile-text-security-v1"}, "structure-v1": {"name": "JSON structure (schema)", "what": "JSON Schema: required fields, types, formats and limits.", "why": "Applications that exchange structured data.", "anchor": "profile-structure-v1"}, "business-v1": {"name": "Business rules: dates and refunds", "what": "JSON Schema plus start date before end date, and refund no larger than purchase.", "why": "Catch an AI promising something inconsistent.", "anchor": "profile-business-v1"}, "business-number-le-v1": {"name": "Business rules: number comparison", "what": "One numeric comparison: left value no larger than right value.", "why": "Limits such as quantity or amount caps.", "anchor": "profile-business-number-le-v1"}, "completeness-v1": {"name": "Required sections", "what": "Requires “Summary:” in the message, and “Summary:” and “Next steps:” in the answer.", "why": "Make sure answers include required parts.", "anchor": "profile-completeness-v1"}, "content-safety-v1": {"name": "Content safety (outside provider)", "what": "Everyday checks plus an outside content-safety provider. Not configured on this local server.", "why": "Review harmful content.", "anchor": "profile-content-safety-v1"}, "bias-matched-string-v1": {"name": "Matched decisions: text outcomes", "what": "Compares decision records that differ only by group; outcomes are text.", "why": "Spot inconsistent decisions between groups.", "anchor": "profile-bias-matched-string-v1"}, "bias-matched-boolean-v1": {"name": "Matched decisions: yes/no outcomes", "what": "Same comparison with yes/no outcomes.", "why": "Approve/deny decisions.", "anchor": "profile-bias-matched-boolean-v1"}, "bias-matched-number-v1": {"name": "Matched decisions: number outcomes", "what": "Same comparison with numeric outcomes.", "why": "Scores, prices or limits.", "anchor": "profile-bias-matched-number-v1"}, "evidence-v1": {"name": "Citation evidence", "what": "Citations and quotations checked word for word against a source catalog.", "why": "Catch made-up citations and misquotes.", "anchor": "profile-evidence-v1"}, "tool-calls-v1": {"name": "Proposed tool calls", "what": "Allowed tool names and argument schemas.", "why": "Keep AI agents within the tools they may use.", "anchor": "profile-tool-calls-v1"}, "ledger-v1": {"name": "Ledger totals", "what": "Debits and credits add up exactly.", "why": "Financial summaries.", "anchor": "profile-ledger-v1"}, "timestamps-v1": {"name": "Timestamp order", "what": "Timestamps are in order.", "why": "Event logs and timelines.", "anchor": "profile-timestamps-v1"}, "graph-v1": {"name": "Graph structure", "what": "No cycles, self-loops, duplicate edges or unknown nodes.", "why": "Workflow and dependency graphs.", "anchor": "profile-graph-v1"}, "integrity-v1": {"name": "Content integrity (SHA-256)", "what": "Content matches an approved fingerprint.", "why": "Unchanged templates and policy text.", "anchor": "profile-integrity-v1"}, "tenant": {"name": "Checks on this tenant record", "what": "The checks that are on in “Checks on this record” below, on both stages.", "why": "Your own combination of checks; change it with the drop-downs below.", "anchor": "profile-tenant"}};
+const profileHelp = {"conversation-v1": {"name": "Conversation: everyday checks", "what": "Personal data, encoded personal data, secrets and hidden text, on both the user’s message and the AI’s answer.", "why": "The starting point for a chat assistant.", "anchor": "profile-conversation-v1"}, "pii-v1": {"name": "Personal data: email, card, SSN", "what": "Email, card and U.S. SSN rules plus the 90 privacy pattern types.", "why": "Focus on personal data only.", "anchor": "profile-pii-v1"}, "pii-extended-v1": {"name": "Personal data: labeled fields too", "what": "Adds labeled phone, birth date, medical record, health plan and bank account fields.", "why": "Forms and records where fields are labeled.", "anchor": "profile-pii-extended-v1"}, "redaction-v1": {"name": "Personal data: redact", "what": "Replaces found identifiers and runs the checks again on the cleaned text.", "why": "See what a cleaned message or answer would look like.", "anchor": "profile-redaction-v1"}, "privacy-encoded-v1": {"name": "Personal data: inside encodings", "what": "Personal data in plain text and inside one labeled Base64/hex layer.", "why": "Catch identifiers hidden by encoding.", "anchor": "profile-privacy-encoded-v1"}, "privacy-encoded-redact-v1": {"name": "Personal data: inside encodings, redact", "what": "Redacts plain identifiers and blocks encoded ones.", "why": "Clean what can be cleaned and stop what cannot.", "anchor": "profile-privacy-encoded-redact-v1"}, "secrets-v1": {"name": "Secrets: credential patterns", "what": "Selected provider keys, JWTs, private keys and passwords in URLs.", "why": "Stop credentials from leaking.", "anchor": "profile-secrets-v1"}, "secrets-extended-v1": {"name": "Secrets: extended", "what": "Adds quoted password assignments, labeled encoded secrets and confidential phrases.", "why": "Also protect internal project names and configuration.", "anchor": "profile-secrets-extended-v1"}, "text-security-v1": {"name": "Hidden text and encodings", "what": "Invisible and direction-changing characters, and labeled Base64/hex text.", "why": "Find text crafted to hide instructions.", "anchor": "profile-text-security-v1"}, "structure-v1": {"name": "JSON structure (schema)", "what": "JSON Schema: required fields, types, formats and limits.", "why": "Applications that exchange structured data.", "anchor": "profile-structure-v1"}, "business-v1": {"name": "Business rules: dates and refunds", "what": "JSON Schema plus start date before end date, and refund no larger than purchase.", "why": "Catch an AI promising something inconsistent.", "anchor": "profile-business-v1"}, "business-number-le-v1": {"name": "Business rules: number comparison", "what": "One numeric comparison: left value no larger than right value.", "why": "Limits such as quantity or amount caps.", "anchor": "profile-business-number-le-v1"}, "completeness-v1": {"name": "Required sections", "what": "Requires “Summary:” in the message, and “Summary:” and “Next steps:” in the answer.", "why": "Make sure answers include required parts.", "anchor": "profile-completeness-v1"}, "content-safety-v1": {"name": "Content safety (outside provider)", "what": "Everyday checks plus an outside content-safety provider. Not configured on this local server.", "why": "Review harmful content.", "anchor": "profile-content-safety-v1"}, "bias-matched-string-v1": {"name": "Matched decisions: text outcomes", "what": "Compares decision records that differ only by group; outcomes are text.", "why": "Spot inconsistent decisions between groups.", "anchor": "profile-bias-matched-string-v1"}, "bias-matched-boolean-v1": {"name": "Matched decisions: yes/no outcomes", "what": "Same comparison with yes/no outcomes.", "why": "Approve/deny decisions.", "anchor": "profile-bias-matched-boolean-v1"}, "bias-matched-number-v1": {"name": "Matched decisions: number outcomes", "what": "Same comparison with numeric outcomes.", "why": "Scores, prices or limits.", "anchor": "profile-bias-matched-number-v1"}, "evidence-v1": {"name": "Citation evidence", "what": "Citations and quotations checked word for word against a source catalog.", "why": "Catch made-up citations and misquotes.", "anchor": "profile-evidence-v1"}, "tool-calls-v1": {"name": "Proposed tool calls", "what": "Allowed tool names and argument schemas.", "why": "Keep AI agents within the tools they may use.", "anchor": "profile-tool-calls-v1"}, "ledger-v1": {"name": "Ledger totals", "what": "Debits and credits add up exactly.", "why": "Financial summaries.", "anchor": "profile-ledger-v1"}, "timestamps-v1": {"name": "Timestamp order", "what": "Timestamps are in order.", "why": "Event logs and timelines.", "anchor": "profile-timestamps-v1"}, "graph-v1": {"name": "Graph structure", "what": "No cycles, self-loops, duplicate edges or unknown nodes.", "why": "Workflow and dependency graphs.", "anchor": "profile-graph-v1"}, "integrity-v1": {"name": "Content integrity (SHA-256)", "what": "Content matches an approved fingerprint.", "why": "Unchanged templates and policy text.", "anchor": "profile-integrity-v1"}, "tenant": {"name": "Checks on this tenant record", "what": "The checks that are on in “Checks on this record” below, on the stages set there.", "why": "Your own combination of checks; change it with the drop-downs below.", "anchor": "profile-tenant"}};
 function guideLink(anchor, text) { const link = document.createElement("a"); link.href = guideUrl + anchor; link.target = "_blank"; link.rel = "noopener noreferrer"; link.textContent = text; return link; }
 function helpBlock(help, extra) {
   const box = document.createDocumentFragment();
@@ -145,7 +150,7 @@ function actionName(value) { return value ? value.charAt(0).toUpperCase() + valu
 // The record's own checks can be changed here; an example profile's checks are shown as they are.
 function ownChecksSelected() { const policy = currentPolicy(); return !policy || policy.version === "tenant"; }
 // Rules inside each check (GET /v1/controls). Loaded once; a rule list is filled only when it is opened.
-let controlRules = null, ruleEdits = {};
+let controlRules = null, ruleEdits = {input: {}, output: {}};
 async function loadRules() {
   if (controlRules) return controlRules;
   const response = await send("/v1/controls", {cache: "default"});
@@ -155,27 +160,38 @@ async function loadRules() {
   controlRules = map; return map;
 }
 function sortedEntries(value) { return JSON.stringify(Object.entries(value || {}).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)); }
-// Rules (2026-11-03): one list of every rule, alphabetical, found by name or id and filtered by check and setting.
-// A rule with no setting of its own uses its check's setting ("Same as check"), so a check set to Block blocks every
-// rule in it until a rule is given its own setting, such as Email address: Allow. A rule runs only while its check
-// is on. This is the engine's rule: a finding uses its rule's own action if one is set, otherwise the check's.
+// The checks panel (2026-11-04): one table grouped by category. Each check is a row with its Input and Output setting
+// (one record field per stage); its rules sit under it, each with its own Input and Output setting. A rule with no
+// setting of its own uses its check's setting on that stage ("Same as check"), so a check set to Block blocks every
+// rule in it until a rule is given its own setting, such as Email address: Allow. A rule runs only on the stages where
+// its check is on. This is the engine's rule: a finding uses its rule's own action if one is set, otherwise the check's.
 const collator = new Intl.Collator("en", {sensitivity: "base", numeric: true});
 const settingNames = {"": "Off", off: "Off", block: "Block", flag: "Flag", allow: "Allow", redact: "Redact"};
-let ruleIndex = {}, ruleFilters = {text: "", check: "", setting: ""};
+const stageNames = {input: "Input", output: "Output"};
+const inputOnlyChecks = ["azure_prompt_shields"];
+let ruleIndex = {}, ruleFilters = {text: "", check: "", setting: ""}, openGroups = new Set();
 function byCheckName(a, b) { return collator.compare(checkNames[a] || a, checkNames[b] || b); }
-function checkSetting(id) { const select = $("tenant-check-" + id); return select ? select.value : (application?.tenant?.checks[id] || ""); }
-function fillRuleOptions(select, rule) {
-  const check = checkSetting(rule.control_id), redacts = check === "redact";
+function runsOn(id, stage) { return stage === "input" || !inputOnlyChecks.includes(id); }
+function savedCheck(id, stage) { return (application?.tenant?.[stage + "_checks"] || {})[id] || ""; }
+function checkSetting(id, stage) { if (!runsOn(id, stage)) return ""; const select = $("tenant-check-" + stage + "-" + id); return select ? select.value : savedCheck(id, stage); }
+function stageCell(cell, id, stage) {
+  if (!runsOn(id, stage)) { cell.textContent = "Input only"; cell.className += " not-applicable"; return false; }
+  return true;
+}
+function fillRuleOptions(select, rule, stage) {
+  const check = checkSetting(rule.control_id, stage), redacts = check === "redact";
   const choices = [["", "Same as check (" + settingNames[check] + ")"], ...(redacts ? [] : [["block", "Block"], ["flag", "Flag"], ["allow", "Allow"]]), ["off", "Off"]];
   select.replaceChildren(...choices.map(([value, text]) => new Option(text, value)));
-  const own = ruleEdits[rule.rule_id];
+  const own = ruleEdits[stage][rule.rule_id];
   select.value = own && choices.some(([value]) => value === own) ? own : "";
   select.disabled = !check;
-  select.title = !check ? "Turn on " + (checkNames[rule.control_id] || rule.control_id) + " to set this rule: a rule runs only while its check is on." : "";
+  select.title = !check ? "Turn on " + (checkNames[rule.control_id] || rule.control_id) + " for " + stage + " to set this rule there: a rule runs only where its check is on." : "";
 }
-// The setting a rule runs with: its own, or its check's; a rule never runs while its check is off.
-function ruleInEffect(ruleId) {
-  const rule = ruleIndex[ruleId], check = checkSetting(rule.control_id), own = ruleEdits[ruleId];
+// The setting a rule runs with on one stage: its own, or its check's; a rule never runs where its check is off.
+function ruleInEffect(ruleId, stage) {
+  const rule = ruleIndex[ruleId];
+  if (!runsOn(rule.control_id, stage)) return {value: "", text: "Does not run (input only)"};
+  const check = checkSetting(rule.control_id, stage), own = ruleEdits[stage][ruleId];
   if (!check) return {value: "off", text: "Off (check is off)"};
   if (own) return {value: own, text: settingNames[own] + " (own setting)"};
   return {value: check, text: settingNames[check] + " (from check)"};
@@ -183,7 +199,7 @@ function ruleInEffect(ruleId) {
 function ruleRow(rule) {
   const row = document.createElement("tr"); row.className = "rule-row"; row.dataset.rule = rule.rule_id; row.dataset.check = rule.control_id;
   const nameCell = document.createElement("td"); nameCell.className = "rule-name";
-  const title = document.createElement("label"); title.className = "rule-title"; title.htmlFor = "rule-action-" + rule.rule_id; title.textContent = rule.title;
+  const title = document.createElement("label"); title.className = "rule-title"; title.htmlFor = "rule-action-input-" + rule.rule_id; title.textContent = rule.title;
   const id = document.createElement("code"); id.className = "rule-id"; id.textContent = rule.rule_id;
   const info = document.createElement("details"); info.className = "rule-info";
   const summary = document.createElement("summary"); summary.textContent = "Use case and examples"; info.append(summary);
@@ -200,127 +216,202 @@ function ruleRow(rule) {
   }
   const severity = document.createElement("p"); severity.className = "hint"; severity.textContent = "Severity " + rule.severity + (rule.record_rule ? " \u00b7 defined on this tenant record" : ""); info.append(severity);
   nameCell.append(title, id, info);
-  const check = document.createElement("td"); check.className = "rule-check"; check.textContent = checkNames[rule.control_id] || rule.control_id;
-  const settingCell = document.createElement("td"); settingCell.className = "rule-setting";
-  const action = document.createElement("select"); action.id = "rule-action-" + rule.rule_id; action.dataset.rule = rule.rule_id;
-  fillRuleOptions(action, rule); settingCell.append(action);
+  row.append(nameCell);
+  for (const stage of ["input", "output"]) {
+    const cell = document.createElement("td"); cell.className = "rule-setting stage-" + stage;
+    if (stageCell(cell, rule.control_id, stage)) {
+      const action = document.createElement("select"); action.id = "rule-action-" + stage + "-" + rule.rule_id; action.dataset.rule = rule.rule_id; action.dataset.stage = stage;
+      action.setAttribute("aria-label", rule.title + ": " + stage);
+      fillRuleOptions(action, rule, stage); cell.append(action);
+      action.addEventListener("change", () => {
+        if (action.value) ruleEdits[stage][rule.rule_id] = action.value; else delete ruleEdits[stage][rule.rule_id];
+        showEffect(rule.rule_id); updateRuleCounts(); showUnsaved();
+      });
+    }
+    row.append(cell);
+  }
   const effect = document.createElement("td"); effect.className = "rule-effect"; effect.id = "rule-effect-" + rule.rule_id;
-  action.addEventListener("change", () => {
-    if (action.value) ruleEdits[rule.rule_id] = action.value; else delete ruleEdits[rule.rule_id];
-    showEffect(rule.rule_id); updateRuleCounts();
-  });
-  row.append(nameCell, check, settingCell, effect);
+  for (const stage of ["input", "output"]) {
+    const line = document.createElement("span"); line.className = "effect-" + stage; line.id = "rule-effect-" + stage + "-" + rule.rule_id; effect.append(line);
+  }
+  row.append(effect);
   return row;
 }
 function showEffect(ruleId) {
-  const cell = $("rule-effect-" + ruleId); if (!cell) return;
-  const effect = ruleInEffect(ruleId); cell.textContent = effect.text; cell.dataset.value = effect.value;
-}
-let ruleSort = {key: "rule", up: true};
-function sortRules() {
-  const body = $("rule-table").tBodies[0], rows = [...body.rows];
-  const keyOf = {rule: r => ruleIndex[r.dataset.rule].title, check: r => checkNames[r.dataset.check] || r.dataset.check,
-                 effect: r => ruleInEffect(r.dataset.rule).text};
-  const key = keyOf[ruleSort.key], direction = ruleSort.up ? 1 : -1;
-  rows.sort((a, b) => direction * collator.compare(key(a), key(b)) || collator.compare(ruleIndex[a.dataset.rule].title, ruleIndex[b.dataset.rule].title));
-  body.append(...rows);
-  for (const th of $("rule-table").tHead.rows[0].cells) {
-    th.setAttribute("aria-sort", th.dataset.sort === ruleSort.key ? (ruleSort.up ? "ascending" : "descending") : "none");
+  for (const stage of ["input", "output"]) {
+    const line = $("rule-effect-" + stage + "-" + ruleId); if (!line) continue;
+    const effect = ruleInEffect(ruleId, stage); line.textContent = stageNames[stage] + ": " + effect.text; line.dataset.value = effect.value;
   }
 }
+function checkRow(id, own, policy) {
+  const tenant = application.tenant;
+  const row = document.createElement("tr"); row.className = "check-row"; row.dataset.check = id; row.id = "tenant-row-" + id;
+  const head = document.createElement("th"); head.scope = "rowgroup"; head.className = "check-name";
+  const name = document.createElement("span"); name.className = "check-title"; name.id = "tenant-name-" + id; name.textContent = checkNames[id] || id;
+  head.append(name);
+  const format = document.createElement("p"); format.className = "hint format-note"; format.id = "tenant-format-" + id; format.hidden = true;
+  head.append(format);
+  const help = checkHelp[id];
+  if (help) {
+    const details = document.createElement("details"); details.className = "check-help"; details.id = "tenant-help-" + id;
+    const summary = document.createElement("summary"); summary.textContent = "What is this?";
+    details.append(summary, helpBlock(help, help.limit)); head.append(details);
+  }
+  const toggle = document.createElement("button"); toggle.type = "button"; toggle.className = "link rule-jump"; toggle.id = "tenant-rules-" + id;
+  toggle.dataset.check = id; toggle.hidden = true; toggle.setAttribute("aria-expanded", "false"); toggle.addEventListener("click", () => toggleRules(id));
+  head.append(toggle);
+  row.append(head);
+  for (const stage of ["input", "output"]) {
+    const cell = document.createElement("td"); cell.className = "check-setting stage-" + stage;
+    if (stageCell(cell, id, stage)) {
+      if (own) {
+        const select = document.createElement("select"); select.id = "tenant-check-" + stage + "-" + id; select.dataset.check = id; select.dataset.stage = stage;
+        select.setAttribute("aria-labelledby", "tenant-name-" + id + " tenant-stage-" + stage);
+        for (const [option, text] of [["", "Off"], ["block", "Block"], ["flag", "Flag"], ["allow", "Allow"], ...(id === "pii" ? [["redact", "Redact"]] : [])]) select.append(new Option(text, option));
+        select.value = savedCheck(id, stage);
+        if (tenant.demo && paidChecks.includes(id)) { select.disabled = true; row.title = "Calls a paid outside provider. Not available for demo users."; }
+        cell.append(select);
+      } else {
+        const rule = policy?.checks.find(c => c.id === id);
+        const shown = document.createElement("span"); shown.className = "tenant-action"; shown.id = "tenant-check-" + stage + "-" + id; shown.dataset.check = id;
+        shown.textContent = rule && rule.stages.includes(stage) ? actionName(rule.actions?.[stage]) : "Off"; cell.append(shown);
+      }
+    }
+    row.append(cell);
+  }
+  const effect = document.createElement("td"); effect.className = "check-effect"; row.append(effect);
+  return row;
+}
+function filtersActive() { return Boolean(ruleFilters.text.trim() || ruleFilters.check || ruleFilters.setting); }
+function toggleRules(id) {
+  if (openGroups.has(id)) openGroups.delete(id); else openGroups.add(id);
+  filterRules();
+}
+function renderTenant() {
+  const tenant = application?.tenant; $("tenant-panel").hidden = !tenant; $("tenant-message").textContent = "";
+  if (!tenant) return;
+  const policy = currentPolicy(), own = ownChecksSelected();
+  $("tenant-title").textContent = own ? "Checks on " + tenant.display_name + "\u2019s record" : "Checks in the profile " + profileName(policy.version);
+  $("tenant-usage").textContent = tenant.used + " of " + tenant.monthly_allowance + " checks used in " + tenant.month + (tenant.overage === "block" ? " (hard limit)" : "") + " \u00b7 revision " + tenant.revision;
+  const box = $("tenant-checks"); box.replaceChildren();
+  ruleEdits = {input: {...(tenant.input_rule_actions || {})}, output: {...(tenant.output_rule_actions || {})}}; ruleIndex = {};
+  const filters = document.createElement("div"); filters.className = "rule-filters"; filters.id = "rule-filters"; filters.hidden = true;
+  const count = document.createElement("p"); count.id = "rule-count"; count.className = "hint"; count.setAttribute("role", "status");
+  const table = document.createElement("table"); table.id = "check-table"; table.className = "rule-table check-table";
+  const caption = document.createElement("caption"); caption.className = "sr-only"; caption.textContent = "Every check, grouped with its rules, and its Input and Output settings"; table.append(caption);
+  const headRow = table.createTHead().insertRow();
+  for (const [id, text] of [["tenant-stage-name", "Check or rule"], ["tenant-stage-input", "Input (user\u2019s message)"], ["tenant-stage-output", "Output (AI\u2019s answer)"], ["tenant-stage-effect", "In effect"]]) {
+    const th = document.createElement("th"); th.scope = "col"; th.id = id; th.textContent = text; headRow.append(th);
+  }
+  // Checks alphabetical by name (2026-11-03); each check is one group (tbody) with its rules under it.
+  for (const id of Object.keys(tenant.input_checks).sort(byCheckName)) {
+    const group = table.createTBody(); group.className = "check-group"; group.dataset.check = id; group.id = "tenant-group-" + id;
+    group.append(checkRow(id, own, policy));
+  }
+  const wrap = document.createElement("div"); wrap.className = "rule-table-wrap"; wrap.append(table);
+  box.append(filters, count, wrap);
+  for (const id of Object.keys(tenant.input_checks)) { updateFormatNote(id); showCheckEffect(id); }
+  buildRuleFinder();
+  $("tenant-save").disabled = !own;
+  $("tenant-reset").hidden = !tenant.demo;
+  // The example picker and notes read the panel (checkIsOn), and loadApplication refreshes them before this
+  // function rebuilds the panel, so refresh them again now that the panel shows the record (Tests #673).
+  refreshExamplePickers();
+  for (const stage of ["input", "output"]) if (lastExample[stage]) exampleNote(stage, lastExample[stage]);
+}
+// The check row's In effect cell: whether it runs on each stage, and with what.
+function showCheckEffect(id) {
+  const cell = $("tenant-row-" + id)?.querySelector(".check-effect"); if (!cell) return;
+  cell.textContent = ["input", "output"].filter(stage => runsOn(id, stage)).map(stage => stageNames[stage] + ": " + settingNames[checkSetting(id, stage)]).join(" \u00b7 ");
+}
 async function buildRuleFinder() {
-  const shown = application, box = $("rule-finder");
-  if (!application?.tenant || !ownChecksSelected()) { box.hidden = true; box.replaceChildren(); return; }
+  const shown = application, filters = $("rule-filters");
+  if (!application?.tenant || !ownChecksSelected() || !filters) return;
   let rules; try { rules = await loadRules(); } catch (error) { rules = null; }
-  if (shown !== application) return;
-  box.hidden = false; box.replaceChildren();
-  if (!rules) { const p = document.createElement("p"); p.className = "hint"; p.textContent = "The rule list could not be loaded right now."; box.append(p); return; }
+  if (shown !== application || !$("rule-filters")) return;
+  if (!rules) { $("rule-count").textContent = "The rule list could not be loaded right now."; return; }
   ruleIndex = {};
   for (const [controlId, list] of Object.entries(rules)) for (const rule of list) ruleIndex[rule.rule_id] = {...rule, control_id: controlId};
   // The connected tenant's own rules (its field comparisons and required sections), from its own record only.
   for (const rule of application.tenant.record_rules || []) ruleIndex[rule.rule_id] = {...rule};
   const perCheck = {};
-  for (const rule of Object.values(ruleIndex)) perCheck[rule.control_id] = (perCheck[rule.control_id] || 0) + 1;
-  const all = Object.values(ruleIndex).sort((a, b) => collator.compare(a.title, b.title) || collator.compare(a.rule_id, b.rule_id));
-  const heading = document.createElement("h3"); heading.id = "rule-finder-title"; heading.textContent = "All rules (" + all.length + ")";
-  const note = document.createElement("p"); note.className = "hint";
-  note.textContent = "Every rule in one table, with the category (check) it belongs to, its setting and the setting in effect. Select a column heading to sort. A rule with no setting of its own uses its check\u2019s setting (\u201cSame as check\u201d): when Personal data (PII) is Block, Email address is Block too. Give a rule its own setting to change only that rule, for example Email address: Allow. A rule runs only while its check is on.";
-  const filters = document.createElement("div"); filters.className = "rule-filters";
+  for (const rule of Object.values(ruleIndex)) (perCheck[rule.control_id] = perCheck[rule.control_id] || []).push(rule);
+  const all = Object.values(ruleIndex);
+  for (const [id, list] of Object.entries(perCheck)) {
+    const group = $("tenant-group-" + id); if (!group) continue;
+    list.sort((a, b) => collator.compare(a.title, b.title) || collator.compare(a.rule_id, b.rule_id));
+    group.append(...list.map(ruleRow));
+  }
   const field = (labelText, control) => { const wrap = document.createElement("div"); const label = document.createElement("label"); label.htmlFor = control.id; label.textContent = labelText; wrap.append(label, control); return wrap; };
   const search = document.createElement("input"); search.id = "rule-search"; search.type = "search"; search.placeholder = "Rule name or id, for example email"; search.autocomplete = "off"; search.value = ruleFilters.text;
   const checkFilter = document.createElement("select"); checkFilter.id = "rule-filter-check";
-  checkFilter.append(new Option("All categories (" + all.length + ")", ""));
-  for (const id of Object.keys(perCheck).sort(byCheckName)) checkFilter.append(new Option((checkNames[id] || id) + " (" + perCheck[id] + ")", id));
-  checkFilter.value = ruleFilters.check;
+  checkFilter.append(new Option("All categories (" + all.length + " rules)", ""));
+  for (const id of Object.keys(perCheck).sort(byCheckName)) checkFilter.append(new Option((checkNames[id] || id) + " (" + perCheck[id].length + ")", id));
+  checkFilter.value = perCheck[ruleFilters.check] ? ruleFilters.check : "";
   const settingFilter = document.createElement("select"); settingFilter.id = "rule-filter-setting";
   for (const [value, text] of [["", "Any setting"], ["block", "Block"], ["flag", "Flag"], ["allow", "Allow"], ["redact", "Redact"], ["off", "Off"], ["own", "Own setting (not the check\u2019s)"]]) settingFilter.append(new Option(text, value));
   settingFilter.value = ruleFilters.setting;
   const clear = document.createElement("button"); clear.id = "rule-filter-clear"; clear.className = "secondary"; clear.type = "button"; clear.textContent = "Clear filters";
-  filters.append(field("Find a rule", search), field("Category (check)", checkFilter), field("In effect", settingFilter), clear);
-  const count = document.createElement("p"); count.id = "rule-count"; count.className = "hint"; count.setAttribute("role", "status");
-  // One table of every rule: Rule, Category (the check it belongs to), its setting, and the setting in effect.
-  // Select a column heading to sort by it.
-  const table = document.createElement("table"); table.id = "rule-table"; table.className = "rule-table";
-  const caption = document.createElement("caption"); caption.className = "sr-only"; caption.textContent = "Every rule, its category and its setting"; table.append(caption);
-  const headRow = table.createTHead().insertRow();
-  for (const [sort, text] of [["rule", "Rule"], ["check", "Category (check)"], ["", "Setting"], ["effect", "In effect"]]) {
-    const th = document.createElement("th"); th.scope = "col";
-    if (sort) {
-      th.dataset.sort = sort;
-      const button = document.createElement("button"); button.type = "button"; button.className = "sort"; button.id = "rule-sort-" + sort; button.textContent = text;
-      button.addEventListener("click", () => { ruleSort = {key: sort, up: ruleSort.key === sort ? !ruleSort.up : true}; sortRules(); });
-      th.append(button);
-    } else th.textContent = text;
-    headRow.append(th);
-  }
-  const body = table.createTBody(); body.append(...all.map(ruleRow));
-  const wrap = document.createElement("div"); wrap.className = "rule-table-wrap"; wrap.append(table);
-  box.append(heading, note, filters, count, wrap);
+  filters.replaceChildren(field("Find a rule", search), field("Category (check)", checkFilter), field("In effect (either stage)", settingFilter), clear);
+  filters.hidden = false;
   for (const rule of all) showEffect(rule.rule_id);
-  sortRules();
   search.addEventListener("input", filterRules); checkFilter.addEventListener("change", filterRules); settingFilter.addEventListener("change", filterRules);
   clear.addEventListener("click", () => { search.value = ""; checkFilter.value = ""; settingFilter.value = ""; filterRules(); });
   filterRules(); updateRuleCounts();
 }
+// With no filter, every check shows and a check's rules show when it is opened. With a filter, only matching rules show,
+// under their checks, and checks with no matching rule are hidden.
 function filterRules() {
-  const words = $("rule-search").value.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const check = $("rule-filter-check").value, setting = $("rule-filter-setting").value;
-  ruleFilters = {text: $("rule-search").value, check, setting};
-  let shown = 0; const rows = $("rule-table").tBodies[0].rows;
-  for (const row of rows) {
-    const rule = ruleIndex[row.dataset.rule];
-    const text = (rule.title + " " + rule.rule_id + " " + (checkNames[rule.control_id] || "") + " " + rule.use_case).toLowerCase();
-    const match = words.every(word => text.includes(word)) && (!check || rule.control_id === check)
-      && (!setting || (setting === "own" ? Boolean(ruleEdits[rule.rule_id]) : ruleInEffect(rule.rule_id).value === setting));
-    row.hidden = !match; if (match) shown++;
+  const search = $("rule-search"), checkFilter = $("rule-filter-check"), settingFilter = $("rule-filter-setting");
+  if (search) ruleFilters = {text: search.value, check: checkFilter.value, setting: settingFilter.value};
+  const words = ruleFilters.text.trim().toLowerCase().split(/\s+/).filter(Boolean), {check, setting} = ruleFilters;
+  const filtered = filtersActive();
+  let shown = 0, total = 0;
+  for (const group of $("check-table")?.tBodies || []) {
+    const id = group.dataset.check, rows = [...group.querySelectorAll(".rule-row")];
+    let matches = 0;
+    for (const row of rows) {
+      const rule = ruleIndex[row.dataset.rule]; total++;
+      const text = (rule.title + " " + rule.rule_id + " " + (checkNames[rule.control_id] || "") + " " + rule.use_case).toLowerCase();
+      const effects = ["input", "output"].map(stage => ruleInEffect(rule.rule_id, stage).value);
+      const match = words.every(word => text.includes(word)) && (!check || rule.control_id === check)
+        && (!setting || (setting === "own" ? Boolean(ruleEdits.input[rule.rule_id] || ruleEdits.output[rule.rule_id]) : effects.includes(setting)));
+      row.hidden = filtered ? !match : !openGroups.has(id);
+      if (match) matches++;
+      if (filtered && match) shown++;
+    }
+    group.hidden = filtered && !matches;
+    const toggle = $("tenant-rules-" + id);
+    if (toggle) toggle.setAttribute("aria-expanded", String(filtered ? matches > 0 : openGroups.has(id)));
   }
-  $("rule-count").textContent = "Showing " + shown + " of " + rows.length + " rules" + (shown ? "." : ". No rule matches these filters; clear them to see every rule.");
+  const count = $("rule-count"); if (!count) return;
+  count.textContent = filtered ? "Showing " + shown + " of " + total + " rules" + (shown ? "." : ". No rule matches these filters; clear them to see every check.")
+    : total + " rules in " + ($("check-table")?.tBodies.length || 0) + " checks. Open a check\u2019s rules, or find a rule by name.";
+  updateRuleCounts();
 }
-// The check's "Rules in this check" button: the count, and how many have their own setting.
+// The check's rules button: the count, how many have their own setting, and whether they are shown.
 function updateRuleCounts() {
   for (const button of $("tenant-checks").querySelectorAll(".rule-jump")) {
     const id = button.dataset.check, list = Object.values(ruleIndex).filter(rule => rule.control_id === id);
-    const own = list.filter(rule => ruleEdits[rule.rule_id]).length;
+    const own = list.filter(rule => ruleEdits.input[rule.rule_id] || ruleEdits.output[rule.rule_id]).length;
     button.hidden = !list.length;
-    button.textContent = "Rules in this check (" + list.length + (own ? " \u00b7 " + own + " with " + (own === 1 ? "its" : "their") + " own setting" : "") + ")";
+    const open = button.getAttribute("aria-expanded") === "true";
+    button.textContent = (open ? "Hide rules (" : "Show rules (") + list.length + (own ? " \u00b7 " + own + " with " + (own === 1 ? "its" : "their") + " own setting" : "") + ")";
   }
 }
 // A check's setting changed in the panel: its rules show the new "Same as check" value. A redacting check allows
-// only Off for single rules (redaction replaces every value it finds), so other own settings of its rules are cleared.
-function checkChanged(id) {
+// only Off for single rules (redaction replaces every value it finds), so other own settings of its rules on that
+// stage are cleared.
+function checkChanged(id, stage) {
   let cleared = 0;
-  if (checkSetting(id) === "redact") for (const rule of Object.values(ruleIndex)) {
-    if (rule.control_id === id && ruleEdits[rule.rule_id] && ruleEdits[rule.rule_id] !== "off") { delete ruleEdits[rule.rule_id]; cleared++; }
+  if (checkSetting(id, stage) === "redact") for (const rule of Object.values(ruleIndex)) {
+    if (rule.control_id === id && ruleEdits[stage][rule.rule_id] && ruleEdits[stage][rule.rule_id] !== "off") { delete ruleEdits[stage][rule.rule_id]; cleared++; }
   }
-  for (const select of $("rule-finder").querySelectorAll("select[data-rule]")) {
-    const rule = ruleIndex[select.dataset.rule]; if (rule.control_id === id) { fillRuleOptions(select, rule); showEffect(rule.rule_id); }
+  for (const select of $("tenant-checks").querySelectorAll("select[data-rule][data-stage=" + stage + "]")) {
+    const rule = ruleIndex[select.dataset.rule]; if (rule.control_id === id) { fillRuleOptions(select, rule, stage); showEffect(rule.rule_id); }
   }
-  updateRuleCounts(); if ($("rule-table")) filterRules();
+  showCheckEffect(id); filterRules();
   return cleared;
-}
-function jumpToRules(id) {
-  $("rule-search").value = ""; $("rule-filter-setting").value = ""; $("rule-filter-check").value = id; filterRules();
-  $("rule-finder").scrollIntoView({block: "start"}); $("rule-search").focus();
 }
 
 // Checks that can run only on one message format (checked against each check's code in tests/test_check_stages.py).
@@ -335,63 +426,11 @@ function formatWarning(id) {
 }
 function updateFormatNote(id) {
   const note = $("tenant-format-" + id); if (!note) return;
-  const on = panelCheck(id) !== null ? Boolean(panelCheck(id)) : checkIsOn(id);
+  const on = ["input", "output"].some(stage => checkIsOn(id, stage));
   const rule = currentPolicy()?.checks.find(c => c.id === id);
-  const oneStage = rule && rule.stages.length === 1 ? " Runs on " + rule.stages[0] + " only (its settings cover that stage)." : "";
+  const oneStage = rule && rule.stages.length === 1 && on ? " Its settings cover " + rule.stages[0] + " only, so it runs there only." : "";
   note.textContent = on ? (formatWarning(id) + oneStage).trim() : "";
   note.hidden = !note.textContent;
-}
-function renderTenant() {
-  const tenant = application?.tenant; $("tenant-panel").hidden = !tenant; $("tenant-message").textContent = "";
-  if (!tenant) return;
-  const policy = currentPolicy(), own = ownChecksSelected();
-  $("tenant-title").textContent = own ? "Checks on " + tenant.display_name + "\u2019s record" : "Checks in the profile " + profileName(policy.version);
-  $("tenant-usage").textContent = tenant.used + " of " + tenant.monthly_allowance + " checks used in " + tenant.month + (tenant.overage === "block" ? " (hard limit)" : "") + " \u00b7 revision " + tenant.revision;
-  const box = $("tenant-checks"); box.replaceChildren(); ruleEdits = {...(tenant.rule_actions || {})};
-  // Alphabetical by name (2026-11-03).
-  for (const [id, value] of Object.entries(tenant.checks).sort(([a], [b]) => byCheckName(a, b))) {
-    const row = document.createElement("div"); row.className = "tenant-check";
-    const line = document.createElement("div"); line.className = "tenant-check-row";
-    const name = document.createElement("label"); name.textContent = checkNames[id] || id;
-    if (own) {
-      name.htmlFor = "tenant-check-" + id;
-      const select = document.createElement("select"); select.id = "tenant-check-" + id; select.dataset.check = id;
-      for (const [option, text] of [["", "Off"], ["block", "Block"], ["flag", "Flag"], ["allow", "Allow"], ...(id === "pii" ? [["redact", "Redact"]] : [])]) {
-        const item = document.createElement("option"); item.value = option; item.textContent = text; select.append(item);
-      }
-      select.value = value || "";
-      if (tenant.demo && paidChecks.includes(id)) { select.disabled = true; row.title = "Calls a paid outside provider. Not available for demo users."; }
-      line.append(name, select);
-    } else {
-      const rule = policy.checks.find(c => c.id === id);
-      const shown = document.createElement("span"); shown.className = "tenant-action"; shown.id = "tenant-check-" + id; shown.dataset.check = id;
-      shown.textContent = !rule ? "Off" : rule.stages.map(stage => (stage === "input" ? "Input " : "Output ") + actionName(rule.actions?.[stage])).join(" \u00b7 ");
-      line.append(name, shown);
-    }
-    row.append(line);
-    const format = document.createElement("p"); format.className = "hint format-note"; format.id = "tenant-format-" + id; format.hidden = true;
-    row.append(format);
-    const help = checkHelp[id];
-    if (help) {
-      const details = document.createElement("details"); details.className = "check-help"; details.id = "tenant-help-" + id;
-      const summary = document.createElement("summary"); summary.textContent = "What is this?";
-      details.append(summary, helpBlock(help, help.limit)); row.append(details);
-    }
-    if (own) {
-      const jump = document.createElement("button"); jump.type = "button"; jump.className = "link rule-jump"; jump.id = "tenant-rules-" + id;
-      jump.dataset.check = id; jump.hidden = true; jump.addEventListener("click", () => jumpToRules(id));
-      row.append(jump);
-    }
-    box.append(row);
-  }
-  buildRuleFinder();
-  for (const id of Object.keys(tenant.checks)) updateFormatNote(id);
-  $("tenant-save").disabled = !own;
-  $("tenant-reset").hidden = !tenant.demo;
-  // The example picker and notes read the panel (checkIsOn), and loadApplication refreshes them before this
-  // function rebuilds the panel, so refresh them again now that the panel shows the record (Tests #673).
-  refreshExamplePickers();
-  for (const stage of ["input", "output"]) if (lastExample[stage]) exampleNote(stage, lastExample[stage]);
 }
 async function reloadApplication() { reset(); const attempt = revision; await loadApplication(key, attempt); }
 async function saveTenant(path, body, done) {
@@ -411,15 +450,17 @@ async function saveTenant(path, body, done) {
   finally { $("tenant-reset").disabled = false; $("tenant-save").disabled = !ownChecksSelected(); $("tenant-message").textContent = message; }
   return saved;
 }
-// What the checks panel shows but the record does not have yet.
+// What the checks panel shows but the record does not have yet: one field per check and stage, one rule map per stage.
 function pendingChanges() {
   const tenant = application?.tenant, changes = {};
   if (!tenant || !ownChecksSelected()) return changes;
-  for (const select of $("tenant-checks").querySelectorAll("select[data-check]")) {
-    const value = select.value || null;
-    if (value !== (tenant.checks[select.dataset.check] || null)) changes["check_" + select.dataset.check] = value;
+  for (const select of $("tenant-checks").querySelectorAll("select[data-check][data-stage]")) {
+    const {check, stage} = select.dataset, value = select.value || null;
+    if (value !== (savedCheck(check, stage) || null)) changes[stage + "_check_" + check] = value;
   }
-  if (sortedEntries(ruleEdits) !== sortedEntries(tenant.rule_actions)) changes.rule_actions = {...ruleEdits};
+  for (const stage of ["input", "output"]) {
+    if (sortedEntries(ruleEdits[stage]) !== sortedEntries(tenant[stage + "_rule_actions"])) changes[stage + "_rule_actions"] = {...ruleEdits[stage]};
+  }
   return changes;
 }
 $("tenant-save").addEventListener("click", () => {
@@ -436,20 +477,19 @@ function showUnsaved(prefix = "") {
   const status = $("profile-status");
   if (status && tenant) {
     const base = status.dataset.saved ?? status.textContent; status.dataset.saved = base;
-    const moved = Object.keys(changes).filter(k => k.startsWith("check_")).map(k => k.slice(6))
-      .map(id => (checkNames[id] || id) + " " + settingNames[tenant.checks[id] || ""] + " \u2192 " + settingNames[changes["check_" + id] || ""]);
+    const moved = Object.keys(changes).map(name => name.match(/^(input|output)_check_(.+)$/)).filter(Boolean)
+      .map(([name, stage, id]) => (checkNames[id] || id) + " " + stage + " " + settingNames[savedCheck(id, stage)] + " \u2192 " + settingNames[changes[name] || ""]);
     status.textContent = base + (moved.length ? " Not saved yet: " + moved.join(", ") + ". Running a check saves them first." : "");
   }
   refreshExamplePickers();
   for (const stage of ["input", "output"]) if (lastExample[stage]) exampleNote(stage, lastExample[stage]);
 }
 $("tenant-checks").addEventListener("change", event => {
-  const id = event.target?.dataset?.check; if (!id) return;
-  updateFormatNote(id);
-  const cleared = $("rule-table") ? checkChanged(id) : 0;
-  showUnsaved(cleared ? (checkNames[id] || id) + " now redacts, so the own settings of " + cleared + (cleared === 1 ? " rule were" : " rules were") + " cleared (a redacting check allows only Off for single rules). " : "");
+  const {check, stage} = event.target?.dataset || {}; if (!check || !stage || event.target.dataset.rule) return;
+  updateFormatNote(check);
+  const cleared = checkChanged(check, stage);
+  showUnsaved(cleared ? (checkNames[check] || check) + " now redacts on " + stage + ", so the own " + stage + " settings of " + cleared + (cleared === 1 ? " rule were" : " rules were") + " cleared (a redacting check allows only Off for single rules). " : "");
 });
-$("rule-finder").addEventListener("change", event => { if (event.target?.dataset?.rule) showUnsaved(); });
 $("tenant-reset").addEventListener("click", () => saveTenant("/v1/tenants/current/reset", {}, "Reset to the demo defaults."));
 $("connect").addEventListener("click", async () => {
   const token = $("api-key").value.trim(); if (!token || busy) return;
@@ -962,7 +1002,8 @@ function exampleNote(stage, sample) {
   button.textContent = (local.length ? "Turn on " + names(local) + " (Flag)" : "Use these settings") + (local.length && settings ? " with these settings" : "");
   button.addEventListener("click", async () => {
     const changes = {...(settings || {})};
-    for (const id of local) changes["check_" + id] = "flag";
+    // Turned on for the stage of this example only (input and output are separate fields since 2026-11-04).
+    for (const id of local) changes[stage + "_check_" + id] = "flag";
     button.disabled = true;
     await saveTenant("/v1/tenants/current/checks", {revision: application.tenant.revision, changes},
       "Saved. The example's check is on" + (settings ? " with its settings" : "") + ". Reset to defaults puts the demo settings back.");
@@ -1053,10 +1094,13 @@ function examplesFor(item, stage) {
 }
 // On, as the checks panel shows it: a change made in the panel counts before it is saved (running a check saves it
 // first), so examples, notes and the picker never describe the old record.
-function panelCheck(id) { const select = application?.tenant && ownChecksSelected() ? $("tenant-check-" + id) : null; return select ? select.value : null; }
+function panelCheck(id, stage = "input") {
+  if (!runsOn(id, stage)) return application?.tenant && ownChecksSelected() ? "" : null;
+  const select = application?.tenant && ownChecksSelected() ? $("tenant-check-" + stage + "-" + id) : null; return select ? select.value : null;
+}
 function checkIsOn(id, stage = "input") {
-  const shown = panelCheck(id);
-  if (shown !== null) return Boolean(shown) && (stage === "input" || id !== "azure_prompt_shields");
+  const shown = panelCheck(id, stage);
+  if (shown !== null) return Boolean(shown);
   const policy = currentPolicy(); return !!policy && policy.checks.some(c => c.id === id && (!c.stages || c.stages.includes(stage)));
 }
 function buildExamplePicker(stage, list) {
@@ -1084,7 +1128,7 @@ function buildExamplePicker(stage, list) {
       if (group.children.length) pick.append(group);
     }
     if (currentPolicy() && !checkIsOn(item.control_id, stage)) note.textContent = item.name + " is off on this record: turn it on under Checks to see it report these examples.";
-    else if (panelCheck(item.control_id) !== null && panelCheck(item.control_id) !== (application.tenant.checks[item.control_id] || "")) note.textContent = item.name + " is set to " + settingNames[panelCheck(item.control_id)] + " in the checks panel (not saved yet; running a check saves it first).";
+    else if (panelCheck(item.control_id, stage) !== null && panelCheck(item.control_id, stage) !== savedCheck(item.control_id, stage)) note.textContent = item.name + " is set to " + settingNames[panelCheck(item.control_id, stage)] + " for " + stage + " in the checks panel (not saved yet; running a check saves it first).";
   };
   check.addEventListener("change", fill);
   pick.addEventListener("change", () => {
@@ -1189,11 +1233,11 @@ async function execute(target) {
     const noChecks = results.some(r => !r.checker_results.some(c => ["passed", "flagged"].includes(c.status)));
     const incomplete = noChecks || results.some(r => r.evaluation_status !== "complete"), findings = results.some(r => r.findings.length > 0), simulated = results.some(r => r.simulated), skipped = results.some(r => r.checker_results.some(c => ["error", "unsupported", "skipped"].includes(c.status)));
     const status = $("result-status"), answerStatus = $("answer-status");
-    if (incomplete) { status.textContent = "Incomplete"; status.className = "pill warn"; $("result-summary").textContent = noChecks ? "No checks completed for at least one side. This result is not a pass." : "A required check did not complete. This result is not a pass."; $("answer-note").textContent = "Preview held because check coverage is incomplete."; answerStatus.textContent = "Held"; }
-    else if (findings && results.some(r => !canProceed(r))) { status.textContent = "Findings to review"; status.className = "pill bad"; $("result-summary").textContent = "Review the input and output findings below. Observe mode may still report an effective action of allow."; $("answer-note").textContent = "Preview held for review because checks reported findings."; answerStatus.textContent = "Held for review"; }
+    if (incomplete && results.some(r => !canProceed(r))) { status.textContent = "Incomplete"; status.className = "pill warn"; $("result-summary").textContent = noChecks ? "No checks completed for at least one side. This result is not a pass." : "A required check did not complete. This result is not a pass."; $("answer-note").textContent = "Preview held because check coverage is incomplete."; answerStatus.textContent = "Held"; }
+    else if (findings && results.some(r => !canProceed(r))) { status.textContent = "Blocked"; status.className = "pill bad"; $("result-summary").textContent = "A check set to Block found something. Review the input and output findings below. (Observe mode reports what enforce would do, with an effective action of allow.)"; $("answer-note").textContent = "Preview held because a Block finding stops it."; answerStatus.textContent = "Held (Block)"; }
     else if (results.length === 1 && canProceed(inputResult)) {
       status.textContent = "Input checks passed"; status.className = findings ? "pill warn" : "pill good";
-      $("result-summary").textContent = "Input test complete. " + (findings ? "Findings were reported and your settings allow them (Allow), so the message goes through. " : "") + "Continue to the proposed AI answer and output test.";
+      $("result-summary").textContent = "Input test complete. " + (incomplete ? "A check did not finish; the record\u2019s failure action is Flag, so the message goes through and is reported. " : "") + (findings ? "Findings were reported with the action Allow or Flag, so the message goes through; flagged findings are for review. Only Block stops a message. " : "") + "Continue to the proposed AI answer and output test.";
       $("answer-note").textContent = "Waiting for output checks. No answer has been released.";
     }
     else if (results.length === 1 && !canProceed(inputResult) && !simulated) {
@@ -1201,11 +1245,12 @@ async function execute(target) {
       $("result-summary").textContent = "Input did not pass every configured check. Review its results before continuing.";
       $("answer-note").textContent = "Preview held at the input test.";
     }
-    else { status.textContent = simulated ? "Simulated coverage" : findings ? "Allowed with findings" : "No findings"; status.className = simulated || skipped || findings ? "pill warn" : "pill good";
-      $("result-summary").textContent = simulated ? "No findings, but some checks are simulated. This is not a completed safety or bias assessment." : findings ? "Findings were reported, and your settings allow them (Allow), so the answer is released. Review them below." : "No findings from the selected completed checks. This is not a guarantee of correctness or safety.";
-      $("answer-note").textContent = simulated || skipped ? "Preview only. Some checks were simulated or skipped; see coverage above." : findings ? "Released: every finding has the action Allow on this record." : "The selected checks completed without findings. Only their defined coverage was assessed.";
-      answerStatus.textContent = simulated || skipped ? "Unverified preview" : findings ? "Released (findings allowed)" : "Selected checks passed"; answerStatus.className = status.className;
-      if (results.length === 2 && canProceed(results[1])) { $("answer").textContent = proposed; $("answer").hidden = false; }
+    else { status.textContent = simulated ? "Simulated coverage" : findings ? "Released with findings" : incomplete ? "Released, incomplete (Flag)" : "No findings"; status.className = simulated || skipped || findings ? "pill warn" : "pill good";
+      $("result-summary").textContent = simulated ? "No findings, but some checks are simulated. This is not a completed safety or bias assessment." : findings ? "Findings were reported with the action Allow or Flag, so the answer is released; review the flagged findings below. Only Block stops an answer." : incomplete ? "A check did not finish; the record\u2019s failure action is Flag, so the answer is released and reported." : "No findings from the selected completed checks. This is not a guarantee of correctness or safety.";
+      $("answer-note").textContent = simulated || skipped ? "Preview only. Some checks were simulated or skipped; see coverage above." : findings ? "Released: no finding has the action Block on this record (Flag findings are reported for review)." : "The selected checks completed without findings. Only their defined coverage was assessed.";
+      answerStatus.textContent = simulated || skipped ? "Unverified preview" : findings ? "Released (findings flagged or allowed)" : "Selected checks passed"; answerStatus.className = status.className;
+      // A redacted answer is released as its cleaned, re-checked text.
+      if (results.length === 2 && canProceed(results[1])) { $("answer").textContent = results[1].effective_action === "redact" ? results[1].redaction.content : proposed; $("answer").hidden = false; }
       else { $("answer-note").textContent = "Preview held because every configured check must pass without simulation or skipped checks."; }
     }
   } catch (error) { if (attempt === revision) { $("run-error").textContent = error.message || "Checks failed. No pass was recorded."; $("result-status").textContent = "Check failed"; $("answer-note").textContent = "Preview held because checks failed."; } }

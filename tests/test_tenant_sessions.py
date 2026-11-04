@@ -424,11 +424,11 @@ def change(client, headers, revision, changes):
 
 def test_a_signed_in_user_changes_the_checks_and_the_api_key_cannot(site):
     client, tenants, key, session = site
-    refused = change(client, keyed(key), 1, {"check_text_security": "block"})
+    refused = change(client, keyed(key), 1, {"input_check_text_security": "block", "output_check_text_security": "block"})
     assert refused.status_code == 403 and "Sign in" in refused.json()["detail"]
-    saved = change(client, signed(session), 1, {"check_text_security": "block"})
-    assert saved.status_code == 200 and saved.json()["checks"]["text_security"] == "block"
-    assert tenants.store.get("acme").check_text_security == "block"
+    saved = change(client, signed(session), 1, {"input_check_text_security": "block", "output_check_text_security": "block"})
+    assert saved.status_code == 200 and saved.json()["input_checks"]["text_security"] == "block"
+    assert tenants.store.get("acme").input_check_text_security == "block"
 
 
 def test_a_signed_in_user_sees_and_runs_the_records_checks(site):
@@ -441,7 +441,7 @@ def test_a_signed_in_user_sees_and_runs_the_records_checks(site):
 
 def test_demo_users_keep_changing_their_own_record_with_their_demo_key(site):
     client = site[0]
-    assert change(client, keyed(demo_key("demo1", SECRET)), 1, {"check_pii": "flag"}).status_code == 200
+    assert change(client, keyed(demo_key("demo1", SECRET)), 1, {"input_check_pii": "flag", "output_check_pii": "flag"}).status_code == 200
 
 
 def test_many_forged_sessions_on_get_and_post_are_refused_without_asking_cognito(site, cognito):
@@ -452,7 +452,7 @@ def test_many_forged_sessions_on_get_and_post_are_refused_without_asking_cognito
         fake = token(sub=f"attacker-{number}", signature=random_signature(number))
         for response in (client.get("/v1/applications/current", headers=signed(fake)),
                          client.get("/v1/tenants/current/keys", headers=signed(fake)),
-                         change(client, signed(fake), 1, {"check_pii": "block"})):
+                         change(client, signed(fake), 1, {"input_check_pii": "block", "output_check_pii": "block"})):
             assert response.status_code == 401 and response.json() == expected
     assert cognito.count(GETUSER_URL) == 0 and cognito.count(JWKS_URL) <= 1
     assert tenants.store.get("acme") == before
@@ -463,7 +463,7 @@ def test_a_revoked_session_is_refused_on_get_and_post_and_cognito_is_asked_once(
     revoked = token(sub="revoked")
     for _ in range(30):
         assert client.get("/v1/applications/current", headers=signed(revoked)).status_code == 401
-        assert change(client, signed(revoked), 1, {"check_pii": "block"}).status_code == 401
+        assert change(client, signed(revoked), 1, {"input_check_pii": "block", "output_check_pii": "block"}).status_code == 401
     assert cognito.count(GETUSER_URL) == 1
 
 

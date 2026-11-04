@@ -2,8 +2,8 @@
 reports the rule and a look-alike that does not. A record's own field comparisons and required sections are rules
 too, but they belong to that record only: guardoath.record_rules lists them, never this catalog.
 
-A tenant record can turn any rule here off, or give it its own action, in its rule_actions field. Rules not
-listed there use the action of their check. Every example and look-alike is run against the real detectors
+A tenant record can turn any rule here off, or give it its own action, per stage, in its input_rule_actions and
+output_rule_actions fields. Rules not listed there use the action of their check on that stage. Every example and look-alike is run against the real detectors
 in tests/test_rule_catalog.py. Secret examples are built from synthetic_secrets, never written as literals.
 """
 from __future__ import annotations

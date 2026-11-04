@@ -138,7 +138,9 @@ def test_the_registry_endpoint_is_public_and_describes_every_control():
     listed = [c for d in body["domains"] for c in d["controls"]]
     assert sorted(c["control_id"] for c in listed) == sorted(CHECK_IDS)
     for item in listed:
-        assert item["field"] == "check_" + item["control_id"]
+        assert item["field"] == "input_check_" + item["control_id"]
+        assert item["output_field"] == (None if item["control_id"] == "azure_prompt_shields"
+                                        else "output_check_" + item["control_id"])
         assert item["guide"] == "/guide#check-" + item["control_id"]
         assert item["positive_examples"] and item["look_alikes"]
     assert "test-key" not in response.text and "gok_" not in response.text
@@ -156,9 +158,9 @@ def test_the_registry_reports_detector_versions_of_the_running_service():
 def test_the_registry_is_description_only():
     """The tenant record alone decides what runs: the registry's recommended action is not applied."""
     record = only("lexical_guards")
-    assert record.check_lexical_guards == "flag" and control("lexical_guards").recommended_action == "flag"
-    pii_record = TenantRecord.model_validate({**demo_records()[0].model_dump(), "check_pii": "flag"})
-    assert pii_record.check_pii == "flag" and control("pii").recommended_action == "redact"
+    assert record.input_check_lexical_guards == "flag" and control("lexical_guards").recommended_action == "flag"
+    pii_record = TenantRecord.model_validate({**demo_records()[0].model_dump(), "input_check_pii": "flag", "output_check_pii": "flag"})
+    assert pii_record.input_check_pii == "flag" and control("pii").recommended_action == "redact"
     rules = {r.checker_id: r.on_finding.value for r in pii_record.to_policy().rules}
     assert rules["pii"] == "flag"
 

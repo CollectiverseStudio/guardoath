@@ -1,7 +1,9 @@
-"""One record per tenant: account, key hashes, monthly usage, and one field per check.
+"""One record per tenant: account, key hashes, monthly usage, and two fields per check (input and output).
 
-A check field holds the action taken when that check finds something: block, flag, allow, or
-redact (pii only). A check field with no value means the check does not run. The settings some
+A check field (input_check_<id>, output_check_<id>) holds the action taken when that check finds something on that
+stage: block, flag, allow, or redact (pii only). A check field with no value means the check does not run on that
+stage, so a check can run on input only, output only, or both, with a different action on each (2026-11-04; before,
+one check_<id> field covered both stages, and such records are converted when read). The settings some
 checks need are fields on the same record. They are kept while a check is off, so turning the
 check back on restores them, and they are passed to the engine only while the check is on.
 
@@ -11,9 +13,9 @@ its required sections. Before, it ran on both, and every message on the other st
 Every other check runs on both stages (azure_prompt_shields: input only).
 
 Each field comparison and required section on a record is a rule of that record only (business.<rule_id>,
-completeness.<rule_id>; guardoath.record_rules), and can be set on its own in rule_actions like a catalog rule.
+completeness.<rule_id>; guardoath.record_rules), and can be set on its own, per stage, like a catalog rule.
 
-One rule inside a check can be set on its own in rule_actions: "off" stops that rule, and block, flag or
+One rule inside a check can be set on its own, per stage, in input_rule_actions and output_rule_actions: "off" stops that rule, and block, flag or
 allow replace the check's action for that rule only. Rule ids are the ones in guardoath.rule_catalog.
 
 Every check request runs the checks on its tenant's record. There are no example profiles for tenants
@@ -62,9 +64,27 @@ SETTINGS_OF = {
     "secrets": ("detect_secret_assignments", "inspect_encoded_secrets", "confidential_terms"),
 }
 SETTING_FIELDS = tuple(dict.fromkeys(name for names in SETTINGS_OF.values() for name in names))
-CHECK_FIELDS = tuple("check_" + check_id for check_id in CHECK_IDS)
+STAGES = (Stage.INPUT, Stage.OUTPUT)
+
+
+def check_field(check_id: str, stage: Stage | str) -> str:
+    """The record field that holds a check's action on one stage: input_check_<id> or output_check_<id>."""
+    return f"{Stage(stage).value}_check_{check_id}"
+
+
+def rule_actions_field(stage: Stage | str) -> str:
+    return f"{Stage(stage).value}_rule_actions"
+
+
+INPUT_CHECK_FIELDS = tuple(check_field(check_id, Stage.INPUT) for check_id in CHECK_IDS)
+OUTPUT_CHECK_FIELDS = tuple(check_field(check_id, Stage.OUTPUT) for check_id in CHECK_IDS
+                            if check_id not in INPUT_ONLY_CHECK_IDS)
+CHECK_FIELDS = INPUT_CHECK_FIELDS + OUTPUT_CHECK_FIELDS
+RULE_ACTION_FIELDS = (rule_actions_field(Stage.INPUT), rule_actions_field(Stage.OUTPUT))
+# Field names of records stored before 2026-11-04 (one per check, for both stages); converted when read.
+LEGACY_FIELDS = frozenset({*("check_" + check_id for check_id in CHECK_IDS), "rule_actions"})
 # Fields a tenant (or a demo visitor, on a demo record) may change. Account fields are admin-only.
-EDITABLE_FIELDS = frozenset({"mode", "timeout_ms", "failure_action", "rule_actions", *CHECK_FIELDS, *SETTING_FIELDS})
+EDITABLE_FIELDS = frozenset({"mode", "timeout_ms", "failure_action", *RULE_ACTION_FIELDS, *CHECK_FIELDS, *SETTING_FIELDS})
 TENANT_POLICY_VERSION = "tenant"
 # The retired record field that named a default example profile (removed 2026-11-02).
 RETIRED_PROFILE_FIELD = "default_profile"
@@ -74,6 +94,7 @@ MONTH_PATTERN = r"^[0-9]{4}-(0[1-9]|1[0-2])$"
 DEMO_DEFAULTS_FILE = Path(__file__).parent / "demo_tenant_defaults.json"
 
 Month = Annotated[str, Field(pattern=MONTH_PATTERN)]
+RuleActions = dict[Annotated[str, Field(pattern=RULE_ID_PATTERN, max_length=100)], Literal["off", "allow", "flag", "block"]]
 KeyHash = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 
 
@@ -95,24 +116,40 @@ class TenantRecord(Contract):
     mode: Literal["observe", "enforce"] = "enforce"
     timeout_ms: int = Field(default=1000, ge=1, le=5_000, strict=True)
     failure_action: Literal["block", "flag"] = "block"
-    # One field per check: no value = the check does not run
-    check_pii: Action | None = None
-    check_encoded_pii: Action | None = None
-    check_secrets: Action | None = None
-    check_text_security: Action | None = None
-    check_lexical_guards: Action | None = None
-    check_schema: Action | None = None
-    check_cross_field: Action | None = None
-    check_completeness: Action | None = None
-    check_matched_outcomes: Action | None = None
-    check_evidence: Action | None = None
-    check_tool_calls: Action | None = None
-    check_ledger: Action | None = None
-    check_timestamps: Action | None = None
-    check_graph: Action | None = None
-    check_integrity: Action | None = None
-    check_content_safety: Action | None = None
-    check_azure_prompt_shields: Action | None = None
+    # One field per check and stage (2026-11-04): no value = the check does not run on that stage.
+    input_check_pii: Action | None = None
+    input_check_encoded_pii: Action | None = None
+    input_check_secrets: Action | None = None
+    input_check_text_security: Action | None = None
+    input_check_lexical_guards: Action | None = None
+    input_check_schema: Action | None = None
+    input_check_cross_field: Action | None = None
+    input_check_completeness: Action | None = None
+    input_check_matched_outcomes: Action | None = None
+    input_check_evidence: Action | None = None
+    input_check_tool_calls: Action | None = None
+    input_check_ledger: Action | None = None
+    input_check_timestamps: Action | None = None
+    input_check_graph: Action | None = None
+    input_check_integrity: Action | None = None
+    input_check_content_safety: Action | None = None
+    input_check_azure_prompt_shields: Action | None = None
+    output_check_pii: Action | None = None
+    output_check_encoded_pii: Action | None = None
+    output_check_secrets: Action | None = None
+    output_check_text_security: Action | None = None
+    output_check_lexical_guards: Action | None = None
+    output_check_schema: Action | None = None
+    output_check_cross_field: Action | None = None
+    output_check_completeness: Action | None = None
+    output_check_matched_outcomes: Action | None = None
+    output_check_evidence: Action | None = None
+    output_check_tool_calls: Action | None = None
+    output_check_ledger: Action | None = None
+    output_check_timestamps: Action | None = None
+    output_check_graph: Action | None = None
+    output_check_integrity: Action | None = None
+    output_check_content_safety: Action | None = None
     # Check settings (same names and rules as Policy)
     input_schema: dict[str, Any] | None = None
     output_schema: dict[str, Any] | None = None
@@ -132,9 +169,32 @@ class TenantRecord(Contract):
     timestamps: TimestampPolicy | None = None
     graph: GraphPolicy | None = None
     integrity: IntegrityPolicy | None = None
-    # Per-rule settings: a rule listed here is off, or uses its own action instead of its check's action.
-    rule_actions: dict[Annotated[str, Field(pattern=RULE_ID_PATTERN, max_length=100)],
-                       Literal["off", "allow", "flag", "block"]] = Field(default_factory=dict, max_length=len(RULES))
+    # Per-rule settings, one map per stage: a rule listed here is off on that stage, or uses its own action there
+    # instead of its check's action for that stage.
+    input_rule_actions: RuleActions = Field(default_factory=dict, max_length=len(RULES) + 100)
+    output_rule_actions: RuleActions = Field(default_factory=dict, max_length=len(RULES) + 100)
+
+    @model_validator(mode="before")
+    @classmethod
+    def renamed_check_fields(cls, data):
+        """Records stored before 2026-11-04 hold one field per check (check_<id>) and one rule map (rule_actions),
+        each for both stages. When such a record is read, check_<id> sets input_check_<id> and output_check_<id>
+        (input only for input-only checks) and rule_actions sets both maps, so nothing changes until the tenant
+        sets a stage differently. The API accepts only the new names."""
+        if not isinstance(data, dict) or not (LEGACY_FIELDS & data.keys()):
+            return data
+        data = dict(data)
+        for check_id in CHECK_IDS:
+            if "check_" + check_id in data:
+                value = data.pop("check_" + check_id)
+                data["input_check_" + check_id] = value
+                if check_id not in INPUT_ONLY_CHECK_IDS:
+                    data["output_check_" + check_id] = value
+        if "rule_actions" in data:
+            value = data.pop("rule_actions")
+            data["input_rule_actions"] = value
+            data["output_rule_actions"] = value
+        return data
 
     @model_validator(mode="before")
     @classmethod
@@ -156,8 +216,8 @@ class TenantRecord(Contract):
         on = self.checks()
         if not on:
             raise ValueError("Turn on at least one check")
-        for check_id, action in on.items():
-            if action == Action.REDACT and check_id != "pii":
+        for check_id, actions in on.items():
+            if Action.REDACT in actions and check_id != "pii":
                 raise ValueError(f"Only the pii check can redact; choose block, flag or allow for {check_id}")
         for check_id, names in REQUIRED_SETTINGS.items():
             if check_id in on and not any(getattr(self, name) for name in names):
@@ -168,15 +228,19 @@ class TenantRecord(Contract):
         if problems:
             raise ValueError(problems[0])
         own = record_rule_ids(self)
-        # Messages never repeat submitted values, so an unknown rule id is not echoed back. A record may name only
-        # static rules and its own comparisons and sections: never another tenant's.
-        if any(rule_id not in RULES and rule_id not in own for rule_id in self.rule_actions):
-            raise ValueError("Unknown rule id; GET /v1/controls lists every rule, and this record's own comparisons "
-                             "and required sections are rules too")
-        # Only rules of the pii check itself: encoded personal data (pii.encoded_*) is a separate check that never redacts.
-        if on.get("pii") == Action.REDACT and any(rule_id in RULES and RULES[rule_id].control_id == "pii" and action != "off"
-                                                   for rule_id, action in self.rule_actions.items()):
-            raise ValueError("When the pii check redacts, its rules can only be turned off")
+        for stage in STAGES:
+            actions = self.rule_actions_on(stage)
+            # Messages never repeat submitted values, so an unknown rule id is not echoed back. A record may name
+            # only static rules and its own comparisons and sections: never another tenant's.
+            if any(rule_id not in RULES and rule_id not in own for rule_id in actions):
+                raise ValueError("Unknown rule id; GET /v1/controls lists every rule, and this record's own "
+                                 "comparisons and required sections are rules too")
+            # Only rules of the pii check itself: encoded personal data (pii.encoded_*) never redacts.
+            if self.action("pii", stage) == Action.REDACT and any(
+                    rule_id in RULES and RULES[rule_id].control_id == "pii" and action != "off"
+                    for rule_id, action in actions.items()):
+                raise ValueError(f"When the pii check redacts on {stage.value}, its {stage.value} rules can only "
+                                 "be turned off")
         if self.demo:
             if on.keys() & EXTERNAL_CHECK_IDS:
                 raise ValueError("Demo users cannot run checks that call a paid outside provider")
@@ -187,10 +251,22 @@ class TenantRecord(Contract):
                **{name: getattr(self, name) for name in SETTING_FIELDS})
         return self
 
-    def checks(self) -> dict[str, Action]:
-        """The checks that run, with their actions, in CHECK_IDS order."""
-        return {check_id: getattr(self, "check_" + check_id) for check_id in CHECK_IDS
-                if getattr(self, "check_" + check_id) is not None}
+    def action(self, check_id: str, stage: Stage | str) -> Action | None:
+        """A check's action on one stage; None = it does not run there."""
+        stage = Stage(stage)
+        if stage == Stage.OUTPUT and check_id in INPUT_ONLY_CHECK_IDS:
+            return None
+        return getattr(self, check_field(check_id, stage))
+
+    def rule_actions_on(self, stage: Stage | str) -> dict[str, str]:
+        """The per-rule settings of one stage."""
+        return getattr(self, rule_actions_field(stage))
+
+    def checks(self) -> dict[str, tuple[Action | None, Action | None]]:
+        """The checks that run on at least one stage, as (input action, output action), in CHECK_IDS order."""
+        both = {check_id: (self.action(check_id, Stage.INPUT), self.action(check_id, Stage.OUTPUT))
+                for check_id in CHECK_IDS}
+        return {check_id: actions for check_id, actions in both.items() if actions != (None, None)}
 
     def stages_of(self, check_id: str) -> tuple[Stage, ...]:
         """The stages a check runs on: the stages its settings cover (see the module docstring)."""
@@ -209,20 +285,29 @@ class TenantRecord(Contract):
         return tuple(stage for stage in (Stage.INPUT, Stage.OUTPUT) if stage in covered) or (Stage.INPUT, Stage.OUTPUT)
 
     def to_policy(self) -> Policy:
-        on = self.checks()
+        rules = []
+        for check_id, (input_action, output_action) in self.checks().items():
+            # A check runs on the stages its settings cover (stages_of) where it has an action.
+            stages = tuple(stage for stage in self.stages_of(check_id)
+                           if (input_action if stage == Stage.INPUT else output_action) is not None)
+            if stages:
+                rules.append(Rule(checker_id=check_id, on_finding=input_action or output_action,
+                                  on_input_finding=input_action, on_output_finding=output_action, stages=stages))
+        ran = {rule.checker_id for rule in rules}
         settings = {name: getattr(self, name) for check_id, names in SETTINGS_OF.items()
-                    if check_id in on for name in names}
-        rules = tuple(Rule(checker_id=check_id, on_finding=action, stages=self.stages_of(check_id))
-                      for check_id, action in on.items())
+                    if check_id in ran for name in names}
         # Rule settings go with their check; the pii ones also apply to encoded_pii, which reuses the pii scan.
-        running = on.keys() | ({"pii"} if "encoded_pii" in on else set())
+        running = ran | ({"pii"} if "encoded_pii" in ran else set())
         own = record_rule_ids(self)
-        rule_actions = {rule_id: action for rule_id, action in self.rule_actions.items()
-                        if (RULES[rule_id].control_id if rule_id in RULES else own[rule_id]) in running}
+
+        def kept(actions):
+            return {rule_id: action for rule_id, action in actions.items()
+                    if (RULES[rule_id].control_id if rule_id in RULES else own[rule_id]) in running}
         return Policy(application_id=self.tenant_id, version=TENANT_POLICY_VERSION, mode=self.mode,
-                      timeout_ms=self.timeout_ms, failure_action=self.failure_action, rules=rules,
-                      external_checks="after_local_pass" if on.keys() & EXTERNAL_CHECK_IDS else "disabled",
-                      rule_actions=rule_actions, **settings)
+                      timeout_ms=self.timeout_ms, failure_action=self.failure_action, rules=tuple(rules),
+                      external_checks="after_local_pass" if ran & EXTERNAL_CHECK_IDS else "disabled",
+                      input_rule_actions=kept(self.input_rule_actions),
+                      output_rule_actions=kept(self.output_rule_actions), **settings)
 
     def used(self, month: str) -> int:
         return self.usage.get(month, 0)

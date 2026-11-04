@@ -230,6 +230,16 @@ class Policy(Contract):
     # value replaces the check's action for that rule's findings. The record checks ids against the catalog.
     rule_actions: dict[Annotated[str, Field(pattern=RULE_ID_PATTERN, max_length=100)],
                        Literal["off", "allow", "flag", "block"]] = Field(default_factory=dict, max_length=1000)
+    # Per-stage rule settings (tenant records, 2026-11-04). When set, a stage uses its own map instead of rule_actions.
+    input_rule_actions: dict[Annotated[str, Field(pattern=RULE_ID_PATTERN, max_length=100)],
+                             Literal["off", "allow", "flag", "block"]] | None = Field(default=None, max_length=1000)
+    output_rule_actions: dict[Annotated[str, Field(pattern=RULE_ID_PATTERN, max_length=100)],
+                              Literal["off", "allow", "flag", "block"]] | None = Field(default=None, max_length=1000)
+
+    def rule_actions_for(self, stage: "Stage") -> dict[str, str]:
+        """The rule settings that apply on one stage."""
+        own = self.input_rule_actions if stage == Stage.INPUT else self.output_rule_actions
+        return self.rule_actions if own is None else own
 
     @field_validator("privacy_min_score", mode="before")
     @classmethod
@@ -255,13 +265,15 @@ class Policy(Contract):
 
     @model_validator(mode="after")
     def rule_actions_with_redaction(self):
-        # Redaction replaces every value the pii check finds; a pii rule can then only be turned off.
-        redacts = any(Action.REDACT in (rule.on_finding, rule.on_input_finding, rule.on_output_finding)
-                      for rule in self.rules if rule.checker_id == "pii")
-        # pii.encoded_* rules belong to the encoded personal data check, which never redacts (2026-11-04).
-        if redacts and any(rule_id.startswith("pii.") and not rule_id.startswith("pii.encoded_") and action != "off"
-                           for rule_id, action in self.rule_actions.items()):
-            raise ValueError("When the pii check redacts, its rules can only be turned off")
+        # Redaction replaces every value the pii check finds; a pii rule can then only be turned off on the stages
+        # where pii redacts. pii.encoded_* rules belong to the encoded personal data check, which never redacts.
+        for stage in Stage:
+            redacts = any(((rule.on_input_finding if stage == Stage.INPUT else rule.on_output_finding)
+                           or rule.on_finding) == Action.REDACT
+                          for rule in self.rules if rule.checker_id == "pii" and stage in rule.stages)
+            if redacts and any(rule_id.startswith("pii.") and not rule_id.startswith("pii.encoded_") and action != "off"
+                               for rule_id, action in self.rule_actions_for(stage).items()):
+                raise ValueError("When the pii check redacts, its rules can only be turned off")
         return self
 
 

@@ -29,7 +29,8 @@ from guardoath.budgets import ResourceLimits, RequestBudgets, RequestCapacity
 from guardoath.validation_packs import PackSelectionError, load_pack_registry
 from guardoath.tenants import TenantRegistry
 from guardoath.hosted import ChangeRejected, CheckChanges, NotADemoUser, TenantService
-from guardoath.tenant_record import TENANT_ID_PATTERN, TENANT_POLICY_VERSION, TenantRecord, usage_month
+from guardoath.tenant_record import (CHECK_IDS, INPUT_ONLY_CHECK_IDS, TENANT_ID_PATTERN, TENANT_POLICY_VERSION,
+                                     TenantRecord, usage_month)
 from guardoath.tenant_store import TenantConflict, TenantNotFound, UsageLimitReached
 from guardoath.tenant_record import new_key
 from guardoath.record_rules import record_rules
@@ -322,9 +323,13 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         return {"tenant_id": current.tenant_id, "display_name": current.display_name, "demo": current.demo,
                 "revision": current.revision, "month": month, "used": current.used(month),
                 "monthly_allowance": current.monthly_allowance, "overage": current.overage,
-                "checks": {check_id[6:]: getattr(current, check_id) for check_id in type(current).model_fields
-                           if check_id.startswith("check_")},
-                "rule_actions": dict(sorted(current.rule_actions.items())),
+                # Each check's action on each stage (2026-11-04); no value = it does not run on that stage. Input-only
+                # checks have no output entry.
+                "input_checks": {check_id: current.action(check_id, Stage.INPUT) for check_id in CHECK_IDS},
+                "output_checks": {check_id: current.action(check_id, Stage.OUTPUT) for check_id in CHECK_IDS
+                                  if check_id not in INPUT_ONLY_CHECK_IDS},
+                "input_rule_actions": dict(sorted(current.input_rule_actions.items())),
+                "output_rule_actions": dict(sorted(current.output_rule_actions.items())),
                 # This record's own rules (its field comparisons and required sections), for this tenant only.
                 "record_rules": list(record_rules(current).values())}
 

@@ -17,7 +17,7 @@ LOCAL_CHECKS = [c for c in CHECK_IDS if c not in EXTERNAL_CHECK_IDS]
 
 
 def record(**fields):
-    return TenantRecord(**{"tenant_id": "acme", "display_name": "Acme", "check_secrets": "flag", **fields})
+    return TenantRecord(**{"tenant_id": "acme", "display_name": "Acme", "input_check_secrets": "flag", "output_check_secrets": "flag", **fields})
 
 
 def demo(n=1, **changes):
@@ -32,7 +32,9 @@ def run(policy, content, stage=Stage.INPUT, checkers=None):
 
 
 def test_every_check_is_a_field_on_the_record():
-    assert CHECK_FIELDS == tuple("check_" + c for c in CHECK_IDS)
+    # 2026-11-04: one field per check and stage (tests/test_stage_settings.py); input-only checks have no output field.
+    assert CHECK_FIELDS == tuple("input_check_" + c for c in CHECK_IDS) + tuple(
+        "output_check_" + c for c in CHECK_IDS if c != "azure_prompt_shields")
     assert len(CHECK_IDS) == len(set(CHECK_IDS)) == 17
     for name in CHECK_FIELDS:
         assert TenantRecord.model_fields[name].default is None
@@ -105,11 +107,11 @@ def test_settings_of_a_check_that_is_off_are_kept_but_not_used():
 
 def test_turning_a_check_back_on_restores_its_settings():
     store = MemoryTenantStore((record(ledger={"currency": "EUR", "decimal_places": 0}),))
-    on = store.update_checks("acme", {"check_ledger": "block"}, 1)
+    on = store.update_checks("acme", {"input_check_ledger": "block", "output_check_ledger": "block"}, 1)
     assert on.to_policy().ledger.currency == "EUR"
-    off = store.update_checks("acme", {"check_ledger": None}, 2)
+    off = store.update_checks("acme", {"input_check_ledger": None, "output_check_ledger": None}, 2)
     assert off.to_policy().ledger is None and off.ledger.currency == "EUR"
-    again = store.update_checks("acme", {"check_ledger": "flag"}, 3)
+    again = store.update_checks("acme", {"input_check_ledger": "flag", "output_check_ledger": "flag"}, 3)
     assert again.to_policy().ledger.decimal_places == 0
 
 
@@ -166,8 +168,8 @@ def test_demo_users_are_demo1_to_demo10():
     assert [u.tenant_id for u in users] == [f"demo{n}" for n in range(1, 11)]
     for user in users:
         assert user.demo and user.overage == "block" and user.key_hashes == () and user.monthly_allowance == 2000
-        assert user.checks() == {"pii": Action.BLOCK, "encoded_pii": Action.BLOCK, "secrets": Action.BLOCK,
-                                 "text_security": Action.BLOCK}
+        both = (Action.BLOCK, Action.BLOCK)
+        assert user.checks() == {"pii": both, "encoded_pii": both, "secrets": both, "text_security": both}
         assert user.mode == "enforce"
 
 
@@ -180,7 +182,7 @@ def test_demo_users_have_settings_for_every_check_that_needs_them():
 @pytest.mark.parametrize("check_id", [c for c in LOCAL_CHECKS if c not in ("pii", "encoded_pii")])
 def test_any_demo_check_can_be_turned_on(check_id):
     for action in ("block", "flag", "allow"):
-        policy = demo(**{"check_" + check_id: action, "check_pii": None, "check_encoded_pii": None}).to_policy()
+        policy = demo(**{"check_" + check_id: action, "input_check_pii": None, "output_check_pii": None, "input_check_encoded_pii": None, "output_check_encoded_pii": None}).to_policy()
         assert (check_id, Action(action)) in [(r.checker_id, r.on_finding) for r in policy.rules]
         Engine([policy], default_checkers())
 
@@ -243,7 +245,7 @@ def test_demo_defaults_block_an_email_and_pass_a_clean_question():
 
 def test_demo_reset_restores_every_editable_field():
     store = MemoryTenantStore(demo_records())
-    changed = store.update_checks("demo3", {"check_ledger": "flag", "check_pii": None, "mode": "observe",
+    changed = store.update_checks("demo3", {"input_check_ledger": "flag", "output_check_ledger": "flag", "input_check_pii": None, "output_check_pii": None, "mode": "observe",
                                             "timeout_ms": 50, "detect_secret_assignments": False}, 1)
     reset = store.update_checks("demo3", demo_defaults(), changed.revision)
     fresh = demo(3)
@@ -253,9 +255,9 @@ def test_demo_reset_restores_every_editable_field():
 
 def test_demo_users_are_separate_records():
     store = MemoryTenantStore(demo_records())
-    store.update_checks("demo1", {"check_text_security": None}, 1)
-    assert store.get("demo1").check_text_security is None
-    assert store.get("demo2").check_text_security == Action.BLOCK
+    store.update_checks("demo1", {"input_check_text_security": None, "output_check_text_security": None}, 1)
+    assert store.get("demo1").input_check_text_security is None
+    assert store.get("demo2").input_check_text_security == Action.BLOCK
 
 
 # Keys
@@ -304,11 +306,11 @@ def test_new_key_rejects_bad_tenant_ids():
 
 def test_check_changes_require_the_current_revision():
     store = MemoryTenantStore((record(),))
-    first = store.update_checks("acme", {"check_text_security": "block"}, 1)
+    first = store.update_checks("acme", {"input_check_text_security": "block", "output_check_text_security": "block"}, 1)
     assert first.revision == 2 and first.updated_at
     with pytest.raises(TenantConflict):
-        store.update_checks("acme", {"check_pii": "flag"}, 1)
-    assert store.get("acme").check_pii is None
+        store.update_checks("acme", {"input_check_pii": "flag", "output_check_pii": "flag"}, 1)
+    assert store.get("acme").input_check_pii is None
 
 
 @pytest.mark.parametrize("field", ["usage", "key_hashes", "demo", "monthly_allowance", "overage", "status",
@@ -322,15 +324,15 @@ def test_check_changes_cannot_touch_account_fields(field):
 def test_invalid_check_changes_leave_the_record_unchanged():
     store = MemoryTenantStore((record(),))
     with pytest.raises(ValidationError):
-        store.update_checks("acme", {"check_secrets": "redact"}, 1)
-    assert store.get("acme").revision == 1 and store.get("acme").check_secrets == Action.FLAG
+        store.update_checks("acme", {"input_check_secrets": "redact", "output_check_secrets": "redact"}, 1)
+    assert store.get("acme").revision == 1 and store.get("acme").input_check_secrets == Action.FLAG
 
 
 def test_check_changes_keep_usage_and_keys():
     _, digest = new_key("acme")
     store = MemoryTenantStore((record(key_hashes=(digest,), monthly_allowance=5),))
     store.count_check("acme", "2026-10")
-    updated = store.update_checks("acme", {"check_pii": "block"}, 1)
+    updated = store.update_checks("acme", {"input_check_pii": "block", "output_check_pii": "block"}, 1)
     assert updated.used("2026-10") == 1 and updated.key_hashes == (digest,)
 
 

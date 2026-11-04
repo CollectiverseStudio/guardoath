@@ -356,7 +356,7 @@ def test_the_guide_has_every_check_and_profile_in_the_dashboards_words():
     for check_id, help in checks.items():
         section = guide[guide.index(f'id="check-{check_id}"'):]
         section = section[:section.index("</section>")]
-        for text in (help["what"], help["why"], help["limit"], "check_" + check_id):
+        for text in (help["what"], help["why"], help["limit"], "input_check_" + check_id):
             assert html.escape(text) in section, (check_id, text)
     for version, help in profiles.items():
         row = guide[guide.index(f'id="profile-{version}"'):]
@@ -460,16 +460,27 @@ def test_the_guides_python_example_works_against_the_api(monkeypatch):
     tenants.store.update_checks("demo1", {"mode": "observe"}, tenants.store.get("demo1").revision)
     observed = namespace["check"]("input", "Please email jane@example.com about my order.")
     assert observed["recommended_action"] == "block" and observed["effective_action"] == "allow" and namespace["next_step"](observed) == "continue"
+    # Only Block stops (Greg, 2026-11-04): a Flag finding goes on to the AI model, a ready redaction goes on cleaned.
+    tenants.store.update_checks("demo1", {"mode": "enforce", "input_check_pii": "flag"}, tenants.store.get("demo1").revision)
+    flagged = namespace["check"]("input", "Please email jane@example.com about my order.")
+    assert flagged["effective_action"] == "flag" and flagged["findings"] and namespace["next_step"](flagged) == "continue"
+    tenants.store.update_checks("demo1", {"input_check_pii": "redact", "input_check_encoded_pii": None},
+                                tenants.store.get("demo1").revision)
+    redacted = namespace["check"]("input", "Please email jane@example.com about my order.")
+    assert redacted["effective_action"] == "redact" and redacted["redaction"]["status"] == "ready"
+    assert namespace["next_step"](redacted).startswith("continue with")
 
 
 def test_the_dashboard_lists_the_rules_of_each_check_and_saves_rule_actions():
     from pathlib import Path
     script = (Path(__file__).resolve().parents[1] / "guardoath" / "static" / "dashboard.js").read_text(encoding="utf-8")
-    assert 'send("/v1/controls"' in script and "changes.rule_actions" in script
-    # 2026-11-03: one rule list; a rule without its own setting shows "Same as check (...)" (was "Check action").
-    for text in ["Rules in this check (", "Same as check (", "Not reported (look-alike): ", "Use case: ", 'id = "rule-search"',
-                 'id = "rule-filter-check"', 'id = "rule-filter-setting"', 'table.id = "rule-table"', '"In effect"',
-                 '"Category (check)"']:
+    assert 'send("/v1/controls"' in script and 'changes[stage + "_rule_actions"]' in script
+    # 2026-11-04: one table grouped by category; each check and each rule has an Input and an Output setting. A rule
+    # without its own setting shows "Same as check (...)".
+    for text in ["Show rules (", "Same as check (", "Not reported (look-alike): ", "Use case: ", 'id = "rule-search"',
+                 'id = "rule-filter-check"', 'id = "rule-filter-setting"', 'table.id = "check-table"', '"In effect"',
+                 '"Category (check)"', '"tenant-check-" + stage + "-" + id', '"rule-action-" + stage + "-" + rule.rule_id',
+                 'changes[stage + "_check_" + check]', '"Input only"']:
         assert text in script, text
     # Rule texts are shown with textContent only, never as markup.
     start = script.index("function ruleRow"); end = script.index("function updateRuleCounts")
@@ -531,8 +542,8 @@ def test_every_dashboard_example_names_a_check_and_its_settings_come_from_the_ex
     for version, settings in table("exampleSettings").items():
         for field, value in settings.items():
             assert profiles[version][field] == value, (version, field)
-    from guardoath.tenant_record import CHECK_FIELDS
-    known = {field[len("check_"):] for field in CHECK_FIELDS}
+    from guardoath.tenant_record import INPUT_CHECK_FIELDS
+    known = {field[len("input_check_"):] for field in INPUT_CHECK_FIELDS}
     for ids in table("sampleCheckOverrides").values():
         assert set(ids) <= known
     for text in ["function exampleNote(stage, sample)", 'stage + "-sample-note"', 'stage + "-sample-apply"',
@@ -542,11 +553,14 @@ def test_every_dashboard_example_names_a_check_and_its_settings_come_from_the_ex
 
 def test_the_page_follows_the_decision_and_saves_changed_settings_before_a_check():
     """2026-11-03: a finding whose action is Allow must not hold the message, and a check must run the settings the
-    panel shows (unsaved changes are saved first)."""
+    panel shows (unsaved changes are saved first). 2026-11-04 (Greg): only Block stops; Flag goes through."""
     from pathlib import Path
     script = (Path(__file__).resolve().parents[1] / "guardoath" / "static" / "dashboard.js").read_text(encoding="utf-8")
     gate = next(line for line in script.splitlines() if line.startswith("const canProceed = "))
-    assert "findings.length" not in gate and 'r.recommended_action === "allow"' in gate and 'r.effective_action === "allow"' in gate
+    gate = script[script.index("const goesThrough = "):script.index("function buttons()")]
+    assert "findings.length" not in gate
+    assert '["allow", "flag"].includes(action)' in gate and 'r.redaction?.status === "ready"' in gate
+    assert "goesThrough(r.recommended_action, r) && goesThrough(r.effective_action, r)" in gate
     run = script[script.index("async function execute(target)"):]
     run = run[:run.index("\n}\n")]
     assert "pendingChanges()" in run and "saveTenant(" in run and run.index("saveTenant(") < run.index('assess("input")')

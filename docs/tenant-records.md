@@ -16,38 +16,50 @@ Each tenant is one record. Everything about the tenant is on it:
 
 ## Check fields
 
-Each check is a field named `check_<id>`.
+Each check has two fields, one per stage (since 2026-11-04): `input_check_<id>` for the user's message and
+`output_check_<id>` for the AI's answer. `azure_prompt_shields` checks input only and has no output field. So a check
+can block on input and only flag on output, or run on one stage only.
 
-| Field value | Effect |
+| Field value | Effect on that stage |
 |---|---|
 | no value | The check does not run. |
-| `block` | The check runs. A finding blocks the message or answer. |
-| `flag` | The check runs. A finding is reported and flagged. |
-| `allow` | The check runs. A finding is reported and the message or answer is allowed. |
-| `redact` | `check_pii` only: detected identifiers are replaced, and the selected checks run again on the result. |
+| `block` | The check runs. A finding stops the message or answer. **Only Block stops anything.** |
+| `flag` | The check runs. A finding is reported and flagged for review, and the message or answer still goes through (a flagged input is still sent to the AI model). |
+| `allow` | The check runs. A finding is reported and the message or answer goes through. |
+| `redact` | `pii` only: detected identifiers are replaced, the selected checks run again on the result, and the cleaned text goes through. |
 
-One value covers both the user's message (input) and the AI's answer (output). The exception is
-`check_azure_prompt_shields`, which checks input only.
+A check that did not finish gets the record's `failure_action` (`block` by default, or `flag`), so it stops the
+message only when that is `block`. The strongest action of all findings decides (`effective_action`; observe mode
+always reports `allow` there and puts what enforce would do in `recommended_action`).
 
-| Field | Needs these settings before it can run |
+**Records stored before 2026-11-04** hold one field per check, `check_<id>`, and one rule map, `rule_actions`, each for
+both stages. When such a record is read (memory or DynamoDB), `check_<id>` sets both `input_check_<id>` and
+`output_check_<id>` (input only for `azure_prompt_shields`) and `rule_actions` sets both maps, so the record runs
+exactly as before until a stage is set differently; it is saved with the new names. A change request that uses the old
+names is refused (422) with a message naming the new ones. `tests/test_stage_settings.py` covers both stages, the
+conversion and the API.
+
+The table below lists each check by its id; both of its fields need the same settings.
+
+| Check | Needs these settings before it can run (on either stage) |
 |---|---|
-| `check_pii` | none (options: `detect_labeled_sensitive_data`, `privacy_patterns`, `disabled_privacy_entities`, `privacy_min_score`) |
-| `check_encoded_pii` | none |
-| `check_secrets` | none (options: `detect_secret_assignments`, `inspect_encoded_secrets`, `confidential_terms`) |
-| `check_text_security` | none |
-| `check_lexical_guards` | none (161 wording patterns; off for demo users until turned on) |
-| `check_schema` | `input_schema` or `output_schema` |
-| `check_cross_field` | `comparisons` |
-| `check_completeness` | `required_sections` |
-| `check_matched_outcomes` | `matched_outcomes` |
-| `check_evidence` | `evidence` |
-| `check_tool_calls` | `tool_calls` |
-| `check_ledger` | `ledger` |
-| `check_timestamps` | `timestamps` |
-| `check_graph` | `graph` |
-| `check_integrity` | `integrity` |
-| `check_content_safety` | none; calls a paid outside provider and runs only after the local checks pass |
-| `check_azure_prompt_shields` | none; calls a paid outside provider and runs only after the local checks pass |
+| `pii` | none (options: `detect_labeled_sensitive_data`, `privacy_patterns`, `disabled_privacy_entities`, `privacy_min_score`) |
+| `encoded_pii` | none |
+| `secrets` | none (options: `detect_secret_assignments`, `inspect_encoded_secrets`, `confidential_terms`) |
+| `text_security` | none |
+| `lexical_guards` | none (161 wording patterns; off for demo users until turned on) |
+| `schema` | `input_schema` or `output_schema` |
+| `cross_field` | `comparisons` |
+| `completeness` | `required_sections` |
+| `matched_outcomes` | `matched_outcomes` |
+| `evidence` | `evidence` |
+| `tool_calls` | `tool_calls` |
+| `ledger` | `ledger` |
+| `timestamps` | `timestamps` |
+| `graph` | `graph` |
+| `integrity` | `integrity` |
+| `content_safety` | none; calls a paid outside provider and runs only after the local checks pass |
+| `azure_prompt_shields` | none; calls a paid outside provider and runs only after the local checks pass |
 
 Rules:
 - At least one check must have a value.
@@ -142,7 +154,8 @@ keeps working alongside it.
 - **Domain:** a broad responsibility, such as *Privacy and personal data*. Two domains are planned and have
   no controls yet: *Human safety* (`docs/human-safety-scenarios.md`) and *Structured security events*
   (`guardoath/sigma_rules/`).
-- **Control:** one field on the tenant record, `check_<control_id>`. It has a plain-language outcome, a
+- **Control:** one field per stage on the tenant record, `input_check_<control_id>` and `output_check_<control_id>`
+  (`field` and `output_field` in `GET /v1/controls`). It has a plain-language outcome, a
   use case (why you would turn it on), its limits, a severity, a recommended action, the actions it
   supports and the stages it runs on.
 - **Rule:** one finding a control can report, such as `pii.iban_code` or `agent.git_force`. Each rule has
@@ -190,7 +203,7 @@ rule `completeness.<rule_id>` (check `completeness`). They are rules of that rec
 - **Listed for the tenant only.** `GET /v1/applications/current` returns them in `tenant.record_rules`, in the same
   shape as catalog rules plus `configuration` (pointers, operator, type and stages, or label and minimum length),
   `stages` and `record_rule: true`. The public `GET /v1/controls` never lists them.
-- **Set like any rule.** `rule_actions` may name them (`off`, `allow`, `flag`, `block`). A record's `rule_actions`
+- **Set like any rule.** `input_rule_actions` and `output_rule_actions` may name them (`off`, `allow`, `flag`, `block`). A record's rule maps
   may name only catalog rules and its own comparisons and sections, never another tenant's, and a setting cannot
   outlive its rule: removing a comparison while keeping its setting is refused (422; send both changes together).
 - **Ids on a tenant record** are lowercase letters, digits and `_` (`^[a-z][a-z0-9_]{0,79}$`) and may not name a
@@ -207,7 +220,8 @@ rule `completeness.<rule_id>` (check `completeness`). They are rules of that rec
 users' comparisons and sections, per-rule actions, unknown and removed ids, colliding ids, tenants sharing one engine,
 and the API.
 
-The record field `rule_actions` maps a rule id to one of:
+The record fields `input_rule_actions` and `output_rule_actions` (since 2026-11-04; before, one `rule_actions` for both
+stages) each map a rule id to one of, on that stage:
 
 | Value | Effect |
 |---|---|
@@ -217,18 +231,20 @@ The record field `rule_actions` maps a rule id to one of:
 A rule that is not listed uses its check's action. Rule settings are kept while their check is off and
 apply again when it is turned back on.
 
-On the dashboard (since 2026-11-03), a table under the checks (which are alphabetical) lists every rule with four
-columns: Rule (title and id), Category (the check it belongs to), Setting, and In effect (for example "Block (from
-check)", "Allow (own setting)" or "Off (check is off)"). Select a column heading to sort. Type part of a rule's name
-or id (for example `email` or `ip address`), or filter by category or by the setting in effect (or only rules with
-their own setting). A rule without its own
-setting shows **Same as check (Block)** (or the check's current setting), so a check set to Block blocks every rule
-in it until one rule is given its own setting, such as `pii.email_address`: `allow`. A rule cannot be set while its
-check is off. When a check is changed to Redact, the own settings of its rules other than Off are cleared. Rules are saved like any other check setting, with
+On the dashboard (since 2026-11-04) the checks and their rules are one table grouped by category: each check is a row
+with an **Input** setting, an **Output** setting ("Input only" for Prompt Shields) and what is in effect, and
+**Show rules** opens its rules under it, each with its own Input and Output setting and the setting in effect on each
+stage (for example "Input: Block (from check)", "Output: Allow (own setting)" or "Off (check is off)"). Type part of a
+rule's name or id (for example `email` or `ip address`), or filter by category or by the setting in effect on either
+stage (or only rules with their own setting): only matching rules show, under their checks. A rule without its own
+setting shows **Same as check (Block)** (or the check's current setting on that stage), so a check set to Block blocks
+every rule in it until one rule is given its own setting, such as `pii.email_address`: `allow` on output. A rule cannot
+be set on a stage where its check is off. When a check is changed to Redact on a stage, the own settings of its rules
+on that stage other than Off are cleared. Rules are saved like any other check setting, with
 `POST /v1/tenants/current/checks` and a `revision`; for example
-`{"revision": 4, "changes": {"rule_actions": {"pii.ip_address": "off", "agent.git_force": "block"}}}`
-replaces the whole map. An unknown rule id is refused (422). When the `pii` check redacts, its rules can
-only be turned `off`, because redaction replaces every value the check finds.
+`{"revision": 4, "changes": {"output_rule_actions": {"pii.ip_address": "off", "agent.git_force": "block"}}}`
+replaces the whole output map. An unknown rule id is refused (422). When the `pii` check redacts on a stage, its rules
+can only be turned `off` on that stage, because redaction replaces every value the check finds.
 
 `tests/test_rule_catalog.py` runs every rule's example (it must be reported) and look-alike (it must not
 be) against the real detectors. `tests/test_rule_actions.py` covers saving, refusing and applying rule
@@ -236,8 +252,8 @@ settings.
 
 ## Stages and message formats
 
-A check runs on both stages (input and output), except (since 2026-11-04) a check whose settings cover one stage
-only: `schema` runs on the stages that have a schema (`input_schema`, `output_schema`), `cross_field` on the stages
+A check runs on the stages where its field has a value (`input_check_<id>`, `output_check_<id>`), and (since
+2026-11-04) only where its settings cover the stage: `schema` runs on the stages that have a schema (`input_schema`, `output_schema`), `cross_field` on the stages
 of its `comparisons`, `completeness` on the stages of its `required_sections`. `azure_prompt_shields` is input only.
 Before, such a check also ran on the other stage, found nothing to check there, and blocked every message on it.
 
