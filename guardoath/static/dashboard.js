@@ -187,13 +187,18 @@ function ruleRow(rule) {
   const id = document.createElement("code"); id.className = "rule-id"; id.textContent = rule.rule_id;
   const info = document.createElement("details"); info.className = "rule-info";
   const summary = document.createElement("summary"); summary.textContent = "Use case and examples"; info.append(summary);
-  const lines = [["Use case: ", rule.use_case], ["Reported: ", rule.example], ["Not reported (look-alike): ", rule.look_alike]];
+  const lines = [["Use case: ", rule.use_case]];
+  // A record's own comparison or section shows how it is configured on this record (2026-11-04).
+  if (rule.configuration) lines.push(["Configuration: ", rule.configuration]);
+  lines.push(["Reported: ", rule.example ?? "No generated example: this configuration's two fields overlap."],
+             ["Not reported (look-alike): ", rule.look_alike ?? "No generated example: this configuration's two fields overlap."]);
   if (rule.needs_setting) lines.push(["Needs the setting: ", rule.needs_setting]);
+  if ((rule.needs_checks || []).length) lines.push(["Needs these checks on too: ", rule.needs_checks.map(id => checkNames[id] || id).join(", ")]);
   for (const [heading, text] of lines) {
     const p = document.createElement("p"); const b = document.createElement("strong"); b.textContent = heading;
-    const value = document.createElement(heading === "Use case: " ? "span" : "code"); value.textContent = text; p.append(b, value); info.append(p);
+    const value = document.createElement(["Use case: ", "Needs these checks on too: "].includes(heading) ? "span" : "code"); value.textContent = text; p.append(b, value); info.append(p);
   }
-  const severity = document.createElement("p"); severity.className = "hint"; severity.textContent = "Severity " + rule.severity; info.append(severity);
+  const severity = document.createElement("p"); severity.className = "hint"; severity.textContent = "Severity " + rule.severity + (rule.record_rule ? " \u00b7 defined on this tenant record" : ""); info.append(severity);
   nameCell.append(title, id, info);
   const check = document.createElement("td"); check.className = "rule-check"; check.textContent = checkNames[rule.control_id] || rule.control_id;
   const settingCell = document.createElement("td"); settingCell.className = "rule-setting";
@@ -232,6 +237,10 @@ async function buildRuleFinder() {
   if (!rules) { const p = document.createElement("p"); p.className = "hint"; p.textContent = "The rule list could not be loaded right now."; box.append(p); return; }
   ruleIndex = {};
   for (const [controlId, list] of Object.entries(rules)) for (const rule of list) ruleIndex[rule.rule_id] = {...rule, control_id: controlId};
+  // The connected tenant's own rules (its field comparisons and required sections), from its own record only.
+  for (const rule of application.tenant.record_rules || []) ruleIndex[rule.rule_id] = {...rule};
+  const perCheck = {};
+  for (const rule of Object.values(ruleIndex)) perCheck[rule.control_id] = (perCheck[rule.control_id] || 0) + 1;
   const all = Object.values(ruleIndex).sort((a, b) => collator.compare(a.title, b.title) || collator.compare(a.rule_id, b.rule_id));
   const heading = document.createElement("h3"); heading.id = "rule-finder-title"; heading.textContent = "All rules (" + all.length + ")";
   const note = document.createElement("p"); note.className = "hint";
@@ -241,7 +250,7 @@ async function buildRuleFinder() {
   const search = document.createElement("input"); search.id = "rule-search"; search.type = "search"; search.placeholder = "Rule name or id, for example email"; search.autocomplete = "off"; search.value = ruleFilters.text;
   const checkFilter = document.createElement("select"); checkFilter.id = "rule-filter-check";
   checkFilter.append(new Option("All categories (" + all.length + ")", ""));
-  for (const id of Object.keys(rules).filter(id => rules[id].length).sort(byCheckName)) checkFilter.append(new Option((checkNames[id] || id) + " (" + rules[id].length + ")", id));
+  for (const id of Object.keys(perCheck).sort(byCheckName)) checkFilter.append(new Option((checkNames[id] || id) + " (" + perCheck[id] + ")", id));
   checkFilter.value = ruleFilters.check;
   const settingFilter = document.createElement("select"); settingFilter.id = "rule-filter-setting";
   for (const [value, text] of [["", "Any setting"], ["block", "Block"], ["flag", "Flag"], ["allow", "Allow"], ["redact", "Redact"], ["off", "Off"], ["own", "Own setting (not the check\u2019s)"]]) settingFilter.append(new Option(text, value));
@@ -1029,10 +1038,13 @@ function examplesFor(item, stage) {
   const own = (list, kind) => (list || []).filter(e => e.stage === stage && e.text)
     .map(e => ({kind, label: e.label, format: e.format || "text", text: e.text}));
   const rules = [];
-  for (const rule of [...(item.rules || [])].sort((a, b) => collator.compare(a.title, b.title))) {
+  // Catalog rules, plus the connected tenant's own comparisons and sections for this check (its record only).
+  const recordRules = (application?.tenant?.record_rules || []).filter(rule => rule.control_id === item.control_id && (rule.stages || []).includes(stage));
+  for (const rule of [...(item.rules || []), ...recordRules].sort((a, b) => collator.compare(a.title, b.title))) {
     const name = rule.title + " \u00b7 " + rule.rule_id + (rule.needs_setting ? " (needs " + rule.needs_setting + ")" : "");
-    if (rule.example) rules.push({kind: "reported", label: name, format: "text", text: rule.example});
-    if (rule.look_alike) rules.push({kind: "look-alike", label: name, format: "text", text: rule.look_alike});
+    // Document-check rules are written in JSON (content_format, 2026-11-04).
+    if (rule.example) rules.push({kind: "reported", label: name, format: rule.content_format || "text", text: rule.example});
+    if (rule.look_alike) rules.push({kind: "look-alike", label: name, format: rule.content_format || "text", text: rule.look_alike});
   }
   // The dashboard's own examples for this check (the buttons above), filled in when picked.
   const dashboard = samples.filter(s => s.checks.includes(item.control_id) && (!s.stages || s.stages.includes(stage)))
@@ -1086,15 +1098,21 @@ function buildExamplePicker(stage, list) {
   });
   box.append(heading, check, pick, note);
   $(stage + "-samples").after(box);
-  examplePickers[stage] = {check, pick, fill};
+  examplePickers[stage] = {check, pick, fill, usable, heading};
 }
 function refreshExamplePickers() {
   for (const stage of ["input", "output"]) {
     const picker = (examplePickers || {})[stage]; if (!picker) continue;
     const locked = stage === "output" && outputLocked();
     picker.check.disabled = picker.pick.disabled = busy || locked;
-    for (const option of picker.check.options) if (option.value)
+    // Counts include the connected tenant's own rules, so recount them for the current record.
+    let total = 0;
+    for (const option of picker.check.options) if (option.value) {
+      const item = picker.usable.find(i => i.control_id === option.value);
+      option.dataset.count = String(item ? examplesFor(item, stage).length : 0); total += Number(option.dataset.count);
       option.textContent = option.dataset.name + " (" + option.dataset.count + ")" + (currentPolicy() && !checkIsOn(option.value, stage) ? " \u2014 off" : "");
+    }
+    picker.heading.textContent = "Every " + stage + " example, by check (" + picker.usable.length + " checks, " + total + " examples)";
     if (picker.check.value) { const kept = picker.pick.value; picker.fill(); picker.pick.value = kept; }
   }
 }

@@ -163,12 +163,49 @@ that the guide has a section for every control. Maturity is reported per control
 
 ## Per-rule settings
 
-A check runs many rules. 279 rules can be set one by one today: 161 lexical rules (`lexical_guards`, including
-40 agent-configuration settings such as `verify_tls=false`),
-97 privacy types (`pii`, 4 of them only with `detect_labeled_sensitive_data`), 17 secret rules (`secrets`,
-1 of them only with `detect_secret_assignments`) and 4 text-security rules (`text_security`).
-`GET /v1/controls` lists every rule under its control, with its title, use case, severity, example and
-look-alike.
+A check runs many rules. 397 catalog rules can be set one by one today (2026-11-04), plus each record's own
+comparisons and required sections (below):
+
+| Check | Rules |
+|---|---|
+| `lexical_guards` | 161, including 40 agent-configuration settings such as `verify_tls=false` |
+| `pii` | 97 privacy types, 4 of them only with `detect_labeled_sensitive_data` |
+| `encoded_pii` | 97: each privacy type inside a labeled Base64 or hex payload (`pii.encoded_<type>`) |
+| `secrets` | 17, 1 of them only with `detect_secret_assignments` |
+| `evidence` | 8 citation findings |
+| `text_security` | 4 |
+| `graph` | 3 |
+| `schema`, `tool_calls`, `ledger` | 2 each |
+| `matched_outcomes`, `timestamps`, `integrity`, `cross_field` (malformed JSON) | 1 each |
+
+`GET /v1/controls` lists every catalog rule under its control, with its title, use case, severity, example,
+look-alike, `content_format` (the document checks' examples are JSON) and `needs_checks` (the 4 labeled-field
+encoded rules need Personal data on too: the record passes `detect_labeled_sensitive_data` only with the `pii` check).
+
+### The record's own rules: field comparisons and required sections
+
+Each field comparison on a record is a rule `business.<rule_id>` (check `cross_field`), and each required section a
+rule `completeness.<rule_id>` (check `completeness`). They are rules of that record only (`guardoath/record_rules.py`):
+
+- **Listed for the tenant only.** `GET /v1/applications/current` returns them in `tenant.record_rules`, in the same
+  shape as catalog rules plus `configuration` (pointers, operator, type and stages, or label and minimum length),
+  `stages` and `record_rule: true`. The public `GET /v1/controls` never lists them.
+- **Set like any rule.** `rule_actions` may name them (`off`, `allow`, `flag`, `block`). A record's `rule_actions`
+  may name only catalog rules and its own comparisons and sections, never another tenant's, and a setting cannot
+  outlive its rule: removing a comparison while keeping its setting is refused (422; send both changes together).
+- **Ids on a tenant record** are lowercase letters, digits and `_` (`^[a-z][a-z0-9_]{0,79}$`) and may not name a
+  catalog rule (`business.ledger_currency`, `business.ledger_unbalanced`, `business.invalid_json`). Engine policy files
+  keep the wider pattern.
+- **Examples** are generated from the configuration: a JSON document the comparison reports and a look-alike it does
+  not (other comparisons on the record get passing values where their fields do not overlap); for sections, labeled
+  text with the section left out, and with every section present. When a comparison's two pointers overlap no example
+  is generated.
+- **Limits** are the checks' own: at most 50 comparisons and 50 sections; values come from the submitted JSON only
+  (see `docs/field-comparisons-implementation-plan.md` for what comparisons do not prove).
+
+`tests/test_record_rules.py` covers all 30 templates in `docs/field-comparisons-rule-inventory.json` and the demo
+users' comparisons and sections, per-rule actions, unknown and removed ids, colliding ids, tenants sharing one engine,
+and the API.
 
 The record field `rule_actions` maps a rule id to one of:
 

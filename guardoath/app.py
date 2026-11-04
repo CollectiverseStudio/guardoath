@@ -32,6 +32,7 @@ from guardoath.hosted import ChangeRejected, CheckChanges, NotADemoUser, TenantS
 from guardoath.tenant_record import TENANT_ID_PATTERN, TENANT_POLICY_VERSION, TenantRecord, usage_month
 from guardoath.tenant_store import TenantConflict, TenantNotFound, UsageLimitReached
 from guardoath.tenant_record import new_key
+from guardoath.record_rules import record_rules
 from guardoath.tenant_sessions import SESSION_HEADER, CognitoSessions, SignInBusy
 
 
@@ -323,7 +324,9 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 "monthly_allowance": current.monthly_allowance, "overage": current.overage,
                 "checks": {check_id[6:]: getattr(current, check_id) for check_id in type(current).model_fields
                            if check_id.startswith("check_")},
-                "rule_actions": dict(sorted(current.rule_actions.items()))}
+                "rule_actions": dict(sorted(current.rule_actions.items())),
+                # This record's own rules (its field comparisons and required sections), for this tenant only.
+                "record_rules": list(record_rules(current).values())}
 
     def tenant_only(principal: str | TenantRecord) -> TenantRecord:
         if not isinstance(principal, TenantRecord):

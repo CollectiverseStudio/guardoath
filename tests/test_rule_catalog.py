@@ -15,7 +15,7 @@ from guardoath.models import Action, CheckRequest, Policy, Rule, Stage
 from guardoath.privacy_catalog import CORE_ENTITIES, PATTERN_ENTITIES
 from guardoath.rule_catalog import LABELED, RULE_ACTIONS, RULES, rule_payload, rules_for
 from guardoath.synthetic_secrets import provider_examples
-from guardoath.tenant_record import CHECK_IDS
+from guardoath.tenant_record import CHECK_IDS, SETTINGS_OF, demo_defaults
 
 
 @pytest.fixture(scope="module")
@@ -23,11 +23,19 @@ def checkers():
     return default_checkers(enable_pii=True)
 
 
+DEFAULTS = demo_defaults()
+
+
 def reported(checkers, rule, content):
     settings = {rule.needs_setting: True} if rule.needs_setting else {}
+    # Document checks need their settings: the demo defaults, as the dashboard's demo users have them.
+    settings.update({name: DEFAULTS[name] for name in rule.settings})
+    # Checks a rule needs on as well (the labeled-field encoded rules need Personal data on).
+    checks = (rule.control_id, *rule.needs_checks)
     policy = Policy(application_id="demo", version="v1", timeout_ms=2000,
-                    rules=(Rule(checker_id=rule.control_id, on_finding=Action.FLAG),), **settings)
-    request = CheckRequest(application_id="demo", policy_version="v1", content=content)
+                    rules=tuple(Rule(checker_id=check_id, on_finding=Action.FLAG) for check_id in checks), **settings)
+    request = CheckRequest(application_id="demo", policy_version="v1", content=content,
+                           content_format=rule.content_format)
     result = asyncio.run(Engine([policy], checkers).check(request, Stage.INPUT))
     assert result.evaluation_status == "complete", result.checker_results
     return {finding.rule_id for finding in result.findings}
@@ -47,9 +55,13 @@ def test_no_look_alike_is_reported(checkers, rule_id):
 
 def test_rule_counts():
     # 2026-11-03: the 40 agent-configuration rules (agent_config_guards) joined lexical_guards: 239 -> 279.
-    assert len(RULES) == 279
-    assert {control: len(rules_for(control)) for control in ("lexical_guards", "pii", "secrets", "text_security")} == {
-        "lexical_guards": 161, "pii": 97, "secrets": 17, "text_security": 4}
+    # 2026-11-04: the document checks' findings (21, including field comparisons' malformed JSON) and encoded
+    # personal data (97) became rules: 279 -> 397. A record's own comparisons and sections are not counted here.
+    assert len(RULES) == 397
+    assert {control: len(rules_for(control)) for control in CHECK_IDS if rules_for(control)} == {
+        "lexical_guards": 161, "pii": 97, "secrets": 17, "text_security": 4, "encoded_pii": 97, "schema": 2,
+        "matched_outcomes": 1, "evidence": 8, "tool_calls": 2, "ledger": 2, "timestamps": 1, "graph": 3, "integrity": 1,
+        "cross_field": 1}
     assert len(rules_for("pii")) == len(PATTERN_ENTITIES) + len(CORE_ENTITIES) + len(LABELED)
     assert {rule.control_id for rule in RULES.values()} <= set(CHECK_IDS)
 
@@ -76,6 +88,19 @@ def test_entries_are_complete_and_distinct():
     assert RULE_ACTIONS == ("off", "allow", "flag", "block")
 
 
+def test_labeled_encoded_rules_stay_quiet_without_personal_data_on(checkers):
+    # A tenant record passes detect_labeled_sensitive_data only while the pii check is on (SETTINGS_OF), so these four
+    # rules need Personal data on as well; with encoded personal data alone they never report.
+    labeled = [rule for rule in rules_for("encoded_pii") if rule.needs_checks]
+    assert len(labeled) == len(LABELED)
+    for rule in labeled:
+        policy = Policy(application_id="demo", version="v1", timeout_ms=2000,
+                        rules=(Rule(checker_id="encoded_pii", on_finding=Action.FLAG),))
+        request = CheckRequest(application_id="demo", policy_version="v1", content=rule.example)
+        result = asyncio.run(Engine([policy], checkers).check(request, Stage.INPUT))
+        assert rule.rule_id not in {finding.rule_id for finding in result.findings}, rule.rule_id
+
+
 def test_rules_with_a_needed_setting_stay_quiet_without_it(checkers):
     for rule in RULES.values():
         if rule.needs_setting:
@@ -98,3 +123,21 @@ def test_the_registry_lists_every_rule_under_its_control():
                 assert entry == rule_payload(RULES[entry["rule_id"]])
     assert listed == {rule_id: rule.control_id for rule_id, rule in RULES.items()}
     assert {item.control_id for item in CONTROLS} >= set(listed.values())
+
+
+def test_every_privacy_type_has_an_encoded_rule_with_the_same_setting():
+    for rule in rules_for("pii"):
+        encoded = RULES["pii.encoded_" + rule.rule_id.removeprefix("pii.")]
+        assert encoded.control_id == "encoded_pii" and encoded.needs_setting == rule.needs_setting
+        assert encoded.severity == rule.severity and encoded.title == rule.title + " (in Base64 or hex)"
+        assert encoded.needs_checks == (("pii",) if rule.needs_setting else ())
+
+
+def test_document_rules_use_their_checks_settings_and_format():
+    for rule in RULES.values():
+        if rule.settings:
+            assert set(rule.settings) <= set(SETTINGS_OF[rule.control_id]), rule.rule_id
+            assert all(DEFAULTS[name] for name in rule.settings), rule.rule_id
+        expected = "text" if rule.control_id not in {"schema", "matched_outcomes", "evidence", "tool_calls", "ledger",
+                                                     "timestamps", "graph", "cross_field"} else "json"
+        assert rule.content_format == expected, rule.rule_id

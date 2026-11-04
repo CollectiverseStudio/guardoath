@@ -1224,15 +1224,15 @@ test("one rule list: checks and rules are alphabetical, a rule is found by name,
     return texts.every((text, i) => i === 0 || collator.compare(texts[i - 1], text) <= 0);
   }, await locator.allTextContents());
   expect(await sorted(page.locator("#tenant-checks .tenant-check-row > label"))).toBe(true);
-  await expect(page.locator("#rule-finder-title")).toHaveText("All rules (279)");
-  await expect(page.locator("#rule-count")).toHaveText("Showing 279 of 279 rules.");
+  await expect(page.locator("#rule-finder-title")).toHaveText("All rules (402)");
+  await expect(page.locator("#rule-count")).toHaveText("Showing 402 of 402 rules.");
   expect(await sorted(page.locator("#rule-table .rule-title"))).toBe(true);
   // Typing part of the name finds the rule; every row shown mentions the words.
   await page.locator("#rule-search").fill("email");
   await expect(page.locator('.rule-row[data-rule="pii.email_address"]')).toBeVisible();
   const shown = await page.locator("#rule-table .rule-row:visible").evaluateAll(rows => rows.map(r => r.textContent.toLowerCase()));
   expect(shown.length).toBeGreaterThan(0);
-  expect(shown.length).toBeLessThan(279);
+  expect(shown.length).toBeLessThan(402);
   expect(shown.every(text => text.includes("email"))).toBe(true);
   // Rules follow their check until they have their own setting.
   const email = page.locator('[id="rule-action-pii.email_address"]');
@@ -1252,11 +1252,13 @@ test("one rule list: checks and rules are alphabetical, a rule is found by name,
   await expect(page.locator("#rule-table .rule-row:visible")).toHaveCount(1);
   await page.locator("#rule-filter-setting").selectOption("allow");
   await expect(page.locator("#rule-table .rule-row:visible")).toHaveCount(1);
-  // Demo defaults: Personal data, Secrets and Hidden text block (96 + 17 + 4); Risky instructions is off (161).
+  // Demo defaults: Personal data, Encoded personal data, Secrets and Hidden text block (96 + 97 + 17 + 4); Risky
+  // instructions and the document checks are off (161 + 21), and so are the demo record's own 2 comparisons and
+  // 3 required sections. Counts changed 2026-11-04 when those rules were added.
   await page.locator("#rule-filter-setting").selectOption("block");
-  await expect(page.locator("#rule-table .rule-row:visible")).toHaveCount(117);
+  await expect(page.locator("#rule-table .rule-row:visible")).toHaveCount(214);
   await page.locator("#rule-filter-setting").selectOption("off");
-  await expect(page.locator("#rule-table .rule-row:visible")).toHaveCount(161);
+  await expect(page.locator("#rule-table .rule-row:visible")).toHaveCount(187);
   // A redacting check allows only Off for single rules, so the own Allow is cleared.
   await page.locator("#tenant-check-pii").selectOption("redact");
   await expect(email.locator("option")).toHaveText(["Same as check (Redact)", "Off"]);
@@ -1268,7 +1270,7 @@ test("one rule list: checks and rules are alphabetical, a rule is found by name,
   await expect(page.locator("#rule-filter-setting")).toHaveValue("");
   await expect(page.locator("#rule-table .rule-row:visible")).toHaveCount(17);
   await page.getByRole("button", { name: "Clear filters", exact: true }).click();
-  await expect(page.locator("#rule-count")).toHaveText("Showing 279 of 279 rules.");
+  await expect(page.locator("#rule-count")).toHaveText("Showing 402 of 402 rules.");
   // Nothing above was saved; put the record back to be sure.
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
   await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
@@ -1282,7 +1284,7 @@ test("the rule table shows every rule's category and the setting in effect, and 
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
   await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
   await expect(page.locator("#rule-table thead th")).toHaveText(["Rule", "Category (check)", "Setting", "In effect"]);
-  await expect(page.locator("#rule-table tbody tr")).toHaveCount(279);
+  await expect(page.locator("#rule-table tbody tr")).toHaveCount(402);
   // Find IP address by name: its row says which category it is in and what it does now.
   await page.locator("#rule-search").fill("ip address");
   const ip = page.locator('#rule-table tr[data-rule="pii.ip_address"]');
@@ -1301,11 +1303,12 @@ test("the rule table shows every rule's category and the setting in effect, and 
   await expect(page.locator('#rule-table th[data-sort="check"]')).toHaveAttribute("aria-sort", "ascending");
   const categories = async () => page.locator("#rule-table tbody .rule-check").allTextContents();
   const up = await categories();
-  expect(up[0]).toBe("Hidden text and encodings");
-  expect(up[up.length - 1]).toBe("Secrets and credentials");
+  // Since 2026-11-04 the document checks have rules too: Citation evidence sorts first, Timestamp order last.
+  expect(up[0]).toBe("Citation evidence");
+  expect(up[up.length - 1]).toBe("Timestamp order");
   await page.locator("#rule-sort-check").click();
   await expect(page.locator('#rule-table th[data-sort="check"]')).toHaveAttribute("aria-sort", "descending");
-  expect((await categories())[0]).toBe("Secrets and credentials");
+  expect((await categories())[0]).toBe("Timestamp order");
   // Sort by the setting in effect: the one Allow comes first.
   await page.locator("#rule-sort-effect").click();
   expect((await page.locator("#rule-table tbody .rule-effect").allTextContents())[0]).toBe("Allow (own setting)");
@@ -1361,6 +1364,59 @@ test("a check that needs JSON warns in the panel and explains the block on a tex
   await expect(page.locator("#tenant-format-graph")).toBeVisible();
   await page.locator("#tenant-check-graph").selectOption("");
   await expect(page.locator("#tenant-format-graph")).toBeHidden();
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+});
+test("a document check's rule example is loaded as JSON and reported", async ({ page }) => {
+  // 2026-11-04: the document checks' findings are rules, each with a JSON example.
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo2");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+  await expect(page.locator("#tenant-rules-graph")).toHaveText("Rules in this check (3)");
+  await page.locator("#tenant-check-graph").selectOption("block");
+  await page.locator("#input-example-check").selectOption("graph");
+  await page.locator("#input-example").selectOption({ label: "Graph with a cycle \u00b7 structure.graph_cycle" });
+  await expect(page.locator("#input-format")).toHaveValue("json");
+  await page.locator("#run-input").click();
+  await expect(page.locator("#input-results")).toContainText("Recommended: block");
+  await expect(page.locator("#input-results")).toContainText("contains a cycle");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+});
+test("field comparisons on the record are rules in the table, with their configuration and own setting", async ({ page }) => {
+  // 2026-11-04: each comparison on a tenant record is a rule of that record (business.<rule_id>).
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo2");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+  // Malformed JSON (catalog) + the demo record's date_order and refund_limit.
+  await expect(page.locator("#tenant-rules-cross_field")).toHaveText("Rules in this check (3)");
+  await expect(page.locator("#tenant-rules-completeness")).toHaveText("Rules in this check (3)");
+  await page.locator("#tenant-rules-cross_field").click();
+  await expect(page.locator("#rule-table .rule-row:visible")).toHaveCount(3);
+  const refund = page.locator('#rule-table tr[data-rule="business.refund_limit"]');
+  await expect(refund.locator(".rule-title")).toHaveText("Comparison refund_limit: /refund_amount \u2264 /purchase_amount (number)");
+  await expect(refund.locator(".rule-check")).toHaveText("Field comparisons");
+  await expect(refund.locator(".rule-effect")).toHaveText("Off (check is off)");
+  await refund.locator(".rule-info summary").click();
+  await expect(refund.locator(".rule-info")).toContainText("Configuration: left /refund_amount");
+  await expect(refund.locator(".rule-info")).toContainText("defined on this tenant record");
+  await page.locator("#tenant-check-cross_field").selectOption("flag");
+  await expect(refund.locator(".rule-effect")).toHaveText("Flag (from check)");
+  await page.locator('[id="rule-action-business.refund_limit"]').selectOption("block");
+  await expect(refund.locator(".rule-effect")).toHaveText("Block (own setting)");
+  await page.locator("#input-example-check").selectOption("cross_field");
+  await page.locator("#input-example").selectOption({ label: "Comparison refund_limit: /refund_amount \u2264 /purchase_amount (number) \u00b7 business.refund_limit" });
+  await expect(page.locator("#input-format")).toHaveValue("json");
+  await page.locator("#run-input").click();
+  await expect(page.locator("#tenant-message")).toHaveText("Saved. The checks below ran with these settings.");
+  await expect(page.locator("#input-results")).toContainText("Recommended: block");
+  await expect(page.locator("#input-results")).toContainText("comparison 'refund_limit'");
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
   await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
 });
