@@ -242,3 +242,91 @@ def test_equal_opposite_pointer_constraints_preserve_both_findings(stage):
         assert {finding.rule_id for finding in result.findings} == ({
             "business.different"} if payload["a"] == payload["b"] else {"business.same"})
         assert result.recommended_action == Action.BLOCK
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+@pytest.mark.parametrize("operator,accepted,rejected", [
+    ("lt", 9, 10),
+    ("le", 10, 11),
+    ("eq", 10, 9),
+    ("ge", 10, 9),
+    ("gt", 11, 10),
+    ("ne", 11, 10),
+])
+def test_all_operators_respect_exact_boundary_in_a_two_rule_portfolio(stage, operator, accepted, rejected):
+    """The selected rule must not cause a benign companion rule to fail."""
+    rules = (
+        FieldComparison(rule_id="boundary", left="/value", right="/threshold", operator=operator),
+        FieldComparison(rule_id="companion", left="/quantity", right="/quantity_limit", operator="le"),
+    )
+    payload = {"value": accepted, "threshold": 10, "quantity": 3, "quantity_limit": 10}
+    clean = run(payload, comparisons=rules, stage=stage)
+    assert clean.evaluation_status == "complete"
+    assert clean.findings == () and clean.recommended_action == Action.ALLOW
+
+    violated = run({**payload, "value": rejected}, comparisons=rules, stage=stage)
+    assert violated.evaluation_status == "complete"
+    assert [finding.rule_id for finding in violated.findings] == ["business.boundary"]
+    assert violated.recommended_action == Action.BLOCK
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_invalid_iso_date_and_numeric_failure_report_both_original_rules(stage):
+    rules = (
+        FieldComparison(rule_id="calendar", left="/start", right="/end", operator="le", value_type="date"),
+        FieldComparison(rule_id="budget", left="/spent", right="/budget", operator="le"),
+    )
+    payload = {"start": "2026-02-30", "end": "2026-03-01", "spent": 12, "budget": 10}
+    result = run(payload, comparisons=rules, stage=stage)
+    assert [finding.rule_id for finding in result.findings] == [
+        "business.calendar", "business.budget"
+    ]
+    assert result.evaluation_status == "complete"
+    assert result.recommended_action == Action.BLOCK
+
+
+def test_decimal_precision_is_not_lost_when_rules_share_a_pointer():
+    rules = (
+        FieldComparison(rule_id="not_above", left="/a", right="/b", operator="le"),
+        FieldComparison(rule_id="above", left="/a", right="/b", operator="gt"),
+    )
+    policy = Policy(application_id="precision", version="multi-rule-v1", mode="enforce",
+                    rules=(Rule(checker_id="cross_field", on_finding="block"),), comparisons=rules)
+    request = CheckRequest(
+        application_id="precision", policy_version=policy.version,
+        content='{"a":0.10000000000000000001,"b":0.1}', content_format="json",
+    )
+    result = asyncio.run(Engine([policy], default_checkers()).check(request, Stage.INPUT))
+    assert result.evaluation_status == "complete"
+    assert [finding.rule_id for finding in result.findings] == ["business.not_above"]
+    assert result.recommended_action == Action.BLOCK
+
+
+@pytest.mark.parametrize("raw_json", [
+    '{"shipped_qty":8,"shipped_qty":9,"ordered_qty":10}',
+    '{"shipped_qty":',
+    '{"shipped_qty":NaN,"ordered_qty":10}',
+])
+def test_invalid_json_reports_one_sanitized_document_finding_not_partial_comparison_findings(raw_json):
+    policy = Policy(
+        application_id="malformed", version="multi-rule-v1", mode="enforce",
+        rules=(Rule(checker_id="cross_field", on_finding="block"),), comparisons=CHAIN,
+    )
+    request = CheckRequest(application_id="malformed", policy_version=policy.version,
+                           content=raw_json, content_format="json")
+    result = asyncio.run(Engine([policy], default_checkers()).check(request, Stage.INPUT))
+    assert result.evaluation_status == "complete"
+    assert [finding.rule_id for finding in result.findings] == ["business.invalid_json"]
+    assert result.recommended_action == Action.BLOCK
+    assert all(raw_json not in finding.explanation for finding in result.findings)
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_invalid_secret_like_field_content_is_not_echoed_in_findings(stage):
+    sentinel = "TEST_SECRET_VALUE_DO_NOT_ECHO_8b1ca42"
+    payload = {**BENIGN, "shipped_qty": sentinel}
+    result = run(payload, stage=stage)
+    assert {finding.rule_id for finding in result.findings} == {
+        "business.shipped", "business.delivered"
+    }
+    assert all(sentinel not in finding.explanation for finding in result.findings)
