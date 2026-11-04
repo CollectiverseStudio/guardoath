@@ -1,0 +1,865 @@
+{
+  "schema_version": "1",
+  "category": "Field comparisons",
+  "check_id": "cross_field",
+  "status": "proposed_not_enabled",
+  "count": 30,
+  "base_capabilities": {
+    "operators": [
+      "lt",
+      "le",
+      "eq",
+      "ge",
+      "gt",
+      "ne"
+    ],
+    "value_types": [
+      "number",
+      "date"
+    ],
+    "implementable_primitive_combinations": 12
+  },
+  "implementation_boundary": "Tenant-configured submitted JSON comparisons only; no cross-request joins, sums, reference data, units, string matching, tolerance, external verification or risk claims.",
+  "rules": [
+    {
+      "id": "FC-001",
+      "rule_id": "refund_not_above_purchase",
+      "domain": "Commerce",
+      "use_case": "Refund cannot exceed purchase",
+      "comparison": {
+        "rule_id": "refund_not_above_purchase",
+        "left": "/refund_amount",
+        "right": "/purchase_amount",
+        "operator": "le",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "refund_amount": 120,
+        "purchase_amount": 100
+      },
+      "negative": {
+        "refund_amount": 40,
+        "purchase_amount": 100
+      },
+      "expected_finding": "business.refund_not_above_purchase",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-002",
+      "rule_id": "discount_not_above_subtotal",
+      "domain": "Commerce",
+      "use_case": "Discount cannot exceed subtotal",
+      "comparison": {
+        "rule_id": "discount_not_above_subtotal",
+        "left": "/discount_amount",
+        "right": "/subtotal",
+        "operator": "le",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "discount_amount": 90,
+        "subtotal": 80
+      },
+      "negative": {
+        "discount_amount": 10,
+        "subtotal": 80
+      },
+      "expected_finding": "business.discount_not_above_subtotal",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-003",
+      "rule_id": "paid_not_above_invoice",
+      "domain": "Finance",
+      "use_case": "Paid amount cannot exceed invoice",
+      "comparison": {
+        "rule_id": "paid_not_above_invoice",
+        "left": "/paid_amount",
+        "right": "/invoice_total",
+        "operator": "le",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "paid_amount": 120,
+        "invoice_total": 100
+      },
+      "negative": {
+        "paid_amount": 40,
+        "invoice_total": 100
+      },
+      "expected_finding": "business.paid_not_above_invoice",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-004",
+      "rule_id": "balance_not_above_credit_limit",
+      "domain": "Finance",
+      "use_case": "Balance cannot exceed approved credit limit",
+      "comparison": {
+        "rule_id": "balance_not_above_credit_limit",
+        "left": "/balance",
+        "right": "/credit_limit",
+        "operator": "le",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "balance": 600,
+        "credit_limit": 500
+      },
+      "negative": {
+        "balance": 200,
+        "credit_limit": 500
+      },
+      "expected_finding": "business.balance_not_above_credit_limit",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-005",
+      "rule_id": "reserve_at_least_required",
+      "domain": "Finance",
+      "use_case": "Reserve must cover required reserve",
+      "comparison": {
+        "rule_id": "reserve_at_least_required",
+        "left": "/reserve_amount",
+        "right": "/required_reserve",
+        "operator": "ge",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "reserve_amount": 50,
+        "required_reserve": 75
+      },
+      "negative": {
+        "reserve_amount": 100,
+        "required_reserve": 75
+      },
+      "expected_finding": "business.reserve_at_least_required",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-006",
+      "rule_id": "available_not_below_minimum",
+      "domain": "Finance",
+      "use_case": "Available liquidity meets minimum",
+      "comparison": {
+        "rule_id": "available_not_below_minimum",
+        "left": "/available_liquidity",
+        "right": "/minimum_liquidity",
+        "operator": "ge",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "available_liquidity": 50,
+        "minimum_liquidity": 100
+      },
+      "negative": {
+        "available_liquidity": 150,
+        "minimum_liquidity": 100
+      },
+      "expected_finding": "business.available_not_below_minimum",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-007",
+      "rule_id": "claim_not_above_coverage",
+      "domain": "Insurance",
+      "use_case": "Claim cannot exceed contract coverage",
+      "comparison": {
+        "rule_id": "claim_not_above_coverage",
+        "left": "/claim_amount",
+        "right": "/coverage_limit",
+        "operator": "le",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "claim_amount": 250,
+        "coverage_limit": 200
+      },
+      "negative": {
+        "claim_amount": 100,
+        "coverage_limit": 200
+      },
+      "expected_finding": "business.claim_not_above_coverage",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-008",
+      "rule_id": "deductible_not_above_claim",
+      "domain": "Insurance",
+      "use_case": "Deductible cannot exceed claim",
+      "comparison": {
+        "rule_id": "deductible_not_above_claim",
+        "left": "/deductible",
+        "right": "/claim_amount",
+        "operator": "le",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "deductible": 250,
+        "claim_amount": 200
+      },
+      "negative": {
+        "deductible": 50,
+        "claim_amount": 200
+      },
+      "expected_finding": "business.deductible_not_above_claim",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-009",
+      "rule_id": "quantity_not_above_stock",
+      "domain": "Retail",
+      "use_case": "Requested quantity cannot exceed stock",
+      "comparison": {
+        "rule_id": "quantity_not_above_stock",
+        "left": "/requested_qty",
+        "right": "/stock_qty",
+        "operator": "le",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "requested_qty": 15,
+        "stock_qty": 10
+      },
+      "negative": {
+        "requested_qty": 5,
+        "stock_qty": 10
+      },
+      "expected_finding": "business.quantity_not_above_stock",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-010",
+      "rule_id": "shipped_not_above_ordered",
+      "domain": "Logistics",
+      "use_case": "Shipped units cannot exceed ordered units",
+      "comparison": {
+        "rule_id": "shipped_not_above_ordered",
+        "left": "/shipped_qty",
+        "right": "/ordered_qty",
+        "operator": "le",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "shipped_qty": 12,
+        "ordered_qty": 10
+      },
+      "negative": {
+        "shipped_qty": 5,
+        "ordered_qty": 10
+      },
+      "expected_finding": "business.shipped_not_above_ordered",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-011",
+      "rule_id": "delivered_not_above_shipped",
+      "domain": "Logistics",
+      "use_case": "Delivered units cannot exceed shipped units",
+      "comparison": {
+        "rule_id": "delivered_not_above_shipped",
+        "left": "/delivered_qty",
+        "right": "/shipped_qty",
+        "operator": "le",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "delivered_qty": 12,
+        "shipped_qty": 10
+      },
+      "negative": {
+        "delivered_qty": 5,
+        "shipped_qty": 10
+      },
+      "expected_finding": "business.delivered_not_above_shipped",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-012",
+      "rule_id": "load_below_capacity",
+      "domain": "Transport",
+      "use_case": "Vehicle load must be below certified capacity",
+      "comparison": {
+        "rule_id": "load_below_capacity",
+        "left": "/load_kg",
+        "right": "/capacity_kg",
+        "operator": "lt",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "load_kg": 1000,
+        "capacity_kg": 1000
+      },
+      "negative": {
+        "load_kg": 800,
+        "capacity_kg": 1000
+      },
+      "expected_finding": "business.load_below_capacity",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-013",
+      "rule_id": "temperature_below_maximum",
+      "domain": "Cold chain",
+      "use_case": "Observed temperature must be below allowed maximum",
+      "comparison": {
+        "rule_id": "temperature_below_maximum",
+        "left": "/temperature_c",
+        "right": "/maximum_c",
+        "operator": "lt",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "temperature_c": 5,
+        "maximum_c": 5
+      },
+      "negative": {
+        "temperature_c": 3,
+        "maximum_c": 5
+      },
+      "expected_finding": "business.temperature_below_maximum",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-014",
+      "rule_id": "temperature_above_minimum",
+      "domain": "Cold chain",
+      "use_case": "Observed temperature must exceed allowed minimum",
+      "comparison": {
+        "rule_id": "temperature_above_minimum",
+        "left": "/temperature_c",
+        "right": "/minimum_c",
+        "operator": "gt",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "temperature_c": 1,
+        "minimum_c": 1
+      },
+      "negative": {
+        "temperature_c": 3,
+        "minimum_c": 1
+      },
+      "expected_finding": "business.temperature_above_minimum",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-015",
+      "rule_id": "reading_equal_reference",
+      "domain": "Manufacturing",
+      "use_case": "Measured count must match accepted reference",
+      "comparison": {
+        "rule_id": "reading_equal_reference",
+        "left": "/measured_count",
+        "right": "/reference_count",
+        "operator": "eq",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "measured_count": 101,
+        "reference_count": 100
+      },
+      "negative": {
+        "measured_count": 100,
+        "reference_count": 100
+      },
+      "expected_finding": "business.reading_equal_reference",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-016",
+      "rule_id": "batch_not_equal_quarantined",
+      "domain": "Manufacturing",
+      "use_case": "Batch identifier comparison is out of scope for numeric/date engine",
+      "comparison": {
+        "rule_id": "batch_not_equal_quarantined",
+        "left": "/batch_index",
+        "right": "/quarantined_batch_index",
+        "operator": "ne",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "batch_index": 2,
+        "quarantined_batch_index": 2
+      },
+      "negative": {
+        "batch_index": 1,
+        "quarantined_batch_index": 2
+      },
+      "expected_finding": "business.batch_not_equal_quarantined",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-017",
+      "rule_id": "dose_not_above_prescribed",
+      "domain": "Healthcare",
+      "use_case": "Proposed dose not above prescription",
+      "comparison": {
+        "rule_id": "dose_not_above_prescribed",
+        "left": "/proposed_dose_mg",
+        "right": "/prescribed_dose_mg",
+        "operator": "le",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "proposed_dose_mg": 20,
+        "prescribed_dose_mg": 10
+      },
+      "negative": {
+        "proposed_dose_mg": 5,
+        "prescribed_dose_mg": 10
+      },
+      "expected_finding": "business.dose_not_above_prescribed",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-018",
+      "rule_id": "administered_not_above_ordered",
+      "domain": "Healthcare",
+      "use_case": "Administered units not above ordered units",
+      "comparison": {
+        "rule_id": "administered_not_above_ordered",
+        "left": "/administered_units",
+        "right": "/ordered_units",
+        "operator": "le",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "administered_units": 4,
+        "ordered_units": 3
+      },
+      "negative": {
+        "administered_units": 2,
+        "ordered_units": 3
+      },
+      "expected_finding": "business.administered_not_above_ordered",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-019",
+      "rule_id": "lab_value_above_floor",
+      "domain": "Life sciences",
+      "use_case": "Measured assay value above configured minimum",
+      "comparison": {
+        "rule_id": "lab_value_above_floor",
+        "left": "/assay_value",
+        "right": "/assay_floor",
+        "operator": "gt",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "assay_value": 1,
+        "assay_floor": 1
+      },
+      "negative": {
+        "assay_value": 2,
+        "assay_floor": 1
+      },
+      "expected_finding": "business.lab_value_above_floor",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-020",
+      "rule_id": "sample_count_at_least_minimum",
+      "domain": "Research",
+      "use_case": "Cohort count meets threshold",
+      "comparison": {
+        "rule_id": "sample_count_at_least_minimum",
+        "left": "/sample_count",
+        "right": "/minimum_sample_count",
+        "operator": "ge",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "sample_count": 60,
+        "minimum_sample_count": 80
+      },
+      "negative": {
+        "sample_count": 100,
+        "minimum_sample_count": 80
+      },
+      "expected_finding": "business.sample_count_at_least_minimum",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-021",
+      "rule_id": "energy_not_above_budget",
+      "domain": "Energy",
+      "use_case": "Consumption must not exceed allocated energy budget",
+      "comparison": {
+        "rule_id": "energy_not_above_budget",
+        "left": "/consumption_kwh",
+        "right": "/budget_kwh",
+        "operator": "le",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "consumption_kwh": 110,
+        "budget_kwh": 100
+      },
+      "negative": {
+        "consumption_kwh": 80,
+        "budget_kwh": 100
+      },
+      "expected_finding": "business.energy_not_above_budget",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-022",
+      "rule_id": "emissions_not_above_permit",
+      "domain": "Environment",
+      "use_case": "Reported emissions within configured permit threshold",
+      "comparison": {
+        "rule_id": "emissions_not_above_permit",
+        "left": "/emissions_kg",
+        "right": "/permit_limit_kg",
+        "operator": "le",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "emissions_kg": 60,
+        "permit_limit_kg": 50
+      },
+      "negative": {
+        "emissions_kg": 40,
+        "permit_limit_kg": 50
+      },
+      "expected_finding": "business.emissions_not_above_permit",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-023",
+      "rule_id": "water_use_below_cap",
+      "domain": "Agriculture",
+      "use_case": "Water usage below configured allocation",
+      "comparison": {
+        "rule_id": "water_use_below_cap",
+        "left": "/water_used_m3",
+        "right": "/allocation_m3",
+        "operator": "lt",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "water_used_m3": 10,
+        "allocation_m3": 10
+      },
+      "negative": {
+        "water_used_m3": 9,
+        "allocation_m3": 10
+      },
+      "expected_finding": "business.water_use_below_cap",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-024",
+      "rule_id": "fertilizer_not_above_limit",
+      "domain": "Agriculture",
+      "use_case": "Application amount within specified limit",
+      "comparison": {
+        "rule_id": "fertilizer_not_above_limit",
+        "left": "/applied_kg",
+        "right": "/limit_kg",
+        "operator": "le",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "applied_kg": 12,
+        "limit_kg": 10
+      },
+      "negative": {
+        "applied_kg": 8,
+        "limit_kg": 10
+      },
+      "expected_finding": "business.fertilizer_not_above_limit",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-025",
+      "rule_id": "project_spend_not_above_budget",
+      "domain": "Construction",
+      "use_case": "Spend cannot exceed approved budget",
+      "comparison": {
+        "rule_id": "project_spend_not_above_budget",
+        "left": "/actual_spend",
+        "right": "/approved_budget",
+        "operator": "le",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "actual_spend": 250,
+        "approved_budget": 200
+      },
+      "negative": {
+        "actual_spend": 100,
+        "approved_budget": 200
+      },
+      "expected_finding": "business.project_spend_not_above_budget",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-026",
+      "rule_id": "actual_hours_not_above_authorized",
+      "domain": "Workforce",
+      "use_case": "Reported work hours within approved ceiling",
+      "comparison": {
+        "rule_id": "actual_hours_not_above_authorized",
+        "left": "/reported_hours",
+        "right": "/authorized_hours",
+        "operator": "le",
+        "value_type": "number",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "reported_hours": 50,
+        "authorized_hours": 45
+      },
+      "negative": {
+        "reported_hours": 40,
+        "authorized_hours": 45
+      },
+      "expected_finding": "business.actual_hours_not_above_authorized",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-027",
+      "rule_id": "reservation_before_expiry",
+      "domain": "Access governance",
+      "use_case": "Grant starts before expiration",
+      "comparison": {
+        "rule_id": "reservation_before_expiry",
+        "left": "/granted_date",
+        "right": "/expires_date",
+        "operator": "lt",
+        "value_type": "date",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "granted_date": "2026-12-01",
+        "expires_date": "2026-11-30"
+      },
+      "negative": {
+        "granted_date": "2026-11-01",
+        "expires_date": "2026-11-30"
+      },
+      "expected_finding": "business.reservation_before_expiry",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-028",
+      "rule_id": "delivery_on_or_before_due",
+      "domain": "Logistics",
+      "use_case": "Delivery is not later than due date",
+      "comparison": {
+        "rule_id": "delivery_on_or_before_due",
+        "left": "/delivered_date",
+        "right": "/due_date",
+        "operator": "le",
+        "value_type": "date",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "delivered_date": "2026-11-06",
+        "due_date": "2026-11-04"
+      },
+      "negative": {
+        "delivered_date": "2026-11-02",
+        "due_date": "2026-11-04"
+      },
+      "expected_finding": "business.delivery_on_or_before_due",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-029",
+      "rule_id": "inspection_on_or_after_install",
+      "domain": "Asset management",
+      "use_case": "Inspection not earlier than installation",
+      "comparison": {
+        "rule_id": "inspection_on_or_after_install",
+        "left": "/inspected_date",
+        "right": "/installed_date",
+        "operator": "ge",
+        "value_type": "date",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "inspected_date": "2026-10-31",
+        "installed_date": "2026-11-01"
+      },
+      "negative": {
+        "inspected_date": "2026-11-04",
+        "installed_date": "2026-11-01"
+      },
+      "expected_finding": "business.inspection_on_or_after_install",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    },
+    {
+      "id": "FC-030",
+      "rule_id": "report_date_equal_effective",
+      "domain": "Compliance",
+      "use_case": "Effective and report dates agree when required",
+      "comparison": {
+        "rule_id": "report_date_equal_effective",
+        "left": "/report_date",
+        "right": "/effective_date",
+        "operator": "eq",
+        "value_type": "date",
+        "stages": [
+          "input",
+          "output"
+        ]
+      },
+      "positive": {
+        "report_date": "2026-11-05",
+        "effective_date": "2026-11-04"
+      },
+      "negative": {
+        "report_date": "2026-11-04",
+        "effective_date": "2026-11-04"
+      },
+      "expected_finding": "business.report_date_equal_effective",
+      "status": "proposed",
+      "scope": "submitted_JSON_only"
+    }
+  ]
+}
