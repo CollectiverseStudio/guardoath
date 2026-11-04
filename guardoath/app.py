@@ -1,5 +1,6 @@
 """Local development API. Credentials bind requests to one application."""
 
+import hashlib
 import hmac
 import os
 from pathlib import Path
@@ -10,7 +11,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi import Path as PathParam
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from fastapi.responses import FileResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -31,6 +32,7 @@ from guardoath.hosted import ChangeRejected, CheckChanges, NotADemoUser, TenantS
 from guardoath.tenant_record import TENANT_ID_PATTERN, TENANT_POLICY_VERSION, TenantRecord, usage_month
 from guardoath.tenant_store import TenantConflict, TenantNotFound, UsageLimitReached
 from guardoath.tenant_record import new_key
+from guardoath.record_rules import record_rules
 from guardoath.tenant_sessions import SESSION_HEADER, CognitoSessions, SignInBusy
 
 
@@ -163,6 +165,37 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     bearer = HTTPBearer(auto_error=False)
     static_dir = Path(__file__).parent / "static"
 
+    # Scripts and stylesheets (2026-11-04). The deploy zip stamps every file 2026-01-01 and the /assets mount sent
+    # no Cache-Control, so browsers cached them by heuristic (a share of the file's age: weeks) and kept running
+    # an old dashboard.js under a new dashboard.html. Now the pages name each script and stylesheet with a
+    # version from its content (?v=...), so a changed file is a new address, and the files themselves are
+    # cached for five minutes at most.
+    def asset_versions() -> dict[str, str]:
+        return {path.name: hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+                for pattern in ("*.js", "*.css") for path in static_dir.glob(pattern)}
+
+    versions = asset_versions()
+    asset_link = re.compile(r'(?P<attr>(?:src|href)=")/assets/(?P<name>[a-z0-9][a-z0-9_-]{0,63}\.(?:js|css))"')
+
+    def versioned_page(name: str) -> str:
+        page = (static_dir / name).read_text(encoding="utf-8")
+        return asset_link.sub(lambda m: f'{m["attr"]}/assets/{m["name"]}?v={versions[m["name"]]}"'
+                              if m["name"] in versions else m.group(0), page)
+
+    def script_or_style(stem: str, suffix: str):
+        path = static_dir / f"{stem}.{suffix}"
+        if not MEDIA_STEM.fullmatch(stem) or not path.is_file():
+            raise HTTPException(404, "Not Found")
+        return FileResponse(path, headers={"Cache-Control": "public, max-age=300"})
+
+    @api.api_route("/assets/{stem}.js", methods=["GET", "HEAD"], include_in_schema=False)
+    async def script(stem: str):
+        return script_or_style(stem, "js")
+
+    @api.api_route("/assets/{stem}.css", methods=["GET", "HEAD"], include_in_schema=False)
+    async def style(stem: str):
+        return script_or_style(stem, "css")
+
     # Registered before the /assets mount, which would otherwise serve the whole file in one response.
     @api.api_route("/assets/{stem}.mp4", methods=["GET", "HEAD"], include_in_schema=False)
     async def video(stem: str, request: Request):
@@ -179,7 +212,7 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
 
     @api.get("/dashboard", include_in_schema=False)
     async def dashboard():
-        return FileResponse(static_dir / "dashboard.html", headers={
+        return HTMLResponse(versioned_page("dashboard.html"), headers={
             "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
             "Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
         })
@@ -187,7 +220,7 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     @api.get("/guide", include_in_schema=False)
     async def guide():
         # The developer guide is static text: no scripts at all.
-        return FileResponse(static_dir / "guide.html", headers={
+        return HTMLResponse(versioned_page("guide.html"), headers={
             "Content-Security-Policy": "default-src 'self'; script-src 'none'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
             "Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
         })
@@ -291,7 +324,9 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 "monthly_allowance": current.monthly_allowance, "overage": current.overage,
                 "checks": {check_id[6:]: getattr(current, check_id) for check_id in type(current).model_fields
                            if check_id.startswith("check_")},
-                "rule_actions": dict(sorted(current.rule_actions.items()))}
+                "rule_actions": dict(sorted(current.rule_actions.items())),
+                # This record's own rules (its field comparisons and required sections), for this tenant only.
+                "record_rules": list(record_rules(current).values())}
 
     def tenant_only(principal: str | TenantRecord) -> TenantRecord:
         if not isinstance(principal, TenantRecord):

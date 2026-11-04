@@ -12,6 +12,7 @@ from guardoath.config import load_policies
 from guardoath.engine import Engine
 from guardoath.models import CheckRequest, ConfidentialTerm, Rule, Stage
 from network_guard import deny_network
+from timing_report import timed
 
 
 @pytest.fixture(scope='module')
@@ -49,9 +50,10 @@ def test_benign_lookalikes_with_all_options_enabled(profiles,sample):
 def test_decoded_json_scans_keys_values_and_nested_containers(profiles,name,wrapper):
     candidate=EXAMPLES[name]
     data={candidate:'safe'} if wrapper=='key' else {'item':candidate} if wrapper=='value' else {'items':[{'value':candidate}]}
-    result=assess(profiles[0],json.dumps(data).replace('_','\\u005f'),fmt='json')
-    # A scan that did not finish (timeout, limit) also has no findings: report its status, not just a missing rule.
-    assert result.evaluation_status=='complete', [(c.status, c.error_code, c.latency_ms) for c in result.checker_results]
+    result,timing=timed(lambda: assess(profiles[0],json.dumps(data).replace('_','\\u005f'),fmt='json'))
+    # A scan that did not finish (timeout, limit) also has no findings: report its status, not just a missing rule,
+    # and where the time went (the policy's 500 ms limit is not raised).
+    assert result.evaluation_status=='complete', ([(c.status, c.error_code, c.latency_ms) for c in result.checker_results], timing)
     assert 'secrets.'+name in {f.rule_id for f in result.findings}
 
 

@@ -258,7 +258,9 @@ class Policy(Contract):
         # Redaction replaces every value the pii check finds; a pii rule can then only be turned off.
         redacts = any(Action.REDACT in (rule.on_finding, rule.on_input_finding, rule.on_output_finding)
                       for rule in self.rules if rule.checker_id == "pii")
-        if redacts and any(rule_id.startswith("pii.") and action != "off" for rule_id, action in self.rule_actions.items()):
+        # pii.encoded_* rules belong to the encoded personal data check, which never redacts (2026-11-04).
+        if redacts and any(rule_id.startswith("pii.") and not rule_id.startswith("pii.encoded_") and action != "off"
+                           for rule_id, action in self.rule_actions.items()):
             raise ValueError("When the pii check redacts, its rules can only be turned off")
         return self
 

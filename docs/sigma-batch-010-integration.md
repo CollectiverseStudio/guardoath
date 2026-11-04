@@ -27,10 +27,11 @@ For example, devtoolslauncher.exe with LaunchForDeploy retains its original
 finding; an ordinary executable does not. These synthetic strings are never
 executed commands and establish no real-world recall or hosted effectiveness.
 
-Actual reserved pyproject.toml and packaging handoff remain Director-owned and
-unchanged. Normal editable source tests and proposal-only artifact tests do not
-establish actual release-wheel completeness, installed or hosted readiness.
-Actual package-data adoption needs acknowledgement, an actual repository wheel,
-isolated noneditable acceptance and exact-SHA12-job Tests/3-job CodeQL. Deployment
+The concurrent main integration adopts the Director's package-data declarations
+and actual release-wheel CI without changing those reserved files. Normal editable
+source tests and earlier proposal-only artifacts do not establish release readiness.
+The actual repository wheel must verify all228 originals/239 assets and pass
+isolated noneditable acceptance on this implementation SHA, alongside all13 Tests
+jobs and3 CodeQL analyses. Hosted ingestion and tenant registration remain separate. Deployment
 additionally needs the established exact-SHA request/workflow,15 production
 checks and cost review. No deployment or AWS activity accompanies this source adoption.

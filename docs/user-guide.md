@@ -1929,5 +1929,7 @@ an ordinary executable does not. Explicit trusted Windows host source and origin
 configured IDs select103 process or125 script rules, at most128 per event in one
 inherited budget. Tests preserve all prior203 primary outcomes, missing/malformed
 behavior and frozen candidate history. Earlier staging counts remain historical.
-Actual package-data adoption, isolated actual release-wheel acceptance, hosted
-ingestion and tenant authority remain separate Director-owned integration gates.
+The actual repository wheel now includes these assets: isolated noneditable
+acceptance verifies228 originals/239 assets and228 positive, benign, missing,
+malformed and routing cases. Hosted ingestion and tenant authority still require
+separate integration; wheel acceptance does not establish hosted readiness.

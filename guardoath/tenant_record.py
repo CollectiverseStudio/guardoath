@@ -5,6 +5,14 @@ redact (pii only). A check field with no value means the check does not run. The
 checks need are fields on the same record. They are kept while a check is off, so turning the
 check back on restores them, and they are passed to the engine only while the check is on.
 
+A check whose settings cover one stage only runs on that stage (2026-11-04): schema runs on the stages that have a
+schema (input_schema, output_schema), cross_field on the stages of its comparisons, completeness on the stages of
+its required sections. Before, it ran on both, and every message on the other stage came back incomplete (blocked).
+Every other check runs on both stages (azure_prompt_shields: input only).
+
+Each field comparison and required section on a record is a rule of that record only (business.<rule_id>,
+completeness.<rule_id>; guardoath.record_rules), and can be set on its own in rule_actions like a catalog rule.
+
 One rule inside a check can be set on its own in rule_actions: "off" stops that rule, and block, flag or
 allow replace the check's action for that rule only. Rule ids are the ones in guardoath.rule_catalog.
 
@@ -30,6 +38,7 @@ from guardoath.models import (Action, ConfidentialTerm, Contract, EvidencePolicy
                               IntegrityPolicy, LedgerPolicy, MatchedOutcomes, Policy, RequiredSection, Rule,
                               Stage, TimestampPolicy, ToolPolicy)
 from guardoath.privacy_catalog import DEFAULT_MIN_SCORE
+from guardoath.record_rules import bad_record_rule_ids, record_rule_ids
 from guardoath.rule_catalog import RULE_ID_PATTERN, RULES
 
 # Every check a tenant can turn on. The simulated "safety" and "bias" checkers are test fixtures only.
@@ -153,10 +162,19 @@ class TenantRecord(Contract):
         for check_id, names in REQUIRED_SETTINGS.items():
             if check_id in on and not any(getattr(self, name) for name in names):
                 raise ValueError(f"The {check_id} check needs its settings before it can run: {', '.join(names)}")
-        # Messages never repeat submitted values, so an unknown rule id is not echoed back.
-        if any(rule_id not in RULES for rule_id in self.rule_actions):
-            raise ValueError("Unknown rule id; GET /v1/controls lists every rule")
-        if on.get("pii") == Action.REDACT and any(rule_id.startswith("pii.") and action != "off"
+        # The record's own comparisons and required sections are rules too (guardoath.record_rules); their ids may
+        # not name a static rule, so a setting can never reach another check's rule.
+        problems = bad_record_rule_ids(self, RULES)
+        if problems:
+            raise ValueError(problems[0])
+        own = record_rule_ids(self)
+        # Messages never repeat submitted values, so an unknown rule id is not echoed back. A record may name only
+        # static rules and its own comparisons and sections: never another tenant's.
+        if any(rule_id not in RULES and rule_id not in own for rule_id in self.rule_actions):
+            raise ValueError("Unknown rule id; GET /v1/controls lists every rule, and this record's own comparisons "
+                             "and required sections are rules too")
+        # Only rules of the pii check itself: encoded personal data (pii.encoded_*) is a separate check that never redacts.
+        if on.get("pii") == Action.REDACT and any(rule_id in RULES and RULES[rule_id].control_id == "pii" and action != "off"
                                                    for rule_id, action in self.rule_actions.items()):
             raise ValueError("When the pii check redacts, its rules can only be turned off")
         if self.demo:
@@ -174,17 +192,33 @@ class TenantRecord(Contract):
         return {check_id: getattr(self, "check_" + check_id) for check_id in CHECK_IDS
                 if getattr(self, "check_" + check_id) is not None}
 
+    def stages_of(self, check_id: str) -> tuple[Stage, ...]:
+        """The stages a check runs on: the stages its settings cover (see the module docstring)."""
+        if check_id in INPUT_ONLY_CHECK_IDS:
+            return (Stage.INPUT,)
+        if check_id == "schema":
+            covered = {stage for stage, schema in ((Stage.INPUT, self.input_schema), (Stage.OUTPUT, self.output_schema))
+                       if schema is not None}
+        elif check_id == "cross_field":
+            covered = {stage for comparison in self.comparisons for stage in comparison.stages}
+        elif check_id == "completeness":
+            covered = {stage for section in self.required_sections for stage in section.stages}
+        else:
+            return (Stage.INPUT, Stage.OUTPUT)
+        # The record's own validation (REQUIRED_SETTINGS) refuses an on check with no settings at all.
+        return tuple(stage for stage in (Stage.INPUT, Stage.OUTPUT) if stage in covered) or (Stage.INPUT, Stage.OUTPUT)
+
     def to_policy(self) -> Policy:
         on = self.checks()
         settings = {name: getattr(self, name) for check_id, names in SETTINGS_OF.items()
                     if check_id in on for name in names}
-        rules = tuple(Rule(checker_id=check_id, on_finding=action,
-                           stages=(Stage.INPUT,) if check_id in INPUT_ONLY_CHECK_IDS else (Stage.INPUT, Stage.OUTPUT))
+        rules = tuple(Rule(checker_id=check_id, on_finding=action, stages=self.stages_of(check_id))
                       for check_id, action in on.items())
         # Rule settings go with their check; the pii ones also apply to encoded_pii, which reuses the pii scan.
         running = on.keys() | ({"pii"} if "encoded_pii" in on else set())
+        own = record_rule_ids(self)
         rule_actions = {rule_id: action for rule_id, action in self.rule_actions.items()
-                        if RULES[rule_id].control_id in running}
+                        if (RULES[rule_id].control_id if rule_id in RULES else own[rule_id]) in running}
         return Policy(application_id=self.tenant_id, version=TENANT_POLICY_VERSION, mode=self.mode,
                       timeout_ms=self.timeout_ms, failure_action=self.failure_action, rules=rules,
                       external_checks="after_local_pass" if on.keys() & EXTERNAL_CHECK_IDS else "disabled",

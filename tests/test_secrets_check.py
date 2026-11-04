@@ -11,6 +11,7 @@ from guardoath.config import load_policies
 from guardoath.engine import Engine
 from guardoath.models import CheckRequest, Stage
 from network_guard import deny_network
+from timing_report import statuses, timed
 
 
 def github_sample():
@@ -44,8 +45,9 @@ def evaluate(engine, content, stage=Stage.INPUT, content_format="text"):
     ("-----BEGIN" + " OPENSSH PRIVATE KEY-----", "secrets.private_key"),
 ])
 def test_supported_candidates(engine, sample, rule):
-    result = evaluate(engine, sample)
-    assert rule in {f.rule_id for f in result.findings}
+    result, timing = timed(lambda: evaluate(engine, sample))
+    # A check that did not finish has no findings either: the message says each checker's status and the timing.
+    assert rule in {f.rule_id for f in result.findings}, (statuses(result), timing)
     assert result.recommended_action == "flag"
     assert result.effective_action == "allow"
     assert result.simulated is False
@@ -60,9 +62,11 @@ def test_supported_candidates(engine, sample, rule):
     "ghp_short", "sk-not-a-supported-key", "eyJbad.invalid.not-valid-json",
 ])
 def test_benign_and_incomplete_lookalikes(engine, sample):
-    result = evaluate(engine, sample)
+    result, timing = timed(lambda: evaluate(engine, sample))
     assert result.findings == ()
-    assert result.recommended_action == "allow"
+    # 2026-11-04, Python 3.11 CI: no findings but Block, which comes from the policy's failure action when the
+    # secrets check does not finish. The message now says each checker's status and where the time went.
+    assert result.recommended_action == "allow", (statuses(result), timing)
 
 
 def test_output_uses_stricter_action(engine):

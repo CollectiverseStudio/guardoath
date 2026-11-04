@@ -215,3 +215,24 @@ def test_resetting_a_demo_user_clears_its_rule_actions():
     assert change(client, token, before["revision"], {"rule_actions": {"agent.git_force": "block"}}).status_code == 200
     assert client.post("/v1/tenants/current/reset", headers=auth(token), json={}).status_code == 200
     assert tenants.store.get("demo3").rule_actions == {}
+
+
+def test_an_encoded_privacy_rule_has_its_own_action_even_while_pii_redacts():
+    # 2026-11-04: pii.encoded_* rules belong to encoded_pii, which never redacts, so they may have any action.
+    payload = "base64: " + base64.b64encode("IBAN DE89 3704 0044 0532 0130 00".encode()).decode()
+    rec = record(mode="enforce", check_pii="redact", check_encoded_pii="flag",
+                 rule_actions={"pii.encoded_iban_code": "block"})
+    result = run(rec, payload)
+    assert "pii.encoded_iban_code" in ids(result) and result.recommended_action == "block"
+    assert run(record(check_encoded_pii="flag"), payload).recommended_action == "flag"
+    with pytest.raises(ValidationError, match="can only be turned off"):
+        record(check_pii="redact", check_encoded_pii="flag", rule_actions={"pii.iban_code": "block"})
+
+
+def test_document_check_rules_can_have_their_own_action():
+    graph = RULES["structure.graph_cycle"]
+    rec = record(check_graph="flag", graph={}, rule_actions={"structure.graph_cycle": "block"})
+    request = CheckRequest(application_id="acme", policy_version=TENANT_POLICY_VERSION, content=graph.example,
+                           content_format="json")
+    result = asyncio.run(Engine([rec.to_policy()], CHECKERS).check(request, Stage.INPUT))
+    assert ids(result) == {"structure.graph_cycle"} and result.recommended_action == "block"

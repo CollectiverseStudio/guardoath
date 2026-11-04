@@ -466,10 +466,13 @@ def test_the_dashboard_lists_the_rules_of_each_check_and_saves_rule_actions():
     from pathlib import Path
     script = (Path(__file__).resolve().parents[1] / "guardoath" / "static" / "dashboard.js").read_text(encoding="utf-8")
     assert 'send("/v1/controls"' in script and "changes.rule_actions" in script
-    for text in ["Rules in this check (", "Check action", "Not reported (look-alike): ", "Use case: "]:
+    # 2026-11-03: one rule list; a rule without its own setting shows "Same as check (...)" (was "Check action").
+    for text in ["Rules in this check (", "Same as check (", "Not reported (look-alike): ", "Use case: ", 'id = "rule-search"',
+                 'id = "rule-filter-check"', 'id = "rule-filter-setting"', 'table.id = "rule-table"', '"In effect"',
+                 '"Category (check)"']:
         assert text in script, text
     # Rule texts are shown with textContent only, never as markup.
-    start = script.index("function ruleRow"); end = script.index("async function fillRuleSlots")
+    start = script.index("function ruleRow"); end = script.index("function updateRuleCounts")
     assert "innerHTML" not in script[start:end]
 
 
@@ -504,3 +507,82 @@ def test_every_check_and_rule_example_can_be_picked_on_the_dashboard():
         assert {item["control_id"] for item in offered} == {item["control_id"] for item in controls if stage in item["stages"]}
     rule_examples = sum(bool(rule["example"]) + bool(rule["look_alike"]) for item in controls for rule in item["rules"])
     assert rule_examples == 2 * sum(len(item["rules"]) for item in controls)
+
+
+def test_every_dashboard_example_names_a_check_and_its_settings_come_from_the_example_profiles():
+    """The dashboard's 130 examples used to be shown only for their example profile. Tenants have no profiles,
+    so each example now names the check it uses; the tables in dashboard.js are checked against
+    policies/playground.json here, so a hand copy cannot drift."""
+    import json
+    import re
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    script = (root / "guardoath" / "static" / "dashboard.js").read_text(encoding="utf-8")
+    profiles = {p["version"]: p for p in json.loads((root / "policies" / "playground.json").read_text(encoding="utf-8"))["policies"]}
+
+    def table(name):
+        found = re.search(r"^const " + name + r" = (\{.*\});$", script, re.M)
+        assert found, name
+        return json.loads(found.group(1))
+    checks = table("profileChecks")
+    for version, ids in checks.items():
+        assert version in profiles, version
+        assert set(ids) <= {rule["checker_id"] for rule in profiles[version]["rules"]}, version
+    for version, settings in table("exampleSettings").items():
+        for field, value in settings.items():
+            assert profiles[version][field] == value, (version, field)
+    from guardoath.tenant_record import CHECK_FIELDS
+    known = {field[len("check_"):] for field in CHECK_FIELDS}
+    for ids in table("sampleCheckOverrides").values():
+        assert set(ids) <= known
+    for text in ["function exampleNote(stage, sample)", 'stage + "-sample-note"', 'stage + "-sample-apply"',
+                 'if (application?.tenant) return true;', '"/v1/tenants/current/checks"']:
+        assert text in script, text
+
+
+def test_the_page_follows_the_decision_and_saves_changed_settings_before_a_check():
+    """2026-11-03: a finding whose action is Allow must not hold the message, and a check must run the settings the
+    panel shows (unsaved changes are saved first)."""
+    from pathlib import Path
+    script = (Path(__file__).resolve().parents[1] / "guardoath" / "static" / "dashboard.js").read_text(encoding="utf-8")
+    gate = next(line for line in script.splitlines() if line.startswith("const canProceed = "))
+    assert "findings.length" not in gate and 'r.recommended_action === "allow"' in gate and 'r.effective_action === "allow"' in gate
+    run = script[script.index("async function execute(target)"):]
+    run = run[:run.index("\n}\n")]
+    assert "pendingChanges()" in run and "saveTenant(" in run and run.index("saveTenant(") < run.index('assess("input")')
+    assert "function pendingChanges()" in script
+    assert "Unsaved changes. Save checks, or run a check: running saves them first." in script
+
+
+def test_the_dashboard_warns_about_checks_that_need_json_or_text():
+    from pathlib import Path
+    script = (Path(__file__).resolve().parents[1] / "guardoath" / "static" / "dashboard.js").read_text(encoding="utf-8")
+    for text in ["function formatWarning(id)", 'format.id = "tenant-format-" + id', "Not run: this check needs ",
+                 "updateFormatNote(id);"]:
+        assert text in script, text
+
+
+def test_pages_name_scripts_and_stylesheets_by_content_version_and_they_are_cached_briefly():
+    """2026-11-04: Greg's browser ran yesterday's dashboard.js under today's page. The deploy zip stamps every file
+    2026-01-01 and /assets sent no Cache-Control, so browsers cached the script by heuristic for weeks."""
+    import hashlib
+    import re
+    from pathlib import Path
+    static = Path(__file__).resolve().parents[1] / "guardoath" / "static"
+    client = TestClient(create_app(credentials={"test-key": "demo"}))
+    for page, names in (("/dashboard", {"dashboard.css", "dashboard.js"}), ("/guide", {"dashboard.css", "guide.css"})):
+        text = client.get(page).text
+        linked = dict(re.findall(r'(?:src|href)="/assets/([a-z0-9_-]+\.(?:js|css))\?v=([0-9a-f]{12})"', text))
+        assert set(linked) == names, page
+        assert not re.search(r'(?:src|href)="/assets/[a-z0-9_-]+\.(?:js|css)"', text), page
+        for name, version in linked.items():
+            body = (static / name).read_bytes()
+            assert version == hashlib.sha256(body).hexdigest()[:12], name
+            response = client.get(f"/assets/{name}?v={version}")
+            assert response.status_code == 200 and response.content == body
+            assert response.headers["cache-control"] == "public, max-age=300"
+    # Other assets keep their own handling.
+    assert client.get("/assets/guardoath-shield.png").status_code == 200
+    assert client.get("/assets/guardoath_ai_final.mp4", headers={"Range": "bytes=0-9"}).status_code == 206
+    assert client.get("/assets/missing.js").status_code == 404
+    assert client.get("/assets/..%2Fapp.py").status_code == 404

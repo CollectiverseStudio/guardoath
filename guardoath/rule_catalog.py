@@ -1,5 +1,6 @@
 """Every rule a tenant can set one by one: one entry per finding rule_id, with a use case, an example that
-reports the rule and a look-alike that does not.
+reports the rule and a look-alike that does not. A record's own field comparisons and required sections are rules
+too, but they belong to that record only: guardoath.record_rules lists them, never this catalog.
 
 A tenant record can turn any rule here off, or give it its own action, in its rule_actions field. Rules not
 listed there use the action of their check. Every example and look-alike is run against the real detectors
@@ -9,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from guardoath import agent_boundary_guards, agent_extended_guards, agent_workflow_guards, data_agent_guards, semantic_guards
+from guardoath import agent_boundary_guards, agent_config_guards, agent_extended_guards, agent_workflow_guards, data_agent_guards, semantic_guards
 from guardoath.privacy_catalog import CORE_ENTITIES, PATTERN_ENTITIES
 from guardoath.synthetic_secrets import provider_examples
 
@@ -29,6 +30,13 @@ class RuleInfo:
     severity: str
     # A check setting that must be on before this rule can report anything.
     needs_setting: str | None = None
+    # The message format the example is written in, and the record settings it relies on (their values are the
+    # demo defaults in guardoath/demo_tenant_defaults.json; tests/test_rule_catalog.py runs every example with them).
+    content_format: str = "text"
+    settings: tuple[str, ...] = ()
+    # Other checks that must be on for this rule to report anything (2026-11-04: the labeled-field encoded rules
+    # need Personal data on, because the record passes detect_labeled_sensitive_data only with the pii check).
+    needs_checks: tuple[str, ...] = ()
 
 
 # Lexical rules in the four 20-rule modules: title, example, look-alike. The 41 rules of agent_boundary_guards
@@ -316,7 +324,101 @@ CONTEXTS = {
     "prompt": "for assistants that read text from users, web pages or documents",
     "data": "when an AI agent can query or change databases",
     "workflow": "when an AI agent runs multi-step business work",
+    "config6": "when an AI agent can change application or security settings",
 }
+
+
+def _config_title(rule_id: str) -> str:
+    # agent_config_guards matches "<setting> = false, off or 0" (also with ":"); the title names the setting.
+    return "Turning off the " + rule_id.split(".", 1)[1] + " setting (false, off or 0)"
+
+
+
+# Rules of the checks that read documents (2026-11-04): one per finding each check reports. Each example uses the
+# check's settings from the demo defaults. Field comparisons (cross_field) are not listed: each comparison a
+# tenant writes is its own rule.
+DOCUMENT_USE_CASES = {
+    'cross_field': 'Turn this on if your application sends JSON whose fields must agree with each other.',
+    'schema': 'Turn this on if your application sends or expects JSON in a fixed shape.',
+    'matched_outcomes': 'Turn this on if your AI makes decisions about people and you test it with matched cases.',
+    'evidence': 'Turn this on if your AI answers from your own documents and cites them.',
+    'tool_calls': 'Turn this on if your AI agent proposes tool calls before they run.',
+    'ledger': 'Turn this on if your AI writes or reads ledger entries.',
+    'timestamps': 'Turn this on if your AI writes or reads time series.',
+    'graph': 'Turn this on if your AI writes or reads dependency or workflow graphs.',
+    'integrity': 'Turn this on if content must stay byte-for-byte the same as an approved copy.',
+}
+DOCUMENT_RULES = {
+    'business.invalid_json': ('cross_field', 'Malformed JSON (field comparisons)', 'json', ('comparisons',), 'high',
+        '{"start_date": "2026-10-01", "end_date": ',
+        '{"start_date":"2026-10-01","end_date":"2026-10-05","purchase_amount":120,"refund_amount":20}'),
+    'schema.invalid_json': ('schema', 'Malformed JSON (schema check)', 'json', ('input_schema',), 'high',
+        '{"start_date": "2026-10-01", "end_date": ',
+        '{"start_date":"2026-10-01","end_date":"2026-10-05","purchase_amount":120,"refund_amount":20}'),
+    'schema.invalid': ('schema', 'JSON that does not match the schema', 'json', ('input_schema',), 'high',
+        '{"start_date":"2026-10-01","end_date":"2026-10-05","purchase_amount":120}',
+        '{"start_date":"2026-10-01","end_date":"2026-10-05","purchase_amount":120,"refund_amount":35}'),
+    'bias.matched_outcome_difference': ('matched_outcomes', 'Different decisions for matched cases', 'json', ('matched_outcomes',), 'medium',
+        '{"scenarios":[{"factors":{"qualification":"same"},"attributes":{"group":"A"},"decision":"approve"},{"factors":{"qualification":"same"},"attributes":{"group":"B"},"decision":"deny"}]}',
+        '{"scenarios":[{"factors":{"qualification":"same"},"attributes":{"group":"A"},"decision":"approve"},{"factors":{"qualification":"same"},"attributes":{"group":"B"},"decision":"approve"}]}'),
+    'evidence.missing_citation': ('evidence', 'Answer without a citation', 'json', ('evidence',), 'medium',
+        '{"answer":"Unused items can be returned within 30 days.","citations":[]}',
+        '{"answer":"Unused items can be returned within 30 days [[returns]].","citations":[{"source_id":"returns","quote":"Unused items may be returned within 30 days."}]}'),
+    'evidence.invalid_marker': ('evidence', 'Malformed citation marker', 'json', ('evidence',), 'medium',
+        '{"answer":"Unused items can be returned within 30 days [[returns]] [returns]].","citations":[{"source_id":"returns","quote":"Unused items may be returned within 30 days."}]}',
+        '{"answer":"Unused items can be returned within 30 days [[returns]].","citations":[{"source_id":"returns","quote":"Unused items may be returned within 30 days."}]}'),
+    'evidence.unknown_source': ('evidence', 'Citation of an unknown source', 'json', ('evidence',), 'medium',
+        '{"answer":"Warranty repairs take ten days [[warranty]].","citations":[{"source_id":"warranty","quote":"Repairs take ten business days to finish."}]}',
+        '{"answer":"Unused items can be returned within 30 days [[returns]].","citations":[{"source_id":"returns","quote":"Unused items may be returned within 30 days."}]}'),
+    'evidence.missing_reference': ('evidence', 'Citation marker without a citation entry', 'json', ('evidence',), 'medium',
+        '{"answer":"Returns are accepted within 30 days [[returns]] and delivery takes three to five days [[shipping]].","citations":[{"source_id":"returns","quote":"Unused items may be returned within 30 days."}]}',
+        '{"answer":"Returns are accepted within 30 days [[returns]] and delivery takes three to five days [[shipping]].","citations":[{"source_id":"returns","quote":"Unused items may be returned within 30 days."},{"source_id":"shipping","quote":"Standard delivery usually takes three to five business days."}]}'),
+    'evidence.unused_citation': ('evidence', 'Citation entry the answer does not use', 'json', ('evidence',), 'medium',
+        '{"answer":"Unused items can be returned within 30 days [[returns]].","citations":[{"source_id":"returns","quote":"Unused items may be returned within 30 days."},{"source_id":"shipping","quote":"Standard delivery usually takes three to five business days."}]}',
+        '{"answer":"Unused items can be returned within 30 days [[returns]].","citations":[{"source_id":"returns","quote":"Unused items may be returned within 30 days."}]}'),
+    'evidence.quote_mismatch': ('evidence', 'Quotation not found in its source', 'json', ('evidence',), 'medium',
+        '{"answer":"Unused items can be returned within 60 days [[returns]].","citations":[{"source_id":"returns","quote":"Unused items may be returned within 60 days."}]}',
+        '{"answer":"Unused items can be returned within 30 days [[returns]].","citations":[{"source_id":"returns","quote":"Unused items may be returned within 30 days."}]}'),
+    'evidence.quote_too_short': ('evidence', 'Quotation too short', 'json', ('evidence',), 'medium',
+        '{"answer":"Returns are accepted within 30 days [[returns]].","citations":[{"source_id":"returns","quote":"within 30 days"}]}',
+        '{"answer":"Unused items can be returned within 30 days [[returns]].","citations":[{"source_id":"returns","quote":"Unused items may be returned within 30 days."}]}'),
+    'evidence.duplicate_citation': ('evidence', 'Two citations of one source', 'json', ('evidence',), 'medium',
+        '{"answer":"Unused items can be returned within 30 days with a receipt [[returns]].","citations":[{"source_id":"returns","quote":"Unused items may be returned within 30 days."},{"source_id":"returns","quote":"Keep the original receipt for a return."}]}',
+        '{"answer":"Unused items can be returned within 30 days [[returns]].","citations":[{"source_id":"returns","quote":"Unused items may be returned within 30 days."}]}'),
+    'actions.unknown_tool': ('tool_calls', 'Tool call outside the allowed tools', 'json', ('tool_calls',), 'high',
+        '{"tool_calls":[{"name":"delete_customer","arguments":{"customer_id":"C-1"}}]}',
+        '{"tool_calls":[{"name":"lookup_order","arguments":{"order_id":"ORD-1234"}}]}'),
+    'actions.invalid_arguments': ('tool_calls', 'Tool call with invalid arguments', 'json', ('tool_calls',), 'high',
+        '{"tool_calls":[{"name":"lookup_order","arguments":{"order_id":"1234"}}]}',
+        '{"tool_calls":[{"name":"lookup_order","arguments":{"order_id":"ORD-1234"}}]}'),
+    'business.ledger_currency': ('ledger', 'Ledger in the wrong currency', 'json', ('ledger',), 'high',
+        '{"currency":"EUR","entries":[{"entry_id":"e1","side":"debit","amount":"10.00"},{"entry_id":"e2","side":"credit","amount":"10.00"}]}',
+        '{"currency":"USD","entries":[{"entry_id":"e1","side":"debit","amount":"10.00"},{"entry_id":"e2","side":"credit","amount":"10.00"}]}'),
+    'business.ledger_unbalanced': ('ledger', 'Ledger debits and credits do not balance', 'json', ('ledger',), 'high',
+        '{"currency":"USD","entries":[{"entry_id":"e1","side":"debit","amount":"10.00"},{"entry_id":"e2","side":"credit","amount":"9.00"}]}',
+        '{"currency":"USD","entries":[{"entry_id":"e1","side":"debit","amount":"10.00"},{"entry_id":"e2","side":"credit","amount":"10.00"}]}'),
+    'structure.timestamp_order': ('timestamps', 'Timestamps out of order', 'json', ('timestamps',), 'high',
+        '{"samples":[{"timestamp":"2026-11-04T11:00:00Z","value":2},{"timestamp":"2026-11-04T10:00:00Z","value":1}]}',
+        '{"samples":[{"timestamp":"2026-11-04T10:00:00Z","value":1},{"timestamp":"2026-11-04T11:00:00Z","value":2}]}'),
+    'structure.graph_duplicate_edge': ('graph', 'Graph with a repeated edge', 'json', ('graph',), 'high',
+        '{"nodes":["a","b","c"],"edges":[["a","b"],["a","b"],["b","c"]]}',
+        '{"nodes":["a","b","c"],"edges":[["a","b"],["b","c"]]}'),
+    'structure.graph_unknown_node': ('graph', 'Graph edge to an undeclared node', 'json', ('graph',), 'high',
+        '{"nodes":["a","b","c"],"edges":[["a","b"],["b","d"]]}',
+        '{"nodes":["a","b","c"],"edges":[["a","b"],["b","c"]]}'),
+    'structure.graph_cycle': ('graph', 'Graph with a cycle', 'json', ('graph',), 'high',
+        '{"nodes":["a","b","c"],"edges":[["a","b"],["b","c"],["c","a"]]}',
+        '{"nodes":["a","b","c"],"edges":[["a","b"],["b","c"]]}'),
+    'structure.integrity_digest_mismatch': ('integrity', 'Content changed from the approved copy', 'text', ('integrity',), 'high',
+        'demo dataset',
+        'demo dataset\n'),
+}
+
+
+def _encoded(text: str) -> str:
+    """A personal-data example as the encoded personal data check reads it: one labeled Base64 payload."""
+    import base64
+    return "base64: " + base64.b64encode(text.encode("utf-8")).decode("ascii")
 
 
 def _lexical_use_case(rule_id: str, title: str) -> str:
@@ -327,7 +429,7 @@ def _lexical_use_case(rule_id: str, title: str) -> str:
 def _lexical_severity(rule_id: str, example: str) -> str:
     found = (semantic_guards.inspect_text(example) + agent_extended_guards.inspect_extended(example)
              + data_agent_guards.inspect_text(example) + agent_workflow_guards.inspect_text(example)
-             + agent_boundary_guards.inspect(example))
+             + agent_boundary_guards.inspect(example) + agent_config_guards.inspect(example))
     signal = next(item for item in found if item.rule_id == rule_id)
     return "high" if signal.severity == "high" else "medium"
 
@@ -337,6 +439,8 @@ def _build() -> dict[str, RuleInfo]:
     lexical = dict(LEXICAL)
     for rule_id, (_pattern, example, look_alike) in agent_boundary_guards.CASES.items():
         lexical[rule_id] = (BOUNDARY_TITLES[rule_id], example, look_alike)
+    for rule_id, (_pattern, example, look_alike) in agent_config_guards.CASES.items():
+        lexical[rule_id] = (_config_title(rule_id), example, look_alike)
     for rule_id, (title, example, look_alike) in lexical.items():
         rules.append(RuleInfo(rule_id, "lexical_guards", title, _lexical_use_case(rule_id, title), example, look_alike,
                               _lexical_severity(rule_id, example)))
@@ -366,6 +470,18 @@ def _build() -> dict[str, RuleInfo]:
     for name, (title, example, look_alike, use_case) in TEXT_SECURITY.items():
         rules.append(RuleInfo("text_security." + name, "text_security", title, f"{use_case} It catches: {title}.",
                               example, look_alike, "low"))
+    for rule_id, (control_id, title, content_format, settings, severity, example, look_alike) in DOCUMENT_RULES.items():
+        rules.append(RuleInfo(rule_id, control_id, title, f"{DOCUMENT_USE_CASES[control_id]} It catches: {title}.",
+                              example, look_alike, severity, None, content_format, settings))
+    # Encoded personal data: one rule per personal-data type, found inside a labeled Base64 or hex payload.
+    for rule in [rule for rule in rules if rule.control_id == "pii"]:
+        title = rule.title + " (in Base64 or hex)"
+        rules.append(RuleInfo("pii.encoded_" + rule.rule_id.removeprefix("pii."), "encoded_pii", title,
+                              "Turn this on if people or documents can hide personal data in Base64 or hex text"
+                              + (" (with labeled-field checks and Personal data on)" if rule.needs_setting else "")
+                              + f". It catches: {title}.",
+                              _encoded(rule.example), _encoded(rule.look_alike), rule.severity, rule.needs_setting,
+                              needs_checks=("pii",) if rule.needs_setting else ()))
     by_id = {rule.rule_id: rule for rule in rules}
     if len(by_id) != len(rules):
         raise ValueError("Duplicate rule id in the rule catalog")
@@ -382,18 +498,21 @@ def rules_for(control_id: str) -> tuple[RuleInfo, ...]:
 
 def rule_payload(rule: RuleInfo) -> dict:
     return {"rule_id": rule.rule_id, "title": rule.title, "use_case": rule.use_case, "severity": rule.severity,
-            "example": rule.example, "look_alike": rule.look_alike, "needs_setting": rule.needs_setting}
+            "example": rule.example, "look_alike": rule.look_alike, "needs_setting": rule.needs_setting,
+            "content_format": rule.content_format, "needs_checks": list(rule.needs_checks)}
 
 
 def _validate():
     import re
     lexical_ids = {*semantic_guards.RULES, *agent_extended_guards.RULES, *data_agent_guards.RULES,
-                   *agent_workflow_guards.RULES, *agent_boundary_guards.CASES}
+                   *agent_workflow_guards.RULES, *agent_boundary_guards.CASES, *agent_config_guards.CASES}
     if {rule.rule_id for rule in rules_for("lexical_guards")} != lexical_ids:
         raise ValueError("The rule catalog must list every lexical rule exactly once")
     privacy = {"pii." + entity.lower() for entity in (*PATTERN_ENTITIES, *CORE_ENTITIES, *LABELED)}
     if {rule.rule_id for rule in rules_for("pii")} != privacy:
         raise ValueError("The rule catalog must list every privacy type exactly once")
+    if {rule.rule_id for rule in rules_for("encoded_pii")} != {"pii.encoded_" + rule_id.removeprefix("pii.") for rule_id in privacy}:
+        raise ValueError("Every privacy type needs its encoded rule")
     if set(SECRET_TITLES) != set(provider_examples()) or set(SECRET_LOOK_ALIKES) != set(SECRET_TITLES):
         raise ValueError("Every secret detector needs a title and a look-alike")
     for rule in RULES.values():
@@ -401,7 +520,8 @@ def _validate():
             raise ValueError(f"Invalid rule id {rule.rule_id}")
         if not (rule.title and rule.use_case.startswith("Turn this on") and rule.example and rule.look_alike):
             raise ValueError(f"Incomplete catalog entry for {rule.rule_id}")
-        if rule.example == rule.look_alike or rule.severity not in ("low", "medium", "high"):
+        if (rule.example == rule.look_alike or rule.severity not in ("low", "medium", "high")
+                or rule.content_format not in ("text", "json")):
             raise ValueError(f"Invalid catalog entry for {rule.rule_id}")
 
 

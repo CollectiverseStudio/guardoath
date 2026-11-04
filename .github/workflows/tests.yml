@@ -98,3 +98,38 @@ jobs:
       - name: Content safety contract cases, Bedrock integration tests and the DynamoDB tenant store
         run: python -m pytest tests/test_content_safety.py tests/test_bedrock_guardrails.py tests/test_dynamodb_store.py -q
 
+  release-wheel:
+    # The other jobs install the checkout in editable mode, which cannot show whether the built wheel ships its
+    # data files. This job builds the real wheel, checks its Sigma assets against the checkout, then installs it
+    # (not editable, no network) and runs the installed-package acceptance outside the checkout.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Build the repository wheel
+        run: python -m pip wheel --no-deps --wheel-dir dist .
+      - name: Sigma assets in the wheel match the checkout
+        run: |
+          python -m guardoath.sigma_rules.verify_distribution dist/guardoath-*.whl > "$RUNNER_TEMP/distribution.json"
+          python - "$RUNNER_TEMP/distribution.json" <<'EOF'
+          import json, pathlib, sys
+          report = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          rules = len(list(pathlib.Path("guardoath/sigma_rules/upstream").glob("batch_*/*.yml")))
+          manifests = len(list(pathlib.Path("guardoath/sigma_rules").glob("upstream_batch_*.json")))
+          expected = (rules, rules, rules + manifests + 1)
+          actual = (report["rule_count"], report["pinned_rule_count"], report["required_asset_count"])
+          print("rules, pinned, required assets:", actual, "expected:", expected)
+          assert actual == expected
+          EOF
+      - name: Installed wheel passes the Sigma acceptance outside the checkout
+        run: |
+          python -m venv "$RUNNER_TEMP/installed"
+          "$RUNNER_TEMP/installed/bin/python" -m pip install --no-index --no-deps dist/guardoath-*.whl
+          root=$("$RUNNER_TEMP/installed/bin/python" -I -c "import sysconfig; print(sysconfig.get_paths()['purelib'])")
+          rules=$(ls guardoath/sigma_rules/upstream/batch_*/*.yml | wc -l)
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/installed/bin/python" -I -m guardoath.sigma_rules.verify_installation --expected-root "$root" > acceptance.json
+          "$RUNNER_TEMP/installed/bin/python" -I -c "import json, sys; r = json.load(open('acceptance.json')); print(r); n = int(sys.argv[1]); assert (r['rule_count'], r['pinned_rule_count'], r['positive_cases'], r['benign_cases'], r['missing_event_cases'], r['malformed_event_rejections'], r['routing_previews']) == (n,) * 7" "$rules"
+
