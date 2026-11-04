@@ -57,7 +57,7 @@ def test_all_catalog_and_routed_findings_now_carry_real_pins_without_new_rules()
     assert CURRENT['source_revision']==REVISION and 'source_branch' not in CURRENT
     assert CURRENT['license']==LICENSE
     evidence=load_evidence_catalog()
-    assert len(evidence)==len({r.rule_id for r in evidence})==203
+    assert len(evidence)==len({r.rule_id for r in evidence})==228
     assert all(r.source_revision==REVISION and r.snapshot_sha256 for r in evidence)
     table=load_routing_table()
     for row in CURRENT['rules']:

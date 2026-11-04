@@ -27,7 +27,8 @@ CASES = [(g, b, c) for g, b in BRANCHES for c in b['cases']]
 
 def test_exact_uncovered_original_alternatives_and_frozen_inventory():
     assert DATA['runtime_registered'] is False
-    assert DATA['reviewed_definition_count'] == len(ROWS) == 203
+    assert DATA['reviewed_definition_count'] == 203  # Frozen C18 review.
+    assert len(ROWS) == 228
     assert DATA['baseline_definition_count'] == len(BASELINE.rule_ids) == 178
     assert len(BRANCHES) == 37 and len(CASES) == 185
     assert {g['id'] for g in DATA['groups']} == {
@@ -89,7 +90,7 @@ def test_each_malformed_essential_field_fails_closed(g, b, field, value):
 
 
 def test_default_selection_caps_and_single_event_raw_limit_remain():
-    assert len(TABLE.plan(trusted_logsource=PROCESS, allowed_rule_ids=TABLE.rule_ids).selected_rule_ids) == 78
+    assert len(TABLE.plan(trusted_logsource=PROCESS, allowed_rule_ids=TABLE.rule_ids).selected_rule_ids) == 103
     assert len(TABLE.plan(trusted_logsource=SCRIPT, allowed_rule_ids=TABLE.rule_ids).selected_rule_ids) == 125
     with pytest.raises(UnsupportedSigmaRule, match='128'):
         evaluate_event(RULES, {})

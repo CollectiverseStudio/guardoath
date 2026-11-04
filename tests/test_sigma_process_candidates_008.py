@@ -45,7 +45,7 @@ def test_frozen_153_predecessor_and_current_default_adoption_preserve_identities
     assert len(ROWS) == len({r['id'] for r in ROWS}) == len({r['source_path'] for r in ROWS}) == 25
     assert not {r['id'] for r in ROWS} & {r['id'] for r in BASE_ROWS}
     assert len(RULES) == len(build_evidence_catalog(ALL_BATCHES)) == 178
-    assert len(load_evidence_catalog()) == len(DEFAULT.rule_ids) == 203
+    assert len(load_evidence_catalog()) == len(DEFAULT.rule_ids) == 228
     assert len(CURRENT_ROWS) == 153
     assert {r['id'] for r in ROWS}.issubset(DEFAULT.rule_ids)
     assert DATA['license'] == LICENSE

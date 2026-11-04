@@ -9,26 +9,31 @@ import yaml
 
 from guardoath.sigma_rules import import_rule, UnsupportedSigmaRule
 from guardoath.sigma_rules.evidence_catalog import BATCH_NAMES
-from guardoath.sigma_rules.routing import RoutingTable
+from guardoath.sigma_rules.routing import RoutingTable, load_routing_table
 from guardoath.sigma_rules.events import evaluate_event
 
 ROOT = Path(__file__).resolve().parents[1] / 'guardoath/sigma_rules'
 DATA = json.loads((ROOT / 'candidates/batch_010.json').read_text(encoding='utf-8'))
 REVIEW = json.loads((ROOT / 'candidates/batch_010_review.json').read_text(encoding='utf-8'))
-BASE = [json.loads((ROOT / n).read_text(encoding='utf-8')) for n in BATCH_NAMES]
+BASE = [json.loads((ROOT / n).read_text(encoding='utf-8')) for n in BATCH_NAMES[:9]]
 ROWS = DATA['rules']
 RULES = [import_rule(r, r['source_path'], source_revision=b['source_revision'])
          for b in BASE + [DATA] for r in b['rules']]
 TABLE = RoutingTable(BASE + [DATA])
 BEFORE = RoutingTable(BASE)
+DEFAULT = load_routing_table()
 PROCESS = {'product': 'windows', 'category': 'process_creation'}
 SCRIPT = {'product': 'windows', 'category': 'ps_script'}
 
 
-def test_staged_inventory_does_not_register_candidates_or_reset_event_cap():
+def test_frozen_staging_review_survives_separate_default_adoption():
     assert DATA['integration_status'] == 'staged-not-default'
     assert DATA['reviewed_predecessor_count'] == REVIEW['default_inventory_at_review'] == len(BEFORE.rule_ids) == 203
     assert REVIEW['runtime_registered'] is False
+    assert len(DEFAULT.rule_ids) == 228
+    adopted = json.loads((ROOT / 'upstream_batch_010.json').read_text(encoding='utf-8'))
+    assert adopted['rules'] == ROWS
+    assert set(r['id'] for r in ROWS).issubset(DEFAULT.rule_ids)
     assert len(ROWS) == len({r['id'] for r in ROWS}) == len({r['source_path'] for r in ROWS}) == 25
     assert set(r['id'] for r in ROWS).isdisjoint(BEFORE.rule_ids)
     assert len(TABLE.rule_ids) == REVIEW['proposed_inventory'] == 228

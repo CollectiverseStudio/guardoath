@@ -1,3 +1,8 @@
+> C23 separately adopts exact candidate010 rows into
+> the 228-rule default. The staging review below remains frozen history; it is
+> not rewritten to imply original hosted registration or installed acceptance.
+> See [the source integration guide](sigma-batch-010-integration.md).
+
 # Staged process-creation batch010
 
 C22 stages 25 further unused SigmaHQ Windows process-creation originals from

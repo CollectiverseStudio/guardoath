@@ -42,11 +42,11 @@ def findings(event,expected):
 def test_frozen_review_and_separate_default_adoption_retain_exact_source():
     assert DATA['integration_status']=='staged-not-default'
     assert DATA['reviewed_predecessor_count']==len(OLD)==178
-    assert len(DEFAULT.rule_ids)==203
+    assert len(DEFAULT.rule_ids)==228
     assert len(ROWS)==len({r['id'] for r in ROWS})==len({r['source_path'] for r in ROWS})==25
     assert {r['id'] for r in ROWS}.issubset(DEFAULT.rule_ids)
     assert len(RULES)==len(BY_ID)==len(build_evidence_catalog(ALL))==203
-    assert len(load_evidence_catalog())==203 and len(BATCH_NAMES)==9
+    assert len(load_evidence_catalog())==228 and len(BATCH_NAMES)==10
     assert DATA['license']==LICENSE
     assert DATA['source_revision']==REVIEW['source_revision']=='05d1031f537e830b76da53bae2400c5814c89165'
     assert REVIEW['runtime_registered'] is False

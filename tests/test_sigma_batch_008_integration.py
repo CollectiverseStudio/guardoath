@@ -29,9 +29,9 @@ def test_adoption_retains_every_candidate_row_snapshot_and_historical_baseline()
     assert DATA['integration_status'] == 'offline-default-source-only'
     assert CANDIDATE['integration_status'] == 'staged-not-default'
     assert DATA['candidate_origin_commit'] == 'd8e1052cdcadf44ad469655418ba2153ceba730c'
-    assert BATCH_NAMES[7] == 'upstream_batch_008.json' and len(BATCH_NAMES) == 9
-    assert len(TABLE.rule_ids) == len(load_evidence_catalog()) == 203
-    assert len(set(TABLE.rule_ids)) == 203
+    assert BATCH_NAMES[7] == 'upstream_batch_008.json' and len(BATCH_NAMES) == 10
+    assert len(TABLE.rule_ids) == len(load_evidence_catalog()) == 228
+    assert len(set(TABLE.rule_ids)) == 228
     for row in DATA['rules']:
         name = Path(row['source_path']).name
         assert (ROOT/'upstream/batch_008'/name).read_bytes() == (ROOT/'candidates/batch_008'/name).read_bytes()
@@ -49,7 +49,7 @@ def test_all_prior_fixture_findings_are_exactly_preserved_after_default_adoption
     assert event == before
 
 
-@pytest.mark.parametrize('source,count',[(SCRIPT,125),(PROCESS,78)])
+@pytest.mark.parametrize('source,count',[(SCRIPT,125),(PROCESS,103)])
 def test_default_153_inventory_uses_one_bounded_source_call(monkeypatch,source,count):
     real = routing.evaluate_event; calls = []
     def spy(selected,event,**kwargs):
@@ -58,7 +58,7 @@ def test_default_153_inventory_uses_one_bounded_source_call(monkeypatch,source,c
         return real(selected,event,**kwargs)
     monkeypatch.setattr(routing,'evaluate_event',spy)
     plan = TABLE.plan(trusted_logsource=source,allowed_rule_ids=TABLE.rule_ids)
-    assert len(plan.selected_rule_ids) == count and len(plan.excluded_rule_ids) == 203-count
+    assert len(plan.selected_rule_ids) == count and len(plan.excluded_rule_ids) == 228-count
     assert TABLE.evaluate({},trusted_logsource=source,allowed_rule_ids=TABLE.rule_ids) == []
     assert calls == [plan.selected_rule_ids]
 

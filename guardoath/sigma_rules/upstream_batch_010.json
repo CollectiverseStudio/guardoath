@@ -1,0 +1,1153 @@
+{
+  "source_repository": "https://github.com/SigmaHQ/sigma",
+  "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+  "license": "Detection Rule License 1.1 (DRL 1.1)",
+  "license_url": "https://github.com/SigmaHQ/Detection-Rule-License/blob/main/LICENSE.Detection.Rules.md",
+  "fixture_origin": "GuardOath-authored synthetic string events; not executed commands, upstream tests or effectiveness evidence",
+  "integration_status": "offline-default-source-only",
+  "reviewed_predecessor_count": 203,
+  "rules": [
+    {
+      "title": "Suspicious Processes Spawned by Java.EXE",
+      "id": "0d34ed8b-1c12-4ff2-828c-16fc860b766d",
+      "related": [
+        {
+          "id": "dff1e1cc-d3fd-47c8-bfc2-aeb878a754c0",
+          "type": "similar"
+        }
+      ],
+      "status": "test",
+      "description": "Detects suspicious processes spawned from a Java host process which could indicate a sign of exploitation (e.g. log4j)",
+      "references": [
+        "https://web.archive.org/web/20231230220738/https://www.lunasec.io/docs/blog/log4j-zero-day/"
+      ],
+      "author": "Andreas Hunkeler (@Karneades), Florian Roth",
+      "date": "2021-12-17",
+      "modified": "2024-01-18",
+      "tags": [
+        "attack.initial-access",
+        "attack.persistence",
+        "attack.privilege-escalation"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "ParentImage|endswith": "\\java.exe",
+          "Image|endswith": [
+            "\\AppVLP.exe",
+            "\\bitsadmin.exe",
+            "\\certutil.exe",
+            "\\cscript.exe",
+            "\\curl.exe",
+            "\\forfiles.exe",
+            "\\hh.exe",
+            "\\mftrace.exe",
+            "\\mshta.exe",
+            "\\net.exe",
+            "\\net1.exe",
+            "\\query.exe",
+            "\\reg.exe",
+            "\\regsvr32.exe",
+            "\\rundll32.exe",
+            "\\schtasks.exe",
+            "\\scrcons.exe",
+            "\\scriptrunner.exe",
+            "\\sh.exe",
+            "\\systeminfo.exe",
+            "\\whoami.exe",
+            "\\wmic.exe",
+            "\\wscript.exe"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate calls to system binaries",
+        "Company specific internal usage"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_java_susp_child_process.yml",
+      "source_sha256": "a67427054c323d2dfc3df9fa7f233a945ce9d19a1f38b30ebc3c459a254bea7f",
+      "source_git_blob": "22a99af45b992cf6b66e723c39ed147464ba7db1",
+      "positive_event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "Image": "C:\\fixtures\\AppVLP.exe"
+      },
+      "negative_event": {
+        "ParentImage": "C:\\benign\\ordinary.exe",
+        "Image": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "Suspicious SysAidServer Child",
+      "id": "60bfeac3-0d35-4302-8efb-1dd16f715bc6",
+      "status": "test",
+      "description": "Detects suspicious child processes of SysAidServer (as seen in MERCURY threat actor intrusions)",
+      "references": [
+        "https://www.microsoft.com/security/blog/2022/08/25/mercury-leveraging-log4j-2-vulnerabilities-in-unpatched-systems-to-target-israeli-organizations/"
+      ],
+      "author": "Florian Roth (Nextron Systems)",
+      "date": "2022-08-26",
+      "tags": [
+        "attack.lateral-movement",
+        "attack.t1210"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "ParentImage|endswith": [
+            "\\java.exe",
+            "\\javaw.exe"
+          ],
+          "ParentCommandLine|contains": "SysAidServer"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_java_sysaidserver_susp_child_process.yml",
+      "source_sha256": "a423a545dc22272a0ceb1f36f8dd7186bed5d1570ff474a832e4e09639f34ffd",
+      "source_git_blob": "75128c6d76befb5ab60563dcbca61508c9c5306a",
+      "positive_event": {
+        "ParentImage": "C:\\fixtures\\java.exe",
+        "ParentCommandLine": "fixture.exe SysAidServer"
+      },
+      "negative_event": {
+        "ParentImage": "C:\\benign\\ordinary.exe",
+        "ParentCommandLine": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "Attempts of Kerberos Coercion Via DNS SPN Spoofing",
+      "id": "0ed99dda-6a35-11ef-8c99-0242ac120002",
+      "related": [
+        {
+          "id": "b07e58cf-cacc-4135-8473-ccb2eba63dd2",
+          "type": "similar"
+        }
+      ],
+      "status": "experimental",
+      "description": "Detects the presence of \"UWhRC....AAYBAAAA\" pattern in command line.\nThe pattern \"1UWhRCAAAAA..BAAAA\" is a base64-encoded signature that corresponds to a marshaled CREDENTIAL_TARGET_INFORMATION structure.\nAttackers can use this technique to coerce authentication from victim systems to attacker-controlled hosts.\nIt is one of the strong indicators of a Kerberos coercion attack, where adversaries manipulate DNS records\nto spoof Service Principal Names (SPNs) and redirect authentication requests like in CVE-2025-33073.\nIf you see this pattern in the command line, it is likely an attempt to add spoofed Service Principal Names (SPNs) to DNS records,\nor checking for the presence of such records through the `nslookup` command.\n",
+      "references": [
+        "https://www.synacktiv.com/publications/ntlm-reflection-is-dead-long-live-ntlm-reflection-an-in-depth-analysis-of-cve-2025",
+        "https://googleprojectzero.blogspot.com/2021/10/using-kerberos-for-authentication-relay.html"
+      ],
+      "author": "Swachchhanda Shrawan Poudel (Nextron Systems)",
+      "date": "2025-06-20",
+      "tags": [
+        "attack.collection",
+        "attack.credential-access",
+        "attack.persistence",
+        "attack.privilege-escalation",
+        "attack.t1557.001",
+        "attack.t1187"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains|all": [
+            "UWhRCA",
+            "BAAAA"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_kerberos_coercion_via_dns_spn_spoofing.yml",
+      "source_sha256": "224582f857a4b1d4df8e496629c409378837037c98fb9d9e34c4a2771e419cf4",
+      "source_git_blob": "7ef36f1139d487d77b271289db75840e68bb0958",
+      "positive_event": {
+        "CommandLine": "fixture.exe UWhRCA BAAAA"
+      },
+      "negative_event": {
+        "CommandLine": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "Devtoolslauncher.exe Executes Specified Binary",
+      "id": "cc268ac1-42d9-40fd-9ed3-8c4e1a5b87e6",
+      "status": "test",
+      "description": "The Devtoolslauncher.exe executes other binary",
+      "references": [
+        "https://lolbas-project.github.io/lolbas/OtherMSBinaries/Devtoolslauncher/",
+        "https://twitter.com/_felamos/status/1179811992841797632"
+      ],
+      "author": "Beyu Denis, oscd.community (rule), @_felamos (idea)",
+      "date": "2019-10-12",
+      "modified": "2021-11-27",
+      "tags": [
+        "attack.stealth",
+        "attack.t1218"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": "\\devtoolslauncher.exe",
+          "CommandLine|contains": "LaunchForDeploy"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate use of devtoolslauncher.exe by legitimate user"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_devtoolslauncher.yml",
+      "source_sha256": "39366e87dfe170d334f81768d22fa8d96d4313813dc40bcd6f517c19103a9157",
+      "source_git_blob": "28b14a717a22710b7217dba6f6d3e1b8c3fafe53",
+      "positive_event": {
+        "Image": "C:\\fixtures\\devtoolslauncher.exe",
+        "CommandLine": "fixture.exe LaunchForDeploy"
+      },
+      "negative_event": {
+        "Image": "C:\\benign\\ordinary.exe",
+        "CommandLine": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "Suspicious Diantz Download and Compress Into a CAB File",
+      "id": "185d7418-f250-42d0-b72e-0c8b70661e93",
+      "status": "test",
+      "description": "Download and compress a remote file and store it in a cab file on local machine.",
+      "references": [
+        "https://lolbas-project.github.io/lolbas/Binaries/Diantz/"
+      ],
+      "author": "frack113",
+      "date": "2021-11-26",
+      "modified": "2022-08-13",
+      "tags": [
+        "attack.command-and-control",
+        "attack.t1105"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains|all": [
+            "diantz.exe",
+            " \\\\\\\\",
+            ".cab"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_diantz_remote_cab.yml",
+      "source_sha256": "f24a08e70b42ce1dbe78690b48419ddc6a4db0442e7af8cd42625b91bc8874cd",
+      "source_git_blob": "5ca0d24b1fac627ca5d889fde12d70179562c99f",
+      "positive_event": {
+        "CommandLine": "fixture.exe diantz.exe  \\\\\\\\ .cab"
+      },
+      "negative_event": {
+        "CommandLine": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "Execute Files with Msdeploy.exe",
+      "id": "646bc99f-6682-4b47-a73a-17b1b64c9d34",
+      "status": "test",
+      "description": "Detects file execution using the msdeploy.exe lolbin",
+      "references": [
+        "https://lolbas-project.github.io/lolbas/OtherMSBinaries/Msdeploy/",
+        "https://twitter.com/pabraeken/status/995837734379032576",
+        "https://twitter.com/pabraeken/status/999090532839313408"
+      ],
+      "author": "Beyu Denis, oscd.community",
+      "date": "2020-10-18",
+      "modified": "2021-11-27",
+      "tags": [
+        "attack.stealth",
+        "attack.t1218"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains|all": [
+            "verb:sync",
+            "-source:RunCommand",
+            "-dest:runCommand"
+          ],
+          "Image|endswith": "\\msdeploy.exe"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "System administrator Usage"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_msdeploy.yml",
+      "source_sha256": "9d5eb1c57f8bdafeb657c3f712c8d76b7422fe3e5f1431bada5ce073fc16ad7d",
+      "source_git_blob": "f3567edac190e950f6017801e5482705b58183a7",
+      "positive_event": {
+        "CommandLine": "fixture.exe verb:sync -source:RunCommand -dest:runCommand",
+        "Image": "C:\\fixtures\\msdeploy.exe"
+      },
+      "negative_event": {
+        "CommandLine": "C:\\benign\\ordinary.exe",
+        "Image": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "OpenWith.exe Executes Specified Binary",
+      "id": "cec8e918-30f7-4e2d-9bfa-a59cc97ae60f",
+      "status": "test",
+      "description": "The OpenWith.exe executes other binary",
+      "references": [
+        "https://github.com/LOLBAS-Project/LOLBAS/blob/4db780e0f0b2e2bb8cb1fa13e09196da9b9f1834/yml/LOLUtilz/OSBinaries/Openwith.yml",
+        "https://twitter.com/harr0ey/status/991670870384021504"
+      ],
+      "author": "Beyu Denis, oscd.community (rule), @harr0ey (idea)",
+      "date": "2019-10-12",
+      "modified": "2021-11-27",
+      "tags": [
+        "attack.stealth",
+        "attack.t1218"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": "\\OpenWith.exe",
+          "CommandLine|contains": "/c"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_openwith.yml",
+      "source_sha256": "a0681d37191157d8e151030e8a10eff1f4f1dfa33c7749e148ad7e6aab59c944",
+      "source_git_blob": "0a7d7fabde02f03c9ef59aee332b0db3239ae101",
+      "positive_event": {
+        "Image": "C:\\fixtures\\OpenWith.exe",
+        "CommandLine": "fixture.exe /c"
+      },
+      "negative_event": {
+        "Image": "C:\\benign\\ordinary.exe",
+        "CommandLine": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "Use of Pcalua For Execution",
+      "id": "0955e4e1-c281-4fb9-9ee1-5ee7b4b754d2",
+      "related": [
+        {
+          "id": "fa47597e-90e9-41cd-ab72-c3b74cfb0d02",
+          "type": "obsolete"
+        }
+      ],
+      "status": "test",
+      "description": "Detects execition of commands and binaries from the context of The program compatibility assistant (Pcalua.exe). This can be used as a LOLBIN in order to bypass application whitelisting.",
+      "references": [
+        "https://lolbas-project.github.io/lolbas/Binaries/Pcalua/",
+        "https://pentestlab.blog/2020/07/06/indirect-command-execution/"
+      ],
+      "author": "Nasreddine Bencherchali (Nextron Systems), E.M. Anhaus (originally from Atomic Blue Detections, Endgame), oscd.community",
+      "date": "2022-06-14",
+      "modified": "2023-01-04",
+      "tags": [
+        "attack.execution",
+        "attack.t1059"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": "\\pcalua.exe",
+          "CommandLine|contains": " -a"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate use by a via a batch script or by an administrator."
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_pcalua.yml",
+      "source_sha256": "43da09920dde5cc5b8e0cc70bc972928072eb3e0cc5826b3802753587d770487",
+      "source_git_blob": "7672ec751f02cbdee1a41c10e80fa3e8d2668800",
+      "positive_event": {
+        "Image": "C:\\fixtures\\pcalua.exe",
+        "CommandLine": "fixture.exe  -a"
+      },
+      "negative_event": {
+        "Image": "C:\\benign\\ordinary.exe",
+        "CommandLine": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "Indirect Command Execution By Program Compatibility Wizard",
+      "id": "b97cd4b1-30b8-4a9d-bd72-6293928d52bc",
+      "status": "test",
+      "description": "Detect indirect command execution via Program Compatibility Assistant pcwrun.exe",
+      "references": [
+        "https://twitter.com/pabraeken/status/991335019833708544",
+        "https://lolbas-project.github.io/lolbas/Binaries/Pcwrun/"
+      ],
+      "author": "A. Sungurov , oscd.community",
+      "date": "2020-10-12",
+      "modified": "2021-11-27",
+      "tags": [
+        "attack.stealth",
+        "attack.t1218",
+        "attack.execution"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "ParentImage|endswith": "\\pcwrun.exe"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Need to use extra processing with 'unique_count' / 'filter' to focus on outliers as opposed to commonly seen artifacts",
+        "Legit usage of scripts"
+      ],
+      "level": "low",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_pcwrun.yml",
+      "source_sha256": "9d034a4ca92fd6447aca939d92adf4535baef4b96872fb92de04e9acd8a595d6",
+      "source_git_blob": "0d3869978c922f4442ff173437b8fd4fa4313664",
+      "positive_event": {
+        "ParentImage": "C:\\fixtures\\pcwrun.exe"
+      },
+      "negative_event": {
+        "ParentImage": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "Execute Pcwrun.EXE To Leverage Follina",
+      "id": "6004abd0-afa4-4557-ba90-49d172e0a299",
+      "status": "test",
+      "description": "Detects indirect command execution via Program Compatibility Assistant \"pcwrun.exe\" leveraging the follina (CVE-2022-30190) vulnerability",
+      "references": [
+        "https://twitter.com/nas_bench/status/1535663791362519040"
+      ],
+      "author": "Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2022-06-13",
+      "tags": [
+        "attack.stealth",
+        "attack.t1218",
+        "attack.execution"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": "\\pcwrun.exe",
+          "CommandLine|contains": "../"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unlikely"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_pcwrun_follina.yml",
+      "source_sha256": "9387b8dc338ac0e94a534447a1f6ec82acea228d92c8ab4a455097cc3bb380fd",
+      "source_git_blob": "5e466d64f52c4ec068d4e5c7834feec1f603e880",
+      "positive_event": {
+        "Image": "C:\\fixtures\\pcwrun.exe",
+        "CommandLine": "fixture.exe ../"
+      },
+      "negative_event": {
+        "Image": "C:\\benign\\ordinary.exe",
+        "CommandLine": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "PrintBrm ZIP Creation of Extraction",
+      "id": "cafeeba3-01da-4ab4-b6c4-a31b1d9730c7",
+      "status": "test",
+      "description": "Detects the execution of the LOLBIN PrintBrm.exe, which can be used to create or extract ZIP files. PrintBrm.exe should not be run on a normal workstation.",
+      "references": [
+        "https://lolbas-project.github.io/lolbas/Binaries/PrintBrm/"
+      ],
+      "author": "frack113",
+      "date": "2022-05-02",
+      "tags": [
+        "attack.command-and-control",
+        "attack.stealth",
+        "attack.t1105",
+        "attack.t1564.004"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "process_creation"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": "\\PrintBrm.exe",
+          "CommandLine|contains|all": [
+            " -f",
+            ".zip"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "high",
+      "regression_tests_path": "regression_data/rules/windows/process_creation/proc_creation_win_lolbin_printbrm/info.yml",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_printbrm.yml",
+      "source_sha256": "407072c6ce753d356146c5f3f89433723c3e95aa48aba31960b18965cbcbcfbd",
+      "source_git_blob": "988e5af69563bb45be7965e44194631c04085d91",
+      "positive_event": {
+        "Image": "C:\\fixtures\\PrintBrm.exe",
+        "CommandLine": "fixture.exe  -f .zip"
+      },
+      "negative_event": {
+        "Image": "C:\\benign\\ordinary.exe",
+        "CommandLine": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "Pubprn.vbs Proxy Execution",
+      "id": "1fb76ab8-fa60-4b01-bddd-71e89bf555da",
+      "status": "test",
+      "description": "Detects the use of the 'Pubprn.vbs' Microsoft signed script to execute commands.",
+      "references": [
+        "https://lolbas-project.github.io/lolbas/Scripts/Pubprn/"
+      ],
+      "author": "frack113",
+      "date": "2022-05-28",
+      "tags": [
+        "attack.stealth",
+        "attack.t1216.001"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains|all": [
+            "\\pubprn.vbs",
+            "script:"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "regression_tests_path": "regression_data/rules/windows/process_creation/proc_creation_win_lolbin_pubprn/info.yml",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_pubprn.yml",
+      "source_sha256": "c344adc5a8f0391c69d57aaa0299bf23b685fb594d851859573a250d47f563d6",
+      "source_git_blob": "7240aa7e13bebb5b635ca9afb2033776630503ef",
+      "positive_event": {
+        "CommandLine": "fixture.exe \\pubprn.vbs script:"
+      },
+      "negative_event": {
+        "CommandLine": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "REGISTER_APP.VBS Proxy Execution",
+      "id": "1c8774a0-44d4-4db0-91f8-e792359c70bd",
+      "status": "test",
+      "description": "Detects the use of a Microsoft signed script 'REGISTER_APP.VBS' to register a VSS/VDS Provider as a COM+ application.",
+      "references": [
+        "https://twitter.com/sblmsrsn/status/1456613494783160325?s=20"
+      ],
+      "author": "Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2022-08-19",
+      "tags": [
+        "attack.stealth",
+        "attack.t1218"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains|all": [
+            "\\register_app.vbs",
+            "-register"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate usage of the script. Always investigate what's being registered to confirm if it's benign"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_register_app.yml",
+      "source_sha256": "c09c82116563e58e9db0113ae8e8ad5e1cb8566a7bb4591cf6849c5ccddbb838",
+      "source_git_blob": "012bdb05adc29344dc36a737364bd7887432b03b",
+      "positive_event": {
+        "CommandLine": "fixture.exe \\register_app.vbs -register"
+      },
+      "negative_event": {
+        "CommandLine": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "Lolbin Runexehelper Use As Proxy",
+      "id": "cd71385d-fd9b-4691-9b98-2b1f7e508714",
+      "status": "test",
+      "description": "Detect usage of the \"runexehelper.exe\" binary as a proxy to launch other programs",
+      "references": [
+        "https://twitter.com/0gtweet/status/1206692239839289344",
+        "https://lolbas-project.github.io/lolbas/Binaries/Runexehelper/"
+      ],
+      "author": "frack113",
+      "date": "2022-12-29",
+      "tags": [
+        "attack.stealth",
+        "attack.t1218"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "ParentImage|endswith": "\\runexehelper.exe"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_runexehelper.yml",
+      "source_sha256": "f538ccf55a106b620613c0b22ebd2bd25b8ad83cc6c79b9ca556cc25ede8914a",
+      "source_git_blob": "50be454e04939b4a8a47df6cfcc9430f8e85dab5",
+      "positive_event": {
+        "ParentImage": "C:\\fixtures\\runexehelper.exe"
+      },
+      "negative_event": {
+        "ParentImage": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "Suspicious Runscripthelper.exe",
+      "id": "eca49c87-8a75-4f13-9c73-a5a29e845f03",
+      "status": "test",
+      "description": "Detects execution of powershell scripts via Runscripthelper.exe",
+      "references": [
+        "https://lolbas-project.github.io/lolbas/Binaries/Runscripthelper/"
+      ],
+      "author": "Victor Sergeev, oscd.community",
+      "date": "2020-10-09",
+      "modified": "2022-07-11",
+      "tags": [
+        "attack.execution",
+        "attack.stealth",
+        "attack.t1059",
+        "attack.t1202"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": "\\Runscripthelper.exe",
+          "CommandLine|contains": "surfacecheck"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_runscripthelper.yml",
+      "source_sha256": "d3475ab6d1b926539558b1976328d54d9dfbd1e04f3287854c0fbc3bb5d06220",
+      "source_git_blob": "6ca5b303548c047c66ce1edf86ac9114569bd0c9",
+      "positive_event": {
+        "Image": "C:\\fixtures\\Runscripthelper.exe",
+        "CommandLine": "fixture.exe surfacecheck"
+      },
+      "negative_event": {
+        "Image": "C:\\benign\\ordinary.exe",
+        "CommandLine": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "Use Of The SFTP.EXE Binary As A LOLBIN",
+      "id": "a85ffc3a-e8fd-4040-93bf-78aff284d801",
+      "status": "test",
+      "description": "Detects the usage of the \"sftp.exe\" binary as a LOLBIN by abusing the \"-D\" flag",
+      "references": [
+        "https://github.com/LOLBAS-Project/LOLBAS/pull/264"
+      ],
+      "author": "Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2022-11-10",
+      "tags": [
+        "attack.execution",
+        "attack.stealth",
+        "attack.t1218"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": "\\sftp.exe",
+          "CommandLine|contains": [
+            " -D ..",
+            " -D C:\\"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_sftp.yml",
+      "source_sha256": "8588ffb75e54c683a4d3540de8d41654a226d932dd3da8ffab0c39dcb91aa512",
+      "source_git_blob": "3671267311a0d66de94baa2a74226b33ffe8e7f0",
+      "positive_event": {
+        "Image": "C:\\fixtures\\sftp.exe",
+        "CommandLine": "fixture.exe  -D .."
+      },
+      "negative_event": {
+        "Image": "C:\\benign\\ordinary.exe",
+        "CommandLine": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "Suspicious Driver Install by pnputil.exe",
+      "id": "a2ea3ae7-d3d0-40a0-a55c-25a45c87cac1",
+      "status": "test",
+      "description": "Detects when a possible suspicious driver is being installed via pnputil.exe lolbin",
+      "references": [
+        "https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/pnputil-command-syntax",
+        "https://strontic.github.io/xcyclopedia/library/pnputil.exe-60EDC5E6BDBAEE441F2E3AEACD0340D2.html"
+      ],
+      "author": "Hai Vaknin @LuxNoBulIshit, Avihay eldad  @aloneliassaf, Austin Songer @austinsonger",
+      "date": "2021-09-30",
+      "modified": "2022-10-09",
+      "tags": [
+        "attack.privilege-escalation",
+        "attack.persistence",
+        "attack.t1547"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains": [
+            "-i",
+            "/install",
+            "-a",
+            "/add-driver",
+            ".inf"
+          ],
+          "Image|endswith": "\\pnputil.exe"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Pnputil.exe being used may be performed by a system administrator.",
+        "Verify whether the user identity, user agent, and/or hostname should be making changes in your environment.",
+        "Pnputil.exe being executed from unfamiliar users should be investigated. If known behavior is causing false positives, it can be exempted from the rule."
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_susp_driver_installed_by_pnputil.yml",
+      "source_sha256": "5a92cb588d27234706173ed5147cd4c3071b8f218b391c6343d597b7a6962327",
+      "source_git_blob": "ec854b5a1ae118081d5efd0ae8cb455beba9c594",
+      "positive_event": {
+        "CommandLine": "fixture.exe -i",
+        "Image": "C:\\fixtures\\pnputil.exe"
+      },
+      "negative_event": {
+        "CommandLine": "C:\\benign\\ordinary.exe",
+        "Image": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "Suspicious GrpConv Execution",
+      "id": "f14e169e-9978-4c69-acb3-1cff8200bc36",
+      "status": "test",
+      "description": "Detects the suspicious execution of a utility to convert Windows 3.x .grp files or for persistence purposes by malicious software or actors",
+      "references": [
+        "https://twitter.com/0gtweet/status/1526833181831200770"
+      ],
+      "author": "Florian Roth (Nextron Systems)",
+      "date": "2022-05-19",
+      "tags": [
+        "attack.privilege-escalation",
+        "attack.persistence",
+        "attack.t1547"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains": [
+            "grpconv.exe -o",
+            "grpconv -o"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_susp_grpconv.yml",
+      "source_sha256": "ac388faa2bbd6a851693ae98811b2faf0d90319aaa9791adc921b8d0cb5803c7",
+      "source_git_blob": "06c2fabaa6e30d309f20d50b3efb9437c636fd17",
+      "positive_event": {
+        "CommandLine": "fixture.exe grpconv.exe -o"
+      },
+      "negative_event": {
+        "CommandLine": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "Dumping Process via Sqldumper.exe",
+      "id": "23ceaf5c-b6f1-4a32-8559-f2ff734be516",
+      "status": "test",
+      "description": "Detects process dump via legitimate sqldumper.exe binary",
+      "references": [
+        "https://twitter.com/countuponsec/status/910977826853068800",
+        "https://twitter.com/countuponsec/status/910969424215232518",
+        "https://lolbas-project.github.io/lolbas/OtherMSBinaries/Sqldumper/"
+      ],
+      "author": "Kirill Kiryanov, oscd.community",
+      "date": "2020-10-08",
+      "modified": "2021-11-27",
+      "tags": [
+        "attack.credential-access",
+        "attack.t1003.001"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "Image|endswith": "\\sqldumper.exe",
+          "CommandLine|contains": [
+            "0x0110",
+            "0x01100:40"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate MSSQL Server actions"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_susp_sqldumper_activity.yml",
+      "source_sha256": "8d1cd2fcff24e7e57248865ad26093fc06b05f6f48aa4aaa1c802d4d587daa4b",
+      "source_git_blob": "3606441aa46876be8c320298d657e657b6e115ac",
+      "positive_event": {
+        "Image": "C:\\fixtures\\sqldumper.exe",
+        "CommandLine": "fixture.exe 0x0110"
+      },
+      "negative_event": {
+        "Image": "C:\\benign\\ordinary.exe",
+        "CommandLine": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "SyncAppvPublishingServer VBS Execute Arbitrary PowerShell Code",
+      "id": "36475a7d-0f6d-4dce-9b01-6aeb473bbaf1",
+      "status": "test",
+      "description": "Executes arbitrary PowerShell code using SyncAppvPublishingServer.vbs",
+      "references": [
+        "https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1216/T1216.md",
+        "https://lolbas-project.github.io/lolbas/Binaries/Syncappvpublishingserver/"
+      ],
+      "author": "frack113",
+      "date": "2021-07-16",
+      "modified": "2022-06-22",
+      "tags": [
+        "attack.stealth",
+        "attack.t1218",
+        "attack.t1216"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains|all": [
+            "\\SyncAppvPublishingServer.vbs",
+            ";"
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "regression_tests_path": "regression_data/rules/windows/process_creation/proc_creation_win_lolbin_syncappvpublishingserver_vbs_execute_psh/info.yml",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_syncappvpublishingserver_vbs_execute_psh.yml",
+      "source_sha256": "85dc48467d2b3fb90d961e8eeaa522318bad454186d8d9ec0fcc2d90dcbda304",
+      "source_git_blob": "53d1ce8b23e4af9cf4b5208e4cbbd94743ab20ff",
+      "positive_event": {
+        "CommandLine": "fixture.exe \\SyncAppvPublishingServer.vbs ;"
+      },
+      "negative_event": {
+        "CommandLine": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "Time Travel Debugging Utility Usage",
+      "id": "0b4ae027-2a2d-4b93-8c7e-962caaba5b2a",
+      "related": [
+        {
+          "id": "e76c8240-d68f-4773-8880-5c6f63595aaf",
+          "type": "derived"
+        }
+      ],
+      "status": "test",
+      "description": "Detects usage of Time Travel Debugging Utility. Adversaries can execute malicious processes and dump processes, such as lsass.exe, via tttracer.exe.",
+      "references": [
+        "https://lolbas-project.github.io/lolbas/Binaries/Tttracer/",
+        "https://twitter.com/mattifestation/status/1196390321783025666",
+        "https://twitter.com/oulusoyum/status/1191329746069655553"
+      ],
+      "author": "Ensar \u015eamil, @sblmsrsn, @oscd_initiative",
+      "date": "2020-10-06",
+      "modified": "2022-10-09",
+      "tags": [
+        "attack.credential-access",
+        "attack.stealth",
+        "attack.t1218",
+        "attack.t1003.001"
+      ],
+      "logsource": {
+        "product": "windows",
+        "category": "process_creation"
+      },
+      "detection": {
+        "selection": {
+          "ParentImage|endswith": "\\tttracer.exe"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate usage by software developers/testers"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_tttracer_mod_load.yml",
+      "source_sha256": "4d2ecb961faf6234fd03217e8b15de1551cf3e6d5c4cf516bbf9c37e17eb2411",
+      "source_git_blob": "47c023be1f2e1e3ac1d78bc1cfd2ddbf62034f5f",
+      "positive_event": {
+        "ParentImage": "C:\\fixtures\\tttracer.exe"
+      },
+      "negative_event": {
+        "ParentImage": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "UtilityFunctions.ps1 Proxy Dll",
+      "id": "0403d67d-6227-4ea8-8145-4e72db7da120",
+      "status": "test",
+      "description": "Detects the use of a Microsoft signed script executing a managed DLL with PowerShell.",
+      "references": [
+        "https://lolbas-project.github.io/lolbas/Scripts/UtilityFunctions/"
+      ],
+      "author": "frack113",
+      "date": "2022-05-28",
+      "tags": [
+        "attack.stealth",
+        "attack.t1216"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "CommandLine|contains": [
+            "UtilityFunctions.ps1",
+            "RegSnapin "
+          ]
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_utilityfunctions.yml",
+      "source_sha256": "522cae83245765275ca382eed55b120b6bdc58794db9eaf18e892eee476264bb",
+      "source_git_blob": "187d1ec1f38773629568b99ac45f1aa8f4943d63",
+      "positive_event": {
+        "CommandLine": "fixture.exe UtilityFunctions.ps1"
+      },
+      "negative_event": {
+        "CommandLine": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "Visual Basic Command Line Compiler Usage",
+      "id": "7b10f171-7f04-47c7-9fa2-5be43c76e535",
+      "status": "test",
+      "description": "Detects successful code compilation via Visual Basic Command Line Compiler that utilizes Windows Resource to Object Converter.",
+      "references": [
+        "https://lolbas-project.github.io/lolbas/Binaries/Vbc/"
+      ],
+      "author": "Ensar \u015eamil, @sblmsrsn, @oscd_initiative",
+      "date": "2020-10-07",
+      "modified": "2021-11-27",
+      "tags": [
+        "attack.stealth",
+        "attack.t1027.004"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "ParentImage|endswith": "\\vbc.exe",
+          "Image|endswith": "\\cvtres.exe"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Utilization of this tool should not be seen in enterprise environment"
+      ],
+      "level": "high",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lolbin_visual_basic_compiler.yml",
+      "source_sha256": "0ae98263ac0d53d7c3e361e1b8b7dcf7ca0d482da84a0066d3f213d735221013",
+      "source_git_blob": "d44e3a255e6e07105de8371366ff91b50cb143b8",
+      "positive_event": {
+        "ParentImage": "C:\\fixtures\\vbc.exe",
+        "Image": "C:\\fixtures\\cvtres.exe"
+      },
+      "negative_event": {
+        "ParentImage": "C:\\benign\\ordinary.exe",
+        "Image": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "Potential Credential Dumping Via LSASS Process Clone",
+      "id": "c8da0dfd-4ed0-4b68-962d-13c9c884384e",
+      "status": "test",
+      "description": "Detects a suspicious LSASS process process clone that could be a sign of credential dumping activity",
+      "references": [
+        "https://www.matteomalvica.com/blog/2019/12/02/win-defender-atp-cred-bypass/",
+        "https://twitter.com/Hexacorn/status/1420053502554951689",
+        "https://twitter.com/SBousseaden/status/1464566846594691073?s=20"
+      ],
+      "author": "Florian Roth (Nextron Systems), Samir Bousseaden",
+      "date": "2021-11-27",
+      "modified": "2023-03-02",
+      "tags": [
+        "attack.credential-access",
+        "attack.t1003",
+        "attack.t1003.001"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "ParentImage|endswith": "\\Windows\\System32\\lsass.exe",
+          "Image|endswith": "\\Windows\\System32\\lsass.exe"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Unknown"
+      ],
+      "level": "critical",
+      "source_path": "rules/windows/process_creation/proc_creation_win_lsass_process_clone.yml",
+      "source_sha256": "74982f215f0649b319eec4f43d1d6c4e613dd9465e1ecea727124011c78347a0",
+      "source_git_blob": "5ce833272f41a06f6e069645473072744770cebf",
+      "positive_event": {
+        "ParentImage": "C:\\fixtures\\Windows\\System32\\lsass.exe",
+        "Image": "C:\\fixtures\\Windows\\System32\\lsass.exe"
+      },
+      "negative_event": {
+        "ParentImage": "C:\\benign\\ordinary.exe",
+        "Image": "C:\\benign\\ordinary.exe"
+      }
+    },
+    {
+      "title": "Potential Mftrace.EXE Abuse",
+      "id": "3d48c9d3-1aa6-418d-98d3-8fd3c01a564e",
+      "status": "test",
+      "description": "Detects child processes of the \"Trace log generation tool for Media Foundation Tools\" (Mftrace.exe) which can abused to execute arbitrary binaries.",
+      "references": [
+        "https://lolbas-project.github.io/lolbas/OtherMSBinaries/Mftrace/"
+      ],
+      "author": "Nasreddine Bencherchali (Nextron Systems)",
+      "date": "2022-06-09",
+      "modified": "2023-08-03",
+      "tags": [
+        "attack.execution",
+        "attack.stealth",
+        "attack.t1127"
+      ],
+      "logsource": {
+        "category": "process_creation",
+        "product": "windows"
+      },
+      "detection": {
+        "selection": {
+          "ParentImage|endswith": "\\mftrace.exe"
+        },
+        "condition": "selection"
+      },
+      "falsepositives": [
+        "Legitimate use for tracing purposes"
+      ],
+      "level": "medium",
+      "source_path": "rules/windows/process_creation/proc_creation_win_mftrace_child_process.yml",
+      "source_sha256": "7522098d3f50a31c92e9c9120b2feaf0f124b55494bc8a106ea3ac3bc15f828e",
+      "source_git_blob": "e79099896547e26faec1364dfb0b89631455f1b5",
+      "positive_event": {
+        "ParentImage": "C:\\fixtures\\mftrace.exe"
+      },
+      "negative_event": {
+        "ParentImage": "C:\\benign\\ordinary.exe"
+      }
+    }
+  ],
+  "candidate_origin_commit": "6060d0caccfa2e73d52e89fbd59919930bf1020d"
+}

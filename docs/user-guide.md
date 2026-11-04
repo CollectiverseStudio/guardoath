@@ -1919,3 +1919,15 @@ These are synthetic Windows event fixtures, not executed commands or chat
 checks. The default remains203/213; the proposed228 definitions route103 process
 or125 script rules within the unchanged128-selected-rule event budget. No default,
 installed-package, hosted or tenant adoption is implied by staging.
+
+### Sigma batch010 source catalog
+
+The [C23 source integration](sigma-batch-010-integration.md) promotes25 unchanged
+pinned candidate010 originals, yielding228 rules/239 required source assets.
+For example, devtoolslauncher.exe with LaunchForDeploy matches its original rule;
+an ordinary executable does not. Explicit trusted Windows host source and original
+configured IDs select103 process or125 script rules, at most128 per event in one
+inherited budget. Tests preserve all prior203 primary outcomes, missing/malformed
+behavior and frozen candidate history. Earlier staging counts remain historical.
+Actual package-data adoption, isolated actual release-wheel acceptance, hosted
+ingestion and tenant authority remain separate Director-owned integration gates.

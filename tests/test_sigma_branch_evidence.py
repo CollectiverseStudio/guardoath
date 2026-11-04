@@ -28,7 +28,7 @@ def test_inventory_is_ten_gaps_in_nine_existing_rules_not_new_detectors():
     assert len({g['rule_id'] for g in GAPS}) == 9
     assert len(CASES) == len(IDS) == len(set(IDS)) == 30
     assert DATA['rule_inventory_size'] == 128  # Frozen C5 review scope.
-    assert len(RULES) == len(BY_ID) == 203
+    assert len(RULES) == len(BY_ID) == 228
     assert DATA['runtime_registered'] is False
     assert len(DATA['prior_evidence_files']) == 5
     for gap in GAPS:

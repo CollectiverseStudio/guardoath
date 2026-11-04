@@ -8,7 +8,7 @@ import re
 
 from . import LICENSE, import_rule
 
-BATCH_NAMES = tuple(f'upstream_batch_{n:03d}.json' for n in range(1, 10))
+BATCH_NAMES = tuple(f'upstream_batch_{n:03d}.json' for n in range(1, 11))
 MAX_BATCH_BYTES = 1_000_000
 MAX_CATALOG_RULES = 4096  # Metadata bound, independent of event evaluation's 128-rule limit.
 LIMITATIONS = ('Synthetic fixtures are not upstream tests or measured effectiveness. '

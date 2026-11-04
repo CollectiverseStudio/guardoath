@@ -16,7 +16,7 @@ For example, a ClickOnce Apps/2.0 parent spawning calc.exe matches; calc.exe.bak
 or an unrelated trusted parent does not match that rule.
 
 Dedicated tests compare exact complete findings and provenance under both the
-original 178-rule table and current 203-rule table, including case-insensitive
+original 178-rule table and current 228-rule table, including case-insensitive
 values and script-source exclusion. Reviewed events have precisely their target
 finding on positives and no findings on these negatives. This is an observation
 for these fixtures, not a general claim that all look-alikes are globally benign.
@@ -26,7 +26,7 @@ The test imports include the pinned revision so full finding provenance is
 checked, not only rule IDs. Exact source SHA256 and Git blob hashes are retained.
 
 Configuration remains explicit trusted host `windows/process_creation` plus
-configured original IDs. The 203-rule metadata catalog routes 78 process or
+configured original IDs. The 228-rule metadata catalog routes 103 process or
 125 script rules, with at most 128 selected in one inherited event budget.
 Raw full-catalog evaluation rejects. Branch evidence changes no defaults,
 release fingerprints, matcher, packaging, hosted API, tenant policy or budgets.
