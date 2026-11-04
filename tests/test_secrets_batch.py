@@ -1,6 +1,9 @@
 import asyncio
 import base64
+import gc
 import json
+import threading
+from time import perf_counter
 
 from fastapi.testclient import TestClient
 import pytest
@@ -16,6 +19,24 @@ from network_guard import deny_network
 
 @pytest.fixture(scope='module')
 def profiles(): return load_policies('policies/secrets-batch.json')
+
+
+def timed(call):
+    """Run call() and report where the wall time went: garbage-collection pauses, live threads and total time.
+    Used where a 500 ms scan of a short string has timed out on Python 3.14 CI only (checker_timeout at
+    510-573 ms); the scan itself takes well under 1 ms, so the report shows whether the process was paused."""
+    pauses,started=[],{}
+    def watch(phase,info):
+        if phase=='start': started['at']=perf_counter()
+        elif 'at' in started: pauses.append((info.get('generation'),round((perf_counter()-started.pop('at'))*1000,1)))
+    gc.callbacks.append(watch)
+    began=perf_counter()
+    try:
+        result=call()
+    finally:
+        gc.callbacks.remove(watch)
+    return result,{'wall_ms':round((perf_counter()-began)*1000,1),'gc_pauses_ms':pauses,
+                   'threads':sorted(t.name for t in threading.enumerate())}
 
 
 def assess(policy,content,stage='input',fmt='text',checkers=None):
@@ -49,9 +70,10 @@ def test_benign_lookalikes_with_all_options_enabled(profiles,sample):
 def test_decoded_json_scans_keys_values_and_nested_containers(profiles,name,wrapper):
     candidate=EXAMPLES[name]
     data={candidate:'safe'} if wrapper=='key' else {'item':candidate} if wrapper=='value' else {'items':[{'value':candidate}]}
-    result=assess(profiles[0],json.dumps(data).replace('_','\\u005f'),fmt='json')
-    # A scan that did not finish (timeout, limit) also has no findings: report its status, not just a missing rule.
-    assert result.evaluation_status=='complete', [(c.status, c.error_code, c.latency_ms) for c in result.checker_results]
+    result,timing=timed(lambda: assess(profiles[0],json.dumps(data).replace('_','\\u005f'),fmt='json'))
+    # A scan that did not finish (timeout, limit) also has no findings: report its status, not just a missing rule,
+    # and where the time went (the policy's 500 ms limit is not raised).
+    assert result.evaluation_status=='complete', ([(c.status, c.error_code, c.latency_ms) for c in result.checker_results], timing)
     assert 'secrets.'+name in {f.rule_id for f in result.findings}
 
 

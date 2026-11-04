@@ -188,10 +188,10 @@ Tests execute each exported positive/look-alike against its original rule and
 check all missing-field contracts. A nonmatch for one rule is not global benignity.
 Full upstream YAML-to-JSON semantic fidelity remains the development source audit
 (`verify_sources` with a pinned upstream checkout), not a new runtime YAML parser.
-Director owns registry/tenant integration and package-data declarations; a local wheel probe found all Sigma JSON/YAML/license assets absent. The module
-fails closed when imported from that wheel, with no source-checkout fallback.
-Director acknowledgement is requested for the reserved `pyproject.toml` package-data
-fix and installed-distribution tests before any installed/hosted integration.
+Director owns registry/tenant integration and package-data declarations. Before 2026-11-03 a local wheel probe
+found all Sigma JSON/YAML/license assets absent, and the module failed closed when imported from that wheel, with
+no source-checkout fallback. Since 2026-11-03 `pyproject.toml` declares them, and the `release-wheel` CI job builds
+the wheel and runs `verify_distribution` and `verify_installation` on it. Hosted integration is still separate.
 
 ## Trusted structured-event routing (isolated)
 

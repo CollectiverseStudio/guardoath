@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from guardoath import agent_boundary_guards, agent_extended_guards, agent_workflow_guards, data_agent_guards, semantic_guards
+from guardoath import agent_boundary_guards, agent_config_guards, agent_extended_guards, agent_workflow_guards, data_agent_guards, semantic_guards
 from guardoath.privacy_catalog import CORE_ENTITIES, PATTERN_ENTITIES
 from guardoath.synthetic_secrets import provider_examples
 
@@ -316,7 +316,13 @@ CONTEXTS = {
     "prompt": "for assistants that read text from users, web pages or documents",
     "data": "when an AI agent can query or change databases",
     "workflow": "when an AI agent runs multi-step business work",
+    "config6": "when an AI agent can change application or security settings",
 }
+
+
+def _config_title(rule_id: str) -> str:
+    # agent_config_guards matches "<setting> = false, off or 0" (also with ":"); the title names the setting.
+    return "Turning off the " + rule_id.split(".", 1)[1] + " setting (false, off or 0)"
 
 
 def _lexical_use_case(rule_id: str, title: str) -> str:
@@ -327,7 +333,7 @@ def _lexical_use_case(rule_id: str, title: str) -> str:
 def _lexical_severity(rule_id: str, example: str) -> str:
     found = (semantic_guards.inspect_text(example) + agent_extended_guards.inspect_extended(example)
              + data_agent_guards.inspect_text(example) + agent_workflow_guards.inspect_text(example)
-             + agent_boundary_guards.inspect(example))
+             + agent_boundary_guards.inspect(example) + agent_config_guards.inspect(example))
     signal = next(item for item in found if item.rule_id == rule_id)
     return "high" if signal.severity == "high" else "medium"
 
@@ -337,6 +343,8 @@ def _build() -> dict[str, RuleInfo]:
     lexical = dict(LEXICAL)
     for rule_id, (_pattern, example, look_alike) in agent_boundary_guards.CASES.items():
         lexical[rule_id] = (BOUNDARY_TITLES[rule_id], example, look_alike)
+    for rule_id, (_pattern, example, look_alike) in agent_config_guards.CASES.items():
+        lexical[rule_id] = (_config_title(rule_id), example, look_alike)
     for rule_id, (title, example, look_alike) in lexical.items():
         rules.append(RuleInfo(rule_id, "lexical_guards", title, _lexical_use_case(rule_id, title), example, look_alike,
                               _lexical_severity(rule_id, example)))
@@ -388,7 +396,7 @@ def rule_payload(rule: RuleInfo) -> dict:
 def _validate():
     import re
     lexical_ids = {*semantic_guards.RULES, *agent_extended_guards.RULES, *data_agent_guards.RULES,
-                   *agent_workflow_guards.RULES, *agent_boundary_guards.CASES}
+                   *agent_workflow_guards.RULES, *agent_boundary_guards.CASES, *agent_config_guards.CASES}
     if {rule.rule_id for rule in rules_for("lexical_guards")} != lexical_ids:
         raise ValueError("The rule catalog must list every lexical rule exactly once")
     privacy = {"pii." + entity.lower() for entity in (*PATTERN_ENTITIES, *CORE_ENTITIES, *LABELED)}

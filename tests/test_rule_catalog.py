@@ -7,7 +7,7 @@ import pytest
 pytest.importorskip("tldextract")
 pytest.importorskip("phonenumbers")
 
-from guardoath import agent_boundary_guards, agent_extended_guards, agent_workflow_guards, data_agent_guards, semantic_guards
+from guardoath import agent_boundary_guards, agent_config_guards, agent_extended_guards, agent_workflow_guards, data_agent_guards, semantic_guards
 from guardoath.checkers import default_checkers
 from guardoath.control_registry import CONTROLS, registry_payload
 from guardoath.engine import Engine
@@ -46,16 +46,17 @@ def test_no_look_alike_is_reported(checkers, rule_id):
 
 
 def test_rule_counts():
-    assert len(RULES) == 239
+    # 2026-11-03: the 40 agent-configuration rules (agent_config_guards) joined lexical_guards: 239 -> 279.
+    assert len(RULES) == 279
     assert {control: len(rules_for(control)) for control in ("lexical_guards", "pii", "secrets", "text_security")} == {
-        "lexical_guards": 121, "pii": 97, "secrets": 17, "text_security": 4}
+        "lexical_guards": 161, "pii": 97, "secrets": 17, "text_security": 4}
     assert len(rules_for("pii")) == len(PATTERN_ENTITIES) + len(CORE_ENTITIES) + len(LABELED)
     assert {rule.control_id for rule in RULES.values()} <= set(CHECK_IDS)
 
 
 def test_every_lexical_rule_is_listed_once():
     modules = {**semantic_guards.RULES, **agent_extended_guards.RULES, **data_agent_guards.RULES,
-               **agent_workflow_guards.RULES, **agent_boundary_guards.CASES}
+               **agent_workflow_guards.RULES, **agent_boundary_guards.CASES, **agent_config_guards.CASES}
     assert {rule.rule_id for rule in rules_for("lexical_guards")} == set(modules)
 
 

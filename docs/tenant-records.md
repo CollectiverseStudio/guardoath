@@ -35,7 +35,7 @@ One value covers both the user's message (input) and the AI's answer (output). T
 | `check_encoded_pii` | none |
 | `check_secrets` | none (options: `detect_secret_assignments`, `inspect_encoded_secrets`, `confidential_terms`) |
 | `check_text_security` | none |
-| `check_lexical_guards` | none (121 wording patterns; off for demo users until turned on) |
+| `check_lexical_guards` | none (161 wording patterns; off for demo users until turned on) |
 | `check_schema` | `input_schema` or `output_schema` |
 | `check_cross_field` | `comparisons` |
 | `check_completeness` | `required_sections` |
@@ -163,7 +163,8 @@ that the guide has a section for every control. Maturity is reported per control
 
 ## Per-rule settings
 
-A check runs many rules. 239 rules can be set one by one today: 121 lexical rules (`lexical_guards`),
+A check runs many rules. 279 rules can be set one by one today: 161 lexical rules (`lexical_guards`, including
+40 agent-configuration settings such as `verify_tls=false`),
 97 privacy types (`pii`, 4 of them only with `detect_labeled_sensitive_data`), 17 secret rules (`secrets`,
 1 of them only with `detect_secret_assignments`) and 4 text-security rules (`text_security`).
 `GET /v1/controls` lists every rule under its control, with its title, use case, severity, example and
@@ -177,7 +178,16 @@ The record field `rule_actions` maps a rule id to one of:
 | `block`, `flag`, `allow` | The rule's findings use this action instead of the check's action. The strongest action of all findings decides, as before. |
 
 A rule that is not listed uses its check's action. Rule settings are kept while their check is off and
-apply again when it is turned back on. Rules are saved like any other check setting, with
+apply again when it is turned back on.
+
+On the dashboard (since 2026-11-03), a table under the checks (which are alphabetical) lists every rule with four
+columns: Rule (title and id), Category (the check it belongs to), Setting, and In effect (for example "Block (from
+check)", "Allow (own setting)" or "Off (check is off)"). Select a column heading to sort. Type part of a rule's name
+or id (for example `email` or `ip address`), or filter by category or by the setting in effect (or only rules with
+their own setting). A rule without its own
+setting shows **Same as check (Block)** (or the check's current setting), so a check set to Block blocks every rule
+in it until one rule is given its own setting, such as `pii.email_address`: `allow`. A rule cannot be set while its
+check is off. When a check is changed to Redact, the own settings of its rules other than Off are cleared. Rules are saved like any other check setting, with
 `POST /v1/tenants/current/checks` and a `revision`; for example
 `{"revision": 4, "changes": {"rule_actions": {"pii.ip_address": "off", "agent.git_force": "block"}}}`
 replaces the whole map. An unknown rule id is refused (422). When the `pii` check redacts, its rules can

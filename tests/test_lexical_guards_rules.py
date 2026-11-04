@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from guardoath import agent_boundary_guards, agent_extended_guards, agent_workflow_guards, data_agent_guards, semantic_guards
+from guardoath import agent_boundary_guards, agent_config_guards, agent_extended_guards, agent_workflow_guards, data_agent_guards, semantic_guards
 from guardoath.checkers import default_checkers
 from guardoath.combined_guards import evaluate
 from guardoath.engine import Engine
@@ -282,6 +282,68 @@ def test_the_five_modules_have_121_rules_with_no_shared_ids():
     assert len(set(BOUNDARY) | set(ALL_RULES)) == 121
 
 
+# Batch 6: agent_config_guards (40 rules), registered 2026-11-03. Eight of its settings overlap eight batch-5
+# rules (Atlas 2026-11-02 18:25: related, not equivalent). Both ids are reported for those inputs; neither is
+# renamed to the other, so each keeps its own per-rule tenant setting.
+CONFIG = agent_config_guards.CASES
+OVERLAP = {
+    "config6.verify_tls": "agent5.disable_tls_cert",
+    "config6.verify_webhook_signature": "agent5.disable_webhook_signature",
+    "config6.audit_logging_enabled": "agent5.disable_audit_setting",
+    "config6.secret_scanning_enabled": "agent5.disable_secret_scan",
+    "config6.content_filter_enabled": "agent5.disable_content_filter",
+    "config6.dlp_enabled": "agent5.disable_dlp_setting",
+    "config6.backup_enabled": "agent5.disable_backup_setting",
+    "config6.encrypt_at_rest": "agent5.disable_encryption_setting",
+}
+# Batch-5 examples that also contain a batch-6 setting turned off (the other three batch-5 examples use other
+# words for the same setting).
+BOUNDARY_ALSO = {
+    "agent5.disable_tls_cert": "config6.verify_tls",
+    "agent5.disable_webhook_signature": "config6.verify_webhook_signature",
+    "agent5.disable_dlp_setting": "config6.dlp_enabled",
+    "agent5.disable_secret_scan": "config6.secret_scanning_enabled",
+    "agent5.disable_backup_setting": "config6.backup_enabled",
+}
+
+
+def test_the_six_modules_have_161_rules_with_no_shared_ids():
+    assert len(CONFIG) == 40 and not set(CONFIG) & (set(BOUNDARY) | set(ALL_RULES))
+    assert len(set(CONFIG) | set(BOUNDARY) | set(ALL_RULES)) == 161
+
+
+@pytest.mark.parametrize("rule_id", sorted(CONFIG))
+def test_each_batch_6_example_reports_its_own_rule_and_its_look_alike_none(rule_id):
+    _pattern, example, look_alike = CONFIG[rule_id]
+    expected = {rule_id, OVERLAP[rule_id]} if rule_id in OVERLAP else {rule_id}
+    assert set(rule_ids(example)) == expected
+    assert rule_ids(look_alike) == ()
+
+
+@pytest.mark.parametrize("rule_id", sorted(OVERLAP))
+def test_off_is_reported_only_by_batch_6(rule_id):
+    # Batch 5 accepts false or 0, batch 6 also off: "=off" reports only the batch-6 rule.
+    setting = rule_id.split(".", 1)[1]
+    assert rule_ids(setting + "=off") == (rule_id,)
+
+
+def test_the_registered_checker_reports_batch_6_rules_with_their_own_ids():
+    result = run_checker("sandbox_enabled: off")
+    assert result.status == "flagged" and [f.rule_id for f in result.findings] == ["config6.sandbox_enabled"]
+    result = run_checker("verify_tls=false")
+    assert sorted(f.rule_id for f in result.findings) == ["agent5.disable_tls_cert", "config6.verify_tls"]
+
+
+def test_a_tenant_record_sets_each_overlapping_rule_on_its_own():
+    record = TenantRecord(tenant_id="acme", display_name="Acme", check_lexical_guards="flag",
+                          rule_actions={"config6.verify_tls": "block", "agent5.disable_tls_cert": "off"})
+    engine = Engine([record.to_policy()], default_checkers())
+    result = asyncio.run(engine.check(CheckRequest(application_id="acme", policy_version="tenant",
+                                                   content="verify_tls=false"), Stage.INPUT))
+    assert [f.rule_id for f in result.findings] == ["config6.verify_tls"]
+    assert result.recommended_action == Action.BLOCK
+
+
 @pytest.mark.parametrize("rule_id", sorted(EXAMPLES))
 def test_each_original_example_reports_only_its_own_rule(rule_id):
     assert rule_ids(EXAMPLES[rule_id]) == (rule_id,)
@@ -289,8 +351,10 @@ def test_each_original_example_reports_only_its_own_rule(rule_id):
 
 @pytest.mark.parametrize("rule_id", sorted(BOUNDARY))
 def test_each_batch_5_example_reports_only_its_own_rule_and_its_look_alike_none(rule_id):
+    # Since batch 6 was registered (2026-11-03), five batch-5 examples also report their batch-6 setting.
     _pattern, example, look_alike = BOUNDARY[rule_id]
-    assert rule_ids(example) == (rule_id,)
+    expected = {rule_id, BOUNDARY_ALSO[rule_id]} if rule_id in BOUNDARY_ALSO else {rule_id}
+    assert set(rule_ids(example)) == expected
     assert rule_ids(look_alike) == ()
 
 
@@ -326,7 +390,7 @@ def test_the_largest_allowed_request_is_checked_quickly_by_batch_5(text):
 def test_the_registered_checker_reports_batch_5_rules():
     result = run_checker("aws guardduty delete-detector --detector-id abc")
     assert result.status == "flagged" and [f.rule_id for f in result.findings] == ["agent5.disable_guardduty"]
-    assert result.checker_version == CHECKER_VERSION == "4"
+    assert result.checker_version == CHECKER_VERSION == "5"
 
 
 def test_batch_5_matches_full_width_look_alike_letters():

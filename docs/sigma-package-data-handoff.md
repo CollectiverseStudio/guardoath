@@ -1,6 +1,12 @@
 # Sigma package-data handoff to the Director
 
-**Proposed only.** The repository's reserved `pyproject.toml` is unchanged.
+**Adopted 2026-11-03 by the Director.** `pyproject.toml` now has the package-data entry below, and the
+`release-wheel` CI job builds the repository wheel, runs `verify_distribution` on it (counts must equal the
+checkout's: today 203 rules / 203 pinned / 213 required assets), installs it non-editable with no network and runs
+`verify_installation` with `python -I` outside the checkout (203 cases in each category). The history below is
+kept as written.
+
+**Before adoption (history):** the repository's reserved `pyproject.toml` was unchanged.
 The current C20 source inventory is **203 pinned rules / 213 required assets**.
 The C20 proposal was rebuilt and verified at 203/203/213, with 203 cases in each
 fresh offline installed-acceptance category; [proof](sigma-batch-009-integration.md).
@@ -61,7 +67,7 @@ python -m guardoath.sigma_rules.verify_distribution PATH_TO_BUILT_WHEEL
 
 Then repeat the trusted installed-artifact smoke test outside the checkout with
 no PYTHONPATH fallback: assert the module originates from the isolated install,
-load the 128 pinned evidence records and 128 routed rules, and run each shipped
+load the 203 pinned evidence records and 203 routed rules (128 at the time of the C6 proof above), and run each shipped
 positive/look-alike fixture using its original product/category and permitted ID.
 Archive inspection alone does not execute or establish correctness of archive code;
 the isolated installation test is a separate step for the trusted built artifact.

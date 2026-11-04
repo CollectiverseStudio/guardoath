@@ -26,6 +26,7 @@ include = ["guardoath*"]
 [tool.setuptools.package-data]
 guardoath = ["static/*.html", "static/*.css", "static/*.js", "static/*.mp4", "static/*.png", "demo_tenant_defaults.json"]
 "guardoath.privacy_patterns" = ["LICENSE", "README.md"]
+"guardoath.sigma_rules" = ["README.md", "LICENSE.Detection.Rules.md", "*.json", "upstream/batch_*/*.yml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
