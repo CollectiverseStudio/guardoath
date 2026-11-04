@@ -183,3 +183,62 @@ def test_shared_engine_tenant_isolation_during_concurrent_requests(stage):
                and result.recommended_action == Action.BLOCK for result in first)
     assert all(result.findings == () and result.recommended_action == Action.ALLOW
                for result in second)
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_nested_pointer_chain_reports_all_affected_original_rules(stage):
+    rules = (
+        FieldComparison(rule_id="ordered", left="/orders/shipped", right="/orders/requested", operator="le"),
+        FieldComparison(rule_id="delivered", left="/orders/delivered", right="/orders/shipped", operator="le"),
+    )
+    benign = {"orders": {"requested": 10, "shipped": 8, "delivered": 6}}
+    assert run(benign, comparisons=rules, stage=stage).findings == ()
+    wrong = {"orders": {"requested": 7, "shipped": 8, "delivered": 9}}
+    result = run(wrong, comparisons=rules, stage=stage)
+    assert [finding.rule_id for finding in result.findings] == [
+        "business.ordered", "business.delivered"
+    ]
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_json_pointer_escaping_with_multi_rule_overlap(stage):
+    rules = (
+        FieldComparison(rule_id="slash", left="/a~1b", right="/limit", operator="le"),
+        FieldComparison(rule_id="tilde", left="/c~0d", right="/a~1b", operator="le"),
+    )
+    benign = {"a/b": 5, "c~d": 3, "limit": 10}
+    assert run(benign, comparisons=rules, stage=stage).findings == ()
+    wrong = {"a/b": 12, "c~d": 13, "limit": 10}
+    result = run(wrong, comparisons=rules, stage=stage)
+    assert {finding.rule_id for finding in result.findings} == {"business.slash", "business.tilde"}
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_shared_number_and_date_pointer_is_invalid_for_only_one_type(stage):
+    rules = (
+        FieldComparison(rule_id="number", left="/shared", right="/num_limit",
+                        operator="le", value_type="number"),
+        FieldComparison(rule_id="date", left="/shared", right="/date_limit",
+                        operator="le", value_type="date"),
+    )
+    numeric = {"shared": 3, "num_limit": 4, "date_limit": "2026-11-30"}
+    date_value = {"shared": "2026-11-03", "num_limit": 4, "date_limit": "2026-11-30"}
+    for payload, expected in ((numeric, "business.date"), (date_value, "business.number")):
+        result = run(payload, comparisons=rules, stage=stage)
+        assert {finding.rule_id for finding in result.findings} == {expected}
+        assert result.evaluation_status == "complete"
+        assert result.recommended_action == Action.BLOCK
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_equal_opposite_pointer_constraints_preserve_both_findings(stage):
+    rules = (
+        FieldComparison(rule_id="same", left="/a", right="/b", operator="eq"),
+        FieldComparison(rule_id="different", left="/a", right="/b", operator="ne"),
+    )
+    for payload in ({"a": 1, "b": 1}, {"a": 1, "b": 2}):
+        result = run(payload, comparisons=rules, stage=stage)
+        assert len(result.findings) == 1
+        assert {finding.rule_id for finding in result.findings} == ({
+            "business.different"} if payload["a"] == payload["b"] else {"business.same"})
+        assert result.recommended_action == Action.BLOCK
