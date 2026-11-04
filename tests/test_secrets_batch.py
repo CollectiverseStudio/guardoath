@@ -1,9 +1,6 @@
 import asyncio
 import base64
-import gc
 import json
-import threading
-from time import perf_counter
 
 from fastapi.testclient import TestClient
 import pytest
@@ -15,28 +12,11 @@ from guardoath.config import load_policies
 from guardoath.engine import Engine
 from guardoath.models import CheckRequest, ConfidentialTerm, Rule, Stage
 from network_guard import deny_network
+from timing_report import timed
 
 
 @pytest.fixture(scope='module')
 def profiles(): return load_policies('policies/secrets-batch.json')
-
-
-def timed(call):
-    """Run call() and report where the wall time went: garbage-collection pauses, live threads and total time.
-    Used where a 500 ms scan of a short string has timed out on Python 3.14 CI only (checker_timeout at
-    510-573 ms); the scan itself takes well under 1 ms, so the report shows whether the process was paused."""
-    pauses,started=[],{}
-    def watch(phase,info):
-        if phase=='start': started['at']=perf_counter()
-        elif 'at' in started: pauses.append((info.get('generation'),round((perf_counter()-started.pop('at'))*1000,1)))
-    gc.callbacks.append(watch)
-    began=perf_counter()
-    try:
-        result=call()
-    finally:
-        gc.callbacks.remove(watch)
-    return result,{'wall_ms':round((perf_counter()-began)*1000,1),'gc_pauses_ms':pauses,
-                   'threads':sorted(t.name for t in threading.enumerate())}
 
 
 def assess(policy,content,stage='input',fmt='text',checkers=None):
