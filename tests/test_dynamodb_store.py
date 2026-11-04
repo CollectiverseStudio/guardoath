@@ -113,7 +113,7 @@ def store(fake):
 
 def customer(**fields):
     _, digest = new_key("acme")
-    return TenantRecord(**{"tenant_id": "acme", "display_name": "Acme", "key_hashes": (digest,), "check_secrets": "flag",
+    return TenantRecord(**{"tenant_id": "acme", "display_name": "Acme", "key_hashes": (digest,), "input_check_secrets": "flag", "output_check_secrets": "flag",
                            "monthly_allowance": 2, **fields})
 
 
@@ -178,31 +178,31 @@ def test_tenant_ids_read_every_page_in_order(store, fake):
 
 def test_a_change_bumps_the_revision_and_keeps_usage(store):
     store.count_check("demo1", MONTH)
-    updated = store.update_checks("demo1", {"check_pii": "flag", "rule_actions": {"pii.url": "off"}}, 1)
-    assert updated.revision == 2 and updated.check_pii == "flag" and updated.rule_actions == {"pii.url": "off"}
+    updated = store.update_checks("demo1", {"input_check_pii": "flag", "output_check_pii": "flag", "input_rule_actions": {"pii.url": "off"}, "output_rule_actions": {"pii.url": "off"}}, 1)
+    assert updated.revision == 2 and updated.input_check_pii == "flag" and updated.input_rule_actions == {"pii.url": "off"}
     assert updated.used(MONTH) == 1 and store.get("demo1") == updated
 
 
 def test_a_stale_revision_is_refused_and_nothing_changes(store):
     before = store.get("demo1")
-    store.update_checks("demo1", {"check_pii": "flag"}, 1)
+    store.update_checks("demo1", {"input_check_pii": "flag", "output_check_pii": "flag"}, 1)
     with pytest.raises(TenantConflict):
-        store.update_checks("demo1", {"check_pii": None}, 1)
-    assert store.get("demo1").check_pii == "flag" and store.get("demo1").revision == before.revision + 1
+        store.update_checks("demo1", {"input_check_pii": None, "output_check_pii": None}, 1)
+    assert store.get("demo1").input_check_pii == "flag" and store.get("demo1").revision == before.revision + 1
 
 
 def test_a_change_racing_another_change_is_refused(store, fake):
     # Another writer saves between this store's read and its conditional write.
-    fake.before_update = lambda: store.update_checks("demo1", {"check_text_security": None}, 1)
+    fake.before_update = lambda: store.update_checks("demo1", {"input_check_text_security": None, "output_check_text_security": None}, 1)
     with pytest.raises(TenantConflict):
-        store.update_checks("demo1", {"check_pii": "flag"}, 1)
+        store.update_checks("demo1", {"input_check_pii": "flag", "output_check_pii": "flag"}, 1)
     record = store.get("demo1")
-    assert record.revision == 2 and record.check_text_security is None and record.check_pii == "block"
+    assert record.revision == 2 and record.input_check_text_security is None and record.input_check_pii == "block"
 
 
 def test_a_count_during_a_change_is_not_lost(store, fake):
     fake.before_update = lambda: store.count_check("demo1", MONTH)
-    updated = store.update_checks("demo1", {"check_pii": "flag"}, 1)
+    updated = store.update_checks("demo1", {"input_check_pii": "flag", "output_check_pii": "flag"}, 1)
     assert updated.used(MONTH) == 1 and store.get("demo1").used(MONTH) == 1
 
 
@@ -214,7 +214,7 @@ def test_account_fields_cannot_be_changed(store, changes):
 
 def test_changing_a_missing_tenant_is_not_found(store):
     with pytest.raises(TenantNotFound):
-        store.update_checks("nobody", {"check_pii": "flag"}, 1)
+        store.update_checks("nobody", {"input_check_pii": "flag", "output_check_pii": "flag"}, 1)
     with pytest.raises(TenantNotFound):
         store.set_key_hashes("nobody", ())
 
@@ -292,7 +292,7 @@ def test_other_dynamodb_errors_are_not_hidden(store, fake):
     with pytest.raises(Throttled):
         store.release_check("demo1", MONTH)
     with pytest.raises(Throttled):
-        store.update_checks("demo1", {"check_pii": "flag"}, 1)
+        store.update_checks("demo1", {"input_check_pii": "flag", "output_check_pii": "flag"}, 1)
 
 
 # Demo users
@@ -305,19 +305,19 @@ def test_missing_demo_users_are_created(fake):
 
 
 def test_existing_demo_users_keep_their_checks_and_usage(store):
-    store.update_checks("demo1", {"check_pii": "flag"}, 1)
+    store.update_checks("demo1", {"input_check_pii": "flag", "output_check_pii": "flag"}, 1)
     store.count_check("demo1", MONTH)
     ensure_demo_records(store, demo_records(key_secret=SECRET))
     record = store.get("demo1")
-    assert record.check_pii == "flag" and record.used(MONTH) == 1 and record.revision == 2
+    assert record.input_check_pii == "flag" and record.used(MONTH) == 1 and record.revision == 2
 
 
 def test_a_new_demo_secret_replaces_the_key_hash_only(store):
-    store.update_checks("demo1", {"check_pii": "flag"}, 1)
+    store.update_checks("demo1", {"input_check_pii": "flag", "output_check_pii": "flag"}, 1)
     other = "another-dynamodb-secret-" + "t" * 32
     ensure_demo_records(store, demo_records(key_secret=other))
     record = store.get("demo1")
-    assert record.key_hashes == (key_hash(demo_key("demo1", other)),) and record.check_pii == "flag"
+    assert record.key_hashes == (key_hash(demo_key("demo1", other)),) and record.input_check_pii == "flag"
 
 
 # The hosted API on the DynamoDB store
@@ -339,11 +339,11 @@ def test_the_hosted_api_runs_on_the_dynamodb_store(store):
     tenant = client.get("/v1/applications/current", headers=headers).json()["tenant"]
     assert tenant["used"] == 1 and tenant["revision"] == 1
     saved = client.post("/v1/tenants/current/checks", headers=headers,
-                        json={"revision": 1, "changes": {"check_pii": None, "check_encoded_pii": None}})
-    assert saved.status_code == 200 and saved.json()["checks"]["pii"] is None and saved.json()["used"] == 1
+                        json={"revision": 1, "changes": {"input_check_pii": None, "output_check_pii": None, "input_check_encoded_pii": None, "output_check_encoded_pii": None}})
+    assert saved.status_code == 200 and saved.json()["input_checks"]["pii"] is None and saved.json()["used"] == 1
     after = client.post("/v1/checks/input", headers=headers, json=body).json()
     assert after["policy_version"] == "tenant" and after["effective_action"] == "allow"
-    stale = client.post("/v1/tenants/current/checks", headers=headers, json={"revision": 1, "changes": {"check_pii": None}})
+    stale = client.post("/v1/tenants/current/checks", headers=headers, json={"revision": 1, "changes": {"input_check_pii": None, "output_check_pii": None}})
     assert stale.status_code == 409
     assert store.get("demo2").used(ddb.usage_month()) == 2
 
@@ -405,7 +405,7 @@ def test_every_request_is_valid_for_the_dynamodb_api(monkeypatch):
         stub.add_response("get_item", {"Item": item})
         stub.add_response("update_item", {})
         stub.add_response("get_item", {"Item": {**item, "revision": {"N": "2"}}})
-        store.update_checks("acme", {"check_pii": "flag"}, 1)
+        store.update_checks("acme", {"input_check_pii": "flag", "output_check_pii": "flag"}, 1)
         stub.add_response("get_item", {"Item": item})
         stub.add_response("update_item", {"Attributes": {"usage": {"M": {MONTH: {"N": "1"}}}}})
         assert store.count_check("acme", MONTH) == (1, False)
@@ -431,9 +431,9 @@ def test_the_store_against_a_real_table():
     try:
         store.create(record)
         assert store.get(tenant_id).revision == 1
-        assert store.update_checks(tenant_id, {"check_pii": "flag"}, 1).revision == 2
+        assert store.update_checks(tenant_id, {"input_check_pii": "flag", "output_check_pii": "flag"}, 1).revision == 2
         with pytest.raises(TenantConflict):
-            store.update_checks(tenant_id, {"check_pii": None}, 1)
+            store.update_checks(tenant_id, {"input_check_pii": None, "output_check_pii": None}, 1)
         assert [store.count_check(tenant_id, MONTH) for _ in range(2)] == [(1, False), (2, False)]
         with pytest.raises(UsageLimitReached):
             store.count_check(tenant_id, MONTH)

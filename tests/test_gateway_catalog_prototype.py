@@ -39,7 +39,7 @@ def test_migration_is_idempotent_preserves_off_allow_and_disabled_settings():
     assert preview['validations']['pii']['settings']['disabled_privacy_entities'] == ['IBAN_CODE']
     assert preview == migration_preview(preview, catalog)
     assert preview == decode_payload(json.dumps(preview), catalog)
-    assert record.check_pii is None and record.revision == 7
+    assert record.input_check_pii is None and record.revision == 7
 
 
 def test_migrated_actions_exactly_match_real_record_compiler():
@@ -196,7 +196,7 @@ def test_valid_disabled_settings_are_typed_and_roundtrip_without_becoming_active
     assert preview['validations']['schema']['settings']['input_schema'] == source.input_schema
     assert preview == validate_payload(preview, catalog)
     assert preview == migration_preview(preview, catalog)
-    assert source.check_schema is None
+    assert source.input_check_schema is None
 
 
 def test_enabled_required_control_needs_source_required_settings():
@@ -264,7 +264,7 @@ def test_migration_preserves_registered_rule_actions_and_roundtrips(action):
     assert preview == decode_payload(json.dumps(preview), catalog)
     assert record.model_dump(mode='json') == before
     preview['rule_actions']['prompt.extract_system'] = 'off' if action != 'off' else 'block'
-    assert record.rule_actions == actions
+    assert record.input_rule_actions == actions
 
 
 def test_old_preview_without_per_rule_settings_normalizes_to_explicit_empty_map():

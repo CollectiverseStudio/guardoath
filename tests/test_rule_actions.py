@@ -1,4 +1,4 @@
-"""Per-rule settings on a tenant record (rule_actions): saved, refused and applied."""
+"""Per-rule settings on a tenant record (input_rule_actions, output_rule_actions): saved, refused and applied."""
 import asyncio
 import base64
 
@@ -45,9 +45,9 @@ def ids(result):
 
 
 def test_rule_actions_is_an_editable_check_setting():
-    assert "rule_actions" in EDITABLE_FIELDS
-    assert record(check_lexical_guards="flag").rule_actions == {}
-    assert demo_defaults()["rule_actions"] == {}
+    assert {"input_rule_actions", "output_rule_actions"} <= EDITABLE_FIELDS and "rule_actions" not in EDITABLE_FIELDS
+    assert record(check_lexical_guards="flag").input_rule_actions == {}
+    assert demo_defaults()["input_rule_actions"] == demo_defaults()["output_rule_actions"] == {}
 
 
 @pytest.mark.parametrize("rule_actions", [
@@ -76,17 +76,17 @@ def test_a_redacting_pii_check_allows_only_off_for_its_rules():
 
 def test_rule_settings_go_to_the_engine_only_with_their_check():
     rec = record(check_secrets="flag", rule_actions={"agent.git_force": "block", "secrets.jwt": "off"})
-    assert rec.to_policy().rule_actions == {"secrets.jwt": "off"}
+    assert rec.to_policy().input_rule_actions == {"secrets.jwt": "off"}
     rec = record(check_lexical_guards="flag", check_secrets="flag", rule_actions={"agent.git_force": "block"})
-    assert rec.to_policy().rule_actions == {"agent.git_force": "block"}
+    assert rec.to_policy().input_rule_actions == {"agent.git_force": "block"}
     # encoded_pii reuses the pii scan, so pii rule settings go with it too.
     rec = record(check_encoded_pii="flag", rule_actions={"pii.iban_code": "off"})
-    assert rec.to_policy().rule_actions == {"pii.iban_code": "off"}
+    assert rec.to_policy().input_rule_actions == {"pii.iban_code": "off"}
 
 
 def test_rule_settings_survive_the_dynamodb_item():
     rec = record(check_lexical_guards="flag", rule_actions={"agent.git_force": "block", "pii.url": "off"})
-    assert from_item(to_item(rec)).rule_actions == rec.rule_actions
+    assert from_item(to_item(rec)).input_rule_actions == rec.input_rule_actions == rec.output_rule_actions
 
 
 # Applying them
@@ -184,16 +184,16 @@ def test_rule_actions_are_saved_shown_and_applied():
     client, _ = client_and_service()
     token = demo_key("demo1", SECRET)
     before = summary(client, token)
-    assert before["rule_actions"] == {}
+    assert before["input_rule_actions"] == before["output_rule_actions"] == {}
     email = "Please email jane@example.com about my order."
     assert client.post("/v1/checks/input", headers=auth(token), json={
         "application_id": "demo1", "content": email}).json()["effective_action"] == "block"
     # The domain inside the address is also a URL, so both rules are turned off.
     off = {"pii.email_address": "off", "pii.url": "off"}
-    response = change(client, token, before["revision"], {"rule_actions": off})
+    response = change(client, token, before["revision"], {"input_rule_actions": off, "output_rule_actions": off})
     assert response.status_code == 200
-    assert response.json()["rule_actions"] == off
-    assert summary(client, token)["rule_actions"] == off
+    assert response.json()["input_rule_actions"] == response.json()["output_rule_actions"] == off
+    assert summary(client, token)["input_rule_actions"] == off
     result = client.post("/v1/checks/input", headers=auth(token), json={"application_id": "demo1", "content": email}).json()
     assert result["effective_action"] == "allow"
     assert "pii.email_address" not in {finding["rule_id"] for finding in result["findings"]}
@@ -203,18 +203,18 @@ def test_unknown_rules_are_refused_with_422_and_nothing_is_saved():
     client, tenants = client_and_service()
     token = demo_key("demo2", SECRET)
     before = summary(client, token)
-    response = change(client, token, before["revision"], {"rule_actions": {"agent.secret_name_xyz": "off"}})
+    response = change(client, token, before["revision"], {"input_rule_actions": {"agent.secret_name_xyz": "off"}, "output_rule_actions": {"agent.secret_name_xyz": "off"}})
     assert response.status_code == 422 and "secret_name_xyz" not in response.text
-    assert tenants.store.get("demo2").revision == before["revision"] and tenants.store.get("demo2").rule_actions == {}
+    assert tenants.store.get("demo2").revision == before["revision"] and tenants.store.get("demo2").input_rule_actions == {}
 
 
 def test_resetting_a_demo_user_clears_its_rule_actions():
     client, tenants = client_and_service()
     token = demo_key("demo3", SECRET)
     before = summary(client, token)
-    assert change(client, token, before["revision"], {"rule_actions": {"agent.git_force": "block"}}).status_code == 200
+    assert change(client, token, before["revision"], {"input_rule_actions": {"agent.git_force": "block"}, "output_rule_actions": {"agent.git_force": "block"}}).status_code == 200
     assert client.post("/v1/tenants/current/reset", headers=auth(token), json={}).status_code == 200
-    assert tenants.store.get("demo3").rule_actions == {}
+    assert tenants.store.get("demo3").input_rule_actions == {}
 
 
 def test_an_encoded_privacy_rule_has_its_own_action_even_while_pii_redacts():

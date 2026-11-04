@@ -173,7 +173,7 @@ def build_pii_checker():
     word_pattern = regex.compile(r"\w+")
     checker_version = f"privacy-patterns-{SOURCE_VERSION}/guardoath-patterns-6"
 
-    def scan(request, redact, policy):
+    def scan(request, redact, policy, stage):
         # The policy timeout is the budget for this checker; the scan stops there too.
         deadline = monotonic() + policy.timeout_ms / 1000
         entities = {}
@@ -181,7 +181,7 @@ def build_pii_checker():
         sensitive_key = False
         disabled = set(policy.disabled_privacy_entities)
         # Types whose rule the tenant turned off (rule_actions) are not looked for: never reported or redacted.
-        off = {rule_id.removeprefix("pii.").upper() for rule_id, action in policy.rule_actions.items()
+        off = {rule_id.removeprefix("pii.").upper() for rule_id, action in policy.rule_actions_for(stage).items()
                if action == "off" and rule_id.startswith("pii.")}
         active = [item for item in extra if item[0] not in disabled | off] if policy.privacy_patterns else []
         minimum = policy.privacy_min_score
@@ -370,7 +370,7 @@ def build_pii_checker():
         rule = next((r for r in policy.rules if r.checker_id == "pii" and stage in r.stages), None)
         action = ((rule.on_input_finding if stage == Stage.INPUT else rule.on_output_finding) or rule.on_finding) if rule else None
         try:
-            entities, transformed = await asyncio.to_thread(scan, request, action == Action.REDACT, policy)
+            entities, transformed = await asyncio.to_thread(scan, request, action == Action.REDACT, policy, stage)
         except SensitiveFieldLimit:
             return CheckerResult(checker_id="pii", checker_version=checker_version,
                                  status="error", error_code="pii_field_limit")

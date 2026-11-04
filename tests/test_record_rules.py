@@ -174,13 +174,13 @@ def test_the_api_shows_each_tenant_only_its_own_rules_and_never_publicly():
         "completeness.next_steps", "completeness.request_summary", "completeness.response_summary"]
     added = [*DEFAULTS["comparisons"], {"rule_id": "demo1_only", "left": "/a", "right": "/b", "operator": "le"}]
     response = client.post("/v1/tenants/current/checks", headers=auth(one), json={
-        "revision": before["revision"], "changes": {"comparisons": added, "rule_actions": {"business.demo1_only": "block"}}})
+        "revision": before["revision"], "changes": {"comparisons": added, "input_rule_actions": {"business.demo1_only": "block"}, "output_rule_actions": {"business.demo1_only": "block"}}})
     assert response.status_code == 200
     assert "business.demo1_only" in {r["rule_id"] for r in response.json()["record_rules"]}
     assert "business.demo1_only" not in {r["rule_id"] for r in summary(client, two)["record_rules"]}
     # demo2 cannot set demo1's comparison; the message does not repeat it.
     refused = client.post("/v1/tenants/current/checks", headers=auth(two), json={
-        "revision": summary(client, two)["revision"], "changes": {"rule_actions": {"business.demo1_only": "block"}}})
+        "revision": summary(client, two)["revision"], "changes": {"input_rule_actions": {"business.demo1_only": "block"}, "output_rule_actions": {"business.demo1_only": "block"}}})
     assert refused.status_code == 422 and "demo1_only" not in refused.text
     # The public rule list never includes a tenant's own rules.
     public = client.get("/v1/controls").text

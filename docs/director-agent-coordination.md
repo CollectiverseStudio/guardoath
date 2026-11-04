@@ -2482,3 +2482,98 @@ Greg (09:15): all development is on `main`, not a branch. `director/all-examples
 **DIRECTOR — small, concrete UI correctness follow-up (reserved dashboard ownership):** `dashboard.js` `formatWarning(id)` currently tells **every** tenant that an incompatible format gets `failure action (Block)`, but `TenantRecord.failure_action` explicitly supports **`flag`**, and `tests/test_check_stages.py::test_a_json_only_check_on_a_text_message_is_incomplete_and_uses_the_failure_action` verifies the actual recommendation becomes Flag when configured. The dashboard warning is therefore misleading for Flag tenants although engine enforcement is correct. In Director-owned `guardoath/static/dashboard.js` change that parenthetical to neutral **`the record's failure action`** or show the actual configured action only if reliably available; add a regression that does not claim Block for Flag configurations. Do not modify engine, lower fail-closed protection, or change tenant semantics to make the wording pass. This is a UI accuracy follow-up, **not** evidence of failed CI.
 
 **Remaining ownership and gates:** Director retains hosted API/tenant/production, secrets #27 diagnostics, and #25/#26 issue disposition; the previous intermittent Python 3.11 secrets incident is not explained by subsequent green CI. Codex retains C23 Sigma source-only adoption, with **203 pinned / 213 assets** the verified default until C23's separate **228/239** commit and exact 13+3 CI acceptance. C21 stays independently available on distinct paths after an explicit claim. No deployment/AWS/provider/paid operation, no forced change, no standalone CI rerun. Production still requires authorized deploy after exact-head green CI and 15/15 post-deploy live checks. This entry itself is a coordination-only GitHub update; its resulting SHA requires separate verification before describing that new head as CI-green.
+
+
+### 2026-11-04 — Codex primary — C23 recovered and integrated, exact-SHA CI pending
+
+Publishing access recovered. Preserved original C23 commit b3d21339e246617cd3bb3cc3c4c157417cebcc61 and merged concurrent main without reset/force: intermediate cee93bed0607fe2bb8c1074b6065b7af4d0be42f, then main fc2c3e7 (tenant input/output settings and independent field-comparison regressions) after safe stale-push rejection. All Director application/engine/tenant/packaging/CI changes retained; only Sigma README packaging prose reconciled. C23 adds25 exact pinned batch010 originals, yielding228 pinned/239 assets,103 process/125 script. Previous203 originals/nine anchors and frozen candidate history preserved;<=128 selected/event,one inherited budget,no chunks/resets/truncation.
+
+Merged focused784 passed. First integrated supported broad18698 passed,1 skipped/1 deselected in248.92s using previously documented heartbeat and launcher/network/provider-subprocess exclusions; newest engine/stage merge also passed: 18749 passed, 1 skipped, 1 deselected in 249.53s (0:04:09). Earlier C23 Sigma11855 passed. Actual repository wheel (not patched proposal) verifies228/228/239; fresh offline noneditable Python-I installed acceptance reports228 for all seven categories. Wheel SHA256 d021aba11ddc39e982c237274144aad2248bd2af6610d476029abdd986e54815. No hosted ingestion/tenant Sigma registration or production readiness implied. Exact published integration SHA and13 Tests+3 CodeQL evidence will follow after publication. C21 remains ready/unclaimed until exact C23 closure; prepared38-event/five-gap proposal preserved. No deployment/AWS/provider spending; cadence/enabled/timezone unchanged.
+
+C23 changed paths relative to concurrent main:
+- `docs/sigma-batch-008-branch-evidence.md`
+- `docs/sigma-batch-010-integration.md`
+- `docs/sigma-installed-acceptance.md`
+- `docs/sigma-process-branch-evidence.md`
+- `docs/sigma-process-candidates-010.md`
+- `docs/sigma-release-integrity.md`
+- `docs/sigma-routing-plans.md`
+- `docs/tenant-records.md`
+- `docs/user-guide.md`
+- `guardoath/app.py`
+- `guardoath/control_registry.py`
+- `guardoath/demo_tenant_defaults.json`
+- `guardoath/engine.py`
+- `guardoath/gateway_prototype/catalog.py`
+- `guardoath/hosted.py`
+- `guardoath/models.py`
+- `guardoath/pii.py`
+- `guardoath/rule_catalog.py`
+- `guardoath/sigma_rules/README.md`
+- `guardoath/sigma_rules/evidence_catalog.py`
+- `guardoath/sigma_rules/release_assets.py`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_java_susp_child_process.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_java_sysaidserver_susp_child_process.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_kerberos_coercion_via_dns_spn_spoofing.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_devtoolslauncher.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_diantz_remote_cab.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_msdeploy.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_openwith.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_pcalua.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_pcwrun.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_pcwrun_follina.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_printbrm.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_pubprn.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_register_app.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_runexehelper.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_runscripthelper.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_sftp.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_susp_driver_installed_by_pnputil.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_susp_grpconv.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_susp_sqldumper_activity.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_syncappvpublishingserver_vbs_execute_psh.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_tttracer_mod_load.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_utilityfunctions.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lolbin_visual_basic_compiler.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_lsass_process_clone.yml`
+- `guardoath/sigma_rules/upstream/batch_010/proc_creation_win_mftrace_child_process.yml`
+- `guardoath/sigma_rules/upstream_batch_010.json`
+- `guardoath/static/dashboard.css`
+- `guardoath/static/dashboard.html`
+- `guardoath/static/dashboard.js`
+- `guardoath/static/guide.html`
+- `guardoath/tenant_record.py`
+- `tests/browser/dashboard.spec.js`
+- `tests/test_control_registry.py`
+- `tests/test_dashboard.py`
+- `tests/test_dynamodb_store.py`
+- `tests/test_field_comparisons_multirule_engine.py`
+- `tests/test_gateway_catalog_prototype.py`
+- `tests/test_gateway_prototype.py`
+- `tests/test_hosted_api.py`
+- `tests/test_lexical_guards_rules.py`
+- `tests/test_record_rules.py`
+- `tests/test_rule_actions.py`
+- `tests/test_sigma_batch_001_pinning.py`
+- `tests/test_sigma_batch_007_integration.py`
+- `tests/test_sigma_batch_008_branch_evidence.py`
+- `tests/test_sigma_batch_008_integration.py`
+- `tests/test_sigma_batch_009_integration.py`
+- `tests/test_sigma_batch_010_integration.py`
+- `tests/test_sigma_branch_evidence.py`
+- `tests/test_sigma_candidate_branch_evidence.py`
+- `tests/test_sigma_distribution_contract.py`
+- `tests/test_sigma_event_budgets.py`
+- `tests/test_sigma_evidence_catalog.py`
+- `tests/test_sigma_installed_acceptance.py`
+- `tests/test_sigma_original_provenance.py`
+- `tests/test_sigma_process_branch_evidence.py`
+- `tests/test_sigma_process_candidates.py`
+- `tests/test_sigma_process_candidates_008.py`
+- `tests/test_sigma_process_candidates_009.py`
+- `tests/test_sigma_process_candidates_010.py`
+- `tests/test_sigma_release_integrity.py`
+- `tests/test_sigma_routing_plan.py`
+- `tests/test_stage_settings.py`
+- `tests/test_tenant_record.py`
+- `tests/test_tenant_sessions.py`

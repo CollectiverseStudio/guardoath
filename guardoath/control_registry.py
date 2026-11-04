@@ -3,12 +3,12 @@
 Hierarchy (the same for every control):
 
 - Domain: a broad responsibility, such as privacy and personal data.
-- Control: an outcome a tenant chooses to enforce. Each control is exactly one field on the tenant
-  record (``check_<control_id>``): no value = off; block, flag, allow or (pii only) redact = on with
-  that action. The tenant record is the only runtime authority; this registry is description only.
+- Control: an outcome a tenant chooses to enforce. Each control is one field per stage on the tenant
+  record (``input_check_<control_id>``, ``output_check_<control_id>``; input-only controls have no output field):
+  no value = off on that stage; block, flag, allow or (pii only) redact = on there with that action. The tenant record is the only runtime authority; this registry is description only.
 - Rule: one finding a control can report, such as ``pii.iban_code``. Each rule has a use case, an
   example and a look-alike (guardoath.rule_catalog), and can be turned off or given its own action in
-  the tenant record's ``rule_actions``.
+  the tenant record's ``input_rule_actions`` and ``output_rule_actions``.
 - Detector: the code that runs for the control (``implementation``) and its version, reported by the
   checker itself (``checker_version``).
 - Evidence: examples it flags (``positive_examples``), look-alikes it does not flag
@@ -72,7 +72,13 @@ class Control:
 
     @property
     def field(self) -> str:
-        return "check_" + self.control_id
+        """The record field with this check's input action (2026-11-04: one field per stage)."""
+        return "input_check_" + self.control_id
+
+    @property
+    def output_field(self) -> str | None:
+        """The record field with this check's output action; None for an input-only check."""
+        return None if self.control_id in INPUT_ONLY_CHECK_IDS else "output_check_" + self.control_id
 
     @property
     def stages(self) -> tuple[str, ...]:
@@ -573,7 +579,7 @@ def registry_payload(checkers: dict | None = None) -> dict:
                 continue
             checker = (checkers or {}).get(item.control_id)
             items.append({
-                "control_id": item.control_id, "field": item.field, "name": item.name, "outcome": item.outcome,
+                "control_id": item.control_id, "field": item.field, "output_field": item.output_field, "name": item.name, "outcome": item.outcome,
                 "use_case": item.use_case, "limitations": item.limitations, "severity": item.severity,
                 "recommended_action": item.recommended_action, "actions": list(item.actions),
                 "stages": list(item.stages), "external_provider": item.external_provider, "owner": item.owner,

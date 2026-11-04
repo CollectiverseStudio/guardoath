@@ -108,7 +108,7 @@ def test_a_demo_key_connects_to_its_own_record(client):
     tenant = data["tenant"]
     assert tenant["tenant_id"] == "demo2" and tenant["demo"] is True and tenant["used"] == 0
     assert tenant["monthly_allowance"] == 2000 and tenant["overage"] == "block" and tenant["month"] == usage_month()
-    assert tenant["checks"]["pii"] == "block" and tenant["checks"]["ledger"] is None and len(tenant["checks"]) == 17
+    assert tenant["input_checks"]["pii"] == "block" and tenant["input_checks"]["ledger"] is None and len(tenant["input_checks"]) == 17
     assert token not in response.text
 
 
@@ -177,10 +177,10 @@ def test_check_changes_apply_to_the_next_request(client, tenants):
     token = demo_key("demo1", SECRET)
     assert check(client, token, "demo1", EMAIL).json()["effective_action"] == "block"
     record = tenants.store.get("demo1")
-    tenants.store.update_checks("demo1", {"check_pii": "flag"}, record.revision)
+    tenants.store.update_checks("demo1", {"input_check_pii": "flag", "output_check_pii": "flag"}, record.revision)
     assert check(client, token, "demo1", EMAIL).json()["effective_action"] == "flag"
     record = tenants.store.get("demo1")
-    tenants.store.update_checks("demo1", {"check_pii": None, "check_encoded_pii": None}, record.revision)
+    tenants.store.update_checks("demo1", {"input_check_pii": None, "output_check_pii": None, "input_check_encoded_pii": None, "output_check_encoded_pii": None}, record.revision)
     result = check(client, token, "demo1", EMAIL).json()
     assert result["effective_action"] == "allow" and {c["checker_id"] for c in result["checker_results"]} == {"secrets", "text_security"}
 
@@ -259,20 +259,20 @@ def summary(client, token):
 def test_a_saved_change_applies_to_the_next_check(client, tenants):
     token = demo_key("demo1", SECRET)
     before = summary(client, token)
-    response = change(client, token, before["revision"], {"check_pii": "flag"})
+    response = change(client, token, before["revision"], {"input_check_pii": "flag", "output_check_pii": "flag"})
     assert response.status_code == 200 and response.headers["cache-control"] == "no-store"
     after = response.json()
-    assert after["revision"] == before["revision"] + 1 and after["checks"]["pii"] == "flag"
+    assert after["revision"] == before["revision"] + 1 and after["input_checks"]["pii"] == "flag"
     assert check(client, token, "demo1", EMAIL).json()["effective_action"] == "flag"
     # A check that was off, with its settings already on the record, can be turned on.
-    assert change(client, token, after["revision"], {"check_ledger": "block"}).json()["checks"]["ledger"] == "block"
+    assert change(client, token, after["revision"], {"input_check_ledger": "block", "output_check_ledger": "block"}).json()["input_checks"]["ledger"] == "block"
     assert "ledger" in [c["id"] for c in client.get("/v1/applications/current", headers=auth(token)).json()["policies"][0]["checks"]]
 
 
 def test_turning_checks_off_stops_them_running(client):
     token = demo_key("demo1", SECRET)
     revision = summary(client, token)["revision"]
-    assert change(client, token, revision, {"check_pii": None, "check_encoded_pii": None}).status_code == 200
+    assert change(client, token, revision, {"input_check_pii": None, "output_check_pii": None, "input_check_encoded_pii": None, "output_check_encoded_pii": None}).status_code == 200
     result = check(client, token, "demo1", EMAIL).json()
     assert result["effective_action"] == "allow"
     assert {c["checker_id"] for c in result["checker_results"]} == {"secrets", "text_security"}
@@ -281,22 +281,22 @@ def test_turning_checks_off_stops_them_running(client):
 def test_a_stale_revision_is_refused_and_nothing_changes(client, tenants):
     token = demo_key("demo1", SECRET)
     revision = summary(client, token)["revision"]
-    assert change(client, token, revision, {"check_pii": "flag"}).status_code == 200
-    stale = change(client, token, revision, {"check_pii": None})
+    assert change(client, token, revision, {"input_check_pii": "flag", "output_check_pii": "flag"}).status_code == 200
+    stale = change(client, token, revision, {"input_check_pii": None, "output_check_pii": None})
     assert stale.status_code == 409 and stale.json() == {"detail": "The tenant record changed; reload it and try again"}
-    assert tenants.store.get("demo1").check_pii == "flag"
+    assert tenants.store.get("demo1").input_check_pii == "flag"
 
 
 @pytest.mark.parametrize("changes, message", [
-    ({"check_secrets": "redact"}, "Only the pii check can redact"),
-    ({"check_secrets": "deny"}, "check_secrets: Input should be"),
-    ({"check_content_safety": "flag"}, "Demo users cannot run checks that call a paid outside provider"),
-    ({"check_pii": None, "check_encoded_pii": None, "check_secrets": None, "check_text_security": None},
+    ({"input_check_secrets": "redact", "output_check_secrets": "redact"}, "Only the pii check can redact"),
+    ({"input_check_secrets": "deny", "output_check_secrets": "deny"}, "input_check_secrets: Input should be"),
+    ({"input_check_content_safety": "flag", "output_check_content_safety": "flag"}, "Demo users cannot run checks that call a paid outside provider"),
+    ({"input_check_pii": None, "output_check_pii": None, "input_check_encoded_pii": None, "output_check_encoded_pii": None, "input_check_secrets": None, "output_check_secrets": None, "input_check_text_security": None, "output_check_text_security": None},
      "Turn on at least one check"),
     ({"monthly_allowance": 10_000_000}, "Only check fields and check settings can be changed"),
     ({"usage": {}}, "Only check fields and check settings can be changed"),
     ({"key_hashes": []}, "Only check fields and check settings can be changed"),
-    ({"ledger": None, "check_ledger": "flag"}, "The ledger check needs its settings before it can run"),
+    ({"ledger": None, "input_check_ledger": "flag", "output_check_ledger": "flag"}, "The ledger check needs its settings before it can run"),
 ])
 def test_rejected_changes_say_why_and_change_nothing(client, tenants, changes, message):
     token = demo_key("demo1", SECRET)
@@ -309,7 +309,7 @@ def test_rejected_changes_say_why_and_change_nothing(client, tenants, changes, m
 def test_a_change_the_engine_rejects_is_not_stored(client, tenants):
     token = demo_key("demo1", SECRET)
     before = tenants.store.get("demo1")
-    response = change(client, token, before.revision, {"check_schema": "block", "input_schema": {"$ref": "https://example.com/s.json"}})
+    response = change(client, token, before.revision, {"input_check_schema": "block", "output_check_schema": "block", "input_schema": {"$ref": "https://example.com/s.json"}})
     assert response.status_code == 422 and "Only local schema references" in response.json()["detail"]
     assert tenants.store.get("demo1") == before
 
@@ -317,22 +317,22 @@ def test_a_change_the_engine_rejects_is_not_stored(client, tenants):
 def test_rejection_messages_do_not_echo_submitted_values(client):
     token = demo_key("demo1", SECRET)
     revision = summary(client, token)["revision"]
-    response = change(client, token, revision, {"check_secrets": "private-submitted-value"})
+    response = change(client, token, revision, {"input_check_secrets": "private-submitted-value", "output_check_secrets": "private-submitted-value"})
     assert response.status_code == 422 and "private-submitted-value" not in response.text
 
 
 def test_changes_are_not_counted_as_checks(client, tenants):
     token = demo_key("demo1", SECRET)
-    change(client, token, summary(client, token)["revision"], {"check_pii": "flag"})
+    change(client, token, summary(client, token)["revision"], {"input_check_pii": "flag", "output_check_pii": "flag"})
     assert used(tenants, "demo1") == 0
 
 
 def test_reset_restores_the_demo_defaults(client, tenants):
     token = demo_key("demo1", SECRET)
-    change(client, token, summary(client, token)["revision"], {"check_pii": None, "check_ledger": "flag", "mode": "observe"})
+    change(client, token, summary(client, token)["revision"], {"input_check_pii": None, "output_check_pii": None, "input_check_ledger": "flag", "output_check_ledger": "flag", "mode": "observe"})
     response = client.post("/v1/tenants/current/reset", headers=auth(token), json={})
     assert response.status_code == 200
-    checks = response.json()["checks"]
+    checks = response.json()["input_checks"]
     assert {k for k, v in checks.items() if v} == {"pii", "encoded_pii", "secrets", "text_security"}
     assert all(v == "block" for v in checks.values() if v)
     assert tenants.store.get("demo1").mode == "enforce"
@@ -341,8 +341,8 @@ def test_reset_restores_the_demo_defaults(client, tenants):
 
 def test_each_demo_user_changes_only_its_own_record(client, tenants):
     token = demo_key("demo1", SECRET)
-    change(client, token, summary(client, token)["revision"], {"check_pii": None})
-    assert tenants.store.get("demo1").check_pii is None and tenants.store.get("demo2").check_pii == "block"
+    change(client, token, summary(client, token)["revision"], {"input_check_pii": None, "output_check_pii": None})
+    assert tenants.store.get("demo1").input_check_pii is None and tenants.store.get("demo2").input_check_pii == "block"
 
 
 def test_a_customers_api_key_cannot_change_settings():
@@ -354,25 +354,25 @@ def test_a_customers_api_key_cannot_change_settings():
     client = client_for(tenants)
     stored = tenants.store.get("acme")  # as the store saved it (revision and time set on load)
     refused = {"detail": "Sign in to change this tenant's settings; an API key only runs checks"}
-    response = change(client, token, 1, {"check_text_security": "block"})
+    response = change(client, token, 1, {"input_check_text_security": "block", "output_check_text_security": "block"})
     assert response.status_code == 403 and response.json() == refused
     response = client.post("/v1/tenants/current/reset", headers=auth(token), json={})
     assert response.status_code == 403 and response.json() == refused
-    assert tenants.store.get("acme") == stored and stored.check_text_security is None
+    assert tenants.store.get("acme") == stored and stored.input_check_text_security is None
     assert check(client, token, "acme", CLEAN).status_code == 200
 
 
 def test_check_changes_need_a_tenant_key(tenants):
     client = client_for(tenants, credentials={"local-key": "demo"})
-    assert change(client, "local-key", 1, {"check_pii": "flag"}).status_code == 403
+    assert change(client, "local-key", 1, {"input_check_pii": "flag", "output_check_pii": "flag"}).status_code == 403
     assert client.post("/v1/tenants/current/reset", headers=auth("local-key"), json={}).status_code == 403
-    assert change(client, "gok_demo1_" + "x" * 43, 1, {"check_pii": "flag"}).status_code == 401
-    assert client.post("/v1/tenants/current/checks", json={"revision": 1, "changes": {"check_pii": "flag"}}).status_code == 401
+    assert change(client, "gok_demo1_" + "x" * 43, 1, {"input_check_pii": "flag", "output_check_pii": "flag"}).status_code == 401
+    assert client.post("/v1/tenants/current/checks", json={"revision": 1, "changes": {"input_check_pii": "flag", "output_check_pii": "flag"}}).status_code == 401
 
 
-@pytest.mark.parametrize("body", [{"changes": {"check_pii": "flag"}}, {"revision": 0, "changes": {"check_pii": "flag"}},
-                                  {"revision": "1", "changes": {"check_pii": "flag"}}, {"revision": 1, "changes": {}},
-                                  {"revision": 1, "changes": {"check_pii": "flag"}, "extra": True}])
+@pytest.mark.parametrize("body", [{"changes": {"input_check_pii": "flag", "output_check_pii": "flag"}}, {"revision": 0, "changes": {"input_check_pii": "flag", "output_check_pii": "flag"}},
+                                  {"revision": "1", "changes": {"input_check_pii": "flag", "output_check_pii": "flag"}}, {"revision": 1, "changes": {}},
+                                  {"revision": 1, "changes": {"input_check_pii": "flag", "output_check_pii": "flag"}, "extra": True}])
 def test_malformed_change_requests_are_refused(client, body):
     response = client.post("/v1/tenants/current/checks", headers=auth(demo_key("demo1", SECRET)), json=body)
     assert response.status_code == 422 and response.json() == {"detail": "Invalid check request"}
@@ -465,8 +465,8 @@ def test_no_usable_key_is_refused(client, headers):
 def test_check_changes_accept_the_key_header(client):
     token = demo_key("demo1", SECRET)
     revision = summary(client, token)["revision"]
-    response = client.post("/v1/tenants/current/checks", headers=keyed(token), json={"revision": revision, "changes": {"check_pii": "flag"}})
-    assert response.status_code == 200 and response.json()["checks"]["pii"] == "flag"
+    response = client.post("/v1/tenants/current/checks", headers=keyed(token), json={"revision": revision, "changes": {"input_check_pii": "flag", "output_check_pii": "flag"}})
+    assert response.status_code == 200 and response.json()["input_checks"]["pii"] == "flag"
 
 
 def test_validation_packs_on_a_tenant_record_are_refused_not_a_server_error(client, tenants):

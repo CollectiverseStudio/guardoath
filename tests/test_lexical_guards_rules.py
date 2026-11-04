@@ -268,8 +268,9 @@ def test_a_tenant_record_allows_text_that_matches_no_rule():
 def test_demo_users_start_with_it_off():
     defaults = json.loads((Path(__file__).resolve().parents[1] / "guardoath" / "demo_tenant_defaults.json")
                           .read_text(encoding="utf-8"))["defaults"]
-    assert "check_lexical_guards" not in defaults
-    assert TenantRecord.model_fields["check_lexical_guards"].default is None
+    assert "input_check_lexical_guards" not in defaults and "output_check_lexical_guards" not in defaults
+    assert TenantRecord.model_fields["input_check_lexical_guards"].default is None
+    assert TenantRecord.model_fields["output_check_lexical_guards"].default is None
 
 
 # Batch 5: agent_boundary_guards (41 rules, each with its own example and look-alike in the module)
