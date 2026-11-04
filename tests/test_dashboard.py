@@ -560,3 +560,29 @@ def test_the_dashboard_warns_about_checks_that_need_json_or_text():
     for text in ["function formatWarning(id)", 'format.id = "tenant-format-" + id', "Not run: this check needs ",
                  "updateFormatNote(id);"]:
         assert text in script, text
+
+
+def test_pages_name_scripts_and_stylesheets_by_content_version_and_they_are_cached_briefly():
+    """2026-11-04: Greg's browser ran yesterday's dashboard.js under today's page. The deploy zip stamps every file
+    2026-01-01 and /assets sent no Cache-Control, so browsers cached the script by heuristic for weeks."""
+    import hashlib
+    import re
+    from pathlib import Path
+    static = Path(__file__).resolve().parents[1] / "guardoath" / "static"
+    client = TestClient(create_app(credentials={"test-key": "demo"}))
+    for page, names in (("/dashboard", {"dashboard.css", "dashboard.js"}), ("/guide", {"dashboard.css", "guide.css"})):
+        text = client.get(page).text
+        linked = dict(re.findall(r'(?:src|href)="/assets/([a-z0-9_-]+\.(?:js|css))\?v=([0-9a-f]{12})"', text))
+        assert set(linked) == names, page
+        assert not re.search(r'(?:src|href)="/assets/[a-z0-9_-]+\.(?:js|css)"', text), page
+        for name, version in linked.items():
+            body = (static / name).read_bytes()
+            assert version == hashlib.sha256(body).hexdigest()[:12], name
+            response = client.get(f"/assets/{name}?v={version}")
+            assert response.status_code == 200 and response.content == body
+            assert response.headers["cache-control"] == "public, max-age=300"
+    # Other assets keep their own handling.
+    assert client.get("/assets/guardoath-shield.png").status_code == 200
+    assert client.get("/assets/guardoath_ai_final.mp4", headers={"Range": "bytes=0-9"}).status_code == 206
+    assert client.get("/assets/missing.js").status_code == 404
+    assert client.get("/assets/..%2Fapp.py").status_code == 404
