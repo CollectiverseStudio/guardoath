@@ -552,3 +552,11 @@ def test_the_page_follows_the_decision_and_saves_changed_settings_before_a_check
     assert "pendingChanges()" in run and "saveTenant(" in run and run.index("saveTenant(") < run.index('assess("input")')
     assert "function pendingChanges()" in script
     assert "Unsaved changes. Save checks, or run a check: running saves them first." in script
+
+
+def test_the_dashboard_warns_about_checks_that_need_json_or_text():
+    from pathlib import Path
+    script = (Path(__file__).resolve().parents[1] / "guardoath" / "static" / "dashboard.js").read_text(encoding="utf-8")
+    for text in ["function formatWarning(id)", 'format.id = "tenant-format-" + id', "Not run: this check needs ",
+                 "updateFormatNote(id);"]:
+        assert text in script, text

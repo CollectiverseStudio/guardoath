@@ -1338,3 +1338,29 @@ test("a check changed in the panel shows at once in the examples, and the run us
   await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
   await expect(graph).toHaveText(/ — off$/);
 });
+test("a check that needs JSON warns in the panel and explains the block on a text message", async ({ page }) => {
+  // 2026-11-04: demo1 had Graph structure on Block, so the live clean-question check came back Block (graph
+  // skipped: it needs JSON). Greg chose to keep blocking, with a warning.
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo5");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo5");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+  await expect(page.locator("#tenant-format-graph")).toBeHidden();
+  await page.locator("#tenant-check-graph").selectOption("block");
+  await expect(page.locator("#tenant-format-graph")).toBeVisible();
+  await expect(page.locator("#tenant-format-graph")).toContainText("Needs JSON messages: while this check is on, a text message is held as incomplete");
+  await page.locator("#input-format").selectOption("text");
+  await page.locator("#input-content").fill("Can you explain your return policy?");
+  await page.locator("#run-input").click();
+  await expect(page.locator("#tenant-message")).toHaveText("Saved. The checks below ran with these settings.");
+  await expect(page.locator("#input-results")).toContainText("Recommended: block · Effective: block");
+  await expect(page.locator("#input-results")).toContainText("Not run: this check needs JSON content, and this message is text.");
+  await expect(page.locator("#result-status")).toHaveText("Incomplete");
+  await expect(page.locator("#tenant-format-graph")).toBeVisible();
+  await page.locator("#tenant-check-graph").selectOption("");
+  await expect(page.locator("#tenant-format-graph")).toBeHidden();
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+});

@@ -5,6 +5,11 @@ redact (pii only). A check field with no value means the check does not run. The
 checks need are fields on the same record. They are kept while a check is off, so turning the
 check back on restores them, and they are passed to the engine only while the check is on.
 
+A check whose settings cover one stage only runs on that stage (2026-11-04): schema runs on the stages that have a
+schema (input_schema, output_schema), cross_field on the stages of its comparisons, completeness on the stages of
+its required sections. Before, it ran on both, and every message on the other stage came back incomplete (blocked).
+Every other check runs on both stages (azure_prompt_shields: input only).
+
 One rule inside a check can be set on its own in rule_actions: "off" stops that rule, and block, flag or
 allow replace the check's action for that rule only. Rule ids are the ones in guardoath.rule_catalog.
 
@@ -174,12 +179,27 @@ class TenantRecord(Contract):
         return {check_id: getattr(self, "check_" + check_id) for check_id in CHECK_IDS
                 if getattr(self, "check_" + check_id) is not None}
 
+    def stages_of(self, check_id: str) -> tuple[Stage, ...]:
+        """The stages a check runs on: the stages its settings cover (see the module docstring)."""
+        if check_id in INPUT_ONLY_CHECK_IDS:
+            return (Stage.INPUT,)
+        if check_id == "schema":
+            covered = {stage for stage, schema in ((Stage.INPUT, self.input_schema), (Stage.OUTPUT, self.output_schema))
+                       if schema is not None}
+        elif check_id == "cross_field":
+            covered = {stage for comparison in self.comparisons for stage in comparison.stages}
+        elif check_id == "completeness":
+            covered = {stage for section in self.required_sections for stage in section.stages}
+        else:
+            return (Stage.INPUT, Stage.OUTPUT)
+        # The record's own validation (REQUIRED_SETTINGS) refuses an on check with no settings at all.
+        return tuple(stage for stage in (Stage.INPUT, Stage.OUTPUT) if stage in covered) or (Stage.INPUT, Stage.OUTPUT)
+
     def to_policy(self) -> Policy:
         on = self.checks()
         settings = {name: getattr(self, name) for check_id, names in SETTINGS_OF.items()
                     if check_id in on for name in names}
-        rules = tuple(Rule(checker_id=check_id, on_finding=action,
-                           stages=(Stage.INPUT,) if check_id in INPUT_ONLY_CHECK_IDS else (Stage.INPUT, Stage.OUTPUT))
+        rules = tuple(Rule(checker_id=check_id, on_finding=action, stages=self.stages_of(check_id))
                       for check_id, action in on.items())
         # Rule settings go with their check; the pii ones also apply to encoded_pii, which reuses the pii scan.
         running = on.keys() | ({"pii"} if "encoded_pii" in on else set())

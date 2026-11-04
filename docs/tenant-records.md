@@ -197,6 +197,25 @@ only be turned `off`, because redaction replaces every value the check finds.
 be) against the real detectors. `tests/test_rule_actions.py` covers saving, refusing and applying rule
 settings.
 
+## Stages and message formats
+
+A check runs on both stages (input and output), except (since 2026-11-04) a check whose settings cover one stage
+only: `schema` runs on the stages that have a schema (`input_schema`, `output_schema`), `cross_field` on the stages
+of its `comparisons`, `completeness` on the stages of its `required_sections`. `azure_prompt_shields` is input only.
+Before, such a check also ran on the other stage, found nothing to check there, and blocked every message on it.
+
+Some checks need one message format (`content_format`):
+
+| Needs JSON | Needs text |
+|---|---|
+| `schema`, `cross_field`, `matched_outcomes`, `evidence`, `tool_calls`, `ledger`, `timestamps`, `graph` | `completeness` |
+
+On a message in the other format the check is skipped. A skipped check makes the result `incomplete`, and the
+record's `failure_action` applies (`block` by default, or `flag`), even with no findings. This is deliberate: a
+check that is on and cannot run is not a pass. The dashboard warns under each such check while it is on, and a
+result shows "Not run: this check needs JSON content". `tests/test_check_stages.py` checks the table above against
+each check's code.
+
 ## Tenant sign-in
 
 Since 2026-11-02 a customer record's settings change only through a signed-in session; its API keys only

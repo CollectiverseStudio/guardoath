@@ -314,6 +314,24 @@ function jumpToRules(id) {
   $("rule-finder").scrollIntoView({block: "start"}); $("rule-search").focus();
 }
 
+// Checks that can run only on one message format (checked against each check's code in tests/test_check_stages.py).
+// On a message in the other format the check is skipped, the result is incomplete and the record's failure action
+// applies (Block by default). Greg 2026-11-04: keep that, and warn here.
+const formatNeeds = {schema: "json", cross_field: "json", matched_outcomes: "json", evidence: "json", tool_calls: "json", ledger: "json", timestamps: "json", graph: "json", completeness: "text"};
+function formatWarning(id) {
+  const needs = formatNeeds[id]; if (!needs) return "";
+  const other = needs === "json" ? "text" : "JSON";
+  return "Needs " + (needs === "json" ? "JSON" : "text") + " messages: while this check is on, a " + other +
+    " message is held as incomplete and gets the record\u2019s failure action (Block), because this check cannot run on " + other + ".";
+}
+function updateFormatNote(id) {
+  const note = $("tenant-format-" + id); if (!note) return;
+  const on = panelCheck(id) !== null ? Boolean(panelCheck(id)) : checkIsOn(id);
+  const rule = currentPolicy()?.checks.find(c => c.id === id);
+  const oneStage = rule && rule.stages.length === 1 ? " Runs on " + rule.stages[0] + " only (its settings cover that stage)." : "";
+  note.textContent = on ? (formatWarning(id) + oneStage).trim() : "";
+  note.hidden = !note.textContent;
+}
 function renderTenant() {
   const tenant = application?.tenant; $("tenant-panel").hidden = !tenant; $("tenant-message").textContent = "";
   if (!tenant) return;
@@ -342,6 +360,8 @@ function renderTenant() {
       line.append(name, shown);
     }
     row.append(line);
+    const format = document.createElement("p"); format.className = "hint format-note"; format.id = "tenant-format-" + id; format.hidden = true;
+    row.append(format);
     const help = checkHelp[id];
     if (help) {
       const details = document.createElement("details"); details.className = "check-help"; details.id = "tenant-help-" + id;
@@ -356,6 +376,7 @@ function renderTenant() {
     box.append(row);
   }
   buildRuleFinder();
+  for (const id of Object.keys(tenant.checks)) updateFormatNote(id);
   $("tenant-save").disabled = !own;
   $("tenant-reset").hidden = !tenant.demo;
   // The example picker and notes read the panel (checkIsOn), and loadApplication refreshes them before this
@@ -415,6 +436,7 @@ function showUnsaved(prefix = "") {
 }
 $("tenant-checks").addEventListener("change", event => {
   const id = event.target?.dataset?.check; if (!id) return;
+  updateFormatNote(id);
   const cleared = $("rule-table") ? checkChanged(id) : 0;
   showUnsaved(cleared ? (checkNames[id] || id) + " now redacts, so the own settings of " + cleared + (cleared === 1 ? " rule were" : " rules were") + " cleared (a redacting check allows only Off for single rules). " : "");
 });
@@ -1093,7 +1115,9 @@ function render(stage, result) {
     const heading = document.createElement("div"), name = document.createElement("span"), status = document.createElement("span");
     name.textContent = check.checker_id + (check.external ? " · external provider" : ""); status.className = "pill" + (check.simulated ? " warn" : check.status === "passed" ? " good" : check.status === "flagged" ? " bad" : " warn");
     status.textContent = (check.simulated ? "SIMULATED · " : "") + check.status; heading.append(name, status); row.append(heading);
-    if (check.error_code) { const error = document.createElement("p"); const gateMessages = {external_local_gate:"External check withheld: configured local checks must all pass without simulation.", external_policy_disabled:"External check withheld: this policy disables provider calls."}; error.textContent = gateMessages[check.error_code] || "Check unavailable: " + check.error_code; row.append(error); }
+    const needs = check.status === "skipped" ? formatNeeds[check.checker_id] : null;
+    if (needs) { const error = document.createElement("p"); error.className = "format-skip"; error.textContent = "Not run: this check needs " + (needs === "json" ? "JSON" : "text") + " content, and this message is " + (needs === "json" ? "text" : "JSON") + ". The result is incomplete, so the record\u2019s failure action applies. Turn the check off, or send " + (needs === "json" ? "JSON" : "text") + "."; row.append(error); }
+    else if (check.error_code) { const error = document.createElement("p"); const gateMessages = {external_local_gate:"External check withheld: configured local checks must all pass without simulation.", external_policy_disabled:"External check withheld: this policy disables provider calls."}; error.textContent = gateMessages[check.error_code] || "Check unavailable: " + check.error_code; row.append(error); }
     for (const finding of check.findings) { const detail = document.createElement("p"); detail.className = "finding"; detail.textContent = finding.explanation; row.append(detail); }
     return row;
   }
