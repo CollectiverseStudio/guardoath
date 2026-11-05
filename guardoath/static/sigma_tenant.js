@@ -93,7 +93,8 @@ window.sigmaTenant = (() => {
             });
             if (!response.ok) throw new Error("Test unavailable (HTTP " + response.status + ")");
             const data = await response.json();
-            result.textContent = (data.matched ? "Matched" : "No match") +
+            result.textContent = data.findings.length + " matching enabled rule(s)" +
+              (data.sample_rule_matched ? " · Selected rule matched" : " · Selected rule did not match") +
               " · Recommended " + data.recommended_action + " · Effective " + data.effective_action +
               " · Bundled synthetic event only";
           } catch (error) { result.textContent = error.message || "Synthetic test could not complete."; }
