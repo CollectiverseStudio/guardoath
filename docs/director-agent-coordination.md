@@ -3057,3 +3057,19 @@ Following canonical Base64 runtime/test correction `12c0b5e2` and `55cdbdc6`, th
 [Issue #30 reliability/release closure task](https://github.com/CollectiverseStudio/guardoath/issues/30#issuecomment-6668419730) asks Director to reproduce and instrument synthetic PII/secrets intermittent failures with case ID, stage, status, queue/scan timing and no raw values, independently retain 500-ms production-deadline/fail-closed evidence alongside 5,000-ms deterministic semantic fixtures, fix only confirmed root cause, then complete exact-implementation CI and all 15 authorized live post-deploy checks. Director owns reserved privacy, engine, CI, and deploy. Existing 13+3 green CI does not prove these runtime incidents closed.
 
 **Changes / gates:** Issue comments and this shared coordination append only. No production/config changes, no checker/test relaxation, no AWS/provider spend, no assertion of fresh 60/60 witnesses, 500-ms stress pass, or 15/15 deployment acceptance. Owners to acknowledge scope here or on respective issues before reserved implementation changes. Coordination-only HEAD requires its own CI verification.
+
+
+### 2026-11-05 — Atlas — independent CSV spreadsheet-formula validation implementation (Greg-directed non-overlap)
+
+**Rule #1 / ownership:** Re-read latest shared coordination file before work and confirmed Codex owns Field Comparisons, Director owns privacy/secrets/runtime release and dashboard. Greg explicitly directed Atlas to stop duplicating their work and implement a separate area. Chosen **opt-in CSV spreadsheet-formula inspection**, which neither agent has claimed. This work did not modify Director-reserved tenant, engine, privacy, website, deployment or CI files, nor Codex's Field Comparisons generator.
+
+**Newly implemented and pushed to main:**
+- `guardoath/csv_formula.py` (initial `215e2bf3`, BOM/Unicode-whitespace hardening `9e4c2ae4`) scans parsed CSV fields for leading spreadsheet trigger characters `= + - @` after selected leading whitespace; bounds rows/columns/cells, rejects malformed CSV/NUL, never runs formula code or returns the cell value.
+- `guardoath/checkers.py` (registration `612cd5f9`) enables the `csv_formula` checker in the default local checker registry, without enabling it for general conversation traffic.
+- `policies/csv-export.json` (`83260f1a`) provides a **separate, explicitly selected** enforce-mode Block policy.
+- `tests/test_csv_formula.py` (`5b2ac881`, `df4342d9`, `14e4f692`) adds parameterized input/output trigger cases, benign and apostrophe-escaped look-alikes, observe/enforce decisions, privacy-safe finding assertions, invalid content, malformed CSV, row/column budget fail-closed behavior, BOM and nonbreaking-space coverage.
+- `docs/user-guide.md` (`e48cf304`) documents purpose, configuration, examples, expected actions, limitations and spreadsheet-import compatibility caveats.
+
+**Evidence status:** Latest implementation SHA at inspection: `14e4f6923889c68565a4c0c31532dc27f74171f1`. **Fresh 13/13 Tests and 3/3 CodeQL are not verified yet.** The connected GitHub workflow lookup for that SHA returns no PR-triggered runs and does not expose push-triggered Actions jobs; no success is claimed. No local dependency-equipped pytest run was available. Next check: inspect exact SHA's push workflow jobs; repair any failure in Atlas-owned files only, without weakening checks. Separately assess user-facing tenant rule registration as a *new* scope request if Greg wants it, rather than silently editing reserved files.
+
+**Explicit limitations:** This is opt-in CSV field-signal validation, not general prompt-injection detection, spreadsheet execution, guaranteed cross-application CSV sanitization, or deployment. No user inputs or formulas are logged, no paid service/AWS spending and no production changes. Codex and Director retain all previous assignments; no work transferred to them.
