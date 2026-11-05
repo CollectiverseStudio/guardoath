@@ -5,7 +5,7 @@ import hmac
 import os
 from pathlib import Path
 import re
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi import Path as PathParam
@@ -34,6 +34,7 @@ from guardoath.tenant_record import (CHECK_IDS, INPUT_ONLY_CHECK_IDS, TENANT_ID_
 from guardoath.tenant_store import TenantConflict, TenantNotFound, UsageLimitReached
 from guardoath.tenant_record import new_key
 from guardoath.record_rules import record_rules
+from guardoath.sigma_site import catalog_payload as sigma_catalog_payload, evaluate_fixture as sigma_evaluate_fixture
 from guardoath.tenant_sessions import SESSION_HEADER, CognitoSessions, SignInBusy
 
 
@@ -106,6 +107,11 @@ def demo_engine(enable_pii: bool = False, enable_azure: bool = False, content_sa
 
 class KeyRevocation(Contract):
     key_id: str = Field(pattern=r"^[0-9a-f]{12}$")
+
+
+class SigmaDemoRequest(Contract):
+    rule_id: str = Field(min_length=1, max_length=128)
+    sample: Literal["positive", "lookalike"]
 
 
 class SignInCode(Contract):
@@ -218,6 +224,13 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             "Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
         })
 
+    @api.get("/sigma", include_in_schema=False)
+    async def sigma_preview():
+        return HTMLResponse(versioned_page("sigma.html"), headers={
+            "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+            "Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
+        })
+
     @api.get("/guide", include_in_schema=False)
     async def guide():
         # The developer guide is static text: no scripts at all.
@@ -272,6 +285,50 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 if hmac.compare_digest(token.encode(), credential.encode()):
                     return app_id
         raise HTTPException(401, "Invalid application credential", headers={"WWW-Authenticate": "Bearer"})
+
+    def sigma_preview_principal(principal: str | TenantRecord) -> str:
+        # This is an explicitly isolated demo, NOT a production tenant control.
+        if isinstance(principal, TenantRecord):
+            if not principal.demo:
+                raise HTTPException(403, "Sigma preview is available to demo users only")
+            return principal.tenant_id
+        if principal != "demo":
+            raise HTTPException(403, "Sigma preview is available to demo users only")
+        return principal
+
+    @api.get("/v1/sigma/catalog")
+    async def sigma_catalog(principal: Annotated[str | TenantRecord, Depends(authenticate)]):
+        app_id = sigma_preview_principal(principal)
+        with budgets.check(app_id):
+            try:
+                result = await run_in_threadpool(sigma_catalog_payload)
+            except Exception:
+                raise HTTPException(503, "Sigma source catalog unavailable") from None
+        return JSONResponse(result, headers={"Cache-Control": "no-store"})
+
+    @api.post("/v1/sigma/demo")
+    async def sigma_demo(body: SigmaDemoRequest,
+                         principal: Annotated[str | TenantRecord, Depends(authenticate)]):
+        app_id = sigma_preview_principal(principal)
+        with budgets.check(app_id):
+            counted = False
+            if isinstance(principal, TenantRecord):
+                try:
+                    tenants.store.count_check(principal.tenant_id, usage_month())
+                except UsageLimitReached:
+                    raise HTTPException(429, "Monthly check limit reached") from None
+                counted = True
+            try:
+                result = await run_in_threadpool(sigma_evaluate_fixture, body.rule_id, body.sample)
+            except KeyError:
+                if counted:
+                    tenants.store.release_check(principal.tenant_id, usage_month())
+                raise HTTPException(404, "Sigma rule not found") from None
+            except Exception:
+                if counted:
+                    tenants.store.release_check(principal.tenant_id, usage_month())
+                raise HTTPException(503, "Sigma synthetic evaluation could not complete") from None
+        return JSONResponse(result, headers={"Cache-Control": "no-store"})
 
     async def assess(request: ApiCheckRequest, principal: str | TenantRecord, stage: Stage):
         if isinstance(principal, TenantRecord):
