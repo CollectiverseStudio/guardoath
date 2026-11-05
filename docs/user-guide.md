@@ -1583,9 +1583,13 @@ See [the data-quality guide](data-quality-coverage.md) for ledger, timestamps, g
 | `integrity-v1` | Flag a changed byte, newline or case against approved bytes' SHA-256. | `integrity`: sha256, encoding, max_bytes | Trusted server reference required; matching bytes do not prove safe content or authentic provenance. |
 
 The first three expect their documented JSON envelopes. Integrity hashes the
-exact submitted text's UTF-8 bytes or strict Base64-decoded bytes. Unsupported
-format, invalid records and exhausted limits remain incomplete rather than
-passing. Both stages use the same authenticated check endpoints. See the linked
+exact submitted text's UTF-8 bytes or canonical Base64-decoded bytes. For Base64,
+GuardOath decodes once and requires re-encoding to exactly match the supplied
+standard Base64 text: excess padding (such as `YWJj====`) or nonzero unused pad
+bits (such as `YR==`) cause `integrity_invalid_encoding` and an incomplete,
+fail-closed required check. This is independent of the configured SHA-256 digest.
+Unsupported format, invalid records and exhausted limits remain incomplete rather
+than passing. Both stages use the same authenticated check endpoints. See the linked
 data-quality guide for complete requests and error codes. The integrity demo's
 clean buttons intentionally supply identical bytes on both stages to match the
 single configured digest; the other examples can use distinct stage data.
