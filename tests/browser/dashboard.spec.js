@@ -1288,7 +1288,7 @@ test("only Block holds a message: Allow and Flag findings go through, and change
   await expect(page.locator("#result-status")).toHaveText("Blocked");
   await expect(page.locator("#run-output")).toBeDisabled();
 });
-test("one table grouped by check: checks and rules are alphabetical, a rule is found by name, and rules follow their check on each stage", async ({ page }) => {
+test("one table grouped by check lists and searches rules correctly", async ({ page }) => {
   // Greg 2026-11-03: Email address took a long time to find, and a rule should default to its check's setting.
   // Greg 2026-11-04: the drop-down grid plus a separate rule table was confusing; one table grouped by category.
   await page.goto("/dashboard");
@@ -1318,6 +1318,16 @@ test("one table grouped by check: checks and rules are alphabetical, a rule is f
   expect(shown.length).toBeLessThan(402);
   expect(shown.every(text => text.includes("email"))).toBe(true);
   await expect(page.locator("#tenant-group-timestamps")).toBeHidden();
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+});
+test("rule settings inherit independently on input and output", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo6");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo6");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+  await page.locator("#rule-search").fill("email");
   // Rules follow their check on each stage until they have their own setting.
   const email = page.locator('[id="rule-action-input-pii.email_address"]'), emailOut = page.locator('[id="rule-action-output-pii.email_address"]');
   await expect(email.locator("option").first()).toHaveText("Same as check (Block)");
@@ -1333,6 +1343,18 @@ test("one table grouped by check: checks and rules are alphabetical, a rule is f
   await email.selectOption("allow");
   await expect(page.locator("#tenant-rules-pii")).toHaveText("Hide rules (97 \u00b7 1 with its own setting)");
   await expect(page.locator("#tenant-message")).toHaveText("Unsaved changes. Save checks, or run a check: running saves them first.");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+});
+test("rule setting filters honor either-stage action and redaction constraints", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo6");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo6");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+  await page.locator("#rule-search").fill("email");
+  const email = page.locator('[id="rule-action-input-pii.email_address"]'), emailOut = page.locator('[id="rule-action-output-pii.email_address"]');
+  await email.selectOption("allow");
   // Filter by setting: the setting each rule will use on either stage (its own, or its check's).
   await page.locator("#rule-search").fill("");
   await page.locator("#rule-filter-setting").selectOption("own");
