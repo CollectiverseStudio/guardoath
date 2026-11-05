@@ -1389,7 +1389,9 @@ test("redaction clears incompatible own actions and category filter scopes resul
   await expect(email).toHaveValue("");
   await expect(emailOut.locator("option")).toHaveCount(5);
   await expect(page.locator("#tenant-message")).toContainText("the own input settings of 1 rule were cleared");
-  // The category filter shows that check's rules only.
+  // Clear the prior "email" text filter before selecting the Secrets category;
+  // otherwise the combined filters correctly return no matching rows.
+  await page.locator("#rule-search").fill("");
   await page.locator("#rule-filter-setting").selectOption("");
   await page.locator("#rule-filter-check").selectOption("secrets");
   await expect(page.locator("#check-table .rule-row:visible")).toHaveCount(17);
