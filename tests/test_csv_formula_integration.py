@@ -73,3 +73,12 @@ def test_csv_export_authenticated_api_enforce_and_error_contract():
         assert invalid.json()["evaluation_status"] == "incomplete"
         assert invalid.json()["effective_action"] == "block"
         assert invalid.json()["checker_results"][0]["error_code"] == "csv_invalid_content"
+        # A different key cannot run the export policy or read results.
+        unauthorized = client.post("/v1/checks/output", headers={
+            "Authorization": "Bearer wrong-synthetic-key",
+        }, json={
+            "application_id": "demo", "policy_version": "csv-export-v1",
+            "content": "name,entry\\nA,=1+2", "content_format": "text",
+        })
+        assert unauthorized.status_code in (401, 403)
+        assert "csv_formula.potential_formula" not in unauthorized.text
