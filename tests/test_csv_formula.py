@@ -24,7 +24,7 @@ def check(content, *, mode="enforce", stage=Stage.OUTPUT, fmt="text"):
 ])
 @pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
 def test_formula_triggers_are_blocked_and_original_value_is_not_echoed(cell, stage):
-    response = check('name,amount\nAlice,"' + cell + '"', stage=stage)
+    response = check('name,amount\nAlice,"' + cell.replace('"', '""') + '"', stage=stage)
     assert response.evaluation_status == "complete"
     assert response.recommended_action == "block"
     assert response.effective_action == "block"
