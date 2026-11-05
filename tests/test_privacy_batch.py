@@ -153,9 +153,15 @@ def test_labeled_identifier_withholds_external_adapter(checkers):
 
 
 def test_privacy_group_batch_has_exact_expectations_and_private_reports(checkers):
-    report=asyncio.run(evaluate(load_suite(ROOT/'evals/privacy.json'),
-                               Engine(load_policies(ROOT/'policies/privacy-batch.json'),checkers)))
-    assert report['summary']=={'total':100,'matched':100,'mismatched':0,'incomplete':12,'simulated':0}
+    # 2026-11-04 (Tests #690, Python 3.14): one case came back incomplete instead of matching. The pii scan stops at the
+    # policy's timeout_ms (500 in policies/privacy-batch.json), so a slow CI runner can end a scan early. This test
+    # checks expected outcomes, not timing, so it runs the same policies with the largest allowed timeout (5,000 ms).
+    # None of the 12 expected-incomplete cases depends on time: they are invalid JSON and field length/count limits.
+    policies=[policy.model_copy(update={'timeout_ms':5000}) for policy in load_policies(ROOT/'policies/privacy-batch.json')]
+    report=asyncio.run(evaluate(load_suite(ROOT/'evals/privacy.json'),Engine(policies,checkers)))
+    # On a mismatch, name the case (ids, differing fields and checker statuses only; never content).
+    mismatched=[(row['case_id'],row['differences'],row['checker_statuses']) for row in report['cases'] if not row['matched']]
+    assert report['summary']=={'total':100,'matched':100,'mismatched':0,'incomplete':12,'simulated':0},mismatched
     for value in ['A1234','M000123','jane@example.com','1980-02-29','76543210']:
         assert value not in json.dumps(report)
 

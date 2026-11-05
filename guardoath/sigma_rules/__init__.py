@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from collections.abc import Mapping
 from copy import deepcopy
 import re
-from .matcher import match_detection, UnsupportedSigmaRule
+from .matcher import match_detection, validate_detection, UnsupportedSigmaRule
 from .bounded_regex import SigmaEvaluationError, SigmaRegexTimeout
 from .budgets import SigmaBudgetExceeded
 
@@ -64,9 +64,9 @@ def import_rule(data: Mapping[str, object], source_path: str, *,
     declared_license = data.get("license", "DRL-1.1")
     if declared_license not in ("DRL-1.1", LICENSE):
         raise UnsupportedSigmaRule("unsupported rule license")
-    # Validate condition support with an empty event; semantic fidelity still
-    # requires per-rule positive and negative fixtures.
-    match_detection(detection, {})
+    # Validate condition support (structure only, no time limit: matcher.validate_detection); semantic fidelity
+    # still requires per-rule positive and negative fixtures.
+    validate_detection(detection)
     return ImportedRule(
         rule_id=data["id"], title=data["title"], author=data["author"],
         source_url=(SOURCE_PREFIX if source_revision is None else

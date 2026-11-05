@@ -12,7 +12,10 @@ from .matcher import UnsupportedSigmaRule, match_selection
 TOKEN = re.compile(r"\s*(\(|\)|1(?=\s+of\b)|[A-Za-z_][A-Za-z0-9_*.-]*)")
 
 def evaluate_condition(condition: str, selections: Mapping[str, object],
-                       event: Mapping[str, object]) -> bool:
+                       event: Mapping[str, object], *, match=None) -> bool:
+    """match (default match_selection) decides each selection; rule import passes one that matches nothing, so only
+    the structure of the condition is checked (matcher.validate_detection)."""
+    test = match_selection if match is None else match
     if not isinstance(condition, str) or len(condition) > 2048:
         raise UnsupportedSigmaRule("invalid condition")
     tokens = []
@@ -53,11 +56,11 @@ def evaluate_condition(condition: str, selections: Mapping[str, object],
             names = [name for name in selections if fnmatch.fnmatchcase(name, pattern)]
             if not names:
                 raise UnsupportedSigmaRule("selector matches no fields")
-            results = [match_selection(selections[name], event) for name in names]
+            results = [test(selections[name], event) for name in names]
             return all(results) if word == "all" else any(results)
         if word not in selections:
             raise UnsupportedSigmaRule("unknown selection")
-        return match_selection(selections[word], event)
+        return test(selections[word], event)
     def conjunction(depth: int):
         nonlocal index
         result = atom(depth)

@@ -26,6 +26,16 @@ def jwt_sample():
 
 @pytest.fixture
 def engine():
+    # Expectation tests check what is found, not timing: they run with the largest allowed timeout (5,000 ms), so a slow
+    # CI runner cannot end the scan early (2026-11-04: Python 3.11 CI, a look-alike came back Block because the check
+    # did not finish). The 500 ms limit of policies/secrets.json is tested with file_limit_engine below.
+    return Engine([policy.model_copy(update={"timeout_ms": 5000}) for policy in load_policies("policies/secrets.json")],
+                  default_checkers())
+
+
+@pytest.fixture
+def file_limit_engine():
+    """The policies exactly as shipped (timeout_ms 500), for the tests of the time limit itself."""
     return Engine(load_policies("policies/secrets.json"), default_checkers())
 
 
@@ -100,16 +110,16 @@ def test_no_verification_or_network(monkeypatch):
     assert evaluate(engine, "AK" + "IA" + "A" * 16).findings
 
 
-def test_timeout_is_incomplete_not_a_pass(engine, monkeypatch):
+def test_timeout_is_incomplete_not_a_pass(file_limit_engine, monkeypatch):
     import guardoath.secrets_check
     values = iter([0, 1])
     monkeypatch.setattr(guardoath.secrets_check, "monotonic", lambda:next(values))
-    result = evaluate(engine, "hello")
+    result = evaluate(file_limit_engine, "hello")
     assert result.evaluation_status == "incomplete"
     assert result.checker_results[0].error_code == "checker_timeout"
 
 
-def test_scan_deadline_is_the_policy_timeout(engine, monkeypatch):
+def test_scan_deadline_is_the_policy_timeout(file_limit_engine, monkeypatch):
     # policies/secrets.json sets timeout_ms 500. A scan that has used 0.3 s still completes
     # (the old fixed 0.2 s limit failed it); one that has used 0.6 s stops as a timeout.
     import guardoath.secrets_check
@@ -117,7 +127,7 @@ def test_scan_deadline_is_the_policy_timeout(engine, monkeypatch):
     for elapsed, status in [(0.3, "flagged"), (0.6, "error")]:
         calls = iter([0.0])
         monkeypatch.setattr(guardoath.secrets_check, "monotonic", lambda: next(calls, elapsed))
-        result = evaluate(engine, github_sample())
+        result = evaluate(file_limit_engine, github_sample())
         assert result.checker_results[0].status == status, elapsed
         if status == "error":
             assert result.evaluation_status == "incomplete"

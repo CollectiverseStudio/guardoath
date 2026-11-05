@@ -118,9 +118,8 @@ def match_detection(detection: Mapping[str, object], event: Mapping[str, object]
     with evaluation_budget():
         return _match_detection(detection, event)
 
-def _match_detection(detection: Mapping[str, object], event: Mapping[str, object]) -> bool:
-    if not isinstance(detection, Mapping) or not isinstance(event, Mapping):
-        raise UnsupportedSigmaRule("detection and event must be mappings")
+def _detection_parts(detection: Mapping[str, object]) -> tuple[str, dict[str, object]]:
+    """Check every selection and return the condition and the selections. Matches nothing."""
     for name, selection in detection.items():
         if not isinstance(name, str) or not name:
             raise UnsupportedSigmaRule("invalid selection name")
@@ -131,6 +130,28 @@ def _match_detection(detection: Mapping[str, object], event: Mapping[str, object
     condition = detection.get("condition")
     if not isinstance(condition, str):
         raise UnsupportedSigmaRule("missing condition")
-    selections = {k: v for k, v in detection.items() if k != "condition"}
+    return condition, {k: v for k, v in detection.items() if k != "condition"}
+
+def _match_detection(detection: Mapping[str, object], event: Mapping[str, object]) -> bool:
+    if not isinstance(detection, Mapping) or not isinstance(event, Mapping):
+        raise UnsupportedSigmaRule("detection and event must be mappings")
+    condition, selections = _detection_parts(detection)
     from .conditions import evaluate_condition
     return evaluate_condition(condition, selections, event)
+
+def validate_detection(detection: object) -> None:
+    """Structure only, for importing a rule: every selection and the whole condition are checked and nothing is
+    matched, so no evaluation time limit applies and the result never depends on how busy the machine is.
+
+    2026-11-04: importing used to evaluate the condition against an empty event under the 1-second evaluation
+    limit, so a valid rule was refused when the machine paused (local test run). With an empty event every selection
+    evaluates to False (no value is a string), so matching nothing parses exactly the same condition and raises
+    exactly the same errors. Evaluating an event (match_detection) keeps the time limit."""
+    if not isinstance(detection, Mapping):
+        raise UnsupportedSigmaRule("detection and event must be mappings")
+    condition, selections = _detection_parts(detection)
+    from .conditions import evaluate_condition
+    evaluate_condition(condition, selections, {}, match=_no_match)
+
+def _no_match(selection: object, event: Mapping[str, object]) -> bool:
+    return False
