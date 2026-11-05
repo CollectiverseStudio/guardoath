@@ -140,7 +140,7 @@ keeps working alongside it.
 - **Dashboard:** when demo users are on, the dashboard shows **Or try a demo user**. Choosing one and
   selecting **Get demo API key** shows the key and connects with it. The check profile drop-down lists every
   profile the tenant can use and starts on its default profile. **Default profile** with **Save default
-  profile** changes the default. The checks panel follows the selected profile: for `tenant` it lists all 17
+  profile** changes the default. The checks panel follows the selected profile: for `tenant` it lists all 18
   check fields (Off, Block, Flag, Allow, and Redact for pii) and **Save checks** saves the changed fields; for
   an example profile it shows that profile's checks and their input and output actions, which cannot be
   changed. **Reset to defaults** (demo users) restores the demo values. Paid outside checks cannot be turned
@@ -176,7 +176,7 @@ that the guide has a section for every control. Maturity is reported per control
 
 ## Per-rule settings
 
-A check runs many rules. 397 catalog rules can be set one by one today (2026-11-04), plus each record's own
+A check runs many rules. 398 catalog rules can be set one by one today (updated 2026-11-05), plus each record's own
 comparisons and required sections (below):
 
 | Check | Rules |
@@ -297,3 +297,8 @@ run checks, so a leaked production key cannot change settings or keys.
 - Demo users have no accounts. Their demo key still changes their own demo record.
 - Settings: `GUARDOATH_COGNITO_POOL_ID`, `GUARDOATH_COGNITO_CLIENT_ID`, `GUARDOATH_COGNITO_DOMAIN`,
   `GUARDOATH_COGNITO_REDIRECT_URI` (all four or none). The deploy template sets them.
+
+
+### CSV formula protection in the tenant record
+
+`csv_formula` is part of the **same tenant record and revision-checked Save checks API** as every other text check. It has separate `input_check_csv_formula` and `output_check_csv_formula` actions; both are Off by default. One static rule, `csv_formula.potential_formula`, supports independent per-stage overrides in `input_rule_actions` and `output_rule_actions`. The dashboard lists this check in the unified rule table, exposes its input/output settings and offers an unsafe CSV example and benign look-alike in the existing example picker. The selected tenant record—not a standalone evaluation profile—controls runtime behavior through `/v1/checks/input` and `/v1/checks/output`. A CSV should be submitted with `content_format: "text"`; do not enable this check on ordinary chat conversations. Saved local regression fixtures live in `evals/csv-export.json` and deployment remains separately gated.
