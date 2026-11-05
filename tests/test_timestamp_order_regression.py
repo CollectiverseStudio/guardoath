@@ -123,7 +123,7 @@ def test_equal_instants_are_allowed_only_by_opt_in_policy(stage):
 def test_configured_sample_budget_has_exact_boundary(stage, count, expected_status, expected_error):
     from datetime import datetime, timedelta, timezone
     origin = datetime(2026, 11, 4, 0, 0, tzinfo=timezone.utc)
-    document = samples(*(origin + timedelta(seconds=n)).isoformat().replace("+00:00", "Z")
+    document = samples(*((origin + timedelta(seconds=n)).isoformat().replace("+00:00", "Z")
                          for n in range(count)))
     response = assess(document, stage)
     assert response.evaluation_status == ("complete" if expected_error is None else "incomplete")
