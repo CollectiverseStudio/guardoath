@@ -43,6 +43,8 @@ def test_csv_check_is_in_unified_rule_catalog_and_off_in_demo_defaults():
     assert control["field"] == "input_check_csv_formula"
     assert control["output_field"] == "output_check_csv_formula"
     assert control["rule_count"] == 1
+    assert control["control_id"] == "csv_formula"
+    assert next(domain["domain_id"] for domain in registry_payload(default_checkers())["domains"] if control in domain["controls"]) == "file_security"
     assert control["maturity"]["integrated"] is True
     assert control["external_provider"] is False
     assert control["rules"][0]["rule_id"] == "csv_formula.potential_formula"
