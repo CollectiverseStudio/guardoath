@@ -45,7 +45,7 @@ from guardoath.rule_catalog import RULE_ID_PATTERN, RULES
 
 # Every check a tenant can turn on. The simulated "safety" and "bias" checkers are test fixtures only.
 CHECK_IDS = ("pii", "encoded_pii", "secrets", "text_security", "lexical_guards", "schema", "cross_field", "completeness",
-             "matched_outcomes", "evidence", "tool_calls", "ledger", "timestamps", "graph", "integrity",
+             "matched_outcomes", "evidence", "tool_calls", "ledger", "timestamps", "graph", "integrity", "csv_formula",
              "content_safety", "azure_prompt_shields")
 # Checks that call a paid outside provider. They never run for demo users.
 EXTERNAL_CHECK_IDS = frozenset({"content_safety", "azure_prompt_shields"})
@@ -132,6 +132,7 @@ class TenantRecord(Contract):
     input_check_timestamps: Action | None = None
     input_check_graph: Action | None = None
     input_check_integrity: Action | None = None
+    input_check_csv_formula: Action | None = None
     input_check_content_safety: Action | None = None
     input_check_azure_prompt_shields: Action | None = None
     output_check_pii: Action | None = None
@@ -149,6 +150,7 @@ class TenantRecord(Contract):
     output_check_timestamps: Action | None = None
     output_check_graph: Action | None = None
     output_check_integrity: Action | None = None
+    output_check_csv_formula: Action | None = None
     output_check_content_safety: Action | None = None
     # Check settings (same names and rules as Policy)
     input_schema: dict[str, Any] | None = None
