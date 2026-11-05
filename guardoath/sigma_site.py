@@ -23,6 +23,10 @@ def _catalog():
     return {row.rule_id: row for row in evidence}
 
 
+def sigma_rule_ids():
+    return frozenset(_catalog())
+
+
 @lru_cache(maxsize=1)
 def _routing():
     return load_routing_table()  # Re-verifies shipped sources and routing.
