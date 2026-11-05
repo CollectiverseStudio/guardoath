@@ -71,6 +71,38 @@ window.sigmaTenant = (() => {
       const source = document.createElement("small");
       source.textContent = " · " + rule.product + " / " + rule.category;
       use.append(source);
+      const controls = document.createElement("div");
+      controls.className = "sigma-sample-controls";
+      const result = document.createElement("span");
+      result.setAttribute("role", "status");
+      result.className = "hint";
+      for (const [sample, label] of [["positive", "Test match"], ["lookalike", "Test look-alike"]]) {
+        const button = document.createElement("button");
+        button.className = "secondary";
+        button.type = "button";
+        button.textContent = label;
+        button.addEventListener("click", async () => {
+          if (delta() !== null) { result.textContent = "Save the tenant rule settings before testing."; return; }
+          if (!saved[rule.rule_id]) { result.textContent = "This tenant rule is Off. Enable and save it first."; return; }
+          button.disabled = true;
+          result.textContent = "Running bundled synthetic " + sample + " event...";
+          try {
+            const content = JSON.stringify({rule_id: rule.rule_id, sample});
+            const response = await fetcher("/v1/sigma/demo", {
+              method: "POST", cache: "no-store", headers: await makeHeaders(token, content), body: content
+            });
+            if (!response.ok) throw new Error("Test unavailable (HTTP " + response.status + ")");
+            const data = await response.json();
+            result.textContent = (data.matched ? "Matched" : "No match") +
+              " · Recommended " + data.recommended_action + " · Effective " + data.effective_action +
+              " · Bundled synthetic event only";
+          } catch (error) { result.textContent = error.message || "Synthetic test could not complete."; }
+          finally { button.disabled = false; }
+        });
+        controls.append(button);
+      }
+      controls.append(result);
+      use.append(controls);
       rows.push({row, query: [rule.title, rule.rule_id, rule.use_case, rule.category].join(" ").toLowerCase()});
     }
     const update = () => {
