@@ -310,6 +310,7 @@ function renderTenant() {
   }
   const wrap = document.createElement("div"); wrap.className = "rule-table-wrap"; wrap.append(table);
   box.append(filters, count, wrap);
+  window.sigmaTenant.render(box, tenant, key, requestHeaders, send, showUnsaved);
   for (const id of Object.keys(tenant.input_checks)) { updateFormatNote(id); showCheckEffect(id); }
   buildRuleFinder();
   $("tenant-save").disabled = !own;
@@ -461,6 +462,8 @@ function pendingChanges() {
   for (const stage of ["input", "output"]) {
     if (sortedEntries(ruleEdits[stage]) !== sortedEntries(tenant[stage + "_rule_actions"])) changes[stage + "_rule_actions"] = {...ruleEdits[stage]};
   }
+  const sigmaChanges = window.sigmaTenant.delta();
+  if (sigmaChanges !== null) changes.sigma_rule_actions = sigmaChanges;
   return changes;
 }
 $("tenant-save").addEventListener("click", () => {
