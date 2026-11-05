@@ -84,7 +84,7 @@ RULE_ACTION_FIELDS = (rule_actions_field(Stage.INPUT), rule_actions_field(Stage.
 # Field names of records stored before 2026-11-04 (one per check, for both stages); converted when read.
 LEGACY_FIELDS = frozenset({*("check_" + check_id for check_id in CHECK_IDS), "rule_actions"})
 # Fields a tenant (or a demo visitor, on a demo record) may change. Account fields are admin-only.
-EDITABLE_FIELDS = frozenset({"mode", "timeout_ms", "failure_action", *RULE_ACTION_FIELDS, *CHECK_FIELDS, *SETTING_FIELDS})
+EDITABLE_FIELDS = frozenset({"mode", "timeout_ms", "failure_action", "sigma_rule_actions", *RULE_ACTION_FIELDS, *CHECK_FIELDS, *SETTING_FIELDS})
 TENANT_POLICY_VERSION = "tenant"
 # The retired record field that named a default example profile (removed 2026-11-02).
 RETIRED_PROFILE_FIELD = "default_profile"
@@ -173,6 +173,8 @@ class TenantRecord(Contract):
     # instead of its check's action for that stage.
     input_rule_actions: RuleActions = Field(default_factory=dict, max_length=len(RULES) + 100)
     output_rule_actions: RuleActions = Field(default_factory=dict, max_length=len(RULES) + 100)
+    # Independent Windows event rule settings; absent means Off. Never run on AI text.
+    sigma_rule_actions: dict[str, Literal["allow", "flag", "block"]] = Field(default_factory=dict, max_length=228)
 
     @model_validator(mode="before")
     @classmethod
@@ -246,6 +248,10 @@ class TenantRecord(Contract):
                 raise ValueError("Demo users cannot run checks that call a paid outside provider")
             if self.overage != "block":
                 raise ValueError("Demo users have a hard monthly limit")
+        if self.sigma_rule_actions:
+            from guardoath.sigma_site import sigma_rule_ids
+            if any(rule_id not in sigma_rule_ids() for rule_id in self.sigma_rule_actions):
+                raise ValueError("Unknown Sigma event rule id")
         # Field-level rules of every stored setting, including settings of checks that are off.
         Policy(application_id=self.tenant_id, version=TENANT_POLICY_VERSION, rules=(),
                **{name: getattr(self, name) for name in SETTING_FIELDS})
