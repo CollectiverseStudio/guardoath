@@ -327,8 +327,16 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                     raise HTTPException(429, "Monthly check limit reached") from None
                 counted = True
             try:
-                result = await run_in_threadpool(sigma_evaluate_fixture, body.rule_id, body.sample)
-                recommendation = selected_action if result["matched"] else "allow"
+                result = await run_in_threadpool(
+                    sigma_evaluate_fixture, body.rule_id, body.sample,
+                    tuple(current.sigma_rule_actions),
+                )
+                # Return EVERY matching configured event rule; the strongest tenant
+                # action wins, as for multiple AI validation findings.
+                priority = {"allow": 0, "flag": 1, "block": 2}
+                actions = [current.sigma_rule_actions[match["rule_id"]]
+                           for match in result["findings"]]
+                recommendation = max(actions, key=priority.__getitem__, default="allow")
                 result["recommended_action"] = recommendation
                 result["effective_action"] = ("allow" if current.mode == "observe" else recommendation)
                 result["tenant_policy_revision"] = current.revision
