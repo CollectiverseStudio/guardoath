@@ -86,3 +86,41 @@ def test_unknown_label_ends_previous_body_and_cannot_rescue_short_section(stage)
     assert {f.rule_id for f in response.findings} == expected
     assert response.recommended_action == ("flag" if stage == Stage.INPUT else "block")
     assert response.effective_action == response.recommended_action
+
+
+@pytest.mark.parametrize("stage,content", [
+    (Stage.INPUT, "Summary: a"),
+    (Stage.INPUT, "Summary:\n  a"),
+    (Stage.OUTPUT, "Summary: X\nNext steps: abcde"),
+    (Stage.OUTPUT, "Summary: X\nNext steps: a\tb c d e"),
+    (Stage.OUTPUT, "Summary: X\nNext steps: ab\n  cde"),
+    (Stage.OUTPUT, "summary: X\nNEXT STEPS: abcde"),
+])
+def test_section_minimum_accepts_exact_boundary_and_multiline(stage, content):
+    response = assess(content, stage)
+    assert response.evaluation_status == "complete"
+    assert response.recommended_action == "allow"
+    assert response.effective_action == "allow"
+    assert not response.findings
+
+
+@pytest.mark.parametrize("stage,content,expected", [
+    (Stage.INPUT, "Summary:  ", {"completeness.request_summary"}),
+    (Stage.INPUT, "Summary:  \n  ", {"completeness.request_summary"}),
+    (Stage.INPUT, "Summary: a\nsummary: b", {"completeness.request_summary"}),
+    (Stage.OUTPUT, "Summary: X\nNext steps: abcd", {"completeness.next_steps"}),
+    (Stage.OUTPUT, "Summary: X\nNext steps: a\tb c d", {"completeness.next_steps"}),
+    (Stage.OUTPUT, "Summary: X\nNext steps:\nOther: abcdefgh", {"completeness.next_steps"}),
+    (Stage.OUTPUT, "Summary: X\nNext steps: abcde\nNEXT STEPS: abcde", {"completeness.next_steps"}),
+    (Stage.OUTPUT, "Summary: X\nSUMMARY: Y\nNext steps: abcde", {"completeness.response_summary"}),
+    (Stage.OUTPUT, "Summary: X\nNext steps:  ", {"completeness.next_steps"}),
+    (Stage.OUTPUT, "Other: value", {"completeness.response_summary", "completeness.next_steps"}),
+])
+def test_case_insensitive_duplicate_and_whitespace_boundaries(stage, content, expected):
+    response = assess(content, stage)
+    assert response.evaluation_status == "complete"
+    assert {finding.rule_id for finding in response.findings} == expected
+    assert len(response.findings) == len(expected)
+    assert response.recommended_action == ("flag" if stage == Stage.INPUT else "block")
+    assert response.effective_action == response.recommended_action
+    assert content not in [finding.explanation for finding in response.findings]
