@@ -287,13 +287,10 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         raise HTTPException(401, "Invalid application credential", headers={"WWW-Authenticate": "Bearer"})
 
     def sigma_preview_principal(principal: str | TenantRecord) -> str:
-        # This is an explicitly isolated demo, NOT a production tenant control.
         if isinstance(principal, TenantRecord):
-            if not principal.demo:
-                raise HTTPException(403, "Sigma preview is available to demo users only")
             return principal.tenant_id
         if principal != "demo":
-            raise HTTPException(403, "Sigma preview is available to demo users only")
+            raise HTTPException(403, "Sigma preview needs a tenant or demo credential")
         return principal
 
     @api.get("/v1/sigma/catalog")
@@ -310,6 +307,17 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     async def sigma_demo(body: SigmaDemoRequest,
                          principal: Annotated[str | TenantRecord, Depends(authenticate)]):
         app_id = sigma_preview_principal(principal)
+        # A tenant record is authoritative; missing rule action means OFF.
+        # Legacy local developer keys may view the source catalog but cannot evaluate
+        # tenant-selected event rules on behalf of another tenant.
+        if not isinstance(principal, TenantRecord):
+            raise HTTPException(403, "A tenant API key is required for Sigma event rules")
+        current = tenants.store.get(principal.tenant_id)
+        if current is None or current.status != "active":
+            raise HTTPException(403, "Tenant record is not active")
+        selected_action = current.sigma_rule_actions.get(body.rule_id)
+        if selected_action is None:
+            raise HTTPException(403, "Sigma event rule is off for this tenant")
         with budgets.check(app_id):
             counted = False
             if isinstance(principal, TenantRecord):
@@ -320,6 +328,12 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 counted = True
             try:
                 result = await run_in_threadpool(sigma_evaluate_fixture, body.rule_id, body.sample)
+                recommendation = selected_action if result["matched"] else "allow"
+                result["recommended_action"] = recommendation
+                result["effective_action"] = ("allow" if current.mode == "observe" else recommendation)
+                result["tenant_policy_revision"] = current.revision
+                result["tenant_id"] = current.tenant_id
+                result["rule_configuration_source"] = "tenant_record"
             except KeyError:
                 if counted:
                     tenants.store.release_check(principal.tenant_id, usage_month())
@@ -388,7 +402,8 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 "input_rule_actions": dict(sorted(current.input_rule_actions.items())),
                 "output_rule_actions": dict(sorted(current.output_rule_actions.items())),
                 # This record's own rules (its field comparisons and required sections), for this tenant only.
-                "record_rules": list(record_rules(current).values())}
+                "record_rules": list(record_rules(current).values()),
+                 "sigma_rule_actions": dict(sorted(current.sigma_rule_actions.items()))}
 
     def tenant_only(principal: str | TenantRecord) -> TenantRecord:
         if not isinstance(principal, TenantRecord):
