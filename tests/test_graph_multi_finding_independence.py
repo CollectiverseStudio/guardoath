@@ -131,3 +131,45 @@ def test_self_loop_and_diamond_dag_are_not_confused(stage, action, document, exp
     assert {finding.rule_id for finding in response.findings} == expected
     assert response.recommended_action == (action if expected else "allow")
     assert response.effective_action == (action if expected else "allow")
+
+
+def assess_raw(content, stage, *, content_format="json"):
+    """Exercise strict JSON and format gating without normalizing the submitted bytes."""
+    return asyncio.run(ENGINE.check(
+        CheckRequest(
+            application_id="demo",
+            policy_version="graph-enforce-v1",
+            content=content,
+            content_format=content_format,
+        ),
+        stage,
+    ))
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+@pytest.mark.parametrize("content", [
+    '{"nodes":["A"],"nodes":["B"],"edges":[]}',
+    '{"nodes":["A"],"edges":[["A","B"]]',
+    '{"nodes":["A"],"edges":[["A","A"]],"comment":NaN}',
+    '{"nodes":["A"],"edges":[["A",true]]}',
+    '{"nodes":["A"],"edges":[["A",null]]}',
+])
+def test_invalid_graph_documents_fail_closed_without_raw_value_leak(stage, content):
+    response = assess_raw(content, stage)
+    assert response.evaluation_status == "incomplete"
+    assert response.recommended_action == "block"
+    assert response.effective_action == "block"
+    assert not response.findings
+    assert any(c.checker_id == "graph" and c.status == "error"
+               and c.error_code == "graph_invalid_document" for c in response.checker_results)
+    assert content not in response.model_dump_json()
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_text_instead_of_json_is_not_a_successful_graph_validation(stage):
+    response = assess_raw("nodes: A, B; edges: A -> B", stage, content_format="text")
+    assert response.evaluation_status == "incomplete"
+    assert response.recommended_action == "block"
+    assert response.effective_action == "block"
+    assert any(c.checker_id == "graph" and c.status == "skipped"
+               and c.error_code == "graph_json_required" for c in response.checker_results)
