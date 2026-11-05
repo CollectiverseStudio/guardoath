@@ -62,7 +62,7 @@ def cases(kind):
 
 def test_every_tenant_record_check_is_one_control():
     assert sorted(item.control_id for item in CONTROLS) == sorted(CHECK_IDS)
-    assert len(CONTROLS) == len(set(item.control_id for item in CONTROLS)) == 17
+    assert len(CONTROLS) == len(set(item.control_id for item in CONTROLS)) == 18
     for item in CONTROLS:
         assert item.field in CHECK_FIELDS and item.field in TenantRecord.model_fields
         assert control(item.control_id) is item
