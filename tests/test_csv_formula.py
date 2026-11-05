@@ -42,6 +42,10 @@ def test_benign_and_escaped_values_pass(value):
     assert result.evaluation_status == "complete"
     assert not result.findings
     assert result.effective_action == "allow"
+    structure = next(group for group in result.groups if group.group_id == "structure")
+    assert structure.status == "passed"
+    assert "csv_formula" in structure.checker_ids
+    assert all(group.group_id != "custom" for group in result.groups)
 
 
 def test_observe_reports_without_enforcing():
