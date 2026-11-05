@@ -119,3 +119,33 @@ def test_ledger_wrong_format_is_incomplete_not_safe(stage):
     assert response.effective_action == "block"
     assert any(c.checker_id == "ledger" and c.status == "skipped"
                and c.error_code == "ledger_json_required" for c in response.checker_results)
+
+
+def entries_at_limit(extra=False):
+    """A balanced 100-row ledger, optionally with one extra debit row."""
+    rows = [(f"d{i:03d}", "debit", "1.00") for i in range(50)]
+    rows += [(f"c{i:03d}", "credit", "1.00") for i in range(50)]
+    if extra:
+        rows.append(("over_limit", "debit", "1.00"))
+    return ledger(*rows)
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+@pytest.mark.parametrize("over_limit", [False, True])
+def test_exact_configured_ledger_entry_limit(stage, over_limit):
+    response = assess(entries_at_limit(over_limit), stage)
+    if over_limit:
+        assert response.evaluation_status == "incomplete"
+        assert response.recommended_action == "block"
+        assert response.effective_action == "block"
+        assert not response.findings
+        assert any(c.checker_id == "ledger" and c.status == "error"
+                   and c.error_code == "ledger_entry_limit" for c in response.checker_results)
+    else:
+        assert response.evaluation_status == "complete"
+        assert not response.findings
+        assert response.recommended_action == "allow"
+        assert response.effective_action == "allow"
+        assert any(c.checker_id == "ledger" and c.status == "passed"
+                   for c in response.checker_results)
+    assert "over_limit" not in response.model_dump_json()
