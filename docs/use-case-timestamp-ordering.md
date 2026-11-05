@@ -41,3 +41,20 @@ The `value` field must be a JSON number (not Boolean); the checker does not inte
 - `docs/data-quality-coverage.md` documents the base check, supported syntax and bounded resource policy.
 
 The regression file must pass its focused tests and the exact-implementation 13/13 repository Tests plus 3/3 CodeQL before any release claim. No new checker, API, tenant schema, dashboard, CI, paid service or AWS deployment was introduced by this test batch.
+
+
+## Additional accepted candidate regressions — exact boundary and format restrictions
+
+The subsequent Timestamp regression batch adds **14 parametrized test executions** (both stages) in `tests/test_timestamp_order_regression.py`:
+
+| Contract | Synthetic case | Expected behavior |
+|---|---|---|
+| Explicit opt-in for equivalent instants | `timestamps-equal-v1` permits two differently expressed offsets for one UTC instant | Complete Allow in observe mode, no finding |
+| Exact policy sample maximum | 200 strictly increasing synthetic samples, `timestamps-enforce-v1` max_samples=200 | Complete Allow |
+| One beyond policy maximum | 201 otherwise valid samples | Incomplete / `timestamps_sample_limit` / Block |
+| No timezone offset | `2026-11-04T09:00:00` | Incomplete / `timestamps_invalid_document` / Block |
+| Unknown UTC offset | `2026-11-04T09:00:00-00:00` | Incomplete / `timestamps_invalid_document` / Block |
+| Impossible timezone offset | `2026-11-04T09:00:00+25:00` | Incomplete / `timestamps_invalid_document` / Block |
+| Unsupported fractional precision | Seven fractional second digits | Incomplete / `timestamps_invalid_document` / Block |
+
+The 200-sample limit is a **configured local data-quality resource bound** and must not be confused with the disallowed arbitrary 50-comparisons-per-tenant product ceiling in the unrelated Field Comparisons category. Tests preserve the existing strict time grammar, fail-closed contract and no-raw-input response privacy. These additional cases are not described as CI-passing until the exact correction commit completes all required checks.
