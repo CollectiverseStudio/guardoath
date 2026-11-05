@@ -1,0 +1,17 @@
+/* Event-rule evidence only: deliberately not part of chat validation layout. */
+.sigma-main{max-width:1080px}.sigma-panel{margin:20px 0}.sigma-panel .hint,.sigma-footer{color:#61718a}
+.sigma-inline{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.sigma-inline label{margin:0}.sigma-inline input{flex:1;min-width:220px}
+.sigma-details{padding:14px;background:#f6f8fc;border:1px solid #dfe5ee;border-radius:8px;margin:15px 0}
+.sigma-details a{color:#3156ad}.sigma-details p{overflow-wrap:anywhere}
+.sigma-actions{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+.sigma-result{white-space:pre-wrap;overflow-wrap:anywhere;font:13px ui-monospace,monospace;background:#edf2f9;padding:13px;border-radius:7px}
+.sigma-sample-controls{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+.sigma-sample-controls button{font-size:11px;padding:5px 8px}
+.sigma-sample-controls .hint{width:100%;margin:3px 0;font-size:11px}
+.sigma-tenant-group{margin:20px 0;padding:15px;border:1px solid #dfe5ee;border-radius:9px;background:#fff}
+.sigma-tenant-group>summary{font-weight:700;cursor:pointer}
+.sigma-tenant-group .rule-table td{padding:8px;vertical-align:top}
+.sigma-tenant-group .rule-table small{display:block;color:#69778a;margin-top:4px}
+.sigma-tenant-group .rule-table select{min-width:110px}
+.sigma-tenant-group .rule-table tr[hidden]{display:none}
