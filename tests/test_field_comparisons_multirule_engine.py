@@ -183,3 +183,150 @@ def test_shared_engine_tenant_isolation_during_concurrent_requests(stage):
                and result.recommended_action == Action.BLOCK for result in first)
     assert all(result.findings == () and result.recommended_action == Action.ALLOW
                for result in second)
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_nested_pointer_chain_reports_all_affected_original_rules(stage):
+    rules = (
+        FieldComparison(rule_id="ordered", left="/orders/shipped", right="/orders/requested", operator="le"),
+        FieldComparison(rule_id="delivered", left="/orders/delivered", right="/orders/shipped", operator="le"),
+    )
+    benign = {"orders": {"requested": 10, "shipped": 8, "delivered": 6}}
+    assert run(benign, comparisons=rules, stage=stage).findings == ()
+    wrong = {"orders": {"requested": 7, "shipped": 8, "delivered": 9}}
+    result = run(wrong, comparisons=rules, stage=stage)
+    assert [finding.rule_id for finding in result.findings] == [
+        "business.ordered", "business.delivered"
+    ]
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_json_pointer_escaping_with_multi_rule_overlap(stage):
+    rules = (
+        FieldComparison(rule_id="slash", left="/a~1b", right="/limit", operator="le"),
+        FieldComparison(rule_id="tilde", left="/c~0d", right="/a~1b", operator="le"),
+    )
+    benign = {"a/b": 5, "c~d": 3, "limit": 10}
+    assert run(benign, comparisons=rules, stage=stage).findings == ()
+    wrong = {"a/b": 12, "c~d": 13, "limit": 10}
+    result = run(wrong, comparisons=rules, stage=stage)
+    assert {finding.rule_id for finding in result.findings} == {"business.slash", "business.tilde"}
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_shared_number_and_date_pointer_is_invalid_for_only_one_type(stage):
+    rules = (
+        FieldComparison(rule_id="number", left="/shared", right="/num_limit",
+                        operator="le", value_type="number"),
+        FieldComparison(rule_id="date", left="/shared", right="/date_limit",
+                        operator="le", value_type="date"),
+    )
+    numeric = {"shared": 3, "num_limit": 4, "date_limit": "2026-11-30"}
+    date_value = {"shared": "2026-11-03", "num_limit": 4, "date_limit": "2026-11-30"}
+    for payload, expected in ((numeric, "business.date"), (date_value, "business.number")):
+        result = run(payload, comparisons=rules, stage=stage)
+        assert {finding.rule_id for finding in result.findings} == {expected}
+        assert result.evaluation_status == "complete"
+        assert result.recommended_action == Action.BLOCK
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_equal_opposite_pointer_constraints_preserve_both_findings(stage):
+    rules = (
+        FieldComparison(rule_id="same", left="/a", right="/b", operator="eq"),
+        FieldComparison(rule_id="different", left="/a", right="/b", operator="ne"),
+    )
+    for payload in ({"a": 1, "b": 1}, {"a": 1, "b": 2}):
+        result = run(payload, comparisons=rules, stage=stage)
+        assert len(result.findings) == 1
+        assert {finding.rule_id for finding in result.findings} == ({
+            "business.different"} if payload["a"] == payload["b"] else {"business.same"})
+        assert result.recommended_action == Action.BLOCK
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+@pytest.mark.parametrize("operator,accepted,rejected", [
+    ("lt", 9, 10),
+    ("le", 10, 11),
+    ("eq", 10, 9),
+    ("ge", 10, 9),
+    ("gt", 11, 10),
+    ("ne", 11, 10),
+])
+def test_all_operators_respect_exact_boundary_in_a_two_rule_portfolio(stage, operator, accepted, rejected):
+    """The selected rule must not cause a benign companion rule to fail."""
+    rules = (
+        FieldComparison(rule_id="boundary", left="/value", right="/threshold", operator=operator),
+        FieldComparison(rule_id="companion", left="/quantity", right="/quantity_limit", operator="le"),
+    )
+    payload = {"value": accepted, "threshold": 10, "quantity": 3, "quantity_limit": 10}
+    clean = run(payload, comparisons=rules, stage=stage)
+    assert clean.evaluation_status == "complete"
+    assert clean.findings == () and clean.recommended_action == Action.ALLOW
+
+    violated = run({**payload, "value": rejected}, comparisons=rules, stage=stage)
+    assert violated.evaluation_status == "complete"
+    assert [finding.rule_id for finding in violated.findings] == ["business.boundary"]
+    assert violated.recommended_action == Action.BLOCK
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_invalid_iso_date_and_numeric_failure_report_both_original_rules(stage):
+    rules = (
+        FieldComparison(rule_id="calendar", left="/start", right="/end", operator="le", value_type="date"),
+        FieldComparison(rule_id="budget", left="/spent", right="/budget", operator="le"),
+    )
+    payload = {"start": "2026-02-30", "end": "2026-03-01", "spent": 12, "budget": 10}
+    result = run(payload, comparisons=rules, stage=stage)
+    assert [finding.rule_id for finding in result.findings] == [
+        "business.calendar", "business.budget"
+    ]
+    assert result.evaluation_status == "complete"
+    assert result.recommended_action == Action.BLOCK
+
+
+def test_decimal_precision_is_not_lost_when_rules_share_a_pointer():
+    rules = (
+        FieldComparison(rule_id="not_above", left="/a", right="/b", operator="le"),
+        FieldComparison(rule_id="above", left="/a", right="/b", operator="gt"),
+    )
+    policy = Policy(application_id="precision", version="multi-rule-v1", mode="enforce",
+                    rules=(Rule(checker_id="cross_field", on_finding="block"),), comparisons=rules)
+    request = CheckRequest(
+        application_id="precision", policy_version=policy.version,
+        content='{"a":0.10000000000000000001,"b":0.1}', content_format="json",
+    )
+    result = asyncio.run(Engine([policy], default_checkers()).check(request, Stage.INPUT))
+    assert result.evaluation_status == "complete"
+    assert [finding.rule_id for finding in result.findings] == ["business.not_above"]
+    assert result.recommended_action == Action.BLOCK
+
+
+@pytest.mark.parametrize("raw_json", [
+    '{"shipped_qty":8,"shipped_qty":9,"ordered_qty":10}',
+    '{"shipped_qty":',
+    '{"shipped_qty":NaN,"ordered_qty":10}',
+])
+def test_invalid_json_reports_one_sanitized_document_finding_not_partial_comparison_findings(raw_json):
+    policy = Policy(
+        application_id="malformed", version="multi-rule-v1", mode="enforce",
+        rules=(Rule(checker_id="cross_field", on_finding="block"),), comparisons=CHAIN,
+    )
+    request = CheckRequest(application_id="malformed", policy_version=policy.version,
+                           content=raw_json, content_format="json")
+    result = asyncio.run(Engine([policy], default_checkers()).check(request, Stage.INPUT))
+    assert result.evaluation_status == "complete"
+    assert [finding.rule_id for finding in result.findings] == ["business.invalid_json"]
+    assert result.recommended_action == Action.BLOCK
+    assert all(raw_json not in finding.explanation for finding in result.findings)
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_invalid_secret_like_field_content_is_not_echoed_in_findings(stage):
+    sentinel = "TEST_SECRET_VALUE_DO_NOT_ECHO_8b1ca42"
+    payload = {**BENIGN, "shipped_qty": sentinel}
+    result = run(payload, stage=stage)
+    assert {finding.rule_id for finding in result.findings} == {
+        "business.shipped", "business.delivered"
+    }
+    assert all(sentinel not in finding.explanation for finding in result.findings)
