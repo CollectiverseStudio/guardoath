@@ -1947,3 +1947,16 @@ malformed inputs; imported sources and the original203-rule review stay unchange
 Configure trusted Windows process creation and original entitled rule IDs;
 103 process/125 script selections preserve the128-rule one-event budget.
 Synthetic fixtures prove these branches, not hosted or tenant deployment readiness.
+
+
+### Field comparison scale observations
+
+The [standalone scale evidence](field-comparison-scale-evidence.md) measures
+30/51/100/250/500 independent comparisons without changing your tenant settings.
+Run `python -m tools.field_comparison_scale --output report.json` from a source
+checkout for synthetic timing, traced-memory and payload observations. A larger
+direct-checker run does not mean that a tenant record accepts that count: current
+schemas still reject more than50, and coordinated removal of that implementation
+limit remains pending. Catalog-generation timeouts are reported as unmeasured,
+not accepted capacity. This tool does not validate external truth, generated
+whole-portfolio benignity, production latency or deployment readiness.

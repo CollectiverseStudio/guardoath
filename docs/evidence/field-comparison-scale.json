@@ -1,0 +1,258 @@
+{
+  "schema_version": 1,
+  "python": "3.12.14",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "release_readiness": false,
+  "source_sha256": {
+    "guardoath/business.py": "6feaaf9db1c9d4dbd644820e5b41695f932e5d920d7151fd8ba35a6a56ec3611",
+    "guardoath/record_rules.py": "9121559adf5f9576feac4f4c487b8ba58ecb39002ecca92a14a72502fe145b71",
+    "guardoath/models.py": "a71308d23d90dfea949175e812ee1c80b6bc5b3c3a8fc1eb870054e258732db2",
+    "guardoath/tenant_record.py": "dc78fb4ac5f54f0209e751c0fa6ae7803e517df7a29ecc82e766e6cc1b90c92a",
+    "tools/field_comparison_scale.py": "2edc06f0cdc9dbd734362e046da53ca23b624a227cbf1fdff18eac545d6f9c02"
+  },
+  "notes": [
+    "Synthetic independent numeric pointers, both stages per checker sample.",
+    "tracemalloc adds overhead; peak excludes model setup and is not process RSS.",
+    "Generator samples measure construction, not full-portfolio benign correctness.",
+    "Nearest-rank p95 of a small sample is not a stable tail-latency estimate.",
+    "Timeouts are evidence gaps, not passing measurements or product limits.",
+    "No concurrency, request admission, persisted API or deployed acceptance tested."
+  ],
+  "measurements": [
+    {
+      "component": "checker",
+      "size": 30,
+      "status": "measured",
+      "samples": 3,
+      "median_ms": 1.554954011226073,
+      "p95_nearest_rank_ms": 2.0957289962098002,
+      "peak_traced_bytes": 24386,
+      "output_bytes": 850,
+      "scope": "standalone component; not Engine or tenant acceptance",
+      "schema_acceptance": {
+        "policy": {
+          "accepted": true,
+          "errors": []
+        },
+        "tenant_record": {
+          "accepted": true,
+          "errors": []
+        }
+      }
+    },
+    {
+      "component": "generator",
+      "size": 30,
+      "status": "measured",
+      "samples": 3,
+      "median_ms": 200.60491497861221,
+      "p95_nearest_rank_ms": 200.96249299240299,
+      "peak_traced_bytes": 380449,
+      "output_bytes": 96960,
+      "scope": "standalone component; not Engine or tenant acceptance",
+      "schema_acceptance": {
+        "policy": {
+          "accepted": true,
+          "errors": []
+        },
+        "tenant_record": {
+          "accepted": true,
+          "errors": []
+        }
+      }
+    },
+    {
+      "component": "checker",
+      "size": 51,
+      "status": "measured",
+      "samples": 3,
+      "median_ms": 2.267168019898236,
+      "p95_nearest_rank_ms": 2.760611998382956,
+      "peak_traced_bytes": 31057,
+      "output_bytes": 1459,
+      "scope": "standalone component; not Engine or tenant acceptance",
+      "schema_acceptance": {
+        "policy": {
+          "accepted": false,
+          "errors": [
+            {
+              "path": [
+                "comparisons"
+              ],
+              "type": "too_long"
+            }
+          ]
+        },
+        "tenant_record": {
+          "accepted": false,
+          "errors": [
+            {
+              "path": [
+                "comparisons"
+              ],
+              "type": "too_long"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "component": "generator",
+      "size": 51,
+      "status": "measured",
+      "samples": 3,
+      "median_ms": 936.0597080085427,
+      "p95_nearest_rank_ms": 942.7690000156872,
+      "peak_traced_bytes": 832512,
+      "output_bytes": 257022,
+      "scope": "standalone component; not Engine or tenant acceptance",
+      "schema_acceptance": {
+        "policy": {
+          "accepted": false,
+          "errors": [
+            {
+              "path": [
+                "comparisons"
+              ],
+              "type": "too_long"
+            }
+          ]
+        },
+        "tenant_record": {
+          "accepted": false,
+          "errors": [
+            {
+              "path": [
+                "comparisons"
+              ],
+              "type": "too_long"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "component": "checker",
+      "size": 100,
+      "status": "measured",
+      "samples": 3,
+      "median_ms": 3.857856005197391,
+      "p95_nearest_rank_ms": 4.3716799991671,
+      "peak_traced_bytes": 45333,
+      "output_bytes": 2880,
+      "scope": "standalone component; not Engine or tenant acceptance",
+      "schema_acceptance": {
+        "policy": {
+          "accepted": false,
+          "errors": [
+            {
+              "path": [
+                "comparisons"
+              ],
+              "type": "too_long"
+            }
+          ]
+        },
+        "tenant_record": {
+          "accepted": false,
+          "errors": [
+            {
+              "path": [
+                "comparisons"
+              ],
+              "type": "too_long"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "component": "generator",
+      "size": 100,
+      "status": "timeout",
+      "timeout_seconds": 10
+    },
+    {
+      "component": "checker",
+      "size": 250,
+      "status": "measured",
+      "samples": 3,
+      "median_ms": 8.998481003800407,
+      "p95_nearest_rank_ms": 9.507217997452244,
+      "peak_traced_bytes": 96373,
+      "output_bytes": 7530,
+      "scope": "standalone component; not Engine or tenant acceptance",
+      "schema_acceptance": {
+        "policy": {
+          "accepted": false,
+          "errors": [
+            {
+              "path": [
+                "comparisons"
+              ],
+              "type": "too_long"
+            }
+          ]
+        },
+        "tenant_record": {
+          "accepted": false,
+          "errors": [
+            {
+              "path": [
+                "comparisons"
+              ],
+              "type": "too_long"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "component": "generator",
+      "size": 250,
+      "status": "timeout",
+      "timeout_seconds": 10
+    },
+    {
+      "component": "checker",
+      "size": 500,
+      "status": "measured",
+      "samples": 3,
+      "median_ms": 17.285456007812172,
+      "p95_nearest_rank_ms": 17.73518297704868,
+      "peak_traced_bytes": 188465,
+      "output_bytes": 15280,
+      "scope": "standalone component; not Engine or tenant acceptance",
+      "schema_acceptance": {
+        "policy": {
+          "accepted": false,
+          "errors": [
+            {
+              "path": [
+                "comparisons"
+              ],
+              "type": "too_long"
+            }
+          ]
+        },
+        "tenant_record": {
+          "accepted": false,
+          "errors": [
+            {
+              "path": [
+                "comparisons"
+              ],
+              "type": "too_long"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "component": "generator",
+      "size": 500,
+      "status": "timeout",
+      "timeout_seconds": 10
+    }
+  ]
+}
