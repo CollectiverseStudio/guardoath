@@ -20,7 +20,7 @@ def source_record(**changes):
 def test_catalog_ids_stages_actions_and_version_come_from_source_record_contract():
     catalog = catalog_for({})
     assert tuple(catalog) == CHECK_IDS
-    assert len(catalog) == 17
+    assert len(catalog) == 18
     assert catalog['azure_prompt_shields'].stages == ('input',)
     assert 'redact' in catalog['pii'].actions
     assert all('redact' not in c.actions for name, c in catalog.items() if name != 'pii')
@@ -215,7 +215,7 @@ def test_control_cannot_borrow_settings_from_another_checker():
         validate_payload(preview, catalog)
 
 
-def test_all_seventeen_source_controls_migrate_exactly_with_valid_settings():
+def test_all_source_controls_migrate_exactly_with_valid_settings():
     from guardoath.engine import Engine
     from guardoath.tenant_record import SETTINGS_OF
     source = TenantRecord(tenant_id='tenant-a', display_name='Tenant A', revision=8,
@@ -229,7 +229,7 @@ def test_all_seventeen_source_controls_migrate_exactly_with_valid_settings():
         ledger={'currency': 'USD'}, timestamps={}, graph={}, integrity={'sha256': 'a'*64})
     Engine([source.to_policy()], {})  # Configuration verification only; no adapter runs.
     preview = migration_preview(source, catalog_for({}))
-    assert len(preview['validations']) == len(CHECK_IDS) == 17
+    assert len(preview['validations']) == len(CHECK_IDS) == 18
     raw = source.model_dump(mode='json')
     for control, selection in preview['validations'].items():
         assert selection['input_action'] == 'flag'
