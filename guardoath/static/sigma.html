@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GuardOath — Security Event Rules Preview</title>
+<link rel="stylesheet" href="/assets/dashboard.css">
+<link rel="stylesheet" href="/assets/sigma.css">
+<script defer src="/assets/sigma.js"></script>
+</head>
+<body>
+<header>
+<div class="brand"><span class="brand-name">GuardOath</span><span class="tag">SOURCE EVIDENCE PREVIEW</span></div>
+<nav><a href="/dashboard">AI check playground</a> &nbsp; <a href="/guide">Developer guide</a></nav>
+</header>
+<main class="sigma-main">
+<div class="eyebrow">SEPARATE SECURITY EVENT DOMAIN</div>
+<h1>Windows event rule evidence</h1>
+<p class="intro">Explore Codex's pinned SigmaHQ rule catalog and run a rule against its own bundled synthetic positive or look-alike event. This does not inspect customer logs, enable tenant rules, or validate AI conversations.</p>
+<section class="panel sigma-panel" aria-labelledby="sigma-connect-title">
+<h2 id="sigma-connect-title">Connect a demo user</h2>
+<p class="hint">Use a demo API key from the <a href="/dashboard">GuardOath playground</a>. This page does not store the key or send it anywhere except this site. Customer production tenants cannot run this preview.</p>
+<div class="sigma-inline"><label for="sigma-key">Demo API key</label><input id="sigma-key" type="password" autocomplete="off" spellcheck="false" placeholder="Paste a demo API key"><button id="sigma-load" type="button">Load rule catalog</button></div>
+<p id="sigma-status" role="status" aria-live="polite">Not connected.</p>
+</section>
+<section id="sigma-workspace" class="panel sigma-panel" hidden aria-labelledby="sigma-catalog-title">
+<h2 id="sigma-catalog-title">Pinned source rules <span id="sigma-count"></span></h2>
+<p class="hint">These are source-attributed event detections, not prompt-security checks. An event may match multiple rules; this preview evaluates only the selected rule and its server-owned synthetic fixture.</p>
+<label for="sigma-filter">Find a rule by name, source, category or ID</label><input id="sigma-filter" type="search" autocomplete="off" placeholder="e.g. PowerShell, process creation, scheduled task">
+<label for="sigma-rule">Choose a rule</label><select id="sigma-rule"></select>
+<div id="sigma-details" class="sigma-details" aria-live="polite"></div>
+<div class="sigma-actions"><button id="sigma-positive" type="button">Run synthetic matching example</button><button id="sigma-lookalike" class="secondary" type="button">Run synthetic look-alike</button></div>
+<pre id="sigma-result" class="sigma-result" role="status" aria-live="polite">Choose a rule and run a synthetic example.</pre>
+</section>
+<p class="hint sigma-footer">No arbitrary event uploads, SIEM connections, tenant activation or external rule fetches are performed. Results come from bundled evidence and local evaluation only. Findings may describe legitimate administrative behavior.</p>
+</main>
+</body>
+</html>
