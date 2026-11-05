@@ -1,0 +1,762 @@
+{
+  "format_version": "1",
+  "suite_id": "csv-export-v1",
+  "cases": [
+    {
+      "case_id": "csv.formula_equals.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,=1+1",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "flagged"
+        },
+        "finding_rule_ids": [
+          "csv_formula.potential_formula"
+        ]
+      }
+    },
+    {
+      "case_id": "csv.formula_equals.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,=1+1",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "flagged"
+        },
+        "finding_rule_ids": [
+          "csv_formula.potential_formula"
+        ]
+      }
+    },
+    {
+      "case_id": "csv.formula_plus.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,+SUM(A1:A2)",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "flagged"
+        },
+        "finding_rule_ids": [
+          "csv_formula.potential_formula"
+        ]
+      }
+    },
+    {
+      "case_id": "csv.formula_plus.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,+SUM(A1:A2)",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "flagged"
+        },
+        "finding_rule_ids": [
+          "csv_formula.potential_formula"
+        ]
+      }
+    },
+    {
+      "case_id": "csv.formula_minus.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,-cmd",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "flagged"
+        },
+        "finding_rule_ids": [
+          "csv_formula.potential_formula"
+        ]
+      }
+    },
+    {
+      "case_id": "csv.formula_minus.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,-cmd",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "flagged"
+        },
+        "finding_rule_ids": [
+          "csv_formula.potential_formula"
+        ]
+      }
+    },
+    {
+      "case_id": "csv.formula_at.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,@SUM(A1:A2)",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "flagged"
+        },
+        "finding_rule_ids": [
+          "csv_formula.potential_formula"
+        ]
+      }
+    },
+    {
+      "case_id": "csv.formula_at.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,@SUM(A1:A2)",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "flagged"
+        },
+        "finding_rule_ids": [
+          "csv_formula.potential_formula"
+        ]
+      }
+    },
+    {
+      "case_id": "csv.formula_quoted.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,\"=HYPERLINK(\"\"https://example.invalid\"\")\"",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "flagged"
+        },
+        "finding_rule_ids": [
+          "csv_formula.potential_formula"
+        ]
+      }
+    },
+    {
+      "case_id": "csv.formula_quoted.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,\"=HYPERLINK(\"\"https://example.invalid\"\")\"",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "flagged"
+        },
+        "finding_rule_ids": [
+          "csv_formula.potential_formula"
+        ]
+      }
+    },
+    {
+      "case_id": "csv.formula_space.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1, =1+1",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "flagged"
+        },
+        "finding_rule_ids": [
+          "csv_formula.potential_formula"
+        ]
+      }
+    },
+    {
+      "case_id": "csv.formula_space.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1, =1+1",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "flagged"
+        },
+        "finding_rule_ids": [
+          "csv_formula.potential_formula"
+        ]
+      }
+    },
+    {
+      "case_id": "csv.formula_tab.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,\t=1+1",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "flagged"
+        },
+        "finding_rule_ids": [
+          "csv_formula.potential_formula"
+        ]
+      }
+    },
+    {
+      "case_id": "csv.formula_tab.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,\t=1+1",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "flagged"
+        },
+        "finding_rule_ids": [
+          "csv_formula.potential_formula"
+        ]
+      }
+    },
+    {
+      "case_id": "csv.formula_bom.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,﻿=1+1",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "flagged"
+        },
+        "finding_rule_ids": [
+          "csv_formula.potential_formula"
+        ]
+      }
+    },
+    {
+      "case_id": "csv.formula_bom.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,﻿=1+1",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "flagged"
+        },
+        "finding_rule_ids": [
+          "csv_formula.potential_formula"
+        ]
+      }
+    },
+    {
+      "case_id": "csv.formula_nbsp.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1, =1+1",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "flagged"
+        },
+        "finding_rule_ids": [
+          "csv_formula.potential_formula"
+        ]
+      }
+    },
+    {
+      "case_id": "csv.formula_nbsp.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1, =1+1",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "flagged"
+        },
+        "finding_rule_ids": [
+          "csv_formula.potential_formula"
+        ]
+      }
+    },
+    {
+      "case_id": "csv.benign_integer.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,42",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "csv_formula": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.benign_integer.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,42",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "csv_formula": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.benign_prose.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,\"a + b = c\"",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "csv_formula": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.benign_prose.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,\"a + b = c\"",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "csv_formula": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.benign_escaped.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,'=1+1",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "csv_formula": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.benign_escaped.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,'=1+1",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "csv_formula": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.benign_negative_escaped.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,'-10",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "csv_formula": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.benign_negative_escaped.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,'-10",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "complete",
+        "recommended_action": "allow",
+        "effective_action": "allow",
+        "checker_statuses": {
+          "csv_formula": "passed"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.malformed_quote.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,\"unclosed",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.malformed_quote.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,\"unclosed",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.nul.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,\u0000",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.nul.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "a,b\n1,\u0000",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.json_refused.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "{\"x\":\"=1+1\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.json_refused.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "{\"x\":\"=1+1\"}",
+        "content_format": "json"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.row_budget.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "x\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.row_budget.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "x\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\n",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.col_budget.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.col_budget.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "error"
+        },
+        "finding_rule_ids": []
+      }
+    }
+  ]
+}
