@@ -1960,3 +1960,17 @@ schemas still reject more than50, and coordinated removal of that implementation
 limit remains pending. Catalog-generation timeouts are reported as unmeasured,
 not accepted capacity. This tool does not validate external truth, generated
 whole-portfolio benignity, production latency or deployment readiness.
+
+
+### Generated field-comparison example audit
+
+The [whole-portfolio audit](field-comparison-portfolio-evidence.md) checks generated
+examples against every active comparison on both stages. Run
+`python -m tools.field_comparison_portfolio --output report.json` from a checkout.
+Current exit1 is intentional evidence of generator defects: all30 inventory
+look-alikes violate other active comparisons, even when their nominated rule
+does not fire. The Engine correctly reports those findings and blocks them.
+Do not treat those samples as benign or suppress companion findings. The report
+contains synthetic IDs/statuses without sample contents; runtime generator repair
+and explicit unavailable reasons remain pending. This audit establishes no
+external truth, hosted effectiveness or release readiness.

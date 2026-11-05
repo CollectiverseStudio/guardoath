@@ -1,0 +1,3596 @@
+{
+  "schema_version": 1,
+  "release_readiness": false,
+  "scope": "offline generated examples, real enforce-mode Engine, both stages",
+  "source_sha256": {
+    "guardoath/record_rules.py": "9121559adf5f9576feac4f4c487b8ba58ecb39002ecca92a14a72502fe145b71",
+    "guardoath/business.py": "6feaaf9db1c9d4dbd644820e5b41695f932e5d920d7151fd8ba35a6a56ec3611",
+    "guardoath/models.py": "a71308d23d90dfea949175e812ee1c80b6bc5b3c3a8fc1eb870054e258732db2",
+    "guardoath/engine.py": "fe54a334d73b773b5897b1aed6f4a4ce6e4a1bbea1e7ee4e3465868dd28a2cb1",
+    "docs/field-comparisons-rule-inventory.json": "2d69406b682510514a219083d5a76b62c3280e1d9914520187ec330dfa45d882",
+    "tools/field_comparison_portfolio.py": "bd70bc10c69c79a9e7fb9b5f00105080e18f43b48400a1ce78238ea3a36e54e7"
+  },
+  "acceptance_passed": false,
+  "notes": [
+    "Genuine overlaps retained; absence of only the target finding is not benignity.",
+    "No feasibility solver; a contradictory portfolio must not yield a fake benign sample.",
+    "None without an explicit generator reason is reported as an acceptance gap.",
+    "No generated documents or submitted values are included in this report."
+  ],
+  "scenarios": [
+    {
+      "scenario": "MFC-018-inventory",
+      "comparison_count": 30,
+      "case_count": 120,
+      "accepted_cases": 60,
+      "cases": [
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.refund_not_above_purchase",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.refund_not_above_purchase",
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.refund_not_above_purchase",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.refund_not_above_purchase",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.refund_not_above_purchase",
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.refund_not_above_purchase",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.discount_not_above_subtotal",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.discount_not_above_subtotal",
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.discount_not_above_subtotal",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.discount_not_above_subtotal",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.discount_not_above_subtotal",
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.discount_not_above_subtotal",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.paid_not_above_invoice",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.paid_not_above_invoice",
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.paid_not_above_invoice",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.paid_not_above_invoice",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.paid_not_above_invoice",
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.paid_not_above_invoice",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.balance_not_above_credit_limit",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.balance_not_above_credit_limit",
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.balance_not_above_credit_limit",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.balance_not_above_credit_limit",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.balance_not_above_credit_limit",
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.balance_not_above_credit_limit",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.reserve_at_least_required",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.reserve_at_least_required",
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.reserve_at_least_required",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.reserve_at_least_required",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.reserve_at_least_required",
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.reserve_at_least_required",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.available_not_below_minimum",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.available_not_below_minimum",
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.available_not_below_minimum",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.available_not_below_minimum",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.available_not_below_minimum",
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.available_not_below_minimum",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.claim_not_above_coverage",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.claim_not_above_coverage",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.claim_not_above_coverage",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.claim_not_above_coverage",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.claim_not_above_coverage",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.claim_not_above_coverage",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.deductible_not_above_claim",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.deductible_not_above_claim",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.deductible_not_above_claim",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.deductible_not_above_claim",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.quantity_not_above_stock",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.quantity_not_above_stock",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.quantity_not_above_stock",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.quantity_not_above_stock",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.quantity_not_above_stock",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.quantity_not_above_stock",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.shipped_not_above_ordered",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.shipped_not_above_ordered",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.shipped_not_above_ordered",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.shipped_not_above_ordered",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.shipped_not_above_ordered",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.shipped_not_above_ordered",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.delivered_not_above_shipped",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.delivered_not_above_shipped",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.delivered_not_above_shipped",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.delivered_not_above_shipped",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.load_below_capacity",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.load_below_capacity",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.load_below_capacity",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.load_below_capacity",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.load_below_capacity",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.load_below_capacity",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.temperature_below_maximum",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_below_maximum",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.temperature_below_maximum",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.temperature_below_maximum",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_below_maximum",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.temperature_below_maximum",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.temperature_above_minimum",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_below_maximum",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.temperature_above_minimum",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_below_maximum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.temperature_above_minimum",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_below_maximum",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.temperature_above_minimum",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_below_maximum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.reading_equal_reference",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.reading_equal_reference"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.reading_equal_reference",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.reading_equal_reference",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.reading_equal_reference"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.reading_equal_reference",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.batch_not_equal_quarantined",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.batch_not_equal_quarantined"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.batch_not_equal_quarantined",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.batch_not_equal_quarantined",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.batch_not_equal_quarantined"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.batch_not_equal_quarantined",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.dose_not_above_prescribed",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.dose_not_above_prescribed"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.dose_not_above_prescribed",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.dose_not_above_prescribed",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.dose_not_above_prescribed"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.dose_not_above_prescribed",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.administered_not_above_ordered",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.administered_not_above_ordered"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.administered_not_above_ordered",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.administered_not_above_ordered",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.administered_not_above_ordered"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.administered_not_above_ordered",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.lab_value_above_floor",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.lab_value_above_floor"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.lab_value_above_floor",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.lab_value_above_floor",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.lab_value_above_floor"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.lab_value_above_floor",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.sample_count_at_least_minimum",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.sample_count_at_least_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.sample_count_at_least_minimum",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.sample_count_at_least_minimum",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.sample_count_at_least_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.sample_count_at_least_minimum",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.energy_not_above_budget",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.energy_not_above_budget"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.energy_not_above_budget",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.energy_not_above_budget",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.energy_not_above_budget"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.energy_not_above_budget",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.emissions_not_above_permit",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.emissions_not_above_permit"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.emissions_not_above_permit",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.emissions_not_above_permit",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.emissions_not_above_permit"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.emissions_not_above_permit",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.water_use_below_cap",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.water_use_below_cap"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.water_use_below_cap",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.water_use_below_cap",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.water_use_below_cap"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.water_use_below_cap",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.fertilizer_not_above_limit",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.fertilizer_not_above_limit"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.fertilizer_not_above_limit",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.fertilizer_not_above_limit",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.fertilizer_not_above_limit"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.fertilizer_not_above_limit",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.project_spend_not_above_budget",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.project_spend_not_above_budget"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.project_spend_not_above_budget",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.project_spend_not_above_budget",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.project_spend_not_above_budget"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.project_spend_not_above_budget",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.actual_hours_not_above_authorized",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.actual_hours_not_above_authorized"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.actual_hours_not_above_authorized",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.actual_hours_not_above_authorized",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.actual_hours_not_above_authorized"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.actual_hours_not_above_authorized",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.reservation_before_expiry",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.reservation_before_expiry"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.reservation_before_expiry",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.reservation_before_expiry",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.reservation_before_expiry"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.reservation_before_expiry",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.delivery_on_or_before_due",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.delivery_on_or_before_due"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.delivery_on_or_before_due",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.delivery_on_or_before_due",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.delivery_on_or_before_due"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.delivery_on_or_before_due",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.inspection_on_or_after_install",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.inspection_on_or_after_install"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.inspection_on_or_after_install",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.inspection_on_or_after_install",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.inspection_on_or_after_install"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.inspection_on_or_after_install",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.report_date_equal_effective",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.report_date_equal_effective"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.report_date_equal_effective",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.report_date_equal_effective",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum",
+            "business.report_date_equal_effective"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.report_date_equal_effective",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.deductible_not_above_claim",
+            "business.delivered_not_above_shipped",
+            "business.temperature_above_minimum"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        }
+      ]
+    },
+    {
+      "scenario": "MFC-001-chain-refund",
+      "comparison_count": 3,
+      "case_count": 12,
+      "accepted_cases": 10,
+      "cases": [
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.audit_0",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_0"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.audit_0",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "passed",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "allow",
+          "effective_action": "allow"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.audit_0",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_0"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.audit_0",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "passed",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "allow",
+          "effective_action": "allow"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.audit_1",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_1"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.audit_1",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "passed",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "allow",
+          "effective_action": "allow"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.audit_1",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_1"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.audit_1",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "passed",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "allow",
+          "effective_action": "allow"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.audit_2",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_1",
+            "business.audit_2"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.audit_2",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_1"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.audit_2",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_1",
+            "business.audit_2"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.audit_2",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_1"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        }
+      ]
+    },
+    {
+      "scenario": "MFC-002-chain",
+      "comparison_count": 2,
+      "case_count": 8,
+      "accepted_cases": 8,
+      "cases": [
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.audit_0",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_0"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.audit_0",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "passed",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "allow",
+          "effective_action": "allow"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.audit_0",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_0"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.audit_0",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "passed",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "allow",
+          "effective_action": "allow"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.audit_1",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_1"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.audit_1",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "passed",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "allow",
+          "effective_action": "allow"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.audit_1",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_1"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.audit_1",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "passed",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "allow",
+          "effective_action": "allow"
+        }
+      ]
+    },
+    {
+      "scenario": "MFC-007-equality-cycle",
+      "comparison_count": 3,
+      "case_count": 12,
+      "accepted_cases": 12,
+      "cases": [
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.audit_0",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_0"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.audit_0",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "passed",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "allow",
+          "effective_action": "allow"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.audit_0",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_0"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.audit_0",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "passed",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "allow",
+          "effective_action": "allow"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.audit_1",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_1"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.audit_1",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "passed",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "allow",
+          "effective_action": "allow"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.audit_1",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_1"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.audit_1",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "passed",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "allow",
+          "effective_action": "allow"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.audit_2",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_2"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.audit_2",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "passed",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "allow",
+          "effective_action": "allow"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.audit_2",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_2"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.audit_2",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "passed",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "allow",
+          "effective_action": "allow"
+        }
+      ]
+    },
+    {
+      "scenario": "MFC-007-strict-contradiction",
+      "comparison_count": 2,
+      "case_count": 8,
+      "accepted_cases": 4,
+      "cases": [
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.audit_0",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_0",
+            "business.audit_1"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.audit_0",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_1"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.audit_0",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_0",
+            "business.audit_1"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.audit_0",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_1"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.audit_1",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_0",
+            "business.audit_1"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.audit_1",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_0"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.audit_1",
+          "accepted": true,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_0",
+            "business.audit_1"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.audit_1",
+          "accepted": false,
+          "status": "evaluated",
+          "finding_ids": [
+            "business.audit_0"
+          ],
+          "evaluation_status": "complete",
+          "checker_results": [
+            {
+              "checker_id": "cross_field",
+              "status": "flagged",
+              "error_code": null
+            }
+          ],
+          "recommended_action": "block",
+          "effective_action": "block"
+        }
+      ]
+    },
+    {
+      "scenario": "MFC-009-self-strict",
+      "comparison_count": 2,
+      "case_count": 8,
+      "accepted_cases": 0,
+      "cases": [
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.audit_0",
+          "accepted": false,
+          "status": "unavailable",
+          "reason": "generator_returned_none_without_reason"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.audit_0",
+          "accepted": false,
+          "status": "unavailable",
+          "reason": "generator_returned_none_without_reason"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.audit_0",
+          "accepted": false,
+          "status": "unavailable",
+          "reason": "generator_returned_none_without_reason"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.audit_0",
+          "accepted": false,
+          "status": "unavailable",
+          "reason": "generator_returned_none_without_reason"
+        },
+        {
+          "kind": "positive",
+          "stage": "input",
+          "target_rule_id": "business.audit_1",
+          "accepted": false,
+          "status": "unavailable",
+          "reason": "generator_returned_none_without_reason"
+        },
+        {
+          "kind": "benign",
+          "stage": "input",
+          "target_rule_id": "business.audit_1",
+          "accepted": false,
+          "status": "unavailable",
+          "reason": "generator_returned_none_without_reason"
+        },
+        {
+          "kind": "positive",
+          "stage": "output",
+          "target_rule_id": "business.audit_1",
+          "accepted": false,
+          "status": "unavailable",
+          "reason": "generator_returned_none_without_reason"
+        },
+        {
+          "kind": "benign",
+          "stage": "output",
+          "target_rule_id": "business.audit_1",
+          "accepted": false,
+          "status": "unavailable",
+          "reason": "generator_returned_none_without_reason"
+        }
+      ]
+    }
+  ]
+}
