@@ -108,7 +108,7 @@ def test_a_demo_key_connects_to_its_own_record(client):
     tenant = data["tenant"]
     assert tenant["tenant_id"] == "demo2" and tenant["demo"] is True and tenant["used"] == 0
     assert tenant["monthly_allowance"] == 2000 and tenant["overage"] == "block" and tenant["month"] == usage_month()
-    assert tenant["input_checks"]["pii"] == "block" and tenant["input_checks"]["ledger"] is None and len(tenant["input_checks"]) == 17
+    assert tenant["input_checks"]["pii"] == "block" and tenant["input_checks"]["ledger"] is None and len(tenant["input_checks"]) == 18
     assert token not in response.text
 
 
