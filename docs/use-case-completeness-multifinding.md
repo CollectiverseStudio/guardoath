@@ -28,8 +28,13 @@ No semantics, factuality, quality, safety, source authenticity, legal validity, 
 
 ## Acceptance and evidence
 
-- New targeted tests: `tests/test_completeness_multirule_regression.py` (**17 synthetic test executions**) verifying independent stages, benign variants, all applicable finding IDs, extra label boundaries, and wrong-format fail-closed behavior.
+- New targeted tests: `tests/test_completeness_multirule_regression.py` (**33 synthetic test executions**) verifying independent stages, benign variants, all applicable finding IDs, extra label boundaries, and wrong-format fail-closed behavior.
 - Established tests: `tests/test_completeness.py` and existing completeness evaluation fixtures.
 - User guide: `docs/user-guide.md`, Required information/completeness section.
 
 The new tests do not change the checker, tenant record, engine or published policy. Passing a focused test does not prove full release CI or production deployment; the exact latest SHA must pass all required 13 Tests jobs and three CodeQL jobs, followed by separately authorized AWS deployment and 15 live checks.
+
+
+## Extended boundary acceptance (16 additional cases)
+
+The independent `tests/test_completeness_multirule_regression.py` now also verifies that a one-character Input Summary passes its default minimum and a five-nonwhitespace-character Output Next steps passes the configured minimum. Whitespace-only bodies do **not** count as present content; tabs, indentation and multiline bodies are handled as characters rather than whole-word or natural-language assessments. Section label casing is normalized, so duplicate mixed-case labels still fail, including duplicates of required Output Summary or Next steps. An unknown label ends the previous section's body rather than contributing unrelated text. These checks preserve all matching finding IDs and keep completed Input violations Flag versus completed Output violations Block. They do not certify semantic sufficiency or factual correctness.
