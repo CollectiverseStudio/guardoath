@@ -10,10 +10,11 @@ from guardoath.sigma_rules.evidence_catalog import load_evidence_catalog
 from guardoath.sigma_rules.routing import load_routing_table
 
 PREVIEW_LIMITATIONS = (
-    "Synthetic event demonstrations only. One source-identified rule is evaluated "
-    "at a time against its bundled fixture. Other rules can also match the same "
-    "event. No tenant rule is activated; this is not AI prompt safety, production "
-    "event monitoring, or a guarantee of malicious activity."
+    "Synthetic event demonstrations only. The selected rule provides the bundled "
+    "fixture, then all enabled tenant rules for its trusted Windows source are "
+    "evaluated together. All matches are reported. No live customer event is "
+    "ingested; this is not AI prompt safety, production event monitoring, or a "
+    "guarantee of malicious activity."
 )
 
 
@@ -61,7 +62,7 @@ def catalog_payload():
 
 
 def evaluate_fixture(rule_id: str, sample: str, allowed_rule_ids=()):
-    """Evaluate ONLY a pinned, server-owned fixture and one trusted source rule."""
+    """Evaluate a pinned fixture against all tenant-enabled rules for its trusted source."""
     if sample not in ("positive", "lookalike"):
         raise ValueError("Unsupported synthetic sample")
     item = _catalog().get(rule_id)
