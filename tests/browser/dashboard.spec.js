@@ -1553,7 +1553,7 @@ test("CSV formula rules use the same tenant settings, examples and dashboard res
   await expect(page.locator("#tenant-rules-csv_formula")).toHaveText("Show rules (1)");
   await page.locator("#input-example-check").selectOption("csv_formula");
   await page.locator("#input-example").selectOption({label:"Formula in CSV export"});
-  await expect(page.locator("#input-content")).toContainText("Alice,=1+2");
+  await expect(page.locator("#input-content")).toHaveValue(/Alice,=1\+2/);
   await expect(page.locator("#input-sample-note")).toContainText("is off on this record");
   await page.locator("#tenant-check-input-csv_formula").selectOption("block");
   await page.locator("#run-input").click();
