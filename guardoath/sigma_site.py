@@ -60,22 +60,28 @@ def catalog_payload():
     }
 
 
-def evaluate_fixture(rule_id: str, sample: str):
+def evaluate_fixture(rule_id: str, sample: str, allowed_rule_ids=()):
     """Evaluate ONLY a pinned, server-owned fixture and one trusted source rule."""
     if sample not in ("positive", "lookalike"):
         raise ValueError("Unsupported synthetic sample")
     item = _catalog().get(rule_id)
     if item is None:
         raise KeyError("Unknown rule")
-    # Neither logsource nor the allowed rule ID comes from a caller-provided event.
+    # The configured rule portfolio comes from the authoritative tenant record,
+    # not from the caller-supplied request or its synthetic event.
+    allowed = tuple(allowed_rule_ids) if allowed_rule_ids else (rule_id,)
+    if rule_id not in allowed:
+        raise ValueError("The selected rule is not enabled")
     table = _routing()
     source = table.source_for(rule_id)
     logsource = {"product": source["product"], "category": source["category"]}
     event = dict(item.positive_event if sample == "positive" else item.lookalike_event)
+    selected_count = sum(1 for identifier in allowed
+                         if all(table.source_for(identifier).get(k) == v for k, v in logsource.items()))
     matches = table.evaluate(
         event,
         trusted_logsource=logsource,
-        allowed_rule_ids=(rule_id,),
+        allowed_rule_ids=allowed,
         max_workers=1,
         timeout_seconds=1.0,
     )
@@ -87,7 +93,8 @@ def evaluate_fixture(rule_id: str, sample: str):
         "evaluation_status": "complete",
         "matched": bool(matches),
         "findings": matches,
-        "selected_rule_count": 1,
+        "selected_rule_count": selected_count,
+        "sample_rule_matched": any(row["rule_id"] == rule_id for row in matches),
         "tenant_enforcement": False,
         "runtime_registered_as_ai_checker": False,
         "limitations": PREVIEW_LIMITATIONS,
