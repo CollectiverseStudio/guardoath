@@ -72,7 +72,8 @@ async function run(sample) {
       ? "This rule is Off for the tenant, or the credential lacks permission. Enable and save it on the dashboard."
       : "Synthetic evaluation unavailable (HTTP " + response.status + ").");
     const data = await response.json();
-    $("sigma-result").textContent = (data.matched ? "Matched" : "No match") +
+    $("sigma-result").textContent = data.findings.length + " matching enabled rule(s)" +
+      (data.sample_rule_matched ? " | Selected rule matched" : " | Selected rule did not match") +
       " | Recommended " + data.recommended_action + " | Effective " + data.effective_action +
       " | Synthetic fixture only. No customer event was inspected.";
   } catch (err) { $("sigma-result").textContent = err.message; }
