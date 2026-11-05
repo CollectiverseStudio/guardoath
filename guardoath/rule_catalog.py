@@ -347,8 +347,12 @@ DOCUMENT_USE_CASES = {
     'timestamps': 'Turn this on if your AI writes or reads time series.',
     'graph': 'Turn this on if your AI writes or reads dependency or workflow graphs.',
     'integrity': 'Turn this on if content must stay byte-for-byte the same as an approved copy.',
+    'csv_formula': 'Turn this on when exporting CSV cells for opening in spreadsheet applications.'
 }
 DOCUMENT_RULES = {
+    'csv_formula.potential_formula': ('csv_formula', 'Spreadsheet formula in CSV export', 'text', (), 'high',
+        'name,entry\\nAlice,=1+2',
+        "name,entry\\nAlice,'=1+2"),
     'business.invalid_json': ('cross_field', 'Malformed JSON (field comparisons)', 'json', ('comparisons',), 'high',
         '{"start_date": "2026-10-01", "end_date": ',
         '{"start_date":"2026-10-01","end_date":"2026-10-05","purchase_amount":120,"refund_amount":20}'),
