@@ -106,6 +106,8 @@ DOMAINS = (
            "Find text crafted to hide or smuggle instructions."),
     Domain("agent_safety", "Risky instructions and agent actions",
            "Review dangerous instructions and tool calls before an AI agent acts on them."),
+    Domain("file_security", "File & Document Security",
+           "Review supported file content and exports using format-specific tenant controls."),
     Domain("data_quality", "Structured data and business rules",
            "Check that structured requests and answers are well formed and consistent."),
     Domain("fairness_evidence", "Fair decisions and grounded answers",
@@ -487,7 +489,7 @@ CONTROLS = (
         known_misses=(),
     ),
     Control(
-        control_id='csv_formula', domain='data_quality', name='CSV spreadsheet formula protection',
+        control_id='csv_formula', domain='file_security', name='CSV spreadsheet formula protection',
         outcome='Potential spreadsheet formulas are detected before CSV export content reaches a spreadsheet.',
         use_case='Turn this on when your AI or your users produce CSV exports that might contain cells interpreted as spreadsheet formulas.',
         limitations='Text CSV only, with conservative = + - @ prefix checks. It does not neutralize cells, execute spreadsheets, verify imports or evaluate arbitrary text safely.',
