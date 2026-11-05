@@ -34,7 +34,7 @@ def test_formula_triggers_are_blocked_and_original_value_is_not_echoed(cell, sta
 
 @pytest.mark.parametrize("value", [
     "name,amount\nAlice,25", "name,amount\nAlice,'=1+1",
-    'item,description\nA,"a + b = c"', "a,b\n- ,okay",
+    'item,description\nA,"a + b = c"', "a,b\n\'- ,okay",
     "header", "id,amount\n1,0",
 ])
 def test_benign_and_escaped_values_pass(value):
