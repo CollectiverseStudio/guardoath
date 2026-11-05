@@ -51,7 +51,7 @@ def ids(result):
 def test_every_check_has_an_input_field_and_every_two_stage_check_an_output_field():
     assert INPUT_CHECK_FIELDS == tuple("input_check_" + c for c in CHECK_IDS)
     assert OUTPUT_CHECK_FIELDS == tuple("output_check_" + c for c in CHECK_IDS if c not in INPUT_ONLY_CHECK_IDS)
-    assert len(INPUT_CHECK_FIELDS) == 17 and len(OUTPUT_CHECK_FIELDS) == 16
+    assert len(INPUT_CHECK_FIELDS) == 18 and len(OUTPUT_CHECK_FIELDS) == 17
     assert CHECK_FIELDS == INPUT_CHECK_FIELDS + OUTPUT_CHECK_FIELDS
     assert RULE_ACTION_FIELDS == ("input_rule_actions", "output_rule_actions")
     for name in CHECK_FIELDS:
@@ -194,7 +194,7 @@ def auth(token):
 def test_the_summary_shows_each_stage_separately():
     client, _ = client_and_service()
     tenant = client.get("/v1/applications/current", headers=auth(demo_key("demo1", SECRET))).json()["tenant"]
-    assert len(tenant["input_checks"]) == 17 and len(tenant["output_checks"]) == 16
+    assert len(tenant["input_checks"]) == 18 and len(tenant["output_checks"]) == 17
     assert "azure_prompt_shields" not in tenant["output_checks"]
     assert tenant["input_checks"]["pii"] == tenant["output_checks"]["pii"] == "block"
     assert tenant["input_rule_actions"] == tenant["output_rule_actions"] == {}
