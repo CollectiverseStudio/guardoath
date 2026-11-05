@@ -487,6 +487,29 @@ CONTROLS = (
         known_misses=(),
     ),
     Control(
+        control_id='csv_formula', domain='data_quality', name='CSV spreadsheet formula protection',
+        outcome='Potential spreadsheet formulas are detected before CSV export content reaches a spreadsheet.',
+        use_case='Turn this on when your AI or your users produce CSV exports that might contain cells interpreted as spreadsheet formulas.',
+        limitations='Text CSV only, with conservative = + - @ prefix checks. It does not neutralize cells, execute spreadsheets, verify imports or evaluate arbitrary text safely.',
+        severity='high', recommended_action='block',
+        implementation=('guardoath/csv_formula.py',),
+        unit_tests=('tests/test_csv_formula.py', 'tests/test_csv_formula_integration.py'),
+        evaluations=('evals/csv-export.json',),
+        positive_examples=(
+            Example('Formula in CSV export', 'input', 'name,entry\nAlice,=1+2'),
+            Example('Formula in CSV answer', 'output', 'name,entry\nAlice,=1+2'),
+        ),
+        look_alikes=(
+            Example('Escaped formula stored as CSV text', 'input', "name,entry\nAlice,'=1+2"),
+            Example('Ordinary CSV export', 'output', 'name,entry\nAlice,25'),
+        ),
+        known_false_positives=(
+            Example('Negative-number-looking CSV cell', 'input', 'name,amount\nAlice,-10'),
+        ),
+        known_misses=(),
+        owner='atlas',
+    ),
+    Control(
         control_id='content_safety', domain='content_harm', name='Harmful content review (outside provider)',
         outcome='Hate, insults, sexual content, violence and misconduct are reviewed by Amazon Bedrock Guardrails.',
         use_case='Turn this on to review harmful content that local pattern checks cannot judge. It is a paid outside service.',
