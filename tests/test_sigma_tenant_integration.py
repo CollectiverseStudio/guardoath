@@ -153,3 +153,32 @@ def test_sigma_demo_rejects_arbitrary_event_input_even_when_rule_is_enabled():
         })
     assert response.status_code == 422
     assert "untrusted caller-supplied event" not in response.text
+
+
+def test_synthetic_event_evaluates_all_enabled_rules_for_trusted_source():
+    rules = catalog_payload()["rules"]
+    first = rules[0]
+    second = next(r for r in rules[1:]
+                  if (r["product"], r["category"]) == (first["product"], first["category"]))
+    settings = {first["rule_id"]: "flag", second["rule_id"]: "block"}
+    original = demo_records(key_secret=SECRET)[0]
+    configured = TenantRecord.model_validate({
+        **original.model_dump(), "sigma_rule_actions": settings
+    })
+    tenants = TenantService(MemoryTenantStore((configured,)),
+                            default_checkers(enable_pii=True), SECRET)
+    with TestClient(create_app(engine=demo_engine(), credentials={}, tenants=tenants)) as client:
+        response = client.post("/v1/sigma/demo", headers=token(), json={
+            "rule_id": first["rule_id"], "sample": "positive",
+        })
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["selected_rule_count"] == 2
+    assert data["sample_rule_matched"] is True
+    assert {f["rule_id"] for f in data["findings"]} <= set(settings)
+    assert data["matched"] is True
+    # All matches are retained and actions are aggregated from this tenant's map.
+    ranking = {"allow": 0, "flag": 1, "block": 2}
+    expected = max((settings[f["rule_id"]] for f in data["findings"]),
+                   key=ranking.__getitem__, default="allow")
+    assert data["recommended_action"] == data["effective_action"] == expected
