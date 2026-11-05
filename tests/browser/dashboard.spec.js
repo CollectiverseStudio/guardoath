@@ -1539,3 +1539,28 @@ test("field comparisons on the record are rules in the table, with their configu
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
   await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
 });
+
+
+test("CSV formula rules use the same tenant settings, examples and dashboard result flow", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo8");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-check-input-csv_formula")).toHaveValue("");
+  await expect(page.locator("#tenant-check-output-csv_formula")).toHaveValue("");
+  await expect(page.locator("#tenant-help-csv_formula a")).toHaveAttribute("href", "/guide#check-csv_formula");
+  await expect(page.locator("#tenant-rules-csv_formula")).toHaveText("Show rules (1)");
+  await page.locator("#input-example-check").selectOption("csv_formula");
+  await page.locator("#input-example").selectOption({label:"Formula in CSV export"});
+  await expect(page.locator("#input-content")).toContainText("Alice,=1+2");
+  await expect(page.locator("#input-sample-note")).toContainText("is off on this record");
+  await page.locator("#tenant-check-input-csv_formula").selectOption("block");
+  await page.locator("#run-input").click();
+  await expect(page.locator("#input-results")).toContainText("csv_formula.potential_formula");
+  await expect(page.locator("#input-results")).toContainText("Recommended: block · Effective: block");
+  await expect(page.locator("#tenant-check-input-csv_formula")).toHaveValue("block");
+  await expect(page.locator("#tenant-check-output-csv_formula")).toHaveValue("");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-check-input-csv_formula")).toHaveValue("");
+});
