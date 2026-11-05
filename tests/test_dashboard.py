@@ -511,7 +511,7 @@ def test_every_check_and_rule_example_can_be_picked_on_the_dashboard():
                  'item.look_alikes, "look-alike"', "rule.example", "rule.look_alike", 'stage + "-example-check"']:
         assert text in script, text
     controls = [item for domain in registry_payload()["domains"] for item in domain["controls"]]
-    assert len(controls) == 17
+    assert len(controls) == 18
     for stage in ("input", "output"):
         offered = [item for item in controls if stage in item["stages"]
                    and ([e for e in item["positive_examples"] + item["look_alikes"] if e["stage"] == stage] or item["rules"])]
