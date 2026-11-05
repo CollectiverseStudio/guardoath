@@ -95,3 +95,59 @@ def test_text_content_cannot_masquerade_as_valid_timestamp_json(stage):
     assert response.effective_action == "block"
     assert any(c.checker_id == "timestamps" and c.status == "skipped"
                and c.error_code == "timestamps_json_required" for c in response.checker_results)
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_equal_instants_are_allowed_only_by_opt_in_policy(stage):
+    document = samples("2026-11-04T09:00:00Z", "2026-11-04T10:00:00+01:00")
+    response = asyncio.run(ENGINE.check(
+        CheckRequest(
+            application_id="demo",
+            policy_version="timestamps-equal-v1",
+            content=json.dumps(document),
+            content_format="json",
+        ), stage,
+    ))
+    assert response.mode == "observe"
+    assert response.evaluation_status == "complete"
+    assert not response.findings
+    assert response.recommended_action == "allow"
+    assert response.effective_action == "allow"
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+@pytest.mark.parametrize("count,expected_status,expected_error", [
+    (200, "passed", None),
+    (201, "error", "timestamps_sample_limit"),
+])
+def test_configured_sample_budget_has_exact_boundary(stage, count, expected_status, expected_error):
+    from datetime import datetime, timedelta, timezone
+    origin = datetime(2026, 11, 4, 0, 0, tzinfo=timezone.utc)
+    document = samples(*(origin + timedelta(seconds=n)).isoformat().replace("+00:00", "Z")
+                         for n in range(count)))
+    response = assess(document, stage)
+    assert response.evaluation_status == ("complete" if expected_error is None else "incomplete")
+    assert response.recommended_action == ("allow" if expected_error is None else "block")
+    assert response.effective_action == ("allow" if expected_error is None else "block")
+    assert not response.findings
+    assert any(c.checker_id == "timestamps" and c.status == expected_status
+               and c.error_code == expected_error for c in response.checker_results)
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+@pytest.mark.parametrize("invalid", [
+    "2026-11-04T09:00:00",
+    "2026-11-04T09:00:00-00:00",
+    "2026-11-04T09:00:00+25:00",
+    "2026-11-04T09:00:00.1234567Z",
+])
+def test_invalid_offsets_or_precision_fail_closed(stage, invalid):
+    response = assess(samples(invalid, "2026-11-04T10:00:00Z"), stage)
+    assert response.evaluation_status == "incomplete"
+    assert not response.findings
+    assert response.recommended_action == "block"
+    assert response.effective_action == "block"
+    assert any(c.checker_id == "timestamps" and c.status == "error"
+               and c.error_code == "timestamps_invalid_document"
+               for c in response.checker_results)
+    assert invalid not in response.model_dump_json()
