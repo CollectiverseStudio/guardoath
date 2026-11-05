@@ -9,7 +9,6 @@ from dataclasses import dataclass
 import csv
 import hashlib
 from io import StringIO
-import zipfile
 
 MAX_ATTACHMENT_BYTES = 32_000
 MAX_CSV_ROWS = 1_000
@@ -52,11 +51,11 @@ def classify_attachment(data: bytes) -> FileProbe:
         return result("unknown", "invalid", "attachment_budget_exceeded")
     if data.startswith(b"%PDF-"):
         return result("pdf", "unsupported", "pdf_parser_unavailable")
-    if data.startswith((b"PK\\x03\\x04", b"PK\\x05\\x06", b"PK\\x07\\x08")):
+    if data.startswith((b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08")):
         return result("zip_container", "unsupported", "zip_parser_unavailable")
     if data.startswith(bytes.fromhex("D0CF11E0A1B11AE1")):
         return result("ole_container", "unsupported", "ole_parser_unavailable")
-    if data.startswith((b"\\x89PNG\\r\\n\\x1a\\n", b"\\xff\\xd8\\xff", b"GIF87a", b"GIF89a")):
+    if data.startswith((b"\x89PNG\r\n\x1a\n", b"\xff\xd8\xff", b"GIF87a", b"GIF89a")):
         return result("image", "unsupported", "image_parser_unavailable")
 
     try:
@@ -64,7 +63,7 @@ def classify_attachment(data: bytes) -> FileProbe:
         value = data.decode("utf-8-sig")
     except UnicodeDecodeError:
         return result("unknown", "unsupported", "unsupported_encoding")
-    if "\\x00" in value:
+    if "\x00" in value:
         return result("unknown", "unsupported", "binary_or_unsupported_encoding")
     try:
         rows = csv.reader(StringIO(value, newline=""), strict=True)
