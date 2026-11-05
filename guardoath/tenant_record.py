@@ -174,7 +174,7 @@ class TenantRecord(Contract):
     input_rule_actions: RuleActions = Field(default_factory=dict, max_length=len(RULES) + 100)
     output_rule_actions: RuleActions = Field(default_factory=dict, max_length=len(RULES) + 100)
     # Independent Windows event rule settings; absent means Off. Never run on AI text.
-    sigma_rule_actions: dict[str, Literal["allow", "flag", "block"]] = Field(default_factory=dict, max_length=228)
+    sigma_rule_actions: dict[str, Literal["allow", "flag", "block"]] = Field(default_factory=dict, max_length=4096)
 
     @model_validator(mode="before")
     @classmethod
