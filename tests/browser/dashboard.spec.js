@@ -1345,7 +1345,7 @@ test("rule settings inherit independently on input and output", async ({ page })
   await expect(page.locator("#tenant-message")).toHaveText("Unsaved changes. Save checks, or run a check: running saves them first.");
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
 });
-test("rule setting filters honor either-stage action and redaction constraints", async ({ page }) => {
+test("rule setting filters honor independent input and output actions", async ({ page }) => {
   await page.goto("/dashboard");
   await page.locator("#demo-user").selectOption("demo6");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
@@ -1370,6 +1370,19 @@ test("rule setting filters honor either-stage action and redaction constraints",
   await expect(page.locator("#check-table .rule-row:visible")).toHaveCount(215);
   await page.locator("#rule-filter-setting").selectOption("off");
   await expect(page.locator("#check-table .rule-row:visible")).toHaveCount(187);
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+});
+test("redaction clears incompatible own actions and category filter scopes results", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo6");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo6");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+  await page.locator("#rule-search").fill("email");
+  const email = page.locator('[id="rule-action-input-pii.email_address"]'), emailOut = page.locator('[id="rule-action-output-pii.email_address"]');
+  await email.selectOption("allow");
   // A redacting check allows only Off for single rules on that stage, so the own input Allow is cleared.
   await page.locator("#tenant-check-input-pii").selectOption("redact");
   await expect(email.locator("option")).toHaveText(["Same as check (Redact)", "Off"]);
