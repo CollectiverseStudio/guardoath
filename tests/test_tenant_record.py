@@ -35,7 +35,7 @@ def test_every_check_is_a_field_on_the_record():
     # 2026-11-04: one field per check and stage (tests/test_stage_settings.py); input-only checks have no output field.
     assert CHECK_FIELDS == tuple("input_check_" + c for c in CHECK_IDS) + tuple(
         "output_check_" + c for c in CHECK_IDS if c != "azure_prompt_shields")
-    assert len(CHECK_IDS) == len(set(CHECK_IDS)) == 17
+    assert len(CHECK_IDS) == len(set(CHECK_IDS)) == 18
     for name in CHECK_FIELDS:
         assert TenantRecord.model_fields[name].default is None
 
