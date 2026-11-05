@@ -70,7 +70,8 @@ def test_independent_financial_findings_survive_combination(stage, expected_acti
     assert len(response.findings) == len(expected)
     assert response.recommended_action == expected_action
     assert response.effective_action == expected_action
-    assert "0.11" not in response.model_dump_json()
+    # Latency metadata may contain the digits 0.11; findings must not disclose amounts.
+    assert all("0.11" not in finding.explanation for finding in response.findings)
 
 
 @pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
