@@ -1,0 +1,414 @@
+{
+  "status": "offline-branch-evidence-only",
+  "runtime_registered": false,
+  "reviewed_definition_count": 203,
+  "source_revision": "05d1031f537e830b76da53bae2400c5814c89165",
+  "fixture_origin": "GuardOath-authored synthetic strings; not executed commands or upstream tests",
+  "groups": [
+    {
+      "gap_id": "C21-SC01",
+      "rule_id": "56c217c3-2de2-479b-990f-5c109ba8458f",
+      "description": "pwsh parent crossed with original /SC DAILY /ST",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hktl_powersploit_empire_default_schtasks.yml",
+      "source_sha256": "23ba3e795c8d8f7806e51816f76f5c2c44e64f32bd6d07bbec896bfed9290c1d",
+      "source_git_blob": "dfb6833e7a4b35fff6bf97d5683b220042557590",
+      "cases": [
+        {
+          "case_id": "positive",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe",
+            "Image": "C:\\fixtures\\schtasks.exe",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC DAILY /ST"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "56c217c3-2de2-479b-990f-5c109ba8458f"
+          ]
+        },
+        {
+          "case_id": "schedule-lookalike",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe",
+            "Image": "C:\\fixtures\\schtasks.exe",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC DAYLY /ST"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "parent-lookalike",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe.bak",
+            "Image": "C:\\fixtures\\schtasks.exe",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC DAILY /ST"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "image-lookalike",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe",
+            "Image": "C:\\fixtures\\schtasks.exe.bak",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC DAILY /ST"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "suffix-remains-contained",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe",
+            "Image": "C:\\fixtures\\schtasks.exe",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC DAILY /ST_EXTRA"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "56c217c3-2de2-479b-990f-5c109ba8458f"
+          ]
+        },
+        {
+          "case_id": "missing-ParentImage",
+          "event": {
+            "Image": "C:\\fixtures\\schtasks.exe",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC DAILY /ST"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "missing-Image",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC DAILY /ST"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "missing-CommandLine",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe",
+            "Image": "C:\\fixtures\\schtasks.exe"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "C21-SC02",
+      "rule_id": "56c217c3-2de2-479b-990f-5c109ba8458f",
+      "description": "pwsh parent crossed with original /SC ONIDLE",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hktl_powersploit_empire_default_schtasks.yml",
+      "source_sha256": "23ba3e795c8d8f7806e51816f76f5c2c44e64f32bd6d07bbec896bfed9290c1d",
+      "source_git_blob": "dfb6833e7a4b35fff6bf97d5683b220042557590",
+      "cases": [
+        {
+          "case_id": "positive",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe",
+            "Image": "C:\\fixtures\\schtasks.exe",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC ONIDLE"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "56c217c3-2de2-479b-990f-5c109ba8458f"
+          ]
+        },
+        {
+          "case_id": "schedule-lookalike",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe",
+            "Image": "C:\\fixtures\\schtasks.exe",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC ONIDL3"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "parent-lookalike",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe.bak",
+            "Image": "C:\\fixtures\\schtasks.exe",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC ONIDLE"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "image-lookalike",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe",
+            "Image": "C:\\fixtures\\schtasks.exe.bak",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC ONIDLE"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "suffix-remains-contained",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe",
+            "Image": "C:\\fixtures\\schtasks.exe",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC ONIDLE_EXTRA"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "56c217c3-2de2-479b-990f-5c109ba8458f"
+          ]
+        },
+        {
+          "case_id": "missing-ParentImage",
+          "event": {
+            "Image": "C:\\fixtures\\schtasks.exe",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC ONIDLE"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "missing-Image",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC ONIDLE"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "missing-CommandLine",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe",
+            "Image": "C:\\fixtures\\schtasks.exe"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "C21-SC03",
+      "rule_id": "56c217c3-2de2-479b-990f-5c109ba8458f",
+      "description": "pwsh parent crossed with original /SC HOURLY",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hktl_powersploit_empire_default_schtasks.yml",
+      "source_sha256": "23ba3e795c8d8f7806e51816f76f5c2c44e64f32bd6d07bbec896bfed9290c1d",
+      "source_git_blob": "dfb6833e7a4b35fff6bf97d5683b220042557590",
+      "cases": [
+        {
+          "case_id": "positive",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe",
+            "Image": "C:\\fixtures\\schtasks.exe",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC HOURLY"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "56c217c3-2de2-479b-990f-5c109ba8458f"
+          ]
+        },
+        {
+          "case_id": "schedule-lookalike",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe",
+            "Image": "C:\\fixtures\\schtasks.exe",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC HOURLX"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "parent-lookalike",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe.bak",
+            "Image": "C:\\fixtures\\schtasks.exe",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC HOURLY"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "image-lookalike",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe",
+            "Image": "C:\\fixtures\\schtasks.exe.bak",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC HOURLY"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "suffix-remains-contained",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe",
+            "Image": "C:\\fixtures\\schtasks.exe",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC HOURLY_EXTRA"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "56c217c3-2de2-479b-990f-5c109ba8458f"
+          ]
+        },
+        {
+          "case_id": "missing-ParentImage",
+          "event": {
+            "Image": "C:\\fixtures\\schtasks.exe",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC HOURLY"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "missing-Image",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe",
+            "CommandLine": "fixture.exe /Create powershell.exe -NonI /TN Updater /TR /SC HOURLY"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "missing-CommandLine",
+          "event": {
+            "ParentImage": "C:\\fixtures\\pwsh.exe",
+            "Image": "C:\\fixtures\\schtasks.exe"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "C21-HY01",
+      "rule_id": "aaafa146-074c-11eb-adc1-0242ac120002",
+      "description": "^PASS^ with -u missing/restored; literal trailing space retained",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hktl_hydra.yml",
+      "source_sha256": "c45843063a8dc6a10a028e337fd59800154a7d78a5c24ec4620c517c7f4b6b67",
+      "source_git_blob": "a9e1eabf6824ff67a8452f8da0a8ef1aa24b983c",
+      "cases": [
+        {
+          "case_id": "positive",
+          "event": {
+            "CommandLine": "fixture.exe -u user -p secret ^PASS^"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "aaafa146-074c-11eb-adc1-0242ac120002"
+          ]
+        },
+        {
+          "case_id": "missing-switch",
+          "event": {
+            "CommandLine": "fixture.exe -p value ^PASS^"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "switch-lookalike",
+          "event": {
+            "CommandLine": "fixture.exe -p value ^PASS^ -uX value"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "missing-trailing-space",
+          "event": {
+            "CommandLine": "fixture.exe -p value ^PASS^ -u"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "tab-is-not-original-space",
+          "event": {
+            "CommandLine": "fixture.exe -p value ^PASS^ -u\tvalue"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "keyword-lookalike",
+          "event": {
+            "CommandLine": "fixture.exe -u user -p secret ^PASSY^"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "missing-CommandLine",
+          "event": {},
+          "target_matches": false,
+          "expected_rule_ids": []
+        }
+      ]
+    },
+    {
+      "gap_id": "C21-HY02",
+      "rule_id": "aaafa146-074c-11eb-adc1-0242ac120002",
+      "description": "^PASS^ with -p missing/restored; literal trailing space retained",
+      "source_path": "rules/windows/process_creation/proc_creation_win_hktl_hydra.yml",
+      "source_sha256": "c45843063a8dc6a10a028e337fd59800154a7d78a5c24ec4620c517c7f4b6b67",
+      "source_git_blob": "a9e1eabf6824ff67a8452f8da0a8ef1aa24b983c",
+      "cases": [
+        {
+          "case_id": "positive",
+          "event": {
+            "CommandLine": "fixture.exe -u user -p secret ^PASS^"
+          },
+          "target_matches": true,
+          "expected_rule_ids": [
+            "aaafa146-074c-11eb-adc1-0242ac120002"
+          ]
+        },
+        {
+          "case_id": "missing-switch",
+          "event": {
+            "CommandLine": "fixture.exe -u value ^PASS^"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "switch-lookalike",
+          "event": {
+            "CommandLine": "fixture.exe -u value ^PASS^ -pX value"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "missing-trailing-space",
+          "event": {
+            "CommandLine": "fixture.exe -u value ^PASS^ -p"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "tab-is-not-original-space",
+          "event": {
+            "CommandLine": "fixture.exe -u value ^PASS^ -p\tvalue"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "keyword-lookalike",
+          "event": {
+            "CommandLine": "fixture.exe -u user -p secret ^PASSY^"
+          },
+          "target_matches": false,
+          "expected_rule_ids": []
+        },
+        {
+          "case_id": "missing-CommandLine",
+          "event": {},
+          "target_matches": false,
+          "expected_rule_ids": []
+        }
+      ]
+    }
+  ]
+}

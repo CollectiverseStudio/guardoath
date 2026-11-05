@@ -1933,3 +1933,17 @@ The actual repository wheel now includes these assets: isolated noneditable
 acceptance verifies228 originals/239 assets and228 positive, benign, missing,
 malformed and routing cases. Hosted ingestion and tenant authority still require
 separate integration; wheel acceptance does not establish hosted readiness.
+
+
+### Sigma batch009 literal branch evidence
+
+[Batch009 branch evidence](sigma-batch-009-branch-evidence.md) covers five
+original schtasks/Hydra alternatives with38 explicit events. A pwsh parent
+with the original DAILY/ST,ONIDLE or HOURLY command matches schtasks; removing
+the required parent/command fields does not. Hydra requires its original literal
+-u/-p switches alongside ^PASS^: end-of-line or tab variants do not substitute
+for a required trailing space. Tests freeze exact full228-rule overlaps and
+malformed inputs; imported sources and the original203-rule review stay unchanged.
+Configure trusted Windows process creation and original entitled rule IDs;
+103 process/125 script selections preserve the128-rule one-event budget.
+Synthetic fixtures prove these branches, not hosted or tenant deployment readiness.
