@@ -150,7 +150,14 @@ async def integrity_check(request, policy, stage):
     if policy.integrity is None:
         return result('integrity','skipped','integrity_configuration_required')
     try:
-        raw = request.content.encode('utf-8') if policy.integrity.encoding == 'utf8' else base64.b64decode(request.content,validate=True)
+        if policy.integrity.encoding == 'utf8':
+            raw = request.content.encode('utf-8')
+        else:
+            raw = base64.b64decode(request.content, validate=True)
+            # validate=True alone accepts excess padding and noncanonical pad bits
+            # on some supported Python releases. Accept one canonical encoding only.
+            if base64.b64encode(raw).decode('ascii') != request.content:
+                raise ValueError('Noncanonical Base64')
     except (ValueError, UnicodeError, binascii.Error):
         return result('integrity','error','integrity_invalid_encoding')
     if len(raw) > policy.integrity.max_bytes:
