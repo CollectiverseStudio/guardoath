@@ -37,8 +37,8 @@ async def csv_formula_check(request, policy, stage):
                 return result("error", code="csv_inspection_budget_exceeded")
             for cell in row:
                 # Do not strip an apostrophe: spreadsheet-safe text escapes should stay benign.
-                # Leading spaces/control whitespace can be disregarded by importers.
-                value = cell.lstrip(" \t\r\n")
+                # Leading whitespace, a BOM, or a nonbreaking space may be ignored by importers.
+                value = cell.lstrip(" \t\r\n\ufeff\u00a0")
                 if value.startswith(FORMULA_PREFIXES):
                     dangerous = True
     except (csv.Error, UnicodeError):
