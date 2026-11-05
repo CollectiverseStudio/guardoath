@@ -133,7 +133,7 @@ def test_the_registry_endpoint_is_public_and_describes_every_control():
     assert response.status_code == 200
     assert response.headers["cache-control"] == "public, max-age=300"
     body = response.json()
-    assert body["registry_version"] == REGISTRY_VERSION and body["control_count"] == 17
+    assert body["registry_version"] == REGISTRY_VERSION and body["control_count"] == 18
     assert [d["domain_id"] for d in body["domains"]] == [d.domain_id for d in DOMAINS]
     listed = [c for d in body["domains"] for c in d["controls"]]
     assert sorted(c["control_id"] for c in listed) == sorted(CHECK_IDS)
