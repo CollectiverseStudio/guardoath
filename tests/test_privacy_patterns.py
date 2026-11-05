@@ -140,8 +140,16 @@ def test_catalog_matches_the_copied_recognizers():
 @pytest.mark.parametrize("entity", sorted(PATTERN_ENTITIES))
 def test_every_pattern_type_is_detected_by_default(checkers, entity):
     result = check(checkers, EXAMPLES[entity])
-    assert "pii." + entity.lower() in rule_ids(result)
-    assert result.evaluation_status == "complete" and result.recommended_action == "flag"
+    # Keep the exact detection and completion requirements. On failure, report safe
+    # checker status/timing so CI distinguishes timeouts from genuine missed matches.
+    expected = "pii." + entity.lower()
+    diagnostic = (
+        f"entity={entity}, evaluation_status={result.evaluation_status}, "
+        f"recommended_action={result.recommended_action}, "
+        f"checkers={[(c.checker_id, c.status, c.error_code, c.latency_ms) for c in result.checker_results]}"
+    )
+    assert expected in rule_ids(result), diagnostic
+    assert result.evaluation_status == "complete" and result.recommended_action == "flag", diagnostic
     assert EXAMPLES[entity] not in result.model_dump_json()
     finding = next(f for f in result.findings if f.rule_id == "pii." + entity.lower())
     assert finding.severity == PATTERN_ENTITIES[entity][1] or entity == "PHONE_NUMBER"
