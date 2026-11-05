@@ -29,6 +29,14 @@
 
 **Required regression matrix:** 0 files, 1 CSV, 1 DOCX unsupported, CSV+DOCX, multiple CSV, wrong extension/MIME, quoted "attachment" in the prompt without bytes, tenant explicit Off, stage-specific overrides, disabled individual rule, malformed/overbudget/truncated file, tenant isolation, stored-record migrations, result no-echo and no-bypass to AI on incomplete required inspections. Verify exact-HEAD CI and subsequent authorized 15/15 live checks; these capabilities are **not currently implemented or deployed**.
 
+## Reusable trusted-byte probe — implemented helper, not an HTTP attachment feature
+
+`guardoath/attachment_probe.py` now provides `classify_attachment(data: bytes)` for an ingestion layer that has **actually received file bytes**. It returns only `kind`, `status`, `byte_count`, `sha256` and a fixed reason code—no filename, raw content, hidden attachment text or network transfer. The probe requires an explicit bytes argument; it never infers attachments from a user's prompt, file name or MIME string. Its current fixed limit is 32,000 bytes, aligned with the existing textual check request size, and the CSV structural check is bounded by rows, columns and total cells.
+
+The probe recognizes **UTF-8 CSV structure** (multiple consistently shaped records, including UTF-8 BOM and quoted fields) and marks `kind=csv,status=recognized`. That means **format recognized, not content cleared or security passed**: the authenticated API must subsequently run the tenant-selected `csv_formula` rule. PDF, ZIP/OpenXML containers, legacy OLE, and image signatures are classified as **unsupported**, not clean. Unknown encodings, malformed/budget-exceeded content and ambiguous plain text must be treated as unsupported/invalid. A ZIP signature does **not** prove the file is DOCX/XLSX; actual safe container inspection is still unimplemented.
+
+`tests/test_attachment_probe.py` provides synthetic positive CSV classification, no-file/ambiguous-text rejection, unsupported binary signatures, malformed and over-budget refusal and non-leaking metadata assertions. This is an independent **library implementation only**, not an authenticated upload route, tenant `auto` activation, dashboard file picker, full format parser, production deploy or complete end-to-end protection. It must be invoked through the approved shared ingress/tenant/engine integration rather than becoming a second policy engine.
+
 ## Initial proposed rules and format coverage
 
 | Control area | Proposed rules/use cases | Status |
