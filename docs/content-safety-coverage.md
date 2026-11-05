@@ -1,5 +1,7 @@
 # Content safety: provider-independent contract and initial adapter
 
+> **Retired 2026-11-05 (Greg): GuardOath does every check itself; no content is sent to another company's service.** The connector this page describes was removed with its code, tests and policy files. `prompt_attack` and `harmful_content` (guardoath/prompt_attack.py, guardoath/harmful_content.py) do this work locally; see docs/tenant-records.md. This page is kept as a record of the earlier decision.
+
 Version 0.21.0. Hosting and validation-provider selection are independent.
 The stable checker ID is `content_safety`; the initial optional adapter uses
 Amazon Bedrock ApplyGuardrail. No cloud SDK is required by the portable core,

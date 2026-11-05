@@ -1,6 +1,6 @@
 """Input and output settings on one tenant record (2026-11-04).
 
-Each check has two fields, input_check_<id> and output_check_<id> (input-only checks have no output field), and the
+Each check has two fields, input_check_<id> and output_check_<id>, and the
 rule settings are two maps, input_rule_actions and output_rule_actions. Records stored before then hold one
 check_<id> field and one rule_actions map for both stages; they are converted when read, so nothing changes until a
 stage is set differently. Only Block stops a message or answer (Greg, 2026-11-04): see the dashboard and guide tests.
@@ -21,9 +21,9 @@ from guardoath.dynamodb_store import from_item, to_item
 from guardoath.engine import Engine
 from guardoath.hosted import TenantService
 from guardoath.models import Action, CheckRequest, Stage
-from guardoath.tenant_record import (CHECK_FIELDS, CHECK_IDS, EDITABLE_FIELDS, INPUT_CHECK_FIELDS, INPUT_ONLY_CHECK_IDS,
-                                     LEGACY_FIELDS, OUTPUT_CHECK_FIELDS, RULE_ACTION_FIELDS, TENANT_POLICY_VERSION,
-                                     TenantRecord, demo_key, demo_records)
+from guardoath.tenant_record import (CHECK_FIELDS, CHECK_IDS, EDITABLE_FIELDS, INPUT_CHECK_FIELDS, LEGACY_FIELDS,
+                                     OUTPUT_CHECK_FIELDS, RETIRED_CHECK_FIELDS, RULE_ACTION_FIELDS,
+                                     TENANT_POLICY_VERSION, TenantRecord, demo_key, demo_records)
 from guardoath.tenant_store import MemoryTenantStore
 
 CHECKERS = default_checkers(enable_pii=True)
@@ -48,15 +48,16 @@ def ids(result):
 # The record fields
 
 
-def test_every_check_has_an_input_field_and_every_two_stage_check_an_output_field():
+def test_every_check_has_an_input_field_and_an_output_field():
+    # 2026-11-05: every check runs on both stages (the only input-only check, azure_prompt_shields, was removed).
     assert INPUT_CHECK_FIELDS == tuple("input_check_" + c for c in CHECK_IDS)
-    assert OUTPUT_CHECK_FIELDS == tuple("output_check_" + c for c in CHECK_IDS if c not in INPUT_ONLY_CHECK_IDS)
-    assert len(INPUT_CHECK_FIELDS) == 18 and len(OUTPUT_CHECK_FIELDS) == 17
+    assert OUTPUT_CHECK_FIELDS == tuple("output_check_" + c for c in CHECK_IDS)
+    assert len(INPUT_CHECK_FIELDS) == len(OUTPUT_CHECK_FIELDS) == 19
     assert CHECK_FIELDS == INPUT_CHECK_FIELDS + OUTPUT_CHECK_FIELDS
     assert RULE_ACTION_FIELDS == ("input_rule_actions", "output_rule_actions")
     for name in CHECK_FIELDS:
         assert TenantRecord.model_fields[name].default is None
-    assert "output_check_azure_prompt_shields" not in TenantRecord.model_fields
+    assert not RETIRED_CHECK_FIELDS & set(TenantRecord.model_fields) and not RETIRED_CHECK_FIELDS & EDITABLE_FIELDS
 
 
 def test_the_old_field_names_are_not_record_fields_and_cannot_be_changed():
@@ -86,13 +87,6 @@ def test_input_flag_and_output_block_report_the_same_finding_with_different_deci
     rec = record(input_check_pii="flag", output_check_pii="block")
     assert run(rec, EMAIL, Stage.INPUT).effective_action == Action.FLAG
     assert run(rec, EMAIL, Stage.OUTPUT).effective_action == Action.BLOCK
-
-
-def test_an_input_only_check_has_no_output_action():
-    rec = record(input_check_secrets="flag")
-    assert rec.action("azure_prompt_shields", Stage.OUTPUT) is None
-    with pytest.raises(ValidationError):
-        record(input_check_secrets="flag", output_check_azure_prompt_shields="flag")
 
 
 def test_redact_is_refused_for_other_checks_on_either_stage():
@@ -158,9 +152,24 @@ def test_a_stored_record_with_the_old_names_runs_exactly_as_before_on_both_stage
     assert not LEGACY_FIELDS & set(dumped)
 
 
-def test_an_old_input_only_check_converts_to_input_only():
-    rec = TenantRecord.model_validate({**LEGACY, "check_azure_prompt_shields": "flag"})
-    assert rec.input_check_azure_prompt_shields == Action.FLAG and rec.action("azure_prompt_shields", Stage.OUTPUT) is None
+def test_the_removed_outside_provider_checks_are_dropped_when_a_stored_record_is_read():
+    # 2026-11-05: every stored record holds the removed checks' fields (null when off); they are dropped when read.
+    stored = {**LEGACY, "input_check_content_safety": None, "output_check_content_safety": None,
+              "input_check_azure_prompt_shields": None}
+    rec = TenantRecord.model_validate(stored)
+    assert rec.input_check_pii == rec.output_check_pii == Action.BLOCK
+    assert not RETIRED_CHECK_FIELDS & set(rec.model_dump())
+    # A demo record could never turn them on; any value there is dropped too.
+    demo = TenantRecord.model_validate({**demo_records()[0].model_dump(), "input_check_content_safety": "flag"})
+    assert not RETIRED_CHECK_FIELDS & set(demo.model_dump())
+
+
+@pytest.mark.parametrize("name", ["check_azure_prompt_shields", "input_check_content_safety", "output_check_content_safety",
+                                  "input_check_azure_prompt_shields"])
+def test_a_customer_record_that_still_turns_a_removed_check_on_is_refused_for_review(name):
+    with pytest.raises(ValidationError, match="were removed"):
+        TenantRecord.model_validate({**LEGACY, name: "flag"})
+
 
 
 def test_a_dynamodb_item_holding_the_old_names_is_read_and_saved_with_the_new_ones():
@@ -194,8 +203,7 @@ def auth(token):
 def test_the_summary_shows_each_stage_separately():
     client, _ = client_and_service()
     tenant = client.get("/v1/applications/current", headers=auth(demo_key("demo1", SECRET))).json()["tenant"]
-    assert len(tenant["input_checks"]) == 18 and len(tenant["output_checks"]) == 17
-    assert "azure_prompt_shields" not in tenant["output_checks"]
+    assert len(tenant["input_checks"]) == len(tenant["output_checks"]) == 19
     assert tenant["input_checks"]["pii"] == tenant["output_checks"]["pii"] == "block"
     assert tenant["input_rule_actions"] == tenant["output_rule_actions"] == {}
     assert "checks" not in tenant and "rule_actions" not in tenant

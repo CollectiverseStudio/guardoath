@@ -13,6 +13,9 @@ from guardoath.completeness import completeness_check
 from guardoath.text_security import text_security_check
 from guardoath.csv_formula import csv_formula_check
 from guardoath.lexical_checker import lexical_guards_check
+from guardoath.human_safety import human_safety_check
+from guardoath.prompt_attack import prompt_attack_check
+from guardoath.harmful_content import harmful_content_check
 from guardoath.secrets_check import build_secret_checker
 from guardoath.matched_outcomes import matched_outcomes_check
 from guardoath.evidence import evidence_check
@@ -92,20 +95,18 @@ def simulated_checker(kind: str) -> Checker:
     return run
 
 
-def default_checkers(enable_pii: bool = False, enable_azure: bool = False, content_safety_provider: str = "none") -> dict[str, Checker]:
+def default_checkers(enable_pii: bool = False) -> dict[str, Checker]:
+    """Every checker runs here, in this process. None sends content to another company's service (2026-11-05: the
+    Azure Prompt Shields and Amazon Bedrock Guardrails connectors were removed; prompt_attack and harmful_content
+    replace them)."""
     checkers = {"schema": schema_check, "safety": simulated_checker("safety"),
                 "bias": simulated_checker("bias"), "cross_field": cross_field_check,
-                "secrets": build_secret_checker(), "completeness": completeness_check, "text_security": text_security_check, "csv_formula": csv_formula_check, "matched_outcomes": matched_outcomes_check, "evidence": evidence_check, "tool_calls": tool_calls_check, "ledger": ledger_check, "timestamps": timestamps_check, "graph": graph_check, "integrity": integrity_check, "lexical_guards": lexical_guards_check}
+                "secrets": build_secret_checker(), "completeness": completeness_check, "text_security": text_security_check, "csv_formula": csv_formula_check, "matched_outcomes": matched_outcomes_check, "evidence": evidence_check, "tool_calls": tool_calls_check, "ledger": ledger_check, "timestamps": timestamps_check, "graph": graph_check, "integrity": integrity_check, "lexical_guards": lexical_guards_check,
+                "human_safety": human_safety_check, "prompt_attack": prompt_attack_check,
+                "harmful_content": harmful_content_check}
     if enable_pii:
         from guardoath.pii import build_pii_checker
         checkers["pii"] = build_pii_checker()
         from guardoath.encoded_pii import build_encoded_pii_checker
         checkers["encoded_pii"] = build_encoded_pii_checker(checkers["pii"])
-    if enable_azure:
-        from guardoath.azure_prompt_shields import from_environment
-        checkers["azure_prompt_shields"] = from_environment()
-    from guardoath.content_safety import build_content_safety
-    safety_adapter = build_content_safety(content_safety_provider)
-    if safety_adapter is not None:
-        checkers["content_safety"] = safety_adapter
     return checkers

@@ -108,7 +108,7 @@ def test_a_demo_key_connects_to_its_own_record(client):
     tenant = data["tenant"]
     assert tenant["tenant_id"] == "demo2" and tenant["demo"] is True and tenant["used"] == 0
     assert tenant["monthly_allowance"] == 2000 and tenant["overage"] == "block" and tenant["month"] == usage_month()
-    assert tenant["input_checks"]["pii"] == "block" and tenant["input_checks"]["ledger"] is None and len(tenant["input_checks"]) == 18
+    assert tenant["input_checks"]["pii"] == "block" and tenant["input_checks"]["ledger"] is None and len(tenant["input_checks"]) == 19
     assert token not in response.text
 
 
@@ -290,7 +290,8 @@ def test_a_stale_revision_is_refused_and_nothing_changes(client, tenants):
 @pytest.mark.parametrize("changes, message", [
     ({"input_check_secrets": "redact", "output_check_secrets": "redact"}, "Only the pii check can redact"),
     ({"input_check_secrets": "deny", "output_check_secrets": "deny"}, "input_check_secrets: Input should be"),
-    ({"input_check_content_safety": "flag", "output_check_content_safety": "flag"}, "Demo users cannot run checks that call a paid outside provider"),
+    ({"input_check_content_safety": "flag", "output_check_content_safety": "flag"}, "content_safety and azure_prompt_shields were removed"),
+    ({"input_check_azure_prompt_shields": "flag"}, "content_safety and azure_prompt_shields were removed"),
     ({"input_check_pii": None, "output_check_pii": None, "input_check_encoded_pii": None, "output_check_encoded_pii": None, "input_check_secrets": None, "output_check_secrets": None, "input_check_text_security": None, "output_check_text_security": None},
      "Turn on at least one check"),
     ({"monthly_allowance": 10_000_000}, "Only check fields and check settings can be changed"),

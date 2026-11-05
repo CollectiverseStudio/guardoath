@@ -70,7 +70,6 @@ def serve(port, browser=True):
     # Demo users demo1-demo10 are kept in memory for this run; their keys change on every start.
     os.environ.update(GUARDOATH_TENANT_STORE='memory', GUARDOATH_DEMO_KEY_SECRET=secrets.token_urlsafe(32))
     os.environ.update(GUARDOATH_API_KEY=key, GUARDOATH_ENABLE_PII='1',
-                      GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS='0', GUARDOATH_CONTENT_SAFETY_PROVIDER='none',
                       GUARDOATH_POLICY_FILE=str(ROOT / 'policies/playground.json'))
     try:
         import uvicorn

@@ -84,7 +84,8 @@ async def classify(witness):
         violations.append(row)
         for rule_id, fields in generated.items():
             for kind, field in (("positive", "example"), ("benign", "look_alike")):
-                samples.append(await audit_example(engine, policy, rule_id, fields[field], kind, stage))
+                samples.append(await audit_example(engine, policy, rule_id, fields[field], kind, stage,
+                                                   fields.get(field + "_unavailable")))
     proof = strict_cycle_proof(comparisons) if witness["kind"] == "strict_two_cycle" else None
     feasible = bool(manual) and all(c["accepted"] for c in manual)
     generated_benign_pass = all(c["accepted"] for c in samples if c["kind"] == "benign")

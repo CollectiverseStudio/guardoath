@@ -75,11 +75,6 @@ async def evaluate(suite, engine, groups=None):
     # Validate references before executing anything; avoid misleading partial reports.
     if any(not engine.has_policy(c.request.application_id,c.request.policy_version) for c in cases):
         raise ValueError('A case references an unavailable policy')
-    for case in cases:
-        description = next(p for p in engine.describe_policies(case.request.application_id)
-                           if p['version'] == case.request.policy_version)
-        if any(c['external'] for c in description['checks']):
-            raise ValueError('Regression runs only support local adapters')
     rows = []
     for case in cases:
         content_request=case.request
@@ -155,7 +150,7 @@ def main(argv=None):
         baseline = load_report(args.baseline) if args.baseline else None
         if baseline and baseline.suite_id != suite.suite_id:
             raise ValueError('Baseline suite does not match')
-        # Deliberately ignore Azure environment settings and never register providers.
+        # Only GuardOath's own checkers run here; none sends content anywhere.
         engine = Engine(load_policies(args.policies),default_checkers(enable_pii=args.pii))
         report = asyncio.run(evaluate(suite,engine,set(args.group or [])))
         comparison = compare_reports(baseline,report) if baseline else None

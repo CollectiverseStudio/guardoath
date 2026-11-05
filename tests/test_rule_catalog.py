@@ -56,12 +56,14 @@ def test_no_look_alike_is_reported(checkers, rule_id):
 def test_rule_counts():
     # 2026-11-03: the 40 agent-configuration rules (agent_config_guards) joined lexical_guards: 239 -> 279.
     # 2026-11-04: the document checks' findings (21, including field comparisons' malformed JSON) and encoded
-    # personal data (97) became rules: 279 -> 397. A record's own comparisons and sections are not counted here.
-    assert len(RULES) == 398
+    # personal data (97) became rules: 279 -> 397. 2026-11-05: human safety (61): 397 -> 458; prompt attack (35) and
+    # harmful content (30), replacing the removed outside-provider checks, and CSV formula (1): 458 -> 524. A record's own comparisons
+    # and sections are not counted here.
+    assert len(RULES) == 524
     assert {control: len(rules_for(control)) for control in CHECK_IDS if rules_for(control)} == {
         "lexical_guards": 161, "pii": 97, "secrets": 17, "text_security": 4, "encoded_pii": 97, "schema": 2,
         "matched_outcomes": 1, "evidence": 8, "tool_calls": 2, "ledger": 2, "timestamps": 1, "graph": 3, "integrity": 1,
-        "cross_field": 1, "csv_formula": 1}
+        "cross_field": 1, "csv_formula": 1, "human_safety": 61, "prompt_attack": 35, "harmful_content": 30}
     assert len(rules_for("pii")) == len(PATTERN_ENTITIES) + len(CORE_ENTITIES) + len(LABELED)
     assert {rule.control_id for rule in RULES.values()} <= set(CHECK_IDS)
 

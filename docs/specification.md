@@ -552,3 +552,15 @@ The new 100-case batch adds 28 deliberate incomplete assessments, independent
 examples and unit/API/gate/launcher/browser/CI coverage. The all-suite collection
 now runs ten suites / 930 expectations / 188 expected incomplete cases. No new
 dependency, provider call, model download, deployment or product rename is added.
+
+## Version 0.26: no outside providers (2026-11-05)
+
+Greg's decision (2026-11-02, restated 2026-11-05): GuardOath does every check itself and sends no content to another
+company's service. Removed: the optional `azure_prompt_shields` connector (Azure Prompt Shields), the optional
+`content_safety` connector and its Amazon Bedrock Guardrails adapter, their policy files (`azure-prompt-shields.json`,
+`content-safety.json`) and the `content-safety-v1` example profile, the engine's external-provider gate
+(`Policy.external_checks`, `CheckerResult.external`) and the `provider_unpriced` cost basis; every check reports
+`cost_basis: "local_only"`. Added local checks: `prompt_attack` (35 wording rules) and `harmful_content` (30), beside
+`human_safety` (61). The earlier sections of this document that describe the connectors are history. Stored tenant
+records still hold the removed checks' fields; they are dropped when read, and a customer record that turns one on is
+refused for review.

@@ -14,10 +14,17 @@ Each tenant is one record. Everything about the tenant is on it:
 - **One field per check**, listed below.
 - **Check settings:** what some checks need to run (schemas, comparisons, required sections, and so on).
 
+
+> **No outside providers (2026-11-05, Greg).** GuardOath does every check itself; no content is sent to another
+> company's service. The two checks that did (`content_safety`, Amazon Bedrock Guardrails; `azure_prompt_shields`,
+> Azure Prompt Shields) were removed, and `harmful_content` and `prompt_attack` do that work here. Every stored record
+> holds their fields (null when off): they are dropped when the record is read. A customer record that still turns one
+> on is refused until it is reviewed; a change request that names one is refused with 422.
+
 ## Check fields
 
 Each check has two fields, one per stage (since 2026-11-04): `input_check_<id>` for the user's message and
-`output_check_<id>` for the AI's answer. `azure_prompt_shields` checks input only and has no output field. So a check
+`output_check_<id>` for the AI's answer. So a check
 can block on input and only flag on output, or run on one stage only.
 
 | Field value | Effect on that stage |
@@ -34,7 +41,7 @@ always reports `allow` there and puts what enforce would do in `recommended_acti
 
 **Records stored before 2026-11-04** hold one field per check, `check_<id>`, and one rule map, `rule_actions`, each for
 both stages. When such a record is read (memory or DynamoDB), `check_<id>` sets both `input_check_<id>` and
-`output_check_<id>` (input only for `azure_prompt_shields`) and `rule_actions` sets both maps, so the record runs
+`output_check_<id>` and `rule_actions` sets both maps, so the record runs
 exactly as before until a stage is set differently; it is saved with the new names. A change request that uses the old
 names is refused (422) with a message naming the new ones. `tests/test_stage_settings.py` covers both stages, the
 conversion and the API.
@@ -48,6 +55,9 @@ The table below lists each check by its id; both of its fields need the same set
 | `secrets` | none (options: `detect_secret_assignments`, `inspect_encoded_secrets`, `confidential_terms`) |
 | `text_security` | none |
 | `lexical_guards` | none (161 wording patterns; off for demo users until turned on) |
+| `human_safety` | none (61 wording patterns from `docs/human-safety-scenarios.md`; off for demo users until turned on) |
+| `prompt_attack` | none (35 wording patterns of jailbreaks and injected instructions; off for demo users until turned on) |
+| `harmful_content` | none (30 wording patterns of hate, harassment, threats, sexual content involving minors, extremism and violence; off for demo users until turned on) |
 | `schema` | `input_schema` or `output_schema` |
 | `cross_field` | `comparisons` |
 | `completeness` | `required_sections` |
@@ -58,8 +68,6 @@ The table below lists each check by its id; both of its fields need the same set
 | `timestamps` | `timestamps` |
 | `graph` | `graph` |
 | `integrity` | `integrity` |
-| `content_safety` | none; calls a paid outside provider and runs only after the local checks pass |
-| `azure_prompt_shields` | none; calls a paid outside provider and runs only after the local checks pass |
 
 Rules:
 - At least one check must have a value.
@@ -92,7 +100,6 @@ launcher and the evaluations only.
 - **On, with `block`:** pii, encoded_pii, secrets and text_security.
 - **Off, with settings filled in** so any of them can be turned on: schema, cross_field, completeness,
   matched_outcomes, evidence, tool_calls, ledger, timestamps, graph and integrity.
-- **Never on:** content_safety and azure_prompt_shields (paid providers).
 - **Limits:** 2,000 checks per month each, hard limit (`overage: block`), and no keys.
 - **Default profile:** `tenant`.
 - **Reset:** a reset sets every check field, check setting and the default profile back to these values.
@@ -140,11 +147,10 @@ keeps working alongside it.
 - **Dashboard:** when demo users are on, the dashboard shows **Or try a demo user**. Choosing one and
   selecting **Get demo API key** shows the key and connects with it. The check profile drop-down lists every
   profile the tenant can use and starts on its default profile. **Default profile** with **Save default
-  profile** changes the default. The checks panel follows the selected profile: for `tenant` it lists all 18
+  profile** changes the default. The checks panel follows the selected profile: for `tenant` it lists all 19
   check fields (Off, Block, Flag, Allow, and Redact for pii) and **Save checks** saves the changed fields; for
   an example profile it shows that profile's checks and their input and output actions, which cannot be
-  changed. **Reset to defaults** (demo users) restores the demo values. Paid outside checks cannot be turned
-  on for demo users.
+  changed. **Reset to defaults** (demo users) restores the demo values.
 - **Local launcher:** `python start_dashboard.py` turns on demo users with a new secret on every start.
 
 ## Control registry
@@ -176,12 +182,16 @@ that the guide has a section for every control. Maturity is reported per control
 
 ## Per-rule settings
 
-A check runs many rules. 398 catalog rules can be set one by one today (updated 2026-11-05), plus each record's own
+A check runs many rules. 524 catalog rules can be set one by one today (2026-11-05: 397, plus 1 CSV-formula,
+61 human-safety, 35 prompt-attack and 30 harmful-content rules), plus each record's own
 comparisons and required sections (below):
 
 | Check | Rules |
 |---|---|
 | `lexical_guards` | 161, including 40 agent-configuration settings such as `verify_tls=false` |
+| `human_safety` | 61 (since 2026-11-05): self-harm, medical emergencies, medicines, children, physical hazards, abuse, scams, violence |
+| `prompt_attack` | 35 (since 2026-11-05): jailbreak personas and modes, instruction overrides, prompt extraction, injected instructions, signs an attack worked |
+| `harmful_content` | 30 (since 2026-11-05): hate, insults and harassment, threats, sexual content involving minors, extremism, violence |
 | `pii` | 97 privacy types, 4 of them only with `detect_labeled_sensitive_data` |
 | `encoded_pii` | 97: each privacy type inside a labeled Base64 or hex payload (`pii.encoded_<type>`) |
 | `secrets` | 17, 1 of them only with `detect_secret_assignments` |
@@ -209,12 +219,27 @@ rule `completeness.<rule_id>` (check `completeness`). They are rules of that rec
 - **Ids on a tenant record** are lowercase letters, digits and `_` (`^[a-z][a-z0-9_]{0,79}$`) and may not name a
   catalog rule (`business.ledger_currency`, `business.ledger_unbalanced`, `business.invalid_json`). Engine policy files
   keep the wider pattern.
-- **Examples** are generated from the configuration: a JSON document the comparison reports and a look-alike it does
-  not (other comparisons on the record get passing values where their fields do not overlap); for sections, labeled
-  text with the section left out, and with every section present. When a comparison's two pointers overlap no example
-  is generated.
-- **Limits** are the checks' own: at most 50 comparisons and 50 sections; values come from the submitted JSON only
-  (see `docs/field-comparisons-implementation-plan.md` for what comparisons do not prove).
+- **Examples** are generated from the configuration. For a comparison (since 2026-11-05): a JSON document that this
+  comparison reports and no other comparison on the record does, and a look-alike that none of the record's comparisons
+  reports, on every stage the comparison runs on. The values are solved for all of the record's comparisons together
+  (comparisons that share no stage with it are ignored) and each document is checked with the checker's own value
+  rules before it is shown. When no such document exists, the example or look-alike is `null` and
+  `example_unavailable` / `look_alike_unavailable` gives a code and a reason: `cannot_all_pass` (the comparisons
+  contradict each other, for example a < b and b < a), `cannot_fail_alone` (the others imply this one, for example a ≤ a),
+  `mixed_types` (a field compared as a number and as a date), `field_inside_field` (a field that is also an object of
+  other fields) or `search_limit` (too many "different from" comparisons). For sections: labeled text with the section
+  left out, and with every section present.
+- **No count limit** (since 2026-11-05, Greg: "we should not limit the comparisons"): a record can hold any number of
+  comparisons and sections. What bounds a record is physical: its stored settings must fit one database item
+  (`MAX_RECORD_BYTES`, 350,000 bytes; a save over it is refused with 422 and nothing is stored), and one save's
+  request body is at most 262,144 bytes (the API's JSON limit). A typical comparison takes about 150 bytes, so that is
+  roughly 1,700 comparisons per save, fewer with long field names. Values come from the submitted JSON only (see
+  `docs/field-comparisons-implementation-plan.md` for what comparisons do not prove). Generating examples is bounded
+  per record (work and 2,000,000 bytes of example text in one response); past that a rule's example says
+  `listing_limit` or `search_limit` instead of a document, and the comparison itself still runs.
+- **One message is one JSON document:** the checker accepts at most 1,000 fields in one object and nesting 32 deep
+  (`guardoath/json_data.py`). Comparisons that need more top-level fields than that can never all pass; their examples
+  say `json_limit`. Nest the fields in more objects (for example `/order/total`, `/refund/amount`).
 
 `tests/test_record_rules.py` covers all 30 templates in `docs/field-comparisons-rule-inventory.json` and the demo
 users' comparisons and sections, per-rule actions, unknown and removed ids, colliding ids, tenants sharing one engine,
@@ -232,7 +257,7 @@ A rule that is not listed uses its check's action. Rule settings are kept while 
 apply again when it is turned back on.
 
 On the dashboard (since 2026-11-04) the checks and their rules are one table grouped by category: each check is a row
-with an **Input** setting, an **Output** setting ("Input only" for Prompt Shields) and what is in effect, and
+with an **Input** setting, an **Output** setting and what is in effect, and
 **Show rules** opens its rules under it, each with its own Input and Output setting and the setting in effect on each
 stage (for example "Input: Block (from check)", "Output: Allow (own setting)" or "Off (check is off)"). Type part of a
 rule's name or id (for example `email` or `ip address`), or filter by category or by the setting in effect on either
@@ -254,7 +279,7 @@ settings.
 
 A check runs on the stages where its field has a value (`input_check_<id>`, `output_check_<id>`), and (since
 2026-11-04) only where its settings cover the stage: `schema` runs on the stages that have a schema (`input_schema`, `output_schema`), `cross_field` on the stages
-of its `comparisons`, `completeness` on the stages of its `required_sections`. `azure_prompt_shields` is input only.
+of its `comparisons`, `completeness` on the stages of its `required_sections`.
 Before, such a check also ran on the other stage, found nothing to check there, and blocked every message on it.
 
 Some checks need one message format (`content_format`):

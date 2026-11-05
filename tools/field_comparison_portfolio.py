@@ -35,11 +35,14 @@ def scenarios():
                           for i, (left, right, op) in enumerate(relations))
 
 
-async def audit_example(engine, policy, rule_id, text, kind, stage):
+async def audit_example(engine, policy, rule_id, text, kind, stage, unavailable=None):
+    # The generator gives a stable reason code with None (record_rules *_unavailable, 2026-11-05). It is reported, never
+    # accepted: this audit does not prove infeasibility itself.
     if text is None:
         return {"kind": kind, "stage": stage.value, "target_rule_id": rule_id,
                 "accepted": False, "status": "unavailable",
-                "reason": "generator_returned_none_without_reason"}
+                "reason": ("generator_unavailable:" + unavailable["code"]) if unavailable
+                else "generator_returned_none_without_reason"}
     request = CheckRequest(application_id=policy.application_id, policy_version=policy.version,
                            content=text, content_format="json")
     result = await engine.check(request, stage)
@@ -71,7 +74,8 @@ async def audit_portfolio(name, comparisons):
     for rule_id, row in generated.items():
         for stage in (Stage.INPUT, Stage.OUTPUT):
             for kind, field in (("positive", "example"), ("benign", "look_alike")):
-                cases.append(await audit_example(engine, policy, rule_id, row[field], kind, stage))
+                cases.append(await audit_example(engine, policy, rule_id, row[field], kind, stage,
+                                                 row.get(field + "_unavailable")))
     return {"scenario": name, "comparison_count": len(comparisons),
             "case_count": len(cases), "accepted_cases": sum(c["accepted"] for c in cases),
             "cases": cases}

@@ -179,21 +179,6 @@ def test_local_bias_batch_never_uses_network(monkeypatch):
     assert asyncio.run(evaluate(load_suite(ROOT/'evals/bias.json'),engine))['summary']['matched']==100
 
 
-@pytest.mark.parametrize('finding', [False,True])
-def test_external_gate_uses_bias_result_even_when_its_action_is_allow(finding):
-    calls=[]
-    async def remote(request,policy,stage):
-        calls.append(stage)
-        return CheckerResult(checker_id='external',checker_version='fixture',status='passed',external=True)
-    remote.external=True
-    selected=policy().model_copy(update={'rules':(Rule(checker_id='matched_outcomes',on_finding='allow'),Rule(checker_id='external')),
-        'external_checks':'after_local_pass'})
-    result=check(payload('approve','deny' if finding else 'approve'),configured=selected,extras={'external':remote})
-    assert bool(calls) is not finding
-    if finding:
-        assert result.checker_results[-1].error_code=='external_local_gate' and result.evaluation_status=='incomplete'
-
-
 def test_required_failure_action_is_respected_in_enforce_mode():
     selected=policy(mode='enforce').model_copy(update={'failure_action':'flag'})
     result=check({'scenarios':[]},configured=selected)

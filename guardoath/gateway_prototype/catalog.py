@@ -6,7 +6,7 @@ import re
 
 from guardoath.engine import Engine
 from guardoath.models import Action, Policy
-from guardoath.tenant_record import (CHECK_IDS, INPUT_ONLY_CHECK_IDS, REQUIRED_SETTINGS,
+from guardoath.tenant_record import (CHECK_IDS, REQUIRED_SETTINGS,
                                     SETTINGS_OF, TENANT_ID_PATTERN, TenantRecord)
 
 CATALOG_VERSION = 'prototype-1'
@@ -28,7 +28,7 @@ class Control:
 def catalog_for(checkers):
     """IDs/stages/actions come from the actual persisted TenantRecord schema."""
     return {control_id: Control(control_id,
-        stages=('input',) if control_id in INPUT_ONLY_CHECK_IDS else ('input', 'output'),
+        stages=('input', 'output'),
         actions=('block', 'flag', 'allow', 'redact') if control_id == 'pii' else ('block', 'flag', 'allow'),
         implementation_version=str(getattr(checkers.get(control_id), 'checker_version', 'unavailable')))
         for control_id in CHECK_IDS}
@@ -61,8 +61,7 @@ def _validated_settings(control_id, selection, owner):
     enabled = any(selection[stage + '_action'] is not None for stage in ('input', 'output'))
     # This ephemeral policy checks configuration only. No checker is executed,
     # and it is never used as runtime selection/action authority.
-    rules = [{'checker_id': control_id,
-              'stages': ['input'] if control_id in INPUT_ONLY_CHECK_IDS else ['input', 'output']}]
+    rules = [{'checker_id': control_id, 'stages': ['input', 'output']}]
     try:
         policy = Policy.model_validate_json(json.dumps({
             'application_id': owner, 'version': 'catalog-settings-validation',

@@ -10,7 +10,7 @@ check back on restores them, and they are passed to the engine only while the ch
 A check whose settings cover one stage only runs on that stage (2026-11-04): schema runs on the stages that have a
 schema (input_schema, output_schema), cross_field on the stages of its comparisons, completeness on the stages of
 its required sections. Before, it ran on both, and every message on the other stage came back incomplete (blocked).
-Every other check runs on both stages (azure_prompt_shields: input only).
+Every other check runs on both stages.
 
 Each field comparison and required section on a record is a rule of that record only (business.<rule_id>,
 completeness.<rule_id>; guardoath.record_rules), and can be set on its own, per stage, like a catalog rule.
@@ -43,13 +43,17 @@ from guardoath.privacy_catalog import DEFAULT_MIN_SCORE
 from guardoath.record_rules import bad_record_rule_ids, record_rule_ids
 from guardoath.rule_catalog import RULE_ID_PATTERN, RULES
 
-# Every check a tenant can turn on. The simulated "safety" and "bias" checkers are test fixtures only.
-CHECK_IDS = ("pii", "encoded_pii", "secrets", "text_security", "lexical_guards", "schema", "cross_field", "completeness",
-             "matched_outcomes", "evidence", "tool_calls", "ledger", "timestamps", "graph", "integrity", "csv_formula",
-             "content_safety", "azure_prompt_shields")
-# Checks that call a paid outside provider. They never run for demo users.
-EXTERNAL_CHECK_IDS = frozenset({"content_safety", "azure_prompt_shields"})
-INPUT_ONLY_CHECK_IDS = frozenset({"azure_prompt_shields"})
+# Every check a tenant can turn on. GuardOath runs every one of them itself: no content is sent to another company's
+# service (Greg, 2026-11-02 and 2026-11-05). The simulated "safety" and "bias" checkers are test fixtures only.
+CHECK_IDS = ("pii", "encoded_pii", "secrets", "text_security", "prompt_attack", "lexical_guards", "human_safety",
+             "harmful_content", "schema", "cross_field", "completeness", "matched_outcomes", "evidence", "tool_calls",
+             "ledger", "timestamps", "graph", "integrity", "csv_formula")
+# The two checks that sent content to an outside provider were removed on 2026-11-05: content_safety (Amazon Bedrock
+# Guardrails) and azure_prompt_shields (Azure Prompt Shields). harmful_content and prompt_attack do that work here.
+# Stored records still hold their fields (every field is stored, null when off); they are dropped when read.
+RETIRED_CHECK_IDS = ("content_safety", "azure_prompt_shields")
+RETIRED_CHECK_FIELDS = frozenset(f"{prefix}{check_id}" for check_id in RETIRED_CHECK_IDS
+                                 for prefix in ("check_", "input_check_", "output_check_"))
 # A check listed here cannot run without at least one of these settings.
 REQUIRED_SETTINGS = {
     "schema": ("input_schema", "output_schema"), "cross_field": ("comparisons",),
@@ -77,8 +81,7 @@ def rule_actions_field(stage: Stage | str) -> str:
 
 
 INPUT_CHECK_FIELDS = tuple(check_field(check_id, Stage.INPUT) for check_id in CHECK_IDS)
-OUTPUT_CHECK_FIELDS = tuple(check_field(check_id, Stage.OUTPUT) for check_id in CHECK_IDS
-                            if check_id not in INPUT_ONLY_CHECK_IDS)
+OUTPUT_CHECK_FIELDS = tuple(check_field(check_id, Stage.OUTPUT) for check_id in CHECK_IDS)
 CHECK_FIELDS = INPUT_CHECK_FIELDS + OUTPUT_CHECK_FIELDS
 RULE_ACTION_FIELDS = (rule_actions_field(Stage.INPUT), rule_actions_field(Stage.OUTPUT))
 # Field names of records stored before 2026-11-04 (one per check, for both stages); converted when read.
@@ -86,6 +89,10 @@ LEGACY_FIELDS = frozenset({*("check_" + check_id for check_id in CHECK_IDS), "ru
 # Fields a tenant (or a demo visitor, on a demo record) may change. Account fields are admin-only.
 EDITABLE_FIELDS = frozenset({"mode", "timeout_ms", "failure_action", "sigma_rule_actions", *RULE_ACTION_FIELDS, *CHECK_FIELDS, *SETTING_FIELDS})
 TENANT_POLICY_VERSION = "tenant"
+# A record is stored as one DynamoDB item, which holds at most 400 KB (attribute names and values). The record's own
+# fields (everything but usage and revision, as guardoath.dynamodb_store.record_json stores them) are kept below this,
+# which leaves room for the item's usage counts, revision and key. Checked when a change is saved (hosted).
+MAX_RECORD_BYTES = 350_000
 # The retired record field that named a default example profile (removed 2026-11-02).
 RETIRED_PROFILE_FIELD = "default_profile"
 KEY_PREFIX = "gok_"
@@ -121,7 +128,10 @@ class TenantRecord(Contract):
     input_check_encoded_pii: Action | None = None
     input_check_secrets: Action | None = None
     input_check_text_security: Action | None = None
+    input_check_prompt_attack: Action | None = None
     input_check_lexical_guards: Action | None = None
+    input_check_human_safety: Action | None = None
+    input_check_harmful_content: Action | None = None
     input_check_schema: Action | None = None
     input_check_cross_field: Action | None = None
     input_check_completeness: Action | None = None
@@ -133,13 +143,14 @@ class TenantRecord(Contract):
     input_check_graph: Action | None = None
     input_check_integrity: Action | None = None
     input_check_csv_formula: Action | None = None
-    input_check_content_safety: Action | None = None
-    input_check_azure_prompt_shields: Action | None = None
     output_check_pii: Action | None = None
     output_check_encoded_pii: Action | None = None
     output_check_secrets: Action | None = None
     output_check_text_security: Action | None = None
+    output_check_prompt_attack: Action | None = None
     output_check_lexical_guards: Action | None = None
+    output_check_human_safety: Action | None = None
+    output_check_harmful_content: Action | None = None
     output_check_schema: Action | None = None
     output_check_cross_field: Action | None = None
     output_check_completeness: Action | None = None
@@ -151,12 +162,13 @@ class TenantRecord(Contract):
     output_check_graph: Action | None = None
     output_check_integrity: Action | None = None
     output_check_csv_formula: Action | None = None
-    output_check_content_safety: Action | None = None
     # Check settings (same names and rules as Policy)
     input_schema: dict[str, Any] | None = None
     output_schema: dict[str, Any] | None = None
-    comparisons: tuple[FieldComparison, ...] = Field(default=(), max_length=50)
-    required_sections: tuple[RequiredSection, ...] = Field(default=(), max_length=50)
+    # No count limit (2026-11-05, Greg): the record's size is bounded instead (MAX_RECORD_BYTES, checked when a change
+    # is saved) and a save's request body by the API's JSON limit.
+    comparisons: tuple[FieldComparison, ...] = ()
+    required_sections: tuple[RequiredSection, ...] = ()
     detect_labeled_sensitive_data: bool = Field(default=False, strict=True)
     privacy_patterns: bool = Field(default=True, strict=True)
     disabled_privacy_entities: tuple[str, ...] = Field(default=(), max_length=100)
@@ -173,8 +185,11 @@ class TenantRecord(Contract):
     integrity: IntegrityPolicy | None = None
     # Per-rule settings, one map per stage: a rule listed here is off on that stage, or uses its own action there
     # instead of its check's action for that stage.
-    input_rule_actions: RuleActions = Field(default_factory=dict, max_length=len(RULES) + 100)
-    output_rule_actions: RuleActions = Field(default_factory=dict, max_length=len(RULES) + 100)
+    # Each map may name only catalog rules and this record's own rules (checked in consistent), so it can never be larger
+    # than those; there is no separate count limit (2026-11-05: the old cap, catalog + 100, would have refused a setting
+    # for every comparison of a record with more than 100).
+    input_rule_actions: RuleActions = Field(default_factory=dict)
+    output_rule_actions: RuleActions = Field(default_factory=dict)
     # Independent Windows event rule settings; absent means Off. Never run on AI text.
     sigma_rule_actions: dict[str, Literal["allow", "flag", "block"]] = Field(default_factory=dict, max_length=4096)
 
@@ -183,17 +198,33 @@ class TenantRecord(Contract):
     def renamed_check_fields(cls, data):
         """Records stored before 2026-11-04 hold one field per check (check_<id>) and one rule map (rule_actions),
         each for both stages. When such a record is read, check_<id> sets input_check_<id> and output_check_<id>
-        (input only for input-only checks) and rule_actions sets both maps, so nothing changes until the tenant
-        sets a stage differently. The API accepts only the new names."""
-        if not isinstance(data, dict) or not (LEGACY_FIELDS & data.keys()):
+        and rule_actions sets both maps, so nothing changes until the tenant
+        sets a stage differently. The API accepts only the new names.
+
+        The fields of the two removed outside-provider checks (RETIRED_CHECK_IDS) are dropped here too. Every stored
+        record holds them (null when off). One that is on can only be on a customer record (demo records could never
+        turn them on); such a record is refused so it is reviewed and moved to harmful_content or prompt_attack, not
+        silently changed. On the hosted site the two checks never ran: their provider was not configured."""
+        if not isinstance(data, dict):
+            return data
+        retired = RETIRED_CHECK_FIELDS & data.keys()
+        if retired:
+            data = dict(data)
+            on = sorted(name for name in retired if data[name] is not None)
+            if on and data.get("demo") is not True:
+                raise ValueError("content_safety and azure_prompt_shields were removed (2026-11-05): GuardOath runs "
+                                 "every check itself. This customer record still turns one on and needs a migration "
+                                 "review (use harmful_content and prompt_attack)")
+            for name in retired:
+                data.pop(name)
+        if not (LEGACY_FIELDS & data.keys()):
             return data
         data = dict(data)
         for check_id in CHECK_IDS:
             if "check_" + check_id in data:
                 value = data.pop("check_" + check_id)
                 data["input_check_" + check_id] = value
-                if check_id not in INPUT_ONLY_CHECK_IDS:
-                    data["output_check_" + check_id] = value
+                data["output_check_" + check_id] = value
         if "rule_actions" in data:
             value = data.pop("rule_actions")
             data["input_rule_actions"] = value
@@ -246,8 +277,6 @@ class TenantRecord(Contract):
                 raise ValueError(f"When the pii check redacts on {stage.value}, its {stage.value} rules can only "
                                  "be turned off")
         if self.demo:
-            if on.keys() & EXTERNAL_CHECK_IDS:
-                raise ValueError("Demo users cannot run checks that call a paid outside provider")
             if self.overage != "block":
                 raise ValueError("Demo users have a hard monthly limit")
         if self.sigma_rule_actions:
@@ -261,10 +290,7 @@ class TenantRecord(Contract):
 
     def action(self, check_id: str, stage: Stage | str) -> Action | None:
         """A check's action on one stage; None = it does not run there."""
-        stage = Stage(stage)
-        if stage == Stage.OUTPUT and check_id in INPUT_ONLY_CHECK_IDS:
-            return None
-        return getattr(self, check_field(check_id, stage))
+        return getattr(self, check_field(check_id, Stage(stage)))
 
     def rule_actions_on(self, stage: Stage | str) -> dict[str, str]:
         """The per-rule settings of one stage."""
@@ -278,8 +304,6 @@ class TenantRecord(Contract):
 
     def stages_of(self, check_id: str) -> tuple[Stage, ...]:
         """The stages a check runs on: the stages its settings cover (see the module docstring)."""
-        if check_id in INPUT_ONLY_CHECK_IDS:
-            return (Stage.INPUT,)
         if check_id == "schema":
             covered = {stage for stage, schema in ((Stage.INPUT, self.input_schema), (Stage.OUTPUT, self.output_schema))
                        if schema is not None}
@@ -313,7 +337,6 @@ class TenantRecord(Contract):
                     if (RULES[rule_id].control_id if rule_id in RULES else own[rule_id]) in running}
         return Policy(application_id=self.tenant_id, version=TENANT_POLICY_VERSION, mode=self.mode,
                       timeout_ms=self.timeout_ms, failure_action=self.failure_action, rules=tuple(rules),
-                      external_checks="after_local_pass" if ran & EXTERNAL_CHECK_IDS else "disabled",
                       input_rule_actions=kept(self.input_rule_actions),
                       output_rule_actions=kept(self.output_rule_actions), **settings)
 
@@ -396,3 +419,9 @@ def demo_defaults(path: Path = DEMO_DEFAULTS_FILE) -> dict:
     values = {name: fields[name].get_default(call_default_factory=True) for name in EDITABLE_FIELDS}
     values.update(raw["defaults"])
     return values
+
+
+def record_bytes(record: TenantRecord) -> int:
+    """The size of the record's stored fields, exactly as guardoath.dynamodb_store.record_json writes them."""
+    return len(json.dumps(record.model_dump(mode="json", exclude={"usage", "revision"}), separators=(",", ":"),
+                          sort_keys=True).encode("utf-8"))

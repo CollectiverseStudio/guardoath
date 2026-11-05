@@ -8,12 +8,13 @@ from pydantic import ValidationError
 from guardoath.checkers import default_checkers
 from guardoath.engine import Engine
 from guardoath.models import Action, CheckRequest, Stage
-from guardoath.tenant_record import (CHECK_FIELDS, CHECK_IDS, EDITABLE_FIELDS, EXTERNAL_CHECK_IDS, REQUIRED_SETTINGS,
+from guardoath.tenant_record import (CHECK_FIELDS, CHECK_IDS, EDITABLE_FIELDS, REQUIRED_SETTINGS,
                                      SETTINGS_OF, TENANT_POLICY_VERSION, TenantRecord, demo_defaults, demo_key, demo_records,
                                      key_hash, key_matches, new_key, tenant_id_from_key, usage_month)
 from guardoath.tenant_store import MemoryTenantStore, TenantConflict, TenantNotFound, UsageLimitReached
 
-LOCAL_CHECKS = [c for c in CHECK_IDS if c not in EXTERNAL_CHECK_IDS]
+# Every check runs in GuardOath itself (2026-11-05: the two outside-provider checks were removed).
+LOCAL_CHECKS = list(CHECK_IDS)
 
 
 def record(**fields):
@@ -32,10 +33,9 @@ def run(policy, content, stage=Stage.INPUT, checkers=None):
 
 
 def test_every_check_is_a_field_on_the_record():
-    # 2026-11-04: one field per check and stage (tests/test_stage_settings.py); input-only checks have no output field.
-    assert CHECK_FIELDS == tuple("input_check_" + c for c in CHECK_IDS) + tuple(
-        "output_check_" + c for c in CHECK_IDS if c != "azure_prompt_shields")
-    assert len(CHECK_IDS) == len(set(CHECK_IDS)) == 18
+    # 2026-11-04: one field per check and stage (tests/test_stage_settings.py).
+    assert CHECK_FIELDS == tuple("input_check_" + c for c in CHECK_IDS) + tuple("output_check_" + c for c in CHECK_IDS)
+    assert len(CHECK_IDS) == len(set(CHECK_IDS)) == 19
     for name in CHECK_FIELDS:
         assert TenantRecord.model_fields[name].default is None
 
@@ -44,8 +44,8 @@ def test_every_real_checker_has_a_field():
     pytest.importorskip("tldextract")
     pytest.importorskip("phonenumbers")
     real = set(default_checkers(enable_pii=True)) - {"safety", "bias"}
-    assert real <= set(CHECK_IDS)
-    assert set(CHECK_IDS) - real == EXTERNAL_CHECK_IDS
+    # Every check a tenant can turn on has its checker here (none is an outside provider, 2026-11-05).
+    assert real == set(CHECK_IDS)
 
 
 def test_a_check_without_a_value_does_not_run():
@@ -124,17 +124,6 @@ def test_invalid_settings_are_rejected_even_while_their_check_is_off():
         record(ledger={"currency": "usd"})
 
 
-def test_external_checks_run_only_after_local_checks_pass():
-    policy = record(check_content_safety="block").to_policy()
-    assert policy.external_checks == "after_local_pass"
-    assert record().to_policy().external_checks == "disabled"
-
-
-def test_prompt_shields_runs_on_input_only():
-    rule = record(check_azure_prompt_shields="flag").to_policy().rules[-1]
-    assert rule.checker_id == "azure_prompt_shields" and rule.stages == (Stage.INPUT,)
-
-
 def test_settings_map_covers_every_setting_field():
     for check_id in SETTINGS_OF:
         assert check_id in CHECK_IDS
@@ -193,12 +182,6 @@ def test_every_local_demo_check_can_run_at_once():
     policy = demo(**{"check_" + c: "flag" for c in LOCAL_CHECKS}).to_policy()
     assert [r.checker_id for r in policy.rules] == LOCAL_CHECKS
     Engine([policy], default_checkers(enable_pii=True))
-
-
-@pytest.mark.parametrize("check_id", sorted(EXTERNAL_CHECK_IDS))
-def test_demo_users_cannot_run_paid_outside_checks(check_id):
-    with pytest.raises(ValidationError, match="paid outside provider"):
-        demo(**{"check_" + check_id: "flag"})
 
 
 def test_demo_users_cannot_go_over_their_limit():

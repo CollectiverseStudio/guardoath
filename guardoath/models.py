@@ -61,7 +61,6 @@ class CheckerResult(Contract):
     latency_ms: float = 0
     error_code: str | None = None
     simulated: bool = False
-    external: bool = False
     # Private intermediate value: never serialized as a checker finding/result.
     transformed_content: str | None = Field(default=None, exclude=True)
 
@@ -208,9 +207,10 @@ class Policy(Contract):
     input_schema: dict[str, Any] | None = None
     output_schema: dict[str, Any] | None = None
     allow_simulated_enforcement: bool = False
-    external_checks: Literal["disabled", "after_local_pass"] = "disabled"
-    comparisons: tuple[FieldComparison, ...] = Field(default=(), max_length=50)
-    required_sections: tuple[RequiredSection, ...] = Field(default=(), max_length=50)
+    # No count limit (2026-11-05): a tenant record's size is bounded (tenant_record.MAX_RECORD_BYTES), and policy files are
+    # trusted configuration.
+    comparisons: tuple[FieldComparison, ...] = ()
+    required_sections: tuple[RequiredSection, ...] = ()
     detect_labeled_sensitive_data: bool = Field(default=False, strict=True)
     # Copied privacy pattern checks run with every pii rule unless turned off here.
     privacy_patterns: bool = Field(default=True, strict=True)
@@ -227,14 +227,16 @@ class Policy(Contract):
     graph: GraphPolicy | None = None
     integrity: IntegrityPolicy | None = None
     # Per-rule settings (from a tenant record's rule_actions): "off" drops that rule's findings; any other
-    # value replaces the check's action for that rule's findings. The record checks ids against the catalog.
+    # value replaces the check's action for that rule's findings. The record checks ids against the catalog, so a map
+    # is never larger than the catalog plus the record's own rules (no separate count limit since 2026-11-05: the
+    # catalog is growing past 1,000 rules).
     rule_actions: dict[Annotated[str, Field(pattern=RULE_ID_PATTERN, max_length=100)],
-                       Literal["off", "allow", "flag", "block"]] = Field(default_factory=dict, max_length=1000)
+                       Literal["off", "allow", "flag", "block"]] = Field(default_factory=dict)
     # Per-stage rule settings (tenant records, 2026-11-04). When set, a stage uses its own map instead of rule_actions.
     input_rule_actions: dict[Annotated[str, Field(pattern=RULE_ID_PATTERN, max_length=100)],
-                             Literal["off", "allow", "flag", "block"]] | None = Field(default=None, max_length=1000)
+                             Literal["off", "allow", "flag", "block"]] | None = None
     output_rule_actions: dict[Annotated[str, Field(pattern=RULE_ID_PATTERN, max_length=100)],
-                              Literal["off", "allow", "flag", "block"]] | None = Field(default=None, max_length=1000)
+                              Literal["off", "allow", "flag", "block"]] | None = None
 
     def rule_actions_for(self, stage: "Stage") -> dict[str, str]:
         """The rule settings that apply on one stage."""
@@ -305,8 +307,9 @@ class CheckResponse(Contract):
     findings: tuple[Finding, ...]
     checker_results: tuple[CheckerResult, ...]
     total_latency_ms: float
-    cost_usd: float | None = 0
-    cost_basis: Literal["local_only", "provider_unpriced"] = "local_only"
+    # Every check runs in GuardOath itself, so a check has no per-call provider cost (2026-11-05).
+    cost_usd: float = 0
+    cost_basis: Literal["local_only"] = "local_only"
     simulated: bool
     groups: tuple[GroupResult, ...] = ()
     redaction: RedactionResult = Field(default_factory=RedactionResult)

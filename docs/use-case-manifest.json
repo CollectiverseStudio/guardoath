@@ -15,19 +15,19 @@
       "title": "Jailbreak detection",
       "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Optional input-only Azure user-attack connector; offline contract tested, live effectiveness uncalibrated. No local semantic jailbreak detector.",
+      "existing_coverage_note": "Local prompt_attack check: 35 wording rules for jailbreak personas, mode switches, instruction overrides, prompt extraction and injected instructions, on input and output. Wording only; reworded or multi-turn attacks pass.",
       "evidence": {
         "modules": [
-          "guardoath/azure_prompt_shields.py"
+          "guardoath/prompt_attack.py"
         ],
         "tests": [
-          "tests/test_azure_prompt_shields.py::test_real_adapter_contract_and_routing_with_fixture",
-          "tests/test_azure_prompt_shields.py::test_output_is_not_sent_to_prompt_api",
-          "tests/test_azure_prompt_shields.py::test_unavailable_provider_remains_incomplete_without_network"
+          "tests/test_prompt_attack.py::test_each_example_reports_only_its_own_rule_and_each_look_alike_nothing",
+          "tests/test_prompt_attack.py::test_everyday_text_is_not_reported",
+          "tests/test_prompt_attack.py::test_it_runs_here_and_sends_nothing_anywhere"
         ],
         "eval_case_ids": []
       },
-      "audit_note": "Optional Azure user-prompt attack analysis has locally mocked transport and stage/failure contract tests. No independent live-provider accuracy, general local semantic jailbreak detection, or dedicated saved eval case. External provider is opt-in."
+      "audit_note": "2026-11-05: the optional outside-provider connectors (Azure Prompt Shields, Amazon Bedrock Guardrails) were removed; GuardOath runs every check itself. prompt_attack matches jailbreak wording with tested examples and look-alikes. No semantic or multilingual jailbreak classifier, no calibrated accuracy and no saved eval case."
     },
     {
       "id": "UC003",
@@ -164,41 +164,37 @@
       "title": "Hate speech",
       "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Initial optional content_safety adapter supports provider hate signals on input/output. Offline contract tested, live classification uncalibrated.",
+      "existing_coverage_note": "Local harmful_content check: hate rules for dehumanizing language, calls for violence, inferiority, exclusion and stereotypes about the groups they name, on input and output. Wording only; slurs and unnamed groups are not covered.",
       "evidence": {
         "modules": [
-          "guardoath/content_safety.py",
-          "guardoath/bedrock_guardrails.py"
+          "guardoath/harmful_content.py"
         ],
         "tests": [
-          "tests/test_content_safety.py::test_provider_can_be_replaced_without_changing_api_or_policy",
-          "tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external",
-          "tests/test_bedrock_guardrails.py::test_category_contract",
-          "tests/test_bedrock_guardrails.py::test_missing_or_partial_coverage_is_not_a_pass"
+          "tests/test_harmful_content.py::test_each_example_reports_only_its_own_rule_and_each_look_alike_nothing",
+          "tests/test_harmful_content.py::test_everyday_text_is_not_reported",
+          "tests/test_harmful_content.py::test_it_runs_here_and_sends_nothing_anywhere"
         ],
         "eval_case_ids": []
       },
-      "audit_note": "Optional AWS Bedrock guardrail adapter recognizes provider hate-category assessments and maps to normalized findings for input/output. No local hate-speech classifier, dedicated saved eval case or independently calibrated live provider accuracy. Missing/disabled provider remains incomplete."
+      "audit_note": "2026-11-05: the optional outside-provider connectors (Azure Prompt Shields, Amazon Bedrock Guardrails) were removed; GuardOath runs every check itself. harmful_content matches hate-speech wording about listed groups with tested examples and look-alikes. No hate-speech classifier, no slur list, no calibrated accuracy and no saved eval case."
     },
     {
       "id": "UC012",
       "title": "Self-harm interception",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "No dedicated self-harm classifier or crisis-routing workflow implemented. Do not infer it from the initial five content categories.",
-      "audit_classification": "not_implemented",
+      "existing_coverage_note": "Local human_safety check: wording rules for suicidal statements, self-harm, method and lethal-dose requests on input, and answers that give methods, encourage self-harm or discourage crisis help on output. No crisis-routing workflow.",
       "evidence": {
         "modules": [
-          "guardoath/bedrock_guardrails.py",
-          "guardoath/content_safety.py"
+          "guardoath/human_safety.py"
         ],
         "tests": [
-          "tests/test_bedrock_guardrails.py::test_category_contract",
-          "tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external"
+          "tests/test_human_safety.py::test_each_example_reports_only_its_own_rule_and_each_look_alike_nothing",
+          "tests/test_human_safety.py::test_input_flag_lets_a_person_asking_for_help_through_and_output_block_stops_a_harmful_answer"
         ],
         "eval_case_ids": []
       },
-      "audit_note": "Current optional content-safety adapter enumerates five categories (hate, insults, sexual, violence, misconduct), not a self-harm classification or crisis-routing workflow. No dedicated self-harm saved eval exists; absence of a finding must not be interpreted as safety."
+      "audit_note": "2026-11-05: the optional outside-provider connectors (Azure Prompt Shields, Amazon Bedrock Guardrails) were removed; GuardOath runs every check itself. human_safety reports self-harm wording with tested examples and look-alikes; Flag on input lets a person asking for help through. Not a clinical or crisis assessment, no routing workflow and no saved eval case; absence of a finding is not safety."
     },
     {
       "id": "UC013",
@@ -224,39 +220,37 @@
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
       "existing_coverage_note": "Not implemented; requires approved application-specific scope/rubric. Neutral identity examples are not automatically violations.",
-      "audit_classification": "not_implemented",
       "evidence": {
         "modules": [
-          "guardoath/content_safety.py",
-          "guardoath/bedrock_guardrails.py"
+          "guardoath/harmful_content.py"
         ],
         "tests": [
-          "tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external",
-          "tests/test_bedrock_guardrails.py::test_category_contract"
+          "tests/test_harmful_content.py::test_each_example_reports_only_its_own_rule_and_each_look_alike_nothing",
+          "tests/test_harmful_content.py::test_everyday_text_is_not_reported"
         ],
         "eval_case_ids": []
       },
-      "audit_note": "Optional provider categories do not establish a brand-specific political/religious neutrality rubric or adjudication; no dedicated policy classifier or saved eval."
+      "audit_note": "2026-11-05: the optional outside-provider connectors (Azure Prompt Shields, Amazon Bedrock Guardrails) were removed; GuardOath runs every check itself. harmful_content hate rules do not establish a brand-specific political/religious neutrality rubric or adjudication; no dedicated policy classifier or saved eval.",
+      "audit_classification": "not_implemented"
     },
     {
       "id": "UC015",
       "title": "Extremism / radicalization",
-      "status": "review_required",
+      "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "No dedicated classifier or reference database implemented.",
-      "audit_classification": "not_implemented",
+      "existing_coverage_note": "Local harmful_content check: wording rules for praise of attackers or terrorist groups, calls to join named groups, attacks called justified and requests for violent manifestos. No reference database of extremist content.",
       "evidence": {
         "modules": [
-          "guardoath/content_safety.py",
-          "guardoath/bedrock_guardrails.py"
+          "guardoath/harmful_content.py"
         ],
         "tests": [
-          "tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external",
-          "tests/test_bedrock_guardrails.py::test_category_contract"
+          "tests/test_harmful_content.py::test_each_example_reports_only_its_own_rule_and_each_look_alike_nothing",
+          "tests/test_harmful_content.py::test_everyday_text_is_not_reported",
+          "tests/test_harmful_content.py::test_it_runs_here_and_sends_nothing_anywhere"
         ],
         "eval_case_ids": []
       },
-      "audit_note": "No dedicated extremist/radicalization classification, reference corpus, or validated provider category; generic misconduct is not equivalent."
+      "audit_note": "2026-11-05: the optional outside-provider connectors (Azure Prompt Shields, Amazon Bedrock Guardrails) were removed; GuardOath runs every check itself. harmful_content reports extremism wording with tested examples and look-alikes. No radicalization classifier, reference corpus or calibrated accuracy; no saved eval case."
     },
     {
       "id": "UC016",
@@ -281,20 +275,19 @@
       "title": "Cyberbullying",
       "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Optional provider insults/hate signals; no tested covert sarcasm, student-intent or repeated-harassment model.",
+      "existing_coverage_note": "Local harmful_content check: direct insults, body shaming, organized harassment and threats on input and output. No repeated-harassment tracking across turns or sarcasm detection.",
       "evidence": {
         "modules": [
-          "guardoath/bedrock_guardrails.py",
-          "guardoath/content_safety.py"
+          "guardoath/harmful_content.py"
         ],
         "tests": [
-          "tests/test_bedrock_guardrails.py::test_category_contract",
-          "tests/test_bedrock_guardrails.py::test_missing_or_partial_coverage_is_not_a_pass",
-          "tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external"
+          "tests/test_harmful_content.py::test_each_example_reports_only_its_own_rule_and_each_look_alike_nothing",
+          "tests/test_harmful_content.py::test_everyday_text_is_not_reported",
+          "tests/test_harmful_content.py::test_it_runs_here_and_sends_nothing_anywhere"
         ],
         "eval_case_ids": []
       },
-      "audit_note": "Optional Bedrock content safety offers hate/insults category signals on input/output, but not contextual cyberbullying classification, repeated harassment across turns, student intent or sarcasm detection. No dedicated saved cyberbullying eval or calibrated live provider assessment."
+      "audit_note": "2026-11-05: the optional outside-provider connectors (Azure Prompt Shields, Amazon Bedrock Guardrails) were removed; GuardOath runs every check itself. harmful_content reports insult, harassment and threat wording with tested examples and look-alikes. Not contextual cyberbullying classification, no multi-turn tracking and no saved eval case."
     },
     {
       "id": "UC018",
@@ -412,19 +405,17 @@
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
       "existing_coverage_note": "Not implemented; no user-location/consent/transfer-rules engine or compliance determination.",
-      "audit_classification": "not_implemented",
       "evidence": {
         "modules": [
-          "guardoath/pii.py",
-          "guardoath/content_safety.py"
+          "guardoath/pii.py"
         ],
         "tests": [
-          "tests/test_pii.py::test_real_local_findings",
-          "tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external"
+          "tests/test_pii.py::test_real_local_findings"
         ],
         "eval_case_ids": []
       },
-      "audit_note": "Identifier detection and optional content safety do not establish geographic consent, jurisdiction, cross-border transfer authorization or compliance."
+      "audit_note": "2026-11-05: the optional outside-provider connectors (Azure Prompt Shields, Amazon Bedrock Guardrails) were removed; GuardOath runs every check itself. Identifier detection does not establish geographic consent, jurisdiction, cross-border transfer authorization or compliance.",
+      "audit_classification": "not_implemented"
     },
     {
       "id": "UC026",
@@ -761,17 +752,18 @@
       "status": "review_required",
       "source": "docs/use-case-coverage.md",
       "existing_coverage_note": "Not implemented; no calibrated anger/frustration classifier or human-routing integration.",
-      "audit_classification": "not_implemented",
       "evidence": {
         "modules": [
-          "guardoath/content_safety.py"
+          "guardoath/harmful_content.py"
         ],
         "tests": [
-          "tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external"
+          "tests/test_harmful_content.py::test_each_example_reports_only_its_own_rule_and_each_look_alike_nothing",
+          "tests/test_harmful_content.py::test_everyday_text_is_not_reported"
         ],
         "eval_case_ids": []
       },
-      "audit_note": "No calibrated sentiment/anger classifier, repeated frustration tracking, or human escalation workflow. Generic optional content moderation is not sentiment routing."
+      "audit_note": "2026-11-05: the optional outside-provider connectors (Azure Prompt Shields, Amazon Bedrock Guardrails) were removed; GuardOath runs every check itself. No calibrated sentiment/anger classifier, repeated frustration tracking, or human escalation workflow. harmful_content insult wording is not sentiment routing.",
+      "audit_classification": "not_implemented"
     },
     {
       "id": "UC047",
@@ -956,18 +948,19 @@
       "title": "Idiomatic threats",
       "status": "review_required",
       "source": "docs/additional-use-cases.md",
-      "existing_coverage_note": "Planned contextual classifier",
-      "audit_classification": "not_implemented",
+      "existing_coverage_note": "Literal threat wording only (harmful_content); idioms are not distinguished from real threats.",
       "evidence": {
         "modules": [
-          "guardoath/content_safety.py"
+          "guardoath/harmful_content.py"
         ],
         "tests": [
-          "tests/test_content_safety.py::test_disabled_provider_is_incomplete_and_visible_as_external"
+          "tests/test_harmful_content.py::test_each_example_reports_only_its_own_rule_and_each_look_alike_nothing",
+          "tests/test_harmful_content.py::test_everyday_text_is_not_reported"
         ],
         "eval_case_ids": []
       },
-      "audit_note": "Optional content moderation is not a contextual idiom/threat intent classifier; no dedicated saved eval."
+      "audit_note": "2026-11-05: the optional outside-provider connectors (Azure Prompt Shields, Amazon Bedrock Guardrails) were removed; GuardOath runs every check itself. harmful_content matches literal threat wording; it is not a contextual idiom/threat intent classifier, and an idiom with the same words is reported. No dedicated saved eval.",
+      "audit_classification": "not_implemented"
     },
     {
       "id": "UC060",

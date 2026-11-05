@@ -1,5 +1,7 @@
 # GuardOath catalog audit coordination notes
 
+> **2026-11-05:** the content_safety (Bedrock) and azure_prompt_shields (Azure) connectors referred to below were removed; GuardOath does every check itself. The affected rows in docs/use-case-manifest.json now cite prompt_attack, harmful_content and human_safety. The audit entries below are history.
+
 ## Batch 1 — non-privacy UC003, UC005, UC006, UC007
 
 The manifest now records statuses and exact code/test/eval evidence for these four cases. `partial` means a bounded portion of the requested capability exists; `not_implemented` means the requested end-to-end capability is not present, even if adjacent safety components exist. No checker or eval suite was changed.

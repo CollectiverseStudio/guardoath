@@ -1,5 +1,11 @@
 # Field comparison standalone scale evidence (FC-MR3)
 
+> **2026-11-05:** the 50-comparison limit was removed from `TenantRecord` and `Policy` (Greg's decision; the record's
+> size is bounded instead: 350,000 bytes of stored settings, 262,144-byte save requests), and the example generator in
+> `guardoath/record_rules.py` was rewritten (related comparisons solved together, independent groups solved once, work
+> and listed text bounded per record). The observed run below, including "rejected 51/100/250/500" and the generator
+> timeouts, is from before that change; re-run the command to refresh docs/evidence/field-comparison-scale.json.
+
 This offline harness measures existing components at30,51,100,250 and500
 independent numeric comparisons. It does not change tenant schemas, request
 admission, runtime code, Engine deadlines, example generation or product limits.

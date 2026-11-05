@@ -122,16 +122,6 @@ def test_encoded_values_are_not_rewritten_or_released_by_raw_redaction(adapters)
     assert encoded(result).transformed_content is None
 
 
-def test_local_findings_stop_external_calls_even_with_allow_action(adapters):
-    called=[]
-    async def remote(request,p,stage):
-        called.append(1);return CheckerResult(checker_id='remote',checker_version='fixture',status='passed',external=True)
-    remote.external=True
-    p=policy().model_copy(update={'rules':(Rule(checker_id='pii'),Rule(checker_id='encoded_pii',on_finding='allow'),Rule(checker_id='remote')),'external_checks':'after_local_pass'})
-    result=check({**adapters,'remote':remote},encode('jane@example.com'),selected=p)
-    assert not called and result.checker_results[-1].error_code=='external_local_gate'
-
-
 def test_no_network(adapters,monkeypatch):
     deny_network(monkeypatch,'Network attempted')
     assert encoded(check(adapters,encode('jane@example.com'))).status=='flagged'
@@ -144,7 +134,7 @@ def test_raw_redaction_not_needed_is_not_an_overall_privacy_pass(adapters):
     assert result.recommended_action=='block' and result.findings
 
 
-@pytest.mark.parametrize('kind',['wrong-id','empty-flag','hidden-finding','external','simulated'])
+@pytest.mark.parametrize('kind',['wrong-id','empty-flag','hidden-finding','simulated'])
 def test_inconsistent_inner_results_cannot_become_a_pass(kind):
     from guardoath.encoded_pii import build_encoded_pii_checker
     from guardoath.models import Finding
@@ -152,7 +142,7 @@ def test_inconsistent_inner_results_cannot_become_a_pass(kind):
         finding=Finding(rule_id='pii.email_address',category='privacy',severity='medium',explanation='Synthetic private result')
         return CheckerResult(checker_id='wrong' if kind=='wrong-id' else 'pii',checker_version='fixture',
             status='flagged' if kind=='empty-flag' else 'passed',findings=(finding,) if kind=='hidden-finding' else (),
-            external=kind=='external',simulated=kind=='simulated')
+            simulated=kind=='simulated')
     request=CheckRequest(application_id='demo',policy_version=policy().version,content=encode('jane@example.com'))
     result=asyncio.run(build_encoded_pii_checker(inner)(request,policy(),Stage.INPUT))
     assert result.status=='error' and result.error_code=='encoded_pii_scan_incomplete' and not result.findings

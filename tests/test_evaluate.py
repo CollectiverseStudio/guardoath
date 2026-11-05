@@ -108,19 +108,6 @@ def test_empty_group_is_configuration_error(tmp_path):
     assert main(['--cases',str(source),'--group','no-matching-group']) == 2
 
 
-def test_external_engine_refused_before_execution(tmp_path):
-    raw = json.loads(single_suite(tmp_path).read_text(encoding='utf-8'))
-    raw['cases'][0]['request']['policy_version'] = 'v1'
-    suite = Suite.model_validate(raw)
-    calls = []
-    async def provider(*args): calls.append('provider')
-    provider.external = True
-    selected = Policy(application_id='demo',version='v1',external_checks='after_local_pass',rules=(Rule(checker_id='provider'),))
-    with pytest.raises(ValueError,match='only support local adapters'):
-        asyncio.run(evaluate(suite,Engine([selected],{'provider':provider})))
-    assert not calls
-
-
 def test_unknown_policy_refused_before_any_partial_execution(tmp_path):
     raw = json.loads(single_suite(tmp_path).read_text(encoding='utf-8'))
     raw['cases'].append(deepcopy(raw['cases'][0]))
@@ -136,12 +123,10 @@ def test_unknown_policy_refused_before_any_partial_execution(tmp_path):
     assert not calls
 
 
-def test_subprocess_ignores_provider_environment(tmp_path):
+def test_subprocess_ignores_the_service_policy_environment(tmp_path):
     import os
     source = single_suite(tmp_path)
-    env = {**os.environ,'GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS':'1',
-           'GUARDOATH_AZURE_CONTENT_SAFETY_ENDPOINT':'invalid-endpoint',
-           'GUARDOATH_POLICY_FILE':'missing-policy'}
+    env = {**os.environ,'GUARDOATH_POLICY_FILE':'missing-policy'}
     result = subprocess.run([sys.executable,'-m','guardoath.evaluate','--cases',str(source),
                              '--policies',str(ROOT/'policies/playground.json')],
                             cwd=ROOT,env=env,capture_output=True,text=True,timeout=15)

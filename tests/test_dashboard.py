@@ -66,7 +66,7 @@ def test_conversation_profile_runs_combined_checks_on_both_stages():
             assert result['evaluation_status'] == 'complete'
             checks = {c['checker_id']: c for c in result['checker_results']}
             assert set(checks) == {'pii', 'secrets', 'text_security', 'encoded_pii'}
-            assert all(not c['simulated'] and not c['external'] for c in checks.values())
+            assert all(not c['simulated'] for c in checks.values())
             if flagged:
                 assert checks[flagged]['status'] == 'flagged'
                 assert result['recommended_action'] == ('flag' if stage == 'input' else 'block')
@@ -476,11 +476,11 @@ def test_the_dashboard_lists_the_rules_of_each_check_and_saves_rule_actions():
     script = (Path(__file__).resolve().parents[1] / "guardoath" / "static" / "dashboard.js").read_text(encoding="utf-8")
     assert 'send("/v1/controls"' in script and 'changes[stage + "_rule_actions"]' in script
     # 2026-11-04: one table grouped by category; each check and each rule has an Input and an Output setting. A rule
-    # without its own setting shows "Same as check (...)".
+    # without its own setting shows "Same as check (...)". 2026-11-05: every check runs on both stages (no "Input only").
     for text in ["Show rules (", "Same as check (", "Not reported (look-alike): ", "Use case: ", 'id = "rule-search"',
                  'id = "rule-filter-check"', 'id = "rule-filter-setting"', 'table.id = "check-table"', '"In effect"',
                  '"Category (check)"', '"tenant-check-" + stage + "-" + id', '"rule-action-" + stage + "-" + rule.rule_id',
-                 'changes[stage + "_check_" + check]', '"Input only"']:
+                 'changes[stage + "_check_" + check]']:
         assert text in script, text
     # Rule texts are shown with textContent only, never as markup.
     start = script.index("function ruleRow"); end = script.index("function updateRuleCounts")
@@ -511,7 +511,7 @@ def test_every_check_and_rule_example_can_be_picked_on_the_dashboard():
                  'item.look_alikes, "look-alike"', "rule.example", "rule.look_alike", 'stage + "-example-check"']:
         assert text in script, text
     controls = [item for domain in registry_payload()["domains"] for item in domain["controls"]]
-    assert len(controls) == 18
+    assert len(controls) == 19
     for stage in ("input", "output"):
         offered = [item for item in controls if stage in item["stages"]
                    and ([e for e in item["positive_examples"] + item["look_alikes"] if e["stage"] == stage] or item["rules"])]

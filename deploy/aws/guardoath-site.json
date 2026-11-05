@@ -216,8 +216,6 @@
        "Ref": "DemoKeySecret"
       },
       "GUARDOATH_ENABLE_PII": "1",
-      "GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS": "0",
-      "GUARDOATH_CONTENT_SAFETY_PROVIDER": "none",
       "GUARDOATH_COGNITO_POOL_ID": {
        "Ref": "UserPool"
       },

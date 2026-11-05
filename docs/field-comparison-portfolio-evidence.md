@@ -1,5 +1,12 @@
 # Strict whole-portfolio generated-example audit (FC-MR2 / FC-MR4)
 
+> **2026-11-05:** the generator defect described below is repaired in `guardoath/record_rules.py` (values solved for
+> all of a record's comparisons together, each document checked with the checker's value rules, and a stable reason
+> code when no document exists; tests in `tests/test_record_rule_examples.py`). The observations and the checked
+> report below are from before that change; re-run `python -m tools.field_comparison_portfolio --output
+> docs/evidence/field-comparison-portfolio.json` to refresh them. Contradictory and strict-self scenarios still have
+> no look-alike (reported as `generator_unavailable:<code>`), so the strict audit still exits 1 by design.
+
 This audit uses actual validated Policy objects and the real enforce-mode Engine
 with one mandatory cross_field checker, on input and output. The generated
 positive must report its nominated original rule ID; real overlaps stay visible.

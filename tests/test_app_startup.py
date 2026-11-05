@@ -8,8 +8,6 @@ def test_create_app_builds_the_sensitive_data_checker_once(monkeypatch):
                  "GUARDOATH_DEMO_KEY_SECRET"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("GUARDOATH_ENABLE_PII", "1")
-    monkeypatch.setenv("GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS", "0")
-    monkeypatch.setenv("GUARDOATH_CONTENT_SAFETY_PROVIDER", "none")
     original, calls = pii.build_pii_checker, []
 
     def counted():

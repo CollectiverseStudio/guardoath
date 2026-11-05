@@ -23,7 +23,7 @@ and opens http://127.0.0.1:8000/dashboard. Copy the key into **Application API k
 and select **Connect**. Keep that PowerShell window open; Ctrl+C stops the server.
 A restart gives you a new key. The dashboard checks the message and proposed
 answer you provide; it does not generate the AI answer. The default launcher
-keeps all checks local and disables Azure, including inherited enable settings.
+keeps all checks local. GuardOath sends no content to an outside service.
 
 To run the entire Secrets and confidential information batch, use a second
 PowerShell window in the same folder:
@@ -177,8 +177,7 @@ Both endpoints take the same canonical content. Example request body:
 }
 ```
 
-Use `Authorization: Bearer YOUR_LOCAL_PLATFORM_KEY`. The Azure provider key, if
-configured separately, is not the browser/platform key. `request_context` is not
+Use `Authorization: Bearer YOUR_LOCAL_PLATFORM_KEY`. `request_context` is not
 scanned by the current local secret/PII/text checks; put material requiring a scan
 in `content`. For `content_format: "json"`, put the JSON document as a string in
 `content`. Unknown request fields are rejected. The local API explorer is at
@@ -216,8 +215,8 @@ example to actual coverage or its remaining gap.
 | --- | --- | --- |
 | Regulated and sensitive data | Supported email, card and U.S. SSN candidates; opt-in labeled phone, birth date, medical-record, health-plan and bank-account fields; revalidated redaction | Remove supported identifiers before downstream processing; not general PHI or full anonymization |
 | Secrets and confidential information | Selected provider credentials, JWT/private-key markers, embedded URL credentials; optional assignments, encoded inspection and confidential phrases | Catch credential/configuration leaks and customer-defined phrases; full chapter below |
-| Prompt injection and manipulation | Selected hidden/control characters, explicit encodings; optional Azure input-attack analysis | Review obfuscated text; local text signals do not classify malicious intent |
-| Harmful content and abuse | Optional provider-neutral content_safety; initial Bedrock adapter covers hate, insults, sexual content, violence and misconduct | Off by default; live accuracy uncalibrated; safety remains a separate simulator; no dedicated self-harm coverage |
+| Prompt injection and manipulation | Selected hidden/control characters, explicit encodings (text_security); 35 wording rules for jailbreaks, instruction overrides, prompt extraction and injected instructions on input and output (prompt_attack) | Review obfuscated text and attack wording; wording does not classify malicious intent, and reworded attacks pass |
+| Harmful content and abuse | 30 wording rules for hate, harassment, threats, sexual content involving minors, extremism and violence (harmful_content); 61 human-safety rules for self-harm, emergencies, medicines, children and other risks to people (human_safety) | Off for demo users until turned on; wording, not meaning: quoted or educational text can be reported and reworded content passes; safety remains a separate simulator |
 | Structure and data validity | Strict bounded JSON, JSON Schema and supported formats | Reject malformed data and schema/format violations; not factual verification |
 | Scope and intent | Not implemented | A shopping bot receiving an unrelated question is not currently classified as off-topic |
 | Accuracy and supporting evidence | Local citation markers and exact quotations against a configured source catalog | No factual truth, claim entailment/coverage, source authenticity or live reference verification |
@@ -371,11 +370,8 @@ scan deadline equal to the policy's `timeout_ms` also apply. Errors never become
 - JSON keys/string values are scanned; duplicate keys/invalid bounded JSON produce
   incomplete checks. Integers/booleans are not secret-token text candidates.
 - User-supplied allowlist/noqa/gitleaks comments do not disable scanning.
-- Configured local findings/errors hold external checks under the local-first
-  gate, including in observe mode. This does not stop model calls your app makes
+- GuardOath sends no content to an outside service (2026-11-05). This does not stop model calls your app makes
   independently of GuardOath or prove complete confidentiality coverage.
-- The optional Azure sample now enables quoted-assignment and encoded-secret
-  inspection in its local gate. The ordinary launcher still disables Azure.
 
 ### Secrets batch case catalog
 
@@ -859,10 +855,9 @@ The separate secrets checker has its own credential inspection and policy rules.
 The dashboard's `text-security-v1` observes and recommends flag on both stages;
 effective action stays allow. The batch also includes `text-security-enforce-v1`,
 which blocks findings. Required failures follow failure_action, block by default.
-The dashboard holds findings/incomplete checks regardless of observe mode. Local
-findings or errors withhold registered external checkers under the existing gate.
-Plain attack wording with no local signal can pass that gate when a separate
-external policy permits it; a local pass is not evidence of benign intent.
+The dashboard holds findings/incomplete checks regardless of observe mode. Plain
+attack wording is the separate prompt_attack check; a pass is not evidence of
+benign intent.
 
 ### Run the complete local batch
 
@@ -886,14 +881,10 @@ python -m guardoath.evaluate --cases evals/text-security.json --policies policie
 
 ### Semantic detection remains separate
 
-The optional Azure Prompt Shields adapter remains off by default and is not
-activated or called by this batch. It supports selected user-prompt attack
-analysis on input only, within its 4,000-character plain-text cap, after policy
-permission and real local passes. Live calibration, an approved resource/region,
-data-handling terms and a test budget remain pending. No output attack detection,
-multi-turn guarantee or universal jailbreak defense is implied. See README and
-provider decisions for its configuration, unknown-cost reporting and failure
-handling. No new dependency, model download or paid call is added here.
+The prompt_attack check (35 wording rules, input and output) covers jailbreak personas and modes, instruction
+overrides, prompt extraction, instructions hidden in documents or pages and answers that show an attack worked. It
+replaced the optional Azure Prompt Shields connector, which was removed on 2026-11-05: GuardOath sends nothing to an
+outside service. It matches wording: no multi-turn guarantee or universal jailbreak defense is implied.
 
 ## Structure and data validity checks
 
@@ -1139,121 +1130,25 @@ python -m guardoath.evaluate --cases evals/business.json --policies policies/bus
 ```
 
 
-## Harmful content and abuse: optional provider assessment
+## Harmful content and abuse (GuardOath's own checks)
 
-`content_safety` is the common checker interface, independent of where GuardOath
-runs. It is disabled by default. Hosting on AWS does not select Bedrock; moving
-the API to another host does not change requests, policies or local checks.
-The initial optional adapter uses Bedrock. Other providers can implement the same
-contract; they are not all implemented or live-calibrated already.
+Since 2026-11-05 GuardOath checks harmful content itself; nothing is sent to an outside service. The former optional
+`content_safety` connector (Amazon Bedrock Guardrails) and its `content-safety-v1` example profile were removed.
 
-### What each supported check does
+- **harmful_content** (30 wording rules, input and output): hate about the groups the rules name (dehumanizing
+  language, calls for violence, claims of inferiority, exclusion, stereotypes), direct insults, body shaming and
+  organized harassment, threats (to hurt someone, to a family, bombs, shootings, doxxing), sexual content involving
+  minors and explicit sexual requests, nude or deepfake images of real people, praise or support of attackers and
+  terrorist groups, and requests for violence (poisoning a person, hiring a hitman, trafficking, making hard drugs).
+- **human_safety** (61 wording rules, input and output): risks to people, from docs/human-safety-scenarios.md.
 
-| Rule ID | What it reviews under the published provider configuration | Example/use case | Handling |
-| --- | --- | --- | --- |
-| `harmful_content.bedrock_hate` | Hate content | Review a reported identity-based attack in a support conversation | Finding when the provider reports detected; quotation/context can matter |
-| `harmful_content.bedrock_insults` | Insulting or demeaning content | Review “You are an idiot” in a proposed customer reply | Finding when detected; not every criticism is an insult |
-| `harmful_content.bedrock_sexual` | Sexual content | Distinguish content for review from consent/health education | Provider determination; no automatic prediction from the example button |
-| `harmful_content.bedrock_violence` | Threats or violent content | Review “I will hurt you tomorrow” versus historical discussion | Provider signal needs contextual review |
-| `harmful_content.bedrock_misconduct` | Content involving wrongdoing | Review a request to help defraud someone | Not a legal determination or assessment of every harmful activity |
+Every rule has an example it reports and a look-alike it does not, listed under **Show rules** on the dashboard and in
+`GET /v1/controls`; tests/test_harmful_content.py runs each one on both stages. Flag suits input (the message goes
+through and is reported; only Block stops it); Block suits output.
 
-Confidence and filter strength are provider labels, not calibrated probabilities
-or interchangeable severity scores. Detected findings use medium review severity.
-These five filters are not a dedicated self-harm classifier, a bias assessment,
-a fact checker or image analysis. A clean result applies only to selected checks.
-
-### Dashboard examples
-
-Under Advanced, select `content-safety-v1`. Six new examples per editor cover
-Threat review, Reported abuse, Insult review, Health education, Neutral identity
-and Historical violence. Each changes only its own editor. They have **no
-predetermined real classification**: none of these buttons runs a local keyword
-moderator, changes the provider, or calls a service.
-
-The normal launcher disables external providers, so this profile deliberately
-returns **Incomplete / checker_unavailable** and holds the output stage. That is
-expected, not a failed installation. The default conversation profile continues
-to run real local general-text checks. Do not show “all safety tests passed” when
-the provider is unavailable. Browser tests use labelled synthetic API fixtures
-for finding/error/clean UI paths, not live classifier accuracy.
-
-### Explicit configuration
-
-For a separately approved provider trial, install optional `aws` and `pii` extras,
-select the dedicated policy file, and configure server-side settings:
-
-```text
-GUARDOATH_CONTENT_SAFETY_PROVIDER=bedrock
-GUARDOATH_AWS_REGION=<reviewed commercial AWS region>
-GUARDOATH_BEDROCK_GUARDRAIL_ID=<short guardrail ID>
-GUARDOATH_BEDROCK_GUARDRAIL_VERSION=<published numeric version>
-GUARDOATH_POLICY_FILE=policies/content-safety.json
-GUARDOATH_ENABLE_PII=1
-```
-
-Use a workload role or normal server-side SDK credential configuration. Provider
-credentials do not belong in the dashboard. The dedicated guardrail must have all
-five text filters active on both stages. Its strengths/actions are controlled in
-the reviewed provider version. DRAFT is rejected. Additional policy assessment
-sections are intentionally unsupported by this first adapter. No default region,
-resource, provider fallback or live service activation is inferred.
-
-Local PII, secrets and formatting checks run first. Only after **every selected
-local check passes without simulation** and policy permission allows egress does
-the provider receive the current input or output text. This gate is limited by
-those detectors; it does not prove complete anonymization. Request context is not
-sent. JSON and text longer than 10,000 Unicode code points are rejected locally;
-content is never truncated or split. The output API does not require a previous
-input request; your application coordinates and enforces that sequence.
-
-The sample is observe mode: input findings recommend flag, output findings
-recommend block, effective action remains allow. The dashboard holds the answer
-on any findings or incomplete checks. An enforcing application must use an
-appropriate published enforce-mode policy and handle failures explicitly.
-
-### Errors and limitations
-
-| Code | Meaning | Expected handling |
-| --- | --- | --- |
-| `checker_unavailable` | No provider adapter selected/installed | Incomplete; do not claim safety assessment |
-| `external_policy_disabled` / `external_local_gate` | Provider call withheld by policy/local results | Incomplete for required provider; inspect local findings |
-| `bedrock_text_only` / `bedrock_input_limit` | Unsupported format or application size cap | Incomplete; correct the request, no outbound call |
-| `bedrock_invalid_response` | Missing/duplicate/inactive filters, malformed assessment or unsupported extra policy | Incomplete; investigate configuration/contract |
-| `bedrock_credentials_missing` / `bedrock_access_denied` | Missing role credentials or insufficient permission | Incomplete; operator fixes server configuration |
-| `bedrock_rate_limited` / `bedrock_busy` | Provider quota or occupied local worker slots | Incomplete; caller may retry later within its own limits |
-| `bedrock_timeout` / `checker_timeout` | SDK or engine deadline | Incomplete; no automatic fallback or pass |
-| `bedrock_resource_missing` / `bedrock_request_rejected` | Incorrect resource/version or provider rejection | Incomplete; operator reviews configuration |
-| `bedrock_connection_failed` / `bedrock_provider_error` / `bedrock_worker_failure` | Transport, provider or local worker failure | Incomplete; no private exception/provider-body text returned |
-
-In enforce mode, a required-check error uses the configured failure action
-(default block). In observe mode, effective action is still allow and Joe must
-inspect incomplete status/recommendation rather than treating HTTP 200 as clean.
-
-A provider detect-only response with detected=true **still produces a finding**,
-even when its action is NONE. We do not release the provider's replacement output,
-matched text or free-form reason. Cost is unknown, not zero. At most two SDK
-workers are admitted per adapter. An engine timeout cannot terminate an SDK
-thread; its slot remains occupied until it finishes. No retries, fallback calls
-or model generation are performed.
-
-The adapter also requires explicit text coverage counts matching the entire
-submitted string. Missing, partial, wrong-type or mismatched counts are
-incomplete, not a pass. Character-count behavior for non-ASCII real traffic must
-be confirmed during live calibration; conservative mismatches hold the request.
-
-### Run the complete offline contract batch
-
-```bash
-python -m pip install -e '.[test,pii,aws]'
-python -m pytest tests/test_content_safety.py tests/test_bedrock_guardrails.py -q
-```
-
-The 100-case contract matrix covers all five categories/confidence labels,
-detect true/false, both stages and malformed responses. Additional integration
-tests cover errors, gating, local privacy, SDK request validation and resource
-boundaries. These are **not live content-classification accuracy tests**. See
-[the detailed inventory](content-safety-coverage.md). Live reviewed calibration,
-provider routing/terms and budget remain necessary before relying on blocking.
+**Limits:** these match wording, not meaning or intent. Reworded content passes; quoted, reported or educational text
+with the same words is reported for review; hate rules cover the groups they name and include no slurs. They are not a
+calibrated classifier, a clinical or crisis assessment, or a legal judgment.
 
 ## How Joe receives and handles results
 
@@ -1963,10 +1858,12 @@ The [standalone scale evidence](field-comparison-scale-evidence.md) measures
 30/51/100/250/500 independent comparisons without changing your tenant settings.
 Run `python -m tools.field_comparison_scale --output report.json` from a source
 checkout for synthetic timing, traced-memory and payload observations. A larger
-direct-checker run does not mean that a tenant record accepts that count: current
-schemas still reject more than50, and coordinated removal of that implementation
-limit remains pending. Catalog-generation timeouts are reported as unmeasured,
-not accepted capacity. This tool does not validate external truth, generated
+direct-checker run is not tenant acceptance by itself. Since 2026-11-05 a tenant
+record has no comparison count limit; its stored settings must fit 350,000 bytes and
+one save's body 262,144 bytes (see tenant-records.md). The example generator was
+rewritten the same day (groups of related comparisons solved once); the recorded
+generator timeouts above 51 are from before that change. Catalog-generation
+timeouts are reported as unmeasured, not accepted capacity. This tool does not validate external truth, generated
 whole-portfolio benignity, production latency or deployment readiness.
 
 
@@ -2002,10 +1899,9 @@ The 228 source-identified SigmaHQ rules imported by Codex now appear in the **sa
 
 **Example:** Search for a process-creation rule, choose `Flag`, and save. You can then select **Test match** or **Test look-alike** on its row to run a **server-owned synthetic event** through that rule. A matching event recommends the tenant's configured action and, in enforce mode, makes it effective. In observe mode, the effective action is Allow while the recommended action is reported. Missing/Off rules cannot be run. Each synthetic demo counts against the tenant's monthly limit; no external provider is called. The API surfaces are `GET /v1/sigma/catalog` and `POST /v1/sigma/demo` with `{"rule_id":"<pinned UUID>","sample":"positive"}` or `sample="lookalike"`. Production customers must sign in to change tenant settings; their application API keys are read/evaluation credentials only.
 
-**Separate event domain:** Sigma rules inspect declared Windows security-event fields. They do **not** run on AI user messages or model outputs, do not alter the existing 17 conversational checks, and do not inherit the Input/Output action fields. Live log ingestion, source attestation, enterprise SIEM routing, and production event blocking are not wired by this preview. Every test request uses a pinned local synthetic fixture and trusted server-owned source routing under the existing aggregate one-second event budget. A rule's synthetic look-alike need not be benign against *other* rules. The original author, upstream source URL, known false positives and evidence maturity remain visible. A match is a signal, not proof of malicious intent or a reason to execute a command.
+**Separate event domain:** Sigma rules inspect declared Windows security-event fields. They do **not** run on AI user messages or model outputs, do not alter the conversational checks, and do not inherit the Input/Output action fields. Live log ingestion, source attestation, enterprise SIEM routing, and production event blocking are not wired by this preview. Every test request uses a pinned local synthetic fixture and trusted server-owned source routing under the existing aggregate one-second event budget. A rule's synthetic look-alike need not be benign against *other* rules. The original author, upstream source URL, known false positives and evidence maturity remain visible. A match is a signal, not proof of malicious intent or a reason to execute a command.
 
-**Limits and acceptance:** The `sigma_rule_actions` field is bounded by the pinned catalog's 4096-rule metadata ceiling and validates IDs against actual bundled sources; the current 228 rules are not an arbitrary permanent tenant quota. This setting is separate from the unapproved 50-comparison limit in Field Comparisons. Validation and isolation tests live in `tests/test_sigma_tenant_integration.py`, with tenant-table and synthetic-run browser tests in `tests/browser/sigma_tenant.spec.js`. Nothing here asserts that Codex's outstanding full-portfolio Field Comparisons generator problem has been solved, and the feature is not production-deployed merely because it is committed to `main`.
-
+**Limits and acceptance:** The `sigma_rule_actions` field is bounded by the pinned catalog's 4096-rule metadata ceiling and validates IDs against actual bundled sources; the current 228 rules are not an arbitrary permanent tenant quota. This setting is separate from Field Comparisons, which have had no count limit since 2026-11-05. Validation and isolation tests live in `tests/test_sigma_tenant_integration.py`, with tenant-table and synthetic-run browser tests in `tests/browser/sigma_tenant.spec.js`. Nothing here asserts that Codex's outstanding full-portfolio Field Comparisons generator problem has been solved, and the feature is not production-deployed merely because it is committed to `main`.
 
 ## File & Document Security (shared tenant category)
 

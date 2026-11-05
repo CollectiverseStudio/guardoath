@@ -11,11 +11,16 @@ own comparisons and sections; each tenant's engine policy is built from its own 
 lowercase (``^[a-z][a-z0-9_]{0,79}$``) and may not name a static rule (business.ledger_currency, for example).
 
 Examples are generated from the configuration and are synthetic: a JSON document (comparisons) or labeled text
-(sections) that the rule reports, and a look-alike it does not. Other comparisons or sections on the same record get
-passing values where their fields do not overlap, so a look-alike usually reports nothing at all.
+(sections) that the rule reports, and a look-alike it does not. For a comparison, the example is reported by that
+comparison only and the look-alike by none of the record's comparisons on that comparison's stages (2026-11-05: the
+values are solved for all of them together and checked with the checker's own value rules). When no such document
+exists (contradictory comparisons, a field compared as a number and as a date, a field that is both a value and an
+object), the example or look-alike is None and example_unavailable / look_alike_unavailable gives the reason.
 """
 from __future__ import annotations
 
+from collections import deque
+from datetime import date, timedelta
 import json
 import re
 
@@ -25,10 +30,6 @@ SECTION_PREFIX = "completeness."
 SYMBOLS = {"lt": "<", "le": "\u2264", "eq": "=", "ge": "\u2265", "gt": ">", "ne": "\u2260"}
 WORDS = {"lt": "less than", "le": "less than or equal to", "eq": "equal to", "ge": "greater than or equal to",
          "gt": "greater than", "ne": "different from"}
-NUMBERS = {-1: 99, 0: 100, 1: 101}
-DATES = {-1: "2026-11-03", 0: "2026-11-04", 1: "2026-11-05"}
-# For each operator: the left value (relative to the right one) that fails the comparison, and one that passes.
-FAIL_PASS = {"lt": (0, -1), "le": (1, 0), "eq": (1, 0), "ge": (-1, 0), "gt": (0, 1), "ne": (0, 1)}
 FILLER = "Details provided for this section."
 
 
@@ -41,71 +42,313 @@ def _segments(pointer: str) -> list[str]:
     return [segment.replace("~1", "/").replace("~0", "~") for segment in pointer[1:].split("/")]
 
 
-def _place(document: dict, pointer: str, value) -> bool:
-    """Set the value at pointer only where nothing is placed yet (no overwrite, no value in the way)."""
-    segments = _segments(pointer)
-    target = document
-    for segment in segments[:-1]:
-        if segment not in target:
-            break
-        target = target[segment]
-        if not isinstance(target, dict):
-            return False
-    else:
-        if segments[-1] in target:
-            return False
-    return _set(document, pointer, value)
+# Examples for comparisons (2026-11-05). One document gives every field one value, chosen so that every other comparison
+# on the record that shares a stage with this one passes: in the look-alike this comparison passes too, in the example it
+# fails. The values come from solving the comparisons together (difference constraints, below), and every document is
+# checked with the cross_field checker's own value rules (guardoath.business) before it is shown. When no such document
+# exists, the example or look-alike is None and *_unavailable gives a stable reason. Before 2026-11-05 each comparison's
+# values were placed one after another, so a later comparison could overwrite a field an earlier one needed, and a
+# look-alike could be reported by the record's other comparisons (docs/field-comparison-portfolio-evidence.md).
+#
+# Comparisons that share no field are independent: each group of comparisons linked by shared fields is solved once and
+# reused, so only the target's own group is solved again for its example. There is no limit on how many comparisons a
+# record has (2026-11-05); the work and the listed text per record are bounded instead (MAX_RECORD_WORK,
+# MAX_LISTED_BYTES): past them an example is None with search_limit or listing_limit, never a wrong document. Every
+# document is also parsed with the checker's own JSON limits (json_limit).
+NUMBER_BASE = 100
+DATE_BASE = date(2026, 6, 1)
+MAX_SOLVES = 512  # "different from" comparisons are tried both ways; this bounds that search per document.
+MAX_RECORD_WORK = 5_000_000  # constraint relaxations per record (record_rules), so a GET of the record stays fast.
+MAX_LISTED_BYTES = 2_000_000  # example text per record in one response (the API response limit is 6 MB).
+MAX_CONTENT_CHARS = 32_000  # what one check accepts (guardoath.models.CheckRequest.content); longer is no example.
+NEGATION = {"lt": "ge", "le": "gt", "eq": "ne", "ge": "lt", "gt": "le", "ne": "eq"}
+UNAVAILABLE = {
+    "mixed_types": "A field is compared as a number in one comparison and as a date in another, so no document can "
+                   "satisfy both.",
+    "field_inside_field": "A field holds a value for one comparison and other fields for another comparison, so no "
+                          "document can satisfy both.",
+    "cannot_all_pass": "The comparisons on this record that share a stage with this one cannot all pass at once, so no "
+                       "look-alike exists.",
+    "cannot_fail_alone": "This comparison cannot fail while the record's other comparisons on its stages pass, so no "
+                         "example exists.",
+    "search_limit": "Building this example needs more work than one listing allows (many related comparisons).",
+    "listing_limit": "This record's examples are larger than one listing holds; the first comparisons' examples are "
+                     "listed.",
+    "content_limit": "A document with every field these comparisons use is longer than one check accepts (32,000 "
+                     "characters), so no example can be checked.",
+    "json_limit": "A document with every field these comparisons use breaks the JSON limits of one check (at most "
+                  "1,000 fields in one object, nested at most 32 deep), so no example can be checked, and no message "
+                  "can pass all of these comparisons. Nest the fields in more objects.",
+}
 
-def _values(comparison, which: int):
-    table = DATES if comparison.value_type == "date" else NUMBERS
-    return table[FAIL_PASS[comparison.operator][which]], table[0]
+
+class _Unavailable(Exception):
+    def __init__(self, code):
+        super().__init__(code)
+        self.code = code
 
 
-def _comparison_document(comparison, comparisons, failing: bool) -> str | None:
-    document: dict = {}
-    for other in comparisons:
-        if other.rule_id == comparison.rule_id:
-            continue
-        left, right = _values(other, 1)
-        probe = json.loads(json.dumps(document))
-        if _place(probe, other.left, left) and _place(probe, other.right, right):
-            document = probe
-    left, right = _values(comparison, 0 if failing else 1)
-    for pointer, value in ((comparison.left, left), (comparison.right, right)):
-        if not _set(document, pointer, value):
+def _unavailable(code: str) -> dict:
+    return {"code": code, "reason": UNAVAILABLE[code]}
+
+
+def _shares_stage(a, b) -> bool:
+    return bool(set(a.stages) & set(b.stages))
+
+
+def _difference_edges(constraints):
+    """x_left <op> x_right as x_a - x_b <= c edges (b -> a, weight c); 'ne' is returned separately."""
+    edges, different = [], []
+    for left, right, op in constraints:
+        if op == "lt":
+            edges.append((right, left, -1))
+        elif op == "le":
+            edges.append((right, left, 0))
+        elif op == "gt":
+            edges.append((left, right, -1))
+        elif op == "ge":
+            edges.append((left, right, 0))
+        elif op == "eq":
+            edges += [(right, left, 0), (left, right, 0)]
+        else:
+            different.append((left, right))
+    return edges, different
+
+
+class _Budget:
+    def __init__(self):
+        self.work = MAX_RECORD_WORK
+        self.listed = MAX_LISTED_BYTES
+
+
+def _solve(variables, edges, budget, start=None):
+    """Integer levels with level[b] <= level[a] + weight for every edge (a, b, weight), or None when none exist (a
+    negative cycle). Queue-based relaxation from start (a solution of nearby constraints, or all zeros); a level that
+    keeps falling along a path longer than the number of fields means a negative cycle."""
+    level = {v: (start or {}).get(v, 0) for v in variables}
+    out = {}
+    for a, b, weight in edges:
+        out.setdefault(a, []).append((b, weight))
+    steps = dict.fromkeys(variables, 0)
+    queue, queued, limit = deque(variables), set(variables), len(variables)
+    while queue:
+        a = queue.popleft()
+        queued.discard(a)
+        for b, weight in out.get(a, ()):
+            budget.work -= 1
+            if budget.work < 0:
+                raise _Unavailable("search_limit")
+            if level[a] + weight < level[b]:
+                level[b] = level[a] + weight
+                steps[b] = steps[a] + 1
+                if steps[b] > limit:
+                    return None
+                if b not in queued:
+                    queue.append(b)
+                    queued.add(b)
+    return level
+
+
+def _levels(variables, constraints, budget, start=None):
+    edges, different = _difference_edges(constraints)
+    solves = [MAX_SOLVES]
+
+    def search(edges, start):
+        solves[0] -= 1
+        if solves[0] < 0:
+            raise _Unavailable("search_limit")
+        level = _solve(variables, edges, budget, start)
+        if level is None:
             return None
-    return json.dumps(document, indent=2)
+        clash = next(((a, b) for a, b in different if level[a] == level[b]), None)
+        if clash is None:
+            return level
+        a, b = clash
+        return search(edges + [(b, a, -1)], level) or search(edges + [(a, b, -1)], level)
+
+    return search(edges, start)
 
 
-def _set(document: dict, pointer: str, value) -> bool:
-    """Set the value at pointer, overwriting a value placed for another comparison; refuses to replace an object."""
-    segments = _segments(pointer)
-    target = document
-    for segment in segments[:-1]:
-        nxt = target.get(segment)
-        if nxt is None:
-            nxt = target[segment] = {}
-        if not isinstance(nxt, dict):
-            return False
-        target = nxt
-    if isinstance(target.get(segments[-1]), dict):
+def _set_path(document: dict, path: tuple, value) -> None:
+    for segment in path[:-1]:
+        document = document.setdefault(segment, {})
+    document[path[-1]] = value
+
+
+def _passes(payload, comparison) -> bool:
+    """The cross_field checker's own value rules (guardoath.business) for one comparison."""
+    from decimal import DecimalException
+    from guardoath.business import OPERATORS, resolve, typed
+    try:
+        left, right = (typed(resolve(payload, p), comparison.value_type) for p in (comparison.left, comparison.right))
+        return bool(OPERATORS[comparison.operator](left, right))
+    except (ValueError, KeyError, IndexError, TypeError, OverflowError, DecimalException):
         return False
-    target[segments[-1]] = value
-    return True
 
 
-def comparison_rule(comparison, comparisons=()) -> dict:
+class _Examples:
+    """Example documents for one record's comparisons. Groups of comparisons that share fields are solved once."""
+
+    def __init__(self, comparisons):
+        self.comparisons = tuple(comparisons)
+        self.paths = {}
+        for comparison in self.comparisons:
+            for pointer in (comparison.left, comparison.right):
+                self.paths.setdefault(pointer, tuple(_segments(pointer)))
+        self.budget = _Budget()
+        self._layouts = {}
+        self._solutions = {}
+        self._smallest = {}  # active set -> size of the smallest document listed for it
+        self._active = {}  # a comparison's stages -> the comparisons that share one of them
+        self._json_limited = set()  # active sets whose documents break the checker's JSON limits
+
+    def _layout(self, active: tuple):
+        """Groups of active comparisons linked by shared fields, or an _Unavailable code for the whole active set."""
+        if active in self._layouts:
+            return self._layouts[active]
+        kinds = {}
+        for index in active:
+            comparison = self.comparisons[index]
+            for pointer in (comparison.left, comparison.right):
+                if kinds.setdefault(self.paths[pointer], comparison.value_type) != comparison.value_type:
+                    self._layouts[active] = "mixed_types"
+                    return "mixed_types"
+        ordered = sorted(kinds)
+        # Paths that start with another path form a block right after it in sorted order.
+        if any(ordered[i + 1][:len(ordered[i])] == ordered[i] for i in range(len(ordered) - 1)):
+            self._layouts[active] = "field_inside_field"
+            return "field_inside_field"
+        parent = {}
+
+        def find(x):
+            while parent.setdefault(x, x) != x:
+                parent[x] = parent[parent[x]]
+                x = parent[x]
+            return x
+        for index in active:
+            comparison = self.comparisons[index]
+            parent[find(self.paths[comparison.left])] = find(self.paths[comparison.right])
+        groups = {}
+        for index in active:
+            groups.setdefault(find(self.paths[self.comparisons[index].left]), []).append(index)
+        groups = tuple(tuple(group) for group in groups.values())
+        layout = (kinds, {index: group for group in groups for index in group}, groups)
+        self._layouts[active] = layout
+        return layout
+
+    def _group_values(self, group: tuple, kinds, negate=None):
+        """Field values for one group (negate = index of the comparison that must fail), checked; or a code."""
+        key = (group, negate)
+        if key in self._solutions:
+            return self._solutions[key]
+        constraints, impossible = [], False
+        for index in group:
+            comparison = self.comparisons[index]
+            op = NEGATION[comparison.operator] if index == negate else comparison.operator
+            left, right = self.paths[comparison.left], self.paths[comparison.right]
+            if left == right:
+                impossible = impossible or op in ("lt", "gt", "ne")
+                continue
+            constraints.append((left, right, op))
+        variables = sorted({p for index in group for p in (self.paths[self.comparisons[index].left],
+                                                           self.paths[self.comparisons[index].right])})
+        # An example starts from the group's look-alike levels: only the changed comparison has to move.
+        base = self._solutions.get((group, None)) if negate is not None else None
+        start = base[1] if isinstance(base, tuple) else None
+        try:
+            level = None if impossible else _levels(variables, constraints, self.budget, start)
+        except _Unavailable as reason:
+            self._solutions[key] = reason.code
+            return reason.code
+        if level is None:
+            result = "cannot_fail_alone" if negate is not None else "cannot_all_pass"
+        else:
+            values = {path: NUMBER_BASE + level[path] if kinds[path] == "number"
+                      else (DATE_BASE + timedelta(days=level[path])).isoformat() for path in variables}
+            payload = {}
+            for path, value in values.items():
+                _set_path(payload, path, value)
+            from guardoath.business import exact_number
+            payload = json.loads(json.dumps(payload), parse_float=exact_number)
+            ok = all(_passes(payload, self.comparisons[index]) == (index != negate) for index in group)
+            result = (values, level) if ok else ("cannot_fail_alone" if negate is not None else "cannot_all_pass")
+        self._solutions[key] = result
+        return result
+
+    def document(self, target: int, failing: bool):
+        """(text, None) or (None, unavailable) for comparisons[target] failing (example) or passing (look-alike)."""
+        comparison = self.comparisons[target]
+        stages = frozenset(comparison.stages)
+        active = self._active.get(stages)
+        if active is None:
+            # Every comparison that shares a stage with this one (rule ids are unique on a valid record).
+            active = self._active[stages] = tuple(i for i, other in enumerate(self.comparisons)
+                                                  if stages & set(other.stages))
+        layout = self._layout(active)
+        if isinstance(layout, str):
+            return None, _unavailable(layout)
+        kinds, group_of, groups = layout
+        if self._smallest.get(active, 0) > MAX_CONTENT_CHARS:
+            return None, _unavailable("content_limit")
+        if active in self._json_limited:
+            return None, _unavailable("json_limit")
+        if self._smallest.get(active, 0) > self.budget.listed:
+            return None, _unavailable("listing_limit")
+        values = {}
+        for group in groups:
+            own = group == group_of[target]
+            solved = self._group_values(group, kinds, target if failing and own else None)
+            if isinstance(solved, str):
+                code = solved if own or solved == "search_limit" else (
+                    "cannot_fail_alone" if failing else "cannot_all_pass")
+                return None, _unavailable(code)
+            values.update(solved[0])
+        document = {}
+        for path in sorted(values):
+            _set_path(document, path, values[path])
+        text = json.dumps(document, indent=2)
+        if len(text) > MAX_CONTENT_CHARS:
+            text = json.dumps(document, separators=(",", ":"))  # compact when the readable form is too long
+        size = len(text.encode("utf-8"))
+        self._smallest[active] = min(self._smallest.get(active, size), size)
+        if len(text) > MAX_CONTENT_CHARS:
+            return None, _unavailable("content_limit")
+        # The checker parses with the same strict limits (guardoath.json_data.parse_json: fields per object, depth),
+        # so a document it would refuse is never offered (2026-11-05: 1,000 comparisons on 2,000 top-level fields).
+        from guardoath.json_data import parse_json
+        try:
+            parse_json(text)
+        except ValueError:
+            self._json_limited.add(active)
+            return None, _unavailable("json_limit")
+        if size > self.budget.listed:
+            return None, _unavailable("listing_limit")
+        self.budget.listed -= size
+        return text, None
+
+
+def _comparison_examples(comparison, comparisons, context=None):
+    """(example, look_alike, example_unavailable, look_alike_unavailable) for one comparison on its record."""
+    comparisons = tuple(comparisons)
+    if context is None or context.comparisons != comparisons:
+        context = _Examples(comparisons)
+    target = next(i for i, other in enumerate(comparisons) if other is comparison or other == comparison)
+    look_alike, look_alike_missing = context.document(target, False)
+    example, example_missing = context.document(target, True)
+    return example, look_alike, example_missing, look_alike_missing
+
+
+def comparison_rule(comparison, comparisons=(), context=None) -> dict:
     sign = SYMBOLS[comparison.operator]
     title = f"Comparison {comparison.rule_id}: {comparison.left} {sign} {comparison.right} ({comparison.value_type})"
-    example = _comparison_document(comparison, comparisons or (comparison,), True)
-    look_alike = _comparison_document(comparison, comparisons or (comparison,), False)
-    if example is not None and example == look_alike:
-        example = look_alike = None
+    example, look_alike, example_unavailable, look_alike_unavailable = _comparison_examples(
+        comparison, tuple(comparisons) or (comparison,), context)
     return {
         "rule_id": COMPARISON_PREFIX + comparison.rule_id, "control_id": "cross_field", "title": title,
         "use_case": (f"Turn this on to check, in submitted JSON, that {comparison.left} is {WORDS[comparison.operator]} "
                      f"{comparison.right} ({comparison.value_type}). Defined on this tenant record. It catches: {title}."),
-        "severity": "medium", "example": example, "look_alike": look_alike, "needs_setting": None,
+        "severity": "medium", "example": example, "look_alike": look_alike,
+        "example_unavailable": example_unavailable, "look_alike_unavailable": look_alike_unavailable, "needs_setting": None,
         "needs_checks": [], "content_format": "json",
         "configuration": (f"left {comparison.left} \u00b7 operator {comparison.operator} ({WORDS[comparison.operator]}) "
                           f"\u00b7 right {comparison.right} \u00b7 {comparison.value_type} \u00b7 runs on "
@@ -145,9 +388,9 @@ def section_rule(section, sections=()) -> dict:
 
 def record_rules(record) -> dict[str, dict]:
     """The record's own rules, by rule id: its comparisons, then its required sections."""
-    rules = {}
+    rules, context = {}, _Examples(record.comparisons)
     for comparison in record.comparisons:
-        rule = comparison_rule(comparison, record.comparisons)
+        rule = comparison_rule(comparison, record.comparisons, context)
         rules[rule["rule_id"]] = rule
     for section in record.required_sections:
         rule = section_rule(section, record.required_sections)

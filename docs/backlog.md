@@ -66,7 +66,7 @@
 - [ ] Add additional managed safety adapters as requirements justify; maintain documented differences in coverage.
 
 
-- [ ] Configure an approved Azure resource, region, retention/data terms, and test budget; run a live Prompt Shields smoke/calibration suite.
+- [x] ~~Configure an approved Azure resource, region, retention/data terms, and test budget; run a live Prompt Shields smoke/calibration suite.~~ Cancelled 2026-11-05: the outside-provider connectors were removed (GuardOath does every check itself); see prompt_attack and harmful_content.
 
 - [ ] Choose managed safety service, region, data routing rules, and test budget.
 - [ ] Add credentials through a secret manager or local environment, never source control.

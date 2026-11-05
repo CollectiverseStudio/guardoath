@@ -64,14 +64,21 @@ def test_each_template_as_a_records_only_comparison_reports_its_example_and_not_
         assert clean.recommended_action == Action.ALLOW
 
 
-def test_all_30_templates_on_one_record_each_example_reports_its_own_rule():
+def test_all_30_templates_on_one_record_each_example_reports_only_its_own_rule_and_each_look_alike_nothing():
+    # 2026-11-05: strengthened. Before, only "its own rule is (not) reported" was checked, and every look-alike was in
+    # fact reported by other comparisons on the record (docs/field-comparison-portfolio-evidence.md).
     rec = record(check_cross_field="flag", comparisons=[case["comparison"] for case in INVENTORY])
     rules = record_rules(rec)
     assert len(rules) == 30
     for case in INVENTORY:
         rule = rules["business." + case["rule_id"]]
-        assert "business." + case["rule_id"] in ids(run(rec, rule["example"], "json", Stage.INPUT))
-        assert "business." + case["rule_id"] not in ids(run(rec, rule["look_alike"], "json", Stage.OUTPUT))
+        assert rule["example_unavailable"] is None and rule["look_alike_unavailable"] is None, case["id"]
+        for stage in (Stage.INPUT, Stage.OUTPUT):
+            reported = run(rec, rule["example"], "json", stage)
+            assert reported.evaluation_status == "complete" and ids(reported) == {"business." + case["rule_id"]}, case["id"]
+            clean = run(rec, rule["look_alike"], "json", stage)
+            assert clean.evaluation_status == "complete" and clean.findings == (), (case["id"], ids(clean))
+            assert clean.recommended_action == Action.ALLOW
 
 
 def test_the_demo_users_own_comparisons_and_sections_are_rules_with_working_examples():

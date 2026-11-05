@@ -37,9 +37,8 @@ def test_launcher_serves_dashboard_and_all_policies_with_fresh_key():
     with socket.socket() as allocation:
         allocation.bind(('127.0.0.1',0))
         port = allocation.getsockname()[1]
-    environment = {**os.environ, 'GUARDOATH_CONTENT_SAFETY_PROVIDER':'bedrock', 'GUARDOATH_AWS_REGION':'invalid-inherited-region', 'GUARDOATH_API_KEY':'old-key', 'GUARDOATH_POLICY_FILE':'missing-old-policy',
-                   'GUARDOATH_ENABLE_PII':'0', 'GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS':'1',
-                   'GUARDOATH_AZURE_CONTENT_SAFETY_ENDPOINT':'invalid-old-endpoint'}
+    environment = {**os.environ, 'GUARDOATH_API_KEY':'old-key', 'GUARDOATH_POLICY_FILE':'missing-old-policy',
+                   'GUARDOATH_ENABLE_PII':'0'}
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     process = subprocess.Popen([sys.executable,str(SCRIPT),'--serve','--no-browser','--port',str(port)],
                                cwd=ROOT.parent,env=environment,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
@@ -70,7 +69,7 @@ def test_launcher_serves_dashboard_and_all_policies_with_fresh_key():
                                          headers={'Authorization':'Bearer '+key})
         with opener.open(request,timeout=2) as response:
             metadata = json.load(response)
-        assert {'pii-v1','redaction-v1','secrets-v1','business-v1','completeness-v1','text-security-v1','content-safety-v1','bias-matched-string-v1','evidence-v1','tool-calls-v1','privacy-encoded-v1'} <= {p['version'] for p in metadata['policies']}
+        assert {'pii-v1','redaction-v1','secrets-v1','business-v1','completeness-v1','text-security-v1','bias-matched-string-v1','evidence-v1','tool-calls-v1','privacy-encoded-v1'} <= {p['version'] for p in metadata['policies']}
         with pytest.raises(urllib.error.HTTPError) as denied:
             opener.open(urllib.request.Request(request.full_url,headers={'Authorization':'Bearer old-key'}),timeout=2)
         assert denied.value.code == 401

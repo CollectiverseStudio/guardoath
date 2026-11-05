@@ -38,8 +38,7 @@ async def run_all(root, destination, enable_pii=False):
     root, destination = Path(root).resolve(), Path(destination)
     if destination.is_symlink() or destination.exists():
         raise ValueError('A new collection directory is required')
-    # Load and validate every suite/configuration before creating output. The
-    # supplied provider environment is deliberately ignored.
+    # Load and validate every suite/configuration before creating output. Only GuardOath's own checkers run.
     adapters = default_checkers(enable_pii=enable_pii)
     planned = []
     for name in SUITES:
@@ -49,9 +48,6 @@ async def run_all(root, destination, enable_pii=False):
         for case in suite.cases:
             if not engine.has_policy(case.request.application_id, case.request.policy_version):
                 raise ValueError('Unknown regression policy')
-            selected = next(p for p in engine.describe_policies(case.request.application_id) if p['version'] == case.request.policy_version)
-            if any(c['external'] for c in selected['checks']):
-                raise ValueError('Local regressions cannot select external checks')
         planned.append((name, suite, engine))
     destination.mkdir(parents=True, exist_ok=False)
     collection = {'format_version': 'collection-1', 'execution_scope': 'local_engine',

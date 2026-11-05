@@ -162,18 +162,6 @@ def test_no_network_or_verification_for_extended_group(profiles,monkeypatch):
         assert 'secrets.'+name in {f.rule_id for f in assess(profiles[1],candidate).findings}
 
 
-@pytest.mark.parametrize('name',sorted(EXAMPLES))
-def test_each_provider_pattern_holds_external_transfer(profiles,name):
-    calls=[]
-    async def provider(*args): calls.append('provider')
-    provider.external=True
-    selected=profiles[1].model_copy(update={'external_checks':'after_local_pass',
-        'rules':profiles[1].rules+(Rule(checker_id='provider'),)})
-    result=assess(selected,EXAMPLES[name],checkers={**default_checkers(),'provider':provider})
-    assert calls==[]
-    assert result.checker_results[1].error_code=='external_local_gate'
-
-
 @pytest.mark.parametrize('suffix',['# pragma: allowlist secret','# gitleaks:allow','# noqa'])
 @pytest.mark.parametrize('name',['gitlab_token','slack','sendgrid','azure_storage','pypi'])
 def test_untrusted_suppression_comments_cannot_bypass_added_formats(profiles,suffix,name):

@@ -138,20 +138,6 @@ def test_new_fields_do_not_use_network_or_echo_values(checkers,monkeypatch,caplo
     assert 'A1234' not in response.text+caplog.text
 
 
-def test_labeled_identifier_withholds_external_adapter(checkers):
-    calls=[]
-    async def external(*args):
-        calls.append('external')
-        return CheckerResult(checker_id='external',checker_version='1',status='passed',external=True)
-    external.external=True
-    policy=Policy(application_id='demo',version='v1',detect_labeled_sensitive_data=True,
-                  external_checks='after_local_pass',rules=(Rule(checker_id='external'),Rule(checker_id='pii')))
-    result=asyncio.run(Engine([policy],{**checkers,'external':external}).check(
-        CheckRequest(application_id='demo',policy_version='v1',content='MRN: A1234'),Stage.INPUT))
-    assert calls==[]
-    assert result.checker_results[0].error_code=='external_local_gate'
-
-
 def test_privacy_group_batch_has_exact_expectations_and_private_reports(checkers):
     # 2026-11-04 (Tests #690, Python 3.14): one case came back incomplete instead of matching. The pii scan stops at the
     # policy's timeout_ms (500 in policies/privacy-batch.json), so a slow CI runner can end a scan early. This test

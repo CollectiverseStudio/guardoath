@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from guardoath import agent_boundary_guards, agent_config_guards, agent_extended_guards, agent_workflow_guards, data_agent_guards, semantic_guards
+from guardoath import harmful_content, human_safety, prompt_attack
 from guardoath.privacy_catalog import CORE_ENTITIES, PATTERN_ENTITIES
 from guardoath.synthetic_secrets import provider_examples
 
@@ -448,6 +449,22 @@ def _build() -> dict[str, RuleInfo]:
     for rule_id, (title, example, look_alike) in lexical.items():
         rules.append(RuleInfo(rule_id, "lexical_guards", title, _lexical_use_case(rule_id, title), example, look_alike,
                               _lexical_severity(rule_id, example)))
+    # Human safety (2026-11-05): wording that signals a risk to a person (guardoath.human_safety, 61 rules).
+    for rule_id, (title, severity, _pattern, example, look_alike) in human_safety.RULES.items():
+        rules.append(RuleInfo(rule_id, "human_safety", title,
+                              "Turn this on if people may bring a crisis, an emergency or a risky request to your AI, or "
+                              f"your AI could give advice that harms someone. It catches: {title}.",
+                              example, look_alike, severity))
+    # Prompt attack and harmful content (2026-11-05): GuardOath's own replacements for the removed outside-provider
+    # checks (azure_prompt_shields, content_safety). guardoath.prompt_attack 35 rules, guardoath.harmful_content 30.
+    for rule_id, (title, severity, _pattern, example, look_alike) in prompt_attack.RULES.items():
+        rules.append(RuleInfo(rule_id, "prompt_attack", title,
+                              "Turn this on if your AI reads messages, documents or web pages someone could use to take "
+                              f"over its instructions. It catches: {title}.", example, look_alike, severity))
+    for rule_id, (title, severity, _pattern, example, look_alike) in harmful_content.RULES.items():
+        rules.append(RuleInfo(rule_id, "harmful_content", title,
+                              "Turn this on if people can send your AI, or your AI can write, hateful, threatening, "
+                              f"sexual or violent text. It catches: {title}.", example, look_alike, severity))
     for entity, (example, look_alike) in PRIVACY.items():
         title, severity = CORE_TITLES[entity] if entity in CORE_TITLES else PATTERN_ENTITIES[entity]
         title = title[0].upper() + title[1:]

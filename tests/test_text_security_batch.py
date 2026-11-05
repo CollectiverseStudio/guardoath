@@ -119,24 +119,6 @@ def test_api_findings_and_logs_never_contain_source_or_decoded_payloads(engine,c
     assert response.json()['findings']
 
 
-@pytest.mark.parametrize('content,should_call',[
- ('Ordinary question',True),('a\u202eb',False),('hex: ff',False),
- (' '.join(['hex: 61']*17),False),
-])
-def test_real_local_signals_gate_registered_external_adapters(content,should_call):
-    calls=[]
-    async def external(*args):
-        calls.append(True)
-        return CheckerResult(checker_id='external',checker_version='fixture',status='passed',external=True)
-    external.external=True
-    policy=Policy(application_id='demo',version='v1',external_checks='after_local_pass',rules=(Rule(checker_id='external'),Rule(checker_id='text_security')))
-    result=asyncio.run(Engine([policy],{**default_checkers(),'external':external}).check(
-        CheckRequest(application_id='demo',policy_version='v1',content=content),Stage.INPUT))
-    assert bool(calls) is should_call
-    if not should_call:
-        assert result.checker_results[0].error_code=='external_local_gate'
-
-
 def test_no_network_or_model_download_is_used(monkeypatch):
     deny_network(monkeypatch,'Network attempted')
     engine=Engine(load_policies(ROOT/'policies/text-security-batch.json'),default_checkers())

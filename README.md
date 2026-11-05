@@ -19,21 +19,19 @@ Run `python -m guardoath.coverage_report` to count documented use cases by evide
 
 ## Current milestone
 
-This is a portable API prototype with local checks, optional provider adapters,
-and independent input/output assessment. JSON Schema validation is real. The legacy
+This is a portable API prototype with local checks and independent input/output
+assessment. GuardOath does every check itself: no content is sent to another company's service (2026-11-05). JSON Schema validation is real. The legacy
 `safety` and `bias` adapters are **simulators, not detectors**: they exercise policy decisions,
 timeouts, errors, and review flags without calling any paid API. Every successful
 simulator result is labelled `simulated: true`. An ordinary prompt receiving a
 simulated `passed` result has **not** received a safety or bias assessment.
 
 The prototype includes a local API-backed dashboard. It does not store prompt or
-response content and has no database or production deployment. The optional
-Azure connector and the provider-neutral `content_safety` integration are off by
-default and have not been live-calibrated; the launcher keeps check execution
-local. The initial optional content-safety adapter uses Bedrock. Hosting does not
-select a validation provider. See [cloud portability](docs/cloud-portability.md),
-[content-safety coverage](docs/content-safety-coverage.md). Hosting implementation
-is handled separately by Greg; this batch contains no deployment resources.
+response content and has no database or production deployment. The former optional
+Azure Prompt Shields and Amazon Bedrock Guardrails connectors were removed on 2026-11-05;
+the local `prompt_attack` and `harmful_content` checks do that work. See
+[cloud portability](docs/cloud-portability.md). Hosting implementation is handled
+separately by Greg; this batch contains no deployment resources.
 
 An optional **real local detector** checks email addresses, credit-card candidates
 and selected U.S. SSN candidates, plus 90 more identifier types that are on by default
@@ -87,7 +85,7 @@ If the browser does not open, visit the printed URL yourself. To use another por
 append `--port 8001`. Use `--no-browser` to skip automatic opening and `--reinstall`
 to repair the environment. These options work on both systems. The server binds
 only to `127.0.0.1`; this does not publish a website. Existing resource-limit
-environment overrides remain effective. The launcher explicitly disables external providers, including inherited selection settings.
+environment overrides remain effective.
 No paid models or API calls are used.
 
 After **Connect**, use **Try an input example** in Step 1, then **Run input checks**.
@@ -523,95 +521,16 @@ cannot be forcibly stopped. Multiple workers/replicas multiply local allowances;
 shared quotas and worker/job isolation remain backlog work. These limits are not
 billing or model-token spending caps.
 
-### Optional Azure Prompt Shields connector
+### Prompt attacks and harmful content (local)
 
-The `azure_prompt_shields` adapter implements Microsoft's stable REST API
-`2024-09-01` for **user-input prompt-attack analysis**. It is off by default and
-separate from the safety/bias simulators. It has been tested with local HTTP
-fixtures, not a live Azure resource or a calibrated accuracy dataset. The model
-version is managed by Azure; `checker_version` records the API version, not a
-pinned model checkpoint. Provider findings can be wrong and need context review.
-
-Activation requires an Azure Content Safety resource and deliberate server-side
-configuration. Install `pip install -e '.[azure,pii]'` on Python 3.11–3.15, configure these variables in
-your environment/secret-management system, and use the manual uvicorn start path:
-
-| Variable | Value |
-| --- | --- |
-| `GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS` | `1` |
-| `GUARDOATH_ENABLE_PII` | `1` (required by the sample privacy gate) |
-| `GUARDOATH_AZURE_CONTENT_SAFETY_ENDPOINT` | Your `https://RESOURCE.cognitiveservices.azure.com` resource origin |
-| `GUARDOATH_AZURE_CONTENT_SAFETY_KEY` | Your Azure subscription key, never a browser/platform key |
-| `GUARDOATH_POLICY_FILE` | `policies/azure-prompt-shields.json` |
-| `GUARDOATH_API_KEY` | A separate platform API key for connecting to GuardOath |
-
-Use your resource's exact endpoint. Only public-Azure custom resource origins on
-HTTPS port 443 are supported; sovereign clouds and arbitrary/private origins are
-outside this adapter's configuration surface. Endpoint/key settings alone do
-nothing unless the enable flag is `1`, a selected rule uses the adapter, and the
-policy sets `external_checks: "after_local_pass"`. The policy default is
-`external_checks: "disabled"`, which withholds registered external checks. A bad
-enable flag or incomplete enabled configuration fails startup. The sample policy
-uses observe mode, a 2-second per-checker deadline, Azure on input only, and
-required local text-security, secret, and PII checks on both sides. Its policy
-explicitly permits gated external checks; a missing PII adapter prevents egress. The one-command launcher always forces Azure
-off to preserve its local-only behavior; use manual server startup to enable it.
-
-**Data handling:** the original `content` is sent to the configured Azure
-resource as `userPrompt` with an empty `documents` array. Platform credentials,
-application/policy identifiers, `request_context`, and proposed output are not
-sent by this connector. Inputs must be plain text of at most 4,000 characters
-(a conservative local cap); unsupported/long input fails without a provider call.
-There is no truncation, splitting, document scanning, or output-attack assessment.
-The dashboard discloses routing before a run and labels external checker results.
-
-**Local-first gate:** configured local checks run first. An external check is
-withheld unless at least one local check ran and every selected local check
-passed without simulation. Findings (even with an allow action), optional
-skips/errors, missing adapters, timeouts, and simulated passes all hold egress.
-The gate applies in observe and enforce modes, and repeats on transformed-content
-revalidation. A skipped required external check makes the evaluation incomplete;
-the dashboard explains why it was withheld. Original input is not sent when the
-local gate fails. The gate controls GuardOath's registered external checks, not
-model calls made independently by your application.
-
-This is limited to configured detector coverage. A local pass does not guarantee
-that all PII, PHI, trade secrets, or malicious content was detected. Enabled
-external checks still send original content after those checks pass. With a
-required external check, an original local finding prevents same-call redaction
-from proceeding because the full evaluation is incomplete; use a separate local
-redaction policy first if you need an approved transformed request. Optional
-external checks can defer to transformed-content rechecks, which must pass the
-same local gate before any external call. Rechecks may incur additional charges.
-Custom adapters must declare `external=True` for the gate to recognize them.
-
-Enable only for data permitted to leave your environment. Choose your Azure
-region and review its current data handling/retention terms yourself; GuardOath
-does not infer or verify residency or promise provider retention behavior.
-Shared quotas/region controls remain deployment work.
-
-**Reliability and cost:** no redirects, inherited proxies, retries, fallback
-provider, or synthetic-success substitution. Transport errors, timeouts, provider
-429/authorization failures, malformed responses, and oversized responses become
-sanitized error results. A required failed check is incomplete, applies the
-policy's failure recommendation, and holds the dashboard preview. Observe mode
-still reports an effective action of allow; integrating apps must apply their
-chosen enforcement policy. Provider error bodies and source values are not
-returned. The response is bounded to 16 KiB and must contain a strict Boolean
-`userPromptAnalysis.attackDetected`.
-
-External checks report `cost_usd: null` and `cost_basis: "provider_unpriced"`,
-including failures and locally rejected external checks, because GuardOath has no
-billing receipt or pricing calculation. This is not evidence that a billable
-request was made. Local-only checks retain zero / `local_only`. Each registered
-external adapter must declare `external=True` so routing/cost metadata survives
-engine timeouts. The change makes `cost_usd` nullable; API clients must support it.
-No live Azure calls or resources were created during development.
-
-Provider references:
-- [Prompt Shields REST contract](https://learn.microsoft.com/en-us/rest/api/contentsafety/text-operations/shield-prompt?view=rest-contentsafety-2024-09-01)
-- [Official quickstart](https://learn.microsoft.com/en-us/azure/ai-services/content-safety/quickstart-jailbreak)
-- [Service/model update and pricing FAQ](https://learn.microsoft.com/en-us/azure/ai-services/content-safety/faq)
+`prompt_attack` (35 wording rules: jailbreak personas and modes, instruction overrides, prompt extraction,
+instructions hidden in documents or pages, decode-then-obey, signs an attack worked) and `harmful_content` (30 wording
+rules: hate about the groups they name, insults and harassment, threats, sexual content involving minors, violent
+extremism, requests for violence) run in GuardOath on both stages. They replace the removed Azure Prompt Shields and
+Amazon Bedrock Guardrails connectors (2026-11-05): nothing is sent to an outside service and no check has a per-call
+cost (`cost_usd: 0`, `cost_basis: "local_only"`). Each rule has an example it reports and a look-alike it does not
+(`tests/test_prompt_attack.py`, `tests/test_harmful_content.py`). They match wording, not intent or meaning: reworded
+attacks and content pass, and text that quotes or discusses the same words is reported.
 
 ## Run the local regression examples
 
@@ -658,11 +577,9 @@ Fixture files contain their input examples; keep committed examples synthetic.
 HTML is standalone, escapes labels, has no scripts or network dependencies, and
 can be opened directly in a browser.
 
-The runner uses only local built-in adapters, ignores Azure enable/credential
-settings, and refuses registered external adapters. It cannot perform paid/live
-provider calibration. It calls the engine directly: API authentication, ingress,
-rate limits, and actual external-transfer behavior are covered by the separate
-API test suite, not this report. Missing optional PII support produces mismatched
+The runner uses only GuardOath's own checkers. It calls the engine directly: API
+authentication, ingress and rate limits are covered by the separate API test
+suite, not this report. Missing optional PII support produces mismatched
 expectations rather than silently dropping privacy cases.
 
 For custom cases or automation, use the prepared environment directly:
@@ -836,29 +753,18 @@ encoding and budget examples. Version 2 adds fixed control-class and invalid
 encoding reasons without returning payloads or decoded text. Legitimate joiners
 and an explicitly undetected plain-language attack example demonstrate limits.
 
-This is local obfuscation review, not semantic prompt-injection detection. Azure
-remains optional, off and not live-calibrated by this batch. See the
+This is local obfuscation review; the wording of prompt attacks is the separate
+`prompt_attack` check. See the
 [guide](docs/user-guide.md#prompt-injection-and-manipulation-checks) and
 [case list](docs/text-security-coverage.md). No dependency/model/paid call added.
 
 
-## Optional provider-independent content safety
+## Harmful content (local)
 
-The stable `content_safety` interface is independent of hosting. The normal
-launcher sets its provider to none. `content-safety-v1` under Advanced therefore
-shows unavailable/incomplete until a provider is explicitly configured. Six
-examples per stage demonstrate contextual cases without predetermined labels.
-The initial optional Bedrock adapter has a 100-case offline contract matrix plus
-integration tests; it has not been live-calibrated. These are not model-accuracy
-measurements. No deployment implementation is included in this batch.
-
-```bash
-python -m pip install -e '.[test,pii,aws]'
-python -m pytest tests/test_content_safety.py tests/test_bedrock_guardrails.py -q
-```
-
-See [the guide](docs/user-guide.md#harmful-content-and-abuse-optional-provider-assessment)
-for configuration, rule IDs, safe error responses and limitations.
+The `content_safety` connector (Amazon Bedrock Guardrails) and its `content-safety-v1` example profile were removed on
+2026-11-05. The local `harmful_content` check covers hate, harassment, threats, sexual content involving minors,
+extremism and violence, and `human_safety` covers risks to people; see
+[Prompt attacks and harmful content (local)](#prompt-attacks-and-harmful-content-local).
 
 
 ## Local matched-decision consistency checks

@@ -100,22 +100,6 @@ def test_real_mismatched_expectation_produces_failure_exit_and_visible_count(tmp
     assert '99 of 100 expectations matched' in (output/'index.html').read_text()
 
 
-def test_provider_selection_is_ignored_and_external_cases_are_rejected(tmp_path,monkeypatch):
-    (tmp_path/'input').mkdir()
-    root=fixture_root(tmp_path/'input')
-    monkeypatch.setenv('GUARDOATH_CONTENT_SAFETY_PROVIDER','bedrock')
-    monkeypatch.setenv('GUARDOATH_AWS_REGION','invalid-inherited-region')
-    monkeypatch.setenv('GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS','1')
-    monkeypatch.setattr(all_checks,'SUITES',('evidence',))
-    assert all_checks.main(['--root',str(root),'--output',str(tmp_path/'local-results')])==0
-    policies=json.loads((root/'policies/evidence-batch.json').read_text())
-    policies['policies'][0]['rules'].append({'checker_id':'content_safety'})
-    (root/'policies/evidence-batch.json').write_text(json.dumps(policies))
-    output=tmp_path/'provider-not-created'
-    assert all_checks.main(['--root',str(root),'--output',str(output)])==2
-    assert not output.exists()
-
-
 def test_failure_only_mismatch_diagnostic_is_source_free(tmp_path, monkeypatch):
     """Exercise the rare mismatch branch without waiting for an intermittent CI failure."""
     monkeypatch.setattr(all_checks, 'SUITES', ('privacy',))

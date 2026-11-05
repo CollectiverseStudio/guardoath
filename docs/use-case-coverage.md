@@ -21,8 +21,8 @@ checks; application-specific checks require their configured contracts.
 
 | # | Requested use case | Current coverage / gap |
 | --- | --- | --- |
-| 1 | Indirect injection in incoming email | Not implemented as document/email attack analysis; local formatting signals only. Optional Azure connector currently sends userPrompt, not documents. |
-| 2 | Jailbreak detection | Optional input-only Azure user-attack connector; offline contract tested, live effectiveness uncalibrated. No local semantic jailbreak detector. |
+| 1 | Indirect injection in incoming email | Partly: prompt_attack reports instructions addressed to an AI that reads a document or page and "when you summarize this" instructions (wording only); local formatting signals. No document-structure analysis. |
+| 2 | Jailbreak detection | Local prompt_attack check: 35 wording rules on input and output (2026-11-05). Wording only; no semantic or multilingual jailbreak classifier. |
 | 3 | Invisible characters / homoglyphs | Selected invisible/bidi/control characters detected; no scrubbing or general homoglyph coverage. Legitimate joiners are excluded. |
 | 4 | Base64/hex payload inspection | Explicitly labeled, one-layer, bounded text-security signals and opt-in secret inspection. One labeled Base64/hex layer of supported PII candidates is now also checked, including decoded JSON/hints. No recursive, unlabeled, general encoded-data or complete-obfuscation coverage. |
 | 5 | System-prompt extraction requests | Plain attack wording is deliberately demonstrated as a local coverage gap. Optional semantic service may signal attacks, not a prompt-leak guarantee. |
@@ -31,7 +31,7 @@ checks; application-specific checks require their configured contracts.
 | 8 | Token smuggling | Limited normalization for configured literal confidential phrases and bounded encoded secrets; no general adversarial token-smuggling detector. |
 | 9 | Multi-turn manipulation | Not implemented; request_context is not analyzed by the local text detectors or sent by current connectors. |
 | 10 | De-anonymization intent | Not implemented; identifier detection cannot infer correlation/de-anonymization intent. |
-| 11 | Hate speech | Initial optional content_safety adapter supports provider hate signals on input/output. Offline contract tested, live classification uncalibrated. |
+| 11 | Hate speech | Local harmful_content check: hate wording about the groups the rules name, on input and output (2026-11-05). No classifier or slur list. |
 | 12 | Self-harm interception | No dedicated self-harm classifier or crisis-routing workflow implemented. Do not infer it from the initial five content categories. |
 | 13 | Profanity masking | Not implemented. Current supported redaction is for selected sensitive identifiers, not profanity. |
 | 14 | Brand political/religious neutrality | Not implemented; requires approved application-specific scope/rubric. Neutral identity examples are not automatically violations. |

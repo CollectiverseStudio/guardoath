@@ -17,8 +17,9 @@ from pydantic import Field, ValidationError
 
 from guardoath.engine import Engine
 from guardoath.models import Contract
-from guardoath.tenant_record import (EDITABLE_FIELDS, LEGACY_FIELDS, MIN_DEMO_KEY_SECRET, TENANT_POLICY_VERSION, TenantRecord,
-                                     demo_defaults, demo_key, demo_records, key_matches, tenant_id_from_key)
+from guardoath.tenant_record import (EDITABLE_FIELDS, LEGACY_FIELDS, MAX_RECORD_BYTES, MIN_DEMO_KEY_SECRET, RETIRED_CHECK_FIELDS,
+                                     TENANT_POLICY_VERSION, TenantRecord,
+                                     demo_defaults, demo_key, demo_records, key_matches, record_bytes, tenant_id_from_key)
 from guardoath.tenant_store import MemoryTenantStore, TenantNotFound
 
 TENANT_STORES = ("memory", "dynamodb")
@@ -151,6 +152,9 @@ class TenantService:
     def change_checks(self, tenant_id: str, changes: dict, expected_revision: int) -> TenantRecord:
         """Save a change to the record's check fields and settings. The engine is built from the result
         first, so a change the engine would reject is never stored."""
+        if set(changes) & RETIRED_CHECK_FIELDS:
+            raise ChangeRejected("content_safety and azure_prompt_shields were removed (2026-11-05): GuardOath runs every "
+                                 "check itself. Use harmful_content and prompt_attack")
         if set(changes) & LEGACY_FIELDS:
             raise ChangeRejected("check_<id> and rule_actions were renamed (2026-11-04): send input_check_<id> and "
                                  "output_check_<id>, and input_rule_actions and output_rule_actions")
@@ -169,6 +173,11 @@ class TenantService:
             raise ChangeRejected(str(error)) from None
         except Exception:
             raise ChangeRejected("The checks could not be built from these settings") from None
+        size = record_bytes(candidate)
+        if size > MAX_RECORD_BYTES:
+            raise ChangeRejected(f"This change would make the record {size:,} bytes. A record is stored as one database "
+                                 f"item and its settings can be at most {MAX_RECORD_BYTES:,} bytes; remove some "
+                                 "comparisons, sections or other settings.")
         return self.store.update_checks(tenant_id, changes, expected_revision)
 
     def reset_demo(self, tenant_id: str) -> TenantRecord:

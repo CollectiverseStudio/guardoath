@@ -17,12 +17,10 @@ from guardoath.control_registry import (CONTROLS, DOMAINS, REGISTRY_VERSION, con
                                         repository_maturity)
 from guardoath.engine import Engine
 from guardoath.models import CheckRequest, Stage
-from guardoath.tenant_record import (CHECK_FIELDS, CHECK_IDS, EXTERNAL_CHECK_IDS, INPUT_ONLY_CHECK_IDS,
-                                     TENANT_POLICY_VERSION, TenantRecord, demo_records)
+from guardoath.tenant_record import CHECK_FIELDS, CHECK_IDS, TENANT_POLICY_VERSION, TenantRecord, demo_records
 
 ROOT = Path(__file__).resolve().parents[1]
 PII_BASED = {"pii", "encoded_pii"}
-LOCAL = [item for item in CONTROLS if not item.external_provider]
 _CHECKERS = {}
 
 
@@ -57,12 +55,14 @@ def result_of(control_id, example):
 
 def cases(kind):
     return [pytest.param(item.control_id, example, id=f"{item.control_id}-{example.stage}-{n}")
-            for item in LOCAL for n, example in enumerate(getattr(item, kind), 1)]
+            for item in CONTROLS for n, example in enumerate(getattr(item, kind), 1)]
 
 
 def test_every_tenant_record_check_is_one_control():
     assert sorted(item.control_id for item in CONTROLS) == sorted(CHECK_IDS)
-    assert len(CONTROLS) == len(set(item.control_id for item in CONTROLS)) == 18
+    # 2026-11-05: content_safety and azure_prompt_shields (outside providers) removed; prompt_attack and harmful_content
+    # (GuardOath's own) added.
+    assert len(CONTROLS) == len(set(item.control_id for item in CONTROLS)) == 19
     for item in CONTROLS:
         assert item.field in CHECK_FIELDS and item.field in TenantRecord.model_fields
         assert control(item.control_id) is item
@@ -71,8 +71,7 @@ def test_every_tenant_record_check_is_one_control():
 def test_actions_and_stages_are_the_tenant_record_rules():
     for item in CONTROLS:
         assert ("redact" in item.actions) == (item.control_id == "pii")
-        assert item.stages == (("input",) if item.control_id in INPUT_ONLY_CHECK_IDS else ("input", "output"))
-        assert item.external_provider == (item.control_id in EXTERNAL_CHECK_IDS)
+        assert item.stages == ("input", "output")
         assert item.recommended_action in item.actions
 
 
@@ -96,7 +95,8 @@ def test_planned_domains_have_no_controls_and_point_to_their_specification():
             assert owned == [] and (ROOT / domain.reference).is_file(), domain.domain_id
         else:
             assert owned, domain.domain_id
-    assert {d.domain_id for d in DOMAINS if d.status == "planned"} == {"human_safety", "security_events"}
+    # Human safety became active on 2026-11-05 (guardoath/human_safety.py).
+    assert {d.domain_id for d in DOMAINS if d.status == "planned"} == {"security_events"}
 
 
 @pytest.mark.parametrize("control_id,example", cases("positive_examples"))
@@ -121,10 +121,16 @@ def test_known_misses_really_pass(control_id, example):
     assert result_of(control_id, example).status == "passed", (control_id, example.label)
 
 
-def test_outside_provider_controls_are_described_but_never_run_here():
+def test_no_control_sends_content_to_an_outside_provider():
+    # Greg, 2026-11-02 and 2026-11-05: GuardOath does every check itself.
+    retired = {"content_safety", "azure_prompt_shields"}
+    assert not retired & {item.control_id for item in CONTROLS} and not retired & set(default_checkers())
     for item in CONTROLS:
-        if item.external_provider:
-            assert item.domain in {"content_harm", "manipulation"} and "outside" in item.name
+        assert "outside" not in item.name.lower() and "provider" not in item.name.lower(), item.control_id
+        for path in item.implementation:
+            assert (ROOT / path).is_file(), path
+    for name in ("azure_prompt_shields.py", "bedrock_guardrails.py", "content_safety.py"):
+        assert not (ROOT / "guardoath" / name).exists(), name
 
 
 def test_the_registry_endpoint_is_public_and_describes_every_control():
@@ -133,14 +139,14 @@ def test_the_registry_endpoint_is_public_and_describes_every_control():
     assert response.status_code == 200
     assert response.headers["cache-control"] == "public, max-age=300"
     body = response.json()
-    assert body["registry_version"] == REGISTRY_VERSION and body["control_count"] == 18
+    assert body["registry_version"] == REGISTRY_VERSION and body["control_count"] == 19
     assert [d["domain_id"] for d in body["domains"]] == [d.domain_id for d in DOMAINS]
     listed = [c for d in body["domains"] for c in d["controls"]]
     assert sorted(c["control_id"] for c in listed) == sorted(CHECK_IDS)
     for item in listed:
         assert item["field"] == "input_check_" + item["control_id"]
-        assert item["output_field"] == (None if item["control_id"] == "azure_prompt_shields"
-                                        else "output_check_" + item["control_id"])
+        assert item["output_field"] == "output_check_" + item["control_id"]
+        assert "external_provider" not in item
         assert item["guide"] == "/guide#check-" + item["control_id"]
         assert item["positive_examples"] and item["look_alikes"]
     assert "test-key" not in response.text and "gok_" not in response.text
@@ -151,7 +157,8 @@ def test_the_registry_reports_detector_versions_of_the_running_service():
     versions = {c["control_id"]: c["detector"]["version"] for d in payload["domains"] for c in d["controls"]}
     assert versions["schema"] == "2"
     available = {c["control_id"]: c["maturity"]["available"] for d in payload["domains"] for c in d["controls"]}
-    assert available["schema"] is True and available["content_safety"] is False
+    assert available["schema"] is True and available["prompt_attack"] is True and available["harmful_content"] is True
+    assert available["pii"] is False  # default_checkers() without the optional personal-data dependencies
     assert registry_payload()["domains"][0]["controls"][0]["maturity"]["available"] is None
 
 

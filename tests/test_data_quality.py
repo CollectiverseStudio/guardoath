@@ -75,20 +75,3 @@ def test_digest_reference_is_private_and_not_caller_controlled(stage):
     response=client.post('/v1/checks/'+stage.value,headers=headers,json={**request,'sha256':hashlib.sha256(request['content'].encode()).hexdigest()})
     assert response.status_code==422
 
-@pytest.mark.parametrize('name',NAMES)
-@pytest.mark.parametrize('status',['flagged','error'])
-def test_nonpassing_local_quality_checks_prevent_external_transfer(name,status):
-    original=load_policies(ROOT/'policies'/f'{name}-batch.json')[0]
-    external_rule=Rule(checker_id='remote',on_finding='block')
-    policy=original.model_copy(update={'rules':original.rules+(external_rule,),'external_checks':'after_local_pass'})
-    calls=[]
-    async def remote(*args):
-        calls.append(True)
-        return CheckerResult(checker_id='remote',checker_version='1',status='passed')
-    remote.checker_version='1'
-    remote.external=True
-    adapters=default_checkers();adapters['remote']=remote
-    case=next(c for n,c in CASES if n==name and c['expected']['checker_statuses'][name]==status)
-    result=asyncio.run(Engine([policy],adapters).check(CheckRequest(**{**case['request'],'policy_version':policy.version}),Stage.INPUT))
-    assert not calls
-    assert next(r for r in result.checker_results if r.checker_id=='remote').status=='skipped'

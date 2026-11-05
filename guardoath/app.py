@@ -29,7 +29,7 @@ from guardoath.budgets import ResourceLimits, RequestBudgets, RequestCapacity
 from guardoath.validation_packs import PackSelectionError, load_pack_registry
 from guardoath.tenants import TenantRegistry
 from guardoath.hosted import ChangeRejected, CheckChanges, NotADemoUser, TenantService
-from guardoath.tenant_record import (CHECK_IDS, INPUT_ONLY_CHECK_IDS, TENANT_ID_PATTERN, TENANT_POLICY_VERSION,
+from guardoath.tenant_record import (CHECK_IDS, TENANT_ID_PATTERN, TENANT_POLICY_VERSION,
                                      TenantRecord, usage_month)
 from guardoath.tenant_store import TenantConflict, TenantNotFound, UsageLimitReached
 from guardoath.tenant_record import new_key
@@ -85,24 +85,21 @@ def media_part(path: Path, range_header: str | None, head: bool) -> Response:
                     headers={**headers, "Content-Range": f"bytes {start}-{end}/{size}", "Content-Length": str(length)})
 
 
-def demo_engine(enable_pii: bool = False, enable_azure: bool = False, content_safety_provider: str = "none",
-                checkers: dict | None = None) -> Engine:
+def demo_engine(enable_pii: bool = False, checkers: dict | None = None) -> Engine:
     """The built-in demo policy. checkers: an already built default_checkers() result with the same
     settings, so an app builds its checkers (the sensitive-data checker takes most of the start-up
     time) once instead of twice."""
     return Engine([Policy(
-        application_id="demo", version="support-v1", timeout_ms=2000 if enable_azure else 100,
+        application_id="demo", version="support-v1", timeout_ms=100,
         rules=(Rule(checker_id="schema", required=False, on_finding=Action.BLOCK),
                Rule(checker_id="safety", on_finding=Action.BLOCK),
                Rule(checker_id="bias", on_finding=Action.FLAG)) + (
-                   (Rule(checker_id="pii", on_finding=Action.FLAG),) if enable_pii else ()) + (
-                   (Rule(checker_id="azure_prompt_shields", stages=(Stage.INPUT,), on_finding=Action.FLAG),) if enable_azure else ()),
+                   (Rule(checker_id="pii", on_finding=Action.FLAG),) if enable_pii else ()),
         input_schema={"type": "object", "properties": {"message": {"type": "string"}},
                       "required": ["message"], "additionalProperties": False},
         output_schema={"type": "object", "properties": {"answer": {"type": "string"}},
                        "required": ["answer"], "additionalProperties": False},
-    )], checkers if checkers is not None else default_checkers(enable_pii=enable_pii, enable_azure=enable_azure,
-                                                                content_safety_provider=content_safety_provider))
+    )], checkers if checkers is not None else default_checkers(enable_pii=enable_pii))
 
 
 class KeyRevocation(Contract):
@@ -137,15 +134,9 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         if pii_setting not in {"0", "1"}:
             raise ValueError("GUARDOATH_ENABLE_PII must be 0 or 1")
         enable_pii = pii_setting == "1"
-        azure_setting = os.getenv("GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS", "0")
-        if azure_setting not in {"0", "1"}:
-            raise ValueError("GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS must be 0 or 1")
-        enable_azure = azure_setting == "1"
-        content_safety_provider = os.getenv("GUARDOATH_CONTENT_SAFETY_PROVIDER", "none")
-        checkers = default_checkers(enable_pii=enable_pii, enable_azure=enable_azure, content_safety_provider=content_safety_provider)
+        checkers = default_checkers(enable_pii=enable_pii)
         service = (Engine(load_policies(policy_file), checkers, pack_registry=load_pack_registry(pack_file) if pack_file else None)
-                   if policy_file else demo_engine(enable_pii=enable_pii, enable_azure=enable_azure, content_safety_provider=content_safety_provider,
-                                  checkers=checkers))
+                   if policy_file else demo_engine(enable_pii=enable_pii, checkers=checkers))
         if tenants is None:
             tenants = TenantService.from_environment(checkers)
         if sessions is None:
@@ -402,11 +393,9 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         return {"tenant_id": current.tenant_id, "display_name": current.display_name, "demo": current.demo,
                 "revision": current.revision, "month": month, "used": current.used(month),
                 "monthly_allowance": current.monthly_allowance, "overage": current.overage,
-                # Each check's action on each stage (2026-11-04); no value = it does not run on that stage. Input-only
-                # checks have no output entry.
+                # Each check's action on each stage (2026-11-04); no value = it does not run on that stage.
                 "input_checks": {check_id: current.action(check_id, Stage.INPUT) for check_id in CHECK_IDS},
-                "output_checks": {check_id: current.action(check_id, Stage.OUTPUT) for check_id in CHECK_IDS
-                                  if check_id not in INPUT_ONLY_CHECK_IDS},
+                "output_checks": {check_id: current.action(check_id, Stage.OUTPUT) for check_id in CHECK_IDS},
                 "input_rule_actions": dict(sorted(current.input_rule_actions.items())),
                 "output_rule_actions": dict(sorted(current.output_rule_actions.items())),
                 # This record's own rules (its field comparisons and required sections), for this tenant only.

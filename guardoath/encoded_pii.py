@@ -50,7 +50,7 @@ def build_encoded_pii_checker(pii_checker):
                     scanned = await pii_checker(scan_request, scan_policy, stage)
                     if (scanned.checker_id != 'pii' or scanned.status not in {'passed', 'flagged'}
                             or (scanned.status == 'flagged') != bool(scanned.findings)
-                            or scanned.simulated or scanned.external):
+                            or scanned.simulated):
                         return result('error', 'encoded_pii_scan_incomplete')
                     for finding in scanned.findings:
                         rule_id = 'pii.encoded_' + finding.rule_id.removeprefix('pii.')

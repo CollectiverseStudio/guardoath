@@ -113,12 +113,10 @@ class Engine:
     def describe_policies(self, application_id: str) -> list[dict]:
         """Expose only safe, application-scoped configuration for the dashboard."""
         return [{
-            "version": policy.version, "mode": policy.mode, "external_checks": policy.external_checks,
+            "version": policy.version, "mode": policy.mode,
             "checks": [{"id": rule.checker_id, "required": rule.required,
                         "available": rule.checker_id in self._checkers,
                         "simulated": bool(getattr(self._checkers.get(rule.checker_id), "simulated", False)),
-                        "external": rule.checker_id == "content_safety" or bool(getattr(self._checkers.get(rule.checker_id), "external", False)),
-                        "provider": getattr(self._checkers.get(rule.checker_id), "provider", None),
                         "stages": list(rule.stages),
                         # What a finding does on each stage the check runs on.
                         "actions": {stage.value: ((rule.on_input_finding if stage == Stage.INPUT else rule.on_output_finding)
@@ -153,10 +151,9 @@ class Engine:
             checker = self._checkers.get(checker_id)
             if checker is None:
                 return CheckerResult(checker_id=checker_id, checker_version="unknown",
-                                     status="unsupported", error_code="checker_unavailable", external=checker_id == "content_safety")
+                                     status="unsupported", error_code="checker_unavailable")
             simulated = bool(getattr(checker, "simulated", False))
             version = getattr(checker, "checker_version", "unknown")
-            external = bool(getattr(checker, "external", False))
             try:
                 result = await asyncio.wait_for(
                     checker(content_request, policy, stage), timeout=policy.timeout_ms / 1000,
@@ -165,7 +162,7 @@ class Engine:
                     raise ValueError("Adapter returned wrong identity")
                 if (result.status == "flagged") != bool(result.findings):
                     raise ValueError("Adapter returned inconsistent findings")
-                result = result.model_copy(update={"simulated": simulated or result.simulated, "external": external or result.external})
+                result = result.model_copy(update={"simulated": simulated or result.simulated})
                 result = without_rules_turned_off(result, policy, stage)
                 if (result.simulated and policy.mode == "enforce"
                         and not policy.allow_simulated_enforcement):
@@ -174,30 +171,16 @@ class Engine:
                     })
             except TimeoutError:
                 result = CheckerResult(checker_id=checker_id, checker_version=version,
-                                       status="error", error_code="checker_timeout", simulated=simulated, external=external)
+                                       status="error", error_code="checker_timeout", simulated=simulated)
             except Exception:
                 # Exception text can contain customer content or credentials.
                 result = CheckerResult(checker_id=checker_id, checker_version=version,
-                                       status="error", error_code="checker_failure", simulated=simulated, external=external)
+                                       status="error", error_code="checker_failure", simulated=simulated)
             return result.model_copy(update={"latency_ms": round((perf_counter() - tick) * 1000, 3)})
 
         async def run_rules(content_request):
-            local_rules = [r for r in rules if not bool(getattr(self._checkers.get(r.checker_id), "external", False))]
-            external_rules = [r for r in rules if bool(getattr(self._checkers.get(r.checker_id), "external", False))]
-            local_results = await asyncio.gather(*(execute(r.checker_id, content_request) for r in local_rules))
-            gate_error = None
-            if policy.external_checks != "after_local_pass":
-                gate_error = "external_policy_disabled"
-            elif not local_results or any(c.status != "passed" or c.simulated for c in local_results):
-                gate_error = "external_local_gate"
-            if gate_error:
-                external_results = [CheckerResult(checker_id=r.checker_id,
-                    checker_version=getattr(self._checkers[r.checker_id], "checker_version", "unknown"),
-                    status="skipped", external=True, error_code=gate_error) for r in external_rules]
-            else:
-                external_results = await asyncio.gather(*(execute(r.checker_id, content_request) for r in external_rules))
-            indexed = {c.checker_id: c for c in (*local_results, *external_results)}
-            return tuple(indexed[r.checker_id] for r in rules)
+            # Every check runs here, in this process (no content leaves GuardOath, 2026-11-05).
+            return tuple(await asyncio.gather(*(execute(r.checker_id, content_request) for r in rules)))
 
         results = await run_rules(request)
         actions = [Action.ALLOW]
@@ -242,7 +225,6 @@ class Engine:
                         incomplete = True
                     actions.append(Action.BLOCK)
         recommended = max(actions, key=PRIORITY.__getitem__)
-        external = any(c.external for c in (*results, *redaction.validation_results))
         return CheckResponse(
             check_id=str(uuid4()), application_id=request.application_id,
             policy_version=policy.version, applied_validation_packs=applied_packs, stage=stage, mode=policy.mode,
@@ -254,6 +236,4 @@ class Engine:
             total_latency_ms=round((perf_counter() - started) * 1000, 3),
             groups=group_results(policy, results, stage),
             redaction=redaction,
-            cost_usd=None if external else 0,
-            cost_basis="provider_unpriced" if external else "local_only",
         )

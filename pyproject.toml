@@ -16,7 +16,6 @@ dependencies = [
 
 [project.optional-dependencies]
 aws = ["boto3==1.43.119", "botocore==1.43.121"]
-azure = ["httpx2==2.16.0"]
 test = ["httpx2==2.16.0", "pytest==9.2.0"]
 pii = ["tldextract==5.4.0", "phonenumbers==9.0.42"]
 

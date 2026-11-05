@@ -1,6 +1,6 @@
 # GuardOath human-safety scenarios — review specification
 
-**Status:** Proposed scenarios for Director review, **not implemented detectors or clinical advice**. Source: Greg's 2026-10-31 human-safety request in [Director coordination](director-agent-coordination.md). Separate from the 161 lexical security indicators and the UC001–UC200 implementation catalog.
+**Status (2026-11-05):** implemented as the `human_safety` check: 61 wording rules in `guardoath/human_safety.py`, each with an example it reports and a look-alike it does not (`tests/test_human_safety.py`), covering HS001–HS030. They are review signals, **not clinical advice or a crisis, intent or child-safety assessment**; the acceptance criteria below (calibrated evaluation sets, clinical review, cross-stage emergency omissions) remain open. Original status: proposed scenarios for Director review. Source: Greg's 2026-10-31 human-safety request in [Director coordination](director-agent-coordination.md). Separate from the 161 lexical security indicators and the UC001–UC200 implementation catalog.
 
 ## Design and actions
 

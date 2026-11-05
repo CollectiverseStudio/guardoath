@@ -20,8 +20,8 @@ def source_record(**changes):
 def test_catalog_ids_stages_actions_and_version_come_from_source_record_contract():
     catalog = catalog_for({})
     assert tuple(catalog) == CHECK_IDS
-    assert len(catalog) == 18
-    assert catalog['azure_prompt_shields'].stages == ('input',)
+    assert len(catalog) == 19
+    assert all(c.stages == ('input', 'output') for c in catalog.values())
     assert 'redact' in catalog['pii'].actions
     assert all('redact' not in c.actions for name, c in catalog.items() if name != 'pii')
     assert all(c.implementation_version == 'unavailable' for c in catalog.values())
@@ -52,12 +52,14 @@ def test_migrated_actions_exactly_match_real_record_compiler():
     assert {key for key, row in preview['validations'].items() if row['input_action'] is not None} == set(record.checks())
 
 
-def test_stage_routing_of_input_only_control_is_source_verified():
-    record = source_record(check_azure_prompt_shields='flag')
-    compiled = next(r for r in record.to_policy().rules if r.checker_id == 'azure_prompt_shields')
+def test_a_check_on_one_stage_only_is_previewed_on_that_stage_only():
+    record = source_record(input_check_prompt_attack='flag')
+    compiled = next(r for r in record.to_policy().rules if r.checker_id == 'prompt_attack')
     assert compiled.stages == (Stage.INPUT,)
     preview = migration_preview(record, catalog_for({}))
-    assert preview['validations']['azure_prompt_shields']['output_action'] is None
+    assert preview['validations']['prompt_attack']['input_action'] == 'flag'
+    assert preview['validations']['prompt_attack']['output_action'] is None
+
 
 
 def test_example_profile_is_not_silently_migrated_into_different_actions():
@@ -82,8 +84,8 @@ def test_unknown_control_and_unsupported_stage_are_not_passes():
     with pytest.raises(ValueError, match='unknown'):
         validate_payload(preview, catalog)
     preview = migration_preview(source_record(), catalog)
-    preview['validations']['azure_prompt_shields']['output_action'] = 'allow'
-    with pytest.raises(ValueError, match='stage'):
+    preview['validations']['secrets']['output_action'] = 'redact'  # only pii can redact
+    with pytest.raises(ValueError, match='stage or action'):
         validate_payload(preview, catalog)
 
 
@@ -215,7 +217,7 @@ def test_control_cannot_borrow_settings_from_another_checker():
         validate_payload(preview, catalog)
 
 
-def test_all_source_controls_migrate_exactly_with_valid_settings():
+def test_every_source_control_migrates_exactly_with_valid_settings():
     from guardoath.engine import Engine
     from guardoath.tenant_record import SETTINGS_OF
     source = TenantRecord(tenant_id='tenant-a', display_name='Tenant A', revision=8,
@@ -229,11 +231,11 @@ def test_all_source_controls_migrate_exactly_with_valid_settings():
         ledger={'currency': 'USD'}, timestamps={}, graph={}, integrity={'sha256': 'a'*64})
     Engine([source.to_policy()], {})  # Configuration verification only; no adapter runs.
     preview = migration_preview(source, catalog_for({}))
-    assert len(preview['validations']) == len(CHECK_IDS) == 18
+    assert len(preview['validations']) == len(CHECK_IDS) == 19
     raw = source.model_dump(mode='json')
     for control, selection in preview['validations'].items():
         assert selection['input_action'] == 'flag'
-        assert selection['output_action'] == (None if control == 'azure_prompt_shields' else 'flag')
+        assert selection['output_action'] == 'flag'
         assert selection['settings'] == {key: raw[key] for key in SETTINGS_OF.get(control, ())}
     assert preview == migration_preview(preview, catalog_for({}))
 

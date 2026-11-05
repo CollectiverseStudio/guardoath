@@ -1,5 +1,7 @@
 # Prompt-attack detector integration decision
 
+> **Retired 2026-11-05 (Greg): GuardOath does every check itself; no content is sent to another company's service.** The connector this page describes was removed with its code, tests and policy files. `prompt_attack` and `harmful_content` (guardoath/prompt_attack.py, guardoath/harmful_content.py) do this work locally; see docs/tenant-records.md. This page is kept as a record of the earlier decision.
+
 Reviewed October 28, 2026. Scope: a maintainable, optional input-only detector
 connector with honest routing/cost disclosure and no paid development calls.
 

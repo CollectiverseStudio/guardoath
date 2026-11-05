@@ -119,7 +119,8 @@ def test_the_site_function_runs_the_hosted_app(template):
     env = function["Environment"]["Variables"]
     assert env["GUARDOATH_TENANT_STORE"] == "dynamodb" and env["GUARDOATH_TENANT_TABLE"] == {"Ref": "TenantTable"}
     assert env["GUARDOATH_DEMO_KEY_SECRET"] == {"Ref": "DemoKeySecret"} and template["Parameters"]["DemoKeySecret"]["NoEcho"] is True
-    assert env["GUARDOATH_CONTENT_SAFETY_PROVIDER"] == "none" and env["GUARDOATH_ENABLE_AZURE_PROMPT_SHIELDS"] == "0"
+    # No outside-provider settings (2026-11-05: GuardOath runs every check itself; the connectors were removed).
+    assert not [name for name in env if any(word in name for word in ("AZURE", "CONTENT_SAFETY", "BEDROCK"))]
     assert "GUARDOATH_API_KEY" not in env
 
 
