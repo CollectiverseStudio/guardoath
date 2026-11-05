@@ -133,9 +133,12 @@ caller-provided `sha256` field; a digest written inside content is ordinary
 untrusted content and cannot replace the server reference.
 
 `utf8` hashes exactly `request.content.encode('utf-8')`. `base64` accepts only a
-strict entire-content Base64 string and hashes the decoded bytes, which may be
-binary. No `base64:` prefix, whitespace scrubbing or recursive decoding is
-performed. `integrity_invalid_encoding` and `integrity_byte_limit` are incomplete
+canonical, standard entire-content Base64 string and hashes the decoded bytes,
+which may be binary. It decodes once, then re-encodes and compares exactly with
+the submitted representation. Redundant padding (`YWJj====`) and nonzero
+unused pad bits (`YR==`) are rejected as `integrity_invalid_encoding`, even
+on Python versions whose `base64.b64decode(validate=True)` accepts them.
+No `base64:` prefix, whitespace scrubbing or recursive decoding is performed. `integrity_invalid_encoding` and `integrity_byte_limit` are incomplete
 results. The content-format label does not parse or canonicalize bytes; an
 integrity-only profile can pass bytes that would fail a JSON schema. Pair it
 with the appropriate other checkers when those checks are needed.
