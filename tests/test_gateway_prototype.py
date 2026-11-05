@@ -280,6 +280,44 @@ def test_request_budget_withholds_slow_validation_before_provider():
     assert provider.calls == []
 
 
+def test_a_deadline_used_up_before_the_gateway_is_a_timeout_not_busy(monkeypatch):
+    # 2026-11-05 (Tests #766, Windows 3.12): setup took longer than the 10 ms request budget, and the free gateway was
+    # reported busy (429). Setup is made slow on purpose here, so the result never depends on the machine's speed.
+    import time
+    from guardoath.gateway_prototype import service
+    real_engine = service.Engine
+    def slow_engine(*args, **kwargs):
+        time.sleep(0.03)
+        return real_engine(*args, **kwargs)
+    monkeypatch.setattr(service, 'Engine', slow_engine)
+    client, gateway, provider, _, _ = setup(request_timeout=0.01, provider_timeout=0.005)
+    response = post(client)
+    assert response.json()['status'] == 'gateway_timeout' and response.status_code == 504
+    assert response.json()['response'] is None and provider.calls == []
+    assert not gateway._lock.locked()
+
+
+def test_a_gateway_held_for_the_whole_deadline_is_busy():
+    from guardoath.gateway_prototype.service import InteractionRequest
+    _, gateway, provider, _, _ = setup(request_timeout=0.5, provider_timeout=0.5)
+    async def run():
+        await gateway._lock.acquire()  # Another request holds the gateway and never finishes in time.
+        try:
+            return await gateway.interact(record(), InteractionRequest(message='hello', request_id='held'))
+        finally:
+            gateway._lock.release()
+    result = asyncio.run(run())
+    assert result.status == 'gateway_busy' and result.response is None and provider.calls == []
+
+
+def test_a_free_gateway_is_used_at_once():
+    from guardoath.gateway_prototype.service import InteractionRequest
+    _, gateway, provider, _, _ = setup()
+    result = asyncio.run(gateway.interact(record(), InteractionRequest(message='hello', request_id='free')))
+    assert result.status == 'completed' and provider.calls == [('hello', 'tenant-default')]
+    assert not gateway._lock.locked()
+
+
 def test_queue_and_execution_share_one_request_deadline():
     from guardoath.gateway_prototype.service import InteractionRequest
     _, gateway, provider, _, _ = setup(provider=Provider(delay=0.02), provider_timeout=0.025, request_timeout=0.03)

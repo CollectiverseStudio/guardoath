@@ -132,10 +132,19 @@ class PrototypeGateway:
             engine = Engine([policy], self.checkers)
         except Exception:
             return response('configuration_error')
-        try:
-            await asyncio.wait_for(self._lock.acquire(), timeout=remaining())
-        except TimeoutError:
-            return response('gateway_busy')
+        # 2026-11-05 (Tests #766, Windows 3.12): when setup above used up the request's deadline, waiting for a free lock
+        # with timeout 0 raised TimeoutError and the request was reported 'gateway_busy' (HTTP 429, "retry later") though
+        # nothing held the gateway. A deadline that passed before any wait is a timeout; 'gateway_busy' is reported only
+        # when another request holds the gateway for the rest of this request's deadline.
+        if remaining() <= 0:
+            return response('gateway_timeout')
+        if not self._lock.locked():
+            await self._lock.acquire()  # Free: acquired at once, without waiting.
+        else:
+            try:
+                await asyncio.wait_for(self._lock.acquire(), timeout=remaining())
+            except TimeoutError:
+                return response('gateway_busy')
         try:
             key = (snapshot.tenant_id, request.request_id)
             fingerprint = hmac.new(self._digest_key,
