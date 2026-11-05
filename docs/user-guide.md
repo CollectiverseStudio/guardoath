@@ -1100,7 +1100,11 @@ not recognized. Meaningless text can satisfy length; invisible non-whitespace
 characters can count too. Add other checks as needed. This is not a model-based
 assessment of whether a section is useful, complete in meaning or correct.
 Completeness checker version 2 now explains missing, repeated and too-short
-conditions separately without copying the body.
+conditions separately without copying the body. The independent
+[33-case section-boundary regression suite](use-case-completeness-multifinding.md)
+checks the exact one/five-character thresholds, whitespace-only text, multiline
+bodies, unknown-label boundaries, mixed-case duplicates, multiple concurrent
+findings and fail-closed wrong-format behavior on the applicable stages.
 
 ### Decisions, examples and the full batch
 
