@@ -103,3 +103,53 @@ def test_disabling_sigma_rule_prevents_further_event_demo(setup):
     assert client.post("/v1/sigma/demo", headers=token(), json={
         "rule_id": sample_id(), "sample": "positive",
     }).status_code == 403
+
+
+def test_all_pinned_rules_are_configurable_without_an_arbitrary_50_rule_tenant_cap():
+    ids = [rule["rule_id"] for rule in catalog_payload()["rules"]]
+    assert len(ids) == 228 and len(set(ids)) == 228
+    original = demo_records(key_secret=SECRET)[0]
+    settings = {identifier: "flag" for identifier in ids}
+    candidate = TenantRecord.model_validate({
+        **original.model_dump(), "sigma_rule_actions": settings
+    })
+    assert candidate.sigma_rule_actions == settings
+    assert candidate.to_policy().rules  # Existing AI validations remain separate.
+
+
+def test_observe_mode_preserves_tenant_recommendation_but_allows_synthetic_event():
+    rule_id = sample_id()
+    original = demo_records(key_secret=SECRET)[0]
+    observing = TenantRecord.model_validate({
+        **original.model_dump(), "mode": "observe",
+        "sigma_rule_actions": {rule_id: "block"},
+    })
+    tenants = TenantService(MemoryTenantStore((observing,)),
+                            default_checkers(enable_pii=True), SECRET)
+    with TestClient(create_app(engine=demo_engine(), credentials={}, tenants=tenants)) as client:
+        response = client.post("/v1/sigma/demo", headers=token(), json={
+            "rule_id": rule_id, "sample": "positive",
+        })
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["matched"] is True
+    assert data["recommended_action"] == "block"
+    assert data["effective_action"] == "allow"
+
+
+def test_sigma_demo_rejects_arbitrary_event_input_even_when_rule_is_enabled():
+    rule_id = sample_id()
+    original = demo_records(key_secret=SECRET)[0]
+    configured = TenantRecord.model_validate({
+        **original.model_dump(), "sigma_rule_actions": {rule_id: "flag"}
+    })
+    tenants = TenantService(MemoryTenantStore((configured,)),
+                            default_checkers(enable_pii=True), SECRET)
+    with TestClient(create_app(engine=demo_engine(), credentials={}, tenants=tenants)) as client:
+        response = client.post("/v1/sigma/demo", headers=token(), json={
+            "rule_id": rule_id, "sample": "positive",
+            "event": {"ScriptBlockText": "untrusted caller-supplied event"},
+            "trusted_logsource": {"product": "windows", "category": "ps_script"},
+        })
+    assert response.status_code == 422
+    assert "untrusted caller-supplied event" not in response.text
