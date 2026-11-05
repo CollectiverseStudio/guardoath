@@ -19,7 +19,7 @@ def check(content, *, mode="enforce", stage=Stage.OUTPUT, fmt="text"):
 
 @pytest.mark.parametrize("cell", [
     "=1+1", "+SUM(A1:A2)", "-cmd", "@SUM(A1:A2)",
-    " =1+1", "\t=HYPERLINK(\"https://example.invalid\")",
+    " =1+1", "\ufeff=2+3", "\u00a0=2+3", "\t=HYPERLINK(\"https://example.invalid\")",
     "\r\n=2+2",
 ])
 @pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
