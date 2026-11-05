@@ -1035,7 +1035,7 @@ test("every check and profile explains what it does and why", async ({ page }) =
   await page.locator("#demo-user").selectOption("demo4");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
-  await expect(page.locator("#tenant-checks .check-help")).toHaveCount(17);
+  await expect(page.locator("#tenant-checks .check-help")).toHaveCount(18);
   await expect(page.locator(".action-legend dt")).toHaveText(["Off", "Block", "Flag", "Allow", "Redact"]);
   const help = page.locator("#tenant-help-schema");
   await help.locator("summary").click();
@@ -1183,8 +1183,8 @@ test("every check's examples and every rule's example can be picked", async ({ p
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo9");
   const check = page.locator("#input-example-check");
-  await expect(check.locator("option")).toHaveCount(18);  // "Choose a check" + the 17 checks that run on input
-  await expect(page.locator("#output-example-check option")).toHaveCount(17);  // 16 checks run on output (prompt shields is input only)
+  await expect(check.locator("option")).toHaveCount(19);  // "Choose a check" + the 18 checks that run on input
+  await expect(page.locator("#output-example-check option")).toHaveCount(18);  // 17 checks run on output (prompt shields is input only)
   await check.selectOption("pii");
   await expect(page.locator("#input-example optgroup")).toHaveCount(3);
   // 97 rules (example + look-alike each), the check's own 5 examples and 2 look-alikes, and the 18 dashboard
@@ -1302,10 +1302,10 @@ test("one table grouped by check lists and searches rules correctly", async ({ p
     return texts.every((text, i) => i === 0 || collator.compare(texts[i - 1], text) <= 0);
   }, await locator.allTextContents());
   await expect(page.locator("#check-table thead th")).toHaveText(["Check or rule", "Input (user\u2019s message)", "Output (AI\u2019s answer)", "In effect"]);
-  await expect(page.locator("#check-table tbody.check-group")).toHaveCount(17);
+  await expect(page.locator("#check-table tbody.check-group")).toHaveCount(18);
   expect(await sorted(page.locator("#check-table .check-title"))).toBe(true);
-  await expect(page.locator("#check-table .rule-row")).toHaveCount(402);
-  await expect(page.locator("#rule-count")).toHaveText("402 rules in 17 checks. Open a check\u2019s rules, or find a rule by name.");
+  await expect(page.locator("#check-table .rule-row")).toHaveCount(403);
+  await expect(page.locator("#rule-count")).toHaveText("403 rules in 18 checks. Open a check\u2019s rules, or find a rule by name.");
   await page.locator("#tenant-rules-pii").click();
   expect(await sorted(page.locator("#tenant-group-pii .rule-title"))).toBe(true);
   await page.locator("#tenant-rules-pii").click();
@@ -1396,10 +1396,10 @@ test("redaction clears incompatible own actions and category filter scopes resul
   await page.locator("#rule-filter-check").selectOption("secrets");
   await expect(page.locator("#check-table .rule-row:visible")).toHaveCount(17);
   await expect(page.locator("#check-table tbody.check-group:visible")).toHaveCount(1);
-  await expect(page.locator("#rule-count")).toHaveText("Showing 17 of 402 rules.");
+  await expect(page.locator("#rule-count")).toHaveText("Showing 17 of 403 rules.");
   await page.getByRole("button", { name: "Clear filters", exact: true }).click();
-  await expect(page.locator("#check-table tbody.check-group:visible")).toHaveCount(17);
-  await expect(page.locator("#rule-count")).toHaveText("402 rules in 17 checks. Open a check\u2019s rules, or find a rule by name.");
+  await expect(page.locator("#check-table tbody.check-group:visible")).toHaveCount(18);
+  await expect(page.locator("#rule-count")).toHaveText("403 rules in 18 checks. Open a check\u2019s rules, or find a rule by name.");
   // Nothing above was saved; put the record back to be sure.
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
   await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
