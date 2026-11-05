@@ -81,7 +81,7 @@ def test_two_actual_pinned_rule_hits_preserve_both_findings_and_tenant_action(
         assert result["effective_action"] == effective
         assert result["rule_configuration_source"] == "tenant_record"
         assert result["runtime_registered_as_ai_checker"] is False
-        assert "Get-ADReplAccount" not in positive.text
+        assert SYNTHETIC_EVENT["ScriptBlockText"] not in positive.text
         benign = client.post("/v1/sigma/demo",
                              headers={"X-GuardOath-Key": demo_key("demo1", SECRET)},
                              json={"rule_id": FIRST, "sample": "lookalike"})
