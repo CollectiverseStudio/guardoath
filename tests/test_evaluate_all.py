@@ -114,3 +114,29 @@ def test_provider_selection_is_ignored_and_external_cases_are_rejected(tmp_path,
     output=tmp_path/'provider-not-created'
     assert all_checks.main(['--root',str(root),'--output',str(output)])==2
     assert not output.exists()
+
+
+def test_failure_only_mismatch_diagnostic_is_source_free(tmp_path, monkeypatch):
+    """Exercise the rare mismatch branch without waiting for an intermittent CI failure."""
+    monkeypatch.setattr(all_checks, 'SUITES', ('privacy',))
+    (tmp_path / 'privacy').mkdir()
+    (tmp_path / 'privacy' / 'report.json').write_text(json.dumps({
+        'cases': [
+            {'matched': False, 'case_id': 'synthetic-timeout', 'stage': 'input',
+             'differences': ['evaluation_status', 'checker_statuses'],
+             'evaluation_status': 'incomplete', 'recommended_action': 'block',
+             'checker_statuses': {'pii': 'error'}, 'latency_ms': 547.271,
+             # Deliberately injected input-shaped field must never appear in diagnostics.
+             'content': 'SYNTHETIC_PRIVATE_CONTENT_NEVER_PRINT'},
+        ],
+    }))
+    totals = {'total': 1430, 'matched': 1429, 'mismatched': 1,
+              'incomplete': 397, 'simulated': 0}
+    with pytest.raises(AssertionError) as failure:
+        test_all_bundled_suites_and_reports((tmp_path, {'totals': totals}))
+    message = str(failure.value)
+    assert 'synthetic-timeout' in message
+    assert '"evaluation_status": "incomplete"' in message
+    assert '"pii": "error"' in message
+    assert '"latency_ms": 547.271' in message
+    assert 'SYNTHETIC_PRIVATE_CONTENT_NEVER_PRINT' not in message
