@@ -66,17 +66,17 @@ contracts without proving generated-example correctness. Open rows remain open.
 
 | Matrix ID | Concrete evidence | Remaining gap |
 |---|---|---|
-|001|test_complete_three_rule_portfolio_benign_has_zero_findings; this generated audit|Generated refund look-alike fails|
-|002|MFC-002-chain generated audit|Additional unrelated failure combinations|
+|001|test_complete_three_rule_portfolio_benign_has_zero_findings; W1 witness tests on both stages|Generated refund look-alike fails|
+|002|MFC-002-chain generated audit; W3 manual benign and all-violation tests|No general DAG/API claim|
 |003|30-template individual inventory tests|Dedicated shared-invoice portfolio|
 |004|Individual inventory tests|Dedicated shared-prescription portfolio|
 |005|test_all_operators_respect_exact_boundary_in_a_two_rule_portfolio|Combined inclusive interval|
-|006|Same exact-operator boundary test|Combined strict interval feasibility|
-|007|Equality/strict-cycle audit; test_contradictory_strict_comparisons_both_report_on_equal_input|Unavailable reason/generator repair|
+|006|W2 strict-interval manual witness and all-original-violation tests, both stages|Generator target overwrite still invalidates companion|
+|007|Equality/strict-cycle audit; W4 guarded two-cycle proof and all-violation tests|Unavailable reason/generator repair|
 |008|test_equal_opposite_pointer_constraints_preserve_both_findings|Feasible eq/ne generated portfolio|
 |009|Self-strict generated audit|Explicit infeasibility reason|
 |010|test_nested_pointer_chain_reports_all_affected_original_rules|Generator object/leaf collision handling|
-|011|test_json_pointer_escaping_with_multi_rule_overlap|Generated escaped-pointer portfolio|
+|011|test_json_pointer_escaping_with_multi_rule_overlap; W5 generated/manual escaped-pointer evidence, both stages|No broader pointer/tenant claim|
 |012|test_invalid_iso_date_and_numeric_failure_report_both_original_rules|Full ordered date chain and leap-day generator|
 |013|test_stage_scoping_executes_only_the_comparisons_for_that_stage|Stage-aware generated witnesses|
 |014|test_shared_number_and_date_pointer_is_invalid_for_only_one_type|Generator explicit infeasibility|
@@ -96,3 +96,8 @@ The317-case relevant group covers inventory, existing multi-rule Engine, tenant
 record rules, stage settings and both evidence harnesses. No runtime/generator
 fix, >50 tenant acceptance, hosted release or production readiness follows from
 these passing harness/regression tests.
+
+The [five-witness classification batch](field-comparison-witness-evidence.md)
+provides exact new test identifiers for MFC001/002/006/007/011. It preserves the
+source audit's actual findings and does not repair the generator or close the
+other explicitly open matrix rows.

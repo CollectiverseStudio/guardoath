@@ -1974,3 +1974,15 @@ Do not treat those samples as benign or suppress companion findings. The report
 contains synthetic IDs/statuses without sample contents; runtime generator repair
 and explicit unavailable reasons remain pending. This audit establishes no
 external truth, hosted effectiveness or release readiness.
+
+
+### Field-comparison witness classifications
+
+The [five-witness audit](field-comparison-witness-evidence.md)
+separates manual feasible witnesses from generated-example correctness. It covers
+shared pointers, strict-bound overwrites, a simple feasible DAG, a strict numeric
+two-cycle and escaped JSON Pointers on both stages. Manual all-violation cases
+retain every configured finding and Block; contradictions receive no invented
+benign witness. Its strict audit exits1 because generator acceptance still fails.
+Source/CI evidence is separate from runtime generator repair, tenant integration
+and deployment; no external-truth claim is implied.
