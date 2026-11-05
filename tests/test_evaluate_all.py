@@ -21,7 +21,29 @@ def full_collection(tmp_path_factory):
 
 def test_all_bundled_suites_and_reports(full_collection):
     directory,collection=full_collection
-    assert collection['totals']=={'total':1430,'matched':1430,'mismatched':0,'incomplete':396,'simulated':0}
+    expected_totals = {'total':1430,'matched':1430,'mismatched':0,'incomplete':396,'simulated':0}
+    # Failure-only diagnostics. These reports contain case IDs and outcome metadata,
+    # never the submitted fixture or content; keep exact acceptance totals unchanged.
+    mismatch_details = []
+    if collection['totals'] != expected_totals:
+        for suite_name in all_checks.SUITES:
+            suite_report = json.loads((directory/suite_name/'report.json').read_text())
+            for case in suite_report['cases']:
+                if not case['matched']:
+                    mismatch_details.append({
+                        'suite': suite_name,
+                        'case_id': case['case_id'],
+                        'stage': case['stage'],
+                        'differences': case['differences'],
+                        'evaluation_status': case['evaluation_status'],
+                        'recommended_action': case['recommended_action'],
+                        'checker_statuses': case['checker_statuses'],
+                        'latency_ms': case['latency_ms'],
+                    })
+    assert collection['totals'] == expected_totals, (
+        'Synthetic mismatch metadata (no source text): ' +
+        json.dumps(mismatch_details, sort_keys=True)
+    )
     assert [row['suite'] for row in collection['suites']]==list(all_checks.SUITES)
     assert len(collection['suites'])==15
     for name in all_checks.SUITES:
