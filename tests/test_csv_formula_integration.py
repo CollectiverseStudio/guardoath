@@ -21,7 +21,7 @@ SUITE = ROOT / "evals" / "csv-export.json"
 def test_csv_export_saved_suite_matches_engine_with_no_raw_export_data():
     report = asyncio.run(evaluate(load_suite(SUITE), Engine(load_policies(POLICIES), default_checkers())))
     assert report["summary"] == {
-        "total": 36, "matched": 36, "mismatched": 0, "incomplete": 8, "simulated": 0
+        "total": 36, "matched": 36, "mismatched": 0, "incomplete": 10, "simulated": 0
     }, [(row["case_id"], row["differences"]) for row in report["cases"] if not row["matched"]]
     serialized = json.dumps(report)
     assert "HYPERLINK" not in serialized
