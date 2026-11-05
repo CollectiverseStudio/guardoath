@@ -19,6 +19,8 @@
 | Duplicate JSON object key | Two currency keys in one payload | Incomplete; `ledger_invalid_document`; Block |
 | Truncated JSON | Unclosed entries list | Incomplete; `ledger_invalid_document`; Block |
 | Non-JSON input | Free-form text submitted to required Ledger checker | Skipped checker, incomplete evaluation, Block |
+| Exact configured 100-row limit | 50 synthetic debit and 50 synthetic credit rows, each 1.00 | Complete Allow with exact integer sums |
+| 101-row over-limit document | Same balanced 100 entries plus a synthetic extra row | Incomplete; `ledger_entry_limit`; Block |
 | Private submitted values | Synthetic invalid or violating values | Do not echo raw amount or source document in findings |
 
 The tests at `tests/test_ledger_multifinding_regression.py` verify these conditions on both **Input** and **Output** through the same shipped checker and Engine. A completed finding under `ledger-enforce-v1` triggers Input **Flag** or Output **Block**, while required-check errors and skips use the default **Block** failure action on both stages.
