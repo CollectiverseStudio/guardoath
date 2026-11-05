@@ -83,7 +83,7 @@ def test_strict_base64_is_hashed_after_single_decode(stage, approved):
 
 @pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
 @pytest.mark.parametrize("content", [
-    "YWJj$", "YW Jj", "YWJj\n", "base64:YWJj", "Y", "YWJj====",
+    "YWJj$", "YW Jj", "YWJj\n", "base64:YWJj", "Y", "YWJj====", "YR==",
 ])
 def test_invalid_base64_is_incomplete_and_blocks(stage, content):
     response, digest = assess(content, stage, b"abc", encoding="base64")
