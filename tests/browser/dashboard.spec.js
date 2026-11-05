@@ -236,6 +236,8 @@ test("a withheld external check explains its local gate", async ({ page }) => {
     data.checker_results[0].status = "skipped"; data.checker_results[0].external = true;
     data.checker_results[0].error_code = "external_local_gate";
     data.evaluation_status = "incomplete"; data.cost_usd = null; data.cost_basis = "provider_unpriced";
+    // A deliberately withheld external check must model an enforced fail-closed decision.
+    data.recommended_action = "block"; data.effective_action = "block";
     await route.fulfill({response,json:data});
   });
   await connect(page); await run(page);
@@ -587,10 +589,15 @@ for(const [id,signal] of [['unicode-bidi','bidirectional formatting'],['unicode-
   test('local text-security output example '+id,async({page})=>{
     await connect(page); await profile(page,'text-security-v1');
     await page.locator('#run-input').click(); await expect(page.locator('#run-output')).toBeEnabled();
-    await page.locator('#output-'+id+'-sample').click(); await page.locator('#run-output').click();
+    await page.locator('#output-'+id+'-sample').click();
+    const checked = page.waitForResponse(r => r.url().endsWith('/v1/checks/output'));
+    await page.locator('#run-output').click();
+    const decision = await (await checked).json();
     await expect(page.locator('#output-results [data-group="prompt_security"] summary')).toContainText('Findings');
     await expect(page.locator('#output-results')).toContainText(signal);
-    await expect(page.locator('#answer')).toBeHidden();
+    expect(decision.recommended_action).toBe('flag');
+    expect(decision.effective_action).toBe('allow'); // Observe reports but cannot enforce.
+    await expect(page.locator('#answer')).toBeVisible();
   });
 }
 test('inspection budget exhaustion holds input and never submits output',async({page})=>{
@@ -850,9 +857,15 @@ for(const name of ['ledger','timestamps','graph','integrity']) {
     await expect(page.locator('#answer')).toBeVisible();
   });
   for(const stage of ['input','output']) test(name+' '+stage+' finding holds the answer',async({page})=>{
-    await connect(page);await profile(page,name+'-v1');await page.locator('#'+stage+'-'+name+'-1-sample').click();await run(page);
+    await connect(page);await profile(page,name+'-v1');await page.locator('#'+stage+'-'+name+'-1-sample').click();
+    const checked = page.waitForResponse(r => r.url().endsWith('/v1/checks/'+stage));
+    await run(page);
+    const decision = await (await checked).json();
     await expect(page.locator('#'+stage+'-results')).toContainText('Findings');
-    await expect(page.locator('#answer')).toBeHidden();
+    // Findings alone do not gate an answer; only effective Block (or unavailable coverage) does.
+    const passes = ['flag','allow'].includes(decision.recommended_action) && ['flag','allow'].includes(decision.effective_action);
+    if (passes) await expect(page.locator('#answer')).toBeVisible();
+    else await expect(page.locator('#answer')).toBeHidden();
   });
 }
 
@@ -1330,7 +1343,9 @@ test("one table grouped by check: checks and rules are alphabetical, a rule is f
   // instructions and the document checks are off (161 + 21), and so are the demo record's own 2 comparisons and
   // 3 required sections. Counts changed 2026-11-04 when those rules were added.
   await page.locator("#rule-filter-setting").selectOption("block");
-  await expect(page.locator("#check-table .rule-row:visible")).toHaveCount(214);
+  // A rule with own Input Allow still inherits Output Block, so an either-stage Block filter includes it.
+  await expect(page.locator('.rule-row[data-rule="pii.email_address"]')).toBeVisible();
+  await expect(page.locator("#check-table .rule-row:visible")).toHaveCount(215);
   await page.locator("#rule-filter-setting").selectOption("off");
   await expect(page.locator("#check-table .rule-row:visible")).toHaveCount(187);
   // A redacting check allows only Off for single rules on that stage, so the own input Allow is cleared.
