@@ -1691,3 +1691,37 @@ test("output file picker retains a passed input and checks actual output bytes s
   await expect(page.locator("#answer")).toBeHidden();
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
 });
+
+test("tenant dashboard persists independent attachment Auto/Off modes before real-file inspection", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo6");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo6");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-attachment-mode-input")).toHaveValue("auto");
+  await expect(page.locator("#tenant-attachment-mode-output")).toHaveValue("auto");
+
+  await page.locator("#tenant-attachment-mode-input").selectOption("off");
+  await expect(page.locator("#tenant-message")).toContainText("Unsaved changes");
+  await page.getByRole("button", { name: "Save checks", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toContainText("Saved");
+  await expect(page.locator("#tenant-attachment-mode-input")).toHaveValue("off");
+  await expect(page.locator("#tenant-attachment-mode-output")).toHaveValue("auto");
+
+  await page.locator("#input-attachments").setInputFiles({
+    name: "synthetic.csv", mimeType: "text/csv", buffer: Buffer.from("header,value\nrow,=1+1", "utf8"),
+  });
+  const request = page.waitForResponse(r => r.url().endsWith("/v1/checks/input/attachments") && r.request().method() === "POST");
+  await page.locator("#run-input").click();
+  const outcome = await (await request).json();
+  expect(outcome.attachments[0].evaluation_status).toBe("not_inspected_policy_off");
+  await expect(page.locator("#input-results .attachment-receipts")).toContainText("not_inspected_policy_off");
+  expect(outcome.findings.map(f => f.rule_id)).not.toContain("csv_formula.potential_formula");
+
+  await page.locator("#tenant-attachment-mode-input").selectOption("auto");
+  await page.locator("#tenant-attachment-mode-output").selectOption("off");
+  await page.getByRole("button", { name: "Save checks", exact: true }).click();
+  await expect(page.locator("#tenant-attachment-mode-input")).toHaveValue("auto");
+  await expect(page.locator("#tenant-attachment-mode-output")).toHaveValue("off");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+});
