@@ -23,6 +23,33 @@ MAX_CSV_CELLS = 4_000
 # return a clean decision. Tabs, CR/LF and ordinary international text remain valid.
 UNSAFE_BIDI_CONTROLS = frozenset("\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069")
 
+# Some importers silently ignore leading invisible format characters, making
+# a formula prefix hard for a human reviewer to see. Reject only if one of
+# these invisibles occurs *before* an actual formula trigger; ordinary Unicode
+# names, Persian joiners and emoji sequences elsewhere in a cell are valid.
+# This is defensive ambiguity rejection, not an assertion about every
+# spreadsheet application's interpretation of these code points.
+INVISIBLE_FORMULA_PREFIX = frozenset("\u00ad\u034f\u180e\u200b\u200c\u200d\u2060")
+FORMULA_PREFIX = frozenset("=+-@")
+LEADING_CSV_WHITESPACE = frozenset(" \t\r\n\u00a0\ufeff")
+
+
+def has_hidden_csv_formula_prefix(cell: str) -> bool:
+    """Detect an invisible leading character concealing a formula trigger.
+
+    Work is linear in the length of this already size-bounded CSV cell.
+    Preserve interior joiners, legitimate non-formula text and apostrophe escapes.
+    """
+    saw_invisible = False
+    for character in cell:
+        if character in INVISIBLE_FORMULA_PREFIX:
+            saw_invisible = True
+        elif character in LEADING_CSV_WHITESPACE:
+            continue
+        else:
+            return saw_invisible and character in FORMULA_PREFIX
+    return False
+
 
 def has_unsafe_csv_controls(value: str) -> bool:
     return any(
@@ -99,6 +126,8 @@ def classify_attachment(data: bytes) -> FileProbe:
                     return result("unknown", "unsupported", "ambiguous_plain_text")
             if len(row) != first_columns:
                 return result("unknown", "unsupported", "inconsistent_csv_columns")
+            if any(has_hidden_csv_formula_prefix(cell) for cell in row):
+                return result("unknown", "invalid", "unsafe_csv_invisible_formula_prefix")
         if count < 2:
             return result("unknown", "unsupported", "ambiguous_plain_text")
     except csv.Error:
