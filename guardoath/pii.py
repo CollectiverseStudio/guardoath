@@ -2,6 +2,7 @@
 privacy pattern code, with bounded scanning and opt-in transformations."""
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import json
 from time import monotonic
 
@@ -16,6 +17,13 @@ PATTERN = "pattern"
 # Which detections win when two of them cover the same characters (see resolve_overlaps).
 OWN_TIER = 0       # GuardOath's own checks: email, card, SSN and labeled fields
 PATTERN_TIER = 1   # the copied privacy pattern checks
+
+# PII recognizers run in a small, shared, dedicated local pool instead of asyncio's
+# default pool, which is also used by other checkers and API work. A saturated
+# default pool must not consume the entire 500-ms privacy scan/recheck deadline
+# merely waiting in another component's queue. Four workers bound CPU pressure;
+# timed-out scans still enforce their own monotonic deadline and fail closed.
+_PII_EXECUTOR = ThreadPoolExecutor(max_workers=4, thread_name_prefix="guardoath-pii")
 
 
 def resolve_overlaps(candidates, check_deadline=lambda: None):
@@ -370,7 +378,9 @@ def build_pii_checker():
         rule = next((r for r in policy.rules if r.checker_id == "pii" and stage in r.stages), None)
         action = ((rule.on_input_finding if stage == Stage.INPUT else rule.on_output_finding) or rule.on_finding) if rule else None
         try:
-            entities, transformed = await asyncio.to_thread(scan, request, action == Action.REDACT, policy, stage)
+            entities, transformed = await asyncio.get_running_loop().run_in_executor(
+                _PII_EXECUTOR, scan, request, action == Action.REDACT, policy, stage,
+            )
         except SensitiveFieldLimit:
             return CheckerResult(checker_id="pii", checker_version=checker_version,
                                  status="error", error_code="pii_field_limit")
