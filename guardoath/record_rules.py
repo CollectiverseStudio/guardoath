@@ -430,6 +430,51 @@ def arithmetic_rule(rule) -> dict:
     }
 
 
+IDENTITY_EXAMPLES = {
+    "order_id_match": (
+        {"order_id": "ORDER1", "shipment_order_id": "ORDER1"},
+        {"order_id": "ORDER1", "shipment_order_id": "ORDER2"},
+    ),
+    "serial_unique": (
+        {"serials": ["SERIAL1", "SERIAL2"]},
+        {"serials": ["SERIAL1", "SERIAL1"]},
+    ),
+}
+
+
+def identity_rule(rule) -> dict:
+    def document(values):
+        payload = {}
+        for role, pointer in rule.fields.items():
+            _set_path(payload, tuple(_segments(pointer)), values[role])
+        return json.dumps(payload, separators=(",", ":"))
+    samples = IDENTITY_EXAMPLES.get(rule.kind)
+    unavailable = None if samples else {
+        "code": "private_tenant_reference",
+        "reason": "A reference-backed rule cannot disclose tenant-trusted values as sample JSON.",
+    }
+    return {
+        "rule_id": COMPARISON_PREFIX + rule.rule_id,
+        "control_id": "cross_field",
+        "title": f"Identity constraint {rule.rule_id}: {rule.kind}",
+        "use_case": f"Validate {rule.kind.replace('_', ' ')} using the tenant's configured policy.",
+        "severity": "high",
+        "example": document(samples[1]) if samples else None,
+        "look_alike": document(samples[0]) if samples else None,
+        "example_unavailable": unavailable,
+        "look_alike_unavailable": unavailable,
+        "needs_setting": None,
+        "needs_checks": [],
+        "content_format": "json",
+        "configuration": f"{rule.kind} with pointers " + ", ".join(
+            f"{role}={pointer}" for role, pointer in rule.fields.items()) +
+            " · runs on " + stage_names(rule.stages) +
+            (" · trusted reference set stored on tenant (values private)" if rule.trusted_values else ""),
+        "stages": [getattr(stage, "value", stage) for stage in rule.stages],
+        "record_rule": True,
+    }
+
+
 def record_rules(record) -> dict[str, dict]:
     """The record's own rules, by rule id: its comparisons, then its required sections."""
     rules, context = {}, _Examples(record.comparisons)
@@ -438,6 +483,9 @@ def record_rules(record) -> dict[str, dict]:
         rules[rule["rule_id"]] = rule
     for advanced in getattr(record, "advanced_arithmetic", ()):
         rule = arithmetic_rule(advanced)
+        rules[rule["rule_id"]] = rule
+    for identity in getattr(record, "advanced_identity", ()):
+        rule = identity_rule(identity)
         rules[rule["rule_id"]] = rule
     for section in record.required_sections:
         rule = section_rule(section, record.required_sections)
@@ -449,6 +497,7 @@ def record_rule_ids(record) -> dict[str, str]:
     """Rule id -> check id, for the rule ids a record's own comparisons and sections define."""
     return {**{COMPARISON_PREFIX + c.rule_id: "cross_field" for c in record.comparisons},
             **{COMPARISON_PREFIX + c.rule_id: "cross_field" for c in getattr(record, "advanced_arithmetic", ())},
+            **{COMPARISON_PREFIX + c.rule_id: "cross_field" for c in getattr(record, "advanced_identity", ())},
             **{SECTION_PREFIX + s.rule_id: "completeness" for s in record.required_sections}}
 
 
@@ -457,6 +506,7 @@ def bad_record_rule_ids(record, static_ids) -> list[str]:
     problems = []
     for kind, items, prefix in (("comparison", record.comparisons, COMPARISON_PREFIX),
                                 ("arithmetic comparison", getattr(record, "advanced_arithmetic", ()), COMPARISON_PREFIX),
+                                ("identity comparison", getattr(record, "advanced_identity", ()), COMPARISON_PREFIX),
                                 ("required section", record.required_sections, SECTION_PREFIX)):
         for item in items:
             if not re.fullmatch(RECORD_RULE_ID, item.rule_id):
