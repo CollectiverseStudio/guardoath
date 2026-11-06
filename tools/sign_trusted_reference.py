@@ -28,7 +28,10 @@ def main(argv=None):
     rule = AdvancedTrustedReferenceRule.model_validate(json.loads(args.input.read_text(encoding="utf-8")))
     signed = rule.model_copy(update={"host_signature": sign_reference(rule, args.tenant, key)})
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    with args.output.open("x", encoding="utf-8") as handle:
+    # Signed clinical/permit/PO snapshots can be sensitive. Create with
+    # owner-only mode, never overwrite an existing file or follow a symlink.
+    fd = os.open(args.output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
         handle.write(json.dumps(signed.model_dump(mode="json"), indent=2) + "\n")
     print("Host attestation created; verify and save the resulting tenant rule through the authenticated settings API.")
     return 0
