@@ -79,3 +79,33 @@ def test_authenticated_tenant_api_rejects_duplicate_comparison_ids_without_mutat
     assert "Comparison rule IDs must be distinct" in result.text
     assert "/left" not in result.text and "/tax" not in result.text
     assert store.get("demo1") == before
+
+
+def test_authenticated_tenant_api_persists_51_distinct_comparisons():
+    secret = "large-comparison-api-test-0123456789"
+    store = MemoryTenantStore(demo_records(key_secret=secret))
+    service = TenantService(store, default_checkers(), secret)
+    client = TestClient(create_app(engine=demo_engine(), credentials={}, tenants=service))
+    headers = {"Authorization": "Bearer " + demo_key("demo1", secret)}
+    original = store.get("demo1")
+    comparisons = [
+        {"rule_id": f"many_{i:03d}", "left": f"/left_{i}", "right": f"/right_{i}", "operator": "le"}
+        for i in range(51)
+    ]
+    changed = client.post("/v1/tenants/current/checks", headers=headers, json={
+        "revision": original.revision,
+        "changes": {
+            "comparisons": comparisons,
+            "input_rule_actions": {"business.many_000": "block", "business.many_050": "flag"},
+        },
+    })
+    assert changed.status_code == 200, changed.text
+    current = store.get("demo1")
+    assert current.revision == original.revision + 1
+    assert len(current.comparisons) == 51
+    assert current.input_rule_actions == {"business.many_000": "block", "business.many_050": "flag"}
+    expected = {f"business.many_{i:03d}" for i in range(51)}
+    assert expected <= {rule["rule_id"] for rule in changed.json()["record_rules"]}
+    summary = client.get("/v1/applications/current", headers=headers)
+    assert summary.status_code == 200
+    assert expected <= {rule["rule_id"] for rule in summary.json()["tenant"]["record_rules"]}
