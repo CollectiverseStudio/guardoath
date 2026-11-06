@@ -248,6 +248,10 @@ class TenantRecord(Contract):
 
     @model_validator(mode="after")
     def consistent(self):
+        # Duplicate comparison IDs would overwrite a rule in the tenant's rule table.
+        # Reject them rather than silently hiding an active comparison.
+        if len({comparison.rule_id for comparison in self.comparisons}) != len(self.comparisons):
+            raise ValueError("Comparison rule IDs must be distinct")
         on = self.checks()
         if not on:
             raise ValueError("Turn on at least one check")
