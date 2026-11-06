@@ -140,7 +140,7 @@ def test_time_offsets_exact_boundary_and_chronology_return_optional():
     }).findings == ()
     assert evaluate((excursion,), {
         "excursion_start": "2026-11-06T10:00:00Z",
-        "excursion_end": "2026-11-06T11:30:00+01:00",
+        "excursion_end": "2026-11-06T11:00:00+01:00",
         "allowed_minutes": 0,
     }).findings == ()
     assert evaluate((excursion,), {
