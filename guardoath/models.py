@@ -136,6 +136,75 @@ class AdvancedArithmeticRule(Contract):
         return self
 
 
+# FC-035/042/043/050: tenant-owned conversion and temporal controls.
+# Currency rates are versioned tenant-saved references, never request-supplied authority.
+CONVERSION_TIME_FIELD_KEYS = {
+    "currency_conversion_cap": ("payment_amount", "payment_currency", "invoice_amount", "invoice_currency"),
+    "unit_load_kg_cap": ("load", "load_unit", "max_kg"),
+    "cold_chain_excursion": ("excursion_start", "excursion_end", "allowed_minutes"),
+    "lifecycle_chronology": ("order_at", "shipment_at", "delivery_at", "return_at"),
+}
+
+
+class AdvancedConversionTimeRule(Contract):
+    rule_id: str = Field(pattern=r"^[a-z][a-z0-9_]{0,79}$")
+    kind: Literal["currency_conversion_cap", "unit_load_kg_cap",
+                  "cold_chain_excursion", "lifecycle_chronology"]
+    fields: dict[str, str] = Field(min_length=3, max_length=4)
+    stages: tuple[Stage, ...] = Field(default=(Stage.INPUT, Stage.OUTPUT), min_length=1)
+    # FX reference is a bounded, tenant-saved, versioned ratio. This asserts
+    # tenancy of the setting, not external attestation of a market exchange rate.
+    source_currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
+    destination_currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
+    trusted_rate_numerator: int | None = Field(default=None, gt=0, le=1_000_000_000, strict=True)
+    trusted_rate_denominator: int | None = Field(default=None, gt=0, le=1_000_000_000, strict=True)
+    rate_reference: str | None = Field(default=None, min_length=1, max_length=100)
+    rate_asof: str | None = Field(default=None, min_length=20, max_length=35)
+
+    @model_validator(mode="after")
+    def validate_conversion_time(self):
+        import re
+        from datetime import datetime
+        if set(self.fields) != set(CONVERSION_TIME_FIELD_KEYS[self.kind]):
+            raise ValueError("Conversion/time rule requires its declared field names")
+        decoded = []
+        for pointer in self.fields.values():
+            if (not isinstance(pointer, str) or len(pointer) > 200 or
+                    not pointer.startswith("/") or re.search(r"~(?![01])", pointer)):
+                raise ValueError("Conversion/time fields require absolute JSON Pointers")
+            segments = tuple(x.replace("~1", "/").replace("~0", "~") for x in pointer[1:].split("/"))
+            if any(not x or x.isdigit() for x in segments):
+                raise ValueError("Conversion/time pointers require object fields")
+            decoded.append(segments)
+        if len(set(decoded)) != len(decoded) or any(
+                a == b[:len(a)] or b == a[:len(b)]
+                for i, a in enumerate(decoded) for b in decoded[i + 1:]):
+            raise ValueError("Conversion/time pointers must not overlap")
+        if len(set(self.stages)) != len(self.stages):
+            raise ValueError("Conversion/time stages must be distinct")
+        reference = (self.source_currency, self.destination_currency,
+                     self.trusted_rate_numerator, self.trusted_rate_denominator,
+                     self.rate_reference, self.rate_asof)
+        if self.kind == "currency_conversion_cap":
+            if any(value is None for value in reference):
+                raise ValueError("Currency conversion requires versioned tenant-owned FX reference")
+            if self.source_currency == self.destination_currency:
+                raise ValueError("Currency pair must be distinct")
+            if not re.fullmatch(r"[A-Za-z0-9_.:/-]{1,100}", self.rate_reference):
+                raise ValueError("FX reference identifier is invalid")
+            if not re.fullmatch(r"\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})", self.rate_asof):
+                raise ValueError("FX reference timestamp must be explicit-offset ISO-8601")
+            try:
+                asof = datetime.fromisoformat(self.rate_asof.replace("Z", "+00:00"))
+                if asof.utcoffset() is None:
+                    raise ValueError("Timezone is required")
+            except (ValueError, OverflowError) as exc:
+                raise ValueError("FX reference timestamp is invalid") from exc
+        elif any(value is not None for value in reference):
+            raise ValueError("Only currency conversion may carry an FX reference")
+        return self
+
+
 IDENTITY_FIELD_KEYS = {
     "order_id_match": ("order_id", "shipment_order_id"),
     "quarantine_exclusion": ("requested_lot",),
@@ -305,11 +374,12 @@ class Policy(Contract):
     comparisons: tuple[FieldComparison, ...] = ()
     advanced_arithmetic: tuple[AdvancedArithmeticRule, ...] = ()
     advanced_identity: tuple[AdvancedIdentityRule, ...] = ()
+    advanced_conversion_time: tuple[AdvancedConversionTimeRule, ...] = ()
     required_sections: tuple[RequiredSection, ...] = ()
 
     @model_validator(mode="after")
     def all_comparison_rule_ids_are_unique(self):
-        ids = [r.rule_id for r in (*self.comparisons, *self.advanced_arithmetic, *self.advanced_identity)]
+        ids = [r.rule_id for r in (*self.comparisons, *self.advanced_arithmetic, *self.advanced_identity, *self.advanced_conversion_time)]
         if len(set(ids)) != len(ids):
             raise ValueError("Comparison rule IDs must be distinct")
         return self
