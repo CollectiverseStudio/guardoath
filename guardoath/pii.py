@@ -118,8 +118,9 @@ def _context_cue_matches_at(words, ends, start, hint_words, context):
     stay local to a scanned field, never cached between users.
     """
     index = bisect_right(ends, start)
-    window = (word for _, _, word in words[max(0, index - CONTEXT_WORDS_BEFORE):index + 1])
-    return any(cue in word for cue in context for word in (*window, *hint_words))
+    window = tuple(word for _, _, word in words[max(0, index - CONTEXT_WORDS_BEFORE):index + 1])
+    window += tuple(hint_words)
+    return any(cue in word for cue in context for word in window)
 
 
 def shortest_match(expression):
