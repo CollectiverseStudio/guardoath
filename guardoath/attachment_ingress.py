@@ -88,7 +88,8 @@ async def inspect_attachments(record: TenantRecord, stage: Stage, contents: tupl
         (secrets_action is not None and (rule_id.startswith("secrets.") or rule_id.startswith("confidential.")))
     }
     # The credential checker uses these exact tenant settings for ordinary text as
-    # well. Only terms applicable to this file stage enter the one-stage Engine.\n    # Do not change assignment/encoded/configured-term matching behavior for files.
+    # well. Only terms applicable to this file stage enter the one-stage Engine.
+    # Do not change assignment/encoded/configured-term matching behavior for files.
     secret_settings = ({"detect_secret_assignments": record.detect_secret_assignments,
                         "inspect_encoded_secrets": record.inspect_encoded_secrets,
                         "confidential_terms": tuple(term for term in record.confidential_terms
