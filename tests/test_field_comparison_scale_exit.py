@@ -74,3 +74,14 @@ def test_cli_succeeds_only_when_every_component_and_schema_pass(tmp_path, monkey
     report = json.loads(output.read_text())
     assert report["scale_acceptance_passed"] is True
     assert report["release_readiness"] is False
+
+
+def test_single_component_worker_cli_succeeds_only_with_real_measurement(tmp_path, monkeypatch):
+    monkeypatch.setattr(scale, "measure", lambda component, size, samples: measured(size, component))
+    output = tmp_path / "worker.json"
+    monkeypatch.setattr(sys, "argv", ["field_comparison_scale", "--worker", "checker",
+                                     "--size", "51", "--samples", "1", "--output", str(output)])
+    assert scale.main() == 0
+    assert json.loads(output.read_text())["component"] == "checker"
+    monkeypatch.setattr(scale, "measure", lambda component, size, samples: measured(size, component, schema_ok=False))
+    assert scale.main() == 1
