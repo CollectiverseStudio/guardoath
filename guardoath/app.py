@@ -396,6 +396,7 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 # file must not be reported as a successful inspection.
                 csv_results = tuple(result for result in batch.checker_results if result.checker_id == "csv_formula")
                 prompt_results = tuple(result for result in batch.checker_results if result.checker_id == "prompt_attack")
+                secret_results = tuple(result for result in batch.checker_results if result.checker_id == "secrets")
                 file_status = ("incomplete" if batch.incomplete else
                                "findings" if any(result.status == "flagged" for result in csv_results) else
                                "passed" if csv_results and all(result.status == "passed" for result in csv_results)
@@ -422,6 +423,19 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                         group = group.model_copy(update={
                             "status": status,
                             "checker_ids": tuple(dict.fromkeys((*group.checker_ids, "prompt_attack"))),
+                        })
+                    elif group.group_id == "secrets" and secret_results:
+                        # CSV credential findings belong to the same Secrets group
+                        # as normal message findings, not the CSV Structure group.
+                        status = ("incomplete" if group.status == "incomplete" or
+                                  any(result.status not in {"passed", "flagged"}
+                                      for result in secret_results) else
+                                  "findings" if group.status == "findings" or
+                                  any(result.status == "flagged" for result in secret_results) else
+                                  group.status)
+                        group = group.model_copy(update={
+                            "status": status,
+                            "checker_ids": tuple(dict.fromkeys((*group.checker_ids, "secrets"))),
                         })
                     groups.append(group)
                 updated = response.model_copy(update={
