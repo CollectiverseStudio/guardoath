@@ -1627,7 +1627,7 @@ test("selected browser CSV bytes use authenticated attachment API, ignore claime
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
 });
 
-test("unsupported attachment bytes fail closed in observe mode, never reach proposed output", async ({ page }) => {
+test("unsupported attachment bytes fail closed despite a misleading CSV MIME claim", async ({ page }) => {
   await page.goto("/dashboard");
   await page.locator("#demo-user").selectOption("demo9");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
@@ -1663,4 +1663,31 @@ test("over-budget browser file is rejected before reading or sending any attachm
   await expect(page.locator("#run-error")).toContainText("exceeds 32,000 bytes");
   await expect(page.locator("#answer")).toBeHidden();
   expect(uploads).toBe(0);
+});
+
+test("output file picker retains a passed input and checks actual output bytes separately", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo7");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo7");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await page.locator("#tenant-check-output-csv_formula").selectOption("block");
+
+  const ordinary = page.waitForResponse(r => r.url().endsWith("/v1/checks/input") && r.request().method() === "POST");
+  await page.locator("#run-input").click();
+  expect((await (await ordinary).json()).effective_action).toBe("allow");
+  await expect(page.locator("#output-attachments")).toBeEnabled();
+  await page.locator("#output-content").fill("Here is your safe summary.");
+  await page.locator("#output-attachments").setInputFiles({
+    name: "answer.csv", mimeType: "text/csv", buffer: Buffer.from("key,value\nanswer,=5+6", "utf8"),
+  });
+  await expect(page.locator("#input-gate")).toContainText("Input checks passed");
+  const outputResponse = page.waitForResponse(r => r.url().endsWith("/v1/checks/output/attachments") && r.request().method() === "POST");
+  await page.locator("#run-output").click();
+  const outcome = await (await outputResponse).json();
+  expect(outcome.effective_action).toBe("block");
+  expect(outcome.findings.map(f => f.rule_id)).toContain("csv_formula.potential_formula");
+  await expect(page.locator("#output-results .attachment-receipts")).toContainText("csv_structure_recognized_only");
+  await expect(page.locator("#answer")).toBeHidden();
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
 });
