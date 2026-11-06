@@ -136,6 +136,54 @@ class AdvancedArithmeticRule(Contract):
         return self
 
 
+IDENTITY_FIELD_KEYS = {
+    "order_id_match": ("order_id", "shipment_order_id"),
+    "quarantine_exclusion": ("requested_lot",),
+    "serial_unique": ("serials",),
+    "authorized_scope_subset": ("requested_scopes",),
+}
+
+
+class AdvancedIdentityRule(Contract):
+    """FC-038/039/040/048; reference sets come from trusted tenant configuration."""
+    rule_id: str = Field(pattern=r"^[a-z][a-z0-9_]{0,79}$")
+    kind: Literal["order_id_match", "quarantine_exclusion",
+                  "serial_unique", "authorized_scope_subset"]
+    fields: dict[str, str] = Field(min_length=1, max_length=2)
+    trusted_values: tuple[str, ...] = Field(default=(), max_length=128)
+    stages: tuple[Stage, ...] = Field(default=(Stage.INPUT, Stage.OUTPUT), min_length=1)
+
+    @model_validator(mode="after")
+    def valid_identity_rule(self):
+        import re
+        if set(self.fields) != set(IDENTITY_FIELD_KEYS[self.kind]):
+            raise ValueError("Identity rule requires its declared field names")
+        decoded = []
+        for pointer in self.fields.values():
+            if not isinstance(pointer, str) or len(pointer) > 200 or not pointer.startswith("/") or re.search(r"~(?![01])", pointer):
+                raise ValueError("Identity fields require absolute JSON Pointers")
+            segments = tuple(x.replace("~1", "/").replace("~0", "~") for x in pointer[1:].split("/"))
+            if any(not x or x.isdigit() for x in segments):
+                raise ValueError("Identity fields require object fields, not positional indices")
+            decoded.append(segments)
+        if len(set(decoded)) != len(decoded) or any(
+                p == q[:len(p)] or q == p[:len(q)]
+                for i, p in enumerate(decoded) for q in decoded[i + 1:]):
+            raise ValueError("Identity pointers must be distinct and nonoverlapping")
+        referenced = self.kind in ("quarantine_exclusion", "authorized_scope_subset")
+        if referenced != bool(self.trusted_values):
+            raise ValueError("Trusted reference values required only for reference-backed identity rules")
+        if len(set(self.trusted_values)) != len(self.trusted_values):
+            raise ValueError("Trusted reference values must be distinct")
+        if any(not isinstance(value, str) or
+               not re.fullmatch(r"[A-Za-z0-9_.:-]{1,100}", value)
+               for value in self.trusted_values):
+            raise ValueError("Invalid trusted reference identifier")
+        if len(set(self.stages)) != len(self.stages):
+            raise ValueError("Identity stages must be distinct")
+        return self
+
+
 class RequiredSection(Contract):
     rule_id: str = Field(pattern=r"^[a-zA-Z0-9_.-]{1,80}$")
     label: str = Field(pattern=r"^[A-Za-z][A-Za-z0-9 _-]{0,79}$")
@@ -256,11 +304,12 @@ class Policy(Contract):
     # trusted configuration.
     comparisons: tuple[FieldComparison, ...] = ()
     advanced_arithmetic: tuple[AdvancedArithmeticRule, ...] = ()
+    advanced_identity: tuple[AdvancedIdentityRule, ...] = ()
     required_sections: tuple[RequiredSection, ...] = ()
 
     @model_validator(mode="after")
     def all_comparison_rule_ids_are_unique(self):
-        ids = [r.rule_id for r in (*self.comparisons, *self.advanced_arithmetic)]
+        ids = [r.rule_id for r in (*self.comparisons, *self.advanced_arithmetic, *self.advanced_identity)]
         if len(set(ids)) != len(ids):
             raise ValueError("Comparison rule IDs must be distinct")
         return self
