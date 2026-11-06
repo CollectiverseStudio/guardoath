@@ -6,6 +6,13 @@ comparison count limit is not introduced. Only synthetic pointers are used.
 import pytest
 from pydantic import ValidationError
 
+from fastapi.testclient import TestClient
+
+from guardoath.app import create_app, demo_engine
+from guardoath.checkers import default_checkers
+from guardoath.hosted import TenantService
+from guardoath.tenant_record import demo_key, demo_records
+from guardoath.tenant_store import MemoryTenantStore
 from guardoath.models import FieldComparison, Policy
 from guardoath.record_rules import record_rule_ids, record_rules
 from guardoath.tenant_record import TenantRecord
@@ -51,3 +58,24 @@ def test_no_arbitrary_tenant_comparison_count_cap_is_reintroduced():
     assert len(record.comparisons) == len(record.to_policy().comparisons) == 51
     policy = Policy(application_id="demo", version="v1", rules=(), comparisons=comparisons)
     assert len(policy.comparisons) == 51
+
+
+def test_authenticated_tenant_api_rejects_duplicate_comparison_ids_without_mutation():
+    secret = "duplicate-comparison-api-test-0123456789"
+    store = MemoryTenantStore(demo_records(key_secret=secret))
+    service = TenantService(store, default_checkers(), secret)
+    client = TestClient(create_app(engine=demo_engine(), credentials={}, tenants=service))
+    token = demo_key("demo1", secret)
+    headers = {"Authorization": "Bearer " + token}
+    before = store.get("demo1")
+    repeated = [
+        {"rule_id": "collision", "left": "/left", "right": "/right", "operator": "lt"},
+        {"rule_id": "collision", "left": "/tax", "right": "/base", "operator": "ge"},
+    ]
+    result = client.post("/v1/tenants/current/checks", headers=headers, json={
+        "revision": before.revision, "changes": {"comparisons": repeated}
+    })
+    assert result.status_code == 422
+    assert "Comparison rule IDs must be distinct" in result.text
+    assert "/left" not in result.text and "/tax" not in result.text
+    assert store.get("demo1") == before
