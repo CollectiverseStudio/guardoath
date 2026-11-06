@@ -3,6 +3,7 @@ privacy pattern code, with bounded scanning and opt-in transformations."""
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from threading import BoundedSemaphore
 import json
 from time import monotonic
 
@@ -24,6 +25,34 @@ PATTERN_TIER = 1   # the copied privacy pattern checks
 # merely waiting in another component's queue. Four workers bound CPU pressure;
 # timed-out scans still enforce their own monotonic deadline and fail closed.
 _PII_EXECUTOR = ThreadPoolExecutor(max_workers=4, thread_name_prefix="guardoath-pii")
+# ThreadPoolExecutor's normal work queue is unbounded. Do not accept a scan that
+# will simply wait behind all four occupied workers and burn the shipped 500-ms
+# per-checker deadline. Count running AND pending work; a denied submission
+# returns a private incomplete result via the existing Engine failure path.
+_PII_SLOTS = BoundedSemaphore(4)
+
+
+class PiiCapacityExceeded(Exception):
+    """Local PII capacity is occupied; never interpret this as a clean scan."""
+
+
+async def _bounded_local_scan(scanner, *args):
+    """Execute a PII scan with bounded admission and cancellation-safe release.
+
+    Release the slot when the underlying concurrent Future finishes, NOT when
+    an awaiting asyncio Task is cancelled: wait_for() may time out while the
+    worker is still running. The worker is responsible for respecting the
+    existing monotonic per-scan deadline.
+    """
+    if not _PII_SLOTS.acquire(blocking=False):
+        raise PiiCapacityExceeded
+    try:
+        future = _PII_EXECUTOR.submit(scanner, *args)
+    except Exception:
+        _PII_SLOTS.release()
+        raise
+    future.add_done_callback(lambda _done: _PII_SLOTS.release())
+    return await asyncio.wrap_future(future)
 
 
 def resolve_overlaps(candidates, check_deadline=lambda: None):
@@ -378,9 +407,12 @@ def build_pii_checker():
         rule = next((r for r in policy.rules if r.checker_id == "pii" and stage in r.stages), None)
         action = ((rule.on_input_finding if stage == Stage.INPUT else rule.on_output_finding) or rule.on_finding) if rule else None
         try:
-            entities, transformed = await asyncio.get_running_loop().run_in_executor(
-                _PII_EXECUTOR, scan, request, action == Action.REDACT, policy, stage,
+            entities, transformed = await _bounded_local_scan(
+                scan, request, action == Action.REDACT, policy, stage,
             )
+        except PiiCapacityExceeded:
+            return CheckerResult(checker_id="pii", checker_version=checker_version,
+                                 status="error", error_code="pii_capacity_exceeded")
         except SensitiveFieldLimit:
             return CheckerResult(checker_id="pii", checker_version=checker_version,
                                  status="error", error_code="pii_field_limit")
