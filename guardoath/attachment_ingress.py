@@ -2,7 +2,7 @@
 
 The API envelope is Base64 because the existing ingress is strict JSON, but only decoded,
 server-received bytes activate the file probe. User-supplied names and MIME are ignored.
-This module supports *only* structural UTF-8 CSV + the existing csv_formula checker.
+This module recognizes *only* structural UTF-8 CSV. Its cells use the existing csv_formula checker and any tenant-enabled prompt_attack checker, not a semantic file parser.
 """
 from __future__ import annotations
 
@@ -67,16 +67,29 @@ async def inspect_attachments(record: TenantRecord, stage: Stage, contents: tupl
         raise ValueError("Attachment count exceeded")
     mode = record.input_attachment_csv_mode if stage == Stage.INPUT else record.output_attachment_csv_mode
     stage_action = record.action("csv_formula", stage) or Action.BLOCK
-    own = record.rule_actions_on(stage).get("csv_formula.potential_formula")
-    rule_actions = {"csv_formula.potential_formula": own} if own else {}
+    # Recognized CSV bytes are lower-trust model input. If the tenant enabled
+    # prompt_attack for this stage, run that SAME checker/rules on file text too.
+    # Never enable a tenant-disabled check or bypass an explicit attachment Off.
+    prompt_action = record.action("prompt_attack", stage)
+    file_rules = [Rule(checker_id="csv_formula", on_finding=stage_action, stages=(stage,))]
+    selected_checkers = {"csv_formula": checkers["csv_formula"]}
+    if prompt_action is not None:
+        file_rules.append(Rule(checker_id="prompt_attack", on_finding=prompt_action, stages=(stage,)))
+        selected_checkers["prompt_attack"] = checkers["prompt_attack"]
+    allowed_rule_ids = {"csv_formula.potential_formula"}
+    rule_actions = {
+        rule_id: action for rule_id, action in record.rule_actions_on(stage).items()
+        if rule_id in allowed_rule_ids or
+        (prompt_action is not None and rule_id.startswith("prompt_attack."))
+    }
     policy = Policy(
         application_id=record.tenant_id, version=TENANT_POLICY_VERSION,
         mode=record.mode, timeout_ms=record.timeout_ms, failure_action=record.failure_action,
-        rules=(Rule(checker_id="csv_formula", on_finding=stage_action, stages=(stage,)),),
+        rules=tuple(file_rules),
         input_rule_actions=rule_actions if stage == Stage.INPUT else {},
         output_rule_actions=rule_actions if stage == Stage.OUTPUT else {},
     )
-    engine = Engine([policy], {"csv_formula": checkers["csv_formula"]}) if mode == "auto" else None
+    engine = Engine([policy], selected_checkers) if mode == "auto" else None
     receipts = []
     results = []
     findings = []
@@ -103,13 +116,19 @@ async def inspect_attachments(record: TenantRecord, stage: Stage, contents: tupl
             request = CheckRequest(application_id=record.tenant_id, policy_version=TENANT_POLICY_VERSION,
                                    content=raw.decode("utf-8-sig"), content_format="text")
             evaluated = await engine.check(request, stage)
-            # A recognized format is not equivalent to passing a security check.
-            result = evaluated.checker_results[0]
+            # Both format security and configured lower-trust prompt security use
+            # the existing Engine and its tenant rule actions. Retain every result.
+            results.extend(evaluated.checker_results)
             findings.extend(evaluated.findings)
             actions.append(evaluated.recommended_action)
             if evaluated.evaluation_status == "incomplete":
+                # A partial file inspection is not safe to pass even if the
+                # customer's ordinary text-check failure_action is Flag.
+                actions.append(Action.BLOCK)
                 incomplete = True
             receipt["evaluation_status"] = evaluated.evaluation_status
+            receipts.append(receipt)
+            continue
         results.append(result)
         receipts.append(receipt)
     return AttachmentBatch(tuple(receipts), tuple(results), tuple(findings),
