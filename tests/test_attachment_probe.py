@@ -72,3 +72,35 @@ def test_unsupported_api_inputs_and_stable_non_leaking_metadata():
         classify_attachment("name,entry\nAlice,=1+2")
     result = classify_attachment(b"a,b\n1,2")
     assert set(vars(result)) == {"kind", "status", "byte_count", "sha256", "reason"}
+
+
+
+@pytest.mark.parametrize("payload", [
+    b"name,value\nrow,\x1b=2+3",                    # ANSI escape in a CSV cell
+    b"name,value\nrow,\x07data",                   # terminal bell
+    b"name,value\nrow,\x7fdata",                   # DEL control
+    b"name,value\nrow,\"\x1b[31m=3+4\"",          # quoted cell does not grant trust
+    "name,value\nrow,\u202e=3+4".encode("utf-8"), # right-to-left override
+    "name,value\nrow,\u2066=3+4\u2069".encode("utf-8"), # bidi isolate
+])
+def test_unsafe_control_or_bidi_formatting_never_counts_as_clean_csv(payload):
+    report = classify_attachment(payload)
+    assert report.kind == "unknown"
+    assert report.status == "invalid"
+    assert report.reason == "unsafe_csv_control_characters"
+    assert not report.csv_text_supported
+    assert report.byte_count == len(payload)
+    assert report.sha256 == hashlib.sha256(payload).hexdigest()
+    assert "row" not in str(report)
+
+
+@pytest.mark.parametrize("payload", [
+    b"name,value\nrow,normal\ttext",
+    b'name,value\nrow,"quoted\nmultiline"',
+    "name,value\nمستخدم,قيمة".encode("utf-8"),
+])
+def test_ordinary_unicode_and_legal_csv_tabs_and_multiline_are_recognized(payload):
+    report = classify_attachment(payload)
+    assert report.kind == "csv"
+    assert report.status == "recognized"
+    assert report.csv_text_supported
