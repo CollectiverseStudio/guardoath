@@ -201,3 +201,17 @@ def test_revisioned_tenant_attachment_policy_save_updates_next_check():
     outgoing = send(client, one[1], stage="output")
     assert outgoing.status_code == 200
     assert outgoing.json()["attachments"][0]["evaluation_status"] == "not_inspected_policy_off"
+
+
+def test_unsupported_attachment_is_fail_closed_even_for_observe_mode():
+    one = tenant("demo1", mode="observe")
+    client, service = harness(one)
+    response = send(client, one[1], files=(PDF,))
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["mode"] == "observe"
+    assert body["evaluation_status"] == "incomplete"
+    assert body["recommended_action"] == "block"
+    assert body["effective_action"] == "block"
+    assert body["attachments"][0]["status"] == "unsupported"
+    assert service.store.get("demo1").used(usage_month()) == 1
