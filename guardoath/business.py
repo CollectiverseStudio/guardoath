@@ -56,7 +56,8 @@ async def cross_field_check(request, policy, stage):
     comparisons = [rule for rule in policy.comparisons if stage in rule.stages]
     arithmetic = [rule for rule in getattr(policy, "advanced_arithmetic", ()) if stage in rule.stages]
     identity = [rule for rule in getattr(policy, "advanced_identity", ()) if stage in rule.stages]
-    if not (comparisons or arithmetic or identity) or request.content_format != "json":
+    conversion_time = [rule for rule in getattr(policy, "advanced_conversion_time", ()) if stage in rule.stages]
+    if not (comparisons or arithmetic or identity or conversion_time) or request.content_format != "json":
         return CheckerResult(checker_id="cross_field", checker_version="2", status="skipped")
     try:
         # Preserve the strict parser's duplicate/size/depth/finite-number guards,
@@ -86,6 +87,9 @@ async def cross_field_check(request, policy, stage):
     if identity:
         from guardoath.advanced_identity import identity_findings
         findings.extend(identity_findings(payload, identity, stage))
+    if conversion_time:
+        from guardoath.advanced_conversion_time import conversion_time_findings
+        findings.extend(conversion_time_findings(payload, conversion_time, stage))
     return CheckerResult(checker_id="cross_field", checker_version="2", status="flagged" if findings else "passed",
                          findings=tuple(findings))
 
