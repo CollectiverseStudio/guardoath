@@ -87,7 +87,7 @@ RULE_ACTION_FIELDS = (rule_actions_field(Stage.INPUT), rule_actions_field(Stage.
 # Field names of records stored before 2026-11-04 (one per check, for both stages); converted when read.
 LEGACY_FIELDS = frozenset({*("check_" + check_id for check_id in CHECK_IDS), "rule_actions"})
 # Fields a tenant (or a demo visitor, on a demo record) may change. Account fields are admin-only.
-EDITABLE_FIELDS = frozenset({"mode", "timeout_ms", "failure_action", "sigma_rule_actions", *RULE_ACTION_FIELDS, *CHECK_FIELDS, *SETTING_FIELDS})
+EDITABLE_FIELDS = frozenset({"mode", "timeout_ms", "failure_action", "sigma_rule_actions", "input_attachment_csv_mode", "output_attachment_csv_mode", *RULE_ACTION_FIELDS, *CHECK_FIELDS, *SETTING_FIELDS})
 TENANT_POLICY_VERSION = "tenant"
 # A record is stored as one DynamoDB item, which holds at most 400 KB (attribute names and values). The record's own
 # fields (everything but usage and revision, as guardoath.dynamodb_store.record_json stores them) are kept below this,
@@ -143,6 +143,10 @@ class TenantRecord(Contract):
     input_check_graph: Action | None = None
     input_check_integrity: Action | None = None
     input_check_csv_formula: Action | None = None
+    # New tenants opt into attachment-triggered CSV inspection. Old saved records are
+    # grandfathered Off in legacy_attachment_policy until explicitly updated.
+    input_attachment_csv_mode: Literal["auto", "off"] = "auto"
+    output_attachment_csv_mode: Literal["auto", "off"] = "auto"
     output_check_pii: Action | None = None
     output_check_encoded_pii: Action | None = None
     output_check_secrets: Action | None = None
@@ -192,6 +196,21 @@ class TenantRecord(Contract):
     output_rule_actions: RuleActions = Field(default_factory=dict)
     # Independent Windows event rule settings; absent means Off. Never run on AI text.
     sigma_rule_actions: dict[str, Literal["allow", "flag", "block"]] = Field(default_factory=dict, max_length=4096)
+
+    @model_validator(mode="before")
+    @classmethod
+    def legacy_attachment_policy(cls, data):
+        """A saved tenant from before binary ingress must not silently gain file scanning.
+
+        Stored records have a positive revision. New unsaved tenants default to Auto,
+        but existing records missing the fields retain explicit Off on both stages.
+        """
+        if isinstance(data, dict) and isinstance(data.get("revision"), int) and data["revision"] > 0:
+            if "input_attachment_csv_mode" not in data or "output_attachment_csv_mode" not in data:
+                data = dict(data)
+                data.setdefault("input_attachment_csv_mode", "off")
+                data.setdefault("output_attachment_csv_mode", "off")
+        return data
 
     @model_validator(mode="before")
     @classmethod
