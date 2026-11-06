@@ -1595,3 +1595,72 @@ test("CSV formula rules use the same tenant settings, examples and dashboard res
   await expect(page.locator("#tenant-check-input-csv_formula")).toHaveValue("");
 });
 
+
+
+test("selected browser CSV bytes use authenticated attachment API, ignore claimed PDF type and hold Block", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo8");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#input-attachments")).toBeEnabled();
+  await page.locator("#tenant-check-input-csv_formula").selectOption("block");
+  const actualCsv = Buffer.from("name,value\nSynthetic,=2+3", "utf8");
+  // Deliberately misleading filename/MIME; server must classify received bytes only.
+  await page.locator("#input-attachments").setInputFiles({
+    name: "report.pdf", mimeType: "application/pdf", buffer: actualCsv,
+  });
+  const response = page.waitForResponse(r => r.url().endsWith("/v1/checks/input/attachments") && r.request().method() === "POST");
+  await page.locator("#run-input").click();
+  const checked = await response;
+  const payload = checked.request().postDataJSON();
+  expect(payload.attachments_b64).toEqual([actualCsv.toString("base64")]);
+  expect(JSON.stringify(payload)).not.toContain("report.pdf");
+  const outcome = await checked.json();
+  expect(outcome.findings.map(f => f.rule_id)).toContain("csv_formula.potential_formula");
+  expect(outcome.effective_action).toBe("block");
+  expect(outcome.attachments[0].kind).toBe("csv");
+  await expect(page.locator("#input-results .attachment-receipts")).toContainText("csv_structure_recognized_only");
+  await expect(page.locator("#input-results")).toContainText("Recommended: block");
+  await expect(page.locator("#answer")).toBeHidden();
+  await expect(page.locator("#input-results")).not.toContainText("Synthetic,=2+3");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+});
+
+test("unsupported attachment bytes fail closed in observe mode, never reach proposed output", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo9");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo9");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  const payload = Buffer.from("%PDF-1.7\nsynthetic-test-fixture", "utf8");
+  await page.locator("#input-attachments").setInputFiles({
+    name: "looks-like.csv", mimeType: "text/csv", buffer: payload,
+  });
+  const response = page.waitForResponse(r => r.url().endsWith("/v1/checks/input/attachments") && r.request().method() === "POST");
+  await page.locator("#run-input").click();
+  const checked = await response;
+  expect((await checked.json()).evaluation_status).toBe("incomplete");
+  await expect(page.locator("#input-results .attachment-receipts")).toContainText("pdf_parser_unavailable");
+  await expect(page.locator("#input-results")).toContainText("Recommended: block");
+  await expect(page.locator("#answer")).toBeHidden();
+  await expect(page.locator("#run-output")).toBeDisabled();
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+});
+
+test("over-budget browser file is rejected before reading or sending any attachment API request", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo9");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo9");
+  let uploads = 0;
+  await page.route("**/v1/checks/input/attachments", route => { uploads++; return route.abort(); });
+  await page.locator("#input-attachments").setInputFiles({
+    name: "large.csv", mimeType: "text/csv", buffer: Buffer.alloc(32001, 65),
+  });
+  await page.locator("#run-input").click();
+  await expect(page.locator("#result-status")).toHaveText("Check failed");
+  await expect(page.locator("#run-error")).toContainText("exceeds 32,000 bytes");
+  await expect(page.locator("#answer")).toBeHidden();
+  expect(uploads).toBe(0);
+});
