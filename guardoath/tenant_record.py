@@ -195,7 +195,9 @@ class TenantRecord(Contract):
     input_rule_actions: RuleActions = Field(default_factory=dict)
     output_rule_actions: RuleActions = Field(default_factory=dict)
     # Independent Windows event rule settings; absent means Off. Never run on AI text.
-    sigma_rule_actions: dict[str, Literal["allow", "flag", "block"]] = Field(default_factory=dict, max_length    @model_validator(mode="before")
+    sigma_rule_actions: dict[str, Literal["allow", "flag", "block"]] = Field(default_factory=dict, max_length=4096)
+
+    @model_validator(mode="before")
     @classmethod
     def renamed_check_fields(cls, data):
         """Records stored before 2026-11-04 hold one field per check (check_<id>) and one rule map (rule_actions),
