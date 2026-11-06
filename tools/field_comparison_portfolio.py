@@ -35,12 +35,102 @@ def scenarios():
                           for i, (left, right, op) in enumerate(relations))
 
 
-async def audit_example(engine, policy, rule_id, text, kind, stage, unavailable=None):
-    # The generator gives a stable reason code with None (record_rules *_unavailable, 2026-11-05). It is reported, never
-    # accepted: this audit does not prove infeasibility itself.
+# This verifier deliberately does NOT call the generator's _solve/_levels helpers.
+# For the small unsatisfiable portfolios it independently proves impossibility via
+# negative-cycle detection in difference constraints. Unknown is never accepted.
+_NEGATED = {"lt": "ge", "le": "gt", "eq": "ne", "ge": "lt", "gt": "le", "ne": "eq"}
+_PROOF_BRANCH_LIMIT = 128
+
+
+def _constraint_feasibility(relations):
+    """True=feasible, False=proved impossible, None=unknown/bounded search.
+
+    Relations have no anchored constants: the relative ordering problem is
+    equivalent to integer difference constraints (strict < is <= -1), for
+    number and date comparisons. Branch for !=; cap search, never guess.
+    """
+    nodes = {path for left, right, _ in relations for path in (left, right)}
+    if len(nodes) > 256 or len(relations) > 256:
+        return None
+    budget = [_PROOF_BRANCH_LIMIT]
+
+    def solve(rows):
+        budget[0] -= 1
+        if budget[0] < 0:
+            return None
+        for index, (left, right, op) in enumerate(rows):
+            if op == "ne":
+                a = solve(rows[:index] + [(left, right, "lt")] + rows[index + 1:])
+                if a is True:
+                    return True
+                b = solve(rows[:index] + [(left, right, "gt")] + rows[index + 1:])
+                if b is True:
+                    return True
+                return False if a is False and b is False else None
+        edges = []
+        for left, right, op in rows:
+            if op == "le":
+                edges.append((right, left, 0))
+            elif op == "lt":
+                edges.append((right, left, -1))
+            elif op == "ge":
+                edges.append((left, right, 0))
+            elif op == "gt":
+                edges.append((left, right, -1))
+            elif op == "eq":
+                edges.extend(((right, left, 0), (left, right, 0)))
+            else:
+                return None
+        dist = dict.fromkeys(nodes, 0)
+        for _ in nodes:
+            changed = False
+            for start, end, weight in edges:
+                if dist[end] > dist[start] + weight:
+                    dist[end] = dist[start] + weight
+                    changed = True
+            if not changed:
+                return True
+        return False  # a relaxation on the |V|-th pass proves a negative cycle
+
+    return solve(list(relations))
+
+
+def _infeasibility_proved(comparisons, rule_id, kind, unavailable):
+    """Only prove a generator's precise impossible-portfolio reason.
+
+    Do not turn search limits, schema/type conflicts or unexplained None into
+    passing cases. The real Engine still validates every available example.
+    """
+    expected = "cannot_all_pass" if kind == "benign" else "cannot_fail_alone"
+    if not isinstance(unavailable, dict) or unavailable.get("code") != expected:
+        return False
+    local_id = rule_id.removeprefix("business.")
+    target = next((c for c in comparisons if c.rule_id == local_id), None)
+    if target is None:
+        return False
+    active = [c for c in comparisons if set(c.stages) & set(target.stages)]
+    types = {}
+    for c in active:
+        for pointer in (c.left, c.right):
+            if pointer in types and types[pointer] != c.value_type:
+                return False
+            types[pointer] = c.value_type
+    rows = []
+    for c in active:
+        op = _NEGATED[c.operator] if c is target and kind == "positive" else c.operator
+        rows.append((c.left, c.right, op))
+    return _constraint_feasibility(rows) is False
+
+
+async def audit_example(engine, policy, rule_id, text, kind, stage, unavailable=None, comparisons=()):
+    # A generator's None is acceptable ONLY when a separate, bounded proof
+    # establishes that the requested witness cannot exist. Preserve the absence:
+    # it must never be mislabeled as an evaluated benign JSON document.
     if text is None:
+        proven = _infeasibility_proved(comparisons, rule_id, kind, unavailable)
         return {"kind": kind, "stage": stage.value, "target_rule_id": rule_id,
-                "accepted": False, "status": "unavailable",
+                "accepted": proven, "status": "unavailable",
+                "proof_status": "independently_proved_impossible" if proven else "unverified",
                 "reason": ("generator_unavailable:" + unavailable["code"]) if unavailable
                 else "generator_returned_none_without_reason"}
     request = CheckRequest(application_id=policy.application_id, policy_version=policy.version,
@@ -75,7 +165,7 @@ async def audit_portfolio(name, comparisons):
         for stage in (Stage.INPUT, Stage.OUTPUT):
             for kind, field in (("positive", "example"), ("benign", "look_alike")):
                 cases.append(await audit_example(engine, policy, rule_id, row[field], kind, stage,
-                                                 row.get(field + "_unavailable")))
+                                                 row.get(field + "_unavailable"), comparisons))
     return {"scenario": name, "comparison_count": len(comparisons),
             "case_count": len(cases), "accepted_cases": sum(c["accepted"] for c in cases),
             "cases": cases}
@@ -92,7 +182,7 @@ async def run_audit():
                                            "tools/field_comparison_portfolio.py")},
             "acceptance_passed": all(c["accepted"] for r in rows for c in r["cases"]),
             "notes": ["Genuine overlaps retained; absence of only the target finding is not benignity.",
-                      "No feasibility solver; a contradictory portfolio must not yield a fake benign sample.",
+                      "Independently proved impossible witnesses may be unavailable; no false clean JSON is manufactured.",
                       "None without an explicit generator reason is reported as an acceptance gap.",
                       "No generated documents or submitted values are included in this report."],
             "scenarios": rows}
