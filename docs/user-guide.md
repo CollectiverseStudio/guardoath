@@ -672,6 +672,21 @@ lies inside another, it is not reported (see [One value, one finding](#one-value
 and the outer value's label is used. When two pattern types match exactly the same characters
 with the same score, both are reported and the label is `[REDACTED_SENSITIVE]`.
 
+**Multiple-value redaction (November 2026).** If a response contains several
+separate supported identifiers, such as `Email jane@example.com and SSN 219-09-9999`,
+the local checker returns `Email [REDACTED_EMAIL_ADDRESS] and SSN [REDACTED_US_SSN]`
+**only after** its existing second-pass revalidation has completed. Redacted
+text is assembled in one forward pass across the nonoverlapping, precedence-resolved
+spans rather than repeatedly copying the whole string for each match. This is
+a CPU/memory hot-path improvement for many values, not a new detection type.
+It preserves overlap labels, all findings, tenant stage/actions, 500-ms checker
+deadline, privacy-safe fail-closed behavior and withholding on any recheck failure.
+See `tests/test_pii_redaction_assembly.py` for independent original-output
+parity, long synthetic multi-span input and actual Input/Output Engine rechecks.
+**This does not establish that intermittent single-value PII or redaction
+recheck 500-ms timeouts are resolved**; production acceptance remains gated
+on Issue #30's repeated reliable initial and recheck runs.
+
 ### Limitations
 
 - **Lookalikes are reported.** The patterns are broad by design: dates and timestamps
