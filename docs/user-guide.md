@@ -693,6 +693,20 @@ with the same score, both are reported and the label is `[REDACTED_SENSITIVE]`.
   numbers can exceed the policy's `timeout_ms`; the check then reports `checker_timeout` and the
   result is incomplete, never a pass.
 
+**Local privacy worker isolation (November 2026).** The PII scanner (including the second scan
+that verifies redacted content) uses a bounded four-worker local executor independent of
+the shared asyncio default thread pool. This reduces queue starvation when unrelated
+checkers or API work saturate that shared pool. It does **not** extend the existing
+`timeout_ms` budget, change the tenant's actions, skip any recognizer, permit leaking a
+transformed value without a successful recheck, or eliminate all possible timeouts.
+For example, with the shared default executor deliberately occupied, a synthetic
+`Contact jane@example.com` request configured for Redact must still produce
+`[REDACTED_EMAIL_ADDRESS]` only after a clean second scan. If either pass cannot
+complete by its configured deadline, GuardOath withholds the transformed content and
+applies the tenant's fail-closed decision. See `tests/test_pii_executor_isolation.py`.
+The reproducible test isolates queueing; actual recognizer CPU hotspots remain
+under investigation in Issue #30.
+
 ### Regression suite
 
 ```powershell
