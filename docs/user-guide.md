@@ -2175,3 +2175,39 @@ Batch B extends the **existing** `cross_field` checker and tenant-stored `busine
 ```
 
 These checks enforce the tenant's own authenticated configuration; **they do not establish external authority, permission ownership, supply-chain provenance, or real-time quarantine data freshness**. Customers must protect and maintain the configuration. Implementation: `guardoath/advanced_identity.py`, `guardoath/models.py`, `guardoath/business.py`, `guardoath/tenant_record.py`, `guardoath/record_rules.py`, and `tests/test_advanced_identity.py` for all four rules, bounded and malformed input, private reference presentation, concurrent findings and authenticated save/API stage actions. The latest implementation commit requires its own 13 Tests and three CodeQL exact-SHA verification before being release-accepted. FC-035, 042–045, 047, 049, 050 remain pending provenance-aware conversion, chronology or external-reference implementation.
+
+
+### Field Comparisons Batch C — FC-035, FC-042, FC-043, FC-050 (tenant conversion/time rules)
+
+These four controls use the same `cross_field` checker and the **saved tenant record**, not an independent model or service. Set `input_check_cross_field` / `output_check_cross_field` to `block`, `flag` or `allow`, and populate `advanced_conversion_time` with one or more rules. Each rule has a unique lowercase `rule_id`, a `kind`, a `fields` mapping from the required logical role to an **absolute JSON Pointer** (such as `/invoice/amount`), and `stages` (`input`, `output` or both). Configure stage-specific `business.<rule_id>` settings under `input_rule_actions` / `output_rule_actions` to override the check, or `off` to skip only that rule. Every applicable failure is returned, with private fixed explanations.
+
+| Template | Input example and expected behavior | Legitimate boundary / limitation |
+|---|---|---|
+| FC-035 `currency_conversion_cap` | Payment 110 EUR into invoice 100 USD at a **tenant-saved** USD/EUR rate of exactly 6/5 violates `payment×6 ≤ invoice×5` and returns `business.<rule_id>`. | Payment 80 EUR is allowed; both declared currencies must match the tenant-pinned pair. The tenant saves positive integer `trusted_rate_numerator` and `trusted_rate_denominator`, source/destination ISO three-letter currency codes, nonempty versioned `rate_reference`, and explicit timezone-aware `rate_asof`. These are **administratively configured snapshots**, not verified live exchange feeds or proof of external authority. The submitted document cannot supply or override the configured rate; no rate is echoed in the dashboard examples. |
+| FC-042 `unit_load_kg_cap` | 1500 lb exceeds a 600 kg limit (the exact factor is 0.45359237 kg/lb). | 1000 lb is within 600 kg. Only the explicit units `kg` and `lb` are supported; unsupported spellings, negative/bool/float-integer mismatches or missing fields produce a finding, not silent conversion. |
+| FC-043 `cold_chain_excursion` | 10:00Z to 10:45Z with a 30-minute allowance fails. | Exactly 30 minutes passes. Start/end must be explicit-offset ISO 8601 datetimes, elapsed duration nonnegative and no more than 366 days, allowance integer 0–527040 minutes. The checker compares timestamps, **not** proof that sensor events are genuine or complete. |
+| FC-050 `lifecycle_chronology` | Shipment at 12:00Z after a delivery at 11:00Z fails. | `order_at ≤ shipment_at ≤ delivery_at ≤ return_at` when return exists; `return_at` may be genuinely absent before any return. A supplied null/invalid return timestamp fails. Timestamps must carry timezone offsets; this is ordering validation, not cross-system attestation. |
+
+FC-035 configuration example (illustrative internal reference; store it only through authorized tenant settings):
+
+```json
+{
+  "rule_id": "fx_invoice",
+  "kind": "currency_conversion_cap",
+  "fields": {
+    "payment_amount": "/payment_amount",
+    "payment_currency": "/payment_currency",
+    "invoice_amount": "/invoice_amount",
+    "invoice_currency": "/invoice_currency"
+  },
+  "stages": ["input", "output"],
+  "source_currency": "EUR",
+  "destination_currency": "USD",
+  "trusted_rate_numerator": 6,
+  "trusted_rate_denominator": 5,
+  "rate_reference": "internal-fx-v2026-11-06",
+  "rate_asof": "2026-11-06T00:00:00Z"
+}
+```
+
+All four rules use bounded, exact numeric conversions or integer-microsecond timestamp comparisons. Invalid JSON/fields, unsupported units, bad offset dates, zero/negative rate factors and overbudget samples fail closed without revealing submitted or stored reference values. The implementation **does not retrieve, purchase or certify FX, clinical, permit or logistics data**. The active tenant record governs validation and actions at both stages. This section documents implementation contracts; production readiness remains separately gated by exact-SHA GitHub Actions, recurring local PII 500-ms failures, attachment-mode provenance and post-deploy live checks.
