@@ -2017,6 +2017,15 @@ When a tenant has attachment CSV inspection set to **Auto** on a stage and sends
 
 **Implementation:** `guardoath/attachment_ingress.py` (existing engine and tenant Policy), `guardoath/app.py` (existing sensitive-data group), and `tests/test_csv_attachment_pii.py` (authenticated positive/benign/Off/Input/Output/observe/redaction/multi-finding/metering/missing-checker and optional real offline PII tests). The shipped 500-ms privacy deadline and fail-closed behavior are unchanged; historical intermittent initial-scan/redaction-recheck timing failures remain open in Issue #30.
 
+#### Local PII scan capacity and incomplete privacy decisions
+
+**Use case:** Many simultaneous tenant messages request local PII detection or redaction. GuardOath runs supported recognizers in a process-shared, dedicated four-worker PII pool. A bounded admission slot is held until the actual scanning thread completes, even when an awaiting request is cancelled or reaches its timeout; unlike the executor's ordinary unbounded queue, additional scans do **not** wait indefinitely behind occupied workers. An excess scan returns a `pii` checker result with `status=error` and `error_code=pii_capacity_exceeded`. It is **not** reported as a clean or redacted scan.
+
+**Expected behavior / configuration:** On an **enforce** tenant whose required PII checker has `failure_action=block`, capacity exhaustion produces `evaluation_status=incomplete`, `recommended_action=block` and `effective_action=block`; no raw identifiers or fabricated redacted preview are returned. Existing tenant Input/Output actions, disabled rules, offline recognizers and the shipped 500-ms PII timeout are unchanged. A tenant in **observe** mode must independently honor an incomplete privacy assessment before forwarding or displaying text; observe is not an enforcement guarantee.
+
+**Limitations:** This provides bounded admission, backpressure and cancellation-safe slot recovery, **not** a higher scanning throughput guarantee or proof that all historical individual recognizer/redaction recheck 500-ms timeouts are resolved. Each actual scan still obeys its original deadline and can fail closed. The deterministic regression suite is `tests/test_pii_capacity_backpressure.py`; track remaining initial/recheck latency investigations in [Issue #30](https://github.com/CollectiverseStudio/guardoath/issues/30).
+
+
 
 ### CSV attachment control-character integrity
 
