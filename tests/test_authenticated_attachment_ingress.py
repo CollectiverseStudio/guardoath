@@ -56,21 +56,68 @@ def test_auto_detects_real_csv_bytes_on_both_stages_with_tenant_actions():
     assert store.store.get("demo1").used(usage_month()) == 2
 
 
-def test_new_tenant_auto_default_and_legacy_explicit_off_are_distinct():
+def test_saved_legacy_record_missing_attachment_settings_defaults_to_auto():
     new, token = tenant("demo1")
-    assert new.input_attachment_csv_mode == "auto"
     original = new.model_dump(exclude={"input_attachment_csv_mode", "output_attachment_csv_mode"})
-    original["revision"] = 1
+    original["revision"] = 7
     loaded = TenantRecord.model_validate(original)
-    assert loaded.input_attachment_csv_mode == "off"
-    assert loaded.output_attachment_csv_mode == "off"
+    assert loaded.input_attachment_csv_mode == "auto"
+    assert loaded.output_attachment_csv_mode == "auto"
+    client, service = harness((loaded, token))
+    for stage in ("input", "output"):
+        response = send(client, token, stage=stage)
+        assert response.status_code == 200, response.text
+        result = response.json()
+        assert result["effective_action"] == "block"
+        assert result["attachments"][0]["evaluation_status"] == "complete"
+        assert "csv_formula.potential_formula" in {f["rule_id"] for f in result["findings"]}
+    assert service.store.get("demo1").used(usage_month()) == 2
+
+
+def test_explicit_saved_attachment_off_remains_off_after_reload():
+    new, token = tenant("demo1")
+    saved = new.model_dump()
+    saved.update(revision=7, input_attachment_csv_mode="off", output_attachment_csv_mode="off")
+    loaded = TenantRecord.model_validate(saved)
+    assert loaded.input_attachment_csv_mode == loaded.output_attachment_csv_mode == "off"
     client, _ = harness((loaded, token))
-    result = send(client, token).json()
-    assert result["effective_action"] == "allow"
-    assert result["attachments"][0]["evaluation_status"] == "not_inspected_policy_off"
-    assert result["checker_results"][-1]["status"] == "skipped"
-    enabled, _ = harness((new, token))
-    assert send(enabled, token).json()["effective_action"] == "block"
+    for stage in ("input", "output"):
+        result = send(client, token, stage=stage).json()
+        assert result["effective_action"] == "allow"
+        assert result["attachments"][0]["evaluation_status"] == "not_inspected_policy_off"
+        assert result["checker_results"][-1]["status"] == "skipped"
+
+
+def test_partial_legacy_setting_preserves_explicit_off_and_autos_other_stage():
+    new, token = tenant("demo1")
+    saved = new.model_dump(exclude={"output_attachment_csv_mode"})
+    saved.update(revision=7, input_attachment_csv_mode="off")
+    loaded = TenantRecord.model_validate(saved)
+    assert loaded.input_attachment_csv_mode == "off"
+    assert loaded.output_attachment_csv_mode == "auto"
+    client, _ = harness((loaded, token))
+    assert send(client, token, stage="input").json()["attachments"][0]["evaluation_status"] == "not_inspected_policy_off"
+    result = send(client, token, stage="output").json()
+    assert result["effective_action"] == "block"
+    assert result["attachments"][0]["evaluation_status"] == "complete"
+
+
+def test_incomplete_attachment_blocks_even_with_observe_flag_failure_and_explicit_off():
+    for stage in ("input", "output"):
+        one = tenant("demo1", mode="observe", failure_action="flag",
+                     input_attachment_csv_mode="off", output_attachment_csv_mode="off")
+        client, _ = harness(one)
+        for raw, expected in ((PDF, "pdf_parser_unavailable"),
+                              (b"x" * 32001, "attachment_budget_exceeded"),
+                              (b'name,value\\n"unterminated', "malformed_csv")):
+            response = send(client, one[1], stage=stage, files=(raw,))
+            assert response.status_code == 200, response.text
+            result = response.json()
+            assert result["evaluation_status"] == "incomplete"
+            assert result["recommended_action"] == result["effective_action"] == "block"
+            assert result["attachments"][0]["reason"] == expected
+            assert result["attachments"][0]["evaluation_status"] == "incomplete"
+
 
 
 def test_two_csv_files_preserve_all_findings_and_clean_file_passes():
