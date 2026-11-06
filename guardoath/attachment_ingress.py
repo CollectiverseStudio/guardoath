@@ -2,7 +2,8 @@
 
 The API envelope is Base64 because the existing ingress is strict JSON, but only decoded,
 server-received bytes activate the file probe. User-supplied names and MIME are ignored.
-This module recognizes *only* structural UTF-8 CSV. Its cells use the existing csv_formula checker and tenant-enabled prompt_attack and secrets checkers, not a semantic file parser.
+This module recognizes *only* structural UTF-8 CSV. Its cells use the existing csv_formula checker and tenant-enabled prompt_attack, secrets and optional local pii checkers, not a semantic file parser.
+File redaction is not supported: a tenant PII Redact finding blocks the whole file request, including observe mode.
 """
 from __future__ import annotations
 
@@ -72,6 +73,7 @@ async def inspect_attachments(record: TenantRecord, stage: Stage, contents: tupl
     # Never enable a tenant-disabled check or bypass an explicit attachment Off.
     prompt_action = record.action("prompt_attack", stage)
     secrets_action = record.action("secrets", stage)
+    pii_action = record.action("pii", stage)
     file_rules = [Rule(checker_id="csv_formula", on_finding=stage_action, stages=(stage,))]
     selected_checkers = {"csv_formula": checkers["csv_formula"]}
     if prompt_action is not None:
@@ -80,12 +82,23 @@ async def inspect_attachments(record: TenantRecord, stage: Stage, contents: tupl
     if secrets_action is not None:
         file_rules.append(Rule(checker_id="secrets", on_finding=secrets_action, stages=(stage,)))
         selected_checkers["secrets"] = checkers["secrets"]
+    if pii_action is not None:
+        # File bytes have no safe transformed-file return contract. A tenant Redact
+        # policy must scan the CSV but BLOCK if a PII finding is present rather
+        # than returning a fabricated/redacted chat-only preview. Do not modify
+        # the tenant record or weaken its ordinary message redaction behavior.
+        file_rules.append(Rule(checker_id="pii", on_finding=(Action.BLOCK if pii_action == Action.REDACT
+                                                             else pii_action), stages=(stage,)))
+        # Missing optional local PII dependencies yield checker_unavailable and
+        # the existing Engine's required-check/incomplete fail-closed pathway.
+        selected_checkers["pii"] = checkers.get("pii")
     allowed_rule_ids = {"csv_formula.potential_formula"}
     rule_actions = {
         rule_id: action for rule_id, action in record.rule_actions_on(stage).items()
         if rule_id in allowed_rule_ids or
         (prompt_action is not None and rule_id.startswith("prompt_attack.")) or
-        (secrets_action is not None and (rule_id.startswith("secrets.") or rule_id.startswith("confidential.")))
+        (secrets_action is not None and (rule_id.startswith("secrets.") or rule_id.startswith("confidential."))) or
+        (pii_action is not None and rule_id.startswith("pii.") and not rule_id.startswith("pii.encoded_"))
     }
     # The credential checker uses these exact tenant settings for ordinary text as
     # well. The file Engine has ONE active stage: filter and scope each term's
@@ -97,6 +110,11 @@ async def inspect_attachments(record: TenantRecord, stage: Stage, contents: tupl
                                                     for term in record.confidential_terms
                                                     if stage in term.stages)}
                        if secrets_action is not None else {})
+    privacy_settings = ({"detect_labeled_sensitive_data": record.detect_labeled_sensitive_data,
+                         "privacy_patterns": record.privacy_patterns,
+                         "disabled_privacy_entities": record.disabled_privacy_entities,
+                         "privacy_min_score": record.privacy_min_score}
+                        if pii_action is not None else {})
     policy = Policy(
         application_id=record.tenant_id, version=TENANT_POLICY_VERSION,
         mode=record.mode, timeout_ms=record.timeout_ms, failure_action=record.failure_action,
@@ -104,6 +122,7 @@ async def inspect_attachments(record: TenantRecord, stage: Stage, contents: tupl
         input_rule_actions=rule_actions if stage == Stage.INPUT else {},
         output_rule_actions=rule_actions if stage == Stage.OUTPUT else {},
         **secret_settings,
+        **privacy_settings,
     )
     engine = Engine([policy], selected_checkers) if mode == "auto" else None
     receipts = []
@@ -137,12 +156,23 @@ async def inspect_attachments(record: TenantRecord, stage: Stage, contents: tupl
             results.extend(evaluated.checker_results)
             findings.extend(evaluated.findings)
             actions.append(evaluated.recommended_action)
+            # A PII Redact finding on a CSV requires a transformed FILE, which
+            # this API cannot return or validate. No false clean/redacted claim.
+            # The file must be withheld even in observe mode; non-PII rules and
+            # all PII findings are still retained by the same Engine.
+            unredactable_pii = (pii_action == Action.REDACT and
+                                any(result.checker_id == "pii" and result.status == "flagged"
+                                    for result in evaluated.checker_results))
+            if unredactable_pii:
+                actions.append(Action.BLOCK)
+                incomplete = True
+                receipt["reason"] = "attachment_redaction_unavailable"
             if evaluated.evaluation_status == "incomplete":
                 # A partial file inspection is not safe to pass even if the
                 # customer's ordinary text-check failure_action is Flag.
                 actions.append(Action.BLOCK)
                 incomplete = True
-            receipt["evaluation_status"] = evaluated.evaluation_status
+            receipt["evaluation_status"] = ("incomplete" if unredactable_pii else evaluated.evaluation_status)
             receipts.append(receipt)
             continue
         results.append(result)
