@@ -2025,6 +2025,8 @@ When a tenant has attachment CSV inspection set to **Auto** on a stage and sends
 
 **Limitations:** This provides bounded admission, backpressure and cancellation-safe slot recovery, **not** a higher scanning throughput guarantee or proof that all historical individual recognizer/redaction recheck 500-ms timeouts are resolved. Each actual scan still obeys its original deadline and can fail closed. The deterministic regression suite is `tests/test_pii_capacity_backpressure.py`; track remaining initial/recheck latency investigations in [Issue #30](https://github.com/CollectiverseStudio/guardoath/issues/30).
 
+**PII context-window indexing (2026-11-06):** The local privacy-pattern scanner now tokenizes each inspected field and its JSON-key hint once, then uses a bounded word-end index for repeated contextual-score decisions rather than re-scanning every earlier word for each potential finding. For a synthetic text field such as `date of birth = 12/31/1990`, the same contextual cue, input/output policy actions, enabled entities, score thresholds and redaction behavior still apply. The index is ephemeral to that single field; it does not cache messages between tenants or requests. `tests/test_pii_context_window.py` checks parity with the prior linear oracle, exact boundaries, JSON-key hints, benign contexts and long text. This removes a repeated CPU cost but **does not yet demonstrate that the intermittent 500-ms recognizer or redaction-recheck CI failures are fixed**; preserve the existing deadline, fail-closed behavior and full exact-SHA release gate.
+
 
 
 ### CSV attachment control-character integrity
