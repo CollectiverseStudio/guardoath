@@ -27,3 +27,15 @@
 - `guardoath/attachment_ingress.py` requires mandatory Block for invalid probe and partial engine inspection.
 - `tests/test_authenticated_attachment_ingress.py` checks legacy missing/explicit/mixed modes and observe+Flag+Off incomplete Block.
 - Known failing PII job: [Tests 42228089099 / local-pii (3.13)](https://github.com/CollectiverseStudio/guardoath/actions/runs/42228089099/job/127926602314) — synthetic `privacy/date_of_birth1.input`, 560.611ms versus unchanged 500ms; dependent HTML report failure. Green reruns do not close the reliability defect.
+
+
+## Read-only production legacy-mode inventory
+
+After AWS access is available, run this **from the repository root**, using the existing read-only permissions or approved administrative profile. It does not change DynamoDB records or output any tenant identifiers or private record values:
+
+```powershell
+cd C:\Users\bellgj\Documents\Personal\collectiverse\guardoath
+python -m tools.attachment_mode_audit --profile collectiverse-prod --region us-east-1 --table guardoath-tenants
+```
+
+The tool scans only the `record` attribute with strongly consistent reads and emits aggregate counts of `missing`, `auto`, `off`, and `invalid` for Input and Output; it also reports unparseable records and always reports `mutated_records: 0`. It needs the repository's existing optional boto3 AWS dependency and AWS permissions for `dynamodb:Scan`. It does **not** distinguish intentionally saved Off from system-materialized legacy Off; any nonzero Off count requires the separate provenance review described above. Test contract: `tests/test_attachment_mode_audit.py`. No automatic rewrite or credential disclosure.
