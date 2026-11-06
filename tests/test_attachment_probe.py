@@ -142,3 +142,28 @@ def test_benign_unicode_cells_and_escaped_formula_text_remain_supported(value):
     assert report.status == "recognized"
     assert report.kind == "csv"
     assert report.reason == "csv_structure_recognized_only"
+
+
+@pytest.mark.parametrize("control", [chr(point) for point in range(0x80, 0xA0)])
+def test_every_utf8_c1_control_is_invalid_csv_not_inspected(control):
+    # U+0085 (NEL), U+009B (CSI) and U+009D (OSC) can change rendering;
+    # the same structural fail-closed contract applies to all 32 C1 controls.
+    payload = ("name,value\\nSynthetic," + control + "=2+3").replace("\\n", "\n").encode("utf-8")
+    result = classify_attachment(payload)
+    assert result.kind == "unknown"
+    assert result.status == "invalid"
+    assert result.reason == "unsafe_csv_control_characters"
+    assert result.byte_count == len(payload)
+    assert result.sha256 == hashlib.sha256(payload).hexdigest()
+    assert not result.csv_text_supported
+    assert "Synthetic" not in str(result) and "=2+3" not in str(result)
+
+
+@pytest.mark.parametrize("value", [
+    "Málaga", "東京", "مرحبا", "👩\\u200d🔬", "plain text with normal spaces",
+])
+def test_c1_integrity_check_keeps_legitimate_international_csv(value):
+    payload = ("name,value\\nSynthetic," + value).replace("\\n", "\n").encode("utf-8")
+    report = classify_attachment(payload)
+    assert report.kind == "csv" and report.status == "recognized"
+    assert report.reason == "csv_structure_recognized_only"

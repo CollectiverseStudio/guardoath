@@ -54,7 +54,9 @@ def has_hidden_csv_formula_prefix(cell: str) -> bool:
 def has_unsafe_csv_controls(value: str) -> bool:
     return any(
         (0 < ord(char) < 32 and char not in "\t\r\n")
-        or ord(char) == 127
+        # C1 includes NEL, CSI and OSC, which can change line/terminal rendering
+        # even when a strict UTF-8 CSV parser accepts the cell as ordinary text.
+        or 0x7F <= ord(char) <= 0x9F
         or char in UNSAFE_BIDI_CONTROLS
         for char in value
     )
