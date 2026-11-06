@@ -2,6 +2,7 @@
 privacy pattern code, with bounded scanning and opt-in transformations."""
 
 import asyncio
+from bisect import bisect_right
 from concurrent.futures import ThreadPoolExecutor
 from threading import BoundedSemaphore
 import json
@@ -104,6 +105,21 @@ def resolve_overlaps(candidates, check_deadline=lambda: None):
         kept.append((start, end, entity, source))
         containers.append((start, end, score))
     return kept
+
+
+
+def _context_cue_matches_at(words, ends, start, hint_words, context):
+    """Match the same five preceding words, current word and field hint as the
+    original linear lookup, without walking the entire token list per finding.
+
+    Ends are monotonically sorted with words. The first token whose end is
+    strictly greater than start is the original context anchor; bisect_right
+    retains that exact boundary behavior for overlapping spans. All tokens
+    stay local to a scanned field, never cached between users.
+    """
+    index = bisect_right(ends, start)
+    window = (word for _, _, word in words[max(0, index - CONTEXT_WORDS_BEFORE):index + 1])
+    return any(cue in word for cue in context for word in (*window, *hint_words))
 
 
 def shortest_match(expression):
@@ -255,18 +271,21 @@ def build_pii_checker():
                     found(entity, PATTERN, OWN_TIER, match.start(), match.end())
             if active:
                 words = None
+                word_ends = None
+                hint_words = None
 
                 def supported_by_context(start, context):
-                    # Up to five words before the value plus the word where it starts,
-                    # and the JSON field name; a context word may appear inside a word.
-                    nonlocal words
+                    # Up to five preceding words, the current word, and JSON key
+                    # hints. Index and tokenize only once per inspected field.
+                    nonlocal words, word_ends, hint_words
                     if words is None:
                         words = [(m.start(), m.end(), m.group().lower())
                                  for m in word_pattern.finditer(text, timeout=check_deadline())]
-                    index = next((i for i, (_, end, _) in enumerate(words) if end > start), len(words))
-                    window = [word for _, _, word in words[max(0, index - CONTEXT_WORDS_BEFORE):index + 1]]
-                    window += [m.group().lower() for m in word_pattern.finditer(hint)]
-                    return any(cue in word for cue in context for word in window)
+                        word_ends = [end for _, end, _ in words]
+                    if hint_words is None:
+                        hint_words = [m.group().lower()
+                                      for m in word_pattern.finditer(hint, timeout=check_deadline())]
+                    return _context_cue_matches_at(words, word_ends, start, hint_words, context)
 
                 def keep(score, start, context):
                     """The final score when it reaches the policy minimum, else None."""
