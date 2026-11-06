@@ -1697,7 +1697,14 @@ test("tenant dashboard persists independent attachment Auto/Off modes before rea
   await page.locator("#demo-user").selectOption("demo10");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
+  // A reset saves then reloads the authoritative tenant asynchronously. The
+  // controls can already display "auto" before that response completes; do not
+  // race a setting edit against the subsequent save/re-render.
+  const resetResponse = page.waitForResponse(r =>
+    r.url().endsWith("/v1/tenants/current/reset") && r.request().method() === "POST");
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  expect((await resetResponse).ok()).toBe(true);
+  await expect(page.locator("#tenant-message")).toContainText("Reset to the demo defaults.");
   await expect(page.locator("#tenant-attachment-mode-input")).toHaveValue("auto");
   await expect(page.locator("#tenant-attachment-mode-output")).toHaveValue("auto");
 
