@@ -109,7 +109,7 @@ def test_incomplete_attachment_blocks_even_with_observe_flag_failure_and_explici
         client, _ = harness(one)
         for raw, expected in ((PDF, "pdf_parser_unavailable"),
                               (b"x" * 32001, "attachment_budget_exceeded"),
-                              (b'name,value\\n"unterminated', "malformed_csv")):
+                              (b'name,value\n"unterminated', "malformed_csv")):
             response = send(client, one[1], stage=stage, files=(raw,))
             assert response.status_code == 200, response.text
             result = response.json()
