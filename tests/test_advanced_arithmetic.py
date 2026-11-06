@@ -181,3 +181,23 @@ def test_authenticated_saved_tenant_arithmetic_two_stage_actions_and_one_meter()
         assert body["effective_action"] == action
         assert "1000" not in response.text
     assert store.get(name).used(usage_month()) == 2
+
+
+def test_all_eight_advanced_rules_run_together_and_return_all_findings():
+    rules = []
+    payload = {}
+    for _case, kind in KINDS:
+        rule = make_rule(kind)
+        rule = rule.model_copy(update={
+            "fields": {name: "/" + kind + "/" + name for name in rule.fields}
+        })
+        clean, bad_role, bad_value = ARITHMETIC_EXAMPLES[kind]
+        payload[kind] = {**clean, bad_role: bad_value}
+        rules.append(rule)
+    for stage in (Stage.INPUT, Stage.OUTPUT):
+        result = check(engine(*rules), json.dumps(payload), stage)
+        assert result.evaluation_status == "complete"
+        assert {f.rule_id for f in result.findings} == {
+            "business." + kind for _case, kind in KINDS
+        }
+        assert result.effective_action == Action.BLOCK
