@@ -95,3 +95,72 @@ def test_tenant_can_disable_one_chat_rule_without_disabling_schema():
     assert "schema.invalid" in rule_ids(result)
     assert "prompt_attack.dan_persona" not in rule_ids(result)
     assert result.effective_action == Action.BLOCK
+
+
+def test_authenticated_api_runs_structured_and_chat_checks_with_one_tenant_policy():
+    from fastapi.testclient import TestClient
+    from guardoath.app import create_app, demo_engine
+    from guardoath.hosted import TenantService
+    from guardoath.tenant_record import new_key
+    from guardoath.tenant_store import MemoryTenantStore
+
+    token, digest = new_key("hybrid-a")
+    tenant = TenantRecord(
+        tenant_id="hybrid-a", display_name="Hybrid A", mode="enforce",
+        key_hashes=(digest,), input_check_schema="flag", input_schema=SCHEMA,
+        input_check_prompt_attack="block",
+    )
+    service = TenantService(MemoryTenantStore((tenant,)), default_checkers())
+    client = TestClient(create_app(engine=demo_engine(), credentials={}, tenants=service))
+    headers = {"Authorization": "Bearer " + token}
+
+    response = client.post("/v1/checks/input", headers=headers, json={
+        "application_id": "hybrid-a", "content_format": "json",
+        "content": json.dumps({"age": "invalid", "question": ATTACK}),
+    })
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert {"schema.invalid", "prompt_attack.dan_persona"} <= {
+        finding["rule_id"] for finding in result["findings"]
+    }
+    assert result["evaluation_status"] == "complete"
+    assert result["recommended_action"] == result["effective_action"] == "block"
+    assert ATTACK not in response.text
+    assert service.store.get("hybrid-a").used(__import__(
+        "guardoath.tenant_record", fromlist=["usage_month"]
+    ).usage_month()) == 1
+
+    benign = client.post("/v1/checks/input", headers=headers, json={
+        "application_id": "hybrid-a", "content_format": "json",
+        "content": json.dumps({"age": 35, "question": BENIGN}),
+    })
+    assert benign.status_code == 200
+    assert benign.json()["effective_action"] == "allow"
+    assert benign.json()["findings"] == []
+
+
+def test_authenticated_hybrid_request_cannot_access_another_tenant_policy():
+    from fastapi.testclient import TestClient
+    from guardoath.app import create_app, demo_engine
+    from guardoath.hosted import TenantService
+    from guardoath.tenant_record import new_key
+    from guardoath.tenant_store import MemoryTenantStore
+
+    token_a, hash_a = new_key("hybrid-a")
+    token_b, hash_b = new_key("hybrid-b")
+    a = TenantRecord(tenant_id="hybrid-a", display_name="Hybrid A", mode="enforce",
+                     key_hashes=(hash_a,), input_check_schema="flag", input_schema=SCHEMA,
+                     input_check_prompt_attack="block")
+    b = TenantRecord(tenant_id="hybrid-b", display_name="Hybrid B", mode="enforce",
+                     key_hashes=(hash_b,), input_check_prompt_attack="flag")
+    client = TestClient(create_app(engine=demo_engine(), credentials={},
+                                  tenants=TenantService(MemoryTenantStore((a, b)), default_checkers())))
+    payload = {"content_format": "json", "content": json.dumps({"age": "invalid", "question": ATTACK})}
+    denied = client.post("/v1/checks/input", headers={"Authorization": "Bearer " + token_a},
+                         json={"application_id": "hybrid-b", **payload})
+    assert denied.status_code == 403
+    allowed = client.post("/v1/checks/input", headers={"Authorization": "Bearer " + token_b},
+                          json={"application_id": "hybrid-b", **payload})
+    assert allowed.status_code == 200
+    assert allowed.json()["effective_action"] == "flag"
+    assert "schema.invalid" not in {f["rule_id"] for f in allowed.json()["findings"]}
