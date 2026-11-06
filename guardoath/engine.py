@@ -49,7 +49,7 @@ class Engine:
                 raise ValueError("Duplicate checker in policy")
             if len({r.rule_id for r in policy.comparisons}) != len(policy.comparisons):
                 raise ValueError("Duplicate field comparison")
-            if policy.comparisons and "cross_field" not in ids:
+            if (policy.comparisons or policy.advanced_arithmetic) and "cross_field" not in ids:
                 raise ValueError("Field comparisons require a cross_field checker rule")
             if len({r.rule_id for r in policy.required_sections}) != len(policy.required_sections):
                 raise ValueError("Duplicate completeness rule")
