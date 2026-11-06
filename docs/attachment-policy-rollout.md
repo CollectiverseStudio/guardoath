@@ -17,7 +17,7 @@
 2. **Missing field**: leave absent or explicitly persist `auto` with optimistic concurrency; loading the new model already resolves to Auto.
 3. **Explicit `auto`**: preserve.
 4. **Explicit `off`**: preserve initially. Earlier releases generated Off for missing legacy fields, and a subsequent save may have persisted that value. Without audited save history these are indistinguishable from intentional opt-outs. Review prior revisions/admin change history/customer intent; change only records positively identified as software-generated legacy Off, with authorized record-level change, audit log and rollback snapshot.
-5. Verify each modified tenant's authenticated `GET /v1/tenants/current` and `POST /v1/tenants/current/checks` revision behavior (or supported tenant-checks summary routes) rather than mutating DynamoDB rows without validation.
+5. Verify each modified tenant's authenticated `GET /v1/applications/current` and `POST /v1/tenants/current/checks` revision behavior (or supported tenant-checks summary routes) rather than mutating DynamoDB rows without validation.
 6. Positive probe: real CSV with synthetic formula must return the expected finding on both Auto stages. Negative probe: no uploaded bytes must not activate file scanners. Mandatory block probes: malformed CSV, supported-envelope oversized content and unsupported PDF must return `incomplete/Block` in observe and with failure_action Flag, including stage Off.
 7. Do not deploy unless latest exact-source SHA has 13 individually successful Tests jobs and 3 CodeQL jobs, with Issue #30 PII tail latency resolved and verified. Perform all 15 post-deploy live checks and have rollback ready.
 
