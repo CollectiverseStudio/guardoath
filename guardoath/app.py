@@ -17,9 +17,10 @@ from starlette.concurrency import run_in_threadpool
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from guardoath.checkers import default_checkers
+from guardoath.attachment_ingress import AttachmentCheckRequest, inspect_attachments
 from guardoath.control_registry import registry_payload
 from guardoath.config import load_policies
-from guardoath.engine import Engine
+from guardoath.engine import Engine, PRIORITY
 from pydantic import Field
 
 from guardoath.models import Action, ApiCheckRequest, CheckRequest, CheckResponse, Contract, Policy, Rule, Stage
@@ -361,14 +362,16 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             except PackSelectionError:
                 raise HTTPException(422, "Invalid or unavailable validation pack selection") from None
 
-    async def assess_tenant(request: ApiCheckRequest, record: TenantRecord, stage: Stage):
+    async def assess_tenant(request: ApiCheckRequest, record: TenantRecord, stage: Stage,
+                            attachments: tuple[bytes, ...] = ()):
         if request.application_id != record.tenant_id:
             raise HTTPException(403, "Credential does not authorize this application")
         # A tenant key runs its record's own checks only. Naming any other profile is refused (not counted).
         version = request.policy_version or TENANT_POLICY_VERSION
         if version not in tenants.policy_versions(record):
             raise HTTPException(404, "Policy version not found")
-        request = CheckRequest.model_validate({**request.model_dump(), "policy_version": version})
+        request = CheckRequest.model_validate({**request.model_dump(exclude={"attachments_b64"}),
+                                               "policy_version": version})
         engine = tenants.engine_for(record)
         with budgets.check(record.tenant_id):
             month = usage_month()
@@ -377,7 +380,28 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             except UsageLimitReached:
                 raise HTTPException(429, "Monthly check limit reached", headers={"Cache-Control": "no-store"}) from None
             try:
-                return await engine.check(request, stage)
+                response = await engine.check(request, stage)
+                if not attachments:
+                    return response
+                # File scanning is inside the existing authenticated, metered and capacity-limited
+                # tenant call. Every file runs the same Engine/checker and receives the tenant's
+                # stage and per-rule action; no separate policy database or outside service.
+                batch = await inspect_attachments(record, stage, attachments, tenants.checkers)
+                recommended = max((response.recommended_action, batch.recommended_action),
+                                  key=PRIORITY.__getitem__)
+                updated = response.model_copy(update={
+                    "findings": response.findings + batch.findings,
+                    "checker_results": response.checker_results + batch.checker_results,
+                    "recommended_action": recommended,
+                    "effective_action": Action.ALLOW if record.mode == "observe" else recommended,
+                    "evaluation_status": "incomplete" if batch.incomplete or
+                                         response.evaluation_status == "incomplete" else "complete",
+                })
+                return JSONResponse({
+                    **updated.model_dump(mode="json"),
+                    # Receipts use server-computed byte metadata and fixed format reason codes only.
+                    "attachments": list(batch.receipts),
+                }, headers={"Cache-Control": "no-store"})
             except PackSelectionError:
                 # Validation packs are not offered on tenant records: refuse the request (not counted).
                 tenants.store.release_check(record.tenant_id, month)
@@ -396,6 +420,8 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 # Each check's action on each stage (2026-11-04); no value = it does not run on that stage.
                 "input_checks": {check_id: current.action(check_id, Stage.INPUT) for check_id in CHECK_IDS},
                 "output_checks": {check_id: current.action(check_id, Stage.OUTPUT) for check_id in CHECK_IDS},
+                "attachment_csv_mode": {"input": current.input_attachment_csv_mode,
+                                        "output": current.output_attachment_csv_mode},
                 "input_rule_actions": dict(sorted(current.input_rule_actions.items())),
                 "output_rule_actions": dict(sorted(current.output_rule_actions.items())),
                 # This record's own rules (its field comparisons and required sections), for this tenant only.
@@ -557,6 +583,24 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     @api.post("/v1/checks/output", response_model=CheckResponse)
     async def check_output(request: ApiCheckRequest, principal: Annotated[str | TenantRecord, Depends(authenticate)]):
         return await assess(request, principal, Stage.OUTPUT)
+
+    @api.post("/v1/checks/input/attachments")
+    async def check_input_attachments(
+        request: AttachmentCheckRequest,
+        principal: Annotated[str | TenantRecord, Depends(authenticate)],
+    ):
+        if not isinstance(principal, TenantRecord):
+            raise HTTPException(403, "Attachments require an authenticated tenant")
+        return await assess_tenant(request, principal, Stage.INPUT, request.attachment_bytes())
+
+    @api.post("/v1/checks/output/attachments")
+    async def check_output_attachments(
+        request: AttachmentCheckRequest,
+        principal: Annotated[str | TenantRecord, Depends(authenticate)],
+    ):
+        if not isinstance(principal, TenantRecord):
+            raise HTTPException(403, "Attachments require an authenticated tenant")
+        return await assess_tenant(request, principal, Stage.OUTPUT, request.attachment_bytes())
 
     return api
 
