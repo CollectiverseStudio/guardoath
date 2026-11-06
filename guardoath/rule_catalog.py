@@ -456,7 +456,7 @@ def _build() -> dict[str, RuleInfo]:
                               f"your AI could give advice that harms someone. It catches: {title}.",
                               example, look_alike, severity))
     # Prompt attack and harmful content (2026-11-05): GuardOath's own replacements for the removed outside-provider
-    # checks (azure_prompt_shields, content_safety). guardoath.prompt_attack 35 rules, guardoath.harmful_content 30.
+    # checks (azure_prompt_shields, content_safety). guardoath.prompt_attack 36 rules, guardoath.harmful_content 30.
     for rule_id, (title, severity, _pattern, example, look_alike) in prompt_attack.RULES.items():
         rules.append(RuleInfo(rule_id, "prompt_attack", title,
                               "Turn this on if your AI reads messages, documents or web pages someone could use to take "
