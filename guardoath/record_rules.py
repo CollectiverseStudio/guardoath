@@ -475,6 +475,60 @@ def identity_rule(rule) -> dict:
     }
 
 
+CONVERSION_TIME_EXAMPLES = {
+    "unit_load_kg_cap": (
+        {"load": 1000, "load_unit": "lb", "max_kg": 600},
+        {"load": 1500, "load_unit": "lb", "max_kg": 600},
+    ),
+    "cold_chain_excursion": (
+        {"excursion_start": "2026-11-06T10:00:00Z", "excursion_end": "2026-11-06T10:15:00Z",
+         "allowed_minutes": 30},
+        {"excursion_start": "2026-11-06T10:00:00Z", "excursion_end": "2026-11-06T10:45:00Z",
+         "allowed_minutes": 30},
+    ),
+    "lifecycle_chronology": (
+        {"order_at": "2026-11-06T09:00:00Z", "shipment_at": "2026-11-06T10:00:00Z",
+         "delivery_at": "2026-11-06T11:00:00Z"},
+        {"order_at": "2026-11-06T09:00:00Z", "shipment_at": "2026-11-06T12:00:00Z",
+         "delivery_at": "2026-11-06T11:00:00Z"},
+    ),
+}
+
+
+def conversion_time_rule(rule) -> dict:
+    def document(values):
+        output = {}
+        for role, pointer in rule.fields.items():
+            if role in values:
+                _set_path(output, tuple(_segments(pointer)), values[role])
+        return json.dumps(output, separators=(",", ":"))
+    samples = CONVERSION_TIME_EXAMPLES.get(rule.kind)
+    unavailable = None if samples else {
+        "code": "private_tenant_reference",
+        "reason": "FX reference-backed conversion cannot display tenant-owned rate or reference as a sample.",
+    }
+    return {
+        "rule_id": COMPARISON_PREFIX + rule.rule_id,
+        "control_id": "cross_field",
+        "title": f"Conversion/time constraint {rule.rule_id}: {rule.kind}",
+        "use_case": f"Validate bounded {rule.kind.replace('_', ' ')} from tenant-configured JSON fields.",
+        "severity": "high",
+        "example": document(samples[1]) if samples else None,
+        "look_alike": document(samples[0]) if samples else None,
+        "example_unavailable": unavailable,
+        "look_alike_unavailable": unavailable,
+        "needs_setting": None,
+        "needs_checks": [],
+        "content_format": "json",
+        "configuration": f"{rule.kind} with pointers " + ", ".join(
+            f"{role}={pointer}" for role, pointer in rule.fields.items()) +
+            " · runs on " + stage_names(rule.stages) +
+            (" · versioned tenant FX reference (values private)" if rule.kind == "currency_conversion_cap" else ""),
+        "stages": [getattr(stage, "value", stage) for stage in rule.stages],
+        "record_rule": True,
+    }
+
+
 def record_rules(record) -> dict[str, dict]:
     """The record's own rules, by rule id: its comparisons, then its required sections."""
     rules, context = {}, _Examples(record.comparisons)
@@ -487,6 +541,9 @@ def record_rules(record) -> dict[str, dict]:
     for identity in getattr(record, "advanced_identity", ()):
         rule = identity_rule(identity)
         rules[rule["rule_id"]] = rule
+    for conversion_time in getattr(record, "advanced_conversion_time", ()):
+        rule = conversion_time_rule(conversion_time)
+        rules[rule["rule_id"]] = rule
     for section in record.required_sections:
         rule = section_rule(section, record.required_sections)
         rules[rule["rule_id"]] = rule
@@ -498,6 +555,7 @@ def record_rule_ids(record) -> dict[str, str]:
     return {**{COMPARISON_PREFIX + c.rule_id: "cross_field" for c in record.comparisons},
             **{COMPARISON_PREFIX + c.rule_id: "cross_field" for c in getattr(record, "advanced_arithmetic", ())},
             **{COMPARISON_PREFIX + c.rule_id: "cross_field" for c in getattr(record, "advanced_identity", ())},
+            **{COMPARISON_PREFIX + c.rule_id: "cross_field" for c in getattr(record, "advanced_conversion_time", ())},
             **{SECTION_PREFIX + s.rule_id: "completeness" for s in record.required_sections}}
 
 
@@ -507,6 +565,7 @@ def bad_record_rule_ids(record, static_ids) -> list[str]:
     for kind, items, prefix in (("comparison", record.comparisons, COMPARISON_PREFIX),
                                 ("arithmetic comparison", getattr(record, "advanced_arithmetic", ()), COMPARISON_PREFIX),
                                 ("identity comparison", getattr(record, "advanced_identity", ()), COMPARISON_PREFIX),
+                                ("conversion/time comparison", getattr(record, "advanced_conversion_time", ()), COMPARISON_PREFIX),
                                 ("required section", record.required_sections, SECTION_PREFIX)):
         for item in items:
             if not re.fullmatch(RECORD_RULE_ID, item.rule_id):
