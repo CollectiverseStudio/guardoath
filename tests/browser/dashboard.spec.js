@@ -1694,9 +1694,9 @@ test("output file picker retains a passed input and checks actual output bytes s
 
 test("tenant dashboard persists independent attachment Auto/Off modes before real-file inspection", async ({ page }) => {
   await page.goto("/dashboard");
-  await page.locator("#demo-user").selectOption("demo6");
+  await page.locator("#demo-user").selectOption("demo10");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
-  await expect(page.locator("#connection-status")).toContainText("Connected to demo6");
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
   await expect(page.locator("#tenant-attachment-mode-input")).toHaveValue("auto");
   await expect(page.locator("#tenant-attachment-mode-output")).toHaveValue("auto");
