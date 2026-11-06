@@ -104,3 +104,41 @@ def test_ordinary_unicode_and_legal_csv_tabs_and_multiline_are_recognized(payloa
     assert report.kind == "csv"
     assert report.status == "recognized"
     assert report.csv_text_supported
+
+
+@pytest.mark.parametrize("invisible", [
+    "\u200b",  # ZERO WIDTH SPACE
+    "\u2060",  # WORD JOINER
+    "\u00ad",  # SOFT HYPHEN
+    "\u200c",  # ZERO WIDTH NON-JOINER
+    "\u200d",  # ZERO WIDTH JOINER
+    "\u034f",  # COMBINING GRAPHEME JOINER
+    "\u180e",  # MONGOLIAN VOWEL SEPARATOR
+])
+@pytest.mark.parametrize("trigger", ["=", "+", "-", "@"])
+def test_invisible_leading_csv_formula_prefix_is_never_attested_clean(invisible, trigger):
+    payload = ("name,value\\nSynthetic,  " + invisible + " " + trigger + "2+3").replace("\\n", "\n").encode("utf-8")
+    report = classify_attachment(payload)
+    assert report.kind == "unknown"
+    assert report.status == "invalid"
+    assert report.reason == "unsafe_csv_invisible_formula_prefix"
+    assert report.byte_count == len(payload)
+    assert report.sha256 == hashlib.sha256(payload).hexdigest()
+    assert not report.csv_text_supported
+    assert "Synthetic" not in str(report)
+
+
+@pytest.mark.parametrize("value", [
+    "\u200btext",           # invisible followed by benign ordinary text
+    "text\u200b=2+3",      # invisible is not a leading prefix
+    "👩\u200d🔬",           # Unicode emoji joiner inside a cell
+    "\u200cفارسی",         # script joiner with no formula marker
+    "'\u200b=2+3",          # explicit leading apostrophe is not a formula trigger
+    "normal value",
+])
+def test_benign_unicode_cells_and_escaped_formula_text_remain_supported(value):
+    payload = ("name,value\nSynthetic," + value).encode("utf-8")
+    report = classify_attachment(payload)
+    assert report.status == "recognized"
+    assert report.kind == "csv"
+    assert report.reason == "csv_structure_recognized_only"
