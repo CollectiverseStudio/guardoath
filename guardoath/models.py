@@ -249,12 +249,12 @@ class Policy(Contract):
     advanced_arithmetic: tuple[AdvancedArithmeticRule, ...] = ()
     required_sections: tuple[RequiredSection, ...] = ()
 
-    @field_validator("comparisons")
-    @classmethod
-    def comparison_rule_ids_are_unique(cls, comparisons):
-        if len({comparison.rule_id for comparison in comparisons}) != len(comparisons):
+    @model_validator(mode="after")
+    def all_comparison_rule_ids_are_unique(self):
+        ids = [r.rule_id for r in (*self.comparisons, *self.advanced_arithmetic)]
+        if len(set(ids)) != len(ids):
             raise ValueError("Comparison rule IDs must be distinct")
-        return comparisons
+        return self
     detect_labeled_sensitive_data: bool = Field(default=False, strict=True)
     # Copied privacy pattern checks run with every pii rule unless turned off here.
     privacy_patterns: bool = Field(default=True, strict=True)
