@@ -5,6 +5,7 @@ import hmac
 import os
 from pathlib import Path
 import re
+from time import perf_counter
 from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
@@ -380,6 +381,7 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             except UsageLimitReached:
                 raise HTTPException(429, "Monthly check limit reached", headers={"Cache-Control": "no-store"}) from None
             try:
+                started = perf_counter()
                 response = await engine.check(request, stage)
                 if not attachments:
                     return response
@@ -389,6 +391,24 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 batch = await inspect_attachments(record, stage, attachments, tenants.checkers)
                 recommended = max((response.recommended_action, batch.recommended_action),
                                   key=PRIORITY.__getitem__)
+                # Preserve the shared group taxonomy while reflecting file findings:
+                # a CSV finding is not a disabled Structure group, and an unsupported
+                # file must not be reported as a successful inspection.
+                file_status = ("incomplete" if batch.incomplete else
+                               "findings" if batch.findings else
+                               "passed" if all(result.status == "passed" for result in batch.checker_results)
+                               else None)
+                groups = []
+                for group in response.groups:
+                    if group.group_id == "structure" and file_status is not None:
+                        status = (group.status if group.status == "incomplete" or
+                                  (group.status == "findings" and file_status == "passed")
+                                  else file_status)
+                        group = group.model_copy(update={
+                            "status": status,
+                            "checker_ids": tuple(dict.fromkeys((*group.checker_ids, "csv_formula"))),
+                        })
+                    groups.append(group)
                 updated = response.model_copy(update={
                     "findings": response.findings + batch.findings,
                     "checker_results": response.checker_results + batch.checker_results,
@@ -396,6 +416,8 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                     "effective_action": Action.ALLOW if record.mode == "observe" else recommended,
                     "evaluation_status": "incomplete" if batch.incomplete or
                                          response.evaluation_status == "incomplete" else "complete",
+                    "groups": tuple(groups),
+                    "total_latency_ms": round((perf_counter() - started) * 1000, 3),
                 })
                 return JSONResponse({
                     **updated.model_dump(mode="json"),
