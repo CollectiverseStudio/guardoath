@@ -23,7 +23,8 @@ def _client():
     token = demo_key(TENANT, SECRET)
     record = TenantRecord(
         tenant_id=TENANT, display_name="Synthetic FC Scale", mode="enforce",
-        monthly_allowance=20, key_hashes=(key_hash(token),),
+        demo=True, overage="block", monthly_allowance=20,
+        key_hashes=(key_hash(token),),
         input_check_text_security="flag", output_check_text_security="flag",
     )
     store = MemoryTenantStore((record,))
