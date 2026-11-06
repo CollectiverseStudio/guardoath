@@ -109,7 +109,7 @@ def test_explicit_attachment_off_prevents_file_secret_scan():
 
 
 def test_tenant_assignment_and_confidential_term_settings_apply_to_csv():
-    client, _, token = _harness(
+    client, service, token = _harness(
         input_check_secrets="flag", output_check_secrets="block",
         detect_secret_assignments=True,
         confidential_terms=(ConfidentialTerm(rule_id="winter", term="internal-codename-winter",
@@ -127,6 +127,7 @@ def test_tenant_assignment_and_confidential_term_settings_apply_to_csv():
     assert "confidential.winter" in {f["rule_id"] for f in output.json()["findings"]}
     assert "internal-codename-winter" not in confidential.text + output.text
     assert "synthetic-only-value" not in assignment.text
+    assert service.store.get("demo1").confidential_terms[0].stages == (Stage.INPUT, Stage.OUTPUT)
 
 
 def test_combined_formula_prompt_and_secret_keep_all_ids_and_one_meter():
