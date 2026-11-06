@@ -143,8 +143,8 @@ class TenantRecord(Contract):
     input_check_graph: Action | None = None
     input_check_integrity: Action | None = None
     input_check_csv_formula: Action | None = None
-    # New tenants opt into attachment-triggered CSV inspection. Old saved records are
-    # grandfathered Off in legacy_attachment_policy until explicitly updated.
+    # Attachment inspection activates only when bytes are submitted. Missing fields on
+    # new AND legacy records mean Auto; only a persisted explicit "off" disables it.
     input_attachment_csv_mode: Literal["auto", "off"] = "auto"
     output_attachment_csv_mode: Literal["auto", "off"] = "auto"
     output_check_pii: Action | None = None
@@ -195,24 +195,7 @@ class TenantRecord(Contract):
     input_rule_actions: RuleActions = Field(default_factory=dict)
     output_rule_actions: RuleActions = Field(default_factory=dict)
     # Independent Windows event rule settings; absent means Off. Never run on AI text.
-    sigma_rule_actions: dict[str, Literal["allow", "flag", "block"]] = Field(default_factory=dict, max_length=4096)
-
-    @model_validator(mode="before")
-    @classmethod
-    def legacy_attachment_policy(cls, data):
-        """A saved tenant from before binary ingress must not silently gain file scanning.
-
-        Stored records have a positive revision. New unsaved tenants default to Auto,
-        but existing records missing the fields retain explicit Off on both stages.
-        """
-        if isinstance(data, dict) and isinstance(data.get("revision"), int) and data["revision"] > 0:
-            if "input_attachment_csv_mode" not in data or "output_attachment_csv_mode" not in data:
-                data = dict(data)
-                data.setdefault("input_attachment_csv_mode", "off")
-                data.setdefault("output_attachment_csv_mode", "off")
-        return data
-
-    @model_validator(mode="before")
+    sigma_rule_actions: dict[str, Literal["allow", "flag", "block"]] = Field(default_factory=dict, max_length    @model_validator(mode="before")
     @classmethod
     def renamed_check_fields(cls, data):
         """Records stored before 2026-11-04 hold one field per check (check_<id>) and one rule map (rule_actions),
