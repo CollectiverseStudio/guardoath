@@ -182,15 +182,15 @@ that the guide has a section for every control. Maturity is reported per control
 
 ## Per-rule settings
 
-A check runs many rules. 524 catalog rules can be set one by one today (2026-11-05: 397, plus 1 CSV-formula,
-61 human-safety, 35 prompt-attack and 30 harmful-content rules), plus each record's own
+A check runs many rules. 525 catalog rules can be set one by one today (2026-11-05: 397, plus 1 CSV-formula,
+61 human-safety, 36 prompt-attack and 30 harmful-content rules), plus each record's own
 comparisons and required sections (below):
 
 | Check | Rules |
 |---|---|
 | `lexical_guards` | 161, including 40 agent-configuration settings such as `verify_tls=false` |
 | `human_safety` | 61 (since 2026-11-05): self-harm, medical emergencies, medicines, children, physical hazards, abuse, scams, violence |
-| `prompt_attack` | 35 (since 2026-11-05): jailbreak personas and modes, instruction overrides, prompt extraction, injected instructions, signs an attack worked |
+| `prompt_attack` | 36 (since 2026-11-05): jailbreak personas and modes, instruction overrides, prompt extraction, injected instructions, signs an attack worked |
 | `harmful_content` | 30 (since 2026-11-05): hate, insults and harassment, threats, sexual content involving minors, extremism, violence |
 | `pii` | 97 privacy types, 4 of them only with `detect_labeled_sensitive_data` |
 | `encoded_pii` | 97: each privacy type inside a labeled Base64 or hex payload (`pii.encoded_<type>`) |
