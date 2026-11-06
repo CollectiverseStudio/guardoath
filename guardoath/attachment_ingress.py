@@ -2,7 +2,7 @@
 
 The API envelope is Base64 because the existing ingress is strict JSON, but only decoded,
 server-received bytes activate the file probe. User-supplied names and MIME are ignored.
-This module recognizes *only* structural UTF-8 CSV. Its cells use the existing csv_formula checker and any tenant-enabled prompt_attack checker, not a semantic file parser.
+This module recognizes *only* structural UTF-8 CSV. Its cells use the existing csv_formula checker and tenant-enabled prompt_attack and secrets checkers, not a semantic file parser.
 """
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ class AttachmentBatch:
 async def inspect_attachments(record: TenantRecord, stage: Stage, contents: tuple[bytes, ...], checkers: dict) -> AttachmentBatch:
     """Inspect every file without treating names, MIME or message text as bytes.
 
-    The tenant controls stage and rule actions; the shared Engine executes csv_formula.
+    The tenant controls stage and rule actions; the shared Engine executes CSV and enabled text security.
     An unsupported or invalid attachment is never reported clean. Every result is
     privacy-safe and format probes do not pretend to scan PDF/Office files.
     """
@@ -71,23 +71,35 @@ async def inspect_attachments(record: TenantRecord, stage: Stage, contents: tupl
     # prompt_attack for this stage, run that SAME checker/rules on file text too.
     # Never enable a tenant-disabled check or bypass an explicit attachment Off.
     prompt_action = record.action("prompt_attack", stage)
+    secrets_action = record.action("secrets", stage)
     file_rules = [Rule(checker_id="csv_formula", on_finding=stage_action, stages=(stage,))]
     selected_checkers = {"csv_formula": checkers["csv_formula"]}
     if prompt_action is not None:
         file_rules.append(Rule(checker_id="prompt_attack", on_finding=prompt_action, stages=(stage,)))
         selected_checkers["prompt_attack"] = checkers["prompt_attack"]
+    if secrets_action is not None:
+        file_rules.append(Rule(checker_id="secrets", on_finding=secrets_action, stages=(stage,)))
+        selected_checkers["secrets"] = checkers["secrets"]
     allowed_rule_ids = {"csv_formula.potential_formula"}
     rule_actions = {
         rule_id: action for rule_id, action in record.rule_actions_on(stage).items()
         if rule_id in allowed_rule_ids or
-        (prompt_action is not None and rule_id.startswith("prompt_attack."))
+        (prompt_action is not None and rule_id.startswith("prompt_attack.")) or
+        (secrets_action is not None and (rule_id.startswith("secrets.") or rule_id.startswith("confidential.")))
     }
+    # The credential checker uses these exact tenant settings for ordinary text as
+    # well. Do not change its assignment/encoded/configured-term behavior for files.
+    secret_settings = ({"detect_secret_assignments": record.detect_secret_assignments,
+                        "inspect_encoded_secrets": record.inspect_encoded_secrets,
+                        "confidential_terms": record.confidential_terms}
+                       if secrets_action is not None else {})
     policy = Policy(
         application_id=record.tenant_id, version=TENANT_POLICY_VERSION,
         mode=record.mode, timeout_ms=record.timeout_ms, failure_action=record.failure_action,
         rules=tuple(file_rules),
         input_rule_actions=rule_actions if stage == Stage.INPUT else {},
         output_rule_actions=rule_actions if stage == Stage.OUTPUT else {},
+        **secret_settings,
     )
     engine = Engine([policy], selected_checkers) if mode == "auto" else None
     receipts = []
@@ -116,8 +128,8 @@ async def inspect_attachments(record: TenantRecord, stage: Stage, contents: tupl
             request = CheckRequest(application_id=record.tenant_id, policy_version=TENANT_POLICY_VERSION,
                                    content=raw.decode("utf-8-sig"), content_format="text")
             evaluated = await engine.check(request, stage)
-            # Both format security and configured lower-trust prompt security use
-            # the existing Engine and its tenant rule actions. Retain every result.
+            # Format, prompt and credential checks all use the existing Engine
+            # and authoritative per-stage tenant rule actions. Retain all results.
             results.extend(evaluated.checker_results)
             findings.extend(evaluated.findings)
             actions.append(evaluated.recommended_action)
