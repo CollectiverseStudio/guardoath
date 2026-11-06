@@ -394,9 +394,11 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 # Preserve the shared group taxonomy while reflecting file findings:
                 # a CSV finding is not a disabled Structure group, and an unsupported
                 # file must not be reported as a successful inspection.
+                csv_results = tuple(result for result in batch.checker_results if result.checker_id == "csv_formula")
+                prompt_results = tuple(result for result in batch.checker_results if result.checker_id == "prompt_attack")
                 file_status = ("incomplete" if batch.incomplete else
-                               "findings" if batch.findings else
-                               "passed" if all(result.status == "passed" for result in batch.checker_results)
+                               "findings" if any(result.status == "flagged" for result in csv_results) else
+                               "passed" if csv_results and all(result.status == "passed" for result in csv_results)
                                else None)
                 groups = []
                 for group in response.groups:
@@ -407,6 +409,19 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                         group = group.model_copy(update={
                             "status": status,
                             "checker_ids": tuple(dict.fromkeys((*group.checker_ids, "csv_formula"))),
+                        })
+                    elif group.group_id == "prompt_security" and prompt_results:
+                        # A finding in untrusted uploaded CSV must not leave the prompt
+                        # security group showing Passed from the ordinary message alone.
+                        status = ("incomplete" if group.status == "incomplete" or
+                                  any(result.status not in {"passed", "flagged"}
+                                      for result in prompt_results) else
+                                  "findings" if group.status == "findings" or
+                                  any(result.status == "flagged" for result in prompt_results) else
+                                  group.status)
+                        group = group.model_copy(update={
+                            "status": status,
+                            "checker_ids": tuple(dict.fromkeys((*group.checker_ids, "prompt_attack"))),
                         })
                     groups.append(group)
                 updated = response.model_copy(update={
