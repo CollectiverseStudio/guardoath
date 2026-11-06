@@ -11,7 +11,7 @@ import pytest
 from guardoath.checkers import default_checkers
 from guardoath.engine import Engine
 from guardoath.models import Action, CheckRequest, Stage
-from guardoath.tenant_record import TENANT_POLICY_VERSION, TenantRecord
+from guardoath.tenant_record import TENANT_POLICY_VERSION, TenantRecord, usage_month
 
 
 SCHEMA = {
@@ -126,9 +126,7 @@ def test_authenticated_api_runs_structured_and_chat_checks_with_one_tenant_polic
     assert result["evaluation_status"] == "complete"
     assert result["recommended_action"] == result["effective_action"] == "block"
     assert ATTACK not in response.text
-    assert service.store.get("hybrid-a").used(__import__(
-        "guardoath.tenant_record", fromlist=["usage_month"]
-    ).usage_month()) == 1
+    assert service.store.get("hybrid-a").used(usage_month()) == 1
 
     benign = client.post("/v1/checks/input", headers=headers, json={
         "application_id": "hybrid-a", "content_format": "json",
