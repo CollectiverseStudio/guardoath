@@ -413,7 +413,8 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                     "findings": response.findings + batch.findings,
                     "checker_results": response.checker_results + batch.checker_results,
                     "recommended_action": recommended,
-                    "effective_action": Action.ALLOW if record.mode == "observe" else recommended,
+                    "effective_action": (Action.BLOCK if batch.incomplete else
+                                         Action.ALLOW if record.mode == "observe" else recommended),
                     "evaluation_status": "incomplete" if batch.incomplete or
                                          response.evaluation_status == "incomplete" else "complete",
                     "groups": tuple(groups),
