@@ -54,7 +54,7 @@ def typed(value, kind):
 
 async def cross_field_check(request, policy, stage):
     comparisons = [rule for rule in policy.comparisons if stage in rule.stages]
-    arithmetic = [rule for rule in policy.advanced_arithmetic if stage in rule.stages]
+    arithmetic = [rule for rule in getattr(policy, "advanced_arithmetic", ()) if stage in rule.stages]
     if not (comparisons or arithmetic) or request.content_format != "json":
         return CheckerResult(checker_id="cross_field", checker_version="2", status="skipped")
     try:
