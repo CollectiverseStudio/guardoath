@@ -386,11 +386,58 @@ def section_rule(section, sections=()) -> dict:
     }
 
 
+# FC-031/032/033/034/036/037/041/046 accepted synthetic examples.
+# These are independently configurable business.* tenant rules under the existing
+# cross_field check; not public static catalog rules or authoritative references.
+ARITHMETIC_EXAMPLES = {
+    "invoice_line_subtotal": ({"lines": [{"quantity": 2, "unit_price": 40}, {"quantity": 1, "unit_price": 30}], "subtotal": 110}, "subtotal", 100),
+    "invoice_total": ({"subtotal": 100, "discount": 10, "tax": 8, "shipping": 5, "total": 103}, "total", 110),
+    "tax_tolerance": ({"tax": 8, "base": 100, "rate": 0.08, "tolerance": 0.01}, "tax", 12),
+    "discount_fraction_cap": ({"discount": 10, "eligible_subtotal": 100, "max_fraction": 0.2}, "discount", 30),
+    "inventory_conservation": ({"opening": 10, "received": 5, "shipped": 8, "lost": 1, "closing": 6}, "closing", 9),
+    "shipment_quantity_sum": ({"lines": [{"quantity": 3}, {"quantity": 4}], "total": 7}, "total", 8),
+    "manufacturing_tolerance": ({"measured": 10.4, "nominal": 10, "tolerance": 0.5}, "measured", 10.6),
+    "carbon_intensity": ({"emissions": 700, "output": 100, "max_intensity": 8}, "emissions", 1000),
+}
+
+
+def arithmetic_rule(rule) -> dict:
+    clean, variable, unsafe_value = ARITHMETIC_EXAMPLES[rule.kind]
+    clean = dict(clean)
+    unsafe = {**clean, variable: unsafe_value}
+    def document(values):
+        output = {}
+        for role, pointer in rule.fields.items():
+            _set_path(output, tuple(_segments(pointer)), values[role])
+        return json.dumps(output, separators=(",", ":"))
+    return {
+        "rule_id": COMPARISON_PREFIX + rule.rule_id,
+        "control_id": "cross_field",
+        "title": f"Advanced arithmetic {rule.rule_id}: {rule.kind}",
+        "use_case": f"Validate exact bounded {rule.kind.replace('_', ' ')} relationships in submitted JSON.",
+        "severity": "high",
+        "example": document(unsafe),
+        "look_alike": document(clean),
+        "example_unavailable": None,
+        "look_alike_unavailable": None,
+        "needs_setting": None,
+        "needs_checks": [],
+        "content_format": "json",
+        "configuration": f"{rule.kind} with pointers " + ", ".join(
+            f"{name}={pointer}" for name, pointer in rule.fields.items()) + " · runs on " + stage_names(rule.stages),
+        "stages": [getattr(stage, "value", stage) for stage in rule.stages],
+        "record_rule": True,
+    }
+
+
 def record_rules(record) -> dict[str, dict]:
     """The record's own rules, by rule id: its comparisons, then its required sections."""
     rules, context = {}, _Examples(record.comparisons)
     for comparison in record.comparisons:
         rule = comparison_rule(comparison, record.comparisons, context)
+        rules[rule["rule_id"]] = rule
+    for advanced in getattr(record, "advanced_arithmetic", ()):
+        rule = arithmetic_rule(advanced)
         rules[rule["rule_id"]] = rule
     for section in record.required_sections:
         rule = section_rule(section, record.required_sections)
@@ -401,6 +448,7 @@ def record_rules(record) -> dict[str, dict]:
 def record_rule_ids(record) -> dict[str, str]:
     """Rule id -> check id, for the rule ids a record's own comparisons and sections define."""
     return {**{COMPARISON_PREFIX + c.rule_id: "cross_field" for c in record.comparisons},
+            **{COMPARISON_PREFIX + c.rule_id: "cross_field" for c in getattr(record, "advanced_arithmetic", ())},
             **{SECTION_PREFIX + s.rule_id: "completeness" for s in record.required_sections}}
 
 
@@ -408,6 +456,7 @@ def bad_record_rule_ids(record, static_ids) -> list[str]:
     """Problems with the record's own rule ids, worded without repeating submitted values."""
     problems = []
     for kind, items, prefix in (("comparison", record.comparisons, COMPARISON_PREFIX),
+                                ("arithmetic comparison", getattr(record, "advanced_arithmetic", ()), COMPARISON_PREFIX),
                                 ("required section", record.required_sections, SECTION_PREFIX)):
         for item in items:
             if not re.fullmatch(RECORD_RULE_ID, item.rule_id):
