@@ -2098,3 +2098,46 @@ The dedicated [Field Comparisons Evidence workflow](../.github/workflows/field-c
 
 
 **Authenticated tenant/API scale regression (November 6):** `tests/test_field_comparison_large_tenant_api.py` exercises **30, 51, 100, 250 and 500** distinct configured comparisons through the existing revision-checked `POST /v1/tenants/current/checks`, the same tenant's saved rule inventory, and authenticated Input/Output checks. Two independent violations must both be returned, with per-rule Block/Allow on Input and Allow/Flag on Output; clean inputs must pass. A separate 51-rule test checks that missing and wrong-typed numeric fields produce both findings on both stages. Authentication and usage metering are covered. The tests intentionally use only small, synthetic JSON inputs and existing local checkers, no external provider; they do not create a count cap or constitute production-load/concurrency proof. Any CI failure is an actual acceptance gap and must be corrected without changing budgets or expected findings.
+
+
+## FC-031–050 advanced Field Comparisons — implemented Batch A (eight arithmetic rules)
+
+The eight Batch A rules below are **tenant-owned** `business.<rule_id>` validations in the **existing** `cross_field` check, not independent static global rules or a second Engine. Configure `input_check_cross_field` and/or `output_check_cross_field` with Block, Flag or Allow; store `advanced_arithmetic` as an array of rules (each `rule_id`, `kind`, exact named `fields` JSON pointers and `stages`). The existing tenant `input_rule_actions` / `output_rule_actions` maps can override individual advanced rules to Off/Allow/Flag/Block. Tenant revision checks, demo/customer authentication, one request meter, group classification and the existing dashboard dynamic `record_rules` inventory apply unchanged. Missing/invalid fields produce individual business findings; nothing is sent to outside providers.
+
+| FC ID | Rule kind | Exact invariant and example that triggers |
+|---|---|---|
+| 031 | `invoice_line_subtotal` | Sum of `lines[].quantity × lines[].unit_price` equals `subtotal`. Lines 2×40 and 1×30 have sum 110, so subtotal 100 triggers |
+| 032 | `invoice_total` | `subtotal - discount + tax + shipping = total`. 100−10+8+5=103, so 110 triggers |
+| 033 | `tax_tolerance` | `abs(tax - base × rate) <= tolerance`. Tax 12 on base 100 and rate 0.08 with tolerance 0.01 triggers |
+| 034 | `discount_fraction_cap` | `discount <= eligible_subtotal × max_fraction`. Discount 30 on eligible 100 with maximum fraction 0.2 triggers; zero eligible subtotal is invalid |
+| 036 | `inventory_conservation` | `opening + received - shipped - lost = closing`. 10+5−8−1=6, so closing 9 triggers |
+| 037 | `shipment_quantity_sum` | Sum of `lines[].quantity = total`. Lines 3 and 4 sum to 7; total 8 triggers |
+| 041 | `manufacturing_tolerance` | `abs(measured - nominal) <= tolerance`. Measured 10.6 vs nominal 10.0 with tolerance 0.5 triggers |
+| 046 | `carbon_intensity` | `emissions <= output × max_intensity`. Emissions 1000 and output 100 with cap 8 triggers; zero output is invalid |
+
+**Rule configuration example** (under a saved tenant, in addition to `input_check_cross_field="block"`):
+
+```json
+{
+  "advanced_arithmetic": [
+    {
+      "rule_id": "invoice_total_limit",
+      "kind": "invoice_total",
+      "fields": {
+        "subtotal": "/invoice/subtotal",
+        "discount": "/invoice/discount",
+        "tax": "/invoice/tax",
+        "shipping": "/invoice/shipping",
+        "total": "/invoice/total"
+      },
+      "stages": ["input", "output"]
+    }
+  ],
+  "input_rule_actions": {"business.invoice_total_limit": "block"},
+  "output_rule_actions": {"business.invoice_total_limit": "flag"}
+}
+```
+
+**Contracts and limitations:** Only submitted bounded JSON is checked; this is not validation of trusted exchange rates, clinical doses, permits or external purchase orders. The engine parses floating-point JSON tokens into `Decimal` rather than binary floats, performs up to 128 line items with bounded numeric precision, refuses values with more than 32 significant decimal digits or magnitude beyond 10^18, accepts exact equality and explicit decimal tolerances (no implicit currency rounding), rejects booleans and string numbers, and requires positive denominators and nonnegative financial quantities/rates where applicable. Fractions must lie from zero through one. Invalid/missing fields, unsupported values, over-budget line arrays and zero denominators produce findings; no unsafe arithmetic operation or submitted value is echoed to clients. Not all rules constrain trusted origins, cross-document authenticity, or business-specific sign/rounding conventions; tenants must supply verified canonical input.
+
+**Verification:** `guardoath/advanced_arithmetic.py`, `guardoath/business.py`, `guardoath/models.py`, `guardoath/tenant_record.py`, `guardoath/record_rules.py`, `guardoath/engine.py`, `tests/test_advanced_arithmetic.py`. Unit cases cover each implemented kind at both stages, malformed and missing JSON fields, exact decimal boundaries, bounded list and numeric limits, simultaneous findings, tenant-authenticated revisions, per-stage actions/Off and request metering. The existing dashboard lists tenant-owned rules through `record_rules`, with examples and configuration. All changes require exact-source CI verification before they count as release-ready. Remaining FC-035/038–040/042–045/047–050 are not implemented by this batch; external trusted-data candidates must not be fabricated.
