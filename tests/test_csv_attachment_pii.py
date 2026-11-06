@@ -82,7 +82,9 @@ def test_tenant_input_output_pii_actions_apply_to_recognized_file_and_group():
 
 def test_benign_csv_is_clean_and_tenant_disabled_check_stays_off():
     on, on_key = _tenant(input_check_pii="block")
-    off, off_key = _tenant("pii-csv-b")
+    # Tenant records require at least one enabled check; enable an unrelated
+    # text-security control while keeping PII explicitly disabled.
+    off, off_key = _tenant("pii-csv-b", input_check_text_security="flag")
     client, service = _harness((on, on_key), (off, off_key))
     clean = _send(client, on, on_key, CSV_BENIGN)
     assert clean.status_code == 200, clean.text
