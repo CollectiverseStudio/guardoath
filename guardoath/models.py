@@ -91,6 +91,42 @@ class FieldComparison(Contract):
         return value
 
 
+# FC-031/032/033/034/036/037/041/046: tenant-owned exact arithmetic.
+# Each kind names precisely the fields it reads. A pointer describes an input
+# location, not an expression or code to execute.
+ADVANCED_FIELD_KEYS = {
+    "invoice_line_subtotal": ("lines", "subtotal"),
+    "invoice_total": ("subtotal", "discount", "tax", "shipping", "total"),
+    "tax_tolerance": ("tax", "base", "rate", "tolerance"),
+    "discount_fraction_cap": ("discount", "eligible_subtotal", "max_fraction"),
+    "inventory_conservation": ("opening", "received", "shipped", "lost", "closing"),
+    "shipment_quantity_sum": ("lines", "total"),
+    "manufacturing_tolerance": ("measured", "nominal", "tolerance"),
+    "carbon_intensity": ("emissions", "output", "max_intensity"),
+}
+
+
+class AdvancedArithmeticRule(Contract):
+    rule_id: str = Field(pattern=r"^[a-z][a-z0-9_]{0,79}$")
+    kind: Literal["invoice_line_subtotal", "invoice_total", "tax_tolerance",
+                  "discount_fraction_cap", "inventory_conservation",
+                  "shipment_quantity_sum", "manufacturing_tolerance", "carbon_intensity"]
+    fields: dict[str, str] = Field(min_length=2, max_length=5)
+    stages: tuple[Stage, ...] = Field(default=(Stage.INPUT, Stage.OUTPUT), min_length=1)
+
+    @model_validator(mode="after")
+    def valid_fields(self):
+        import re
+        if set(self.fields) != set(ADVANCED_FIELD_KEYS[self.kind]):
+            raise ValueError("Arithmetic rule requires its declared field names")
+        for pointer in self.fields.values():
+            if not isinstance(pointer, str) or len(pointer) > 200 or not pointer.startswith("/") or re.search(r"~(?![01])", pointer):
+                raise ValueError("Arithmetic fields require absolute JSON Pointers")
+        if len(set(self.stages)) != len(self.stages):
+            raise ValueError("Arithmetic stages must be distinct")
+        return self
+
+
 class RequiredSection(Contract):
     rule_id: str = Field(pattern=r"^[a-zA-Z0-9_.-]{1,80}$")
     label: str = Field(pattern=r"^[A-Za-z][A-Za-z0-9 _-]{0,79}$")
@@ -210,6 +246,7 @@ class Policy(Contract):
     # No count limit (2026-11-05): a tenant record's size is bounded (tenant_record.MAX_RECORD_BYTES), and policy files are
     # trusted configuration.
     comparisons: tuple[FieldComparison, ...] = ()
+    advanced_arithmetic: tuple[AdvancedArithmeticRule, ...] = ()
     required_sections: tuple[RequiredSection, ...] = ()
 
     @field_validator("comparisons")
