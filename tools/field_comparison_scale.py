@@ -108,14 +108,14 @@ def bounded_measure(component, size, samples, timeout):
 
 
 
-def scale_acceptance(measurements, sizes=SIZES):
+def scale_acceptance(measurements, sizes=SIZES, components=("checker", "generator")):
     """A scale run is accepted only if every requested checker and generator measurement succeeded.
 
     A subprocess timeout, an error, an omitted sample, an unexpected size, or a
     Policy/TenantRecord schema refusal is a real failure, not a successful report.
     This does NOT imply the independent portfolio, API, UI, or production gates passed.
     """
-    expected = {(size, component) for size in sizes for component in ("checker", "generator")}
+    expected = {(size, component) for size in sizes for component in components}
     seen = set()
     for row in measurements:
         if not isinstance(row, dict):
@@ -169,7 +169,8 @@ def main():
     # returned success even when 51+ comparisons failed schema admission or
     # generator workers timed out. Do not weaken budgets or claim release readiness.
     accepted = scale_acceptance([report] if args.worker else report["measurements"],
-                                (args.size,) if args.worker else SIZES)
+                                (args.size,) if args.worker else SIZES,
+                                (args.worker,) if args.worker else ("checker", "generator"))
     if not args.worker:
         report["scale_acceptance_passed"] = accepted
     text = json.dumps(report, indent=2) + "\n"
