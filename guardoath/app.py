@@ -397,6 +397,7 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 csv_results = tuple(result for result in batch.checker_results if result.checker_id == "csv_formula")
                 prompt_results = tuple(result for result in batch.checker_results if result.checker_id == "prompt_attack")
                 secret_results = tuple(result for result in batch.checker_results if result.checker_id == "secrets")
+                pii_results = tuple(result for result in batch.checker_results if result.checker_id == "pii")
                 file_status = ("incomplete" if batch.incomplete else
                                "findings" if any(result.status == "flagged" for result in csv_results) else
                                "passed" if csv_results and all(result.status == "passed" for result in csv_results)
@@ -423,6 +424,21 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                         group = group.model_copy(update={
                             "status": status,
                             "checker_ids": tuple(dict.fromkeys((*group.checker_ids, "prompt_attack"))),
+                        })
+                    elif group.group_id == "sensitive_data" and pii_results:
+                        # Recognized CSV PII uses the original sensitive-data group.
+                        # File redaction cannot be represented as a sanitized file;
+                        # report incomplete/Block instead of implying a safe preview.
+                        redaction_unavailable = (record.action("pii", stage) == Action.REDACT and
+                                                 any(result.status == "flagged" for result in pii_results))
+                        status = ("incomplete" if group.status == "incomplete" or redaction_unavailable or
+                                  any(result.status not in {"passed", "flagged"} for result in pii_results) else
+                                  "findings" if group.status == "findings" or
+                                  any(result.status == "flagged" for result in pii_results) else
+                                  group.status)
+                        group = group.model_copy(update={
+                            "status": status,
+                            "checker_ids": tuple(dict.fromkeys((*group.checker_ids, "pii"))),
                         })
                     elif group.group_id == "secrets" and secret_results:
                         # CSV credential findings belong to the same Secrets group
