@@ -36,7 +36,7 @@ from typing import Annotated, Any, Literal
 from pydantic import Field, model_validator
 
 from guardoath.billing import BillingMode
-from guardoath.models import (Action, ConfidentialTerm, Contract, EvidencePolicy, FieldComparison, GraphPolicy,
+from guardoath.models import (Action, AdvancedArithmeticRule, ConfidentialTerm, Contract, EvidencePolicy, FieldComparison, GraphPolicy,
                               IntegrityPolicy, LedgerPolicy, MatchedOutcomes, Policy, RequiredSection, Rule,
                               Stage, TimestampPolicy, ToolPolicy)
 from guardoath.privacy_catalog import DEFAULT_MIN_SCORE
@@ -56,7 +56,7 @@ RETIRED_CHECK_FIELDS = frozenset(f"{prefix}{check_id}" for check_id in RETIRED_C
                                  for prefix in ("check_", "input_check_", "output_check_"))
 # A check listed here cannot run without at least one of these settings.
 REQUIRED_SETTINGS = {
-    "schema": ("input_schema", "output_schema"), "cross_field": ("comparisons",),
+    "schema": ("input_schema", "output_schema"), "cross_field": ("comparisons", "advanced_arithmetic"),
     "completeness": ("required_sections",), "matched_outcomes": ("matched_outcomes",),
     "evidence": ("evidence",), "tool_calls": ("tool_calls",), "ledger": ("ledger",),
     "timestamps": ("timestamps",), "graph": ("graph",), "integrity": ("integrity",),
@@ -172,6 +172,7 @@ class TenantRecord(Contract):
     # No count limit (2026-11-05, Greg): the record's size is bounded instead (MAX_RECORD_BYTES, checked when a change
     # is saved) and a save's request body by the API's JSON limit.
     comparisons: tuple[FieldComparison, ...] = ()
+    advanced_arithmetic: tuple[AdvancedArithmeticRule, ...] = ()
     required_sections: tuple[RequiredSection, ...] = ()
     detect_labeled_sensitive_data: bool = Field(default=False, strict=True)
     privacy_patterns: bool = Field(default=True, strict=True)
@@ -254,7 +255,8 @@ class TenantRecord(Contract):
     def consistent(self):
         # Duplicate comparison IDs would overwrite a rule in the tenant's rule table.
         # Reject them rather than silently hiding an active comparison.
-        if len({comparison.rule_id for comparison in self.comparisons}) != len(self.comparisons):
+        comparison_ids = [rule.rule_id for rule in (*self.comparisons, *self.advanced_arithmetic)]
+        if len(set(comparison_ids)) != len(comparison_ids):
             raise ValueError("Comparison rule IDs must be distinct")
         on = self.checks()
         if not on:
@@ -316,7 +318,8 @@ class TenantRecord(Contract):
             covered = {stage for stage, schema in ((Stage.INPUT, self.input_schema), (Stage.OUTPUT, self.output_schema))
                        if schema is not None}
         elif check_id == "cross_field":
-            covered = {stage for comparison in self.comparisons for stage in comparison.stages}
+            covered = {stage for comparison in (*self.comparisons, *self.advanced_arithmetic)
+                       for stage in comparison.stages}
         elif check_id == "completeness":
             covered = {stage for section in self.required_sections for stage in section.stages}
         else:
