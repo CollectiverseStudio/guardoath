@@ -49,7 +49,7 @@ class Engine:
                 raise ValueError("Duplicate checker in policy")
             if len({r.rule_id for r in policy.comparisons}) != len(policy.comparisons):
                 raise ValueError("Duplicate field comparison")
-            if (policy.comparisons or policy.advanced_arithmetic or policy.advanced_identity or policy.advanced_conversion_time) and "cross_field" not in ids:
+            if (policy.comparisons or policy.advanced_arithmetic or policy.advanced_identity or policy.advanced_conversion_time or policy.advanced_trusted_reference) and "cross_field" not in ids:
                 raise ValueError("Field comparisons require a cross_field checker rule")
             if len({r.rule_id for r in policy.required_sections}) != len(policy.required_sections):
                 raise ValueError("Duplicate completeness rule")
@@ -182,6 +182,15 @@ class Engine:
             # Every check runs here, in this process (no content leaves GuardOath, 2026-11-05).
             return tuple(await asyncio.gather(*(execute(r.checker_id, content_request) for r in rules)))
 
+        # A missing/expired/forged host reference must never be treated as clean.
+        # Enforce the trust boundary independently of the tenant's ordinary
+        # observe mode, failure_action=flag or individual rule Allow/Flag.
+        from guardoath.trusted_reference import reference_is_trusted
+        untrusted_reference = any(
+            not reference_is_trusted(reference, policy.application_id)
+            for reference in policy.advanced_trusted_reference
+            if stage in reference.stages and "cross_field" in {rule.checker_id for rule in rules}
+        )
         results = await run_rules(request)
         actions = [Action.ALLOW]
         incomplete = False
@@ -195,6 +204,9 @@ class Engine:
             elif rule.required and result.status != "passed":
                 incomplete = True
                 actions.append(Action(policy.failure_action))
+        if untrusted_reference:
+            incomplete = True
+            actions.append(Action.BLOCK)
         redact_rule = next((r for r in rules if r.checker_id == "pii" and (
             (r.on_input_finding if stage == Stage.INPUT else r.on_output_finding) or r.on_finding
         ) == Action.REDACT), None)
@@ -230,7 +242,8 @@ class Engine:
             policy_version=policy.version, applied_validation_packs=applied_packs, stage=stage, mode=policy.mode,
             evaluation_status="incomplete" if incomplete else "complete",
             recommended_action=recommended,
-            effective_action=Action.ALLOW if policy.mode == "observe" else recommended,
+            effective_action=(Action.BLOCK if untrusted_reference else
+                              Action.ALLOW if policy.mode == "observe" else recommended),
             findings=tuple(f for r in results for f in r.findings),
             checker_results=tuple(results), simulated=any(r.simulated for r in results),
             total_latency_ms=round((perf_counter() - started) * 1000, 3),
