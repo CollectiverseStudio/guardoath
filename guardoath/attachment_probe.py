@@ -16,6 +16,23 @@ MAX_CSV_COLUMNS = 256
 MAX_CSV_CELLS = 4_000
 
 
+# Bytes that cannot be relied on as visible CSV data. The fixed-format parser
+# accepts these in otherwise valid text, but terminal escapes and bidirectional
+# override/isolate characters can conceal the displayed value from the reviewer.
+# Reject them at the *byte classification* boundary before any CSV checker can
+# return a clean decision. Tabs, CR/LF and ordinary international text remain valid.
+UNSAFE_BIDI_CONTROLS = frozenset("\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069")
+
+
+def has_unsafe_csv_controls(value: str) -> bool:
+    return any(
+        (0 < ord(char) < 32 and char not in "\t\r\n")
+        or ord(char) == 127
+        or char in UNSAFE_BIDI_CONTROLS
+        for char in value
+    )
+
+
 @dataclass(frozen=True)
 class FileProbe:
     kind: str
@@ -65,6 +82,8 @@ def classify_attachment(data: bytes) -> FileProbe:
         return result("unknown", "unsupported", "unsupported_encoding")
     if "\x00" in value:
         return result("unknown", "unsupported", "binary_or_unsupported_encoding")
+    if has_unsafe_csv_controls(value):
+        return result("unknown", "invalid", "unsafe_csv_control_characters")
     try:
         rows = csv.reader(StringIO(value, newline=""), strict=True)
         first_columns = None
