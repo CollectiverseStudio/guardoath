@@ -83,3 +83,10 @@ A suspicious document *indicator* is not a verified exploit or malware verdict. 
 2. Expand source-only positive/benign and tenant/dashboard acceptance; preserve CSV Off defaults and format-warning semantics.
 3. Design and approve the common binary file envelope/API and low-cost parser isolation. **Do not add binary parsing or upload claims before implementation and authorization.**
 4. Add real format controls in complete batches, prioritizing XLSX and DOCX once common ingress is available, then PDF and archives. Treat legacy binary DOC/XLS separately from OpenXML; don't assume a single parser supports both.
+
+
+## Tenant-selected lower-trust prompt scanning within recognized CSV attachments (2026-11-06)
+
+The real-byte authenticated CSV path now reuses the tenant's existing **`prompt_attack`** stage/rule action when it is enabled, alongside the original `csv_formula` screen. A CSV cell is still untrusted data, never a trusted system or developer role. Both checkers use the existing policy/Engine, and the API returns both sets of stable finding IDs, strongest effective action and the matching Prompt Security/Structure group statuses. A CSV containing an instruction override and a formula can therefore produce two independent findings in a single metered check. Explicit attachment-mode Off skips file inspection (and reports `not_inspected_policy_off`), while an individual prompt rule Off suppresses only that configured rule. Positive/benign, Input/Output stage, per-rule Off, stage Off, grouping and non-echo tests live in `tests/test_csv_attachment_prompt_injection.py`.
+
+This is **only** tenant-enabled lexical `prompt_attack` coverage on recognized CSV bytes. It does not authorize or execute file instructions, classify semantic intent, apply the full PII/secrets/human-safety suites to file bytes, parse binary Office/PDF, sanitize file content or forward model responses. The existing unsupported-format incomplete/Block contract remains.
