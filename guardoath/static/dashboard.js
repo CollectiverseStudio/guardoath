@@ -277,6 +277,11 @@ function renderTenant() {
   $("tenant-title").textContent = own ? "Checks on " + tenant.display_name + "\u2019s record" : "Checks in the profile " + profileName(policy.version);
   $("tenant-usage").textContent = tenant.used + " of " + tenant.monthly_allowance + " checks used in " + tenant.month + (tenant.overage === "block" ? " (hard limit)" : "") + " \u00b7 revision " + tenant.revision;
   const box = $("tenant-checks"); box.replaceChildren();
+  for (const stage of ["input", "output"]) {
+    const select = $("tenant-attachment-mode-" + stage);
+    select.value = tenant.attachment_csv_mode?.[stage] || "off";
+    select.disabled = !own;
+  }
   ruleEdits = {input: {...(tenant.input_rule_actions || {})}, output: {...(tenant.output_rule_actions || {})}}; ruleIndex = {};
   const filters = document.createElement("div"); filters.className = "rule-filters"; filters.id = "rule-filters"; filters.hidden = true;
   const count = document.createElement("p"); count.id = "rule-count"; count.className = "hint"; count.setAttribute("role", "status");
@@ -444,6 +449,10 @@ function pendingChanges() {
   }
   for (const stage of ["input", "output"]) {
     if (sortedEntries(ruleEdits[stage]) !== sortedEntries(tenant[stage + "_rule_actions"])) changes[stage + "_rule_actions"] = {...ruleEdits[stage]};
+    const selected = $("tenant-attachment-mode-" + stage).value;
+    if (selected !== (tenant.attachment_csv_mode?.[stage] || "off")) {
+      changes[stage + "_attachment_csv_mode"] = selected;
+    }
   }
   const sigmaChanges = window.sigmaTenant.delta();
   if (sigmaChanges !== null) changes.sigma_rule_actions = sigmaChanges;
@@ -469,6 +478,14 @@ function showUnsaved(prefix = "") {
   }
   refreshExamplePickers();
   for (const stage of ["input", "output"]) if (lastExample[stage]) exampleNote(stage, lastExample[stage]);
+}
+for (const stage of ["input", "output"]) {
+  $("tenant-attachment-mode-" + stage).addEventListener("change", () => {
+    // A changed file inspection policy invalidates prior input/output decisions and
+    // becomes authoritative only after the revisioned tenant save.
+    reset();
+    showUnsaved("CSV attachment " + stage + " mode changed. ");
+  });
 }
 $("tenant-checks").addEventListener("change", event => {
   const {check, stage} = event.target?.dataset || {}; if (!check || !stage || event.target.dataset.rule) return;
