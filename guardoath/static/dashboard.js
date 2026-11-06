@@ -12,6 +12,8 @@ const canProceed = r => Boolean(r) && !r.simulated && r.checker_results.length >
 function buttons() {
   $("run").disabled = $("run-input").disabled = busy || !application?.policies.length;
   $("run-output").disabled = busy || !application || !canProceed(inputResult);
+  $("input-attachments").disabled = busy || !application?.tenant;
+  $("output-attachments").disabled = busy || !application?.tenant || outputLocked();
   for (const name of ["ledger","timestamps","graph","integrity"]) if (policy?.version === name+"-v1") $("profile-status").textContent += " Bounded local data-contract check only. No fraud detection, relationship authorization, source authenticity or content-safety assessment. Invalid or oversized data stays incomplete; data is never repaired or executed.";
   updateOutputField();
   refreshExamplePickers();
@@ -585,6 +587,17 @@ loadSignIn();
 $("policy").addEventListener("change", () => { reset(); coverage(); renderTenant(); });
 for (const id of ["input-content", "input-format", "api-key"]) $(id).addEventListener("input", () => reset());
 for (const id of ["output-content", "output-format"]) $(id).addEventListener("input", () => reset(true));
+// Selecting actual local file bytes invalidates any prior finding/allow decision.
+// The file names are never used for inspection or sent to the server.
+for (const stage of ["input", "output"]) {
+  $(stage + "-attachments").addEventListener("change", () => {
+    const count = $(stage + "-attachments").files.length;
+    $(stage + "-attachment-note").textContent = count
+      ? count + " local file(s) selected. Run " + stage + " checks; only actual received UTF-8 CSV bytes can be inspected. Unsupported or oversized files are held."
+      : "No file selected. Ordinary " + stage + " text checking remains active.";
+    reset(stage === "output");
+  });
+}
 // Each example owns exactly one editor. Profiles are never switched implicitly.
 const syntheticToken = () => ["ghp", "_", "A".repeat(36)].join("");
 const businessData = (invalid = false, stage = "input") => JSON.stringify({start_date: invalid ? "2026-10-03" : "2026-10-01", end_date: invalid ? "2026-10-01" : "2026-10-03", purchase_amount:100, refund_amount:invalid ? (stage === "output" ? 150 : 125) : (stage === "output" ? 20 : 25)}, null, 2);
@@ -1122,6 +1135,18 @@ loadExampleCatalog().then(list => { for (const stage of ["input", "output"]) bui
 function render(stage, result) {
   const box = $(stage + "-results"); box.replaceChildren(); const title = document.createElement("h3"); title.textContent = stage === "input" ? "Input checks" : "Output checks"; box.append(title);
   const summary = document.createElement("p"); summary.textContent = "Recommended: " + result.recommended_action + " · Effective: " + result.effective_action + " · " + result.total_latency_ms.toFixed(1) + " ms"; box.append(summary);
+  if (Array.isArray(result.attachments)) {
+    const attachments = document.createElement("section"); attachments.className = "attachment-receipts";
+    const title = document.createElement("h4"); title.textContent = "Actual file inspection"; attachments.append(title);
+    for (const receipt of result.attachments) {
+      const item = document.createElement("p");
+      // Stable server receipt metadata only: never display file bytes, Base64, or a client-provided filename.
+      item.textContent = "File " + (receipt.index + 1) + ": " + receipt.kind + " · "
+        + receipt.evaluation_status + " · " + receipt.reason + " · " + receipt.byte_count + " bytes";
+      attachments.append(item);
+    }
+    box.append(attachments);
+  }
   if (result.redaction && !["not_requested", "not_needed"].includes(result.redaction.status)) {
     const section = document.createElement("section"); section.className = "redaction-box";
     const heading = document.createElement("h3"); heading.textContent = result.redaction.status === "preview" ? "Redacted preview — observe mode" : result.redaction.status === "ready" ? "Redacted content — rechecked" : "Redaction withheld";
@@ -1151,6 +1176,26 @@ function render(stage, result) {
     box.append(details);
   }
 }
+// Only signed-in tenant accounts may use the authenticated attachment endpoints.
+// Bound memory before reading: a file that cannot be inspected must never be labeled clean.
+async function selectedAttachmentBytes(stage) {
+  const files = Array.from($(stage + "-attachments").files);
+  if (!files.length) return null;
+  if (!application?.tenant) throw new Error("Attachments require an authenticated tenant connection. No files were checked.");
+  if (files.length > 3) throw new Error("Select no more than three attachments. No files were checked.");
+  const encoded = [];
+  for (const file of files) {
+    if (!file.size || file.size > 32000) {
+      throw new Error("Attachment is empty or exceeds 32,000 bytes. No files were checked or released.");
+    }
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    // The wire format is Base64 of the actual local File bytes, never user-supplied filename or MIME.
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+    encoded.push(btoa(binary));
+  }
+  return encoded;
+}
 async function execute(target) {
   if (!application || busy || (target === "output" && !canProceed(inputResult))) return;
   // Settings changed in the checks panel are saved before the check, so a check always runs what the panel shows.
@@ -1174,7 +1219,13 @@ async function execute(target) {
   const attempt = revision, policy = $("policy").value, app = application.application_id, token = key;
   const proposed = $("output-content").value; busy = true; buttons(); $("result-status").textContent = "Checking…";
   try {
-    const assess = stage => api("/v1/checks/" + stage, {application_id: app, policy_version: policy, content: $(stage + "-content").value, content_format: $(stage + "-format").value}, token);
+    const assess = async stage => {
+      const attachments_b64 = await selectedAttachmentBytes(stage);
+      const request = {application_id: app, policy_version: policy,
+        content: $(stage + "-content").value, content_format: $(stage + "-format").value};
+      if (attachments_b64) request.attachments_b64 = attachments_b64;
+      return api("/v1/checks/" + stage + (attachments_b64 ? "/attachments" : ""), request, token);
+    };
     if (target !== "output") {
       const checked = await assess("input");
       if (attempt !== revision) return;
