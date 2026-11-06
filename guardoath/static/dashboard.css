@@ -28,3 +28,8 @@
 .check-table .check-effect{color:#3d506c;white-space:nowrap}
 .check-table tbody[hidden]{display:none}
 .rule-filters[hidden]{display:none}
+
+/* Tenant CSV attachment modes are part of the existing tenant checks, not a separate dashboard. */
+#tenant-attachment-modes .inline{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center}
+#tenant-attachment-modes select{width:100%;max-width:100%}
+@media(max-width:640px){#tenant-attachment-modes .inline{grid-template-columns:minmax(0,1fr)}}
