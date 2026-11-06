@@ -244,6 +244,10 @@ def build_pii_checker():
     word_pattern = regex.compile(r"\w+")
     checker_version = f"privacy-patterns-{SOURCE_VERSION}/guardoath-patterns-6"
 
+    # regex's concurrent=True releases the GIL while scanning immutable input strings.
+    # This permits independent PII workers to progress instead of serially holding
+    # the interpreter lock. It does NOT change patterns, scores, spans, entity
+    # selection, deadlines or required redaction rechecks.
     def scan(request, redact, policy, stage):
         # The policy timeout is the budget for this checker; the scan stops there too.
         deadline = monotonic() + policy.timeout_ms / 1000
@@ -271,7 +275,7 @@ def build_pii_checker():
                     candidates.append((start, end, entity, source, tier, score))
             for recognizer, pattern in patterns:
                 remaining = check_deadline()
-                for match in pattern.finditer(text, timeout=remaining):
+                for match in pattern.finditer(text, timeout=remaining, concurrent=True):
                     if monotonic() >= deadline:
                         raise TimeoutError("Local scan deadline")
                     entity = recognizer.supported_entities[0]
@@ -298,11 +302,11 @@ def build_pii_checker():
                     nonlocal words, word_ends, hint_words
                     if words is None:
                         words = [(m.start(), m.end(), m.group().lower())
-                                 for m in word_pattern.finditer(text, timeout=check_deadline())]
+                                 for m in word_pattern.finditer(text, timeout=check_deadline(), concurrent=True)]
                         word_ends = [end for _, end, _ in words]
                     if hint_words is None:
                         hint_words = [m.group().lower()
-                                      for m in word_pattern.finditer(hint, timeout=check_deadline())]
+                                      for m in word_pattern.finditer(hint, timeout=check_deadline(), concurrent=True)]
                     return _context_cue_matches_at(words, word_ends, start, hint_words, context)
 
                 def keep(score, start, context):
@@ -336,11 +340,11 @@ def build_pii_checker():
                             core, lookaheads = split
                             last = []
                             for lookahead in lookaheads:
-                                starts = [m.start() for m in lookahead.finditer(text, overlapped=True, timeout=check_deadline())]
+                                starts = [m.start() for m in lookahead.finditer(text, overlapped=True, timeout=check_deadline(), concurrent=True)]
                                 last.append(starts[-1] if starts else -1)
-                            matches = (m for m in core.finditer(text, timeout=remaining) if m.start() <= min(last))
+                            matches = (m for m in core.finditer(text, timeout=remaining, concurrent=True) if m.start() <= min(last))
                         else:
-                            matches = pattern.finditer(text, timeout=remaining)
+                            matches = pattern.finditer(text, timeout=remaining, concurrent=True)
                         for match in matches:
                             if monotonic() >= deadline:
                                 raise TimeoutError("Local scan deadline")
