@@ -4,7 +4,7 @@
 
 ## Why this is needed
 
-The existing GuardOath tenant record configures 19 checks and 524 static rules, including local `prompt_attack`, `human_safety`, `harmful_content`, `lexical_guards`, `pii`, `secrets`, `tool_calls` and schema-related controls. Those checks are valuable, but local prompt-attack and human-safety rules are primarily phrase/regex indicators. A configured checker firing is not proof of context-sensitive semantic understanding. No new hardcoded category count is proposed; these are **coverage capabilities** that map to existing checks or future tenant-configured rules.
+The existing GuardOath tenant record configures 19 checks and 525 static rules, including local `prompt_attack`, `human_safety`, `harmful_content`, `lexical_guards`, `pii`, `secrets`, `tool_calls` and schema-related controls. Those checks are valuable, but local prompt-attack and human-safety rules are primarily phrase/regex indicators. A configured checker firing is not proof of context-sensitive semantic understanding. No new hardcoded category count is proposed; these are **coverage capabilities** that map to existing checks or future tenant-configured rules.
 
 ## Security boundaries and processing order
 
