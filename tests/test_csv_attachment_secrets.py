@@ -110,9 +110,10 @@ def test_explicit_attachment_off_prevents_file_secret_scan():
 
 def test_tenant_assignment_and_confidential_term_settings_apply_to_csv():
     client, _, token = _harness(
-        input_check_secrets="flag", detect_secret_assignments=True,
+        input_check_secrets="flag", output_check_secrets="block",
+        detect_secret_assignments=True,
         confidential_terms=(ConfidentialTerm(rule_id="winter", term="internal-codename-winter",
-                                             stages=(Stage.INPUT,)),),
+                                             stages=(Stage.INPUT, Stage.OUTPUT)),),
     )
     assignment = _send(client, token, CSV_ASSIGNMENT)
     assert assignment.status_code == 200, assignment.text
@@ -120,7 +121,11 @@ def test_tenant_assignment_and_confidential_term_settings_apply_to_csv():
     confidential = _send(client, token, CSV_CONFIDENTIAL)
     assert confidential.status_code == 200, confidential.text
     assert "confidential.winter" in {f["rule_id"] for f in confidential.json()["findings"]}
-    assert b"internal-codename-winter".decode() not in confidential.text
+    output = _send(client, token, CSV_CONFIDENTIAL, stage="output")
+    assert output.status_code == 200, output.text
+    assert output.json()["effective_action"] == "block"
+    assert "confidential.winter" in {f["rule_id"] for f in output.json()["findings"]}
+    assert "internal-codename-winter" not in confidential.text + output.text
     assert "synthetic-only-value" not in assignment.text
 
 
