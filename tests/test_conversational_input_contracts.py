@@ -56,7 +56,8 @@ def test_unrelated_chat_question_is_not_marked_as_an_attack():
 def test_tenant_off_never_inherits_another_tenants_prompt_attack_policy():
     blocked = TenantRecord(tenant_id="tenant-one", display_name="First", mode="enforce",
                            input_check_prompt_attack="block")
-    disabled = TenantRecord(tenant_id="tenant-two", display_name="Second", mode="enforce")
+    disabled = TenantRecord(tenant_id="tenant-two", display_name="Second", mode="enforce",
+                            input_check_secrets="flag")
     yes = _check(blocked, QUESTION)
     no = _check(disabled, QUESTION)
     assert yes.effective_action == Action.BLOCK
