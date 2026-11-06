@@ -107,6 +107,38 @@ def bounded_measure(component, size, samples, timeout):
     return json.loads(result.stdout)
 
 
+
+def scale_acceptance(measurements, sizes=SIZES):
+    """A scale run is accepted only if every requested checker and generator measurement succeeded.
+
+    A subprocess timeout, an error, an omitted sample, an unexpected size, or a
+    Policy/TenantRecord schema refusal is a real failure, not a successful report.
+    This does NOT imply the independent portfolio, API, UI, or production gates passed.
+    """
+    expected = {(size, component) for size in sizes for component in ("checker", "generator")}
+    seen = set()
+    for row in measurements:
+        if not isinstance(row, dict):
+            return False
+        key = (row.get("size"), row.get("component"))
+        if key not in expected or key in seen:
+            return False
+        seen.add(key)
+        if row.get("status") != "measured" or not isinstance(row.get("samples"), int) or row["samples"] < 1:
+            return False
+        schema = row.get("schema_acceptance")
+        if not isinstance(schema, dict):
+            return False
+        if any(not isinstance(schema.get(name), dict) or schema[name].get("accepted") is not True
+               or schema[name].get("errors") for name in ("policy", "tenant_record")):
+            return False
+        if any(not isinstance(row.get(field), (int, float)) or not math.isfinite(row[field])
+               or row[field] < 0 for field in ("median_ms", "p95_nearest_rank_ms",
+                                              "peak_traced_bytes", "output_bytes")):
+            return False
+    return seen == expected
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--worker", choices=("checker", "generator"))
@@ -133,12 +165,20 @@ def main():
                             "No concurrency, request admission, persisted API or deployed acceptance tested."],
                   "measurements": [bounded_measure(c, n, args.samples, args.timeout)
                                    for n in SIZES for c in ("checker", "generator")]}
+    # Tool process status is an acceptance signal. Historically the scale tool
+    # returned success even when 51+ comparisons failed schema admission or
+    # generator workers timed out. Do not weaken budgets or claim release readiness.
+    accepted = scale_acceptance([report] if args.worker else report["measurements"],
+                                (args.size,) if args.worker else SIZES)
+    if not args.worker:
+        report["scale_acceptance_passed"] = accepted
     text = json.dumps(report, indent=2) + "\n"
     if args.output:
         args.output.write_text(text, encoding="utf-8")
     else:
         print(text, end="")
+    return 0 if accepted else 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
