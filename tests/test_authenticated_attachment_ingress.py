@@ -129,7 +129,7 @@ def test_per_rule_off_and_stage_off_preserve_tenant_authority():
 
 def test_authentication_tenant_isolation_and_no_fabricated_attachment():
     one, two = tenant("demo1"), tenant("demo2", input_attachment_csv_mode="off")
-    client, service = harness((one, two))
+    client, service = harness(one, two)
     denied = send(client, one[1], tenant_id="demo2")
     assert denied.status_code == 403
     assert service.store.get("demo1").used(usage_month()) == 0
