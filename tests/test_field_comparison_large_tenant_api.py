@@ -110,3 +110,31 @@ def test_cross_tenant_access_denied_without_usage_or_rule_leak():
     })
     assert response.status_code == 403
     assert store.get(TENANT).used(usage_month()) == 0
+
+
+def test_missing_and_invalid_json_values_are_not_silently_accepted_in_large_tenant():
+    size = 51
+    client, store, headers = _client()
+    initial = store.get(TENANT)
+    saved = client.post("/v1/tenants/current/checks", headers=headers, json={
+        "revision": initial.revision,
+        "changes": {"input_check_cross_field": "block",
+                    "output_check_cross_field": "flag",
+                    "comparisons": _comparisons(size)},
+    })
+    assert saved.status_code == 200, saved.text[:300]
+    data = json.loads(_payload(size))
+    data.pop("left_1")
+    data["right_2"] = "not-a-number"
+    for stage, action in (("input", "block"), ("output", "flag")):
+        result = client.post("/v1/checks/" + stage, headers=headers, json={
+            "application_id": TENANT, "content_format": "json",
+            "content": json.dumps(data),
+        })
+        assert result.status_code == 200, result.text[:300]
+        response = result.json()
+        found = {f["rule_id"] for f in response["findings"] if f["rule_id"].startswith("business.scale_")}
+        assert found == {"business.scale_001", "business.scale_002"}
+        assert response["evaluation_status"] == "complete"
+        assert response["effective_action"] == action
+    assert store.get(TENANT).used(usage_month()) == 2
