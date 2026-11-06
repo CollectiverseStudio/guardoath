@@ -119,9 +119,18 @@ class AdvancedArithmeticRule(Contract):
         import re
         if set(self.fields) != set(ADVANCED_FIELD_KEYS[self.kind]):
             raise ValueError("Arithmetic rule requires its declared field names")
+        decoded = []
         for pointer in self.fields.values():
             if not isinstance(pointer, str) or len(pointer) > 200 or not pointer.startswith("/") or re.search(r"~(?![01])", pointer):
                 raise ValueError("Arithmetic fields require absolute JSON Pointers")
+            segments = tuple(x.replace("~1", "/").replace("~0", "~") for x in pointer[1:].split("/"))
+            if any(not x or x.isdigit() for x in segments):
+                raise ValueError("Arithmetic pointers require object fields, not positional indices")
+            decoded.append(segments)
+        if len(set(decoded)) != len(decoded) or any(
+                p == q[:len(p)] or q == p[:len(q)]
+                for i, p in enumerate(decoded) for q in decoded[i + 1:]):
+            raise ValueError("Arithmetic fields must be distinct and nonoverlapping")
         if len(set(self.stages)) != len(self.stages):
             raise ValueError("Arithmetic stages must be distinct")
         return self
