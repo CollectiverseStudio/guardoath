@@ -201,3 +201,23 @@ def test_all_eight_advanced_rules_run_together_and_return_all_findings():
             "business." + kind for _case, kind in KINDS
         }
         assert result.effective_action == Action.BLOCK
+
+
+def test_old_binary_field_comparison_and_advanced_rule_run_in_same_engine():
+    from guardoath.models import FieldComparison
+    advanced = make_rule("invoice_total")
+    policy = Policy(
+        application_id="arithmetic", version="v1", mode="enforce",
+        comparisons=(FieldComparison(rule_id="old_simple", left="/left", right="/right", operator="le"),),
+        advanced_arithmetic=(advanced,),
+        rules=(Rule(checker_id="cross_field", on_finding=Action.BLOCK),),
+    )
+    content = {**ARITHMETIC_EXAMPLES["invoice_total"][0], "total": 110,
+               "left": 9, "right": 2}
+    for stage in (Stage.INPUT, Stage.OUTPUT):
+        result = check(Engine([policy], default_checkers()), json.dumps(content), stage)
+        assert result.evaluation_status == "complete"
+        assert {f.rule_id for f in result.findings} == {
+            "business.old_simple", "business.invoice_total"
+        }
+        assert result.effective_action == Action.BLOCK
