@@ -107,6 +107,23 @@ def resolve_overlaps(candidates, check_deadline=lambda: None):
     return kept
 
 
+def _assemble_redacted_text(text, merged):
+    """Build redacted content in one pass from sorted, nonoverlapping spans.
+
+    The caller has already resolved candidates, overlap precedence and labels.
+    Copying all unaffected fragments once preserves the exact previous
+    reverse-splice result without repeatedly copying the entire input for
+    every matched sensitive value.
+    """
+    fragments = []
+    cursor = 0
+    for start, end, entity in merged:
+        fragments.append(text[cursor:start])
+        fragments.append(f"[REDACTED_{entity}]")
+        cursor = end
+    fragments.append(text[cursor:])
+    return "".join(fragments)
+
 
 def _context_cue_matches_at(words, ends, start, hint_words, context):
     """Match the same five preceding words, current word and field hint as the
@@ -364,9 +381,7 @@ def build_pii_checker():
                     merged[-1] = (old_start, end, old_entity if old_entity == entity else "SENSITIVE")
                 else:
                     merged.append((start, end, entity))
-            for start, end, entity in reversed(merged):
-                text = text[:start] + f"[REDACTED_{entity}]" + text[end:]
-            return text, True
+            return _assemble_redacted_text(text, merged), True
 
         def transform(value, hint=""):
             nonlocal sensitive_key
