@@ -523,7 +523,7 @@ billing or model-token spending caps.
 
 ### Prompt attacks and harmful content (local)
 
-`prompt_attack` (35 wording rules: jailbreak personas and modes, instruction overrides, prompt extraction,
+`prompt_attack` (36 wording rules: jailbreak personas and modes, instruction overrides, prompt extraction,
 instructions hidden in documents or pages, decode-then-obey, signs an attack worked) and `harmful_content` (30 wording
 rules: hate about the groups they name, insults and harassment, threats, sexual content involving minors, violent
 extremism, requests for violence) run in GuardOath on both stages. They replace the removed Azure Prompt Shields and
