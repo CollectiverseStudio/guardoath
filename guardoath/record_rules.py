@@ -529,6 +529,27 @@ def conversion_time_rule(rule) -> dict:
     }
 
 
+def trusted_reference_rule(rule) -> dict:
+    """Dynamic tenant rule metadata; never expose reference values or signature."""
+    return {
+        "rule_id": COMPARISON_PREFIX + rule.rule_id,
+        "control_id": "cross_field",
+        "title": f"Host-attested reference {rule.rule_id}: {rule.kind}",
+        "use_case": "Check submitted values against a host-signed, versioned, time-bounded reference snapshot.",
+        "severity": "high",
+        "example": None, "look_alike": None,
+        "example_unavailable": {"code": "private_host_reference",
+                                "reason": "Signed authoritative reference data is private; no sample is invented."},
+        "look_alike_unavailable": {"code": "private_host_reference",
+                                   "reason": "No verified benign reference sample is invented."},
+        "needs_setting": None, "needs_checks": [],
+        "content_format": "json",
+        "configuration": f"{rule.kind} · host-attested reference · runs on {stage_names(rule.stages)}",
+        "stages": [getattr(stage, "value", stage) for stage in rule.stages],
+        "record_rule": True,
+    }
+
+
 def record_rules(record) -> dict[str, dict]:
     """The record's own rules, by rule id: its comparisons, then its required sections."""
     rules, context = {}, _Examples(record.comparisons)
@@ -544,6 +565,9 @@ def record_rules(record) -> dict[str, dict]:
     for conversion_time in getattr(record, "advanced_conversion_time", ()):
         rule = conversion_time_rule(conversion_time)
         rules[rule["rule_id"]] = rule
+    for trusted in getattr(record, "advanced_trusted_reference", ()):
+        rule = trusted_reference_rule(trusted)
+        rules[rule["rule_id"]] = rule
     for section in record.required_sections:
         rule = section_rule(section, record.required_sections)
         rules[rule["rule_id"]] = rule
@@ -556,6 +580,7 @@ def record_rule_ids(record) -> dict[str, str]:
             **{COMPARISON_PREFIX + c.rule_id: "cross_field" for c in getattr(record, "advanced_arithmetic", ())},
             **{COMPARISON_PREFIX + c.rule_id: "cross_field" for c in getattr(record, "advanced_identity", ())},
             **{COMPARISON_PREFIX + c.rule_id: "cross_field" for c in getattr(record, "advanced_conversion_time", ())},
+            **{COMPARISON_PREFIX + c.rule_id: "cross_field" for c in getattr(record, "advanced_trusted_reference", ())},
             **{SECTION_PREFIX + s.rule_id: "completeness" for s in record.required_sections}}
 
 
@@ -566,6 +591,7 @@ def bad_record_rule_ids(record, static_ids) -> list[str]:
                                 ("arithmetic comparison", getattr(record, "advanced_arithmetic", ()), COMPARISON_PREFIX),
                                 ("identity comparison", getattr(record, "advanced_identity", ()), COMPARISON_PREFIX),
                                 ("conversion/time comparison", getattr(record, "advanced_conversion_time", ()), COMPARISON_PREFIX),
+                                ("trusted reference comparison", getattr(record, "advanced_trusted_reference", ()), COMPARISON_PREFIX),
                                 ("required section", record.required_sections, SECTION_PREFIX)):
         for item in items:
             if not re.fullmatch(RECORD_RULE_ID, item.rule_id):
