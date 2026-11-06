@@ -15,7 +15,7 @@
       "title": "Jailbreak detection",
       "status": "partial",
       "source": "docs/use-case-coverage.md",
-      "existing_coverage_note": "Local prompt_attack check: 35 wording rules for jailbreak personas, mode switches, instruction overrides, prompt extraction and injected instructions, on input and output. Wording only; reworded or multi-turn attacks pass.",
+      "existing_coverage_note": "Local prompt_attack check: 36 wording rules for jailbreak personas, mode switches, instruction overrides, prompt extraction and injected instructions, on input and output. Wording only; reworded or multi-turn attacks pass.",
       "evidence": {
         "modules": [
           "guardoath/prompt_attack.py"
