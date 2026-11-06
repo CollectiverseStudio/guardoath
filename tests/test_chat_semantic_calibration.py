@@ -1,7 +1,7 @@
 """Measure current lexical chat detection against synthetic intent labels.
 
-This deliberately records one known quoted-text false positive and one Spanish
-false negative. Passing the test is evidence of lexical behavior, not semantic
+This records a known quoted-text false positive, one covered Spanish direct
+command, and a separate still-unrecognized Spanish paraphrase. Passing the test is evidence of lexical behavior, not semantic
 accuracy or successful contextual safety enforcement.
 """
 import asyncio
@@ -54,8 +54,8 @@ def test_synthetic_intent_confusion_matrix_documents_actual_coverage_gaps():
     fp = sum(not actual and detected for actual, detected in predictions)
     fn = sum(actual and not detected for actual, detected in predictions)
     tn = sum(not actual and not detected for actual, detected in predictions)
-    assert (tp, fp, fn, tn) == (2, 1, 1, 2)
-    assert tp / (tp + fp) == pytest.approx(2 / 3)  # synthetic precision
-    assert tp / (tp + fn) == pytest.approx(2 / 3)  # synthetic recall
+    assert (tp, fp, fn, tn) == (3, 1, 1, 2)
+    assert tp / (tp + fp) == pytest.approx(3 / 4)  # synthetic precision
+    assert tp / (tp + fn) == pytest.approx(3 / 4)  # synthetic recall
     assert DATA["schema_version"] == 1
     assert len(CASES) == len({case["id"] for case in CASES})
