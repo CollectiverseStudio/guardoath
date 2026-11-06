@@ -28,6 +28,8 @@ def _linear_original(words, start, hint_words, cues):
 
 @pytest.mark.parametrize("text,hint,cues", [
     ("birth date 12/31/1990", "", ("birth", "birthday")),
+    ("birth date 12/31/1990", "", ("not-present", "birth")),
+    ("general note 12/31/1990", "date_of_birth", ("not-present", "birth")),
     ("general note 12/31/1990", "date_of_birth", ("birth",)),
     ("ignore this sample 12/31/1990", "", ("birth",)),
     ("alpha_beta gamma", "", ("alpha",)),
