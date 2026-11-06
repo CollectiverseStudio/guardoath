@@ -2211,3 +2211,29 @@ FC-035 configuration example (illustrative internal reference; store it only thr
 ```
 
 All four rules use bounded, exact numeric conversions or integer-microsecond timestamp comparisons. Invalid JSON/fields, unsupported units, bad offset dates, zero/negative rate factors and overbudget samples fail closed without revealing submitted or stored reference values. The implementation **does not retrieve, purchase or certify FX, clinical, permit or logistics data**. The active tenant record governs validation and actions at both stages. This section documents implementation contracts; production readiness remains separately gated by exact-SHA GitHub Actions, recurring local PII 500-ms failures, attachment-mode provenance and post-deploy live checks.
+
+
+## FC-044/045/047/049 — Batch D host-attested reference validation
+
+These four **implemented** comparison types depend on host-approved evidence, rather than trusting values supplied by a chat message. Each rule is stored in the authoritative tenant's `advanced_trusted_reference` settings and executed using the **same** `cross_field` check, Input/Output policies, existing findings/action priority, dynamic rule inventory and authenticated tenant API as the original Field Comparisons. A tenant may switch an individual rule Off. When an active rule's host attestation is missing, expired or invalid, the **whole evaluation is incomplete/Block**, even in observe mode and under `failure_action=flag`. This is a non-configurable reference-integrity boundary, not an ordinary low-confidence finding.
+
+| ID | Kind | Trusted reference input | Actual validation and synthetic example |
+|---|---|---|---|
+| FC-044 | `dose_ceiling` | Host-verified `verified_weight_kg` and `max_mg_per_kg` | `dose_mg <= verified_weight_kg × max_mg_per_kg`; dose 900 vs 70 kg × 10 mg/kg violates |
+| FC-045 | `medication_interval` | Host-verified `previous_administration` timestamp and `minimum_interval_minutes` | Administration at 10:00 after a verified 09:00 event with a four-hour minimum violates |
+| FC-047 | `permit_cap` | Host-verified numeric `permit_limit` | Reported emission 60 vs signed permit cap 50 violates |
+| FC-049 | `invoice_po_vendor` | Host-verified `approved_vendor_id` | Invoice vendor VENDOR2 vs signed PO vendor VENDOR1 violates |
+
+A rule supplies its stable `rule_id`, `kind`, exactly named JSON `fields`, bounded string `reference_values`, `source_id`, `reference_version`, `verified_at` and `expires_at` UTC timestamps, stages and a SHA-256 HMAC `host_signature`. The HMAC covers **tenant ID, all rule fields and the reference snapshot**; signatures are checked in constant time. The host-held key is read from `GUARDOATH_REFERENCE_SIGNING_KEY` (minimum 32 characters). This key must be provisioned securely by the operator, **must not** be put in tenant records, application responses, command-line arguments or Git, and is not currently deployed as part of this batch. Reference snapshots have a maximum one-year lifetime. Their expiry is checked on each request. The submitted document cannot supply, alter, extend or impersonate the trusted reference.
+
+**Operator workflow:** Independently verify the reference data, legal/clinical authorization and its effective validity from an approved authoritative source **before** signing. An offline signing helper exists:
+
+```bash
+python -m tools.sign_trusted_reference --tenant tenant-a --input private-verified-rule.json --output private-signed-rule.json
+```
+
+Provide `GUARDOATH_REFERENCE_SIGNING_KEY` through a secured process environment, not in the command. The input rule must already include a 64-zero placeholder `host_signature`. The tool creates a *new* private output file without overwriting the input. After reviewing it, a signed-in authorized tenant administrator saves the rule through the ordinary revision-checked checks API. Host authorization to sign does not imply the source itself is correct: clinical, permit and purchasing data must be validated and reissued when changed. **No external clinical validator, permit authority, FX provider or network call has been implemented**, and this feature is not an independent medical dosing recommendation or regulatory certification.
+
+**Privacy/security:** All values and missing-field/type/invalid-reference problems produce fixed non-echoing findings. Numeric input is bounded and Decimal-exact; medication timestamps require an explicit timezone offset; reference authorizations are tenant-bound and stage-bound and cannot be replayed across tenants or changed after signing. A missing host key, expired signature, modified reference or untrusted context is incomplete/Block even in observe mode. An explicitly disabled individual rule is not evaluated. Private reference values and signatures are intentionally omitted from generated dashboard example previews.
+
+**Verification:** `guardoath/trusted_reference.py`, `guardoath/models.py`, `guardoath/business.py`, `guardoath/tenant_record.py`, `guardoath/engine.py`, `guardoath/record_rules.py`, `tools/sign_trusted_reference.py`, and `tests/test_advanced_trusted_reference.py`. Tests include all four positive and benign cases on both stages, wrong/missing types, timestamp and arithmetic limits, signature tampering, wrong tenant, expiry, missing secret, rule Off, multiple simultaneous findings, private dashboard metadata and authenticated tenant API configuration. This source remains **not production-released** until exact-SHA CI is green, the host operator has deployed a secure signing key and approved real reference provenance, Issue #30 PII timing is resolved, tenant legacy attachment-Off audit is complete, and all 15 production post-deploy checks are recorded.
