@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "scope": "Current-source deterministic Field Comparisons strict portfolio and bounded component scale; not production release approval",
+  "source_commit": "1581252606ba98e17a9d564ac62abcaebdfc09a6",
+  "github_actions": {
+    "workflow_run": "https://github.com/CollectiverseStudio/guardoath/actions/runs/42286872287",
+    "individual_job": "https://github.com/CollectiverseStudio/guardoath/actions/runs/42286872287/job/128129846802",
+    "job_result": "success",
+    "artifact": "https://github.com/CollectiverseStudio/guardoath/actions/runs/42286872287/artifacts/13538176356",
+    "artifact_id": 13538176356,
+    "gate_status": {
+      "portfolio": "success",
+      "scale": "success"
+    }
+  },
+  "portfolio": {
+    "accepted": true,
+    "total_cases": 168,
+    "accepted_cases": 168,
+    "engine_evaluated_cases": 158,
+    "independently_proved_unavailable_cases": 10,
+    "release_readiness": false,
+    "scenarios": [
+      {
+        "id": "MFC-018-inventory",
+        "comparisons": 30,
+        "accepted": 120,
+        "total": 120
+      },
+      {
+        "id": "MFC-001-chain-refund",
+        "comparisons": 3,
+        "accepted": 12,
+        "total": 12
+      },
+      {
+        "id": "MFC-002-chain",
+        "comparisons": 2,
+        "accepted": 8,
+        "total": 8
+      },
+      {
+        "id": "MFC-007-equality-cycle",
+        "comparisons": 3,
+        "accepted": 12,
+        "total": 12
+      },
+      {
+        "id": "MFC-007-strict-contradiction",
+        "comparisons": 2,
+        "accepted": 8,
+        "total": 8,
+        "proved_unavailable": 4,
+        "reason": "cannot_all_pass"
+      },
+      {
+        "id": "MFC-009-self-strict",
+        "comparisons": 2,
+        "accepted": 8,
+        "total": 8,
+        "proved_unavailable": 6,
+        "reasons": {
+          "cannot_all_pass": 4,
+          "cannot_fail_alone": 2
+        }
+      }
+    ],
+    "report_sha256": "db7229f1cc2961a7834d2eea944aeaca16f6e20f2f959ee8b5888d434cd95716",
+    "source_sha256": {
+      "guardoath/record_rules.py": "58bde339a96338aca4f93485806723012c4cf3eb4778d9853064fa779a3a111f",
+      "tools/field_comparison_portfolio.py": "899ff6c0e029c176207d26cf003a0969f4e8c8a8e595e1462b09985804868e97"
+    }
+  },
+  "scale": {
+    "accepted": true,
+    "samples_per_measurement": 3,
+    "worker_timeout_seconds": 10,
+    "sizes": [
+      30,
+      51,
+      100,
+      250,
+      500
+    ],
+    "measurements": [
+      {
+        "size": 30,
+        "checker_median_ms": 2.74,
+        "generator_median_ms": 62.22
+      },
+      {
+        "size": 51,
+        "checker_median_ms": 3.58,
+        "generator_median_ms": 161.93
+      },
+      {
+        "size": 100,
+        "checker_median_ms": 6.05,
+        "generator_median_ms": 563.29
+      },
+      {
+        "size": 250,
+        "checker_median_ms": 13.85,
+        "generator_median_ms": 1570.6
+      },
+      {
+        "size": 500,
+        "checker_median_ms": 26.67,
+        "generator_median_ms": 2318.89
+      }
+    ],
+    "policy_schema_accepted_all": true,
+    "tenant_record_schema_accepted_all": true,
+    "release_readiness": false,
+    "report_sha256": "81909ed8839aa8e9363592ef3c94b303a76db085b052bc9cb9e5d256b00e7ea3",
+    "source_sha256": {
+      "guardoath/record_rules.py": "58bde339a96338aca4f93485806723012c4cf3eb4778d9853064fa779a3a111f",
+      "tools/field_comparison_scale.py": "5fe8becd3ecc523f473e80e5f5b3e190f837d9b6473f785743f26c61ec7040e0"
+    }
+  },
+  "boundaries": [
+    "Proof accepts only independently proven impossible witnesses; unverified missing examples fail.",
+    "Scale reports are component measurements using synthetic data, not tenant/API/dashboard acceptance.",
+    "This receipt preserves full artifact identity and SHA256, but only the summary is committed; original full reports are in the 14-day GitHub Actions artifact.",
+    "Advanced FC-031–050 remains outstanding; PII tail failures and attachment policy provenance still block release."
+  ]
+}
