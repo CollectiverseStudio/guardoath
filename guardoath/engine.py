@@ -186,10 +186,16 @@ class Engine:
         # Enforce the trust boundary independently of the tenant's ordinary
         # observe mode, failure_action=flag or individual rule Allow/Flag.
         from guardoath.trusted_reference import reference_is_trusted
-        untrusted_reference = any(
-            not reference_is_trusted(reference, policy.application_id)
-            for reference in policy.advanced_trusted_reference
-            if stage in reference.stages and "cross_field" in {rule.checker_id for rule in rules}
+        active_trusted_references = [
+            reference for reference in policy.advanced_trusted_reference
+            if stage in reference.stages
+            and "cross_field" in {rule.checker_id for rule in rules}
+            and policy.rule_actions_for(stage).get("business." + reference.rule_id) != "off"
+        ]
+        untrusted_reference = bool(active_trusted_references) and (
+            request.content_format != "json" or
+            any(not reference_is_trusted(reference, policy.application_id)
+                for reference in active_trusted_references)
         )
         results = await run_rules(request)
         actions = [Action.ALLOW]
