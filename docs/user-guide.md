@@ -2141,3 +2141,37 @@ The eight Batch A rules below are **tenant-owned** `business.<rule_id>` validati
 **Contracts and limitations:** Only submitted bounded JSON is checked; this is not validation of trusted exchange rates, clinical doses, permits or external purchase orders. The engine parses floating-point JSON tokens into `Decimal` rather than binary floats, performs up to 128 line items with bounded numeric precision, refuses values with more than 32 significant decimal digits or magnitude beyond 10^18, accepts exact equality and explicit decimal tolerances (no implicit currency rounding), rejects booleans and string numbers, and requires positive denominators and nonnegative financial quantities/rates where applicable. Fractions must lie from zero through one. Invalid/missing fields, unsupported values, over-budget line arrays and zero denominators produce findings; no unsafe arithmetic operation or submitted value is echoed to clients. Not all rules constrain trusted origins, cross-document authenticity, or business-specific sign/rounding conventions; tenants must supply verified canonical input.
 
 **Verification:** `guardoath/advanced_arithmetic.py`, `guardoath/business.py`, `guardoath/models.py`, `guardoath/tenant_record.py`, `guardoath/record_rules.py`, `guardoath/engine.py`, `tests/test_advanced_arithmetic.py`. Unit cases cover each implemented kind at both stages, malformed and missing JSON fields, exact decimal boundaries, bounded list and numeric limits, simultaneous findings, tenant-authenticated revisions, per-stage actions/Off and request metering. The existing dashboard lists tenant-owned rules through `record_rules`, with examples and configuration. All changes require exact-source CI verification before they count as release-ready. Remaining FC-035/038–040/042–045/047–050 are not implemented by this batch; external trusted-data candidates must not be fabricated.
+
+
+## FC-038/039/040/048 — Batch B identity, uniqueness and tenant-authoritative sets
+
+Batch B extends the **existing** `cross_field` checker and tenant-stored `business.<rule_id>` configuration (no new engine, profile or provider). A tenant turns on `input_check_cross_field` / `output_check_cross_field`, saves an `advanced_identity` array of named typed rules, and uses the existing input/output per-rule Off/Allow/Flag/Block overrides. Real JSON bytes are validated on both stages, and every violation is returned.
+
+| Rule | Kind and required fields | Positive violation / benign case |
+|---|---|---|
+| FC-038 | `order_id_match`: `order_id`, `shipment_order_id` pointers | Shipment ORD2 vs order ORD1 violates; both ORD1 passes |
+| FC-039 | `quarantine_exclusion`: `requested_lot` pointer + **tenant-saved trusted_values** | With trusted quarantine set `["QLOT8"]`, requested QLOT8 violates; LOT9 passes |
+| FC-040 | `serial_unique`: `serials` array pointer | `["SER1","SER1"]` violates, `["SER1","SER2"]` passes |
+| FC-048 | `authorized_scope_subset`: `requested_scopes` array pointer + **tenant-saved trusted_values** | Trusted permitted scopes `["read:item"]` do not permit request `["admin:write"]`; `["read:item"]` passes |
+
+**Reference authority and privacy:** Values for quarantine exclusion and access permissions must be configured as trusted data on the authenticated tenant's saved record—not supplied in user JSON. Clients cannot change the trusted sets by including `trusted_values` in a message. The settings require 1–128 unique ASCII identifiers, each 1–100 characters, and the checker reads a maximum of 128 requested members. Values and findings are compared exactly (case-sensitive, no normalization). A malformed/missing/wrong-typed input, empty or oversized array, duplicate serial, unauthorized scope or quarantined lot generates a privacy-safe finding. Dashboard example previews for reference-backed rules are unavailable rather than leaking actual trusted values or fabricating a safe example.
+
+**Configuration example** (tenant settings, not user-submitted content):
+
+```json
+{
+  "advanced_identity": [
+    {
+      "rule_id": "permitted_scopes",
+      "kind": "authorized_scope_subset",
+      "fields": {"requested_scopes": "/requested_scopes"},
+      "trusted_values": ["read:item", "write:item"],
+      "stages": ["input", "output"]
+    }
+  ],
+  "input_rule_actions": {"business.permitted_scopes": "block"},
+  "output_rule_actions": {"business.permitted_scopes": "flag"}
+}
+```
+
+These checks enforce the tenant's own authenticated configuration; **they do not establish external authority, permission ownership, supply-chain provenance, or real-time quarantine data freshness**. Customers must protect and maintain the configuration. Implementation: `guardoath/advanced_identity.py`, `guardoath/models.py`, `guardoath/business.py`, `guardoath/tenant_record.py`, `guardoath/record_rules.py`, and `tests/test_advanced_identity.py` for all four rules, bounded and malformed input, private reference presentation, concurrent findings and authenticated save/API stage actions. The latest implementation commit requires its own 13 Tests and three CodeQL exact-SHA verification before being release-accepted. FC-035, 042–045, 047, 049, 050 remain pending provenance-aware conversion, chronology or external-reference implementation.
