@@ -253,6 +253,48 @@ class AdvancedIdentityRule(Contract):
         return self
 
 
+TRUSTED_REFERENCE_FIELDS = {
+    "dose_ceiling": ("dose_mg",),
+    "medication_interval": ("administered_at",),
+    "permit_cap": ("reported_emission",),
+    "invoice_po_vendor": ("invoice_vendor_id",),
+}
+TRUSTED_REFERENCE_VALUES = {
+    "dose_ceiling": ("verified_weight_kg", "max_mg_per_kg"),
+    "medication_interval": ("previous_administration", "minimum_interval_minutes"),
+    "permit_cap": ("permit_limit",),
+    "invoice_po_vendor": ("approved_vendor_id",),
+}
+
+
+class AdvancedTrustedReferenceRule(Contract):
+    """FC-044/045/047/049: only host-signed tenant-bound snapshots are authoritative."""
+    rule_id: str = Field(pattern=r"^[a-z][a-z0-9_]{0,79}$")
+    kind: Literal["dose_ceiling", "medication_interval", "permit_cap", "invoice_po_vendor"]
+    fields: dict[str, str] = Field(min_length=1, max_length=1)
+    reference_values: dict[str, str] = Field(min_length=1, max_length=2)
+    source_id: str = Field(pattern=r"^[A-Za-z0-9_.:-]{3,100}$")
+    reference_version: str = Field(pattern=r"^[A-Za-z0-9_.:-]{1,80}$")
+    verified_at: str = Field(min_length=20, max_length=40)
+    expires_at: str = Field(min_length=20, max_length=40)
+    host_signature: str = Field(pattern=r"^[0-9a-f]{64}$")
+    stages: tuple[Stage, ...] = Field(default=(Stage.INPUT, Stage.OUTPUT), min_length=1)
+
+    @model_validator(mode="after")
+    def trusted_contract(self):
+        import re
+        if set(self.fields) != set(TRUSTED_REFERENCE_FIELDS[self.kind]) or set(self.reference_values) != set(TRUSTED_REFERENCE_VALUES[self.kind]):
+            raise ValueError("Trusted reference rule requires its exact declared field names")
+        for pointer in self.fields.values():
+            if not isinstance(pointer, str) or len(pointer) > 200 or not pointer.startswith("/") or re.search(r"~(?![01])", pointer):
+                raise ValueError("Trusted reference requires absolute JSON Pointers")
+        if any(not isinstance(v, str) or not 1 <= len(v) <= 100 for v in self.reference_values.values()):
+            raise ValueError("Invalid trusted reference value")
+        if len(set(self.stages)) != len(self.stages):
+            raise ValueError("Trusted reference stages must be distinct")
+        return self
+
+
 class RequiredSection(Contract):
     rule_id: str = Field(pattern=r"^[a-zA-Z0-9_.-]{1,80}$")
     label: str = Field(pattern=r"^[A-Za-z][A-Za-z0-9 _-]{0,79}$")
@@ -375,11 +417,12 @@ class Policy(Contract):
     advanced_arithmetic: tuple[AdvancedArithmeticRule, ...] = ()
     advanced_identity: tuple[AdvancedIdentityRule, ...] = ()
     advanced_conversion_time: tuple[AdvancedConversionTimeRule, ...] = ()
+    advanced_trusted_reference: tuple[AdvancedTrustedReferenceRule, ...] = ()
     required_sections: tuple[RequiredSection, ...] = ()
 
     @model_validator(mode="after")
     def all_comparison_rule_ids_are_unique(self):
-        ids = [r.rule_id for r in (*self.comparisons, *self.advanced_arithmetic, *self.advanced_identity, *self.advanced_conversion_time)]
+        ids = [r.rule_id for r in (*self.comparisons, *self.advanced_arithmetic, *self.advanced_identity, *self.advanced_conversion_time, *self.advanced_trusted_reference)]
         if len(set(ids)) != len(ids):
             raise ValueError("Comparison rule IDs must be distinct")
         return self
