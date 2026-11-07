@@ -1927,3 +1927,82 @@ test("Output PII finding navigates to Output-only tenant rule selector without p
   await expect(page.locator('[id="rule-action-output-pii.email_address"]')).toHaveValue("");
   await page.getByRole("button", {name: "Reset to defaults", exact: true}).click();
 });
+
+
+test("eight-kind arithmetic editor: tenant create/save/reload/real-Engine finding/edit/remove", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo10");
+  await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
+  await page.getByRole("button", {name: "Reset to defaults", exact: true}).click();
+  await expect(page.locator("#tenant-message")).toContainText("Reset to the demo defaults.");
+  await expect(page.locator("#arithmetic-editor")).toBeVisible();
+  const kind = page.locator("#arithmetic-kind");
+  expect(await kind.locator("option").count()).toBe(8);
+  await page.locator("#arithmetic-id").fill("invoice_guard");
+  await kind.selectOption("invoice_total");
+  for (const field of ["subtotal", "discount", "tax", "shipping", "total"])
+    await page.locator("#arithmetic-field-" + field).fill("/invoice/" + field);
+  await page.locator("#arithmetic-stage-output").uncheck();
+  await page.locator("#arithmetic-apply").click();
+  await expect(page.locator('[data-arithmetic-id="invoice_guard"]')).toBeVisible();
+  await page.locator("#tenant-check-input-cross_field").selectOption("block");
+  const save = page.waitForResponse(r =>
+    r.url().endsWith("/v1/tenants/current/checks") && r.request().method() === "POST");
+  await page.getByRole("button", {name: "Save checks", exact: true}).click();
+  expect((await save).ok()).toBe(true);
+  await expect(page.locator("#tenant-message")).toContainText("Saved");
+  await expect(page.locator('[data-arithmetic-id="invoice_guard"]')).toBeVisible();
+  const app = page.waitForResponse(r => r.url().endsWith("/v1/applications/current"));
+  await page.getByRole("button", {name: "Disconnect", exact: true}).click();
+  await page.locator("#demo-user").selectOption("demo10");
+  await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+  await app;
+  await expect(page.locator('[data-arithmetic-id="invoice_guard"]')).toBeVisible();
+
+  await page.locator("#input-format").selectOption("json");
+  await page.locator("#input-content").fill(JSON.stringify({
+    invoice: {subtotal: 100, discount: 10, tax: 8, shipping: 5, total: 110}
+  }));
+  const check = page.waitForResponse(r =>
+    r.url().endsWith("/v1/checks/input") && r.request().method() === "POST");
+  await page.locator("#run-input").click();
+  const result = await (await check).json();
+  expect(result.findings.map(f => f.rule_id)).toContain("business.invoice_guard");
+  expect(result.effective_action).toBe("block");
+  const edit = page.getByRole("button", {name: "Edit arithmetic invoice_guard"});
+  await edit.click();
+  await expect(page.locator("#arithmetic-id")).toHaveValue("invoice_guard");
+  await page.locator("#arithmetic-field-total").fill("/invoice/billed_total");
+  await page.locator("#arithmetic-apply").click();
+  await expect(page.locator("#tenant-message")).toContainText("Unsaved");
+  await page.getByRole("button", {name: "Save checks", exact: true}).click();
+  await expect(page.locator("#tenant-message")).toContainText("Saved");
+  await page.getByRole("button", {name: "Remove arithmetic invoice_guard"}).click();
+  await page.locator("#tenant-check-input-cross_field").selectOption("");
+  await page.getByRole("button", {name: "Save checks", exact: true}).click();
+  await expect(page.locator("#tenant-message")).toContainText("Saved");
+  await expect(page.locator('[data-arithmetic-id="invoice_guard"]')).toHaveCount(0);
+  await page.getByRole("button", {name: "Reset to defaults", exact: true}).click();
+});
+
+test("arithmetic editor rejects malformed, conflicting and incomplete drafts without a tenant write", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo10");
+  await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
+  await page.getByRole("button", {name: "Reset to defaults", exact: true}).click();
+  await expect(page.locator("#tenant-message")).toContainText("Reset to the demo defaults.");
+  await page.locator("#arithmetic-id").fill("not valid");
+  await page.locator("#arithmetic-field-lines").fill("/lines");
+  await page.locator("#arithmetic-field-subtotal").fill("/subtotal");
+  expect(await page.locator("#arithmetic-id").evaluate(e => e.validity.patternMismatch)).toBe(true);
+  await page.locator("#arithmetic-apply").click();
+  await expect(page.locator("#arithmetic-drafts li")).toHaveCount(1);
+  await page.locator("#arithmetic-id").fill("valid_rule");
+  await page.locator("#arithmetic-field-subtotal").fill("/lines");
+  await page.locator("#arithmetic-apply").click();
+  await expect(page.locator("#arithmetic-message")).toContainText("distinct and nonoverlapping");
+  await expect(page.locator("#arithmetic-drafts li")).toHaveCount(1);
+  await page.getByRole("button", {name: "Reset to defaults", exact: true}).click();
+});
