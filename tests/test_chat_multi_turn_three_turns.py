@@ -91,6 +91,24 @@ def test_authenticated_three_turn_tenant_actions_keep_all_findings_private(stage
     assert service.store.get("three-turn-a").used(usage_month()) == 1
 
 
+def test_three_turn_finding_is_returned_alongside_independent_schema_failure():
+    client, _, key_a, _ = _service()
+    payload = json.loads(_chat())
+    payload["age"] = "not-an-integer"
+    response = _post(client, key_a, "three-turn-a", content=json.dumps(payload))
+    assert response.status_code == 200, response.text
+    assert {"schema.invalid", RULE} <= set(_rule_ids(response))
+    assert _rule_ids(response).count(RULE) == 1
+    assert response.json()["effective_action"] == "block"
+    assert all(part not in response.text for part in PARTS)
+
+
+def test_other_json_arrays_do_not_claim_chat_turn_authority():
+    payload = {"first": PARTS[0], "second": PARTS[1], "third": PARTS[2]}
+    assert tuple(submitted_turn_boundaries(payload)) == ()
+    assert all(RULE not in inspect(part) for part in payload.values())
+
+
 def test_tenant_rule_off_and_cross_tenant_spoof_still_enforced():
     client, service, key_a, key_b = _service()
     denied = _post(client, key_a, "three-turn-b")
