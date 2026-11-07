@@ -79,7 +79,10 @@ def test_comparison_editor_auth_read_and_revisioned_add_update_remove_round_trip
     assert update.json()["revision"] == authoritative.revision + 1
 
     stale = client.post("/v1/tenants/current/checks", headers=a, json={
-        "revision": authoritative.revision, "changes": {"comparisons": []}
+        "revision": authoritative.revision, "changes": {
+            "comparisons": [], "input_check_cross_field": None,
+            "output_check_cross_field": None,
+        }
     })
     assert stale.status_code == 409
     assert len(_summary(client, a)["comparisons"]) == 2

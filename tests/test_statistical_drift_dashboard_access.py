@@ -85,7 +85,9 @@ def test_owner_revision_conflict_and_invalid_drift_do_not_change_reference():
     })
     assert valid.status_code == 200
     stale = client.post("/v1/tenants/current/checks", headers=headers, json={
-        "revision": before, "changes": {"advanced_statistical_drift": []},
+        "revision": before, "changes": {
+            "advanced_statistical_drift": [], "input_check_cross_field": None,
+        },
     })
     assert stale.status_code == 409
     assert client.get("/v1/tenants/current/statistical-drift", headers=headers).json()["rules"] == [rule]

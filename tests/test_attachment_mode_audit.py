@@ -345,6 +345,27 @@ def test_read_only_audit_treats_nonfinite_stored_record_as_data_quality_failure(
 
 
 
+@pytest.mark.parametrize("container", ["array", "object"])
+def test_stored_json_depth_is_consistent_across_python_versions(container):
+    """Exactly 128 nested containers may be read; 129 must fail closed."""
+    def nested(count):
+        if container == "array":
+            return "[" * count + "0" + "]" * count
+        return '{"x":' * count + "0" + "}" * count
+
+    prefix = '{"input_attachment_csv_mode":"off","payload":'
+    assert classify_record(prefix + nested(127) + "}") == ("off", "missing")
+    with pytest.raises(ValueError, match="nesting limit"):
+        classify_record(prefix + nested(128) + "}")
+
+
+def test_json_brackets_in_quoted_and_escaped_content_do_not_spoof_depth():
+    """Customer strings can contain thousands of apparent JSON brackets."""
+    quoted = ('\\\\' + 'quote " and [[{][' * 200)
+    raw = json.dumps({"input_attachment_csv_mode": "auto", "string": quoted})
+    assert classify_record(raw) == ("auto", "missing")
+
+
 def test_deeply_nested_valid_json_remains_data_quality_failure_without_secret_echo():
     # 40 KB is well under DynamoDB's item maximum, but enough nesting can
     # trigger CPython's RecursionError during JSON decoding. The audit must

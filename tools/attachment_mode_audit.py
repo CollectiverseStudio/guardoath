@@ -36,8 +36,43 @@ def _reject_nonfinite_json_constant(_value):
     raise ValueError("Nonfinite JSON constant in stored tenant record")
 
 
+# Stored DynamoDB JSON has a bounded size but CPython's decoder nesting
+# tolerance varies by interpreter/version. Never certify a pathological record
+# as Auto/Off on one platform and unparseable on another.
+MAX_AUDIT_JSON_NESTING = 128
+
+
+def _reject_excessive_json_nesting(raw: str) -> None:
+    """Bound JSON container nesting without parsing or logging tenant content.
+
+    Brackets inside quoted strings (including escaped quotes/backslashes) are
+    data, not structure. A malformed document is still rejected by json.loads.
+    """
+    depth = 0
+    quoted = escaped = False
+    for char in raw:
+        if quoted:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                quoted = False
+        elif char == '"':
+            quoted = True
+        elif char in "[{":
+            depth += 1
+            if depth > MAX_AUDIT_JSON_NESTING:
+                raise ValueError("Stored tenant JSON exceeds nesting limit")
+        elif char in "]}":
+            depth -= 1
+            if depth < 0:
+                raise ValueError("Stored tenant JSON has unbalanced nesting")
+
+
 def classify_record(raw: str) -> tuple[str, str]:
     """Classify stored fields, never a model with defaults already applied."""
+    _reject_excessive_json_nesting(raw)
     record = json.loads(raw, object_pairs_hook=_reject_duplicate_json_keys,
                         parse_constant=_reject_nonfinite_json_constant)
     if not isinstance(record, dict):
