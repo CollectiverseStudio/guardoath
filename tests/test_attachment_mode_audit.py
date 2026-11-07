@@ -95,7 +95,8 @@ def test_invalid_field_values_counted_without_exposing_values():
 
 @pytest.mark.parametrize("stored_record, expected_exit, expected_quality, expected_provenance", [
     ('{"input_attachment_csv_mode":"auto"}', 0, False, False),
-    ('{"input_attachment_csv_mode":"off"}', 0, False, True),
+    ('{"input_attachment_csv_mode":"off"}', 2, False, True),
+    ('{"input_attachment_csv_mode":"auto","output_attachment_csv_mode":"off"}', 2, False, True),
     ('{"input_attachment_csv_mode":"bogus"}', 2, True, False),
     ('{"input_attachment_csv_mode":"off","output_attachment_csv_mode":null}', 2, True, True),
     ('{unparseable', 2, True, False),
@@ -384,3 +385,41 @@ def test_deeply_nested_valid_json_remains_data_quality_failure_without_secret_ec
     assert report["mutated_records"] == 0
     assert all(stage["off"] == 0 for stage in report["stages"].values())
     assert payload not in json.dumps(report)
+
+
+def test_off_provenance_blocks_release_cli_even_when_json_and_modes_are_valid(monkeypatch, capsys):
+    """A clean decoder is not a release-ready legacy Off inventory."""
+    import sys
+    import types
+
+    class ReadOnlyClient:
+        def scan(self, **request):
+            assert request["ConsistentRead"] is True
+            assert "UpdateExpression" not in request
+            return {"Items": [{"record": {"S": '{"input_attachment_csv_mode":"auto","output_attachment_csv_mode":"off"}'}}], "Count": 1}
+
+    class Session:
+        def __init__(self, profile_name, region_name):
+            assert profile_name == "synthetic-only"
+
+        def client(self, service, config):
+            assert service == "dynamodb"
+            return ReadOnlyClient()
+
+    boto3 = types.ModuleType("boto3")
+    boto3.Session = Session
+    botocore = types.ModuleType("botocore")
+    botocore.__path__ = []
+    botocore_config = types.ModuleType("botocore.config")
+    botocore_config.Config = lambda **kwargs: kwargs
+    monkeypatch.setitem(sys.modules, "boto3", boto3)
+    monkeypatch.setitem(sys.modules, "botocore", botocore)
+    monkeypatch.setitem(sys.modules, "botocore.config", botocore_config)
+
+    assert main(["--profile", "synthetic-only", "--table", "synthetic-table"]) == 2
+    report = json.loads(capsys.readouterr().out)
+    assert report["requires_provenance_review"] is True
+    assert report["requires_data_quality_review"] is False
+    assert report["stages"]["output"]["off"] == 1
+    assert report["mutated_records"] == 0
+    assert "synthetic-only" not in json.dumps(report)
