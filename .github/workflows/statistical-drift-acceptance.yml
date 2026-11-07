@@ -1,0 +1,26 @@
+name: Statistical Drift Acceptance
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "guardoath/statistical_drift.py"
+      - "tests/test_statistical_drift.py"
+      - ".github/workflows/statistical-drift-acceptance.yml"
+permissions:
+  contents: read
+jobs:
+  psi-deterministic:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install -e '.[test]'
+      - run: python -m pytest -q tests/test_statistical_drift.py
