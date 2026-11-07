@@ -18,6 +18,18 @@ def test_rejects_unparseable_record(raw):
         classify_record(raw)
 
 
+@pytest.mark.parametrize("raw", [
+    '{"input_attachment_csv_mode":"off","input_attachment_csv_mode":"auto"}',
+    '{"input_attachment_csv_mode":"auto","input_attachment_csv_mode":"off"}',
+    '{"output_attachment_csv_mode":"off","output_attachment_csv_mode":"auto"}',
+    '{"output_attachment_csv_mode":"auto","output_attachment_csv_mode":"off"}',
+    '{"other":{"key":1,"key":2},"input_attachment_csv_mode":"auto"}',
+])
+def test_duplicate_json_members_never_hide_saved_policy_or_corrupt_record(raw):
+    with pytest.raises(ValueError, match="Duplicate JSON object key"):
+        classify_record(raw)
+
+
 def test_read_only_paginated_scan_and_aggregate_without_customer_data():
     class FakeClient:
         def __init__(self):
@@ -87,6 +99,8 @@ def test_invalid_field_values_counted_without_exposing_values():
     ('{"input_attachment_csv_mode":"bogus"}', 2, True, False),
     ('{"input_attachment_csv_mode":"off","output_attachment_csv_mode":null}', 2, True, True),
     ('{unparseable', 2, True, False),
+    ('{"input_attachment_csv_mode":"off","input_attachment_csv_mode":"auto"}', 2, True, False),
+    ('{"output_attachment_csv_mode":"auto","output_attachment_csv_mode":"off"}', 2, True, False),
 ])
 def test_cli_never_reports_invalid_stored_modes_as_clean(
     monkeypatch, capsys, stored_record, expected_exit, expected_quality, expected_provenance,
