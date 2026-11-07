@@ -536,6 +536,21 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             raise HTTPException(422, str(error)) from None
         return JSONResponse(tenant_summary(record), headers={"Cache-Control": "no-store"})
 
+    @api.get("/v1/tenants/current/statistical-drift")
+    async def current_statistical_drift(
+        request: Request,
+        principal: Annotated[str | TenantRecord, Depends(authenticate)],
+    ):
+        # Private reference histograms are NOT included in the application
+        # summary that a production evaluation key may read. Only the signed-in
+        # settings owner (or a demo owner using its own demo key) can edit them.
+        owner = settings_owner(request, principal)
+        current = tenants.store.get(owner.tenant_id) or owner
+        return JSONResponse({
+            "revision": current.revision,
+            "rules": [rule.model_dump(mode="json") for rule in current.advanced_statistical_drift],
+        }, headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"})
+
     @api.post("/v1/tenants/current/checks")
     async def change_checks(request: Request, body: CheckChanges,
                             principal: Annotated[str | TenantRecord, Depends(authenticate)]):
