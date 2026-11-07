@@ -150,6 +150,8 @@ def test_identity_invalid_pointers_and_reference_value_admission_fail_closed():
         dict(RULES[0], fields={"order_id": "/same", "shipment_order_id": "/same/child"}),
         dict(RULES[0], trusted_values=["UNAUTHORIZED"]),
         dict(RULES[0], kind="unrecognized_identity_kind"),
+        dict(RULES[0], kind=["order_id_match"]),
+        dict(RULES[0], kind={"malformed": "kind"}),
     ):
         response = api.post("/v1/tenants/current/checks", headers=a, json={
             "revision": original.revision,
