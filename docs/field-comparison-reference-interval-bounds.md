@@ -23,7 +23,9 @@ actions, security budgets and runtime date limits are unchanged.
 Reproduction on the pre-fix actual source: four regression failures and one
 valid-boundary control passed. The real Engine independently returned trusted,
 complete/Allow for the overflowing snapshot under observe/Flag. After the fix,
-the five new cases and affected authenticated replay, signing CLI, semantic
-validity, host-reference, identity, tenant and record-rule suites passed **284
-tests**, no skips. Exact published SHA CI is still required; no deployment is
+the eight new cases and affected authenticated replay, signing CLI, semantic
+validity, host-reference, identity, tenant and record-rule suites passed **287
+tests in 16.43 seconds**, no skips. Exact published SHA CI is still required; no deployment is
 claimed.
+
+The expanded suite runs the real signing CLI in bounded child processes: the overflowing snapshot is refused with exit 2, source-free diagnostics and no output file; the latest valid boundary signs successfully and verifies. Both Engine stages accept an administration exactly at the latest valid threshold.
