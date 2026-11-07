@@ -311,3 +311,31 @@ def test_cli_aws_failures_return_private_safe_incomplete_json_without_traceback(
     assert output.err == ""
     assert secret not in output.out
     assert "synthetic-only" not in output.out
+
+
+@pytest.mark.parametrize("constant", ["NaN", "Infinity", "-Infinity"])
+@pytest.mark.parametrize("prefix", [
+    '{"input_attachment_csv_mode":"auto","unrelated":',
+    '{"input_attachment_csv_mode":"off","unrelated":{"nested":',
+])
+def test_python_nonfinite_json_extensions_never_certify_a_clean_tenant(constant, prefix):
+    raw = prefix + constant + ("}}" if prefix.endswith('{"nested":') else "}")
+    with pytest.raises(ValueError, match="Nonfinite JSON constant"):
+        classify_record(raw)
+
+
+@pytest.mark.parametrize("constant", ["NaN", "Infinity", "-Infinity"])
+def test_read_only_audit_treats_nonfinite_stored_record_as_data_quality_failure(constant):
+    raw = '{"input_attachment_csv_mode":"off","unrelated":' + constant + "}"
+    class Client:
+        def scan(self, **request):
+            assert request["ConsistentRead"] is True
+            assert "UpdateExpression" not in request
+            return {"Items": [{"record": {"S": raw}}], "Count": 1}
+    report = audit(Client(), "synthetic-only")
+    assert report["total_records"] == 1
+    assert report["unparseable_records"] == 1
+    assert report["requires_data_quality_review"] is True
+    assert report["mutated_records"] == 0
+    assert all(stage["off"] == 0 for stage in report["stages"].values())
+    assert raw not in json.dumps(report)
