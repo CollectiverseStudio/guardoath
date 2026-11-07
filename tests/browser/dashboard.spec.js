@@ -1886,14 +1886,44 @@ test("PII finding opens its editable tenant rule without changing saved policy",
   await page.locator("#run-input").click();
   const result = await (await response).json();
   expect(result.findings.map(item => item.rule_id)).toContain("pii.email_address");
-  const button = page.getByRole("button", {name: "Review rule settings for pii.email_address"});
+  const button = page.getByRole("button", {name: "Review input rule settings for pii.email_address"});
   await expect(button).toBeVisible();
   await button.click();
   await expect(page.locator("#rule-search")).toHaveValue("pii.email_address");
   const row = page.locator('.rule-row[data-rule="pii.email_address"]');
   await expect(row).toBeVisible();
   await expect(row.locator(".rule-info")).toHaveAttribute("open", "");
+  await expect(page.locator('[id="rule-action-input-pii.email_address"]')).toBeFocused();
   await expect(page.locator("#tenant-message")).toContainText("No settings were changed");
   await expect(page.locator('[id="rule-action-input-pii.email_address"]')).toHaveValue("");
+  await page.getByRole("button", {name: "Reset to defaults", exact: true}).click();
+});
+
+
+test("Output PII finding navigates to Output-only tenant rule selector without policy mutation", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo10");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toContainText("Reset to the demo defaults.");
+  await page.locator("#input-content").fill("Summarize the public return policy without customer data.");
+  await page.locator("#run-input").click();
+  await expect(page.locator("#input-gate")).toContainText("Input checks passed");
+
+  await page.locator("#output-content").fill("Contact synthetic example jane@example.com for details.");
+  const response = page.waitForResponse(r =>
+    r.url().endsWith("/v1/checks/output") && r.request().method() === "POST");
+  await page.locator("#run-output").click();
+  const result = await (await response).json();
+  expect(result.findings.map(item => item.rule_id)).toContain("pii.email_address");
+  await page.getByRole("button", {name: "Review output rule settings for pii.email_address"}).click();
+  await expect(page.locator("#rule-search")).toHaveValue("pii.email_address");
+  const row = page.locator('.rule-row[data-rule="pii.email_address"]');
+  await expect(row).toBeVisible();
+  await expect(row.locator(".rule-info")).toHaveAttribute("open", "");
+  await expect(page.locator('[id="rule-action-output-pii.email_address"]')).toBeFocused();
+  await expect(page.locator("#tenant-message")).toContainText("No settings were changed");
+  await expect(page.locator('[id="rule-action-output-pii.email_address"]')).toHaveValue("");
   await page.getByRole("button", {name: "Reset to defaults", exact: true}).click();
 });
