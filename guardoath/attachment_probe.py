@@ -2,7 +2,7 @@
 
 This module *only* classifies server-received bytes. It does not accept a filename,
 MIME label, URL or chat text as evidence of an attachment. No format here is
-considered inspected for malicious content except structurally recognized CSV
+considered inspected for malicious content except structurally recognized CSV/TSV
 (which still requires the independent csv_formula rule).
 """
 from dataclasses import dataclass
@@ -75,14 +75,14 @@ class FileProbe:
 
     @property
     def csv_text_supported(self) -> bool:
-        return self.kind == "csv" and self.status == "recognized"
+        return self.kind in ("csv", "tsv") and self.status == "recognized"
 
 
 def classify_attachment(data: bytes) -> FileProbe:
     """Classify real, already-received bytes without inspecting other file formats.
 
-    Only a strict UTF-8 CSV with >=2 records and stable column counts is
-    recognized as CSV. Ambiguous or unsupported inputs must not be treated
+    Only strict UTF-8 comma- or tab-separated tables with >=2 records and
+    stable column counts are recognized as CSV or TSV. Ambiguous or unsupported inputs must not be treated
     as a successful document scan. Upper bound before any parser work.
     """
     if not isinstance(data, bytes):
@@ -116,8 +116,16 @@ def classify_attachment(data: bytes) -> FileProbe:
         return result("unknown", "unsupported", "binary_or_unsupported_encoding")
     if has_unsafe_csv_controls(value):
         return result("unknown", "invalid", "unsafe_csv_control_characters")
+    # Recognize TSV from the actual first record, not an extension or MIME label.
+    # Requiring a tab and no comma in its header keeps ordinary comma CSV
+    # unchanged, including comma CSV with tabs inside later fields. TSV columns
+    # may contain quoted commas; mixed-delimiter/ambiguous headers are not trusted.
+    first_record = value.splitlines()[0] if value.splitlines() else ""
+    is_tsv = "\t" in first_record and "," not in first_record
+    delimiter = "\t" if is_tsv else ","
+    kind = "tsv" if is_tsv else "csv"
     try:
-        rows = csv.reader(StringIO(value, newline=""), strict=True)
+        rows = csv.reader(StringIO(value, newline=""), delimiter=delimiter, strict=True)
         first_columns = None
         count = cells = 0
         for row in rows:
@@ -138,4 +146,4 @@ def classify_attachment(data: bytes) -> FileProbe:
     except csv.Error:
         return result("unknown", "invalid", "malformed_csv")
 
-    return result("csv", "recognized", "csv_structure_recognized_only")
+    return result(kind, "recognized", kind + "_structure_recognized_only")
