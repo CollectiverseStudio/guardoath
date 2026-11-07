@@ -156,3 +156,17 @@ def test_redaction_recheck_requires_exactly_one_named_pii_checker(rechecks):
     sample.redaction.validation_results = rechecks
     result = probe.summarize("dob-redaction", "output", [sample])
     assert result["failed_contracts"] == 1
+
+
+def test_release_probe_leak_witness_matches_its_actual_synthetic_case():
+    fixture = next(content for case, _policy, content in probe._CASES
+                   if case == "dob-redaction")
+    assert probe._SYNTHETIC_REDACTION_DOB in fixture
+
+
+@pytest.mark.parametrize("invalid_preview", [None, [], {"unexpected": "payload"}])
+def test_redaction_preview_requires_text_not_an_unverifiable_container(invalid_preview):
+    sample = _response()
+    sample.redaction.content = invalid_preview
+    report = probe.summarize("dob-redaction", "input", [sample])
+    assert report["failed_contracts"] == 1
