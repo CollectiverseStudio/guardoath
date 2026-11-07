@@ -8,6 +8,8 @@ on:
       - "guardoath/engine.py"
       - "tools/pii_reliability_probe.py"
       - "tools/pii_release_matrix.py"
+      - "tools/pii_latency_probe.py"
+      - "tests/test_pii_latency_probe.py"
       - "tests/test_pii_regex_concurrency.py"
       - "tests/test_pii_release_matrix.py"
       - ".github/workflows/pii-reliability-gate.yml"
@@ -38,8 +40,10 @@ jobs:
       - name: Install existing local recognizers and tests
         run: python -m pip install -e '.[test,pii]'
       - name: Verify regex concurrency never changes detector matches
-        run: python -m pytest -q tests/test_pii_regex_concurrency.py tests/test_pii_reliability_probe.py tests/test_pii_release_matrix.py
+        run: python -m pytest -q tests/test_pii_regex_concurrency.py tests/test_pii_reliability_probe.py tests/test_pii_release_matrix.py tests/test_pii_latency_probe.py
       - name: Repeated real PII detection and mandatory redaction recheck (20 rounds)
         run: python -m tools.pii_reliability_probe --rounds 20
       - name: Repeated previously failed phone/Korean RRN/DOB/redaction cases (20 rounds)
         run: python -m tools.pii_release_matrix --rounds 20
+      - name: Bounded first-pass and redaction-recheck latency diagnostics (10 rounds, 4 concurrent)
+        run: python -m tools.pii_latency_probe --rounds 10 --concurrency 4
