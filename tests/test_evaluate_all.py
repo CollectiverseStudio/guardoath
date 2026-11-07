@@ -38,6 +38,7 @@ def test_all_bundled_suites_and_reports(full_collection):
                         'evaluation_status': case['evaluation_status'],
                         'recommended_action': case['recommended_action'],
                         'checker_statuses': case['checker_statuses'],
+                        'checker_diagnostics': case.get('checker_diagnostics', {}),
                         'latency_ms': case['latency_ms'],
                     })
     assert collection['totals'] == expected_totals, (
@@ -110,6 +111,7 @@ def test_failure_only_mismatch_diagnostic_is_source_free(tmp_path, monkeypatch):
              'differences': ['evaluation_status', 'checker_statuses'],
              'evaluation_status': 'incomplete', 'recommended_action': 'block',
              'checker_statuses': {'pii': 'error'}, 'latency_ms': 547.271,
+             'checker_diagnostics': {'pii': {'error_code': 'pii_scan_deadline', 'latency_ms': 501.02}},
              # Deliberately injected input-shaped field must never appear in diagnostics.
              'content': 'SYNTHETIC_PRIVATE_CONTENT_NEVER_PRINT'},
         ],
@@ -123,4 +125,6 @@ def test_failure_only_mismatch_diagnostic_is_source_free(tmp_path, monkeypatch):
     assert '"evaluation_status": "incomplete"' in message
     assert '"pii": "error"' in message
     assert '"latency_ms": 547.271' in message
+    assert '"error_code": "pii_scan_deadline"' in message
+    assert '"latency_ms": 501.02' in message
     assert 'SYNTHETIC_PRIVATE_CONTENT_NEVER_PRINT' not in message
