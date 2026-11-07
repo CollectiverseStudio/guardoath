@@ -8,7 +8,7 @@ from tools import pii_latency_probe as probe
 
 
 def _check(status="flagged", latency_ms=100, error_code=None):
-    return SimpleNamespace(status=status, latency_ms=latency_ms,
+    return SimpleNamespace(checker_id="pii", status=status, latency_ms=latency_ms,
                            error_code=error_code)
 
 
@@ -89,3 +89,39 @@ def test_missing_checker_or_missing_detection_never_counts_as_clean():
     assert probe.summarize("dob-detection", "input", [blank])["failed_contracts"] == 1
     without_finding = _response(finding=False)
     assert probe.summarize("dob-redaction", "output", [without_finding])["failed_contracts"] == 1
+
+
+@pytest.mark.parametrize("invalid_latency", [
+    None, -1, float("nan"), float("inf"), float("-inf"), True, 500.01,
+])
+def test_missing_or_nonfinite_first_pass_timings_cannot_pass(invalid_latency):
+    sample = _response()
+    sample.checker_results = (_check(latency_ms=invalid_latency),)
+    report = probe.summarize("dob-detection", "input", [sample])
+    assert report["failed_contracts"] == 1
+    assert report["first_pass"]["observed"] == 0
+
+
+@pytest.mark.parametrize("invalid_latency", [
+    None, -1, float("nan"), float("inf"), float("-inf"), True, 500.01,
+])
+def test_missing_or_nonfinite_redaction_recheck_timings_cannot_pass(invalid_latency):
+    sample = _response()
+    sample.redaction.validation_results = (_check(status="passed", latency_ms=invalid_latency),)
+    report = probe.summarize("dob-redaction", "output", [sample])
+    assert report["failed_contracts"] == 1
+    assert report["redaction_recheck"]["observed"] == 0
+
+
+@pytest.mark.parametrize("bad_status", ["passed", "error", "disabled", "not_applicable"])
+def test_expected_pii_finding_requires_flagged_checker_status(bad_status):
+    sample = _response()
+    sample.checker_results = (_check(status=bad_status),)
+    assert probe.summarize("dob-detection", "input", [sample])["failed_contracts"] == 1
+
+
+def test_wrong_checker_cannot_satisfy_privacy_gate():
+    sample = _response()
+    sample.checker_results = (SimpleNamespace(checker_id="secrets", status="flagged",
+                                               latency_ms=30, error_code=None),)
+    assert probe.summarize("dob-detection", "input", [sample])["failed_contracts"] == 1
