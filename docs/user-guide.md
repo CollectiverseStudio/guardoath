@@ -2457,3 +2457,6 @@ another tenant's rules. Signed-in privileges for modifying production records
 remain unchanged; a production API key alone does not grant write access.
 See `tests/test_field_comparison_tenant_summary.py` for authenticated
 add/edit/remove, isolation, stale-revision and unsupported-type acceptance.
+
+
+For tenant-saved FX reference timestamps (`advanced_conversion_time` / `currency_conversion_cap`), `rate_asof` also requires explicit UTC `Z` or a signed offset with hours 00–23 and minutes 00–59; malformed `+00:60` is rejected at typed rule, policy and tenant-save admission, before it could be normalized. This validates timestamp syntax, not external exchange-rate correctness.
