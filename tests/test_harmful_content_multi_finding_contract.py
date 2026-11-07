@@ -59,8 +59,8 @@ def test_stage_disabled_does_not_run_harmful_content(stage):
         tenant_id="stage-off",
         display_name="Stage off",
         mode="enforce",
-        input_check_harmful_content="off" if stage == Stage.INPUT else "block",
-        output_check_harmful_content="off" if stage == Stage.OUTPUT else "block",
+        input_check_harmful_content=None if stage == Stage.INPUT else "block",
+        output_check_harmful_content=None if stage == Stage.OUTPUT else "block",
     )
     result = evaluate(record, stage)
     assert not any(f.rule_id.startswith("harmful_content.") for f in result.findings)
