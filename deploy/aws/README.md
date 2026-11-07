@@ -145,6 +145,49 @@ aws cognito-idp admin-create-user --region us-east-1 --profile collectiverse-pro
 Expect `FORCE_CHANGE_PASSWORD`. The sign-in page is at the stack output `SignInDomain`; the dashboard's
 **Sign in** button goes there.
 
+## Prove whether the latest GitHub source is actually available on guardoath.com
+
+GitHub `main` is **not** the hosted application. The live site uses the last
+Lambda zip uploaded with `aws lambda update-function-code`; CloudFront may also
+retain stale `/assets/*` files until an invalidation. Do not claim deployment
+from a push, passing previous-SHA CI, a successful build, or a 200 health response.
+
+The Lambda builder now **requires a clean committed app** and stamps its full Git
+commit SHA in the package as `guardoath/_release_source.json`. The public
+`/healthz` response includes `source_sha`; local development without that
+package metadata returns `null`, not an invented release. A healthy response is
+not proof of tenant API behavior, reference attestation or the 15 live checks.
+
+From the **repository root** on your Windows PC, after fetching the desired
+`main` commit, run this read-only verifier:
+
+```powershell
+git fetch origin main
+git pull --ff-only origin main
+git rev-parse HEAD
+python -m tools.verify_live_dashboard --url https://guardoath.com
+```
+
+It compares every dashboard-linked versioned JavaScript/CSS file's SHA-256
+suffix **and complete response bytes** against the local checkout. It also
+compares `/healthz`'s embedded backend source SHA with that checkout's full
+Git HEAD. **Exit 0** and `release_source_parity_verified=true` mean both
+source checks passed; **exit 2** means stale/missing UI, backend SHA mismatch,
+unreachable origin, missing build provenance, or incomplete verification.
+The JSON output contains safe asset names and SHAs only, no credentials,
+tenant IDs or uploaded content. The optional `--expected-sha` can pin an
+explicit 40-character Git commit hash. The verifier does not use AWS
+credentials or modify tenants or deployments.
+
+**Important:** parity with a *stale local checkout* is not parity with
+latest GitHub `main`. Always fetch and fast-forward before checking. Even
+a full UI+backend SHA match does not assert behavioral acceptance:
+require the full 13 individual Tests jobs, three CodeQL analyses,
+specialized reliability suites at the exact release SHA, tenant/API/browser
+live smoke tests, the saved-Off provenance audit, rollback readiness and
+all 15 documented post-deployment checks. Historical 500-ms PII latency
+failures must be resolved; do not stretch timeouts to force a green release.
+
 ## After a code change
 
 Run steps 1 and 4, then clear the cached assets (one invalidation path):
