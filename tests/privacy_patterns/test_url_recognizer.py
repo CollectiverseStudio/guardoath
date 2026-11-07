@@ -73,3 +73,28 @@ def test_repeated_dot_input_does_not_backtrack(recognizer, entities):
     elapsed = time.time() - start
     assert results == []
     assert elapsed < 15
+
+
+@pytest.mark.parametrize("text", [
+    "." * 3000,
+    "x" + "." * 3000,
+    "http://x..com",
+    "http://x." + "." * 3000,
+])
+def test_invalid_hostname_period_runs_are_not_urls(recognizer, entities, text):
+    # Empty DNS labels are never safe URL matches. This also exercises the
+    # formerly expensive punctuation input with and without a scheme.
+    assert recognizer.analyze(text, entities) == []
+
+
+def test_hostname_edge_guard_preserves_bounded_valid_http_and_plain_domain(recognizer, entities):
+    # Both authenticated user messages and detected/output content depend on
+    # the same host/URI spans. Keep the existing confidence/offset contract.
+    samples = [
+        ("https://sub.example.com/path?q=1", 0.6),
+        ("sub.example.com", 0.5),
+    ]
+    for content, score in samples:
+        matches = recognizer.analyze(content, entities)
+        assert len(matches) == 1
+        assert_result(matches[0], entities[0], 0, len(content), score)
