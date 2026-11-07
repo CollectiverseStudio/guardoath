@@ -208,9 +208,11 @@ def main(argv=None) -> int:
         }, indent=2, sort_keys=True))
         return 2
     print(json.dumps(report, indent=2, sort_keys=True))
-    # Invalid mode values are not a clean production inventory even when the
-    # record itself is valid JSON; use the same nonzero exit as unreadable rows.
-    return 2 if report["requires_data_quality_review"] else 0
+    # Neither unreadable policy nor unresolved explicitly saved Off can be
+    # certified by an automated release gate. Off remains authoritative and
+    # requires separate human provenance review; never mutate it here.
+    return 2 if (report["requires_data_quality_review"] or
+                 report["requires_provenance_review"]) else 0
 
 
 if __name__ == "__main__":
