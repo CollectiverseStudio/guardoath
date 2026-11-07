@@ -2555,3 +2555,23 @@ After connecting an authenticated tenant, run **Input checks** or **Output check
 **Real Engine example:** For an \`invoice_total\` rule map subtotal, discount, tax, shipping and total to \`/invoice/subtotal\`, \`/invoice/discount\`, \`/invoice/tax\`, \`/invoice/shipping\`, \`/invoice/total\`. Submit Input JSON \`{"invoice":{"subtotal":100,"discount":10,"tax":8,"shipping":5,"total":110}}\` while Input Field comparisons is Block. The inconsistent total should produce a \`business.<rule_id>\` finding. Changing total to \`103\` is the benign look-alike. Output uses its independently saved stage action.
 
 **Safety and limits:** The form rejects malformed JSON pointers, positional/empty segments, overlapping field paths, duplicate IDs, missing stages and missing required fields; the server revalidates before persistence. No code expressions or arbitrary arithmetic execute from the form. These are bounded, deterministic relationships, not semantic chat checks or external financial/clinical/environmental attestation. Signed or operator-held reference values remain outside this editor and cannot be forged by a customer-supplied message. The new source/guide is not proof of production deployment; real browser tests, tenant API regression and exact-SHA 13 Tests + three CodeQL jobs must pass before release.
+
+
+### Advanced arithmetic Field Comparisons in the dashboard (FC-031/032/033/034/036/037/041/046)
+
+Connect as an authenticated tenant and open **Advanced arithmetic comparisons** in the tenant checks panel. Choose an arithmetic validation type, enter a stable rule ID and the named absolute JSON pointers demanded by that type, and choose Input, Output, or both. **Add pending arithmetic rule** only creates a draft; choose **Save checks** to persist it against the authoritative tenant revision. Turn on **Field comparisons** (`cross_field`) separately for each desired stage and choose its Block/Flag/Allow rule action in the unified table. Saved definitions reload on reconnect. Edit or Remove a rule and save to apply; removed or stage-withdrawn rule-action overrides are pruned, not unrelated tenant rules. Invalid pointers (missing `/`, ambiguous/overlapping paths, positional array indices), duplicate IDs, missing required fields and no selected stage are rejected before saving; server-side typed validation remains authoritative.
+
+All eight types use the **existing single cross_field Engine** and deterministic bounded exact arithmetic, not LLM judgment or external reference data:
+
+| Rule type | Validates |
+|---|---|
+| `invoice_line_subtotal` | Sum of quantity × unit price equals subtotal |
+| `invoice_total` | Subtotal − discount + tax + shipping equals total |
+| `tax_tolerance` | Tax is within the configured numeric tolerance of base × rate |
+| `discount_fraction_cap` | Discount is within the declared eligible subtotal fraction |
+| `inventory_conservation` | Beginning stock plus receipts minus outbound/loss equals ending stock |
+| `shipment_quantity_sum` | Line quantities total the declared shipment |
+| `manufacturing_tolerance` | Measured quantity is within declared nominal tolerance |
+| `carbon_intensity` | Emissions per unit of output do not exceed declared limit |
+
+For a synthetic mismatch, choose **Invoice line subtotal**, `/lines` and `/subtotal`, with JSON `{"lines":[{"quantity":2,"unit_price":40},{"quantity":1,"unit_price":30}],"subtotal":100}` (expected 110). Its resulting `business.<rule_id>` finding is visible in Input/Output results; subtotal 110 is a benign control. Use **Review Input/Output rule settings** on a finding to navigate to the tenant's action selectors. This is not a model invocation, signature verification, currency-rate authority, clinical/reference truth or guarantee that any JSON structure is safe. Production acceptance requires the real API and Playwright regression tests, exact-head full CI, and release safety gates. The first eight arithmetic types are not evidence that all FC-031–050 advanced configuration forms are complete.
