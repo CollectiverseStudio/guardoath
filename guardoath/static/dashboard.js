@@ -1233,10 +1233,10 @@ loadExampleCatalog().then(list => { for (const stage of ["input", "output"]) bui
   .catch(() => { for (const stage of ["input", "output"]) { const note = document.createElement("p"); note.className = "hint"; note.textContent = "The full example list could not be loaded right now. Reload the page to try again."; $(stage + "-samples").after(note); } });
 // Results must lead to actionable tenant settings, not only descriptions.
 // Never automatically alter rules; the user explicitly chooses and saves changes.
-function reviewFindingRule(ruleId, checkerId) {
+function reviewFindingRule(ruleId, checkerId, stage) {
+  if (!["input", "output"].includes(stage)) return false;
   const tenant = application?.tenant;
   if (!tenant || !ownChecksSelected()) return false;
-  const panel = $("tenant-panel");
   const search = $("rule-search");
   const defined = ruleIndex[ruleId];
   if (defined && search && $("check-table")) {
@@ -1249,9 +1249,9 @@ function reviewFindingRule(ruleId, checkerId) {
     if (row && !row.hidden) {
       row.querySelector(".rule-info").open = true;
       row.scrollIntoView({block: "center"});
-      row.querySelector('select[data-stage]')?.focus({preventScroll: true});
+      row.querySelector('select[data-stage="' + stage + '"]')?.focus({preventScroll: true});
       $("tenant-message").textContent =
-        "Review " + ruleId + " on your tenant record. No settings were changed; select an action and Save checks to apply it.";
+        "Review " + stage + " rule " + ruleId + " on your tenant record. No settings were changed; select an action and Save checks to apply it.";
       return true;
     }
   }
@@ -1260,8 +1260,8 @@ function reviewFindingRule(ruleId, checkerId) {
   if (row) {
     if (search) { search.value = ""; $("rule-filter-check").value = ""; $("rule-filter-setting").value = ""; filterRules(); }
     row.scrollIntoView({block: "center"});
-    row.querySelector('select[data-check]')?.focus({preventScroll: true});
-    $("tenant-message").textContent = "Review the " + (checkNames[check] || check) +
+    row.querySelector('select[data-check][data-stage="' + stage + '"]')?.focus({preventScroll: true});
+    $("tenant-message").textContent = "Review the " + stage + " " + (checkNames[check] || check) +
       " check setting. This finding has no individually editable rule in the loaded catalog; no settings were changed.";
     return true;
   }
@@ -1303,8 +1303,8 @@ function render(stage, result) {
       const description = document.createElement("p"); description.textContent = finding.explanation; detail.append(description);
       if (application?.tenant && ownChecksSelected()) {
         const button = document.createElement("button"); button.type = "button"; button.className = "secondary";
-        button.textContent = "Review rule settings"; button.setAttribute("aria-label", "Review rule settings for " + finding.rule_id);
-        button.addEventListener("click", () => reviewFindingRule(finding.rule_id, check.checker_id));
+        button.textContent = "Review " + stage + " rule settings"; button.setAttribute("aria-label", "Review " + stage + " rule settings for " + finding.rule_id);
+        button.addEventListener("click", () => reviewFindingRule(finding.rule_id, check.checker_id, stage));
         detail.append(button);
       }
       row.append(detail);
