@@ -94,7 +94,10 @@ def audit(client, table_name: str) -> dict:
             total += 1
             try:
                 modes = classify_record(item["record"]["S"])
-            except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+            # Even well-formed but pathologically nested JSON can exhaust the
+            # decoder's recursion limit. Count it as corrupt, not a traceback
+            # or a fabricated clean Off/Auto inventory.
+            except (KeyError, TypeError, ValueError, RecursionError):
                 invalid_json += 1
                 continue
             for stage, mode in zip(("input", "output"), modes):
