@@ -124,7 +124,7 @@ def save_collection_rules(tenants):
                              fields={"requested_scopes": "/scopes"}, trusted_values=("SCOPE_A",)),
         AdvancedIdentityRule(rule_id="serial_guard", kind="serial_unique", fields={"serials": "/serials"}),
     ]
-    response = client.post("/v1/tenants/current/checks", headers=keys["reference-a"], json={
+    response = client.post("/v1/tenants/current/references", headers=keys["reference-a"], json={
         "revision": store.get("reference-a").revision,
         "changes": {"advanced_identity": [r.model_dump(mode="json") for r in rules]},
     })
