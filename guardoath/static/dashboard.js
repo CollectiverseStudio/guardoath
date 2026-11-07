@@ -299,6 +299,7 @@ function renderTenant() {
   const wrap = document.createElement("div"); wrap.className = "rule-table-wrap"; wrap.append(table);
   box.append(filters, count, wrap);
   window.sigmaTenant.render(box, tenant, key, requestHeaders, send, showUnsaved);
+  window.comparisonEditor.render($("comparison-editor"), tenant, own, showUnsaved);
   for (const id of Object.keys(tenant.input_checks)) { updateFormatNote(id); showCheckEffect(id); }
   buildRuleFinder();
   $("tenant-save").disabled = !own;
@@ -452,6 +453,13 @@ function pendingChanges() {
     const selected = $("tenant-attachment-mode-" + stage).value;
     if (selected !== (tenant.attachment_csv_mode?.[stage] || "off")) {
       changes[stage + "_attachment_csv_mode"] = selected;
+    }
+  }
+  const comparisonChanges = window.comparisonEditor.delta();
+  if (comparisonChanges !== null) {
+    changes.comparisons = comparisonChanges;
+    for (const stage of ["input", "output"]) {
+      changes[stage + "_rule_actions"] = window.comparisonEditor.actions(stage, ruleEdits[stage]);
     }
   }
   const sigmaChanges = window.sigmaTenant.delta();
