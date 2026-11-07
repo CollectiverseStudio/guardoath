@@ -1587,7 +1587,7 @@ test("CSV formula rules use the same tenant settings, examples and dashboard res
   const checked = page.waitForResponse(r => r.url().endsWith("/v1/checks/input") && r.request().method() === "POST");
   await page.locator("#run-input").click();
   expect((await (await checked).json()).findings.map(f => f.rule_id)).toEqual(["csv_formula.potential_formula"]);
-  await expect(page.locator("#input-results")).toContainText("A CSV field begins with a spreadsheet formula trigger");
+  await expect(page.locator("#input-results")).toContainText("A CSV or TSV field begins with a spreadsheet formula trigger");
   await expect(page.locator("#input-results")).toContainText("Recommended: block · Effective: block");
   await expect(page.locator("#tenant-check-input-csv_formula")).toHaveValue("block");
   await expect(page.locator("#tenant-check-output-csv_formula")).toHaveValue("");
