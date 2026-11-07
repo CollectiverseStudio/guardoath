@@ -7,7 +7,7 @@ from urllib.error import URLError
 
 import pytest
 
-from tools.verify_live_dashboard import REQUIRED, verify, main
+from tools.verify_live_dashboard import REQUIRED, verify, verify_release
 
 
 BASE = "https://guardoath.com"
@@ -133,3 +133,52 @@ def test_unreachable_live_site_fails_closed(tmp_path):
     responses.pop(BASE + "/dashboard")
     with pytest.raises(URLError):
         verify(BASE, tmp_path, opener(responses))
+
+
+SHA = "a" * 40
+
+
+def test_live_release_requires_matching_dashboard_and_embedded_lambda_sha(tmp_path):
+    responses, _ = setup(tmp_path)
+    responses[BASE + "/healthz"] = ('{"status":"ok","source_sha":"' + SHA + '"}').encode()
+    report = verify_release(BASE, SHA, tmp_path, opener(responses))
+    assert report["release_source_parity_verified"] is True
+    assert report["dashboard_ui_matches_local_source"] is True
+    assert report["backend_deployment_sha_verified"] is True
+    assert report["live_source_sha"] == SHA
+    assert report["production_tenant_api_verified"] is False
+
+
+@pytest.mark.parametrize("health", [
+    b'{"status":"ok","source_sha":null}',
+    b'{"status":"ok","source_sha":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}',
+    b'{"status":"degraded","source_sha":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}',
+    b'{"status":"ok","source_sha":"unverified"}',
+    b'{}',
+    b'not-json',
+])
+def test_health_missing_wrong_or_invalid_sha_never_claims_deployed_source(tmp_path, health):
+    responses, _ = setup(tmp_path)
+    responses[BASE + "/healthz"] = health
+    report = verify_release(BASE, SHA, tmp_path, opener(responses))
+    assert report["dashboard_ui_matches_local_source"] is True
+    assert report["backend_deployment_sha_verified"] is False
+    assert report["release_source_parity_verified"] is False
+    assert any(issue.startswith("backend_") for issue in report["issues"])
+
+
+def test_stale_asset_rejects_release_even_when_backend_sha_matches(tmp_path):
+    responses, tags = setup(tmp_path)
+    responses[BASE + "/healthz"] = ('{"status":"ok","source_sha":"' + SHA + '"}').encode()
+    responses[BASE + "/assets/dashboard.js?v=" + tags["dashboard.js"]] = b"stale"
+    report = verify_release(BASE, SHA, tmp_path, opener(responses))
+    assert report["backend_deployment_sha_verified"] is True
+    assert report["dashboard_ui_matches_local_source"] is False
+    assert report["release_source_parity_verified"] is False
+
+
+def test_unavailable_health_never_claims_backend_sha(tmp_path):
+    responses, _ = setup(tmp_path)
+    report = verify_release(BASE, SHA, tmp_path, opener(responses))
+    assert report["release_source_parity_verified"] is False
+    assert any(issue.startswith("backend_health_unavailable:") for issue in report["issues"])
