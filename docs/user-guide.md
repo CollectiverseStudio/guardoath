@@ -2427,3 +2427,5 @@ bounded probe, not production tail latency or a statistical SLA guarantee**.
 Repeated tests and the existing 13-job exact-SHA CI still apply; verify any
 reported regressions without raising budgets, mutating tenants or transmitting
 sensitive samples.
+
+A signed medication reference is invalid if its previous administration plus required interval exceeds the supported datetime range; active rules return incomplete/Block, while explicit Off remains Off.
