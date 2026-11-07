@@ -610,9 +610,34 @@ for (const stage of ["input", "output"]) {
   $(stage + "-attachments").addEventListener("change", () => {
     const count = $(stage + "-attachments").files.length;
     $(stage + "-attachment-note").textContent = count
-      ? count + " local file(s) selected. Run " + stage + " checks; only actual received UTF-8 CSV bytes can be inspected. Unsupported or oversized files are held."
+      ? count + " local file(s) selected. Run " + stage + " checks; UTF-8 CSV and TSV bytes are inspected by the same tenant-controlled rules. Unsupported or oversized files are held."
       : "No file selected. Ordinary " + stage + " text checking remains active.";
     reset(stage === "output");
+  });
+}
+// A clickable synthetic TSV sample uses the SAME File-input/attachment API as a
+// customer upload. It never uses a mock API result or pretends the file is safe.
+// Keep these actions separate from settings: do not change an explicit tenant Off.
+for (const stage of ["input", "output"]) {
+  $(stage + "-tsv-sample").addEventListener("click", () => {
+    if (!application?.tenant || busy || (stage === "output" && outputLocked())) {
+      $(stage + "-attachment-note").textContent =
+        stage === "output" ? "Pass input checks before selecting output files."
+                           : "Connect to an authenticated tenant before selecting files.";
+      return;
+    }
+    const file = new File(["name\\tvalue\\nSynthetic\\t=2+3".replaceAll("\\t", "\t").replace("\\n", "\n")],
+                          "synthetic-formula.tsv", {type: "text/tab-separated-values"});
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    $(stage + "-attachments").files = transfer.files;
+    $(stage + "-attachments").dispatchEvent(new Event("change", {bubbles: true}));
+    $(stage + "-attachment-note").textContent =
+      "Sample TSV loaded (synthetic formula). Run " + stage + " checks; the selected tenant's saved actions apply.";
+  });
+  $(stage + "-attachment-clear").addEventListener("click", () => {
+    $(stage + "-attachments").value = "";
+    $(stage + "-attachments").dispatchEvent(new Event("change", {bubbles: true}));
   });
 }
 // Each example owns exactly one editor. Profiles are never switched implicitly.
