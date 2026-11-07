@@ -30,22 +30,31 @@ async def csv_formula_check(request, policy, stage):
     # Continue using comma parsing for ordinary CSV and chat examples.
     first_record = request.content.splitlines()[0] if request.content.splitlines() else ""
     delimiter = "\t" if "\t" in first_record and "," not in first_record else ","
-    total = 0
+    # If an export mixes comma and tab delimiters, evaluate BOTH plausible
+    # spreadsheet import interpretations. A hostile data row must not evade
+    # detection by choosing the header delimiter while a different importer
+    # splits a second cell on the other character. Each pass stays bounded.
+    delimiters = (delimiter,)
+    if "," in request.content and "\t" in request.content:
+        delimiters += ("\t" if delimiter == "," else ",",)
     dangerous = False
     try:
-        reader = csv.reader(StringIO(request.content, newline=""), delimiter=delimiter, strict=True)
-        for row_number, row in enumerate(reader, start=1):
-            if row_number > MAX_CSV_ROWS or len(row) > MAX_CSV_COLUMNS:
-                return result("error", code="csv_inspection_budget_exceeded")
-            total += len(row)
-            if total > MAX_CSV_CELLS:
-                return result("error", code="csv_inspection_budget_exceeded")
-            for cell in row:
-                # Do not strip an apostrophe: spreadsheet-safe text escapes should stay benign.
-                # Leading whitespace, a BOM, or a nonbreaking space may be ignored by importers.
-                value = cell.lstrip(" \t\r\n\ufeff\u00a0")
-                if value.startswith(FORMULA_PREFIXES):
-                    dangerous = True
+        for separator in delimiters:
+            total = 0
+            reader = csv.reader(StringIO(request.content, newline=""),
+                                delimiter=separator, strict=True)
+            for row_number, row in enumerate(reader, start=1):
+                if row_number > MAX_CSV_ROWS or len(row) > MAX_CSV_COLUMNS:
+                    return result("error", code="csv_inspection_budget_exceeded")
+                total += len(row)
+                if total > MAX_CSV_CELLS:
+                    return result("error", code="csv_inspection_budget_exceeded")
+                for cell in row:
+                    # Preserve protective apostrophes. Spreadsheet importers may
+                    # trim leading whitespace, BOM or nonbreaking space.
+                    value = cell.lstrip(" \t\r\n\ufeff\u00a0")
+                    if value.startswith(FORMULA_PREFIXES):
+                        dangerous = True
     except (csv.Error, UnicodeError):
         return result("error", code="csv_invalid_content")
 
