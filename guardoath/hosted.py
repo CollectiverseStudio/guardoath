@@ -163,6 +163,21 @@ class TenantService:
         current = self.store.get(tenant_id)
         if current is None:
             raise TenantNotFound(tenant_id)
+        # The general checks endpoint accepts tenant-authored identity equality and
+        # uniqueness only. Host/administrator provisioned identity reference sets
+        # must never be overwritten by a replacement array from the dashboard or
+        # from a leaked/low-privilege API key. No implicit merge of private values.
+        if "advanced_identity" in changes:
+            protected_kinds = {"quarantine_exclusion", "authorized_scope_subset"}
+            if any(rule.kind in protected_kinds for rule in current.advanced_identity):
+                raise ChangeRejected("Identity definitions with protected reference sets must be managed "
+                                     "through an authorized reference-management workflow")
+            supplied = changes["advanced_identity"]
+            if not isinstance(supplied, (list, tuple)) or any(
+                    (getattr(rule, "kind", None) if not isinstance(rule, dict)
+                     else rule.get("kind")) not in {"order_id_match", "serial_unique"}
+                    for rule in supplied):
+                raise ChangeRejected("The checks endpoint accepts only non-reference identity kinds")
         try:
             candidate = TenantRecord.model_validate({**current.model_dump(), **changes})
         except ValidationError as error:
