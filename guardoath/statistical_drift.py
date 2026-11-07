@@ -90,6 +90,16 @@ def compute_psi(ref: ReferenceHistogram, observations: Sequence,
         raise ValueError("observations must be a bounded in-memory batch")
     reference_total = sum(ref.counts)
     actual_total = len(observations)
+    # Even a too-small batch cannot silently masquerade as valid telemetry.
+    # Validate supplied types and support before returning insufficient_data;
+    # out-of-range values must never be silently ignored.
+    counts = [0] * len(ref.counts)
+    for value in observations:
+        number = _decimal(value)
+        if number < edges[0] or number > edges[-1]:
+            raise ValueError("Observation falls outside approved reference support")
+        index = min(bisect_right(edges, number) - 1, len(counts) - 1)
+        counts[index] += 1
     if reference_total < min_observations or actual_total < min_observations:
         return DriftResult(
             status="insufficient_data",
@@ -101,15 +111,6 @@ def compute_psi(ref: ReferenceHistogram, observations: Sequence,
             smoothing="Jeffreys pseudocount 0.5 per bin",
             interpretation="insufficient_sample_size",
         )
-    counts = [0] * len(ref.counts)
-    for value in observations:
-        number = _decimal(value)
-        if number < edges[0] or number > edges[-1]:
-            # Never discard out-of-range observations or silently clip them.
-            raise ValueError("Observation falls outside approved reference support")
-        index = min(bisect_right(edges, number) - 1, len(counts) - 1)
-        counts[index] += 1
-
     with localcontext() as ctx:
         ctx.prec = 45
         k = Decimal(len(ref.counts))
