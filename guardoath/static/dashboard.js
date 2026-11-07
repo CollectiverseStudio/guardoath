@@ -270,6 +270,42 @@ function toggleRules(id) {
   if (openGroups.has(id)) openGroups.delete(id); else openGroups.add(id);
   filterRules();
 }
+// Host-signed FC reference snapshots can be discovered and action-configured
+// by their tenant without ever exposing source, signature or reference values.
+function renderTrustedReferenceStatus(tenant, own) {
+  const host = $("trusted-reference-status");
+  host.replaceChildren();
+  const rules = tenant?.advanced_trusted_reference_status;
+  host.hidden = !own || !Array.isArray(rules);
+  if (host.hidden) return;
+  const title = document.createElement("h3"); title.textContent = "Host-attested Field Comparison references"; host.append(title);
+  const note = document.createElement("p");
+  note.textContent = "Read-only snapshot inventory. A saved snapshot is not proof of current signature, expiry, provenance, or external accuracy. The Engine enforces those checks at evaluation. Configure Input/Output rule actions below; obtain new signed reference snapshots from the authorized operator workflow.";
+  host.append(note);
+  if (!rules.length) {
+    const empty = document.createElement("p"); empty.textContent = "No host-attested Field Comparison snapshots on this tenant."; host.append(empty);
+    return;
+  }
+  const list = document.createElement("ul"); list.id = "trusted-reference-list";
+  for (const rule of rules) {
+    const item = document.createElement("li"); item.dataset.trustedReferenceId = rule.rule_id;
+    const label = document.createElement("span");
+    label.textContent = rule.rule_id + " · " + rule.kind + " · stages: " + rule.stages.join(", ") +
+      " · saved snapshot: " + (rule.snapshot_present ? "present" : "not present");
+    item.append(label);
+    for (const stage of ["input", "output"]) {
+      if (!rule.stages.includes(stage)) continue;
+      const button = document.createElement("button");
+      button.type = "button"; button.className = "secondary";
+      button.textContent = "Review " + stage + " rule action";
+      button.setAttribute("aria-label", "Review " + stage + " action for host reference " + rule.rule_id);
+      button.addEventListener("click", () => reviewFindingRule("business." + rule.rule_id, "cross_field", stage));
+      item.append(button);
+    }
+    list.append(item);
+  }
+  host.append(list);
+}
 function renderTenant() {
   const tenant = application?.tenant; $("tenant-panel").hidden = !tenant; $("tenant-message").textContent = "";
   if (!tenant) return;
@@ -303,6 +339,7 @@ function renderTenant() {
   window.arithmeticEditor.render($("arithmetic-editor"), tenant, own, showUnsaved);
   window.identityEditor.render($("identity-editor"), tenant, own, showUnsaved);
   window.conversionEditor.render($("conversion-editor"), tenant, own, showUnsaved);
+  renderTrustedReferenceStatus(tenant, own);
   window.statisticalDriftEditor.render($("statistical-drift-editor"), tenant, own,
     () => api("/v1/tenants/current/statistical-drift"), showUnsaved);
   for (const id of Object.keys(tenant.input_checks)) { updateFormatNote(id); showCheckEffect(id); }
