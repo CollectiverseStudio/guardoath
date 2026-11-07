@@ -157,3 +157,39 @@ def test_identity_invalid_pointers_and_reference_value_admission_fail_closed():
         })
         assert response.status_code == 422
         assert store.get("identity-alpha") == original
+
+
+def test_identity_protected_reference_cannot_be_replaced_or_disclosed_by_checks_api():
+    api, store, headers = setup(protected=True)
+    a = headers["identity-alpha"]
+    original = store.get("identity-alpha")
+    for supplied in (
+        [],
+        RULES,
+        [{"rule_id": "private_quarantine", "kind": "quarantine_exclusion",
+          "fields": {"requested_lot": "/lot"}, "trusted_values": ["REPLACED_LOT"],
+          "stages": ["input", "output"]}],
+    ):
+        response = api.post("/v1/tenants/current/checks", headers=a, json={
+            "revision": original.revision, "changes": {"advanced_identity": supplied},
+        })
+        assert response.status_code == 422, response.text[:300]
+        assert "SECRET_LOT_001" not in response.text
+        assert store.get("identity-alpha") == original
+
+
+def test_generic_checks_api_refuses_to_provision_unverified_reference_identity():
+    api, store, headers = setup()
+    a = headers["identity-alpha"]
+    original = store.get("identity-alpha")
+    candidate = {
+        "rule_id": "client_quarantine", "kind": "quarantine_exclusion",
+        "fields": {"requested_lot": "/lot"},
+        "trusted_values": ["CLAIMED_TRUSTED_LOT"], "stages": ["input"],
+    }
+    response = api.post("/v1/tenants/current/checks", headers=a, json={
+        "revision": original.revision, "changes": {"advanced_identity": [candidate]},
+    })
+    assert response.status_code == 422
+    assert "CLAIMED_TRUSTED_LOT" not in response.text
+    assert store.get("identity-alpha") == original
