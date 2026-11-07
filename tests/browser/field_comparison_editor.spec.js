@@ -85,3 +85,19 @@ test("tenant can create, reload, edit stages and remove a comparison from the da
     await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
   }
 });
+
+
+test("comparison IDs enforce native HTML v-pattern validation before a draft can be saved", async ({page}) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo2");
+  await page.getByRole("button", {name:"Get demo API key", exact:true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
+  await page.locator("#comparison-id").fill("invalid space");
+  await page.locator("#comparison-left").fill("/left");
+  await page.locator("#comparison-right").fill("/right");
+  expect(await page.locator("#comparison-id").evaluate(e => e.validity.patternMismatch)).toBe(true);
+  await page.locator("#comparison-apply").click();
+  await expect(page.locator('#comparison-drafts [data-comparison-id="invalid space"]')).toHaveCount(0);
+  await page.locator("#comparison-id").fill("valid_rule-1.x");
+  expect(await page.locator("#comparison-id").evaluate(e => e.validity.patternMismatch)).toBe(false);
+});
