@@ -1,0 +1,135 @@
+"""Synthetic-only checks of live dashboard parity; never call production."""
+from __future__ import annotations
+
+import hashlib
+from pathlib import Path
+from urllib.error import URLError
+
+import pytest
+
+from tools.verify_live_dashboard import REQUIRED, verify, main
+
+
+BASE = "https://guardoath.com"
+
+
+class Response:
+    status = 200
+
+    def __init__(self, url, body, resolved=None):
+        self.url = resolved or url
+        self.body = body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        pass
+
+    def geturl(self):
+        return self.url
+
+    def read(self, size):
+        return self.body[:size]
+
+
+def setup(tmp_path: Path):
+    responses = {}
+    tags = {}
+    for name in sorted(REQUIRED):
+        body = ("Synthetic " + name).encode()
+        (tmp_path / name).write_bytes(body)
+        tag = hashlib.sha256(body).hexdigest()[:12]
+        tags[name] = tag
+        responses[BASE + "/assets/" + name + "?v=" + tag] = body
+    html = "<!doctype html><title>GuardOath</title>" + "".join(
+        '<script src="/assets/' + name + "?v=" + tags[name] + '"></script>'
+        for name in sorted(REQUIRED)
+    )
+    responses[BASE + "/dashboard"] = html.encode()
+    return responses, tags
+
+
+def opener(responses, *, redirect=None):
+    def open_url(request, timeout):
+        assert timeout == 10
+        url = request.full_url
+        if url not in responses:
+            raise URLError("synthetic missing response")
+        return Response(url, responses[url], resolved=redirect)
+    return open_url
+
+
+def test_all_versioned_production_assets_match_exact_local_source(tmp_path):
+    responses, _ = setup(tmp_path)
+    result = verify(BASE, tmp_path, opener(responses))
+    assert result == {
+        "dashboard_ui_matches_local_source": True,
+        "verified_asset_count": len(REQUIRED),
+        "expected_asset_count": len(REQUIRED),
+        "issues": [],
+        "backend_deployment_sha_verified": False,
+        "production_tenant_api_verified": False,
+        "mutated_records": 0,
+    }
+
+
+def test_stale_cloudfront_asset_never_certifies_new_source(tmp_path):
+    responses, tags = setup(tmp_path)
+    key = BASE + "/assets/dashboard.js?v=" + tags["dashboard.js"]
+    responses[key] = b"STALE JAVASCRIPT"
+    result = verify(BASE, tmp_path, opener(responses))
+    assert result["dashboard_ui_matches_local_source"] is False
+    assert "asset_content_mismatch:dashboard.js" in result["issues"]
+    assert result["mutated_records"] == 0
+
+
+def test_dashboard_missing_new_editor_never_passes(tmp_path):
+    responses, _ = setup(tmp_path)
+    responses[BASE + "/dashboard"] = responses[BASE + "/dashboard"].replace(
+        b'/assets/conversion_editor.js?v=', b'/assets/removed_editor_file.js?v=')
+    result = verify(BASE, tmp_path, opener(responses))
+    assert result["dashboard_ui_matches_local_source"] is False
+    assert "missing_dashboard_assets:conversion_editor.js" in result["issues"][0]
+
+
+def test_unversioned_assets_and_wrong_version_tag_are_rejected(tmp_path):
+    responses, tags = setup(tmp_path)
+    tag = tags["dashboard.js"]
+    responses[BASE + "/dashboard"] = responses[BASE + "/dashboard"].replace(
+        ("/assets/dashboard.js?v=" + tag).encode(), b"/assets/dashboard.js")
+    result = verify(BASE, tmp_path, opener(responses))
+    assert not result["dashboard_ui_matches_local_source"]
+    assert "unversioned_asset_link" in result["issues"]
+    assert any(i.startswith("missing_dashboard_assets:") for i in result["issues"])
+
+    responses, tags = setup(tmp_path)
+    old = tags["dashboard.js"]
+    responses[BASE + "/dashboard"] = responses[BASE + "/dashboard"].replace(
+        ("/assets/dashboard.js?v=" + old).encode(), b"/assets/dashboard.js?v=000000000000")
+    result = verify(BASE, tmp_path, opener(responses))
+    assert "asset_version_mismatch:dashboard.js" in result["issues"]
+
+
+def test_redirect_to_other_origin_is_never_treated_as_deployed_asset(tmp_path):
+    responses, _ = setup(tmp_path)
+    with pytest.raises(ValueError, match="redirect changed"):
+        verify(BASE, tmp_path, opener(responses, redirect="https://other.example.com/login"))
+
+
+@pytest.mark.parametrize("origin", [
+    "http://guardoath.com",
+    "https://guardoath.com/some/path",
+    "https://guardoath.com?token=private",
+    "https://user:password@guardoath.com",
+])
+def test_only_bare_secure_origin_is_allowed(tmp_path, origin):
+    with pytest.raises(ValueError):
+        verify(origin, tmp_path, opener({}))
+
+
+def test_unreachable_live_site_fails_closed(tmp_path):
+    responses, _ = setup(tmp_path)
+    responses.pop(BASE + "/dashboard")
+    with pytest.raises(URLError):
+        verify(BASE, tmp_path, opener(responses))
