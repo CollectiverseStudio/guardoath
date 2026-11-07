@@ -302,6 +302,7 @@ function renderTenant() {
   window.comparisonEditor.render($("comparison-editor"), tenant, own, showUnsaved);
   window.arithmeticEditor.render($("arithmetic-editor"), tenant, own, showUnsaved);
   window.identityEditor.render($("identity-editor"), tenant, own, showUnsaved);
+  window.conversionEditor.render($("conversion-editor"), tenant, own, showUnsaved);
   window.statisticalDriftEditor.render($("statistical-drift-editor"), tenant, own,
     () => api("/v1/tenants/current/statistical-drift"), showUnsaved);
   for (const id of Object.keys(tenant.input_checks)) { updateFormatNote(id); showCheckEffect(id); }
@@ -479,6 +480,14 @@ function pendingChanges() {
     changes.advanced_identity = identityChanges;
     for (const stage of ["input", "output"]) {
       changes[stage + "_rule_actions"] = window.identityEditor.actions(
+        stage, changes[stage + "_rule_actions"] || ruleEdits[stage]);
+    }
+  }
+  const conversionChanges = window.conversionEditor.delta();
+  if (conversionChanges !== null) {
+    changes.advanced_conversion_time = conversionChanges;
+    for (const stage of ["input", "output"]) {
+      changes[stage + "_rule_actions"] = window.conversionEditor.actions(
         stage, changes[stage + "_rule_actions"] || ruleEdits[stage]);
     }
   }
