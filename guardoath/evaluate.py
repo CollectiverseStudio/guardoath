@@ -121,7 +121,11 @@ async def evaluate(suite, engine, groups=None):
         rows.append({'case_id':case.case_id,'group':case.group,'stage':case.stage.value,
                      'matched':not differences,'differences':differences,
                      **actual,'latency_ms':round(result.total_latency_ms,3),
-                     'checker_diagnostics':safe_checker_diagnostics(result.checker_results)})
+                     'checker_diagnostics':safe_checker_diagnostics(result.checker_results),
+                     # The mandatory post-redaction pass can fail after the raw
+                     # PII check flagged successfully. Preserve only fixed codes
+                     # and timing: never the transformed content or exception text.
+                     'recheck_diagnostics':safe_checker_diagnostics(result.redaction.validation_results)})
     summary = {'total':len(rows), 'matched':sum(r['matched'] for r in rows),
                'mismatched':sum(not r['matched'] for r in rows),
                'incomplete':sum(r['evaluation_status'] == 'incomplete' for r in rows),

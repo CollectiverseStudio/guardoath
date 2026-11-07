@@ -40,6 +40,9 @@ class ReportCase(Contract):
     checker_statuses: dict[Identifier, Status] = Field(min_length=1, max_length=50)
     # Additive diagnostic metadata; legacy saved reports without this field still load.
     checker_diagnostics: dict[Identifier, CheckerFailureDiagnostic] = Field(default_factory=dict, max_length=50)
+    # A second-pass error belongs to withheld redaction, not the raw checker.
+    # Historical report JSON lacking this field remains valid.
+    recheck_diagnostics: dict[Identifier, CheckerFailureDiagnostic] = Field(default_factory=dict, max_length=50)
     finding_rule_ids: tuple[Identifier, ...] = Field(max_length=100)
     redaction_status: Literal['not_requested','not_needed','preview','ready','withheld']
     simulated: StrictBool
@@ -56,6 +59,10 @@ class ReportCase(Contract):
     def consistent(self):
         if any(self.checker_statuses.get(checker) != 'error' for checker in self.checker_diagnostics):
             raise ValueError('Diagnostics require an errored checker')
+        if self.recheck_diagnostics and self.redaction_status != 'withheld':
+            raise ValueError('Recheck errors require withheld redaction')
+        if any(checker not in self.checker_statuses for checker in self.recheck_diagnostics):
+            raise ValueError('Recheck diagnostics require a selected original checker')
         if self.matched != (not self.differences) or len(set(self.differences)) != len(self.differences):
             raise ValueError('Inconsistent expectation metadata')
         return self

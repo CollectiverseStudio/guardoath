@@ -739,6 +739,20 @@ diagnosing intermittent full-suite failures. This instrumentation does
 **not** resolve the known 500-ms tail, justify an increased budget, or
 authorize deployment; see Issue #30 and `tests/test_pii_deadline_diagnostics.py`.
 
+**Failed redaction recheck attribution.** Local evaluation reports also include
+`recheck_diagnostics` when a mandatory second-pass checker fails **after**
+the original PII checker has found content to redact. This field has the same
+bounded error-code/elapsed-ms allowlist as `checker_diagnostics`; it does not
+include source text, the redacted value, arbitrary exception messages or
+sensitive field spans. In these cases the raw PII checker can be `flagged`
+while the second pass reports `pii_scan_deadline` or `checker_timeout`;
+redaction remains `withheld`, the engine returns incomplete/Block for a
+required failed check, and the evaluation expectation still **fails**.
+Legacy reports without `recheck_diagnostics` remain loadable. This distinguishes
+first-pass and post-transformation failures for Issue #30 investigation; it
+does not improve scan throughput, change the 500-ms budget or authorize release.
+See `tests/test_pii_recheck_diagnostics.py`.
+
 ### Regression suite
 
 ```powershell
