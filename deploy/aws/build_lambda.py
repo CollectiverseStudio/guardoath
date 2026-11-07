@@ -15,7 +15,9 @@ modules again before it can answer. pip's own .pyc files record the time pip wro
 not the date stored in the zip, so they are replaced.
 """
 import importlib.util
+import json
 import py_compile
+import re
 import shutil
 import subprocess
 import sys
@@ -71,10 +73,36 @@ def package_files(stage: Path) -> list[tuple[str, Path]]:
     return [(path.relative_to(stage).as_posix(), path) for path in sorted(stage.rglob("*")) if path.is_file()]
 
 
+def release_source_sha(root: Path = ROOT) -> str:
+    """Builds must have an identifiable, committed GuardOath source tree.
+
+    Reject staged/unstaged/untracked application and packaging changes, so a
+    production source SHA cannot falsely attest to unrelated working files.
+    """
+    def git(*args):
+        result = subprocess.run(["git", "-C", str(root), *args],
+                                check=True, capture_output=True, text=True)
+        return result.stdout.strip()
+    sha = git("rev-parse", "--verify", "HEAD")
+    if not re.fullmatch(r"[0-9a-f]{40}", sha):
+        raise ValueError("Git HEAD is not a full source commit SHA")
+    dirty = git("status", "--porcelain", "--untracked-files=all", "--",
+                "guardoath", "policies", "pyproject.toml",
+                "deploy/aws/build_lambda.py")
+    if dirty:
+        raise ValueError("GuardOath source or Lambda packaging has uncommitted changes")
+    return sha
+
+
 def main() -> int:
     problem = check_python()
     if problem:
         print("ERROR: " + problem, file=sys.stderr)
+        return 1
+    try:
+        source_sha = release_source_sha()
+    except (subprocess.CalledProcessError, OSError, ValueError):
+        print("ERROR: cannot prove a clean committed source SHA for Lambda build", file=sys.stderr)
         return 1
     if BUILD.exists():
         shutil.rmtree(BUILD)
@@ -87,6 +115,11 @@ def main() -> int:
     ignore = shutil.ignore_patterns("__pycache__", "*.pyc")
     shutil.copytree(ROOT / "guardoath", STAGE / "guardoath", ignore=ignore)
     shutil.copytree(ROOT / "policies", STAGE / "policies", ignore=ignore)
+    # This metadata is generated inside the build artifact, not checked into
+    # the working source. /healthz exposes this public SHA for exact release checks.
+    (STAGE / "guardoath" / "_release_source.json").write_text(
+        json.dumps({"source_sha": source_sha}, sort_keys=True) + "\n",
+        encoding="utf-8", newline="\n")
     (STAGE / "index.py").write_text(INDEX, encoding="utf-8", newline="\n")
     print(f"Compiled {compile_package(STAGE)} modules to unchecked-hash bytecode", flush=True)
 
