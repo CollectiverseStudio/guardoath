@@ -2,7 +2,7 @@
 
 The API envelope is Base64 because the existing ingress is strict JSON, but only decoded,
 server-received bytes activate the file probe. User-supplied names and MIME are ignored.
-This module recognizes *only* structural UTF-8 CSV. Its cells use the existing csv_formula checker and tenant-enabled prompt_attack, secrets and optional local pii checkers, not a semantic file parser.
+This module recognizes *only* structural UTF-8 CSV and TSV. Its cells use the existing csv_formula checker and tenant-enabled prompt_attack, secrets and optional local pii checkers, not a semantic file parser.
 File redaction is not supported: a tenant PII Redact finding blocks the whole file request, including observe mode.
 """
 from __future__ import annotations
@@ -60,7 +60,7 @@ class AttachmentBatch:
 async def inspect_attachments(record: TenantRecord, stage: Stage, contents: tuple[bytes, ...], checkers: dict) -> AttachmentBatch:
     """Inspect every file without treating names, MIME or message text as bytes.
 
-    The tenant controls stage and rule actions; the shared Engine executes CSV and enabled text security.
+    The tenant controls stage and rule actions; the shared Engine executes CSV/TSV and enabled text security.
     An unsupported or invalid attachment is never reported clean. Every result is
     privacy-safe and format probes do not pretend to scan PDF/Office files.
     """
@@ -68,7 +68,7 @@ async def inspect_attachments(record: TenantRecord, stage: Stage, contents: tupl
         raise ValueError("Attachment count exceeded")
     mode = record.input_attachment_csv_mode if stage == Stage.INPUT else record.output_attachment_csv_mode
     stage_action = record.action("csv_formula", stage) or Action.BLOCK
-    # Recognized CSV bytes are lower-trust model input. If the tenant enabled
+    # Recognized CSV/TSV bytes are lower-trust model input. If the tenant enabled
     # prompt_attack for this stage, run that SAME checker/rules on file text too.
     # Never enable a tenant-disabled check or bypass an explicit attachment Off.
     prompt_action = record.action("prompt_attack", stage)
@@ -156,7 +156,7 @@ async def inspect_attachments(record: TenantRecord, stage: Stage, contents: tupl
             results.extend(evaluated.checker_results)
             findings.extend(evaluated.findings)
             actions.append(evaluated.recommended_action)
-            # A PII Redact finding on a CSV requires a transformed FILE, which
+            # A PII Redact finding on a CSV/TSV requires a transformed FILE, which
             # this API cannot return or validate. No false clean/redacted claim.
             # The file must be withheld even in observe mode; non-PII rules and
             # all PII findings are still retained by the same Engine.
