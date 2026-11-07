@@ -631,6 +631,9 @@ for (const stage of ["input", "output"]) {
     const transfer = new DataTransfer();
     transfer.items.add(file);
     $(stage + "-attachments").files = transfer.files;
+    if (stage === "output" && !$("output-content").value.trim()) {
+      $("output-content").value = "Here is the synthetic TSV report for inspection.";
+    }
     $(stage + "-attachments").dispatchEvent(new Event("change", {bubbles: true}));
     $(stage + "-attachment-note").textContent =
       "Sample TSV loaded (synthetic formula). Run " + stage + " checks; the selected tenant's saved actions apply.";
