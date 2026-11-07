@@ -1871,3 +1871,29 @@ test("Output sample format controls respect the input gate and send actual TSV b
   await expect(page.locator("#output-results .attachment-receipts")).toContainText("tsv_structure_recognized_only");
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
 });
+
+
+test("PII finding opens its editable tenant rule without changing saved policy", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo10");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toContainText("Reset to the demo defaults.");
+  await expect(page.locator("#rule-search")).toBeVisible();
+  await page.locator("#input-content").fill("Contact synthetic user at jane@example.com");
+  const response = page.waitForResponse(r => r.url().endsWith("/v1/checks/input") && r.request().method() === "POST");
+  await page.locator("#run-input").click();
+  const result = await (await response).json();
+  expect(result.findings.map(item => item.rule_id)).toContain("pii.email_address");
+  const button = page.getByRole("button", {name: "Review rule settings for pii.email_address"});
+  await expect(button).toBeVisible();
+  await button.click();
+  await expect(page.locator("#rule-search")).toHaveValue("pii.email_address");
+  const row = page.locator('.rule-row[data-rule="pii.email_address"]');
+  await expect(row).toBeVisible();
+  await expect(row.locator(".rule-info")).toHaveAttribute("open", "");
+  await expect(page.locator("#tenant-message")).toContainText("No settings were changed");
+  await expect(page.locator('[id="rule-action-input-pii.email_address"]')).toHaveValue("");
+  await page.getByRole("button", {name: "Reset to defaults", exact: true}).click();
+});
