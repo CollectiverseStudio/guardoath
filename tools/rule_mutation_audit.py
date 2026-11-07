@@ -98,12 +98,25 @@ async def audit(*, variants=DEFAULT_VARIANTS, limit=None, both_stages=True):
                     # No tenant default bypass: invoke the actual registered
                     # checker(s) with the exact policy settings for this rule.
                     # All processing remains local.
-                    results = await asyncio.gather(*(checkers[c](request, policy, stage)
-                                                     for c in check_ids))
-                    incomplete = any(result.status not in ("passed", "flagged")
-                                     for result in results)
-                    detected = rule_id in {finding.rule_id for result in results
-                                           for finding in result.findings}
+                    # A broken/timeout checker is recorded as incomplete,
+                    # rather than aborting the entire 525-rule audit. Record
+                    # exception *types* only; messages may contain raw input.
+                    results = await asyncio.gather(*(
+                        asyncio.wait_for(checkers[c](request, policy, stage),
+                                         timeout=policy.timeout_ms / 1000)
+                        for c in check_ids
+                    ), return_exceptions=True)
+                    failures = [type(result).__name__ for result in results
+                                if isinstance(result, BaseException)]
+                    successful = [result for result in results
+                                  if not isinstance(result, BaseException)]
+                    incomplete = bool(failures) or any(
+                        result.status not in ("passed", "flagged")
+                        for result in successful)
+                    detected = rule_id in {
+                        finding.rule_id for result in successful
+                        for finding in result.findings
+                    }
                     stats = by_control[rule.control_id]
                     stats["total"] += 1
                     if incomplete:
@@ -114,7 +127,8 @@ async def audit(*, variants=DEFAULT_VARIANTS, limit=None, both_stages=True):
                         else:
                             stats["missed"] += 1
                             misses.append({"rule_id": rule_id, "stage": stage.value,
-                                           "variant": name, "incomplete": incomplete})
+                                           "variant": name, "incomplete": incomplete,
+                                           "error_types": failures})
                     elif detected:
                         stats["false_positive"] += 1
                         unexpected.append({"rule_id": rule_id, "stage": stage.value,
