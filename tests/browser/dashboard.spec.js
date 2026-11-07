@@ -1132,9 +1132,9 @@ test("a tenant sees every dashboard example under the check it uses and can turn
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
   // Every dashboard example is in the dropdowns under the check it uses (2026-11-05: the example buttons and the six
-  // content-safety examples were removed): 121 run on input, 124 on output. The output list unlocks after the input test.
+  // content-safety examples were removed; two CHAT-009 examples were added): 123 input, 126 output. The output list unlocks after the input test.
   await page.locator("#run-input").click(); await expect(page.locator("#run-output")).toBeEnabled();
-  for (const [stage, expected] of [["input", 121], ["output", 124]]) {
+  for (const [stage, expected] of [["input", 123], ["output", 126]]) {
     const values = await page.locator("#" + stage + "-example-check option").evaluateAll(nodes => nodes.map(n => n.value).filter(Boolean));
     const seen = new Set();
     for (const value of values) {
