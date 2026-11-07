@@ -295,6 +295,46 @@ class AdvancedTrustedReferenceRule(Contract):
         return self
 
 
+class AdvancedStatisticalDriftRule(Contract):
+    """Tenant-owned batch PSI, not a general streaming drift monitor.
+
+    Reference histogram and threshold are tenant configuration, never supplied
+    by the incoming JSON. Stage/action policies remain authoritative.
+    """
+    rule_id: str = Field(pattern=r"^[a-z][a-z0-9_]{0,79}$")
+    observations_pointer: str = Field(min_length=2, max_length=200)
+    reference_id: str = Field(min_length=1, max_length=100)
+    reference_version: str = Field(min_length=1, max_length=80)
+    bin_edges: tuple[str, ...] = Field(min_length=3, max_length=65)
+    counts: tuple[int, ...] = Field(min_length=2, max_length=64)
+    psi_threshold: str = Field(min_length=1, max_length=24)
+    min_observations: int = Field(default=30, ge=30, le=100_000, strict=True)
+    stages: tuple[Stage, ...] = Field(default=(Stage.INPUT, Stage.OUTPUT), min_length=1)
+
+    @model_validator(mode="after")
+    def valid_drift_rule(self):
+        import re
+        from decimal import Decimal, InvalidOperation
+        from guardoath.statistical_drift import ReferenceHistogram, _validate_reference
+        if (not self.observations_pointer.startswith("/")
+                or re.search(r"~(?![01])", self.observations_pointer)
+                or any(not x for x in self.observations_pointer[1:].split("/"))):
+            raise ValueError("Drift observations require a bounded JSON pointer")
+        if len(set(self.stages)) != len(self.stages):
+            raise ValueError("Drift stage names must be unique")
+        _validate_reference(ReferenceHistogram(
+            self.reference_id, self.reference_version, self.bin_edges, self.counts))
+        if sum(self.counts) < self.min_observations:
+            raise ValueError("Drift reference must satisfy minimum sample count")
+        try:
+            threshold = Decimal(self.psi_threshold)
+        except InvalidOperation:
+            raise ValueError("Invalid PSI threshold") from None
+        if not threshold.is_finite() or threshold <= 0 or threshold > 10:
+            raise ValueError("PSI threshold must be finite, positive, <=10")
+        return self
+
+
 class RequiredSection(Contract):
     rule_id: str = Field(pattern=r"^[a-zA-Z0-9_.-]{1,80}$")
     label: str = Field(pattern=r"^[A-Za-z][A-Za-z0-9 _-]{0,79}$")
@@ -418,11 +458,12 @@ class Policy(Contract):
     advanced_identity: tuple[AdvancedIdentityRule, ...] = ()
     advanced_conversion_time: tuple[AdvancedConversionTimeRule, ...] = ()
     advanced_trusted_reference: tuple[AdvancedTrustedReferenceRule, ...] = ()
+    advanced_statistical_drift: tuple[AdvancedStatisticalDriftRule, ...] = ()
     required_sections: tuple[RequiredSection, ...] = ()
 
     @model_validator(mode="after")
     def all_comparison_rule_ids_are_unique(self):
-        ids = [r.rule_id for r in (*self.comparisons, *self.advanced_arithmetic, *self.advanced_identity, *self.advanced_conversion_time, *self.advanced_trusted_reference)]
+        ids = [r.rule_id for r in (*self.comparisons, *self.advanced_arithmetic, *self.advanced_identity, *self.advanced_conversion_time, *self.advanced_trusted_reference, *self.advanced_statistical_drift)]
         if len(set(ids)) != len(ids):
             raise ValueError("Comparison rule IDs must be distinct")
         return self
