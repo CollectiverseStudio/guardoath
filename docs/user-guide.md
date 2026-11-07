@@ -2372,3 +2372,30 @@ The shipped `pii-extended-v1` and `redaction-v1` example tenant policies both us
 New `tests/test_pii_loaded_stress.py` runs the **real Engine and local PII recognizers**, not a fake detection adapter. It repeats the exact historical `date_of_birth1` synthetic example in three cohorts of four concurrent requests for each stage, plus three cohorts of two concurrent DOB-redaction requests per stage. It asserts the original `pii.date_of_birth` finding, completion, each checker's actual elapsed time at or below 500 ms, transformed-content non-echo, and a fully **passed** second validation pass. It also simulates exhausted PII worker capacity under an enforce-mode tenant and requires incomplete/Block/withheld behavior on both stages. Test failures print only stage, static case ID, fixed checker error code, status and duration, **never submitted or redacted PII**.
 
 **Run:** `python -m pytest -q tests/test_pii_loaded_stress.py tests/test_pii_recheck_diagnostics.py tests/test_pii_deadline_diagnostics.py` with the optional local `guardoath[pii]` dependencies installed. The complete 13-job Tests and three-analysis CodeQL matrix must still pass on the exact release commit. Repeated green runs cannot establish the absence of intermittent 500-ms tails; the prior `date_of_birth1.input` full-suite regression remains a release-monitoring concern until a measured optimization demonstrates reliability. Never increase the budget, disable recognizers, relax fixture expectations, or classify an uncompleted scan as clean to obtain green CI.
+
+
+### Host-reference signing boundaries and invalid snapshots
+
+For FC-044/045/047/049, an operator must verify the external source before
+attesting a tenant-bound snapshot. A valid host signature alone does not make
+malformed reference values valid. Positive bounded dose factors, finite
+nonnegative permit limits, supported vendor identifiers and valid administration
+time/interval values are checked before signing and before runtime trust.
+A selected malformed signed snapshot now produces incomplete evaluation and
+Block on Input and Output, including observe mode and failure-action Flag.
+Explicit rule Off remains Off; valid snapshots retain their configured actions.
+Correct malformed saved values and obtain a new operator attestation; no values
+are automatically replaced or re-signed.
+
+Use `python -m tools.sign_trusted_reference --tenant TENANT --input approved-rule.json --output private-signed-rule.json`
+with the operator-managed signing key already configured in
+`GUARDOATH_REFERENCE_SIGNING_KEY`. Keep the key out of commands, logs and source
+control. The CLI accepts bounded UTF-8 JSON up to 262,144 bytes, rejects duplicate
+keys and malformed fields, and reports invalid input/file failures with fixed
+private-safe errors and exit 2. It creates a new owner-only output without
+overwriting an existing file or the unsigned source. A draft with duplicate
+`source_id` or a signed permit limit of `"NaN"` must be corrected rather than
+accepted as authority. Signature/expiry and tenant binding still apply; host
+approval does not independently establish clinical or regulatory truth.
+See [signing boundary contracts](field-comparison-signing-boundaries.md) and the
+signer/runtime regression tests for exact cases and limits.

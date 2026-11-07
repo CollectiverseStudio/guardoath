@@ -10,8 +10,9 @@ import json
 import os
 from pathlib import Path
 
+from guardoath.json_data import MAX_JSON_BYTES, parse_json
 from guardoath.models import AdvancedTrustedReferenceRule
-from guardoath.trusted_reference import SIGNING_KEY_ENV, sign_reference
+from guardoath.trusted_reference import SIGNING_KEY_ENV, reference_values_are_valid, sign_reference
 
 
 def main(argv=None):
@@ -23,16 +24,36 @@ def main(argv=None):
     key = os.getenv(SIGNING_KEY_ENV)
     if not key or len(key) < 32:
         parser.error(f"Provide an operator-managed {SIGNING_KEY_ENV} with at least 32 characters")
-    if args.input.resolve() == args.output.resolve():
+    try:
+        same_path = args.input.resolve() == args.output.resolve()
+    except (OSError, RuntimeError):
+        parser.error("Cannot resolve reference input or output path")
+    if same_path:
         parser.error("Refusing to overwrite the unsigned source or emit a secret to stdout")
-    rule = AdvancedTrustedReferenceRule.model_validate(json.loads(args.input.read_text(encoding="utf-8")))
+    try:
+        # Bound the actual read, including whitespace, before decoding or model
+        # validation. Use the same duplicate-key/structure rules as admission.
+        with args.input.open("rb") as handle:
+            raw = handle.read(MAX_JSON_BYTES + 1)
+        if len(raw) > MAX_JSON_BYTES:
+            raise ValueError("Reference input byte limit")
+        rule = AdvancedTrustedReferenceRule.model_validate(parse_json(raw.decode("utf-8")))
+        if not reference_values_are_valid(rule):
+            raise ValueError("Invalid declared reference value")
+    except (OSError, UnicodeError, ValueError):
+        # ValidationError includes submitted values; never print its text or
+        # an input path from an OS error into operator diagnostic logs.
+        parser.error("Invalid reference input; require bounded UTF-8 JSON with unique keys and valid rule fields")
     signed = rule.model_copy(update={"host_signature": sign_reference(rule, args.tenant, key)})
-    args.output.parent.mkdir(parents=True, exist_ok=True)
     # Signed clinical/permit/PO snapshots can be sensitive. Create with
     # owner-only mode, never overwrite an existing file or follow a symlink.
-    fd = os.open(args.output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as handle:
-        handle.write(json.dumps(signed.model_dump(mode="json"), indent=2) + "\n")
+    try:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(args.output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(json.dumps(signed.model_dump(mode="json"), indent=2) + "\n")
+    except OSError:
+        parser.error("Cannot create private attestation output; require a new writable destination")
     print("Host attestation created; verify and save the resulting tenant rule through the authenticated settings API.")
     return 0
 

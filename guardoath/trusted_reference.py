@@ -19,7 +19,7 @@ from guardoath.advanced_arithmetic import _number
 from guardoath.advanced_conversion_time import _time
 from guardoath.advanced_identity import _identifier
 from guardoath.business import resolve
-from guardoath.models import Finding
+from guardoath.models import Finding, TRUSTED_REFERENCE_VALUES
 
 SIGNING_KEY_ENV = "GUARDOATH_REFERENCE_SIGNING_KEY"
 MAX_REFERENCE_LIFETIME = timedelta(days=366)
@@ -46,6 +46,8 @@ def reference_is_trusted(rule, tenant_id: str, *, now: datetime | None = None, k
     if not isinstance(key, str) or len(key) < 32:
         return False
     try:
+        if not reference_values_are_valid(rule):
+            return False
         signed_at = _time(rule.verified_at).astimezone(timezone.utc)
         expires = _time(rule.expires_at).astimezone(timezone.utc)
         now = now or datetime.now(timezone.utc)
@@ -65,6 +67,39 @@ def _reference_number(value, *, positive=False, nonnegative=False):
     except InvalidOperation:
         raise ValueError("Invalid host numeric reference") from None
     return _number(number, positive=positive, nonnegative=nonnegative)
+
+
+def reference_values_are_valid(rule) -> bool:
+    """Validate the declared snapshot types/bounds independently of its MAC.
+
+    A host signature establishes approval, not numeric/date/identifier validity.
+    Invalid saved snapshots must take the existing untrusted-reference Block
+    path, rather than becoming ordinary findings that observe mode can allow.
+    """
+    try:
+        values = rule.reference_values
+        if set(values) != set(TRUSTED_REFERENCE_VALUES.get(rule.kind, ())):
+            return False
+        if rule.kind == "dose_ceiling":
+            _reference_number(values["verified_weight_kg"], positive=True)
+            _reference_number(values["max_mg_per_kg"], positive=True)
+        elif rule.kind == "medication_interval":
+            _time(values["previous_administration"])
+            text = values["minimum_interval_minutes"]
+            if not isinstance(text, str) or not 1 <= len(text) <= 100:
+                return False
+            minutes = int(text)
+            if text != str(minutes) or not 1 <= minutes <= MAX_INTERVAL_MINUTES:
+                return False
+        elif rule.kind == "permit_cap":
+            _reference_number(values["permit_limit"], nonnegative=True)
+        elif rule.kind == "invoice_po_vendor":
+            _identifier(values["approved_vendor_id"])
+        else:
+            return False
+    except (ValueError, TypeError, KeyError, IndexError, ArithmeticError):
+        return False
+    return True
 
 
 def _valid(rule, payload):
