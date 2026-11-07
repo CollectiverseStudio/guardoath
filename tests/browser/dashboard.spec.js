@@ -1813,3 +1813,61 @@ test("CHAT-009 four-turn conditioning and benign examples run through tenant Inp
   expect(benign.evaluation_status).toBe("complete");
   expect(benign.findings.map(f => f.rule_id)).not.toContain("prompt_attack.multi_turn_conditioning");
 });
+
+
+test("CSV sample button submits real synthetic input bytes through tenant attachment checks", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo10");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toContainText("Reset to the demo defaults.");
+  await expect(page.locator("#tenant-attachment-mode-input")).toHaveValue("auto");
+
+  await page.locator("#input-csv-sample").click();
+  await expect(page.locator("#input-attachment-note")).toContainText("Sample CSV loaded");
+  const selected = await page.locator("#input-attachments").evaluate(async input => {
+    const file = input.files[0];
+    return {name: file?.name, type: file?.type, body: await file?.text()};
+  });
+  expect(selected).toEqual({
+    name: "synthetic-formula.csv",
+    type: "text/csv",
+    body: "name,value\\nSynthetic,=2+3".replaceAll("\\n", "\n"),
+  });
+  const response = page.waitForResponse(r => r.url().endsWith("/v1/checks/input/attachments") && r.request().method() === "POST");
+  await page.locator("#run-input").click();
+  const result = await (await response).json();
+  expect(result.findings.map(f => f.rule_id)).toContain("csv_formula.potential_formula");
+  await expect(page.locator("#input-results .attachment-receipts")).toContainText("csv_structure_recognized_only");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+});
+
+test("Output sample format controls respect the input gate and send actual TSV bytes", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo10");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toContainText("Reset to the demo defaults.");
+  await page.locator("#output-csv-sample").click();
+  expect(await page.locator("#output-attachments").evaluate(e => e.files.length)).toBe(0);
+  await expect(page.locator("#output-attachment-note")).toContainText("Pass input checks");
+
+  await page.locator("#input-content").fill("Please summarize the public return policy.");
+  await page.locator("#run-input").click();
+  await expect(page.locator("#input-gate")).toContainText("Input checks passed");
+  await page.locator("#output-tsv-sample").click();
+  const selected = await page.locator("#output-attachments").evaluate(async input => {
+    const file = input.files[0];
+    return {name: file?.name, body: await file?.text()};
+  });
+  expect(selected.name).toBe("synthetic-formula.tsv");
+  expect(selected.body).toContain("Synthetic\\t=2+3".replaceAll("\\t", "\t"));
+  const response = page.waitForResponse(r => r.url().endsWith("/v1/checks/output/attachments") && r.request().method() === "POST");
+  await page.locator("#run-output").click();
+  const result = await (await response).json();
+  expect(result.findings.map(f => f.rule_id)).toContain("csv_formula.potential_formula");
+  await expect(page.locator("#output-results .attachment-receipts")).toContainText("tsv_structure_recognized_only");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+});
