@@ -84,13 +84,15 @@ def reference_values_are_valid(rule) -> bool:
             _reference_number(values["verified_weight_kg"], positive=True)
             _reference_number(values["max_mg_per_kg"], positive=True)
         elif rule.kind == "medication_interval":
-            _time(values["previous_administration"])
+            previous = _time(values["previous_administration"])
             text = values["minimum_interval_minutes"]
             if not isinstance(text, str) or not 1 <= len(text) <= 100:
                 return False
             minutes = int(text)
             if text != str(minutes) or not 1 <= minutes <= MAX_INTERVAL_MINUTES:
                 return False
+            # Reject signed intervals that overflow the supported datetime range.
+            previous + timedelta(minutes=minutes)
         elif rule.kind == "permit_cap":
             _reference_number(values["permit_limit"], nonnegative=True)
         elif rule.kind == "invoice_po_vendor":
