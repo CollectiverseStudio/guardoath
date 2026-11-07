@@ -2,6 +2,7 @@
 
 import hashlib
 import hmac
+import json
 import os
 from pathlib import Path
 import re
@@ -38,6 +39,16 @@ from guardoath.tenant_record import new_key
 from guardoath.record_rules import record_rules
 from guardoath.sigma_site import catalog_payload as sigma_catalog_payload, evaluate_fixture as sigma_evaluate_fixture
 from guardoath.tenant_sessions import SESSION_HEADER, CognitoSessions, SignInBusy
+
+
+def release_source_sha(path: Path | None = None) -> str | None:
+    """Public Git SHA embedded in Lambda package during a clean-source build."""
+    path = Path(__file__).with_name("_release_source.json") if path is None else path
+    try:
+        value = json.loads(path.read_text(encoding="utf-8")).get("source_sha")
+    except (OSError, UnicodeError, ValueError, AttributeError):
+        return None
+    return value if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{40}", value) else None
 
 
 # Videos are sent in parts of at most this size. The hosted service runs on AWS Lambda, whose buffered
@@ -675,7 +686,10 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
 
     @api.get("/healthz")
     async def health():
-        return {"status": "ok", "profile": "local-prototype"}
+        # Public immutable build identity, not tenant data or deployment secrets.
+        # A missing/invalid identity is explicitly unknown, never guessed.
+        return {"status": "ok", "profile": "local-prototype",
+                "source_sha": release_source_sha()}
 
     @api.get("/v1/applications/current")
     async def current_application(principal: Annotated[str | TenantRecord, Depends(authenticate)]):
