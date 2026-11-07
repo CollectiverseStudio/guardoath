@@ -2399,3 +2399,31 @@ accepted as authority. Signature/expiry and tenant binding still apply; host
 approval does not independently establish clinical or regulatory truth.
 See [signing boundary contracts](field-comparison-signing-boundaries.md) and the
 signer/runtime regression tests for exact cases and limits.
+
+
+### Source-free local PII latency probe for release diagnostics
+
+Issue #30's intermittent shipped 500-ms deadline failures must be measured without
+logging the messages or mistaking a green retry for a permanent performance fix.
+From the repository root with existing optional local PII dependencies installed:
+
+```sh
+python -m tools.pii_latency_probe --rounds 10 --concurrency 4
+```
+
+This diagnostic uses only two **fixed synthetic DOB cases** and the real shipped
+`pii-extended-v1` and `redaction-v1` profiles through the shared Engine on
+Input and Output. It measures first-pass and mandatory redaction-recheck latency,
+retains the **unchanged 500-ms deadline**, and reports aggregate request count,
+failed-contract count, median and maximum checker/recheck latency for each fixed
+case and stage. It never serializes messages, findings, transformed output,
+exception text, tenant credentials or live customer data. A failed, missing,
+late or withheld mandatory recheck is not counted as clean: exit status **2**;
+all expected contracts passing yields status **0**. If dependencies/engine are
+unavailable, the command emits a fixed `probe_unavailable` error and exit 2.
+Both arguments are intentionally bounded (rounds 1–100, concurrency 1–4) to
+avoid creating an uncontrolled diagnostic workload. The result is a **local
+bounded probe, not production tail latency or a statistical SLA guarantee**.
+Repeated tests and the existing 13-job exact-SHA CI still apply; verify any
+reported regressions without raising budgets, mutating tenants or transmitting
+sensitive samples.
