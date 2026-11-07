@@ -2,7 +2,7 @@
 import json
 import pytest
 
-from tools.attachment_mode_audit import audit, classify_record, main
+from tools.attachment_mode_audit import AuditIncompleteError, audit, classify_record, main
 
 
 def test_classifies_raw_stored_fields_without_model_defaults():
@@ -143,3 +143,88 @@ def test_cli_never_reports_invalid_stored_modes_as_clean(
     assert report["requires_provenance_review"] is expected_provenance
     assert "synthetic-read-only" not in json.dumps(report)
     assert stored_record not in json.dumps(report)
+
+
+
+@pytest.mark.parametrize("pages", [
+    [{"Count": 1}],  # omitted Items with a claimed returned item
+    [{"Items": [], "Count": 1}],  # returned Count contradicts item list
+    [{"Items": [], "Count": False}],  # boolean is not a valid count
+    [{"Items": "untrusted-page"}],  # never iterate a string as records
+    [{"Items": [], "LastEvaluatedKey": {}}],  # invalid empty cursor
+    [
+        {"Items": [], "LastEvaluatedKey": {"tenant_id": {"S": "PRIVATE-ID"}}},
+        {"Items": [], "LastEvaluatedKey": {"tenant_id": {"S": "PRIVATE-ID"}}},
+    ],  # a repeated continuation must not loop forever
+])
+def test_scan_integrity_never_certifies_missing_rows_or_repeating_pages(pages):
+    class Client:
+        def __init__(self):
+            self.calls = 0
+
+        def scan(self, **kwargs):
+            result = pages[self.calls]
+            self.calls += 1
+            return result
+
+    client = Client()
+    with pytest.raises(AuditIncompleteError) as exc:
+        audit(client, "synthetic-table")
+    assert client.calls <= len(pages)
+    assert "PRIVATE-ID" not in str(exc.value)
+    assert "untrusted-page" not in str(exc.value)
+
+
+def test_zero_count_scan_page_without_items_is_valid():
+    class Client:
+        def scan(self, **kwargs):
+            return {"Count": 0, "ScannedCount": 0}
+
+    report = audit(Client(), "synthetic-table")
+    assert report["total_records"] == 0
+    assert report["requires_data_quality_review"] is False
+
+
+def test_cli_incomplete_scan_is_nonzero_privacy_safe_and_does_not_write(monkeypatch, capsys):
+    import sys
+    import types
+
+    class BadPage:
+        def scan(self, **request):
+            assert request["ConsistentRead"] is True
+            assert "UpdateExpression" not in request
+            return {
+                "Count": 2,
+                "Items": [{"record": {"S": '{"input_attachment_csv_mode":"off"}'}}],
+                "LastEvaluatedKey": {"tenant_id": {"S": "SENSITIVE-ID"}},
+            }
+
+    class Session:
+        def __init__(self, profile_name, region_name):
+            assert profile_name == "synthetic-read-only"
+            assert region_name == "us-east-1"
+
+        def client(self, service, config):
+            assert service == "dynamodb"
+            return BadPage()
+
+    boto3 = types.ModuleType("boto3")
+    boto3.Session = Session
+    botocore = types.ModuleType("botocore")
+    botocore.__path__ = []
+    botocore_config = types.ModuleType("botocore.config")
+    botocore_config.Config = lambda **kwargs: kwargs
+    monkeypatch.setitem(sys.modules, "boto3", boto3)
+    monkeypatch.setitem(sys.modules, "botocore", botocore)
+    monkeypatch.setitem(sys.modules, "botocore.config", botocore_config)
+
+    assert main(["--profile", "synthetic-read-only", "--table", "synthetic-table"]) == 2
+    report = json.loads(capsys.readouterr().out)
+    assert report == {
+        "audit_incomplete": True,
+        "requires_data_quality_review": True,
+        "mutated_records": 0,
+        "reason": "scan_integrity_error",
+    }
+    assert "SENSITIVE-ID" not in json.dumps(report)
+    assert "input_attachment_csv_mode" not in json.dumps(report)

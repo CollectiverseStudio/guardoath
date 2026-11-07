@@ -17,6 +17,10 @@ FIELDS = ("input_attachment_csv_mode", "output_attachment_csv_mode")
 CATEGORIES = ("missing", "auto", "off", "invalid")
 
 
+class AuditIncompleteError(ValueError):
+    """The scan cannot establish a reliable complete tenant-policy inventory."""
+
+
 def _reject_duplicate_json_keys(pairs):
     """Never silently discard an earlier stored mode (including nested ambiguity)."""
     result = {}
@@ -45,6 +49,7 @@ def audit(client, table_name: str) -> dict:
               for stage in ("input", "output")}
     total = invalid_json = 0
     cursor = None
+    seen_cursors = set()
     while True:
         request = {
             "TableName": table_name,
@@ -55,7 +60,23 @@ def audit(client, table_name: str) -> dict:
         if cursor is not None:
             request["ExclusiveStartKey"] = cursor
         response = client.scan(**request)
-        for item in response.get("Items", []):
+        # A partially decoded or malformed page must never be treated as an
+        # empty page: doing so could incorrectly certify saved Off as absent.
+        if not isinstance(response, dict):
+            raise AuditIncompleteError("Invalid DynamoDB scan response")
+        items = response.get("Items")
+        if items is None:
+            # DynamoDB can omit Items for a zero-count page.
+            if "Items" in response or response.get("Count") != 0:
+                raise AuditIncompleteError("Missing DynamoDB scan items")
+            items = []
+        if not isinstance(items, list):
+            raise AuditIncompleteError("Invalid DynamoDB scan items")
+        if "Count" in response and (
+            type(response["Count"]) is not int or response["Count"] != len(items)
+        ):
+            raise AuditIncompleteError("Inconsistent DynamoDB scan count")
+        for item in items:
             total += 1
             try:
                 modes = classify_record(item["record"]["S"])
@@ -65,7 +86,19 @@ def audit(client, table_name: str) -> dict:
             for stage, mode in zip(("input", "output"), modes):
                 counts[stage][mode] += 1
         cursor = response.get("LastEvaluatedKey")
-        if cursor is None:
+        if cursor is not None:
+            if not isinstance(cursor, dict) or not cursor:
+                raise AuditIncompleteError("Invalid DynamoDB scan continuation")
+            try:
+                # Keep private key values in memory only, never in exceptions
+                # or the aggregate report.
+                cursor_token = json.dumps(cursor, sort_keys=True)
+            except (TypeError, ValueError) as exc:
+                raise AuditIncompleteError("Invalid DynamoDB scan continuation") from exc
+            if cursor_token in seen_cursors:
+                raise AuditIncompleteError("Repeated DynamoDB scan continuation")
+            seen_cursors.add(cursor_token)
+        else:
             break
     # Off requires *provenance* review; corrupt/unreadable stored modes require
     # a separate data-quality review. A count of zero explicit Off values is
@@ -99,7 +132,18 @@ def main(argv=None) -> int:
         connect_timeout=2, read_timeout=5,
         retries={"total_max_attempts": 2, "mode": "standard"},
     ))
-    report = audit(client, args.table)
+    try:
+        report = audit(client, args.table)
+    except AuditIncompleteError:
+        # Partial inventories must not look like a completed zero-Off scan.
+        # Do not expose the cursor, tenant identifiers, or customer record.
+        print(json.dumps({
+            "audit_incomplete": True,
+            "requires_data_quality_review": True,
+            "mutated_records": 0,
+            "reason": "scan_integrity_error",
+        }, indent=2, sort_keys=True))
+        return 2
     print(json.dumps(report, indent=2, sort_keys=True))
     # Invalid mode values are not a clean production inventory even when the
     # record itself is valid JSON; use the same nonzero exit as unreadable rows.
