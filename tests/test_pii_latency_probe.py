@@ -81,3 +81,11 @@ def test_bounds_disallow_unbounded_load():
     with pytest.raises(SystemExit) as exc:
         probe.main(["--rounds", "101", "--concurrency", "4"])
     assert exc.value.code == 2
+
+
+def test_missing_checker_or_missing_detection_never_counts_as_clean():
+    blank = _response()
+    blank.checker_results = ()
+    assert probe.summarize("dob-detection", "input", [blank])["failed_contracts"] == 1
+    without_finding = _response(finding=False)
+    assert probe.summarize("dob-redaction", "output", [without_finding])["failed_contracts"] == 1
