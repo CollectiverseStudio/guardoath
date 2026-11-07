@@ -46,9 +46,15 @@ def summarize(case_id, stage, results):
         is_bad |= not any(f.rule_id == "pii.date_of_birth" for f in result.findings)
         is_bad |= any(c.status != "flagged" for c in pii)
         if case_id == "dob-redaction":
-            is_bad |= (result.redaction.status != "preview" or not rechecks
+            # A successful recheck alone does not prove the preview removed
+            # the fixed synthetic DOB. An unchanged sensitive value must
+            # invalidate this release probe without logging that content.
+            preview = result.redaction.content
+            is_bad |= (result.redaction.status != "preview"
+                       or len(rechecks) != 1 or rechecks[0].checker_id != "pii"
                        or any(c.status != "passed" for c in rechecks)
-                       or result.redaction.content is None)
+                       or not isinstance(preview, str)
+                       or "1980-02-29" in preview)
         errors += bool(is_bad)
     def durations(values):
         ordered = sorted(values)
