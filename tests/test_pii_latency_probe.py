@@ -125,3 +125,34 @@ def test_wrong_checker_cannot_satisfy_privacy_gate():
     sample.checker_results = (SimpleNamespace(checker_id="secrets", status="flagged",
                                                latency_ms=30, error_code=None),)
     assert probe.summarize("dob-detection", "input", [sample])["failed_contracts"] == 1
+
+
+@pytest.mark.parametrize("preview", [
+    "DOB: 1980-02-29",
+    "DOB: 1980-02-29 [REDACTED]",
+])
+def test_redaction_preview_must_remove_synthetic_dob(preview):
+    sample = _response()
+    sample.redaction.content = preview
+    result = probe.summarize("dob-redaction", "input", [sample])
+    assert result["failed_contracts"] == 1
+    assert preview not in json.dumps(result)
+
+
+def test_real_redaction_preview_with_private_value_removed_passes():
+    sample = _response()
+    sample.redaction.content = "DOB: [REDACTED]"
+    result = probe.summarize("dob-redaction", "output", [sample])
+    assert result["failed_contracts"] == 0
+    assert result["redaction_recheck"]["observed"] == 1
+
+
+@pytest.mark.parametrize("rechecks", [
+    (_check(status="passed", latency_ms=50), _check(status="passed", latency_ms=60)),
+    (SimpleNamespace(checker_id="secrets", status="passed", latency_ms=50, error_code=None),),
+])
+def test_redaction_recheck_requires_exactly_one_named_pii_checker(rechecks):
+    sample = _response()
+    sample.redaction.validation_results = rechecks
+    result = probe.summarize("dob-redaction", "output", [sample])
+    assert result["failed_contracts"] == 1
