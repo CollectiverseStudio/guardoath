@@ -31,11 +31,13 @@ def summarize(case_id, stage, results):
         rechecks = tuple(result.redaction.validation_results)
         latencies.extend(float(c.latency_ms) for c in checkers if c.latency_ms is not None)
         recheck_latencies.extend(float(c.latency_ms) for c in rechecks if c.latency_ms is not None)
-        is_bad = result.evaluation_status != "complete" or any(c.status == "error" for c in checkers + rechecks)
+        is_bad = (result.evaluation_status != "complete" or not checkers or
+                  any(c.status == "error" for c in checkers + rechecks))
         if case_id == "dob-detection":
             is_bad |= not any(f.rule_id == "pii.date_of_birth" for f in result.findings)
         else:
-            is_bad |= (result.redaction.status != "preview" or
+            is_bad |= (not any(f.rule_id == "pii.date_of_birth" for f in result.findings) or
+                       result.redaction.status != "preview" or
                        not rechecks or any(c.status != "passed" for c in rechecks) or
                        result.redaction.content is None)
         is_bad |= any(c.latency_ms is not None and c.latency_ms > 500 for c in checkers + rechecks)
