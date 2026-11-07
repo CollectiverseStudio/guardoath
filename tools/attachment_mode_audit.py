@@ -31,9 +31,15 @@ def _reject_duplicate_json_keys(pairs):
     return result
 
 
+def _reject_nonfinite_json_constant(_value):
+    """Reject Python JSON decoder extensions (NaN/Infinity) in any nested field."""
+    raise ValueError("Nonfinite JSON constant in stored tenant record")
+
+
 def classify_record(raw: str) -> tuple[str, str]:
     """Classify stored fields, never a model with defaults already applied."""
-    record = json.loads(raw, object_pairs_hook=_reject_duplicate_json_keys)
+    record = json.loads(raw, object_pairs_hook=_reject_duplicate_json_keys,
+                        parse_constant=_reject_nonfinite_json_constant)
     if not isinstance(record, dict):
         raise ValueError("Stored record must be an object")
     return tuple("missing" if field not in record else
