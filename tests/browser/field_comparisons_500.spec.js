@@ -42,10 +42,10 @@ test("500 tenant comparisons remain searchable and independently configurable in
   await expect(large).toHaveCount(count);
   await expect(page.locator("#tenant-rules-cross_field")).toContainText("501");
   await page.locator("#rule-search").fill("ui_scale_500");
-  const last = page.locator('[data-rule="business.ui_scale_500"]');
+  const last = page.locator('tr.rule-row[data-rule="business.ui_scale_500"]');
   await expect(last).toBeVisible();
   await expect(last.locator(".rule-title")).toHaveText("Scale comparison 500");
-  await expect(page.locator('[data-rule="business.ui_scale_001"]')).toBeHidden();
+  await expect(page.locator('tr.rule-row[data-rule="business.ui_scale_001"]')).toBeHidden();
 
   await page.locator("#tenant-check-input-cross_field").selectOption("flag");
   await page.locator("#tenant-check-output-cross_field").selectOption("block");
@@ -56,7 +56,7 @@ test("500 tenant comparisons remain searchable and independently configurable in
   await expect(last.locator(".effect-output")).toHaveText("Output: Block (from check)");
 
   await page.locator("#rule-search").fill("ui_scale_001");
-  const first = page.locator('[data-rule="business.ui_scale_001"]');
+  const first = page.locator('tr.rule-row[data-rule="business.ui_scale_001"]');
   await expect(first).toBeVisible();
   await expect(first.locator(".effect-input")).toHaveText("Input: Flag (from check)");
   await expect(first.locator(".effect-output")).toHaveText("Output: Block (from check)");
