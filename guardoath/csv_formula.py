@@ -1,6 +1,6 @@
-"""CSV/spreadsheet export formula signals; does not execute formulas or alter content.
+"""CSV/TSV spreadsheet export formula signals; does not execute formulas or alter content.
 
-Intended only for a dedicated CSV-export policy. Never use to classify arbitrary prose.
+Intended only for a dedicated delimited-export policy. Never use to classify arbitrary prose.
 """
 import csv
 from io import StringIO
@@ -25,10 +25,15 @@ async def csv_formula_check(request, policy, stage):
         return result("error", code="csv_text_required")
     if "\x00" in request.content:
         return result("error", code="csv_invalid_content")
+    # Match the byte probe's conservative TSV recognition. The file ingress
+    # already demands bounded, structurally valid rows before this checker.
+    # Continue using comma parsing for ordinary CSV and chat examples.
+    first_record = request.content.splitlines()[0] if request.content.splitlines() else ""
+    delimiter = "\t" if "\t" in first_record and "," not in first_record else ","
     total = 0
     dangerous = False
     try:
-        reader = csv.reader(StringIO(request.content, newline=""), strict=True)
+        reader = csv.reader(StringIO(request.content, newline=""), delimiter=delimiter, strict=True)
         for row_number, row in enumerate(reader, start=1):
             if row_number > MAX_CSV_ROWS or len(row) > MAX_CSV_COLUMNS:
                 return result("error", code="csv_inspection_budget_exceeded")
@@ -50,7 +55,7 @@ async def csv_formula_check(request, policy, stage):
         rule_id="csv_formula.potential_formula",
         category="data_integrity",
         severity="high",
-        explanation="A CSV field begins with a spreadsheet formula trigger after leading whitespace. Review the export or neutralize spreadsheet formula interpretation before opening it.",
+        explanation="A CSV or TSV field begins with a spreadsheet formula trigger after leading whitespace. Review the export or neutralize spreadsheet formula interpretation before opening it.",
     ),))
 
 
