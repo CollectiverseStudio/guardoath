@@ -5,6 +5,11 @@ on:
     branches: [main]
     paths:
       - "guardoath/statistical_drift.py"
+      - "guardoath/models.py"
+      - "guardoath/tenant_record.py"
+      - "guardoath/business.py"
+      - "guardoath/engine.py"
+      - "guardoath/record_rules.py"
       - "tests/test_statistical_drift.py"
       - "tests/test_statistical_drift_tenant.py"
       - ".github/workflows/statistical-drift-acceptance.yml"
