@@ -301,6 +301,7 @@ function renderTenant() {
   window.sigmaTenant.render(box, tenant, key, requestHeaders, send, showUnsaved);
   window.comparisonEditor.render($("comparison-editor"), tenant, own, showUnsaved);
   window.arithmeticEditor.render($("arithmetic-editor"), tenant, own, showUnsaved);
+  window.identityEditor.render($("identity-editor"), tenant, own, showUnsaved);
   window.statisticalDriftEditor.render($("statistical-drift-editor"), tenant, own,
     () => api("/v1/tenants/current/statistical-drift"), showUnsaved);
   for (const id of Object.keys(tenant.input_checks)) { updateFormatNote(id); showCheckEffect(id); }
@@ -470,6 +471,14 @@ function pendingChanges() {
     changes.advanced_arithmetic = arithmeticChanges;
     for (const stage of ["input", "output"]) {
       changes[stage + "_rule_actions"] = window.arithmeticEditor.actions(
+        stage, changes[stage + "_rule_actions"] || ruleEdits[stage]);
+    }
+  }
+  const identityChanges = window.identityEditor.delta();
+  if (identityChanges !== null) {
+    changes.advanced_identity = identityChanges;
+    for (const stage of ["input", "output"]) {
+      changes[stage + "_rule_actions"] = window.identityEditor.actions(
         stage, changes[stage + "_rule_actions"] || ruleEdits[stage]);
     }
   }
