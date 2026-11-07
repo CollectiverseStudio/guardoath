@@ -2530,3 +2530,12 @@ Input/Output PII checks, per-stage actions and findings. Incomplete mandatory
 checks follow their existing fail-closed policy; a clean URL-pattern result is
 not an all-clear for privacy or prompt safety. No external URL lookup or new
 provider is invoked. Regression: `tests/privacy_patterns/test_url_recognizer.py`.
+
+
+### Dashboard attachment examples — CSV and TSV on both stages (2026-11-07)
+
+In **Test a conversation**, connect an authenticated tenant and open its saved **CSV / TSV attachments: automatic inspection** settings. The Input and Output selectors each show **Auto** when that stage's tenant setting is absent (the authoritative runtime default); an explicit persisted **Off** continues to display Off and is never silently changed. Make any deliberate Auto/Off selection and use **Save checks** to persist it through the current tenant revision. A changed setting applies on the next evaluation, not retroactively.
+
+Select **Try sample CSV with formula** or **Try sample TSV with formula** under Input to place actual synthetic UTF-8 bytes in the file picker, then choose **Run input checks**. GuardOath submits the same authenticated attachment request as a local upload and shows the file inspection receipt and any `csv_formula.potential_formula` findings subject to the tenant's saved check and per-rule actions. A stored Off produces a **not inspected** receipt, never a pass. Use **Clear input files** to remove the selected bytes.
+
+For Output, first run a benign Input that passes the shared input gate. Then select either sample button under Output and run **Run output checks**; these use the same server byte inspection and tenant settings as an actual AI answer attachment. The local demo does not invoke an AI model. Examples are synthetic, not proof of malware scanning or coverage for unsupported PDF/Office/images. Unsupported, malformed or incomplete files must Block. Browser acceptance is in `tests/browser/dashboard.spec.js`; source commits alone do not prove production deployment or browser CI success.
