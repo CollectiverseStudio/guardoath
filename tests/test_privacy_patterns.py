@@ -239,7 +239,7 @@ def test_long_inputs_never_pass_when_the_scan_runs_out_of_time(checkers, text):
     pii = result.checker_results[0]
     assert pii.status in {"passed", "flagged", "error"}
     if pii.status == "error":
-        assert pii.error_code in {"checker_timeout", "checker_failure"} and result.evaluation_status == "incomplete"
+        assert pii.error_code in {"checker_timeout", "checker_failure", "pii_scan_deadline"} and result.evaluation_status == "incomplete"
 
 
 def test_lookahead_split_matches_the_pattern_as_written():
@@ -271,7 +271,7 @@ def test_skip_rules_use_pattern_length_and_phone_metadata():
 
 
 def test_checker_version_names_the_copied_code(checkers):
-    assert checkers["pii"].checker_version == "privacy-patterns-2.2.366/guardoath-patterns-6"
+    assert checkers["pii"].checker_version == "privacy-patterns-2.2.366/guardoath-patterns-7"
 
 
 @pytest.mark.parametrize("text", ['<img src=x onerror="window.injected=true">', "Open index.html first.",
