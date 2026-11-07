@@ -17,9 +17,10 @@ from math import isfinite
 from pathlib import Path
 from statistics import median
 
+_SYNTHETIC_REDACTION_DOB = "1980-02-29"
 _CASES = (
     ("dob-detection", "pii-extended-v1", "date of birth = 12/31/1990"),
-    ("dob-redaction", "redaction-v1", "DOB: 1980-02-29"),
+    ("dob-redaction", "redaction-v1", f"DOB: {_SYNTHETIC_REDACTION_DOB}"),
 )
 
 
@@ -54,7 +55,7 @@ def summarize(case_id, stage, results):
                        or len(rechecks) != 1 or rechecks[0].checker_id != "pii"
                        or any(c.status != "passed" for c in rechecks)
                        or not isinstance(preview, str)
-                       or "1980-02-29" in preview)
+                       or _SYNTHETIC_REDACTION_DOB in preview)
         errors += bool(is_bad)
     def durations(values):
         ordered = sorted(values)
