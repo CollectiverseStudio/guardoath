@@ -55,8 +55,12 @@ prints its content. A production inventory with any unparseable record exits
 nonzero, and does not establish that no persisted legacy Off value exists.
 
 
-A stored tenant record with excessive JSON nesting (even if the JSON is
-otherwise syntactically valid) can exceed the decoder's recursion limit. This is
-also counted as **unparseable**, requiring data-quality review and exit code 2;
-no partial record contents or tenant identifiers are emitted. A safe empty scan
-must not be inferred from the failure. The read-only tool never changes records.
+A stored tenant record with **more than 128 nested JSON objects or arrays**
+(including the root object) is rejected deterministically **before decoding**
+regardless of Python interpreter recursion tolerance. An otherwise valid record
+with 129 nested containers is counted as **unparseable**, requiring data-quality
+review and exit code 2; quoted/escaped brackets inside strings do not count.
+This fixes Python 3.14 accepting synthetic pathological nesting that Python
+3.13 rejected. Decoder recursion errors are still separately caught. No partial
+record contents or tenant identifiers are emitted. A safe empty scan must
+not be inferred from the failure. The read-only tool never changes records.
