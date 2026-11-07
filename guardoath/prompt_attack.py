@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import re
 
-CHECKER_VERSION = "1"
+CHECKER_VERSION = "2"
 MAX_CHARS = 32_000
 
 # rule id -> (title, severity, pattern, example it reports, look-alike it does not report)
@@ -206,6 +206,29 @@ RULES: dict[str, tuple[str, str, str, str, str]] = {
         "As described in the document, the refund window is 30 days."),
 }
 _COMPILED = tuple((rule_id, re.compile(pattern, re.I)) for rule_id, (_t, _s, pattern, _e, _l) in RULES.items())
+_CONDITIONING_PATTERN = dict(_COMPILED)["prompt_attack.multi_turn_conditioning"]
+_TURN_BOUNDARY_CHARS = 160
+
+
+def submitted_turn_boundaries(payload: object):
+    """Examine adjacent chat turns when the caller actually submits JSON messages.
+
+    Only inspect the bounded text at each boundary. Do not infer that the caller's
+    'role' field establishes system/developer authority. This is not verified
+    conversation history, and request_context is deliberately not consulted.
+    The API already limits source content to 32,000 characters.
+    """
+    if not isinstance(payload, dict):
+        return
+    messages = payload.get("messages")
+    if not isinstance(messages, list):
+        return
+    for previous, current in zip(messages, messages[1:]):
+        if not isinstance(previous, dict) or not isinstance(current, dict):
+            continue
+        left, right = previous.get("content"), current.get("content")
+        if isinstance(left, str) and isinstance(right, str) and left and right:
+            yield left[-_TURN_BOUNDARY_CHARS:] + " " + right[:_TURN_BOUNDARY_CHARS]
 
 
 def inspect(content: str) -> tuple[str, ...]:
@@ -223,13 +246,21 @@ async def prompt_attack_check(request, policy, stage):
     from guardoath.text_security import texts
     if request.content_format == "json":
         try:
-            parts = tuple(texts(parse_json(request.content)))
+            payload = parse_json(request.content)
+            parts = tuple(texts(payload))
         except (ValueError, RecursionError):
             return CheckerResult(checker_id="prompt_attack", checker_version=CHECKER_VERSION, status="error",
                                  error_code="invalid_json_for_prompt_attack")
     else:
+        payload = None
         parts = (request.content,)
     found = dict.fromkeys(rule_id for part in parts for rule_id in inspect(part))
+    # A conditioning request split across two submitted turns evades individual
+    # scans. Keep this to the existing specific rule: generic concatenation
+    # would manufacture unrelated matches between innocent adjacent messages.
+    if payload is not None and any(_CONDITIONING_PATTERN.search(window)
+                                   for window in submitted_turn_boundaries(payload)):
+        found.setdefault("prompt_attack.multi_turn_conditioning", None)
     findings = tuple(
         Finding(rule_id=rule_id, category="prompt_attack", severity=RULES[rule_id][1],
                 explanation="A prompt-attack indicator matched: wording used to get around an AI's instructions, "
