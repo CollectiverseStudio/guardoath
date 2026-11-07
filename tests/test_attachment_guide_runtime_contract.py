@@ -25,7 +25,8 @@ def _guide_attachments_section():
 
 def test_legacy_missing_attachment_settings_are_auto_not_off():
     initial = TenantRecord(
-        tenant_id="attachment-guide", display_name="Attachment guide", revision=9
+        tenant_id="attachment-guide", display_name="Attachment guide", revision=9,
+        input_check_text_security="allow",  # A tenant must have at least one enabled check.
     )
     stored = initial.model_dump()
     stored.pop("input_attachment_csv_mode")
