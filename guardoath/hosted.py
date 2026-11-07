@@ -149,7 +149,8 @@ class TenantService:
         token = demo_key(tenant_id, self._demo_key_secret)
         return token if key_matches(record, token) else None
 
-    def change_checks(self, tenant_id: str, changes: dict, expected_revision: int) -> TenantRecord:
+    def change_checks(self, tenant_id: str, changes: dict, expected_revision: int, *,
+                      reference_management: bool = False) -> TenantRecord:
         """Save a change to the record's check fields and settings. The engine is built from the result
         first, so a change the engine would reject is never stored."""
         if set(changes) & RETIRED_CHECK_FIELDS:
@@ -167,7 +168,7 @@ class TenantService:
         # uniqueness only. Host/administrator provisioned identity reference sets
         # must never be overwritten by a replacement array from the dashboard or
         # from a leaked/low-privilege API key. No implicit merge of private values.
-        if "advanced_identity" in changes:
+        if not reference_management and "advanced_identity" in changes:
             protected_kinds = {"quarantine_exclusion", "authorized_scope_subset"}
             if any(rule.kind in protected_kinds for rule in current.advanced_identity):
                 raise ChangeRejected("Identity definitions with protected reference sets must be managed "
@@ -181,7 +182,7 @@ class TenantService:
         # Currency conversion uses a private versioned tenant FX reference. The
         # general dashboard checks endpoint is not a reference-provisioning
         # authority, and a replacement array must not drop any hidden rate.
-        if "advanced_conversion_time" in changes:
+        if not reference_management and "advanced_conversion_time" in changes:
             if any(rule.kind == "currency_conversion_cap"
                    for rule in current.advanced_conversion_time):
                 raise ChangeRejected("Conversion/time definitions with protected FX references "
@@ -209,6 +210,25 @@ class TenantService:
                                  f"item and its settings can be at most {MAX_RECORD_BYTES:,} bytes; remove some "
                                  "comparisons, sections or other settings.")
         return self.store.update_checks(tenant_id, changes, expected_revision)
+
+    def change_references(self, tenant_id: str, changes: dict,
+                          expected_revision: int) -> TenantRecord:
+        """Explicit owner-managed reference settings, not the ordinary dashboard save.
+
+        This route is authenticated by the app's settings_owner dependency;
+        it does not grant external data-source attestation or host signing.
+        Only identity/FX reference definitions and their stage/rule actions
+        may be changed here, preserving normal typed tenant and Engine checks.
+        """
+        allowed = {"advanced_identity", "advanced_conversion_time",
+                   "input_check_cross_field", "output_check_cross_field",
+                   "input_rule_actions", "output_rule_actions"}
+        if (not changes or set(changes) - allowed or
+                not ({"advanced_identity", "advanced_conversion_time"} & set(changes))):
+            raise ChangeRejected("Reference management only accepts identity/conversion references "
+                                 "and their existing cross-field stage/rule actions")
+        return self.change_checks(tenant_id, changes, expected_revision,
+                                  reference_management=True)
 
     def reset_demo(self, tenant_id: str) -> TenantRecord:
         """Set a demo user's check fields and settings back to the demo defaults."""
