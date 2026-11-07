@@ -182,3 +182,13 @@ def test_unavailable_health_never_claims_backend_sha(tmp_path):
     report = verify_release(BASE, SHA, tmp_path, opener(responses))
     assert report["release_source_parity_verified"] is False
     assert any(issue.startswith("backend_health_unavailable:") for issue in report["issues"])
+
+
+def test_verifier_inventory_covers_every_real_dashboard_script_and_style():
+    """New UI modules must be included before a release can be certified."""
+    import re
+    from tools.verify_live_dashboard import ROOT
+    markup = (ROOT / "guardoath/static/dashboard.html").read_text(encoding="utf-8")
+    linked = set(re.findall(
+        r'(?:src|href)="/assets/([a-z0-9_-]+\.(?:js|css))"', markup))
+    assert linked == REQUIRED
