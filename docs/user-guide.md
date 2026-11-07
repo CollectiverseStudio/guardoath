@@ -2428,7 +2428,12 @@ retains the **unchanged 500-ms deadline**, and reports aggregate request count,
 failed-contract count, median and maximum checker/recheck latency for each fixed
 case and stage. It never serializes messages, findings, transformed output,
 exception text, tenant credentials or live customer data. A failed, missing,
-late or withheld mandatory recheck is not counted as clean: exit status **2**;
+late or withheld mandatory recheck is not counted as clean. The redaction
+case also requires exactly one completed **PII** recheck and verifies that the
+fixed synthetic DOB value is absent from the preview; a different checker's
+success or an unchanged sensitive value is a failed release contract. Only
+non-sensitive aggregate timings and fixed case IDs are printed. Exit status **2**
+indicates any failed contract;
 all expected contracts passing yields status **0**. If dependencies/engine are
 unavailable, the command emits a fixed `probe_unavailable` error and exit 2.
 Both arguments are intentionally bounded (rounds 1–100, concurrency 1–4) to
