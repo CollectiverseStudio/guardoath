@@ -1231,6 +1231,43 @@ function refreshExamplePickers() {
 }
 loadExampleCatalog().then(list => { for (const stage of ["input", "output"]) buildExamplePicker(stage, list); refreshExamplePickers(); })
   .catch(() => { for (const stage of ["input", "output"]) { const note = document.createElement("p"); note.className = "hint"; note.textContent = "The full example list could not be loaded right now. Reload the page to try again."; $(stage + "-samples").after(note); } });
+// Results must lead to actionable tenant settings, not only descriptions.
+// Never automatically alter rules; the user explicitly chooses and saves changes.
+function reviewFindingRule(ruleId, checkerId) {
+  const tenant = application?.tenant;
+  if (!tenant || !ownChecksSelected()) return false;
+  const panel = $("tenant-panel");
+  const search = $("rule-search");
+  const defined = ruleIndex[ruleId];
+  if (defined && search && $("check-table")) {
+    search.value = ruleId;
+    $("rule-filter-check").value = "";
+    $("rule-filter-setting").value = "";
+    filterRules();
+    const row = [...$("check-table").querySelectorAll(".rule-row")].find(
+      item => item.dataset.rule === ruleId);
+    if (row && !row.hidden) {
+      row.querySelector(".rule-info").open = true;
+      row.scrollIntoView({block: "center"});
+      row.querySelector('select[data-stage]')?.focus({preventScroll: true});
+      $("tenant-message").textContent =
+        "Review " + ruleId + " on your tenant record. No settings were changed; select an action and Save checks to apply it.";
+      return true;
+    }
+  }
+  const check = defined?.control_id || checkerId;
+  const row = $("tenant-row-" + check);
+  if (row) {
+    if (search) { search.value = ""; $("rule-filter-check").value = ""; $("rule-filter-setting").value = ""; filterRules(); }
+    row.scrollIntoView({block: "center"});
+    row.querySelector('select[data-check]')?.focus({preventScroll: true});
+    $("tenant-message").textContent = "Review the " + (checkNames[check] || check) +
+      " check setting. This finding has no individually editable rule in the loaded catalog; no settings were changed.";
+    return true;
+  }
+  $("tenant-message").textContent = "This finding is not configurable in the current tenant rule panel.";
+  return false;
+}
 function render(stage, result) {
   const box = $(stage + "-results"); box.replaceChildren(); const title = document.createElement("h3"); title.textContent = stage === "input" ? "Input checks" : "Output checks"; box.append(title);
   const summary = document.createElement("p"); summary.textContent = "Recommended: " + result.recommended_action + " · Effective: " + result.effective_action + " · " + result.total_latency_ms.toFixed(1) + " ms"; box.append(summary);
@@ -1261,7 +1298,17 @@ function render(stage, result) {
     const needs = check.status === "skipped" ? formatNeeds[check.checker_id] : null;
     if (needs) { const error = document.createElement("p"); error.className = "format-skip"; error.textContent = "Not run: this check needs " + (needs === "json" ? "JSON" : "text") + " content, and this message is " + (needs === "json" ? "text" : "JSON") + ". The result is incomplete, so the record\u2019s failure action applies. Turn the check off, or send " + (needs === "json" ? "JSON" : "text") + "."; row.append(error); }
     else if (check.error_code) { const error = document.createElement("p"); error.textContent = "Check unavailable: " + check.error_code; row.append(error); }
-    for (const finding of check.findings) { const detail = document.createElement("p"); detail.className = "finding"; detail.textContent = finding.explanation; row.append(detail); }
+    for (const finding of check.findings) {
+      const detail = document.createElement("div"); detail.className = "finding";
+      const description = document.createElement("p"); description.textContent = finding.explanation; detail.append(description);
+      if (application?.tenant && ownChecksSelected()) {
+        const button = document.createElement("button"); button.type = "button"; button.className = "secondary";
+        button.textContent = "Review rule settings"; button.setAttribute("aria-label", "Review rule settings for " + finding.rule_id);
+        button.addEventListener("click", () => reviewFindingRule(finding.rule_id, check.checker_id));
+        detail.append(button);
+      }
+      row.append(detail);
+    }
     return row;
   }
   for (const group of result.groups || []) {
