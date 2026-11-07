@@ -100,6 +100,8 @@ def test_invalid_field_values_counted_without_exposing_values():
     ('{"input_attachment_csv_mode":"off","output_attachment_csv_mode":null}', 2, True, True),
     ('{unparseable', 2, True, False),
     ('{"input_attachment_csv_mode":"auto","nested":{"value":NaN}}', 2, True, False),
+    pytest.param('{"input_attachment_csv_mode":"off","nested":' + '[' * 20000 + '0' + ']' * 20000 + '}',
+                 2, True, False, id="deeply-nested-json"),
     ('{"input_attachment_csv_mode":"off","input_attachment_csv_mode":"auto"}', 2, True, False),
     ('{"output_attachment_csv_mode":"auto","output_attachment_csv_mode":"off"}', 2, True, False),
 ])
@@ -340,3 +342,24 @@ def test_read_only_audit_treats_nonfinite_stored_record_as_data_quality_failure(
     assert report["mutated_records"] == 0
     assert all(stage["off"] == 0 for stage in report["stages"].values())
     assert raw not in json.dumps(report)
+
+
+
+def test_deeply_nested_valid_json_remains_data_quality_failure_without_secret_echo():
+    # 40 KB is well under DynamoDB's item maximum, but enough nesting can
+    # trigger CPython's RecursionError during JSON decoding. The audit must
+    # report data quality, not escape through a traceback or certify Off.
+    payload = '{"input_attachment_csv_mode":"off","nested":' + "[" * 20000 + "0" + "]" * 20000 + "}"
+    class Client:
+        def scan(self, **request):
+            assert request["ConsistentRead"] is True
+            assert "UpdateExpression" not in request
+            return {"Items": [{"record": {"S": payload}}], "Count": 1}
+    report = audit(Client(), "synthetic-only")
+    assert report["total_records"] == 1
+    assert report["unparseable_records"] == 1
+    assert report["requires_data_quality_review"] is True
+    assert report["requires_provenance_review"] is False
+    assert report["mutated_records"] == 0
+    assert all(stage["off"] == 0 for stage in report["stages"].values())
+    assert payload not in json.dumps(report)
