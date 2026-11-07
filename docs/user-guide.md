@@ -722,6 +722,23 @@ applies the tenant's fail-closed decision. See `tests/test_pii_executor_isolatio
 The reproducible test isolates queueing; actual recognizer CPU hotspots remain
 under investigation in Issue #30.
 
+**PII deadline attribution (version 7).** A local PII worker that reaches its
+own monotonic scan deadline reports the fixed error code `pii_scan_deadline`;
+the outer shared Engine `asyncio.wait_for` deadline remains
+`checker_timeout`. A full worker pool reports `pii_capacity_exceeded`.
+All are error/incomplete, never an accepted clean scan; required privacy
+and redaction recheck failures continue to fail closed according to the
+tenant's enforcement/failure policy. The bounded local evaluation report's
+`checker_diagnostics` records **only erroring checker IDs**, an allowlisted
+machine error code and that checker's elapsed milliseconds. Unknown exception
+messages map to `other_error`; prompts, sensitive spans and raw exception
+texts never enter the report. Legacy reports lacking this optional field remain
+loadable and comparison outcomes do not change. Use the actual checker
+duration and error code alongside the whole-evaluation latency when
+diagnosing intermittent full-suite failures. This instrumentation does
+**not** resolve the known 500-ms tail, justify an increased budget, or
+authorize deployment; see Issue #30 and `tests/test_pii_deadline_diagnostics.py`.
+
 ### Regression suite
 
 ```powershell
@@ -732,7 +749,7 @@ py -3.13 start_dashboard.py --evaluate --suite privacy-patterns
 failed checksums, context-free numbers, clean text, every setting above, enforce and redaction.
 See [all 100 cases](privacy-patterns-coverage.md).
 
-The `pii` checker version is now `privacy-patterns-2.2.366/guardoath-patterns-6` (version 6 adds
+The `pii` checker version is now `privacy-patterns-2.2.366/guardoath-patterns-7` (version 7 adds classified local scan-deadline errors; version 6 adds
 [One value, one finding](#one-value-one-finding)). Compared against a baseline report saved before
 the pattern checks were added, 4 encoded-privacy cases show **Outcome changed** (pattern matches
 inside `hex:` tokens). Compared against a baseline saved with version 4 or 5, 73 cases show **Outcome
