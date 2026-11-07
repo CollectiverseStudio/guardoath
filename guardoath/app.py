@@ -499,6 +499,17 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 "comparisons": [item.model_dump(mode="json") for item in current.comparisons],
                 # Exact tenant-owned arithmetic pointers only: no host-signed reference values.
                 "advanced_arithmetic": [item.model_dump(mode="json") for item in current.advanced_arithmetic],
+                # Non-reference identity definitions can be edited by this tenant.
+                # Do not expose trusted lot/scope sets in the general application summary.
+                "advanced_identity": [item.model_dump(mode="json") for item in current.advanced_identity
+                                      if item.kind in ("order_id_match", "serial_unique")],
+                "advanced_identity_reference_status": [
+                    {"rule_id": item.rule_id, "kind": item.kind,
+                     "stages": [stage.value for stage in item.stages],
+                     "reference_configured": bool(item.trusted_values)}
+                    for item in current.advanced_identity
+                    if item.kind in ("quarantine_exclusion", "authorized_scope_subset")
+                ],
                  "sigma_rule_actions": dict(sorted(current.sigma_rule_actions.items()))}
 
     def tenant_only(principal: str | TenantRecord) -> TenantRecord:
