@@ -14,6 +14,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import subprocess
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
@@ -98,16 +99,61 @@ def verify(base_url: str, static_root: Path = ASSETS, open_url=urlopen) -> dict:
     }
 
 
+
+def git_head(root: Path = ROOT) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--verify", "HEAD"],
+        capture_output=True, text=True, check=True)
+    sha = result.stdout.strip()
+    if not re.fullmatch(r"[0-9a-f]{40}", sha):
+        raise ValueError("Expected a full local Git commit SHA")
+    return sha
+
+
+def verify_release(base_url: str, expected_sha: str, static_root: Path = ASSETS,
+                   open_url=urlopen) -> dict:
+    """Require matching static assets AND matching Lambda source SHA."""
+    if not re.fullmatch(r"[0-9a-f]{40}", expected_sha):
+        raise ValueError("Expected a full Git source SHA")
+    report = verify(base_url, static_root, open_url)
+    report["expected_source_sha"] = expected_sha
+    report["live_source_sha"] = None
+    try:
+        info = json.loads(_fetch(base_url.rstrip("/") + "/healthz", 10_000, open_url))
+        received = info.get("source_sha")
+        if isinstance(received, str) and re.fullmatch(r"[0-9a-f]{40}", received):
+            report["live_source_sha"] = received
+        if not (info.get("status") == "ok" and received == expected_sha):
+            report["issues"].append("backend_source_sha_mismatch_or_missing")
+    except (HTTPError, URLError, OSError, ValueError, TypeError, UnicodeError) as exc:
+        report["issues"].append("backend_health_unavailable:" + type(exc).__name__)
+    report["backend_deployment_sha_verified"] = (
+        report["live_source_sha"] == expected_sha
+        and not any(issue.startswith("backend_") for issue in report["issues"])
+    )
+    report["release_source_parity_verified"] = (
+        report["dashboard_ui_matches_local_source"]
+        and report["backend_deployment_sha_verified"]
+    )
+    # No private tenant credentials are sent, so this does not prove full behavior.
+    report["production_tenant_api_verified"] = False
+    return report
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", default="https://guardoath.com")
     parser.add_argument("--static-root", type=Path, default=ASSETS)
+    parser.add_argument("--expected-sha", help="Full Git commit SHA (defaults to local checkout HEAD)")
     args = parser.parse_args(argv)
     try:
-        result = verify(args.url, args.static_root)
-    except (HTTPError, URLError, OSError, UnicodeError, ValueError) as exc:
+        source_sha = args.expected_sha or git_head()
+        result = verify_release(args.url, source_sha, args.static_root)
+    except (HTTPError, URLError, OSError, UnicodeError, ValueError,
+            subprocess.CalledProcessError) as exc:
         result = {
             "dashboard_ui_matches_local_source": False,
+            "release_source_parity_verified": False,
             "verified_asset_count": 0,
             "issues": ["live_verification_incomplete:" + type(exc).__name__],
             "backend_deployment_sha_verified": False,
@@ -115,7 +161,7 @@ def main(argv=None) -> int:
             "mutated_records": 0,
         }
     print(json.dumps(result, sort_keys=True, indent=2))
-    return 0 if result["dashboard_ui_matches_local_source"] else 2
+    return 0 if result["release_source_parity_verified"] else 2
 
 
 if __name__ == "__main__":
