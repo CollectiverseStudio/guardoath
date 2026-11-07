@@ -606,6 +606,15 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         record = settings_owner(request, principal)
         return saved(lambda: tenants.change_checks(record.tenant_id, body.changes, body.revision))
 
+    @api.post("/v1/tenants/current/references")
+    async def manage_tenant_references(request: Request, body: CheckChanges,
+                                       principal: Annotated[str | TenantRecord, Depends(authenticate)]):
+        # Owner-only API; production evaluation keys cannot write or read
+        # private tenant reference definitions. Demo owner keys remain synthetic.
+        record = settings_owner(request, principal)
+        return saved(lambda: tenants.change_references(
+            record.tenant_id, body.changes, body.revision))
+
     @api.post("/v1/tenants/current/reset")
     async def reset_checks(request: Request, principal: Annotated[str | TenantRecord, Depends(authenticate)]):
         record = settings_owner(request, principal)
