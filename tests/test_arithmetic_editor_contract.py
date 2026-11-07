@@ -66,7 +66,7 @@ def test_arithmetic_editor_tenant_api_save_reload_stage_actions_and_isolation():
             "content": json.dumps({"lines": [{"quantity": 2, "unit_price": 40},
                                              {"quantity": 1, "unit_price": 30}],
                                    "subtotal": 100}),
-            "content_format": "json", "policy_version": "tenant",
+            "content_format": "json", "application_id": "arith-alpha",
         })
         assert bad.status_code == 200, bad.text[:250]
         assert "business.invoice_math" in {f["rule_id"] for f in bad.json()["findings"]}
@@ -75,7 +75,7 @@ def test_arithmetic_editor_tenant_api_save_reload_stage_actions_and_isolation():
             "content": json.dumps({"lines": [{"quantity": 2, "unit_price": 40},
                                              {"quantity": 1, "unit_price": 30}],
                                    "subtotal": 110}),
-            "content_format": "json", "policy_version": "tenant",
+            "content_format": "json", "application_id": "arith-alpha",
         })
         assert clean.status_code == 200
         assert "business.invoice_math" not in {f["rule_id"] for f in clean.json()["findings"]}
