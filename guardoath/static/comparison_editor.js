@@ -45,7 +45,7 @@
       return control;
     }
     field("id", "Comparison ID").maxLength = 80;
-    controls.id.pattern = "[a-zA-Z0-9_.-]{1,80}";
+    controls.id.pattern = "[a-zA-Z0-9_.\\-]{1,80}";
     field("left", "Left JSON pointer").maxLength = 200;
     field("operator", "Comparison", [["le", "≤ at most"], ["lt", "< less than"], ["eq", "= equal"], ["ne", "≠ different"], ["ge", "≥ at least"], ["gt", "> greater than"]]);
     field("right", "Right JSON pointer").maxLength = 200;
