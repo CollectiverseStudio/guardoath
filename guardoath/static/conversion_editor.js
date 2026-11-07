@@ -30,14 +30,14 @@
   function render(host, tenant, canEdit, changed) {
     host.replaceChildren();
     host.hidden = !canEdit;
-    enabled = canEdit && Array.isArray(tenant.advanced_conversion) &&
+    enabled = canEdit && Array.isArray(tenant.advanced_conversion_time) &&
       Array.isArray(tenant.advanced_conversion_reference_status);
-    original = Array.isArray(tenant.advanced_conversion) ? clone(tenant.advanced_conversion) : [];
+    original = Array.isArray(tenant.advanced_conversion_time) ? clone(tenant.advanced_conversion_time) : [];
     draft = clone(original);
     protectedRules = Array.isArray(tenant.advanced_conversion_reference_status) ?
       clone(tenant.advanced_conversion_reference_status) : [];
     if (!canEdit) return;
-    host.append(el("h3", "Conversion and collection comparisons"));
+    host.append(el("h3", "Conversion and time comparisons"));
     host.append(el("p", "Configure unit-load, cold-chain and lifecycle chronology JSON checks. The existing tenant cross_field Engine and stage actions are authoritative. FX conversion rates remain operator-owned and hidden here."));
     if (!enabled) {
       host.append(el("p", "Conversion definitions could not be loaded. Reconnect before editing."));
