@@ -2489,3 +2489,24 @@ A tenant can configure existing `advanced_statistical_drift` checks from **Check
 **Real synthetic workflow:** Click **Fill synthetic PSI sample**, then **Add to pending changes**. Enable Input Field comparisons with **Block** (and Output if desired); click **Save checks**. Click **Load synthetic shifted batch into Input data** and **Run input checks**. This sends actual JSON observations to the same authenticated Input API and yields a `business.ui_psi_demo` drift finding for the synthetic distribution shift. A 29-element batch reports insufficient data, not "no drift." After a passing input, an Output JSON batch can be tested with the separate Output action. Select **Edit** or **Remove**, then Save checks to persist revisions.
 
 **Limits/security:** Tenant-supplied counts are **not externally certified**. Never treat a synthetic or self-declared baseline as approved financial/clinical/operational truth. PSI detects numeric distribution change against a stored histogram, not semantic LLM risk, integrity of incoming raw data, causal anomalies or real-time drift. No file scan, AWS resource, outside provider or background collection is performed. No sample values or private reference counts appear in generic rule metadata/findings. A check whose input data cannot be evaluated must not be described as a clean success; the tenant's normal check and failure policies remain in force. Release acceptance requires current exact-SHA API/Playwright 13 Tests + 3 CodeQL jobs, plus production rollout controls.
+
+
+### Local privacy URL recognition: malformed domain boundaries
+
+The existing privacy/PII scanner can recognize ordinary HTTP(S) URLs and bare
+hostnames with known top-level domains in **both** Input and Output assessments.
+For example, `https://sub.example.com/path?q=1` and `sub.example.com` retain
+their usual recognition spans and confidence. The local recognizer now requires
+the candidate hostname to begin and end with a label character; a period-only
+message or a hostname with empty trailing DNS labels, such as
+`http://x..com`, must not be reported as a valid URL. This avoids expensive
+repeated attempts on runs of punctuation without extending the original
+253-character hostname bound.
+
+This is a **local lexical boundary correction**, not semantic proof that every
+URL is benign or malicious, not live DNS verification, and not a new tenant
+switch. Continue using the authenticated dashboard's existing tenant-controlled
+Input/Output PII checks, per-stage actions and findings. Incomplete mandatory
+checks follow their existing fail-closed policy; a clean URL-pattern result is
+not an all-clear for privacy or prompt safety. No external URL lookup or new
+provider is invoked. Regression: `tests/privacy_patterns/test_url_recognizer.py`.
