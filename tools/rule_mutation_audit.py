@@ -47,7 +47,15 @@ JSON_FORMATS = (
 def mutation(content: str, content_format: str, index: int) -> tuple[str, str]:
     """Produce a bounded, reproducible variant; no AI-generated risky payloads."""
     if content_format == "json":
-        payload = json.loads(content)
+        try:
+            payload = json.loads(content)
+        except json.JSONDecodeError:
+            # Some positive examples *deliberately* contain invalid JSON
+            # (schema.invalid_json, etc). Never normalize away that defect.
+            # Keep it as an exploratory malformed-payload mutation instead
+            # of terminating coverage for all 525 catalog rules.
+            name, prefix, suffix = WRAPPERS[index % len(WRAPPERS)]
+            return "malformed_json_" + name, prefix + content + suffix
         name, options = JSON_FORMATS[index % len(JSON_FORMATS)]
         # None of the reserializations modifies parsed JSON values.
         return name, json.dumps(payload, **options)
