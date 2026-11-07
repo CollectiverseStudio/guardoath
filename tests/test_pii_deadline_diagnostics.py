@@ -105,7 +105,7 @@ def test_source_free_evaluation_report_supports_legacy_baselines():
                     checker_id="pii", status="error",
                     error_code="pii_scan_deadline", latency_ms=56.1239,
                 ),),
-                findings=(), redaction=SimpleNamespace(status="withheld"),
+                findings=(), redaction=SimpleNamespace(status="withheld", validation_results=()),
                 simulated=False, total_latency_ms=57.357,
             )
 
