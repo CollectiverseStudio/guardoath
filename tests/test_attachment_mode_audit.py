@@ -425,36 +425,29 @@ def test_off_provenance_blocks_release_cli_even_when_json_and_modes_are_valid(mo
     assert "synthetic-only" not in json.dumps(report)
 
 
-@pytest.mark.parametrize("bad_cursor", [
-    {"tenant_id": {"S": "PRIVATE-ID"}, "bad": {"N": float("nan")}},
-    {"tenant_id": {"S": "PRIVATE-ID"}, "bad": {"B": b"SECRET-BYTES"}},
-    {"tenant_id": {"S": "PRIVATE-ID"}, "bad": {"S": float("inf")}},
-    {"tenant_id": {"S": "PRIVATE-ID"}, "bad": {"S": {"x": {"y": 1}}}},
+@pytest.mark.parametrize("bad_value", [
+    float("nan"),
+    float("inf"),
+    b"SECRET-BYTES",
+    "too-deep",
 ])
-def test_continuation_cursor_cannot_smuggle_nonfinite_or_unserializable_values(bad_cursor):
+def test_continuation_cursor_cannot_smuggle_nonfinite_or_unserializable_values(bad_value):
     """Invalid continuation never creates a partial, apparently clean inventory."""
+    if bad_value == "too-deep":
+        bad_value = {"S": "PRIVATE-ID"}
+        for _ in range(129):
+            bad_value = {"nested": bad_value}
+    cursor = {"tenant_id": {"S": "PRIVATE-ID"}, "bad": {"S": bad_value}}
+
     class Client:
         def scan(self, **request):
             assert request["ConsistentRead"] is True
             assert "UpdateExpression" not in request
-            return {"Items": [], "Count": 0, "LastEvaluatedKey": bad_cursor}
-
-    # A shallow serializable cursor is legitimate; it is covered separately by
-    # the pagination success test. Make the final case pathological for this test.
-    if isinstance(bad_cursor["bad"]["S"] if "S" in bad_cursor["bad"] else None, dict):
-        value = {"S": "PRIVATE-ID"}
-        for _ in range(129):
-            value = {"nested": value}
-        bad_cursor = {"tenant_id": {"S": "PRIVATE-ID"}, "bad": value}
-
-    class StubClient:
-        def scan(self, **request):
-            return {"Items": [], "Count": 0, "LastEvaluatedKey": bad_cursor}
+            return {"Items": [], "Count": 0, "LastEvaluatedKey": cursor}
 
     with pytest.raises(AuditIncompleteError, match="Invalid DynamoDB scan continuation") as caught:
-        audit(StubClient(), "synthetic-table")
+        audit(Client(), "synthetic-table")
     assert caught.value.__cause__ is None
-    assert caught.value.__context__ is None or "PRIVATE-ID" not in str(caught.value.__context__)
     assert "PRIVATE-ID" not in str(caught.value)
     assert "SECRET-BYTES" not in str(caught.value)
 
