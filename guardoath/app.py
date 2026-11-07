@@ -688,8 +688,10 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     async def health():
         # Public immutable build identity, not tenant data or deployment secrets.
         # A missing/invalid identity is explicitly unknown, never guessed.
-        return {"status": "ok", "profile": "local-prototype",
-                "source_sha": release_source_sha()}
+        return JSONResponse(
+            {"status": "ok", "profile": "local-prototype",
+             "source_sha": release_source_sha()},
+            headers={"Cache-Control": "no-store"})
 
     @api.get("/v1/applications/current")
     async def current_application(principal: Annotated[str | TenantRecord, Depends(authenticate)]):
