@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+from math import isfinite
 from pathlib import Path
 from statistics import median
 
@@ -29,18 +30,25 @@ def summarize(case_id, stage, results):
     for result in results:
         checkers = tuple(result.checker_results)
         rechecks = tuple(result.redaction.validation_results)
-        latencies.extend(float(c.latency_ms) for c in checkers if c.latency_ms is not None)
-        recheck_latencies.extend(float(c.latency_ms) for c in rechecks if c.latency_ms is not None)
-        is_bad = (result.evaluation_status != "complete" or not checkers or
-                  any(c.status == "error" for c in checkers + rechecks))
-        if case_id == "dob-detection":
-            is_bad |= not any(f.rule_id == "pii.date_of_birth" for f in result.findings)
-        else:
-            is_bad |= (not any(f.rule_id == "pii.date_of_birth" for f in result.findings) or
-                       result.redaction.status != "preview" or
-                       not rechecks or any(c.status != "passed" for c in rechecks) or
-                       result.redaction.content is None)
-        is_bad |= any(c.latency_ms is not None and c.latency_ms > 500 for c in checkers + rechecks)
+        # A missing, nonfinite, negative or unmeasured latency must never make
+        # the release gate look green simply because there is no number > 500.
+        def valid_timing(check):
+            value = check.latency_ms
+            return (isinstance(value, (int, float)) and not isinstance(value, bool)
+                    and isfinite(value) and 0 <= value <= 500)
+
+        latencies.extend(float(c.latency_ms) for c in checkers if valid_timing(c))
+        recheck_latencies.extend(float(c.latency_ms) for c in rechecks if valid_timing(c))
+        pii = tuple(c for c in checkers if c.checker_id == "pii")
+        is_bad = (result.evaluation_status != "complete" or len(pii) != 1
+                  or any(c.status == "error" or not valid_timing(c)
+                         for c in checkers + rechecks))
+        is_bad |= not any(f.rule_id == "pii.date_of_birth" for f in result.findings)
+        is_bad |= any(c.status != "flagged" for c in pii)
+        if case_id == "dob-redaction":
+            is_bad |= (result.redaction.status != "preview" or not rechecks
+                       or any(c.status != "passed" for c in rechecks)
+                       or result.redaction.content is None)
         errors += bool(is_bad)
     def durations(values):
         ordered = sorted(values)
