@@ -130,6 +130,16 @@ def test_reference_backed_identity_values_do_not_leak_through_dashboard_summary(
     assert summary(api, b)["advanced_identity_reference_status"] == []
     assert store.get("identity-alpha").advanced_identity[0].trusted_values == ("SECRET_LOT_001",)
 
+    # An unrelated tenant setting update must preserve the opaque trusted set.
+    prior = store.get("identity-alpha")
+    changed = api.post("/v1/tenants/current/checks", headers=a, json={
+        "revision": prior.revision,
+        "changes": {"input_check_text_security": "block"},
+    })
+    assert changed.status_code == 200, changed.text[:300]
+    assert store.get("identity-alpha").advanced_identity == prior.advanced_identity
+    assert "SECRET_LOT_001" not in changed.text
+
 
 def test_identity_invalid_pointers_and_reference_value_admission_fail_closed():
     api, store, headers = setup()
