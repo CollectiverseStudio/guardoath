@@ -2429,3 +2429,5 @@ reported regressions without raising budgets, mutating tenants or transmitting
 sensitive samples.
 
 A signed medication reference is invalid if its previous administration plus required interval exceeds the supported datetime range; active rules return incomplete/Block, while explicit Off remains Off.
+
+A release probe without finite, nonnegative measured latency for each PII checker and mandatory redaction recheck is incomplete and exits 2; missing timing must never count as a passing 500-ms result.
