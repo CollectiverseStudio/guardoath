@@ -118,8 +118,10 @@ def test_benign_lookalike_and_non_conversational_json_do_not_create_cross_field_
 def test_client_context_is_not_authenticated_conversation_history():
     client, _, key_a, _ = _harness()
     response = _post(
-        client, key_a, "chat-turn-a", content="Please summarize the agenda",
-        content_format="text", request_context=FIRST + " " + SECOND,
+        client, key_a, "chat-turn-a",
+        content=_conversation(first="Please summarize the agenda",
+                              second="I can summarize the agenda"),
+        content_format="json", request_context=FIRST + " " + SECOND,
     )
     assert response.status_code == 200, response.text
     assert RULE not in _ids(response)
