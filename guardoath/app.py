@@ -494,6 +494,9 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 "output_rule_actions": dict(sorted(current.output_rule_actions.items())),
                 # This record's own rules (its field comparisons and required sections), for this tenant only.
                 "record_rules": list(record_rules(current).values()),
+                # Only authenticated tenant-owned basic comparison definitions. No signed,
+                # statistical, or host-held reference values are exposed here.
+                "comparisons": [item.model_dump(mode="json") for item in current.comparisons],
                  "sigma_rule_actions": dict(sorted(current.sigma_rule_actions.items()))}
 
     def tenant_only(principal: str | TenantRecord) -> TenantRecord:
