@@ -143,10 +143,14 @@ def audit(client, table_name: str) -> dict:
                 raise AuditIncompleteError("Invalid DynamoDB scan continuation")
             try:
                 # Keep private key values in memory only, never in exceptions
-                # or the aggregate report.
-                cursor_token = json.dumps(cursor, sort_keys=True)
-            except (TypeError, ValueError) as exc:
-                raise AuditIncompleteError("Invalid DynamoDB scan continuation") from exc
+                # or the aggregate report. Reject malformed/nonfinite or
+                # interpreter-dependent deeply nested pagination keys.
+                cursor_token = json.dumps(cursor, sort_keys=True, allow_nan=False)
+                _reject_excessive_json_nesting(cursor_token)
+            except (TypeError, ValueError, RecursionError, OverflowError):
+                # Original failures can contain customer key material in
+                # exception chains. Do not retain or expose the cause.
+                raise AuditIncompleteError("Invalid DynamoDB scan continuation") from None
             if cursor_token in seen_cursors:
                 raise AuditIncompleteError("Repeated DynamoDB scan continuation")
             seen_cursors.add(cursor_token)
