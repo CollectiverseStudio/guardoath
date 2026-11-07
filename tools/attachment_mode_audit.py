@@ -17,9 +17,19 @@ FIELDS = ("input_attachment_csv_mode", "output_attachment_csv_mode")
 CATEGORIES = ("missing", "auto", "off", "invalid")
 
 
+def _reject_duplicate_json_keys(pairs):
+    """Never silently discard an earlier stored mode (including nested ambiguity)."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Duplicate JSON object key in stored tenant record")
+        result[key] = value
+    return result
+
+
 def classify_record(raw: str) -> tuple[str, str]:
     """Classify stored fields, never a model with defaults already applied."""
-    record = json.loads(raw)
+    record = json.loads(raw, object_pairs_hook=_reject_duplicate_json_keys)
     if not isinstance(record, dict):
         raise ValueError("Stored record must be an object")
     return tuple("missing" if field not in record else
