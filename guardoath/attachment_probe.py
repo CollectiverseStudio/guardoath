@@ -146,4 +146,23 @@ def classify_attachment(data: bytes) -> FileProbe:
     except csv.Error:
         return result("unknown", "invalid", "malformed_csv")
 
+    # A spreadsheet importer may use the alternate delimiter if both comma and
+    # tab bytes occur. Do not attest a hidden formula that is only at the start
+    # of an alternate-dialect cell. Keep this independent pass bounded and
+    # fail closed if it cannot parse the ambiguous export.
+    if "," in value and "\t" in value:
+        other = "," if is_tsv else "\t"
+        other_cells = 0
+        try:
+            for row_number, row in enumerate(
+                    csv.reader(StringIO(value, newline=""), delimiter=other, strict=True), 1):
+                other_cells += len(row)
+                if (row_number > MAX_CSV_ROWS or len(row) > MAX_CSV_COLUMNS
+                        or other_cells > MAX_CSV_CELLS):
+                    return result("unknown", "invalid", "csv_budget_exceeded")
+                if any(has_hidden_csv_formula_prefix(cell) for cell in row):
+                    return result("unknown", "invalid", "unsafe_csv_invisible_formula_prefix")
+        except csv.Error:
+            return result("unknown", "invalid", "malformed_csv")
+
     return result(kind, "recognized", kind + "_structure_recognized_only")
