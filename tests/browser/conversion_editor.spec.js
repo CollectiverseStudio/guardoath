@@ -101,3 +101,28 @@ test("conversion editor blocks invalid overlapping paths, array offsets, and abs
   await expect(page.locator("#conversion-message")).toContainText("Choose Input");
   await expect(page.locator('[data-conversion-id="bad_conversion"]')).toHaveCount(0);
 });
+
+test("conversion editor never exposes FX rates and locks writes when protected FX metadata exists",async ({page})=>{
+  // API data is already protected in Python tenant tests; this replaces only the
+  // reference status metadata to exercise the browser's fail-closed presentation.
+  await page.route("**/v1/applications/current",async route=>{
+    const response=await route.fetch();
+    const body=await response.json();
+    if(body.tenant) body.tenant.advanced_conversion_reference_status=[{
+      rule_id:"signed_fx_test",kind:"currency_conversion_cap",
+      stages:["input","output"],reference_configured:true
+    }];
+    await route.fulfill({response,json:body});
+  });
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo4");
+  await page.getByRole("button",{name:"Get demo API key",exact:true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
+  await expect(page.locator("#conversion-reference-status")).toContainText("signed_fx_test");
+  await expect(page.locator("#conversion-reference-status")).toContainText("read-only");
+  await expect(page.locator("#conversion-apply")).toBeDisabled();
+  await expect(page.locator("#conversion-id")).toBeDisabled();
+  await expect(page.locator("#conversion-field-load")).toBeDisabled();
+  await expect(page.locator("#conversion-editor")).not.toContainText("trusted_rate_numerator");
+  await expect(page.locator("#conversion-editor")).not.toContainText("rate_asof");
+});
