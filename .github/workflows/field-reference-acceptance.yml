@@ -19,6 +19,8 @@ on:
       - "tests/test_field_comparison_reference_isolation.py"
       - "tests/test_trusted_reference_interval_bounds.py"
       - "tests/test_signed_reference_tenant_replay.py"
+      - "guardoath/advanced_conversion_time.py"
+      - "tests/test_field_comparison_timestamp_offsets.py"
       - ".github/workflows/field-reference-acceptance.yml"
 permissions:
   contents: read
@@ -40,6 +42,7 @@ jobs:
           tests/test_field_comparison_reference_isolation.py
           tests/test_trusted_reference_interval_bounds.py
           tests/test_signed_reference_tenant_replay.py
+          tests/test_field_comparison_timestamp_offsets.py
           tests/test_advanced_arithmetic.py
           tests/test_advanced_identity.py
           tests/test_advanced_conversion_time.py
