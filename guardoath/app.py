@@ -497,6 +497,8 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 # Only authenticated tenant-owned basic comparison definitions. No signed,
                 # statistical, or host-held reference values are exposed here.
                 "comparisons": [item.model_dump(mode="json") for item in current.comparisons],
+                # Exact tenant-owned arithmetic pointers only: no host-signed reference values.
+                "advanced_arithmetic": [item.model_dump(mode="json") for item in current.advanced_arithmetic],
                  "sigma_rule_actions": dict(sorted(current.sigma_rule_actions.items()))}
 
     def tenant_only(principal: str | TenantRecord) -> TenantRecord:
