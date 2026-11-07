@@ -11,8 +11,9 @@ worked (a persona prefix, "developer mode enabled", the system prompt itself). T
 (reveal the system prompt, ignore previous instructions) stay there; these rules do not repeat them.
 
 Every rule has an example it reports and a look-alike it does not (tests/test_prompt_attack.py). These match wording,
-not intent: reworded or multi-turn attacks pass, and text that discusses attacks with the same words is reported.
-No text that matched is repeated in a finding.
+not general intent: some conditioning split across adjacent submitted JSON chat turns is detected, but reworded,
+nonadjacent or unstated-context attacks may pass and benign discussions containing the same wording can be reported.
+Client-supplied role labels never establish authority. No matched text is repeated in a finding.
 """
 from __future__ import annotations
 
