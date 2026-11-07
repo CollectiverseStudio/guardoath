@@ -57,6 +57,10 @@ def audit(client, table_name: str) -> dict:
         cursor = response.get("LastEvaluatedKey")
         if cursor is None:
             break
+    # Off requires *provenance* review; corrupt/unreadable stored modes require
+    # a separate data-quality review. A count of zero explicit Off values is
+    # not evidence of a clean inventory when any record could not be classified.
+    invalid_modes = counts["input"]["invalid"] + counts["output"]["invalid"]
     return {
         "total_records": total,
         "unparseable_records": invalid_json,
@@ -64,6 +68,7 @@ def audit(client, table_name: str) -> dict:
         "requires_provenance_review": (
             counts["input"]["off"] + counts["output"]["off"] > 0
         ),
+        "requires_data_quality_review": invalid_json > 0 or invalid_modes > 0,
         "mutated_records": 0,
     }
 
@@ -86,7 +91,9 @@ def main(argv=None) -> int:
     ))
     report = audit(client, args.table)
     print(json.dumps(report, indent=2, sort_keys=True))
-    return 0 if report["unparseable_records"] == 0 else 2
+    # Invalid mode values are not a clean production inventory even when the
+    # record itself is valid JSON; use the same nonzero exit as unreadable rows.
+    return 2 if report["requires_data_quality_review"] else 0
 
 
 if __name__ == "__main__":
