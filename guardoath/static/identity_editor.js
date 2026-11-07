@@ -217,8 +217,9 @@
       clear(); draw(); changed();
       message.textContent = "Identity rule pending. Save checks to persist it.";
     });
+    drawFields();
     for (const input of form.querySelectorAll("input, select, button")) input.disabled = locked;
-    drawFields(); draw();
+    draw();
   }
   window.identityEditor = {render, delta, actions};
 })();
