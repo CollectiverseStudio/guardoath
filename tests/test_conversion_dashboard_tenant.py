@@ -159,3 +159,56 @@ def test_non_fx_rules_reject_untrusted_reference_values_and_bad_pointers():
         })
         assert result.status_code == 422
         assert store.get("conversion-alpha") == original
+
+
+def test_generic_checks_api_cannot_drop_or_replace_existing_protected_fx_reference():
+    api, store, headers = setup(protected=True)
+    a = headers["conversion-alpha"]
+    before = store.get("conversion-alpha")
+    for submitted in (
+        [],
+        DEFINITIONS,
+        [{
+            "rule_id": "private_fx", "kind": "currency_conversion_cap",
+            "fields": {"payment_amount": "/payment", "payment_currency": "/payment_ccy",
+                       "invoice_amount": "/invoice", "invoice_currency": "/invoice_ccy"},
+            "source_currency": "EUR", "destination_currency": "USD",
+            "trusted_rate_numerator": 2, "trusted_rate_denominator": 1,
+            "rate_reference": "UNVERIFIED_REPLACEMENT",
+            "rate_asof": "2026-11-02T09:00:00Z",
+            "stages": ["input", "output"],
+        }],
+    ):
+        result = api.post("/v1/tenants/current/checks", headers=a, json={
+            "revision": before.revision, "changes": {"advanced_conversion_time": submitted},
+        })
+        assert result.status_code == 422, result.text[:250]
+        assert "SENSITIVE-FX-REFERENCE" not in result.text
+        assert store.get("conversion-alpha") == before
+
+
+def test_generic_checks_api_denies_unverified_fx_provisioning_and_malformed_kind():
+    api, store, headers = setup()
+    a = headers["conversion-alpha"]
+    before = store.get("conversion-alpha")
+    for entry in (
+        {
+            "rule_id": "new_fx", "kind": "currency_conversion_cap",
+            "fields": {"payment_amount": "/payment", "payment_currency": "/payment_ccy",
+                       "invoice_amount": "/invoice", "invoice_currency": "/invoice_ccy"},
+            "source_currency": "EUR", "destination_currency": "USD",
+            "trusted_rate_numerator": 6, "trusted_rate_denominator": 5,
+            "rate_reference": "UNVERIFIED_RATE_FROM_REQUEST",
+            "rate_asof": "2026-11-01T09:00:00Z",
+            "stages": ["input", "output"],
+        },
+        dict(DEFINITIONS[0], kind=["unit_load_kg_cap"]),
+        dict(DEFINITIONS[0], kind={"bad": "kind"}),
+    ):
+        result = api.post("/v1/tenants/current/checks", headers=a, json={
+            "revision": before.revision,
+            "changes": {"advanced_conversion_time": [entry]},
+        })
+        assert result.status_code == 422, result.text[:250]
+        assert "UNVERIFIED_RATE_FROM_REQUEST" not in result.text
+        assert store.get("conversion-alpha") == before
