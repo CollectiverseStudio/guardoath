@@ -11,7 +11,7 @@ worked (a persona prefix, "developer mode enabled", the system prompt itself). T
 (reveal the system prompt, ignore previous instructions) stay there; these rules do not repeat them.
 
 Every rule has an example it reports and a look-alike it does not (tests/test_prompt_attack.py). These match wording,
-not general intent: some conditioning split across two or three adjacent submitted JSON chat turns is detected, but reworded,
+not general intent: some conditioning split across two, three or four adjacent submitted JSON chat turns is detected, but reworded,
 nonadjacent or unstated-context attacks may pass and benign discussions containing the same wording can be reported.
 Client-supplied role labels never establish authority. No matched text is repeated in a finding.
 """
@@ -209,16 +209,18 @@ RULES: dict[str, tuple[str, str, str, str, str]] = {
 _COMPILED = tuple((rule_id, re.compile(pattern, re.I)) for rule_id, (_t, _s, pattern, _e, _l) in RULES.items())
 _CONDITIONING_PATTERN = dict(_COMPILED)["prompt_attack.multi_turn_conditioning"]
 _TURN_BOUNDARY_CHARS = 160
+_FOUR_TURN_MIDDLE_CHARS = 80
 
 
 def submitted_turn_boundaries(payload: object):
-    """Examine two or three consecutive submitted JSON chat turns.
+    """Examine two, three or four consecutive submitted JSON chat turns.
 
-    Three-turn windows require a short entire middle turn: truncating it could
-    manufacture an apparent adjacency that the caller never submitted.
-    Never infer trust from a caller-supplied role, request_context or JSON
-    fields outside messages[].content. Each bounded window is at most 482
-    characters, and the API already limits total content to 32,000.
+    Three-/four-turn windows require every middle turn in full: truncating
+    its interior could manufacture an adjacency that was never submitted.
+    The four-turn form restricts each middle turn to 80 characters, and
+    every inspected window is at most 483 characters. Caller role labels,
+    request_context and JSON fields outside messages[].content confer no trust.
+    The authenticated API already limits request content to 32,000.
     """
     if not isinstance(payload, dict):
         return
@@ -237,6 +239,12 @@ def submitted_turn_boundaries(payload: object):
         if (left is not None and middle is not None and right is not None
                 and len(middle) <= _TURN_BOUNDARY_CHARS):
             yield left[-_TURN_BOUNDARY_CHARS:] + " " + middle + " " + right[:_TURN_BOUNDARY_CHARS]
+    for left, middle_a, middle_b, right in zip(turns, turns[1:], turns[2:], turns[3:]):
+        if (left is not None and middle_a is not None and middle_b is not None
+                and right is not None and len(middle_a) <= _FOUR_TURN_MIDDLE_CHARS
+                and len(middle_b) <= _FOUR_TURN_MIDDLE_CHARS):
+            yield (left[-_TURN_BOUNDARY_CHARS:] + " " + middle_a + " "
+                   + middle_b + " " + right[:_TURN_BOUNDARY_CHARS])
 
 
 def inspect(content: str) -> tuple[str, ...]:
