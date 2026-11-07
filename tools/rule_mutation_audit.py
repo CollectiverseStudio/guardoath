@@ -168,9 +168,15 @@ def main(argv=None):
     try:
         report = asyncio.run(audit(variants=args.variants, limit=args.limit,
                                    both_stages=not args.input_only))
-    except Exception:
-        # Never expose raw content or sensitive exception messages.
-        print("Rule mutation audit failed; inspect local environment and tests.", file=sys.stderr)
+    except Exception as exc:
+        # Only the exception *type* and the last source-code location:
+        # exception messages/arguments can contain raw customer content.
+        import traceback
+        frames = traceback.extract_tb(exc.__traceback__)
+        last = frames[-1] if frames else None
+        location = (last.name + ":" + str(last.lineno)) if last else "unknown"
+        print("Rule mutation audit failed: " + type(exc).__name__ +
+              " at " + location + " (no content logged)", file=sys.stderr)
         return 2
     encoded = json.dumps(report, sort_keys=True, indent=2)
     if args.output:
