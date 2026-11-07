@@ -59,7 +59,7 @@ def test_revisioned_api_rejects_invalid_reference_without_mutating_other_tenants
                               tenants=TenantService(store, default_checkers(), secret))) as client:
         original = store.get("fx-a")
         other = store.get("fx-b")
-        response = client.post("/v1/tenants/current/checks", headers=headers, json={
+        response = client.post("/v1/tenants/current/references", headers=headers, json={
             "revision": original.revision, "changes": {
                 "advanced_conversion_time": [fx(offset)],
                 "input_check_cross_field": "block", "output_check_cross_field": "flag"}})
