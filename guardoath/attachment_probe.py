@@ -21,7 +21,10 @@ MAX_CSV_CELLS = 4_000
 # override/isolate characters can conceal the displayed value from the reviewer.
 # Reject them at the *byte classification* boundary before any CSV checker can
 # return a clean decision. Tabs, CR/LF and ordinary international text remain valid.
-UNSAFE_BIDI_CONTROLS = frozenset("\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069")
+# Include directional marks that are visually silent but can precede a formula
+# trigger and bypass the strict CSV formula-prefix checker. Conservative policy:
+# ambiguous display semantics are a structural inspection failure, not clean CSV.
+UNSAFE_BIDI_CONTROLS = frozenset("\u061c\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069")
 
 # Some importers silently ignore leading invisible format characters, making
 # a formula prefix hard for a human reviewer to see. Reject only if one of
