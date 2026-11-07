@@ -510,6 +510,22 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                     for item in current.advanced_identity
                     if item.kind in ("quarantine_exclusion", "authorized_scope_subset")
                 ],
+                # Expose editable non-FX conversion/time rules only; private FX rate,
+                # timestamp and versioned tenant reference remain opaque.
+                "advanced_conversion_time": [
+                    item.model_dump(mode="json") for item in current.advanced_conversion_time
+                    if item.kind != "currency_conversion_cap"
+                ],
+                "advanced_conversion_reference_status": [
+                    {"rule_id": item.rule_id, "kind": item.kind,
+                     "stages": [stage.value for stage in item.stages],
+                     "reference_configured": all(value is not None for value in (
+                         item.source_currency, item.destination_currency,
+                         item.trusted_rate_numerator, item.trusted_rate_denominator,
+                         item.rate_reference, item.rate_asof))}
+                    for item in current.advanced_conversion_time
+                    if item.kind == "currency_conversion_cap"
+                ],
                  "sigma_rule_actions": dict(sorted(current.sigma_rule_actions.items()))}
 
     def tenant_only(principal: str | TenantRecord) -> TenantRecord:
