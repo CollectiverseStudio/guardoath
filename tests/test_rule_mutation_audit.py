@@ -48,3 +48,11 @@ def test_real_checker_small_end_to_end_drift_evidence_is_private():
     assert all(set(item) <= {"rule_id", "stage", "variant"}
                for item in result["false_positives"])
     assert "Example" not in json.dumps(result)
+
+
+def test_intentionally_invalid_json_examples_remain_invalid_without_aborting_catalog():
+    for index in range(16):
+        name, altered = mutation('{"status": ', "json", index)
+        assert name.startswith("malformed_json_")
+        with pytest.raises(json.JSONDecodeError):
+            json.loads(altered)
