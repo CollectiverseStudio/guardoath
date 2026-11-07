@@ -59,7 +59,12 @@ def audit(client, table_name: str) -> dict:
         }
         if cursor is not None:
             request["ExclusiveStartKey"] = cursor
-        response = client.scan(**request)
+        try:
+            response = client.scan(**request)
+        except Exception:
+            # AWS failures may embed request parameters or tenant keys in
+            # exception strings. The audit must fail closed without echoing them.
+            raise AuditIncompleteError("DynamoDB scan request did not complete") from None
         # A partially decoded or malformed page must never be treated as an
         # empty page: doing so could incorrectly certify saved Off as absent.
         if not isinstance(response, dict):
@@ -130,11 +135,22 @@ def main(argv=None) -> int:
         from botocore.config import Config
     except ImportError:
         parser.error("Install the existing optional AWS dependencies before running this audit")
-    session = boto3.Session(profile_name=args.profile, region_name=args.region)
-    client = session.client("dynamodb", config=Config(
-        connect_timeout=2, read_timeout=5,
-        retries={"total_max_attempts": 2, "mode": "standard"},
-    ))
+    try:
+        session = boto3.Session(profile_name=args.profile, region_name=args.region)
+        client = session.client("dynamodb", config=Config(
+            connect_timeout=2, read_timeout=5,
+            retries={"total_max_attempts": 2, "mode": "standard"},
+        ))
+    except Exception:
+        # Authentication/profile errors may contain credentials, account data
+        # or local path details. Never print the underlying exception.
+        print(json.dumps({
+            "audit_incomplete": True,
+            "requires_data_quality_review": True,
+            "mutated_records": 0,
+            "reason": "aws_client_unavailable",
+        }, indent=2, sort_keys=True))
+        return 2
     try:
         report = audit(client, args.table)
     except AuditIncompleteError:

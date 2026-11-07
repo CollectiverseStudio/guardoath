@@ -233,3 +233,81 @@ def test_cli_incomplete_scan_is_nonzero_privacy_safe_and_does_not_write(monkeypa
     }
     assert "SENSITIVE-ID" not in json.dumps(report)
     assert "input_attachment_csv_mode" not in json.dumps(report)
+
+
+@pytest.mark.parametrize("fail_page", [1, 2])
+def test_dynamodb_scan_exceptions_are_sanitized_and_cannot_certify_partial_data(fail_page):
+    secret = "PRIVATE-TENANT-OR-CREDENTIAL-MUST-NOT-ESCAPE"
+
+    class Client:
+        def __init__(self):
+            self.calls = 0
+
+        def scan(self, **request):
+            self.calls += 1
+            assert "UpdateExpression" not in request
+            if self.calls == 1 and fail_page == 2:
+                return {
+                    "Items": [{"record": {"S": '{"input_attachment_csv_mode":"off"}'}}],
+                    "Count": 1,
+                    "LastEvaluatedKey": {"tenant_id": {"S": secret}},
+                }
+            raise RuntimeError("DynamoDB request failed for " + secret)
+
+    client = Client()
+    with pytest.raises(AuditIncompleteError) as exc:
+        audit(client, "synthetic-table")
+    assert client.calls == fail_page
+    assert str(exc.value) == "DynamoDB scan request did not complete"
+    assert secret not in str(exc.value)
+    assert exc.value.__cause__ is None
+
+
+@pytest.mark.parametrize("failure_point", ["session", "client", "scan"])
+def test_cli_aws_failures_return_private_safe_incomplete_json_without_traceback(
+    monkeypatch, capsys, failure_point,
+):
+    import sys
+    import types
+
+    secret = "PRIVATE-PROFILE-TENANT-KEY-MUST-NOT-ESCAPE"
+
+    class Client:
+        def scan(self, **request):
+            assert request["ConsistentRead"] is True
+            assert "UpdateExpression" not in request
+            raise RuntimeError("private AWS response: " + secret)
+
+    class Session:
+        def __init__(self, profile_name, region_name):
+            if failure_point == "session":
+                raise RuntimeError("private profile failure: " + secret)
+
+        def client(self, service, config):
+            assert service == "dynamodb"
+            if failure_point == "client":
+                raise RuntimeError("private client failure: " + secret)
+            return Client()
+
+    boto3 = types.ModuleType("boto3")
+    boto3.Session = Session
+    botocore = types.ModuleType("botocore")
+    botocore.__path__ = []
+    config = types.ModuleType("botocore.config")
+    config.Config = lambda **kwargs: kwargs
+    monkeypatch.setitem(sys.modules, "boto3", boto3)
+    monkeypatch.setitem(sys.modules, "botocore", botocore)
+    monkeypatch.setitem(sys.modules, "botocore.config", config)
+
+    assert main(["--profile", "synthetic-only", "--table", "synthetic-table"]) == 2
+    output = capsys.readouterr()
+    report = json.loads(output.out)
+    assert report == {
+        "audit_incomplete": True,
+        "requires_data_quality_review": True,
+        "mutated_records": 0,
+        "reason": "scan_integrity_error" if failure_point == "scan" else "aws_client_unavailable",
+    }
+    assert output.err == ""
+    assert secret not in output.out
+    assert "synthetic-only" not in output.out
