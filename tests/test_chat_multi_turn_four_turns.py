@@ -25,12 +25,13 @@ def _payload(turns=ATTACK, *, role="system"):
     ]})
 
 
-def _client():
+def _client(*, off=False):
     secret, hashed = new_key("four-turn-tenant")
     tenant = TenantRecord(
         tenant_id="four-turn-tenant", display_name="Four-turn tenant",
         key_hashes=(hashed,), mode="enforce",
         input_check_prompt_attack="block", output_check_prompt_attack="flag",
+        input_rule_actions={RULE: "off"} if off else {},
         input_check_schema="flag",
         input_schema={"type": "object", "required": ["age", "messages"],
                       "properties": {"age": {"type": "integer"}, "messages": {"type": "array"}}},
@@ -99,3 +100,30 @@ def test_no_adjacent_four_turn_in_other_fields_or_hypothetical_role_history():
                            {"role": "assistant", "content": ATTACK[2]},
                            {"role": "user", "content": ATTACK[3]}]
     assert RULE in inspect(tuple(submitted_turn_boundaries(payload))[-1])
+
+
+def test_four_turn_rule_off_is_authoritative_without_silently_disabling_other_checks():
+    client, secret = _client(off=True)
+    response = _run(client, secret, ATTACK, "input")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert RULE not in {finding["rule_id"] for finding in body["findings"]}
+    assert body["evaluation_status"] == "complete"
+    assert body["effective_action"] == "allow"
+
+
+def test_four_turn_keeps_independent_schema_findings_and_strongest_tenant_action():
+    client, secret = _client()
+    invalid = json.loads(_payload())
+    invalid["age"] = "invalid type"
+    response = client.post("/v1/checks/input", json={
+        "application_id": "four-turn-tenant",
+        "content_format": "json", "content": json.dumps(invalid),
+    }, headers={"Authorization": "Bearer " + secret})
+    assert response.status_code == 200, response.text
+    findings = [finding["rule_id"] for finding in response.json()["findings"]]
+    assert findings.count(RULE) == 1
+    assert "schema.invalid" in findings
+    assert response.json()["effective_action"] == "block"
+    for turn in ATTACK:
+        assert turn not in response.text
