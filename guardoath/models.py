@@ -306,7 +306,7 @@ class AdvancedStatisticalDriftRule(Contract):
     reference_id: str = Field(min_length=1, max_length=100)
     reference_version: str = Field(min_length=1, max_length=80)
     bin_edges: tuple[str, ...] = Field(min_length=3, max_length=65)
-    counts: tuple[int, ...] = Field(min_length=2, max_length=64)
+    counts: tuple[Annotated[int, Field(strict=True, ge=0)], ...] = Field(min_length=2, max_length=64)
     psi_threshold: str = Field(min_length=1, max_length=24)
     min_observations: int = Field(default=30, ge=30, le=100_000, strict=True)
     stages: tuple[Stage, ...] = Field(default=(Stage.INPUT, Stage.OUTPUT), min_length=1)
