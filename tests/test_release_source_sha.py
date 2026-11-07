@@ -36,6 +36,7 @@ def test_healthz_exposes_public_source_identity_without_tenant_data(monkeypatch)
     monkeypatch.setattr(app, "release_source_sha", lambda: SHA)
     response = TestClient(create_app(credentials={"test-key":"demo"})).get("/healthz")
     assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
     assert response.json() == {
         "status": "ok", "profile": "local-prototype", "source_sha": SHA,
     }
