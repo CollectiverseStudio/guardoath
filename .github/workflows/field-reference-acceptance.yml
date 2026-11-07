@@ -16,6 +16,7 @@ on:
       - "tests/test_advanced_trusted_reference.py"
       - "tests/test_trusted_reference_value_validity.py"
       - "tests/test_trusted_reference_signing_cli.py"
+      - "tests/test_field_comparison_reference_isolation.py"
       - ".github/workflows/field-reference-acceptance.yml"
 permissions:
   contents: read
@@ -34,6 +35,7 @@ jobs:
           tests/test_advanced_trusted_reference.py
           tests/test_trusted_reference_value_validity.py
           tests/test_trusted_reference_signing_cli.py
+          tests/test_field_comparison_reference_isolation.py
           tests/test_advanced_arithmetic.py
           tests/test_advanced_identity.py
           tests/test_advanced_conversion_time.py
