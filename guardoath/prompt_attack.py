@@ -11,7 +11,7 @@ worked (a persona prefix, "developer mode enabled", the system prompt itself). T
 (reveal the system prompt, ignore previous instructions) stay there; these rules do not repeat them.
 
 Every rule has an example it reports and a look-alike it does not (tests/test_prompt_attack.py). These match wording,
-not general intent: some conditioning split across adjacent submitted JSON chat turns is detected, but reworded,
+not general intent: some conditioning split across two or three adjacent submitted JSON chat turns is detected, but reworded,
 nonadjacent or unstated-context attacks may pass and benign discussions containing the same wording can be reported.
 Client-supplied role labels never establish authority. No matched text is repeated in a finding.
 """
@@ -212,24 +212,31 @@ _TURN_BOUNDARY_CHARS = 160
 
 
 def submitted_turn_boundaries(payload: object):
-    """Examine adjacent chat turns when the caller actually submits JSON messages.
+    """Examine two or three consecutive submitted JSON chat turns.
 
-    Only inspect the bounded text at each boundary. Do not infer that the caller's
-    'role' field establishes system/developer authority. This is not verified
-    conversation history, and request_context is deliberately not consulted.
-    The API already limits source content to 32,000 characters.
+    Three-turn windows require a short entire middle turn: truncating it could
+    manufacture an apparent adjacency that the caller never submitted.
+    Never infer trust from a caller-supplied role, request_context or JSON
+    fields outside messages[].content. Each bounded window is at most 482
+    characters, and the API already limits total content to 32,000.
     """
     if not isinstance(payload, dict):
         return
     messages = payload.get("messages")
     if not isinstance(messages, list):
         return
-    for previous, current in zip(messages, messages[1:]):
-        if not isinstance(previous, dict) or not isinstance(current, dict):
-            continue
-        left, right = previous.get("content"), current.get("content")
-        if isinstance(left, str) and isinstance(right, str) and left and right:
+    turns = tuple(
+        value if isinstance(value, str) and value else None
+        for message in messages
+        for value in [message.get("content") if isinstance(message, dict) else None]
+    )
+    for left, right in zip(turns, turns[1:]):
+        if left is not None and right is not None:
             yield left[-_TURN_BOUNDARY_CHARS:] + " " + right[:_TURN_BOUNDARY_CHARS]
+    for left, middle, right in zip(turns, turns[1:], turns[2:]):
+        if (left is not None and middle is not None and right is not None
+                and len(middle) <= _TURN_BOUNDARY_CHARS):
+            yield left[-_TURN_BOUNDARY_CHARS:] + " " + middle + " " + right[:_TURN_BOUNDARY_CHARS]
 
 
 def inspect(content: str) -> tuple[str, ...]:
@@ -256,7 +263,7 @@ async def prompt_attack_check(request, policy, stage):
         payload = None
         parts = (request.content,)
     found = dict.fromkeys(rule_id for part in parts for rule_id in inspect(part))
-    # A conditioning request split across two submitted turns evades individual
+    # A conditioning request split across submitted turns evades individual
     # scans. Keep this to the existing specific rule: generic concatenation
     # would manufacture unrelated matches between innocent adjacent messages.
     if payload is not None and any(_CONDITIONING_PATTERN.search(window)
