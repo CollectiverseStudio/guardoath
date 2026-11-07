@@ -55,6 +55,8 @@ def test_direction_marks_fail_closed_on_authenticated_bytes_even_when_off_and_ob
         key_hashes=(key_hash(key),),
         mode="observe",
         failure_action="flag",
+        input_check_text_security="allow",  # Valid tenant: at least one enabled check.
+        output_check_text_security="allow",
         input_attachment_csv_mode=attachment_mode,
         output_attachment_csv_mode=attachment_mode,
     )
