@@ -5,8 +5,8 @@ it replaces the removed content_safety check, which sent content to Amazon Bedro
 physical hazards, abuse, scams) are the human_safety check.
 
 Every rule has an example it reports and a look-alike it does not (tests/test_harmful_content.py). These match wording,
-not meaning: reworded content passes, and quoted, reported or educational text with the same words is reported for
-review. Hate rules name groups by the words people commonly use; a group that is not listed is not covered. No slurs are
+not meaning: even with bounded paraphrase variants, many reworded harmful requests pass; quoted, reported or
+educational text with the same words may be reported for review. Hate rules name groups by the words people commonly use; a group that is not listed is not covered. No slurs are
 written here, and no text that matched is repeated in a finding.
 """
 from __future__ import annotations
@@ -25,7 +25,7 @@ RULES: dict[str, tuple[str, str, str, str, str]] = {
         "Refugees are people who fled war or persecution."),
     "harmful_content.hate_violence_call": (
         "Calls for killing or wiping out a group of people", "high",
-        r"\b(?:kill|exterminate|eliminate|wipe out|gas|slaughter|get rid of)\s+(?:all\s+)?(?:the\s+|of the\s+)?(?:Muslims|Jews|Christians|Hindus|Sikhs|Buddhists|Catholics|atheists|immigrants|refugees|migrants|Black people|white people|Asians|Asian people|Hispanics|Latinos|Mexicans|Arabs|Africans|Indians|Chinese people|gay people|gays|lesbians|trans people|transgender people|LGBTQ people|women|disabled people|Roma)\b",
+        r"\b(?:kill|exterminate|eliminate|wipe out|gas|slaughter|get rid of|murder|massacre)\s+(?:all\s+)?(?:the\s+|of the\s+)?(?:Muslims|Jews|Christians|Hindus|Sikhs|Buddhists|Catholics|atheists|immigrants|refugees|migrants|Black people|white people|Asians|Asian people|Hispanics|Latinos|Mexicans|Arabs|Africans|Indians|Chinese people|gay people|gays|lesbians|trans people|transgender people|LGBTQ people|women|disabled people|Roma)\b",
         "Someone should kill all the immigrants.",
         "The city council wants to help all the immigrants find housing."),
     "harmful_content.hate_inferiority": (
@@ -70,7 +70,7 @@ RULES: dict[str, tuple[str, str, str, str, str]] = {
         "Let's all review her account settings."),
     "harmful_content.threat_to_hurt_you": (
         "Threatens to kill or hurt the person", "high",
-        r"\bI(?:'m| am)?\s*(?:going to|gonna|will|'ll)\s+(?:kill|hurt|beat|shoot|stab|strangle)\s+you\b",
+        r"\b(?:I(?:'m| am)?\s*(?:going to|gonna|will|'ll)\s+(?:kill|hurt|beat|shoot|stab|strangle)|I\s+(?:plan|intend|aim)\s+to\s+(?:hurt|injure|harm|attack)|I(?:'m| am)\s+planning\s+(?:to|on)\s+(?:hurting|injuring|harming|attacking|hurt|injure|harm|attack))\s+you\b",
         "I will hurt you tomorrow.",
         "I will help you tomorrow."),
     "harmful_content.threat_menacing": (
