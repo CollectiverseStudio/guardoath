@@ -59,3 +59,66 @@ test("TSV output file picker independently blocks a formula after clean input", 
   await expect(page.locator("#answer")).toBeHidden();
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
 });
+
+
+test("dashboard sample button loads actual TSV bytes and runs a real authenticated input check", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo8");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#input-attachments")).toHaveAttribute("accept", /\\.tsv/);
+  await page.locator("#tenant-check-input-csv_formula").selectOption("block");
+
+  await page.locator("#input-tsv-sample").click();
+  await expect(page.locator("#input-attachment-note")).toContainText("Sample TSV loaded");
+  const selected = await page.locator("#input-attachments").evaluate(async element => ({
+    name: element.files[0]?.name,
+    body: element.files[0] ? await element.files[0].text() : null,
+  }));
+  expect(selected).toEqual({name: "synthetic-formula.tsv", body: "name\\tvalue\\nSynthetic\\t=2+3".replaceAll("\\t", "\t").replace("\\n", "\n")});
+  const response = page.waitForResponse(r => r.url().endsWith("/v1/checks/input/attachments") && r.request().method() === "POST");
+  await page.locator("#run-input").click();
+  const checked = await response;
+  const outcome = await checked.json();
+  expect(outcome.attachments[0].kind).toBe("tsv");
+  expect(outcome.findings.map(f => f.rule_id)).toContain("csv_formula.potential_formula");
+  expect(outcome.effective_action).toBe("block");
+  await expect(page.locator("#answer")).toBeHidden();
+
+  await page.locator("#input-attachment-clear").click();
+  expect(await page.locator("#input-attachments").evaluate(e => e.files.length)).toBe(0);
+  await expect(page.locator("#input-attachment-note")).toContainText("No file selected");
+  await expect(page.locator("#input-results")).not.toContainText("tsv_structure_recognized_only");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+});
+
+test("dashboard output TSV sample requires passed input and clears independently", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo7");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo7");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await page.locator("#output-tsv-sample").click();
+  await expect(page.locator("#output-attachment-note")).toContainText("Pass input checks");
+  expect(await page.locator("#output-attachments").evaluate(e => e.files.length)).toBe(0);
+
+  await page.locator("#tenant-check-output-csv_formula").selectOption("block");
+  const input = page.waitForResponse(r => r.url().endsWith("/v1/checks/input") && r.request().method() === "POST");
+  await page.locator("#run-input").click();
+  expect((await (await input).json()).effective_action).toBe("allow");
+
+  await page.locator("#output-tsv-sample").click();
+  await expect(page.locator("#output-attachment-note")).toContainText("Sample TSV loaded");
+  const output = page.waitForResponse(r => r.url().endsWith("/v1/checks/output/attachments") && r.request().method() === "POST");
+  await page.locator("#run-output").click();
+  const result = await (await output).json();
+  expect(result.attachments[0].kind).toBe("tsv");
+  expect(result.findings.map(f => f.rule_id)).toContain("csv_formula.potential_formula");
+  expect(result.effective_action).toBe("block");
+
+  await page.locator("#output-attachment-clear").click();
+  expect(await page.locator("#output-attachments").evaluate(e => e.files.length)).toBe(0);
+  await expect(page.locator("#output-attachment-note")).toContainText("No file selected");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+});
