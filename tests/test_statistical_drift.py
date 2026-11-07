@@ -95,3 +95,22 @@ def test_invalid_minimum_and_reference_size_fail_closed():
             compute_psi(baseline(), sample(), min_observations=bad)
     with pytest.raises(ValueError):
         compute_psi(replace(baseline(), counts=(100_001, 0, 0)), sample())
+
+
+@pytest.mark.parametrize("small_batch", [
+    ["bad"],
+    [True],
+    [Decimal("Infinity")],
+    [Decimal("31")],
+])
+def test_insufficient_data_does_not_hide_corrupted_or_out_of_range_observations(small_batch):
+    with pytest.raises(ValueError):
+        compute_psi(baseline(), small_batch)
+
+
+def test_near_boundary_decimal_values_are_classified_without_float_rounding():
+    observations = [Decimal("9.999999999999999")] * 10
+    observations += [Decimal("19.99999999999999")] * 10
+    observations += [Decimal("29.999999999999999")] * 10
+    result = compute_psi(baseline(), observations)
+    assert result.status == "measured" and result.psi == "0.000000"
