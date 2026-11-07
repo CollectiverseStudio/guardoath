@@ -134,3 +134,36 @@ def compute_psi(ref: ReferenceHistogram, observations: Sequence,
         psi=value, smoothing="Jeffreys pseudocount 0.5 per bin",
         interpretation="descriptive_only_no_automatic_action",
     )
+
+
+def drift_findings(payload, rules, stage):
+    """Evaluate all tenant-pinned PSI rules against JSON arrays, no data echo.
+
+    Only aggregate findings. A small sample produces a distinct warning instead
+    of claiming no drift; any corrupt sample also produces a finding and never
+    becomes corrected input. Neither finding silently clips a single value.
+    """
+    from guardoath.business import resolve
+    from guardoath.models import Finding
+
+    findings = []
+    for rule in rules:
+        if stage not in rule.stages:
+            continue
+        try:
+            sample = resolve(payload, rule.observations_pointer)
+            reference = ReferenceHistogram(
+                rule.reference_id, rule.reference_version, rule.bin_edges, rule.counts)
+            result = compute_psi(reference, sample, min_observations=rule.min_observations)
+            if result.status == "insufficient_data":
+                reason = "Insufficient validated observations for the tenant's PSI baseline."
+            elif Decimal(result.psi) > Decimal(rule.psi_threshold):
+                reason = "Observed distribution drift exceeds the configured tenant PSI threshold."
+            else:
+                continue
+        except (ValueError, TypeError, KeyError, IndexError, ArithmeticError, OverflowError):
+            reason = "PSI comparison cannot evaluate malformed or unsupported observations."
+        findings.append(Finding(
+            rule_id="business." + rule.rule_id, category="business",
+            severity="high", explanation=reason))
+    return tuple(findings)
