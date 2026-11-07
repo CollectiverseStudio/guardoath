@@ -90,6 +90,19 @@ def test_arithmetic_editor_tenant_api_save_reload_stage_actions_and_isolation():
     assert updated.status_code == 200, updated.text[:250]
     assert summary(api, a)["advanced_arithmetic"][0]["stages"] == ["input"]
 
+    # With Output disabled for this rule and the stage check turned Off,
+    # the same invalid arithmetic must not be reported on Output.
+    output = api.post("/v1/checks/output", headers=a, json={
+        "application_id": "arith-alpha", "content_format": "json",
+        "content": json.dumps({"lines": [{"quantity": 2, "unit_price": 40},
+                                         {"quantity": 1, "unit_price": 30}],
+                               "subtotal": 100}),
+    })
+    assert output.status_code == 200, output.text[:250]
+    assert "business.invoice_math" not in {
+        f["rule_id"] for f in output.json()["findings"]
+    }
+
     stale = api.post("/v1/tenants/current/checks", headers=a, json={
         "revision": existing.revision,
         "changes": {"advanced_arithmetic": [], "input_check_cross_field": None},
