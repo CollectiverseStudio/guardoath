@@ -178,6 +178,21 @@ class TenantService:
                      else rule.get("kind")) not in ("order_id_match", "serial_unique")
                     for rule in supplied):
                 raise ChangeRejected("The checks endpoint accepts only non-reference identity kinds")
+        # Currency conversion uses a private versioned tenant FX reference. The
+        # general dashboard checks endpoint is not a reference-provisioning
+        # authority, and a replacement array must not drop any hidden rate.
+        if "advanced_conversion_time" in changes:
+            if any(rule.kind == "currency_conversion_cap"
+                   for rule in current.advanced_conversion_time):
+                raise ChangeRejected("Conversion/time definitions with protected FX references "
+                                     "must be managed through an authorized reference-management workflow")
+            supplied = changes["advanced_conversion_time"]
+            if not isinstance(supplied, (list, tuple)) or any(
+                    (getattr(rule, "kind", None) if not isinstance(rule, dict)
+                     else rule.get("kind")) not in
+                    ("unit_load_kg_cap", "cold_chain_excursion", "lifecycle_chronology")
+                    for rule in supplied):
+                raise ChangeRejected("The checks endpoint accepts only non-FX conversion/time kinds")
         try:
             candidate = TenantRecord.model_validate({**current.model_dump(), **changes})
         except ValidationError as error:
