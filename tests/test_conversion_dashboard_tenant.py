@@ -212,3 +212,57 @@ def test_generic_checks_api_denies_unverified_fx_provisioning_and_malformed_kind
         assert result.status_code == 422, result.text[:250]
         assert "UNVERIFIED_RATE_FROM_REQUEST" not in result.text
         assert store.get("conversion-alpha") == before
+
+
+def test_reference_management_route_is_owner_scoped_and_cannot_bypass_tenant_authentication():
+    secret = "owner-only-synthetic-reference-key-0123456789"
+    token = demo_key("reference-owner", secret)
+    record = TenantRecord(
+        tenant_id="reference-owner", display_name="Reference owner", demo=False,
+        key_hashes=(key_hash(token),), input_check_text_security="flag")
+    store = MemoryTenantStore((record,))
+    api = TestClient(create_app(engine=demo_engine(), credentials={},
+                     tenants=TenantService(store, default_checkers(), secret)))
+    headers = {"Authorization": "Bearer " + token}
+    candidate = DEFINITIONS[0]
+    body = {"revision": record.revision, "changes": {
+        "advanced_conversion_time": [candidate],
+        "input_check_cross_field": "block",
+    }}
+    assert api.post("/v1/tenants/current/references", json=body).status_code in (401, 403)
+    # Production evaluation-only tenant keys are not reference administrators.
+    response = api.post("/v1/tenants/current/references", headers=headers, json=body)
+    assert response.status_code == 403
+    assert store.get("reference-owner") == record
+
+
+def test_reference_route_rejects_unrelated_settings_and_keeps_generic_api_protected():
+    api, store, headers = setup()
+    a = headers["conversion-alpha"]
+    original = store.get("conversion-alpha")
+    rejected = api.post("/v1/tenants/current/references", headers=a, json={
+        "revision": original.revision, "changes": {
+            "input_check_text_security": "block",
+            "advanced_conversion_time": [DEFINITIONS[0]],
+        },
+    })
+    assert rejected.status_code == 422
+    assert store.get("conversion-alpha") == original
+    # Generic settings route still cannot create an FX reference.
+    unverified_fx = {
+        "rule_id": "unverified_fx", "kind": "currency_conversion_cap",
+        "fields": {"payment_amount": "/payment", "payment_currency": "/payment_ccy",
+                   "invoice_amount": "/invoice", "invoice_currency": "/invoice_ccy"},
+        "source_currency": "EUR", "destination_currency": "USD",
+        "trusted_rate_numerator": 6, "trusted_rate_denominator": 5,
+        "rate_reference": "UNVERIFIED_FROM_GENERIC_API",
+        "rate_asof": "2026-11-01T09:00:00Z",
+        "stages": ["input"],
+    }
+    denied = api.post("/v1/tenants/current/checks", headers=a, json={
+        "revision": original.revision,
+        "changes": {"advanced_conversion_time": [unverified_fx]},
+    })
+    assert denied.status_code == 422
+    assert "UNVERIFIED_FROM_GENERIC_API" not in denied.text
+    assert store.get("conversion-alpha") == original
