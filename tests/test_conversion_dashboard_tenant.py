@@ -40,7 +40,7 @@ def setup(protected=False):
                            "invoice_amount": "/invoice", "invoice_currency": "/invoice_ccy"},
                 "source_currency": "EUR", "destination_currency": "USD",
                 "trusted_rate_numerator": 6, "trusted_rate_denominator": 5,
-                "rate_reference": "SENSITIVE_FX_REFERENCE",
+                "rate_reference": "SENSITIVE-FX-REFERENCE",
                 "rate_asof": "2026-11-01T09:00:00Z",
                 "stages": ["input", "output"],
             },)
@@ -131,8 +131,8 @@ def test_fx_reference_is_opaque_and_preserved_across_unrelated_tenant_save():
         {"rule_id": "private_fx", "kind": "currency_conversion_cap",
          "stages": ["input", "output"], "reference_configured": True},
     ]
-    assert "SENSITIVE_FX_REFERENCE" not in json.dumps(data)
-    assert "SENSITIVE_FX_REFERENCE" not in api.get("/v1/applications/current", headers=a).text
+    assert "SENSITIVE-FX-REFERENCE" not in json.dumps(data)
+    assert "SENSITIVE-FX-REFERENCE" not in api.get("/v1/applications/current", headers=a).text
     assert summary(api, b)["advanced_conversion_reference_status"] == []
     original = store.get("conversion-alpha")
     saved = api.post("/v1/tenants/current/checks", headers=a, json={
@@ -140,7 +140,7 @@ def test_fx_reference_is_opaque_and_preserved_across_unrelated_tenant_save():
     })
     assert saved.status_code == 200
     assert store.get("conversion-alpha").advanced_conversion_time == original.advanced_conversion_time
-    assert "SENSITIVE_FX_REFERENCE" not in saved.text
+    assert "SENSITIVE-FX-REFERENCE" not in saved.text
 
 
 def test_non_fx_rules_reject_untrusted_reference_values_and_bad_pointers():
