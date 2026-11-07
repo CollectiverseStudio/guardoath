@@ -131,7 +131,7 @@ def test_authenticated_tenant_persists_trusted_sets_and_controls_both_stages():
     client = TestClient(create_app(engine=demo_engine(), credentials={},
                                    tenants=TenantService(store, default_checkers(), secret)))
     h = {"Authorization": "Bearer " + token}
-    settings = client.post("/v1/tenants/current/checks", headers=h, json={
+    settings = client.post("/v1/tenants/current/references", headers=h, json={
         "revision": store.get(tenant).revision,
         "changes": {"input_check_cross_field": "flag", "output_check_cross_field": "flag",
                     "advanced_identity": [rule(case).model_dump(mode="json") for case in CASES],
