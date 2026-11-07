@@ -63,3 +63,30 @@ def test_malformed_or_ambiguous_tsv_cannot_be_recognized(data, expected_reason):
 def test_comma_csv_with_tab_inside_cell_remains_comma_csv():
     probe = classify_attachment(b"name,value\nSynthetic,tab\there")
     assert (probe.kind, probe.status) == ("csv", "recognized")
+
+
+@pytest.mark.parametrize("data,expected_kind", [
+    (b"name\tvalue\nSynthetic\tplain,=2+3", "tsv"),
+    (b"name,value\nSynthetic,plain\t=2+3", "csv"),
+])
+def test_mixed_delimiter_export_cannot_hide_formula_under_other_import_dialect(data, expected_kind):
+    receipt = classify_attachment(data)
+    assert (receipt.kind, receipt.status) == (expected_kind, "recognized")
+    policy = Policy(application_id="synthetic", version="v1",
+                    rules=(Rule(checker_id="csv_formula", on_finding="block"),))
+    request = CheckRequest(application_id="synthetic", policy_version="v1",
+                           content=data.decode("utf-8"), content_format="text")
+    result = asyncio.run(csv_formula_check(request, policy, Stage.INPUT))
+    assert result.status == "flagged"
+    assert {item.rule_id for item in result.findings} == {"csv_formula.potential_formula"}
+
+
+@pytest.mark.parametrize("data", [
+    "name\tvalue\nSynthetic\tplain,\u200b=2+3".encode("utf-8"),
+    "name,value\nSynthetic,plain\t\u200b=2+3".encode("utf-8"),
+])
+def test_hidden_formula_in_other_delimiter_view_is_a_hard_structural_failure(data):
+    receipt = classify_attachment(data)
+    assert receipt.status == "invalid"
+    assert receipt.kind == "unknown"
+    assert receipt.reason == "unsafe_csv_invisible_formula_prefix"
