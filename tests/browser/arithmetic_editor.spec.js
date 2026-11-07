@@ -13,7 +13,6 @@ test("FC arithmetic editor creates, saves, reloads, edits and evaluates an actua
     await expect(page.locator("#tenant-message")).toContainText("Reset to the demo defaults.");
   };
   await reset();
-  try {
     await expect(page.locator("#arithmetic-form")).toBeVisible();
     await page.locator("#arithmetic-id").fill("ui_invoice_math");
     await page.locator("#arithmetic-kind").selectOption("invoice_line_subtotal");
@@ -69,9 +68,7 @@ test("FC arithmetic editor creates, saves, reloads, edits and evaluates an actua
     await page.locator("#tenant-save").click();
     await expect(page.locator("#tenant-message")).toContainText("Saved");
     expect((await read()).advanced_arithmetic).toEqual([]);
-  } finally {
-    await reset();
-  }
+  await reset();
 });
 
 test("FC arithmetic dashboard validates pointers, types and stages before saving", async ({page}) => {
