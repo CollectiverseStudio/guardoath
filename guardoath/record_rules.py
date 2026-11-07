@@ -550,6 +550,27 @@ def trusted_reference_rule(rule) -> dict:
     }
 
 
+def statistical_drift_rule(rule) -> dict:
+    """Private dynamic PSI rule; never publish reference counts or samples."""
+    return {
+        "rule_id": COMPARISON_PREFIX + rule.rule_id,
+        "control_id": "cross_field",
+        "title": f"Versioned batch distribution drift: {rule.rule_id}",
+        "use_case": "Compare submitted bounded numeric batches against a tenant-approved histogram and PSI threshold.",
+        "severity": "high",
+        "example": None, "look_alike": None,
+        "example_unavailable": {"code": "private_statistical_reference",
+                                "reason": "Tenant reference distribution cannot be invented or disclosed."},
+        "look_alike_unavailable": {"code": "private_statistical_reference",
+                                   "reason": "No verified benign population sample is disclosed."},
+        "needs_setting": None, "needs_checks": [],
+        "content_format": "json",
+        "configuration": f"batch PSI · versioned tenant baseline · runs on {stage_names(rule.stages)}",
+        "stages": [getattr(stage, "value", stage) for stage in rule.stages],
+        "record_rule": True,
+    }
+
+
 def record_rules(record) -> dict[str, dict]:
     """The record's own rules, by rule id: its comparisons, then its required sections."""
     rules, context = {}, _Examples(record.comparisons)
@@ -568,6 +589,9 @@ def record_rules(record) -> dict[str, dict]:
     for trusted in getattr(record, "advanced_trusted_reference", ()):
         rule = trusted_reference_rule(trusted)
         rules[rule["rule_id"]] = rule
+    for drift in getattr(record, "advanced_statistical_drift", ()):
+        rule = statistical_drift_rule(drift)
+        rules[rule["rule_id"]] = rule
     for section in record.required_sections:
         rule = section_rule(section, record.required_sections)
         rules[rule["rule_id"]] = rule
@@ -581,6 +605,7 @@ def record_rule_ids(record) -> dict[str, str]:
             **{COMPARISON_PREFIX + c.rule_id: "cross_field" for c in getattr(record, "advanced_identity", ())},
             **{COMPARISON_PREFIX + c.rule_id: "cross_field" for c in getattr(record, "advanced_conversion_time", ())},
             **{COMPARISON_PREFIX + c.rule_id: "cross_field" for c in getattr(record, "advanced_trusted_reference", ())},
+            **{COMPARISON_PREFIX + c.rule_id: "cross_field" for c in getattr(record, "advanced_statistical_drift", ())},
             **{SECTION_PREFIX + s.rule_id: "completeness" for s in record.required_sections}}
 
 
@@ -592,6 +617,7 @@ def bad_record_rule_ids(record, static_ids) -> list[str]:
                                 ("identity comparison", getattr(record, "advanced_identity", ()), COMPARISON_PREFIX),
                                 ("conversion/time comparison", getattr(record, "advanced_conversion_time", ()), COMPARISON_PREFIX),
                                 ("trusted reference comparison", getattr(record, "advanced_trusted_reference", ()), COMPARISON_PREFIX),
+                                ("statistical drift comparison", getattr(record, "advanced_statistical_drift", ()), COMPARISON_PREFIX),
                                 ("required section", record.required_sections, SECTION_PREFIX)):
         for item in items:
             if not re.fullmatch(RECORD_RULE_ID, item.rule_id):
