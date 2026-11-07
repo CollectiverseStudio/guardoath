@@ -99,6 +99,7 @@ def test_invalid_field_values_counted_without_exposing_values():
     ('{"input_attachment_csv_mode":"bogus"}', 2, True, False),
     ('{"input_attachment_csv_mode":"off","output_attachment_csv_mode":null}', 2, True, True),
     ('{unparseable', 2, True, False),
+    ('{"input_attachment_csv_mode":"auto","nested":{"value":NaN}}', 2, True, False),
     ('{"input_attachment_csv_mode":"off","input_attachment_csv_mode":"auto"}', 2, True, False),
     ('{"output_attachment_csv_mode":"auto","output_attachment_csv_mode":"off"}', 2, True, False),
 ])
