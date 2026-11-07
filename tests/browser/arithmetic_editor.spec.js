@@ -42,10 +42,11 @@ test("FC arithmetic editor creates, saves, reloads, edits and evaluates an actua
     await expect(page.locator('tr.rule-row[data-rule="business.ui_invoice_math"]')).toBeVisible();
     await page.locator("#rule-search").fill("");
 
-    await page.locator("#input-format").selectOption("json");
-    await page.locator("#input-content").fill(JSON.stringify({
+    await page.getByRole("button", {name:"Try violating input arithmetic ui_invoice_math"}).click();
+    await expect(page.locator("#input-format")).toHaveValue("json");
+    expect(JSON.parse(await page.locator("#input-content").inputValue())).toMatchObject({
       lines:[{quantity:2,unit_price:40},{quantity:1,unit_price:30}],subtotal:100
-    }));
+    });
     const response = page.waitForResponse(r =>
       r.url().endsWith("/v1/checks/input") && r.request().method() === "POST");
     await page.locator("#run-input").click();
@@ -53,6 +54,13 @@ test("FC arithmetic editor creates, saves, reloads, edits and evaluates an actua
     expect(result.findings.map(f=>f.rule_id)).toContain("business.ui_invoice_math");
     expect(result.effective_action).toBe("block");
     await expect(page.locator("#answer")).toBeHidden();
+    await page.getByRole("button", {name:"Try benign input arithmetic ui_invoice_math"}).click();
+    expect(JSON.parse(await page.locator("#input-content").inputValue()).subtotal).toBe(110);
+    const cleanResponse = page.waitForResponse(r =>
+      r.url().endsWith("/v1/checks/input") && r.request().method() === "POST");
+    await page.locator("#run-input").click();
+    const clean = await (await cleanResponse).json();
+    expect(clean.findings.map(f=>f.rule_id)).not.toContain("business.ui_invoice_math");
 
     await page.getByRole("button", {name:"Edit arithmetic ui_invoice_math"}).click();
     await page.locator("#arithmetic-stage-output").uncheck();
