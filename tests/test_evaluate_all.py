@@ -39,6 +39,7 @@ def test_all_bundled_suites_and_reports(full_collection):
                         'recommended_action': case['recommended_action'],
                         'checker_statuses': case['checker_statuses'],
                         'checker_diagnostics': case.get('checker_diagnostics', {}),
+                        'recheck_diagnostics': case.get('recheck_diagnostics', {}),
                         'latency_ms': case['latency_ms'],
                     })
     assert collection['totals'] == expected_totals, (
@@ -112,6 +113,7 @@ def test_failure_only_mismatch_diagnostic_is_source_free(tmp_path, monkeypatch):
              'evaluation_status': 'incomplete', 'recommended_action': 'block',
              'checker_statuses': {'pii': 'error'}, 'latency_ms': 547.271,
              'checker_diagnostics': {'pii': {'error_code': 'pii_scan_deadline', 'latency_ms': 501.02}},
+             'recheck_diagnostics': {'pii': {'error_code': 'checker_timeout', 'latency_ms': 500.99}},
              # Deliberately injected input-shaped field must never appear in diagnostics.
              'content': 'SYNTHETIC_PRIVATE_CONTENT_NEVER_PRINT'},
         ],
@@ -127,4 +129,7 @@ def test_failure_only_mismatch_diagnostic_is_source_free(tmp_path, monkeypatch):
     assert '"latency_ms": 547.271' in message
     assert '"error_code": "pii_scan_deadline"' in message
     assert '"latency_ms": 501.02' in message
+    assert '"recheck_diagnostics"' in message
+    assert '"error_code": "checker_timeout"' in message
+    assert '"latency_ms": 500.99' in message
     assert 'SYNTHETIC_PRIVATE_CONTENT_NEVER_PRINT' not in message
