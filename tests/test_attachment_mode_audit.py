@@ -423,3 +423,82 @@ def test_off_provenance_blocks_release_cli_even_when_json_and_modes_are_valid(mo
     assert report["stages"]["output"]["off"] == 1
     assert report["mutated_records"] == 0
     assert "synthetic-only" not in json.dumps(report)
+
+
+@pytest.mark.parametrize("bad_cursor", [
+    {"tenant_id": {"S": "PRIVATE-ID"}, "bad": {"N": float("nan")}},
+    {"tenant_id": {"S": "PRIVATE-ID"}, "bad": {"B": b"SECRET-BYTES"}},
+    {"tenant_id": {"S": "PRIVATE-ID"}, "bad": {"S": float("inf")}},
+    {"tenant_id": {"S": "PRIVATE-ID"}, "bad": {"S": {"x": {"y": 1}}}},
+])
+def test_continuation_cursor_cannot_smuggle_nonfinite_or_unserializable_values(bad_cursor):
+    """Invalid continuation never creates a partial, apparently clean inventory."""
+    class Client:
+        def scan(self, **request):
+            assert request["ConsistentRead"] is True
+            assert "UpdateExpression" not in request
+            return {"Items": [], "Count": 0, "LastEvaluatedKey": bad_cursor}
+
+    # A shallow serializable cursor is legitimate; it is covered separately by
+    # the pagination success test. Make the final case pathological for this test.
+    if isinstance(bad_cursor["bad"]["S"] if "S" in bad_cursor["bad"] else None, dict):
+        value = {"S": "PRIVATE-ID"}
+        for _ in range(129):
+            value = {"nested": value}
+        bad_cursor = {"tenant_id": {"S": "PRIVATE-ID"}, "bad": value}
+
+    class StubClient:
+        def scan(self, **request):
+            return {"Items": [], "Count": 0, "LastEvaluatedKey": bad_cursor}
+
+    with pytest.raises(AuditIncompleteError, match="Invalid DynamoDB scan continuation") as caught:
+        audit(StubClient(), "synthetic-table")
+    assert caught.value.__cause__ is None
+    assert caught.value.__context__ is None or "PRIVATE-ID" not in str(caught.value.__context__)
+    assert "PRIVATE-ID" not in str(caught.value)
+    assert "SECRET-BYTES" not in str(caught.value)
+
+
+def test_cli_rejects_pathological_saved_cursor_without_private_output_or_writes(monkeypatch, capsys):
+    import sys
+    import types
+
+    secret = "SECRET-TENANT-CURSOR-MUST-NOT-ESCAPE"
+    nested = {"S": secret}
+    for _ in range(140):
+        nested = {"nested": nested}
+
+    class Client:
+        def scan(self, **request):
+            assert request["ConsistentRead"] is True
+            assert "UpdateExpression" not in request
+            return {"Items": [], "Count": 0, "LastEvaluatedKey": {"tenant_id": nested}}
+
+    class Session:
+        def __init__(self, profile_name, region_name):
+            assert profile_name == "synthetic-only"
+
+        def client(self, service, config):
+            assert service == "dynamodb"
+            return Client()
+
+    boto3 = types.ModuleType("boto3")
+    boto3.Session = Session
+    botocore = types.ModuleType("botocore")
+    botocore.__path__ = []
+    config = types.ModuleType("botocore.config")
+    config.Config = lambda **kwargs: kwargs
+    monkeypatch.setitem(sys.modules, "boto3", boto3)
+    monkeypatch.setitem(sys.modules, "botocore", botocore)
+    monkeypatch.setitem(sys.modules, "botocore.config", config)
+
+    assert main(["--profile", "synthetic-only", "--table", "synthetic-table"]) == 2
+    out = capsys.readouterr()
+    assert out.err == ""
+    assert json.loads(out.out) == {
+        "audit_incomplete": True,
+        "requires_data_quality_review": True,
+        "mutated_records": 0,
+        "reason": "scan_integrity_error",
+    }
+    assert secret not in out.out
