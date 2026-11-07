@@ -53,3 +53,10 @@ corrupt stored record. Duplicate keys and nonfinite tokens are both counted as
 unparseable data requiring review; the audit never modifies such a record or
 prints its content. A production inventory with any unparseable record exits
 nonzero, and does not establish that no persisted legacy Off value exists.
+
+
+A stored tenant record with excessive JSON nesting (even if the JSON is
+otherwise syntactically valid) can exceed the decoder's recursion limit. This is
+also counted as **unparseable**, requiring data-quality review and exit code 2;
+no partial record contents or tenant identifiers are emitted. A safe empty scan
+must not be inferred from the failure. The read-only tool never changes records.
