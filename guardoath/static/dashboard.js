@@ -279,7 +279,7 @@ function renderTenant() {
   const box = $("tenant-checks"); box.replaceChildren();
   for (const stage of ["input", "output"]) {
     const select = $("tenant-attachment-mode-" + stage);
-    select.value = tenant.attachment_csv_mode?.[stage] || "off";
+    select.value = tenant.attachment_csv_mode?.[stage] ?? "auto";
     select.disabled = !own;
   }
   ruleEdits = {input: {...(tenant.input_rule_actions || {})}, output: {...(tenant.output_rule_actions || {})}}; ruleIndex = {};
@@ -453,7 +453,7 @@ function pendingChanges() {
   for (const stage of ["input", "output"]) {
     if (sortedEntries(ruleEdits[stage]) !== sortedEntries(tenant[stage + "_rule_actions"])) changes[stage + "_rule_actions"] = {...ruleEdits[stage]};
     const selected = $("tenant-attachment-mode-" + stage).value;
-    if (selected !== (tenant.attachment_csv_mode?.[stage] || "off")) {
+    if (selected !== (tenant.attachment_csv_mode?.[stage] ?? "auto")) {
       changes[stage + "_attachment_csv_mode"] = selected;
     }
   }
@@ -633,29 +633,34 @@ for (const stage of ["input", "output"]) {
     reset(stage === "output");
   });
 }
-// A clickable synthetic TSV sample uses the SAME File-input/attachment API as a
-// customer upload. It never uses a mock API result or pretends the file is safe.
-// Keep these actions separate from settings: do not change an explicit tenant Off.
+// Synthetic CSV and TSV samples travel through the SAME File-input/attachment
+// API as user uploads, never a mocked validation result. Keep tenant Off intact.
 for (const stage of ["input", "output"]) {
-  $(stage + "-tsv-sample").addEventListener("click", () => {
-    if (!application?.tenant || busy || (stage === "output" && outputLocked())) {
+  for (const format of ["csv", "tsv"]) {
+    $(stage + "-" + format + "-sample").addEventListener("click", () => {
+      if (!application?.tenant || busy || (stage === "output" && outputLocked())) {
+        $(stage + "-attachment-note").textContent =
+          stage === "output" ? "Pass input checks before selecting output files."
+                             : "Connect to an authenticated tenant before selecting files.";
+        return;
+      }
+      const separator = format === "tsv" ? "\\t" : ",";
+      const source = ["name" + separator + "value", "Synthetic" + separator + "=2+3"].join("\\n");
+      const file = new File([source.replaceAll("\\t", "\t").replaceAll("\\n", "\n")],
+                            "synthetic-formula." + format,
+                            {type: format === "tsv" ? "text/tab-separated-values" : "text/csv"});
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      $(stage + "-attachments").files = transfer.files;
+      if (stage === "output" && !$("output-content").value.trim()) {
+        $("output-content").value = "Here is the synthetic " + format.toUpperCase() + " report for inspection.";
+      }
+      $(stage + "-attachments").dispatchEvent(new Event("change", {bubbles: true}));
       $(stage + "-attachment-note").textContent =
-        stage === "output" ? "Pass input checks before selecting output files."
-                           : "Connect to an authenticated tenant before selecting files.";
-      return;
-    }
-    const file = new File(["name\\tvalue\\nSynthetic\\t=2+3".replaceAll("\\t", "\t").replace("\\n", "\n")],
-                          "synthetic-formula.tsv", {type: "text/tab-separated-values"});
-    const transfer = new DataTransfer();
-    transfer.items.add(file);
-    $(stage + "-attachments").files = transfer.files;
-    if (stage === "output" && !$("output-content").value.trim()) {
-      $("output-content").value = "Here is the synthetic TSV report for inspection.";
-    }
-    $(stage + "-attachments").dispatchEvent(new Event("change", {bubbles: true}));
-    $(stage + "-attachment-note").textContent =
-      "Sample TSV loaded (synthetic formula). Run " + stage + " checks; the selected tenant's saved actions apply.";
-  });
+        "Sample " + format.toUpperCase() + " loaded (synthetic formula). Run " + stage +
+        " checks; the selected tenant's saved actions apply.";
+    });
+  }
   $(stage + "-attachment-clear").addEventListener("click", () => {
     $(stage + "-attachments").value = "";
     $(stage + "-attachments").dispatchEvent(new Event("change", {bubbles: true}));
