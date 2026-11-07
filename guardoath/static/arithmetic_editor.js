@@ -101,7 +101,39 @@
           if (editing === rule.rule_id) clear();
           draw(); changed(); message.textContent = "Arithmetic removal pending. Save checks to apply.";
         });
-        item.append(edit, remove); list.append(item);
+        item.append(edit, remove);
+        // Saved rules already have synthetic witness and benign controls from
+        // the authoritative record-rule generator. Use them in the same
+        // authenticated Input/Output playground, never a second evaluator.
+        const saved = original.some(entry => entry.rule_id === rule.rule_id);
+        const catalog = (tenant.record_rules || []).find(entry =>
+          entry.rule_id === "business." + rule.rule_id);
+        if (saved && catalog) {
+          for (const stage of rule.stages) {
+            for (const [name, sample] of [["violating", catalog.example],
+                                          ["benign", catalog.look_alike]]) {
+              if (typeof sample !== "string") continue;
+              const button = node("button", "Try " + name + " " + stage + " example");
+              button.type = "button";
+              button.setAttribute("aria-label", "Try " + name + " " + stage + " arithmetic " + rule.rule_id);
+              button.addEventListener("click", () => {
+                const content = document.getElementById(stage + "-content");
+                const format = document.getElementById(stage + "-format");
+                if (!content || !format || content.disabled) {
+                  message.textContent = "Pass Input checks before preparing an Output example."; return;
+                }
+                format.value = "json";
+                content.value = sample;
+                content.dispatchEvent(new Event("input", {bubbles: true}));
+                message.textContent = "Synthetic " + name + " " + stage +
+                  " example loaded. Run " + stage + " checks through the existing tenant Engine.";
+                content.focus();
+              });
+              item.append(button);
+            }
+          }
+        }
+        list.append(item);
       }
     }
     cancel.addEventListener("click", () => { clear(); message.textContent = ""; });
