@@ -526,6 +526,15 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                     for item in current.advanced_conversion_time
                     if item.kind == "currency_conversion_cap"
                 ],
+                # Read-only host-attested FC metadata for tenant dashboard discovery.
+                # Reference values, source, signature and timestamps remain private.
+                # Snapshot presence does not imply signature/expiry acceptance.
+                "advanced_trusted_reference_status": [
+                    {"rule_id": item.rule_id, "kind": item.kind,
+                     "stages": [stage.value for stage in item.stages],
+                     "snapshot_present": True}
+                    for item in current.advanced_trusted_reference
+                ],
                  "sigma_rule_actions": dict(sorted(current.sigma_rule_actions.items()))}
 
     def tenant_only(principal: str | TenantRecord) -> TenantRecord:
