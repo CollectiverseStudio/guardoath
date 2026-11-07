@@ -2433,3 +2433,27 @@ A signed medication reference is invalid if its previous administration plus req
 A release probe without finite, nonnegative measured latency for each PII checker and mandatory redaction recheck is incomplete and exits 2; missing timing must never count as a passing 500-ms result.
 
 Field Comparison timestamps require valid explicit offsets with minutes 00–59; malformed offsets such as +00:60 are rejected rather than normalized.
+
+
+### Field Comparisons — authenticated editor rule definitions
+
+For tenant users, authenticated `GET /v1/applications/current` includes
+`tenant.comparisons`, the authoritative saved definitions for **this tenant only**.
+It returns each basic rule's ID, left/right JSON pointers, comparison operator,
+value type and enabled Input/Output stages. The authenticated
+`POST /v1/tenants/current/checks` remains the only existing revisioned update
+path for adding, editing and removing these tenant definitions. Save and reload
+the full list rather than deriving editable settings from sample rule metadata.
+The tenant's configured stage/rule actions are returned separately and are not
+automatically discarded by editing a definition.
+
+The existing typed `FieldComparison` contract currently supports **number**
+and **date** comparisons, not free-form string comparisons. A string
+`value_type` submitted to the API is rejected; the dashboard must not offer
+a misleading working string option until the schema, Engine, examples and
+authenticated regression suite have implemented it. The summary intentionally
+does not include trusted-reference values, private signatures, tenant secrets or
+another tenant's rules. Signed-in privileges for modifying production records
+remain unchanged; a production API key alone does not grant write access.
+See `tests/test_field_comparison_tenant_summary.py` for authenticated
+add/edit/remove, isolation, stale-revision and unsupported-type acceptance.
