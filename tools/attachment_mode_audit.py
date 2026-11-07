@@ -72,10 +72,13 @@ def audit(client, table_name: str) -> dict:
             items = []
         if not isinstance(items, list):
             raise AuditIncompleteError("Invalid DynamoDB scan items")
-        if "Count" in response and (
+        # DynamoDB Scan promises Count on every page, including zero-row pages.
+        # Without it, a truncated/degraded response could silently be counted as
+        # an empty inventory and hide a persisted attachment inspection Off.
+        if "Count" not in response or (
             type(response["Count"]) is not int or response["Count"] != len(items)
         ):
-            raise AuditIncompleteError("Inconsistent DynamoDB scan count")
+            raise AuditIncompleteError("Missing or inconsistent DynamoDB scan count")
         for item in items:
             total += 1
             try:
