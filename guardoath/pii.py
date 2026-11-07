@@ -242,7 +242,7 @@ def build_pii_checker():
             for part in parts:
                 part.analyze("Call +1 202-555-0147 or 082 123 4567", [entity])
     word_pattern = regex.compile(r"\w+")
-    checker_version = f"privacy-patterns-{SOURCE_VERSION}/guardoath-patterns-6"
+    checker_version = f"privacy-patterns-{SOURCE_VERSION}/guardoath-patterns-7"
 
     # regex's concurrent=True releases the GIL while scanning immutable input strings.
     # This permits independent PII workers to progress instead of serially holding
@@ -449,6 +449,12 @@ def build_pii_checker():
             entities, transformed = await _bounded_local_scan(
                 scan, request, action == Action.REDACT, policy, stage,
             )
+        except TimeoutError:
+            # A worker-local monotonic deadline is distinct from the Engine\'s
+            # outer asyncio.wait_for timeout. Both remain error/incomplete and
+            # follow the tenant\'s fail-closed policy; never echo exception text.
+            return CheckerResult(checker_id="pii", checker_version=checker_version,
+                                 status="error", error_code="pii_scan_deadline")
         except PiiCapacityExceeded:
             return CheckerResult(checker_id="pii", checker_version=checker_version,
                                  status="error", error_code="pii_capacity_exceeded")
