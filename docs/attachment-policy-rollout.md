@@ -64,3 +64,6 @@ This fixes Python 3.14 accepting synthetic pathological nesting that Python
 3.13 rejected. Decoder recursion errors are still separately caught. No partial
 record contents or tenant identifiers are emitted. A safe empty scan must
 not be inferred from the failure. The read-only tool never changes records.
+
+
+**Continuation cursor hardening:** Untrusted/malformed DynamoDB `LastEvaluatedKey` responses containing nonfinite numbers, unserializable values, or more than 128 nested JSON containers cannot be used to declare a clean complete inventory. They produce the existing privacy-safe `audit_incomplete=true`, `reason=scan_integrity_error` report and process exit 2, with no tenant identifier or raw cursor in output. Even Python-version-specific JSON recursion errors are caught and sanitized. This is read-only validation of pagination integrity, not evidence that a live production audit was executed.
