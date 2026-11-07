@@ -11,6 +11,21 @@ Before any GuardOath work (investigating, planning, coding, editing, testing, ru
 - Codex retains Field Comparisons Issue #28; do not overwrite concurrent Codex changes. Continue recording work/claims in the coordination file.
 - The separate production approval gate was removed, but CI, fail-closed security requirements, AWS cost restrictions, rollback procedures and 15 post-deployment verification checks remain.
 
+## Customer usability is part of Definition of Done (Greg, 2026-11-07)
+
+Every new check, rule, configurable validation family or material behavior change must
+be usable through the existing authenticated GuardOath dashboard, not only from
+Python code, an API contract, a hidden tenant field or documentation. Deliver the
+same tenant-owned form/controls, Input/Output actions, per-rule status, explicit
+limitations, saved revisioned persistence, accessible examples and clear errors
+with the actual implementation. Preserve one shared Engine and authoritative
+tenant record. Require real browser/tenant API tests at the exact release SHA,
+alongside the normal 13 Tests + 3 CodeQL, before declaring a feature complete.
+A back-end-only feature is **implemented but not product-complete** until its
+dashboard workflow works; document the unfinished UI explicitly. Never weaken
+host-signed reference authority or allow customer-provided reference claims to
+become trusted through a new editor.
+
 ## Other rules
 
 - Work directly on `main`. Do not create feature branches unless Greg explicitly requests a workflow change.
