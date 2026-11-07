@@ -199,3 +199,40 @@ def test_invalid_reference_contracts_fail_configuration():
         AdvancedTrustedReferenceRule(**{**item.model_dump(), "reference_values": {}})
     with pytest.raises(ValidationError):
         AdvancedTrustedReferenceRule(**{**item.model_dump(), "host_signature": "bad"})
+
+
+def test_host_reference_dashboard_status_is_private_safe_and_tenant_scoped(monkeypatch):
+    monkeypatch.setenv(SIGNING_KEY_ENV, KEY)
+    item = make("permit_cap")
+    secret = "synthetic-status-dashboard-key-0123456789"
+    records = []
+    headers = {}
+    for name in (TENANT, "reference-b"):
+        token = demo_key(name, secret)
+        headers[name] = {"Authorization": "Bearer " + token}
+        records.append(TenantRecord(
+            tenant_id=name, display_name=name, demo=True, overage="block",
+            monthly_allowance=20, key_hashes=(key_hash(token),),
+            input_check_text_security="flag", output_check_text_security="flag",
+            advanced_trusted_reference=(item,) if name == TENANT else (),
+        ))
+    store = MemoryTenantStore(tuple(records))
+    api = TestClient(create_app(engine=demo_engine(), credentials={},
+                                tenants=TenantService(store, default_checkers(), secret)))
+    assert api.get("/v1/applications/current").status_code in (401, 403)
+    response = api.get("/v1/applications/current", headers=headers[TENANT])
+    assert response.status_code == 200
+    assert response.headers.get("cache-control") in (None, "no-store")
+    status = response.json()["tenant"]["advanced_trusted_reference_status"]
+    assert status == [{
+        "rule_id": "permit_cap", "kind": "permit_cap",
+        "stages": ["input", "output"], "snapshot_present": True,
+    }]
+    assert "permit_limit" not in json.dumps(status)
+    for private in ("host-verified-reference", item.host_signature,
+                    item.reference_values["permit_limit"], item.verified_at,
+                    item.expires_at, KEY):
+        assert private not in json.dumps(status)
+    neighbor = api.get("/v1/applications/current", headers=headers["reference-b"])
+    assert neighbor.status_code == 200
+    assert neighbor.json()["tenant"]["advanced_trusted_reference_status"] == []
