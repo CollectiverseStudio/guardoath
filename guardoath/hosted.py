@@ -175,7 +175,7 @@ class TenantService:
             supplied = changes["advanced_identity"]
             if not isinstance(supplied, (list, tuple)) or any(
                     (getattr(rule, "kind", None) if not isinstance(rule, dict)
-                     else rule.get("kind")) not in {"order_id_match", "serial_unique"}
+                     else rule.get("kind")) not in ("order_id_match", "serial_unique")
                     for rule in supplied):
                 raise ChangeRejected("The checks endpoint accepts only non-reference identity kinds")
         try:
