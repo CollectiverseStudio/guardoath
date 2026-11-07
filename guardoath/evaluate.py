@@ -20,6 +20,31 @@ from guardoath.synthetic_secrets import PLACEHOLDER, build_fixture
 
 Status = Literal['passed','flagged','error','skipped','unsupported']
 
+# Stable machine codes only; arbitrary checker/adapter exception text must
+# never enter a local evaluation report.
+SAFE_CHECKER_ERROR_CODES = frozenset({
+    'checker_timeout', 'checker_failure', 'checker_unavailable',
+    'pii_scan_deadline', 'pii_capacity_exceeded', 'pii_field_limit',
+    'invalid_json_for_pii', 'simulator_not_enforceable',
+})
+
+
+def safe_checker_diagnostics(results):
+    """Source-free failure-only checker cause and elapsed time."""
+    from math import isfinite
+    diagnostics = {}
+    for result in results:
+        if result.status != 'error':
+            continue
+        code = result.error_code if result.error_code in SAFE_CHECKER_ERROR_CODES else 'other_error'
+        elapsed = result.latency_ms
+        diagnostics[result.checker_id] = {
+            'error_code': code,
+            'latency_ms': round(float(elapsed), 3) if isinstance(elapsed, (int, float))
+                          and isfinite(elapsed) and elapsed >= 0 else 0.0,
+        }
+    return diagnostics
+
 
 class Expected(Contract):
     evaluation_status: Literal['complete','incomplete']
@@ -95,7 +120,8 @@ async def evaluate(suite, engine, groups=None):
         differences = [field for field in actual if actual[field] != expected[field]]
         rows.append({'case_id':case.case_id,'group':case.group,'stage':case.stage.value,
                      'matched':not differences,'differences':differences,
-                     **actual,'latency_ms':round(result.total_latency_ms,3)})
+                     **actual,'latency_ms':round(result.total_latency_ms,3),
+                     'checker_diagnostics':safe_checker_diagnostics(result.checker_results)})
     summary = {'total':len(rows), 'matched':sum(r['matched'] for r in rows),
                'mismatched':sum(not r['matched'] for r in rows),
                'incomplete':sum(r['evaluation_status'] == 'incomplete' for r in rows),
