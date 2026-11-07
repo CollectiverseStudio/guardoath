@@ -192,7 +192,7 @@ class AdvancedConversionTimeRule(Contract):
                 raise ValueError("Currency pair must be distinct")
             if not re.fullmatch(r"[A-Za-z0-9_.:/-]{1,100}", self.rate_reference):
                 raise ValueError("FX reference identifier is invalid")
-            if not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})", self.rate_asof):
+            if not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])", self.rate_asof):
                 raise ValueError("FX reference timestamp must be explicit-offset ISO-8601")
             try:
                 asof = datetime.fromisoformat(self.rate_asof.replace("Z", "+00:00"))
