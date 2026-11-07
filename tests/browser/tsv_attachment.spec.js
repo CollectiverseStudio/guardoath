@@ -67,7 +67,7 @@ test("dashboard sample button loads actual TSV bytes and runs a real authenticat
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
-  await expect(page.locator("#input-attachments")).toHaveAttribute("accept", /\\.tsv/);
+  await expect(page.locator("#input-attachments")).toHaveAttribute("accept", /\.tsv/);
   await page.locator("#tenant-check-input-csv_formula").selectOption("block");
 
   await page.locator("#input-tsv-sample").click();
