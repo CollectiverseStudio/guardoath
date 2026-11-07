@@ -46,12 +46,12 @@ def test_read_only_paginated_scan_and_aggregate_without_customer_data():
                 return {"Items": [
                     {"record": {"S": json.dumps({"input_attachment_csv_mode": "off", "key_hashes": ["SENSITIVE"]})}},
                     {"record": {"S": '{"output_attachment_csv_mode":"auto"}'}},
-                ], "LastEvaluatedKey": {"tenant_id": {"S": "hidden-id"}}}
+                ], "Count": 2, "LastEvaluatedKey": {"tenant_id": {"S": "hidden-id"}}}
             assert request["ExclusiveStartKey"] == {"tenant_id": {"S": "hidden-id"}}
             return {"Items": [
                 {"record": {"S": '{"input_attachment_csv_mode":"auto","output_attachment_csv_mode":"off"}'}},
                 {"record": {"S": "invalid json"}},
-            ]}
+            ], "Count": 2}
     client = FakeClient()
     report = audit(client, "guardoath-tenants")
     assert len(client.calls) == 2
@@ -73,7 +73,7 @@ def test_read_only_paginated_scan_and_aggregate_without_customer_data():
 def test_empty_table_has_no_changes_and_no_off_review():
     class Client:
         def scan(self, **kwargs):
-            return {"Items": []}
+            return {"Items": [], "Count": 0}
     result = audit(Client(), "guardoath-tenants")
     assert result["total_records"] == 0
     assert result["mutated_records"] == 0
@@ -84,7 +84,7 @@ def test_empty_table_has_no_changes_and_no_off_review():
 def test_invalid_field_values_counted_without_exposing_values():
     class Client:
         def scan(self, **kwargs):
-            return {"Items": [{"record": {"S": '{"input_attachment_csv_mode":"bogus","output_attachment_csv_mode":null}'}}]}
+            return {"Items": [{"record": {"S": '{"input_attachment_csv_mode":"bogus","output_attachment_csv_mode":null}'}}], "Count": 1}
     report = audit(Client(), "guardoath-tenants")
     assert report["stages"]["input"]["invalid"] == 1
     assert report["stages"]["output"]["invalid"] == 1
@@ -114,7 +114,7 @@ def test_cli_never_reports_invalid_stored_modes_as_clean(
             assert kwargs["ProjectionExpression"] == "#record"
             assert kwargs["ConsistentRead"] is True
             assert "UpdateExpression" not in kwargs
-            return {"Items": [{"record": {"S": stored_record}}]}
+            return {"Items": [{"record": {"S": stored_record}}], "Count": 1}
 
     class Session:
         def __init__(self, profile_name, region_name):
@@ -150,11 +150,13 @@ def test_cli_never_reports_invalid_stored_modes_as_clean(
     [{"Count": 1}],  # omitted Items with a claimed returned item
     [{"Items": [], "Count": 1}],  # returned Count contradicts item list
     [{"Items": [], "Count": False}],  # boolean is not a valid count
-    [{"Items": "untrusted-page"}],  # never iterate a string as records
-    [{"Items": [], "LastEvaluatedKey": {}}],  # invalid empty cursor
+    [{"Items": []}],  # omitted Count: no evidence of a complete zero-row page
+    [{"Items": [{"record": {"S": "{}"}}]}],  # a row without Count is not authoritative
+    [{"Items": "untrusted-page", "Count": 0}],  # never iterate a string as records
+    [{"Items": [], "Count": 0, "LastEvaluatedKey": {}}],  # invalid empty cursor
     [
-        {"Items": [], "LastEvaluatedKey": {"tenant_id": {"S": "PRIVATE-ID"}}},
-        {"Items": [], "LastEvaluatedKey": {"tenant_id": {"S": "PRIVATE-ID"}}},
+        {"Items": [], "Count": 0, "LastEvaluatedKey": {"tenant_id": {"S": "PRIVATE-ID"}}},
+        {"Items": [], "Count": 0, "LastEvaluatedKey": {"tenant_id": {"S": "PRIVATE-ID"}}},
     ],  # a repeated continuation must not loop forever
 ])
 def test_scan_integrity_never_certifies_missing_rows_or_repeating_pages(pages):
@@ -185,7 +187,8 @@ def test_zero_count_scan_page_without_items_is_valid():
     assert report["requires_data_quality_review"] is False
 
 
-def test_cli_incomplete_scan_is_nonzero_privacy_safe_and_does_not_write(monkeypatch, capsys):
+@pytest.mark.parametrize("missing_count", [False, True])
+def test_cli_incomplete_scan_is_nonzero_privacy_safe_and_does_not_write(monkeypatch, capsys, missing_count):
     import sys
     import types
 
@@ -193,11 +196,13 @@ def test_cli_incomplete_scan_is_nonzero_privacy_safe_and_does_not_write(monkeypa
         def scan(self, **request):
             assert request["ConsistentRead"] is True
             assert "UpdateExpression" not in request
-            return {
-                "Count": 2,
+            page = {
                 "Items": [{"record": {"S": '{"input_attachment_csv_mode":"off"}'}}],
                 "LastEvaluatedKey": {"tenant_id": {"S": "SENSITIVE-ID"}},
             }
+            if not missing_count:
+                page["Count"] = 2
+            return page
 
     class Session:
         def __init__(self, profile_name, region_name):
