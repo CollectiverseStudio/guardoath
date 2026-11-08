@@ -71,6 +71,11 @@ test("real signed FC-047 reference moves accepted to blocked after tampering, wi
       headers, data: {
         revision: prior.revision,
         changes: {
+          // Reset restores two ordinary demo comparison templates whose
+          // required fields are absent from this synthetic permit document.
+          // Make the tenant portfolio exactly FC-047 before asserting clean
+          // results; leave every independent PII/Secrets check enabled.
+          comparisons: [],
           advanced_trusted_reference: [signed],
           input_check_cross_field: "block",
           output_check_cross_field: "flag",
@@ -81,6 +86,7 @@ test("real signed FC-047 reference moves accepted to blocked after tampering, wi
 
     const live = await summary(request, headers);
     expect(live.revision).toBe(prior.revision + 1);
+    expect(live.comparisons).toEqual([]);
     const status = live.advanced_trusted_reference_status;
     expect(status).toEqual([{
       rule_id: "real_browser_permit", kind: "permit_cap",
