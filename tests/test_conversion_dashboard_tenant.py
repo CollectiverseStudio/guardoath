@@ -226,7 +226,12 @@ def test_reference_management_route_is_owner_scoped_and_cannot_bypass_tenant_aut
     headers = {"Authorization": "Bearer " + token}
     # Use a structurally valid reference-management request so this test
     # exercises the owner authorization gate rather than payload validation.
-    body = {"revision": record.revision, "changes": {
+    # MemoryTenantStore.create initializes the persisted revision at 1; the
+    # unsaved constructor record still has revision 0, which is an invalid
+    # CheckChanges payload and would mask the authorization path with 422.
+    persisted = store.get("reference-owner")
+    assert persisted.revision == 1
+    body = {"revision": persisted.revision, "changes": {
         "advanced_conversion_time": [],
     }}
     assert api.post("/v1/tenants/current/references", json=body).status_code in (401, 403)
