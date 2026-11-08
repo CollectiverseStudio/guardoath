@@ -123,7 +123,8 @@ def test_authenticated_tenant_saves_all_advanced_families_with_real_array_exampl
     token = demo_key(tenant_id, secret)
     rec = TenantRecord(tenant_id=tenant_id, display_name="Synthetic advanced array tenant",
                        demo=True, overage="block", monthly_allowance=25,
-                       key_hashes=(key_hash(token),))
+                       key_hashes=(key_hash(token),),
+                       input_check_text_security="flag", output_check_text_security="flag")
     store = MemoryTenantStore((rec,))
     client = TestClient(create_app(
         engine=demo_engine(), credentials={},
