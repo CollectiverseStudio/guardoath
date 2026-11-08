@@ -37,6 +37,9 @@ under `.guardoath-reports/`. The first run becomes a reference; later runs compa
 with a previous report of the same suite. No server, API key, real credential,
 provider account, or paid call is required. This is separate from the smaller
 30-case starter suite selected by `--evaluate` without `--suite secrets`.
+
+**Secrets local-worker reliability:** Secrets scanning now runs in a dedicated, bounded four-worker local executor instead of waiting in the shared asyncio default pool used by unrelated checks and API work. At capacity it returns an incomplete `secrets_capacity_exceeded` finding status (and the existing tenant's failure action), **never a clean Allow**. It does not change recognized patterns, tenant policy, per-rule actions, the existing 500-ms shipped checker deadline, network isolation, or add cloud services. The change addresses one plausible shared-queue source of intermittent latency but is **not proof that the historical Secrets or PII 500-ms tails are resolved**. The unchanged bundled expectation suite and new `tests/test_secrets_capacity.py` cover token detection, admission and fail-closed capacity; independent repeated tests under realistic concurrency remain required before production release.
+
 Use `--no-browser` to print the report location. Mac/Linux users can use
 `python3.12 start_dashboard.py` with the same options.
 
