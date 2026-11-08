@@ -37,6 +37,8 @@
     host.replaceChildren(); host.hidden = !enabled;
     if (!enabled) return;
     host.append(node("h3", "Advanced arithmetic comparisons — eight deterministic rule types"));
+    const scope = node("p", "A synthetic rule example is not a clean whole-tenant witness. Running it executes every enabled check and comparison on that stage; unrelated rules can also report findings. Save checks controls authoritative stage actions.");
+    scope.dataset.fieldExampleScope = "arithmetic"; host.append(scope);
     host.append(node("p", "Define exact arithmetic and conservation rules using JSON pointers. No model call or outside reference. Save checks to persist a draft on this tenant; switch Field comparisons on for each selected stage and choose the rule action in the unified table. Nested JSON objects and arrays are supported; use canonical zero-based array segments such as /invoices/0/total. The bounded JSON parser still limits array size and nesting."));
     if (!available) { host.append(node("p", "Arithmetic definitions are unavailable. Reconnect before editing.")); return; }
     const list = node("ul"); list.id = "arithmetic-drafts";
