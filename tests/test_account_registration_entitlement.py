@@ -50,6 +50,10 @@ def test_newly_signed_in_user_registers_without_subscription_and_cannot_run_paid
     assert tenant.subscription_status == "inactive"
     assert tenant.monthly_allowance == 0
     assert tenant.key_hashes == ()
+    # Preserve the tenant schema's at-least-one-check invariant without
+    # conferring any paid use: the baseline is local hidden-text protection.
+    assert tenant.input_check_text_security == "block"
+    assert tenant.output_check_text_security == "block"
 
     status = client.get("/v1/account/status", headers=headers)
     assert status.status_code == 200
