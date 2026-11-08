@@ -208,3 +208,49 @@ def test_501_nested_comparisons_run_without_flat_json_object_limit():
         payload["left"]["field_000"] = 1
         payload["left"]["field_500"] = 1
     assert store.get(TENANT).used(usage_month()) == 4
+
+
+def test_comparison_32_level_json_limit_matches_customer_warning_and_33_level_is_not_clean():
+    """The actual shared Engine rejects overdeep JSON rather than silently passing."""
+    client, store, headers = _client()
+    current = store.get(TENANT)
+    saved = client.post("/v1/tenants/current/checks", headers=headers, json={
+        "revision": current.revision,
+        "changes": {
+            "comparisons": [{
+                "rule_id": "depth_boundary", "left": "/k" * 32,
+                "right": "/reference", "operator": "le",
+                "stages": ["input", "output"]
+            }],
+            "input_check_cross_field": "block",
+            "output_check_cross_field": "flag",
+        }
+    })
+    assert saved.status_code == 200, saved.text[:250]
+
+    def document(depth):
+        data = 2
+        for _ in range(depth):
+            data = {"k": data}
+        data["reference"] = 3
+        return json.dumps(data)
+
+    for stage, invalid_action in (("input", "block"), ("output", "flag")):
+        acceptable = client.post("/v1/checks/" + stage, headers=headers, json={
+            "application_id": TENANT, "content_format": "json",
+            "content": document(32)
+        })
+        assert acceptable.status_code == 200, acceptable.text[:250]
+        assert acceptable.json()["evaluation_status"] == "complete"
+        assert acceptable.json()["effective_action"] == "allow"
+
+        too_deep = client.post("/v1/checks/" + stage, headers=headers, json={
+            "application_id": TENANT, "content_format": "json",
+            "content": document(33)
+        })
+        assert too_deep.status_code == 200, too_deep.text[:250]
+        result = too_deep.json()
+        assert "business.invalid_json" in {f["rule_id"] for f in result["findings"]}
+        assert result["effective_action"] == invalid_action
+        assert '"k":' not in too_deep.text
+    assert store.get(TENANT).used(usage_month()) == 4
