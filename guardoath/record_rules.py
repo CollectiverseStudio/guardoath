@@ -175,6 +175,58 @@ def _set_path(document: dict, path: tuple, value) -> None:
     document[path[-1]] = value
 
 
+def _comparison_document(values: dict[tuple, object]) -> dict:
+    """Build *real* array/object JSON for customer comparison examples.
+
+    JSON Pointer numeric segments are ambiguous: a numeric object key and an
+    array index have the same spelling. Prefer an array only if ALL children
+    at that prefix are canonical, bounded array indices. Mixed/nonnumeric
+    siblings remain object keys. Keep the root an object for deterministic
+    examples, even when its first key is numeric. This never changes rule
+    evaluation: the shared business.resolve accepts both container types.
+    """
+    from guardoath.json_data import MAX_CONTAINER_ITEMS
+
+    children: dict[tuple, set[str]] = {}
+    for path in values:
+        for position in range(1, len(path)):
+            children.setdefault(path[:position], set()).add(path[position])
+    arrays = {prefix for prefix, names in children.items()
+              if all(re.fullmatch(r"0|[1-9][0-9]*", name)
+                     and int(name) < MAX_CONTAINER_ITEMS for name in names)}
+    document: dict = {}
+    for path, value in sorted(values.items()):
+        container = document
+        for position, segment in enumerate(path):
+            last = position == len(path) - 1
+            if isinstance(container, list):
+                index = int(segment)
+                if index >= MAX_CONTAINER_ITEMS:
+                    raise ValueError("Invalid generated JSON array index")
+                if len(container) <= index:
+                    container.extend([None] * (index + 1 - len(container)))
+                existing = container[index]
+            else:
+                existing = container.get(segment)
+            if last:
+                if isinstance(container, list):
+                    container[index] = value
+                else:
+                    container[segment] = value
+            else:
+                wanted = [] if path[:position + 1] in arrays else {}
+                if existing is None:
+                    existing = wanted
+                    if isinstance(container, list):
+                        container[index] = existing
+                    else:
+                        container[segment] = existing
+                elif not isinstance(existing, type(wanted)):
+                    raise ValueError("Conflicting generated JSON container layout")
+                container = existing
+    return document
+
+
 def _passes(payload, comparison) -> bool:
     """The cross_field checker's own value rules (guardoath.business) for one comparison."""
     from decimal import DecimalException
@@ -265,9 +317,7 @@ class _Examples:
         else:
             values = {path: NUMBER_BASE + level[path] if kinds[path] == "number"
                       else (DATE_BASE + timedelta(days=level[path])).isoformat() for path in variables}
-            payload = {}
-            for path, value in values.items():
-                _set_path(payload, path, value)
+            payload = _comparison_document(values)
             from guardoath.business import exact_number
             payload = json.loads(json.dumps(payload), parse_float=exact_number)
             ok = all(_passes(payload, self.comparisons[index]) == (index != negate) for index in group)
@@ -303,9 +353,7 @@ class _Examples:
                     "cannot_fail_alone" if failing else "cannot_all_pass")
                 return None, _unavailable(code)
             values.update(solved[0])
-        document = {}
-        for path in sorted(values):
-            _set_path(document, path, values[path])
+        document = _comparison_document(values)
         text = json.dumps(document, indent=2)
         if len(text) > MAX_CONTENT_CHARS:
             text = json.dumps(document, separators=(",", ":"))  # compact when the readable form is too long
