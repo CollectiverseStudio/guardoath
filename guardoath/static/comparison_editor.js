@@ -246,13 +246,45 @@
         if (vacuousSelf)
           logicWarnings.push(stage + " has " + vacuousSelf +
             " self-comparison(s) that cannot detect a comparison difference (le/ge/eq)");
+        // Detect unsatisfiable conditions on the SAME pair of typed fields.
+        // Normalize reversed operands and decoded JSON Pointer segments,
+        // then intersect their allowed ordering signs (<, =, >).
+        // This proves pairwise contradictions only: longer cycles can also be
+        // unsatisfiable and remain the shared Engine's responsibility.
+        const canonicalPointer = pointer => JSON.stringify(pointer.slice(1).split("/").map(
+          segment => segment.replace(/~1/g, "/").replace(/~0/g, "~")));
+        const allowedSigns = {
+          lt: ["lt"], le: ["lt", "eq"], eq: ["eq"],
+          ne: ["lt", "gt"], ge: ["eq", "gt"], gt: ["gt"]
+        };
+        const reversed = {lt: "gt", le: "ge", eq: "eq", ne: "ne", ge: "le", gt: "lt"};
+        const pairs = new Map();
+        for (const rule of draft) {
+          if (!rule.stages.includes(stage)) continue;
+          const left = canonicalPointer(rule.left);
+          const right = canonicalPointer(rule.right);
+          if (left === right) continue; // already counted as a self-comparison
+          const reverse = left > right;
+          const pair = reverse ? [right, left] : [left, right];
+          const key = JSON.stringify([rule.value_type, ...pair]);
+          const signs = new Set(allowedSigns[reverse ? reversed[rule.operator] : rule.operator]);
+          const existing = pairs.get(key);
+          pairs.set(key, existing
+            ? new Set([...existing].filter(sign => signs.has(sign)))
+            : signs);
+        }
+        const contradictoryPairs = [...pairs.values()].filter(signs => signs.size === 0).length;
+        if (contradictoryPairs)
+          logicWarnings.push(stage + " has " + contradictoryPairs +
+            " pair(s) of fields with mutually incompatible comparison conditions");
       }
       logicWarning.hidden = !logicWarnings.length;
       logicWarning.textContent = logicWarnings.length
         ? "Logical comparison warning: " + logicWarnings.join("; ") +
-          ". Both operands point to the same field. Valid values cannot satisfy lt/gt/ne" +
-          " or create a comparison difference for le/ge/eq. Missing or invalid field values" +
-          " may still be reported. Select different pointers or stages. Draft and saved tenant remain unchanged."
+          ". Self-comparisons test a field against itself; conflicting rules for the same two" +
+          " fields can also require mutually impossible results, including with reversed operands." +
+          " Missing or invalid field values may still be reported. Review pointers, operators" +
+          " and stages. Draft and saved tenant remain unchanged."
         : "";
       limitWarning.hidden = !warnings.length;
       limitWarning.textContent = warnings.length
