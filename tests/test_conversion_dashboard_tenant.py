@@ -224,10 +224,10 @@ def test_reference_management_route_is_owner_scoped_and_cannot_bypass_tenant_aut
     api = TestClient(create_app(engine=demo_engine(), credentials={},
                      tenants=TenantService(store, default_checkers(), secret)))
     headers = {"Authorization": "Bearer " + token}
-    candidate = DEFINITIONS[0]
+    # Use a structurally valid reference-management request so this test
+    # exercises the owner authorization gate rather than payload validation.
     body = {"revision": record.revision, "changes": {
-        "advanced_conversion_time": [candidate],
-        "input_check_cross_field": "block",
+        "advanced_conversion_time": [],
     }}
     assert api.post("/v1/tenants/current/references", json=body).status_code in (401, 403)
     # Production evaluation-only tenant keys are not reference administrators.
