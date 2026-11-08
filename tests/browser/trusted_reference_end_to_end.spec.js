@@ -102,7 +102,9 @@ test("real signed FC-047 reference moves accepted to blocked after tampering, wi
     await panel.getByRole("button", {
       name: "Review output action for host reference real_browser_permit",
     }).click();
-    await expect(page.locator("#tenant-check-output-cross_field")).toBeFocused();
+    await expect(page.locator('tr.rule-row[data-rule="business.real_browser_permit"] [data-stage="output"]')).toBeFocused();
+    await expect(page.locator("#tenant-message")).toContainText("Review output rule business.real_browser_permit");
+    await expect(page.locator("#tenant-message")).toContainText("No settings were changed");
 
     for (const [stage, action] of [["input", "block"], ["output", "flag"]]) {
       const failed = await evaluate(request, headers, stage, 60);
