@@ -76,6 +76,16 @@ def test_authenticated_tenant_field_comparisons_scale_both_stages_and_all_findin
     assert summary.status_code == 200, (size, summary.text[:300])
     assert expected <= {r["rule_id"] for r in summary.json()["tenant"]["record_rules"]}
 
+    # A stale revision cannot overwrite this 30/51/100/250/500-rule
+    # portfolio, even when the stale request carries an otherwise valid
+    # unrelated tenant setting. The entire saved authoritative record stays.
+    stale = client.post("/v1/tenants/current/checks", headers=headers, json={
+        "revision": initial.revision,
+        "changes": {"input_check_text_security": "block"},
+    })
+    assert stale.status_code == 409, (size, stale.text[:250])
+    assert store.get(TENANT) == current
+
     for stage, action in (("input", "block"), ("output", "flag")):
         bad = client.post("/v1/checks/" + stage, headers=headers, json={
             "application_id": TENANT, "content_format": "json",
