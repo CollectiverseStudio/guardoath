@@ -143,3 +143,51 @@ test("customer saves 501 split-nested comparisons in dashboard and runs both rea
     }
   }
 });
+
+
+test("comparison editor warns for 33-level JSON pointers per stage, but not 32-level paths", async ({page, request}) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo2");
+  await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
+  const headers = {Authorization: "Bearer " + await page.locator("#demo-key-value").inputValue()};
+  const original = await request.get("/v1/applications/current", {headers});
+  expect(original.status()).toBe(200);
+  const before = (await original.json()).tenant;
+
+  await page.locator("#comparison-bulk-panel > summary").click();
+  const json = page.locator("#comparison-bulk-json");
+  const warning = page.locator("#comparison-structure-warning");
+  async function importDepth(depth, stages) {
+    await json.fill(JSON.stringify([{
+      rule_id: "deep_boundary",
+      left: "/k".repeat(depth),
+      right: "/reference",
+      operator: "le", value_type: "number", stages
+    }]));
+    await page.locator("#comparison-bulk-confirm").check();
+    await page.locator("#comparison-bulk-import").click();
+    await expect(page.locator("#comparison-draft-summary")).toContainText("1 comparison configured");
+  }
+
+  await importDepth(33, ["input"]);
+  await expect(warning).toBeVisible();
+  await expect(warning).toContainText("input requires at least 33 nested JSON containers");
+  await expect(warning).not.toContainText("output requires");
+  await expect(warning).toContainText("at most 32 nested JSON containers");
+
+  await importDepth(32, ["input"]);
+  await expect(warning).toBeHidden();
+
+  await importDepth(33, ["output"]);
+  await expect(warning).toBeVisible();
+  await expect(warning).toContainText("output requires at least 33 nested JSON containers");
+  await expect(warning).not.toContainText("input requires");
+
+  // Import only changes the draft: the tenant and its revision stay authoritative.
+  const current = await request.get("/v1/applications/current", {headers});
+  expect(current.status()).toBe(200);
+  const after = (await current.json()).tenant;
+  expect(after.revision).toBe(before.revision);
+  expect(after.comparisons).toEqual(before.comparisons);
+});
