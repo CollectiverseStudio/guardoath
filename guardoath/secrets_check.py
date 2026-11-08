@@ -5,6 +5,7 @@ No verification, network, source echoes, suppression comments, or file scanning.
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 from threading import BoundedSemaphore
 import base64
 import binascii
@@ -89,7 +90,15 @@ def units(value):
             yield from units(item)
 
 
+@lru_cache(maxsize=1)
 def build_secret_checker():
+    """Reuse fixed local secret detector patterns, never per-tenant content.
+
+    Compiling detector signatures on every tenant Engine construction causes
+    avoidable CPU contention with the same process's 500-ms scans. All mutable
+    found sets, confidential terms, deadlines and tenant actions remain local
+    to each invocation of scan().
+    """
     detectors = (
         ('aws_credentials',AWSKeyDetector(),None),('github_token',GitHubTokenDetector(),None),
         ('jwt',JwtTokenDetector(),JwtTokenDetector.is_formally_valid),('openai_token',OpenAIDetector(),None),
@@ -104,6 +113,9 @@ def build_secret_checker():
                 for name,detector,validate in detectors for p in detector.denylist]
     # Prefix-based candidate coverage; not GitHub credential validity verification.
     patterns.append(('github_token',regex.compile(r'github_pat_[A-Za-z0-9_]{20,255}'),None))
+    # Prestart the first dedicated worker outside the timed customer request.
+    # No input, secrets, policy or tenant metadata is submitted during warmup.
+    _SECRETS_EXECUTOR.submit(lambda: None).result()
     checker_version=f'detect-secrets-{version("detect-secrets")}/guardoath-patterns-3'
 
     def scan(request,policy,stage):
