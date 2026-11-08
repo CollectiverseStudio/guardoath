@@ -146,7 +146,7 @@ def test_identity_invalid_pointers_and_reference_value_admission_fail_closed():
     a = headers["identity-alpha"]
     original = store.get("identity-alpha")
     for invalid in (
-        dict(RULES[0], fields={"order_id": "/0", "shipment_order_id": "/shipment_order_id"}),
+        dict(RULES[0], fields={"order_id": "/batch//order_id", "shipment_order_id": "/shipment_order_id"}),
         dict(RULES[0], fields={"order_id": "/same", "shipment_order_id": "/same/child"}),
         dict(RULES[0], trusted_values=["UNAUTHORIZED"]),
         dict(RULES[0], kind="unrecognized_identity_kind"),
