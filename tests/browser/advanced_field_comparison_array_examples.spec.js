@@ -17,6 +17,9 @@ test("advanced conversion array-index example flows through saved tenant, dashbo
   expect(reset.status()).toBe(200);
   try {
     await page.reload();
+    await page.locator("#demo-user").selectOption("demo4");
+    await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+    await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
     await expect(page.locator("#conversion-form")).toBeVisible();
     await page.locator("#conversion-id").fill("array_mass");
     await page.locator("#conversion-kind").selectOption("unit_load_kg_cap");
@@ -55,6 +58,9 @@ test("advanced conversion array-index example flows through saved tenant, dashbo
     expect(safe.loads[0].load).toBe(1000);
 
     await page.reload();
+    await page.locator("#demo-user").selectOption("demo4");
+    await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+    await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
     await expect(page.locator('[data-conversion-id="array_mass"]')).toHaveCount(1);
     await page.getByRole("button", {name: "Try violating input conversion array_mass"}).click();
     expect(JSON.parse(await page.locator("#input-content").inputValue())).toEqual(violating);
