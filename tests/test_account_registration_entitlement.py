@@ -71,3 +71,22 @@ def test_account_status_is_never_derived_from_unverified_session_or_shared_api_k
     client, _store = make_client()
     assert client.get("/v1/account/status").status_code == 401
     assert client.get("/v1/account/status", headers={"X-GuardOath-Key": "gok_fake"}).status_code == 401
+
+
+def test_registration_allows_only_empty_untyped_post_and_retains_global_ingress_controls():
+    client, store = make_client()
+    headers = {SESSION_HEADER: "verified-test-token"}
+    # No special allowance for untyped data: registration is identity-only.
+    assert client.post("/v1/register", headers=headers,
+                       content=b'{"subscription_status":"active"}').status_code == 415
+    assert client.post("/v1/register", headers={**headers, "Content-Type": "text/plain"},
+                       content=b"{}").status_code == 415
+    # Neither a missing media type nor an empty body bypasses validation on other endpoints.
+    assert client.post("/v1/checks/input", headers=headers).status_code == 415
+    assert store.get("usr-test-account") is None
+    # A genuine empty registration request uses the verified session to bind the account.
+    result = client.post("/v1/register", headers=headers)
+    assert result.status_code == 201, result.text
+    record = store.get("usr-test-account")
+    assert record is not None and record.subscription_status == "inactive"
+    assert record.key_hashes == () and record.monthly_allowance == 0
