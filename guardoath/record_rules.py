@@ -169,14 +169,8 @@ def _levels(variables, constraints, budget, start=None):
     return search(edges, start)
 
 
-def _set_path(document: dict, path: tuple, value) -> None:
-    for segment in path[:-1]:
-        document = document.setdefault(segment, {})
-    document[path[-1]] = value
-
-
 def _comparison_document(values: dict[tuple, object]) -> dict:
-    """Build *real* array/object JSON for customer comparison examples.
+    """Build *real* array/object JSON for tenant rule examples.
 
     JSON Pointer numeric segments are ambiguous: a numeric object key and an
     array index have the same spelling. Prefer an array only if ALL children
@@ -225,6 +219,19 @@ def _comparison_document(values: dict[tuple, object]) -> dict:
                     raise ValueError("Conflicting generated JSON container layout")
                 container = existing
     return document
+
+
+def _field_document(fields: dict, values: dict) -> str:
+    """Serialize a non-reference advanced rule's samples with genuine indexed arrays.
+
+    This is display/sample generation only. The shared Engine still decides
+    whether a submitted document satisfies a tenant rule. Never call this for
+    reference-backed rules: their private reference samples must stay hidden.
+    """
+    return json.dumps(_comparison_document({
+        tuple(_segments(pointer)): values[role]
+        for role, pointer in fields.items() if role in values
+    }), separators=(",", ":"))
 
 
 def _passes(payload, comparison) -> bool:
@@ -454,10 +461,7 @@ def arithmetic_rule(rule) -> dict:
     clean = dict(clean)
     unsafe = {**clean, variable: unsafe_value}
     def document(values):
-        output = {}
-        for role, pointer in rule.fields.items():
-            _set_path(output, tuple(_segments(pointer)), values[role])
-        return json.dumps(output, separators=(",", ":"))
+        return _field_document(rule.fields, values)
     return {
         "rule_id": COMPARISON_PREFIX + rule.rule_id,
         "control_id": "cross_field",
@@ -492,10 +496,7 @@ IDENTITY_EXAMPLES = {
 
 def identity_rule(rule) -> dict:
     def document(values):
-        payload = {}
-        for role, pointer in rule.fields.items():
-            _set_path(payload, tuple(_segments(pointer)), values[role])
-        return json.dumps(payload, separators=(",", ":"))
+        return _field_document(rule.fields, values)
     samples = IDENTITY_EXAMPLES.get(rule.kind)
     unavailable = None if samples else {
         "code": "private_tenant_reference",
@@ -545,11 +546,7 @@ CONVERSION_TIME_EXAMPLES = {
 
 def conversion_time_rule(rule) -> dict:
     def document(values):
-        output = {}
-        for role, pointer in rule.fields.items():
-            if role in values:
-                _set_path(output, tuple(_segments(pointer)), values[role])
-        return json.dumps(output, separators=(",", ":"))
+        return _field_document(rule.fields, values)
     samples = CONVERSION_TIME_EXAMPLES.get(rule.kind)
     unavailable = None if samples else {
         "code": "private_tenant_reference",
