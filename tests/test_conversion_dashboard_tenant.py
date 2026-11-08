@@ -148,7 +148,7 @@ def test_non_fx_rules_reject_untrusted_reference_values_and_bad_pointers():
     a = headers["conversion-alpha"]
     original = store.get("conversion-alpha")
     for invalid in (
-        dict(DEFINITIONS[0], fields={"load": "/load/0", "load_unit": "/unit", "max_kg": "/max"}),
+        dict(DEFINITIONS[0], fields={"load": "/load//0", "load_unit": "/unit", "max_kg": "/max"}),
         dict(DEFINITIONS[0], source_currency="EUR"),
         dict(DEFINITIONS[0], fields={"load": "/same", "load_unit": "/same/x", "max_kg": "/max"}),
         dict(DEFINITIONS[0], kind="unknown_time_kind"),
