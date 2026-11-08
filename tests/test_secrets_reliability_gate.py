@@ -27,3 +27,21 @@ def test_gate_preserves_historical_benign_timeout_and_positive_outcomes():
 def test_rejects_invalid_rounds_without_running_checks(rounds):
     with pytest.raises(ValueError):
         asyncio.run(run_gate(rounds))
+
+
+def test_bounded_four_caller_contention_preserves_every_original_finding():
+    # Four simultaneous real suite evaluators, each with unchanged 500ms
+    # per-check timeout. Not a larger deadline or a mock detector.
+    result = asyncio.run(run_gate(1, concurrency=4))
+    assert result["accepted"], json.dumps(result, sort_keys=True)
+    assert result["concurrency"] == 4
+    assert result["shipped_checker_deadline_ms"] == 500
+    assert all(item["samples"] == 4 and item["failed_contracts"] == 0
+               for item in result["cases"])
+    assert [item["case_id"] for item in result["cases"]] == list(CASES)
+
+
+@pytest.mark.parametrize("concurrency", [0, -1, 5, 1.5, True])
+def test_concurrency_cannot_exceed_existing_worker_bound(concurrency):
+    with pytest.raises(ValueError):
+        asyncio.run(run_gate(1, concurrency=concurrency))
