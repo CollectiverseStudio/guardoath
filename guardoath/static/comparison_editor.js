@@ -62,6 +62,86 @@
     const cancel = element("button", "Cancel edit"); cancel.type = "button"; cancel.hidden = true;
     const message = element("p"); message.id = "comparison-message"; message.setAttribute("role", "status");
     form.append(apply, cancel, message); host.append(summary, list, form);
+    // A customer with hundreds of ordinary comparisons needs a usable import path,
+    // not 500 manual Add clicks or a hidden API. Import changes only the draft;
+    // the existing revisioned Save checks and shared Engine remain authoritative.
+    const bulk = element("details"); bulk.id = "comparison-bulk-panel";
+    bulk.append(element("summary", "Bulk JSON import / export (30–500+ comparisons)"));
+    bulk.append(element("p", "Paste a JSON array of ordinary comparison definitions. Import REPLACES only the unsaved comparison draft, never other validation families. Review the count, configure Field comparisons for the selected stages, then select Save checks. The API enforces the tenant record size; there is no arbitrary comparison-count cap."));
+    const bulkLabel = element("label", "Comparison definitions as JSON array");
+    bulkLabel.htmlFor = "comparison-bulk-json";
+    const bulkJson = element("textarea"); bulkJson.id = "comparison-bulk-json";
+    bulkJson.rows = 7; bulkJson.maxLength = 512000;
+    bulkJson.setAttribute("spellcheck", "false");
+    const exportDraft = element("button", "Load current draft into JSON box");
+    exportDraft.type = "button"; exportDraft.id = "comparison-bulk-export";
+    const acknowledgeLabel = element("label");
+    const acknowledge = element("input"); acknowledge.type = "checkbox"; acknowledge.id = "comparison-bulk-confirm";
+    acknowledgeLabel.append(acknowledge, document.createTextNode(" I understand this replaces the entire ordinary comparison draft; nothing is saved until Save checks."));
+    const importDraft = element("button", "Stage JSON replacement");
+    importDraft.type = "button"; importDraft.id = "comparison-bulk-import";
+    const bulkStatus = element("p"); bulkStatus.id = "comparison-bulk-status";
+    bulkStatus.setAttribute("role", "status"); bulkStatus.setAttribute("aria-live", "polite");
+    bulk.append(bulkLabel, bulkJson, exportDraft, acknowledgeLabel, importDraft, bulkStatus);
+    host.insertBefore(bulk, form);
+    exportDraft.addEventListener("click", () => {
+      bulkJson.value = JSON.stringify(draft, null, 2);
+      acknowledge.checked = false;
+      bulkStatus.textContent = draft.length + " current draft comparisons loaded into the JSON box; not saved.";
+    });
+    function importRules(raw) {
+      if (!Array.isArray(raw)) throw Error("Use a JSON array of comparison objects.");
+      const allowed = new Set(["rule_id", "left", "right", "operator", "value_type", "stages"]);
+      const operators = new Set(["lt", "le", "eq", "ge", "gt", "ne"]);
+      const ids = new Set();
+      const existing = new Set(original.map(rule => rule.rule_id));
+      const otherIds = new Set((tenant.record_rules || [])
+        .filter(rule => rule && typeof rule.rule_id === "string")
+        .map(rule => rule.rule_id));
+      return raw.map((rule, i) => {
+        const fail = reason => { throw Error("Comparison " + (i + 1) + ": " + reason); };
+        if (!rule || typeof rule !== "object" || Array.isArray(rule)) return fail("expected an object.");
+        if (Object.keys(rule).some(key => !allowed.has(key))) return fail("unknown field; use only rule_id, left, right, operator, value_type and stages.");
+        const id = rule.rule_id;
+        if (typeof id !== "string" || !/^[A-Za-z0-9_.-]{1,80}$/.test(id)) return fail("invalid rule_id.");
+        if (ids.has(id) || (!existing.has(id) && otherIds.has("business." + id))) return fail("duplicate or reserved rule_id.");
+        ids.add(id);
+        for (const name of ["left", "right"]) {
+          const pointer = rule[name];
+          if (typeof pointer !== "string" || pointer.length < 1 || pointer.length > 200
+              || !pointer.startsWith("/") || /~(?![01])/.test(pointer))
+            return fail("left/right must be absolute JSON pointers of at most 200 characters.");
+        }
+        if (!operators.has(rule.operator)) return fail("unknown comparison operator.");
+        const type = rule.value_type === undefined ? "number" : rule.value_type;
+        if (!["number", "date"].includes(type)) return fail("value_type must be number or date.");
+        const stages = rule.stages === undefined ? ["input", "output"] : rule.stages;
+        if (!Array.isArray(stages) || stages.length < 1 || stages.length > 2
+            || new Set(stages).size !== stages.length
+            || stages.some(stage => stage !== "input" && stage !== "output"))
+          return fail("stages must include Input, Output, or both without duplicates.");
+        return {rule_id: id, left: rule.left, right: rule.right,
+                operator: rule.operator, value_type: type, stages};
+      });
+    }
+    importDraft.addEventListener("click", () => {
+      if (!acknowledge.checked) {
+        bulkStatus.textContent = "Confirm replacement of the ordinary comparison draft first.";
+        acknowledge.focus(); return;
+      }
+      try {
+        if (bulkJson.value.length > 512000) throw Error("JSON exceeds the 512,000-character editor limit.");
+        const imported = importRules(JSON.parse(bulkJson.value));
+        draft = imported; clear(); draw(); changed();
+        bulkStatus.textContent = imported.length + " comparison definitions staged. Review Input/Output stages and select Save checks to persist; no server change yet.";
+        acknowledge.checked = false;
+      } catch (error) {
+        // Never write partial imports, or echo submitted pointers/values into UI.
+        bulkStatus.textContent = error instanceof SyntaxError
+          ? "Invalid JSON; provide a valid array of comparison objects."
+          : error.message;
+      }
+    });
     function clear() {
       editing = null; form.reset(); controls.id.disabled = false;
       controls.input.checked = controls.output.checked = true;
