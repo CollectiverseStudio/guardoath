@@ -212,8 +212,16 @@ test("FC-044/045/049 coexist: signed tenant status, dashboard and both Engine st
         return response.json();
       };
       const clean = await check(baseline);
-      expect(clean.evaluation_status).toBe("complete");
-      expect(clean.effective_action).toBe("allow");
+      const cleanEvidence = JSON.stringify({
+        stage,
+        evaluation_status: clean.evaluation_status,
+        findings: clean.findings.map(f => ({rule_id: f.rule_id, category: f.category})),
+        checker_results: clean.checker_results.map(c => ({
+          checker_id: c.checker_id, status: c.status, error_code: c.error_code,
+        })),
+      });
+      expect(clean.evaluation_status, cleanEvidence).toBe("complete");
+      expect(clean.effective_action, cleanEvidence).toBe("allow");
       for (const [name,,,,bad] of definitions) {
         const failed = await check({...baseline,...bad});
         expect(failed.evaluation_status).toBe("complete");
