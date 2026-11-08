@@ -1108,6 +1108,14 @@ Valid operators are `lt`, `le`, `eq`, `ne`, `ge`, and `gt`; dates use `YYYY-MM-D
 
 The **Stage JSON replacement** operation is not a Save. If another client changes the tenant revision before Save, a stale request is rejected; re-fetch and reconcile instead of overwriting. Tenant API responses and validation outcomes remain the source of truth. Browser source `tests/browser/field_comparisons_500.spec.js` exercises confirmation, malformed and duplicate rejection, staging without server changes, a real authenticated 500-rule Save/reconnect and both-stage Engine findings; CI execution of this new case is still required before production acceptance.
 
+### Operating ordinary and advanced comparisons together
+
+One GuardOath tenant can evaluate **ordinary number/date comparisons (FC-001–030)**, **advanced arithmetic** and **conversion/time** comparisons in the **same shared Engine**. From the authenticated dashboard, open **Field comparison rules**, **Advanced arithmetic comparisons**, and **Conversion and time comparisons** under the same tenant; add each rule to its pending draft. Select the intended Input and Output **Field comparisons** check actions, then choose **Save checks** once. Reconnect to verify all three rules in the unified rule table. Stage-specific rule dropdowns in that table can override the parent action without changing the other rules.
+
+For example, add `ui_spend` (number: `/order/spend <= /order/limit`), `ui_subtotal` (invoice line subtotal: `/order/lines`, `/order/subtotal`) and `ui_load` (kg load cap: `/shipment/load`, `/shipment/load_unit`, `/shipment/max_kg`). A submitted JSON object with spend 120 against limit 100, line items totaling 110 against declared subtotal 100, and cargo 1500 kg against cap 1000 should report **all three original business rule IDs**, not stop after the first violation. An Input **Flag** still permits a proposed answer to reach the separate Output check; Output **Block** withholds the answer. A per-rule **Allow** preserves a visible finding while leaving companion rule outcomes in force; **Off** is different and suppresses that rule. Use a known-benign payload for a negative test before relying on the configured controls.
+
+The dashboard's synthetic examples are **per-rule witnesses**, not a guarantee that every other enabled tenant check will pass. No check here verifies whether customer-supplied prices, units, cap values or records are authoritative; trusted-reference rules have separately protected host provenance requirements. Real authenticated cross-family dashboard/tenant/API acceptance lives in `tests/browser/field_comparison_cross_family_tenant.spec.js`; a committed test does not establish production deployment or remove the PII 500-ms and attachment provenance release gates.
+
 ### Submitted-field comparisons
 
 | Check / use case | Example | Expected behavior |
