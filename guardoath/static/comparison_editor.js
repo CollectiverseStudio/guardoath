@@ -32,17 +32,24 @@
       if (!rule.stages.includes(stage)) continue;
       let g = graphs.get(rule.value_type);
       if (!g) {
-        g = {forward: new Map(), backward: new Map(), edges: [], different: []};
+        g = {forward: new Map(), backward: new Map(), nonStrictForward: new Map(), nonStrictBackward: new Map(), edges: [], different: []};
         graphs.set(rule.value_type, g);
       }
       const a = key(rule.left), b = key(rule.right);
       if (a === b) continue; // handled by self-comparison warning
       for (const node of [a, b]) {
-        if (!g.forward.has(node)) {g.forward.set(node, []); g.backward.set(node, []);}
+        if (!g.forward.has(node)) {
+          g.forward.set(node, []); g.backward.set(node, []);
+          g.nonStrictForward.set(node, []); g.nonStrictBackward.set(node, []);
+        }
       }
       const edge = (from, to, strict) => {
         g.forward.get(from).push(to);
         g.backward.get(to).push(from);
+        if (!strict) {
+          g.nonStrictForward.get(from).push(to);
+          g.nonStrictBackward.get(to).push(from);
+        }
         g.edges.push({from, to, strict});
       };
       switch (rule.operator) {
@@ -54,23 +61,26 @@
         case "ne": g.different.push([a, b]); break;
       }
     }
-    let orderCycles = 0, forcedEqualDifferences = 0;
-    for (const g of graphs.values()) {
+    // A directed strict edge can make a component impossible WITHOUT forcing
+    // any two fields to equal values. "!= contradicted by forced equality"
+    // requires paths in BOTH directions made of non-strict <=/>=/= edges.
+    // Compute full SCC for strict cycles and non-strict SCC for equality,
+    // rather than claiming a != contradiction from a strict cycle alone.
+    function components(forward, backward) {
       const visited = new Set(), finished = [];
-      for (const start of g.forward.keys()) {
+      for (const start of forward.keys()) {
         if (visited.has(start)) continue;
         const stack = [{node: start, index: 0}];
         visited.add(start);
         while (stack.length) {
           const current = stack[stack.length - 1];
-          const outgoing = g.forward.get(current.node);
+          const outgoing = forward.get(current.node);
           if (current.index === outgoing.length) {
             finished.push(current.node); stack.pop(); continue;
           }
           const next = outgoing[current.index++];
           if (!visited.has(next)) {
-            visited.add(next);
-            stack.push({node: next, index: 0});
+            visited.add(next); stack.push({node: next, index: 0});
           }
         }
       }
@@ -84,7 +94,7 @@
         while (stack.length) {
           const current = stack.pop();
           size++;
-          for (const neighbor of g.backward.get(current)) {
+          for (const neighbor of backward.get(current)) {
             if (!component.has(neighbor)) {
               component.set(neighbor, id); stack.push(neighbor);
             }
@@ -92,6 +102,13 @@
         }
         sizes.push(size);
       }
+      return {component, sizes};
+    }
+    let orderCycles = 0, forcedEqualDifferences = 0;
+    for (const g of graphs.values()) {
+      const {component, sizes} = components(g.forward, g.backward);
+      const {component: nonStrictComponent, sizes: nonStrictSizes} =
+        components(g.nonStrictForward, g.nonStrictBackward);
       const strictCycles = new Set();
       for (const {from, to, strict} of g.edges) {
         const id = component.get(from);
@@ -101,8 +118,8 @@
       orderCycles += strictCycles.size;
       const forcedDifferentPairs = new Set();
       for (const [a, b] of g.different) {
-        const id = component.get(a);
-        if (id === component.get(b) && sizes[id] >= 3) {
+        const id = nonStrictComponent.get(a);
+        if (id === nonStrictComponent.get(b) && nonStrictSizes[id] >= 3) {
           const pair = a < b ? [a, b] : [b, a];
           forcedDifferentPairs.add(JSON.stringify([id, ...pair]));
         }
