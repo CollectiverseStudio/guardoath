@@ -317,6 +317,11 @@ class CognitoSessions:
             return None
         if not isinstance(data, dict) or not isinstance(data.get("UserAttributes"), list):
             return None
+        names = [a.get("Name") for a in data["UserAttributes"] if isinstance(a, dict)]
+        # Duplicated security identity attributes must never become trusted by
+        # last-write-wins dictionary construction.
+        if any(names.count(name) > 1 for name in (TENANT_ATTRIBUTE, "sub", "email_verified")):
+            return None
         attributes = {a.get("Name"): a.get("Value") for a in data["UserAttributes"]
                       if isinstance(a, dict) and isinstance(a.get("Name"), str)}
         tenant_id = attributes.get(TENANT_ATTRIBUTE)
