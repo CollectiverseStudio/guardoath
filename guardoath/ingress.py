@@ -25,7 +25,13 @@ class JsonIngressLimits:
                 return await reject(400, "Ambiguous request headers")
             headers[key] = value
         media = headers.get(b"content-type", b"").split(b";", 1)[0].strip().lower()
-        if media != b"application/json" and not (media.startswith(b"application/") and media.endswith(b"+json")):
+        # Registration deliberately has no request body: identity comes only from
+        # the verified session header, not browser-supplied billing/tenant claims.
+        # Permit *only* a genuinely empty body without Content-Type on this one
+        # endpoint. Every other v1 POST still requires bounded valid JSON.
+        bodyless_registration = scope["path"] == "/v1/register" and not media
+        if not bodyless_registration and media != b"application/json" and not (
+                media.startswith(b"application/") and media.endswith(b"+json")):
             return await reject(415, "A JSON content type is required")
         for parameter in headers.get(b"content-type", b"").split(b";")[1:]:
             name, _, value = parameter.strip().partition(b"=")
@@ -56,10 +62,15 @@ class JsonIngressLimits:
                         break
         except TimeoutError:
             return await reject(408, "Request body read deadline exceeded")
-        try:
-            parse_json(body.decode("utf-8"))
-        except (ValueError, UnicodeError, RecursionError):
-            return await reject(400, "Invalid JSON request or parser limit exceeded")
+        if bodyless_registration:
+            if body:
+                # Reject an untyped payload instead of trusting its contents.
+                return await reject(415, "A JSON content type is required")
+        else:
+            try:
+                parse_json(body.decode("utf-8"))
+            except (ValueError, UnicodeError, RecursionError):
+                return await reject(400, "Invalid JSON request or parser limit exceeded")
         sent = False
 
         async def replay():
