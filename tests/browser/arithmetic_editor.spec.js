@@ -97,9 +97,9 @@ test("FC arithmetic dashboard validates pointers, types and stages before saving
   await expect(page.locator("#arithmetic-message")).toContainText("distinct and nonoverlapping");
   await expect(page.locator('#arithmetic-drafts [data-arithmetic-id="bad_rule"]')).toHaveCount(0);
 
-  await page.locator("#arithmetic-field-base").fill("/records/0");
+  await page.locator("#arithmetic-field-base").fill("/records//base");
   await page.locator("#arithmetic-apply").click();
-  await expect(page.locator("#arithmetic-message")).toContainText("not array positions");
+  await expect(page.locator("#arithmetic-message")).toContainText("empty JSON Pointer segments");
   await expect(page.locator('#arithmetic-drafts [data-arithmetic-id="bad_rule"]')).toHaveCount(0);
 
   await page.locator("#arithmetic-field-base").fill("/base");
