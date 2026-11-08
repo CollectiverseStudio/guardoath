@@ -78,7 +78,7 @@ test("identity editor saves, reloads, tests and removes an order match rule", as
   await reset();
 });
 
-test("identity form rejects ambiguous or positional pointers and empty stage without saving", async ({page}) => {
+test("identity form rejects overlapping or empty pointers and absent stages without saving", async ({page}) => {
   await page.goto("/dashboard");
   await page.locator("#demo-user").selectOption("demo6");
   await page.getByRole("button",{name:"Get demo API key",exact:true}).click();
@@ -91,9 +91,9 @@ test("identity form rejects ambiguous or positional pointers and empty stage wit
   await page.locator("#identity-apply").click();
   await expect(page.locator("#identity-message")).toContainText("nonoverlapping");
   await expect(page.locator('[data-identity-id="invalid_identity"]')).toHaveCount(0);
-  await page.locator("#identity-field-shipment_order_id").fill("/records/0");
+  await page.locator("#identity-field-shipment_order_id").fill("/records//shipment");
   await page.locator("#identity-apply").click();
-  await expect(page.locator("#identity-message")).toContainText("named object");
+  await expect(page.locator("#identity-message")).toContainText("nonempty segments");
   await page.locator("#identity-field-shipment_order_id").fill("/shipment");
   await page.locator("#identity-stage-input").uncheck();
   await page.locator("#identity-stage-output").uncheck();
