@@ -153,25 +153,43 @@
     function draw() {
       const pending = JSON.stringify(original) !== JSON.stringify(draft);
       summary.textContent = `${draft.length} comparison${draft.length === 1 ? "" : "s"} configured; ${draft.filter(rule => rule.stages.includes("input")).length} Input, ${draft.filter(rule => rule.stages.includes("output")).length} Output.${pending ? " Unsaved changes — select Save checks to persist." : " No pending changes."}`;
-      // The shared Engine's JSON decoder allows at most 1,000 members in any
-      // object. Detect guaranteed flat-document overflow by counting unique
-      // top-level pointer keys per stage. This is a planning warning, not a
-      // comparison-count cap: nested documents can support >500 comparisons.
+      // The shared JSON decoder limits *every* object to 1,000 members,
+      // not just the root. Count distinct children at each pointer prefix in
+      // each stage. A pair of sibling maps with 501 fields each is valid;
+      // 1,002 fields under one nested map cannot pass when fully populated.
+      // This is advisory and never imposes a tenant comparison-count cap.
       const warnings = [];
       for (const stage of ["input", "output"]) {
-        const roots = new Set();
+        const scopes = new Map(); // JSON-pointer prefix -> unique direct children
         for (const rule of draft) {
           if (!rule.stages.includes(stage)) continue;
           for (const pointer of [rule.left, rule.right]) {
-            roots.add(pointer.slice(1).split("/")[0].replace(/~1/g, "/").replace(/~0/g, "~"));
+            const parts = pointer.slice(1).split("/").map(
+              item => item.replace(/~1/g, "/").replace(/~0/g, "~"));
+            let prefix = "";
+            for (const part of parts) {
+              if (!scopes.has(prefix)) scopes.set(prefix, new Set());
+              scopes.get(prefix).add(part);
+              // Use a length-encoded prefix so a literal '/' in one field
+              // cannot alias a true path separator in another field.
+              prefix += part.length + ":" + part;
+            }
           }
         }
-        if (roots.size > 1000) warnings.push(stage + " references " + roots.size + " distinct top-level fields");
+        const roots = scopes.get("");
+        if (roots && roots.size > 1000)
+          warnings.push(stage + " references " + roots.size + " distinct top-level fields");
+        let largestNested = 0;
+        for (const [prefix, children] of scopes) {
+          if (prefix && children.size > largestNested) largestNested = children.size;
+        }
+        if (largestNested > 1000)
+          warnings.push(stage + " references " + largestNested + " distinct fields within a nested object");
       }
       limitWarning.hidden = !warnings.length;
       limitWarning.textContent = warnings.length
         ? "JSON structure warning: " + warnings.join("; ") +
-          ". The shared Engine accepts at most 1,000 keys in any one JSON object. A fully populated flat document cannot pass these comparisons. Use nested objects (up to 32 levels) or split the stages; the draft has not been modified."
+          ". The shared Engine accepts at most 1,000 keys in any one JSON object, including nested objects. A fully populated document with these fields cannot pass. Distribute keys across smaller nested objects (up to 32 levels) or split the stages; the draft has not been modified."
         : "";
       list.replaceChildren();
       if (!draft.length) list.append(element("li", "No number or date comparisons on this record."));
