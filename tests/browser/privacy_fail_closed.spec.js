@@ -33,11 +33,19 @@ test("real 65-field privacy capacity limit blocks both stages even in observe/Fl
     expect(saved.status(), (await saved.text()).slice(0,160)).toBe(200);
     const live = await tenant(request,headers);
     expect(live.revision).toBe(before.revision+1);
-    expect(live.mode).toBe("observe");
-    expect(live.failure_action).toBe("flag");
-    expect(live.input_check_pii).toBe("flag");
-    expect(live.output_check_pii).toBe("flag");
-    expect(live.detect_labeled_sensitive_data).toBe(true);
+    // The public tenant summary intentionally exposes only stage actions,
+    // not private raw policy settings. Confirm observe using the authoritative
+    // Engine-described policy, and verify saved Flag actions in both stages.
+    expect(live.input_checks.pii).toBe("flag");
+    expect(live.output_checks.pii).toBe("flag");
+    const currentPolicy = await request.get("/v1/applications/current", {headers});
+    expect(currentPolicy.status()).toBe(200);
+    const described = (await currentPolicy.json()).policies.find(p=>p.version==="tenant");
+    expect(described?.mode).toBe("observe");
+    const piiRule = described?.checks.find(c=>c.id==="pii");
+    expect(piiRule?.actions).toMatchObject({input:"flag",output:"flag"});
+    // No raw detect_labeled_sensitive_data setting is leaked in public
+    // summary. The real pii_field_limit result below proves it is active.
 
     const content = JSON.stringify({numbers: Array.from({length:65}, ()=>({phone_number:"2025550199"}))});
     for (const stage of ["input","output"]) {
