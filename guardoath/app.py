@@ -671,6 +671,12 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     @api.post("/v1/tenants/current/keys")
     async def create_key(request: Request, principal: Annotated[str | TenantRecord, Depends(authenticate)]):
         current = tenants.store.get(signed_in_owner(request, principal).tenant_id)
+        # Registration verifies identity only. Do not issue production
+        # validation credentials until the trusted billing layer has activated
+        # the tenant; an unverified legacy state is not an entitlement.
+        if current.subscription_status != "active":
+            raise HTTPException(402, "An active subscription is required to create an API key",
+                                headers={"Cache-Control": "no-store"})
         if len(current.key_hashes) >= 2:
             raise HTTPException(409, "A tenant has at most 2 API keys; revoke one first")
         token, digest = new_key(current.tenant_id)
