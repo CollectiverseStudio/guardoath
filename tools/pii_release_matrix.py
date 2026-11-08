@@ -23,6 +23,9 @@ SUITES = (
         "redaction.email",
     )),
     ("privacy", "evals/privacy.json", "policies/privacy-batch.json", (
+        # 2026-11-08 local-pii (3.13) job 128738797961: observed 540.484ms
+        # checker_timeout on ssn.input, despite the same 500ms policy.
+        "ssn.input",
         "phone_number1.input", "phone_number1.output",
         "date_of_birth1.input", "date_of_birth1.output",
         "redact.enforce.text.input", "redact.enforce.text.output",
@@ -66,7 +69,7 @@ async def run_matrix(rounds=20):
         "groups": groups,
         "notes": (
             "Synthetic fixed case IDs and aggregate statuses only; no source contents.",
-            "This includes observed 505.215ms phone, 542.812ms Korean RRN, DOB, and the shipped redaction.email mandatory recheck tail.",
+            "This includes observed 505.215ms phone, 542.812ms Korean RRN, 540.484ms SSN, DOB, and redaction.email recheck tails.",
             "End-to-end timing is diagnostic, not the individual checker deadline.",
             "A green finite sample alone cannot prove permanent latency resolution.",
         ),
