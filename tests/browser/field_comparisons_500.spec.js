@@ -188,6 +188,16 @@ test("customer can import 500 JSON comparison definitions, save and execute them
         .map(f => f.rule_id).sort();
       expect(matches).toEqual(["business.ui_scale_001", "business.ui_scale_500"]);
       expect(evaluated.effective_action).toBe(stage === "input" ? "flag" : "block");
+      const benign = await request.post("/v1/checks/" + stage, {headers, data: {
+        application_id: "demo2", content_format: "json",
+        content: numericPayload(500, false),
+      }});
+      expect(benign.status(), (await benign.text()).slice(0,200)).toBe(200);
+      const benignResult = await benign.json();
+      expect(benignResult.evaluation_status).toBe("complete");
+      expect(benignResult.findings.filter(f => f.rule_id.startsWith("business.ui_scale_")))
+        .toEqual([]);
+      expect(benignResult.effective_action).toBe("allow");
     }
   } finally {
     if (resetRequired) {
