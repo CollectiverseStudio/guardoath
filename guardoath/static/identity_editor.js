@@ -14,12 +14,13 @@
   };
   let original = [], draft = [], enabled = false, protectedRules = [];
   function delta() {
-    if (!enabled || protectedRules.length) return null;
-    return JSON.stringify(original) === JSON.stringify(draft) ? null : clone(draft);
+    if (!enabled || JSON.stringify(original) === JSON.stringify(draft)) return null;
+    // Scoped replacement leaves server-owned reference rules untouched.
+    return protectedRules.length ? {editable: clone(draft)} : clone(draft);
   }
   function actions(stage, previous) {
     const result = {...previous};
-    if (!enabled || protectedRules.length) return result;
+    if (!enabled) return result;
     for (const item of original) {
       const kept = draft.find(rule => rule.rule_id === item.rule_id);
       if (!kept || !kept.stages.includes(stage)) delete result["business." + item.rule_id];
@@ -55,10 +56,10 @@
           item.stages.join(", ") + " · trusted reference configured: " +
           (item.reference_configured ? "yes" : "no")));
       }
-      references.append(el("p", "Reference-backed rules are read-only here. All identity edits are locked while these rules exist: deleting or overwriting an unexposed trusted value through a full-array save would be unsafe. Use an authorized reference-management workflow."));
+      references.append(el("p", "Protected identity references remain read-only. Ordinary identity rules can still be edited; Save checks submits only public definitions and the server preserves hidden trusted sets under the tenant revision. Use authorized reference management for protected rules."));
     }
     host.append(references);
-    const locked = protectedRules.length > 0;
+    const locked = false; // Protected reference rows are never in the editable draft.
     const list = el("ul"); list.id = "identity-drafts";
     const form = el("form"); form.id = "identity-form";
     const message = el("p"); message.id = "identity-message";
@@ -179,7 +180,7 @@
     form.addEventListener("submit", event => {
       event.preventDefault();
       if (locked) {
-        message.textContent = "Protected reference-backed rules prevent editing this identity array.";
+        message.textContent = "Protected references cannot be edited in this public rule editor.";
         return;
       }
       if (!form.reportValidity()) return;
@@ -220,7 +221,7 @@
       message.textContent = "Identity rule pending. Save checks to persist it.";
     });
     drawFields();
-    for (const input of form.querySelectorAll("input, select, button")) input.disabled = locked;
+    for (const input of form.querySelectorAll("input, select, button")) input.disabled = false;
     draw();
   }
   window.identityEditor = {render, delta, actions};
