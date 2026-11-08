@@ -4,6 +4,7 @@ privacy pattern code, with bounded scanning and opt-in transformations."""
 import asyncio
 from bisect import bisect_right
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 from threading import BoundedSemaphore
 import json
 from time import monotonic
@@ -191,7 +192,20 @@ def fewest_phone_digits(recognizer):
         return 0
 
 
+@lru_cache(maxsize=1)
 def build_pii_checker():
+    """Build the immutable local recognizer catalog once per worker process.
+
+    Each invocation previously reconstructed and compiled the full recognizer
+    set, warmed phone metadata, and rebuilt a public-suffix extractor. That
+    work competes for CPU with the same process's strictly bounded 500-ms
+    scans, notably when applications/tenants repeatedly build Engines.
+    Request content, tenant policy, disabled entities, active rule actions,
+    deadlines, transformed text and findings remain invocation-local inside
+    scan(); none are cached. The worker pool and per-scan deadlines remain
+    unchanged. This reduces avoidable startup contention, not OS scheduling
+    tail guarantees.
+    """
     try:
         import regex
         import tldextract
