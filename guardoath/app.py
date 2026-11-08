@@ -325,6 +325,9 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         current = tenants.store.get(principal.tenant_id)
         if current is None or current.status != "active":
             raise HTTPException(403, "Tenant record is not active")
+        if sessions is not None and not current.demo and current.subscription_status != "active":
+            raise HTTPException(402, "An active subscription is required to run checks",
+                                headers={"Cache-Control": "no-store"})
         selected_action = current.sigma_rule_actions.get(body.rule_id)
         if selected_action is None:
             raise HTTPException(403, "Sigma event rule is off for this tenant")
@@ -371,6 +374,9 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         # that its submitted observed payload is signed/verified host telemetry.
         if not isinstance(principal, TenantRecord):
             raise HTTPException(403, "Agent activity comparison requires a tenant credential")
+        if sessions is not None and not principal.demo and principal.subscription_status != "active":
+            raise HTTPException(402, "An active subscription is required to run checks",
+                                headers={"Cache-Control": "no-store"})
         with budgets.check(principal.tenant_id):
             try:
                 result = compare_actions(request.proposed, request.observed)
