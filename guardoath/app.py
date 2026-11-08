@@ -757,6 +757,11 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             demo=False, status="active", key_hashes=(),
             monthly_allowance=0, overage="block",
             subscription_status="inactive",
+            # Tenant records require a concrete check at creation. This safe,
+            # local-only baseline preserves that invariant for unpaid accounts
+            # without granting checks or a paid entitlement.
+            input_check_text_security="block",
+            output_check_text_security="block",
         )
         try:
             registered = await run_in_threadpool(tenants.store.create, registered)
