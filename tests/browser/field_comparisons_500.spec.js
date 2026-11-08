@@ -156,6 +156,14 @@ test("customer can import 500 JSON comparison definitions, save and execute them
     await importButton.click();
     await expect(page.locator("#comparison-bulk-status")).toContainText("stages must include");
     await expect(summary).toContainText(before.comparisons.length + " comparisons configured");
+    // UI and authoritative API agree: repeating a valid stage cannot produce
+    // a misleading staged portfolio or bypass the tenant stage contract.
+    for (const repeated of [["input", "input"], ["output", "output"]]) {
+      await jsonBox.fill(JSON.stringify([{...rules[0], stages: repeated}]));
+      await importButton.click();
+      await expect(page.locator("#comparison-bulk-status")).toContainText("without duplicates");
+      await expect(summary).toContainText(before.comparisons.length + " comparisons configured");
+    }
     await jsonBox.fill(JSON.stringify(rules));
     await importButton.click();
     await expect(page.locator("#comparison-bulk-status")).toContainText(
