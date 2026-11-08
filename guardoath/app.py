@@ -38,6 +38,7 @@ from guardoath.tenant_store import TenantConflict, TenantNotFound, UsageLimitRea
 from guardoath.tenant_record import new_key
 from guardoath.record_rules import record_rules
 from guardoath.sigma_site import catalog_payload as sigma_catalog_payload, evaluate_fixture as sigma_evaluate_fixture
+from guardoath.agent_activity import compare_actions, InvalidAction
 from guardoath.tenant_sessions import SESSION_HEADER, CognitoSessions, SignInBusy
 
 
@@ -117,6 +118,11 @@ def demo_engine(enable_pii: bool = False, checkers: dict | None = None) -> Engin
 
 class KeyRevocation(Contract):
     key_id: str = Field(pattern=r"^[0-9a-f]{12}$")
+
+
+class AgentActivityRequest(Contract):
+    proposed: dict
+    observed: dict | None = None
 
 
 class SigmaDemoRequest(Contract):
@@ -355,6 +361,26 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                     tenants.store.release_check(principal.tenant_id, usage_month())
                 raise HTTPException(503, "Sigma synthetic evaluation could not complete") from None
         return JSONResponse(result, headers={"Cache-Control": "no-store"})
+
+    @api.post("/v1/agent-activity/compare")
+    async def compare_agent_activity(
+        request: AgentActivityRequest,
+        principal: Annotated[str | TenantRecord, Depends(authenticate)],
+    ):
+        # Diagnostic ONLY. The authenticated tenant is never permitted to claim
+        # that its submitted observed payload is signed/verified host telemetry.
+        if not isinstance(principal, TenantRecord):
+            raise HTTPException(403, "Agent activity comparison requires a tenant credential")
+        with budgets.check(principal.tenant_id):
+            try:
+                result = compare_actions(request.proposed, request.observed)
+            except InvalidAction:
+                raise HTTPException(422, "Invalid agent activity evidence") from None
+        return JSONResponse({
+            **result, "tenant_id": principal.tenant_id,
+            "mode": "diagnostic_unverified",
+            "limitations": "Caller-reported evidence only; no tool authorization or execution proof."
+        }, headers={"Cache-Control": "no-store"})
 
     async def assess(request: ApiCheckRequest, principal: str | TenantRecord, stage: Stage):
         if isinstance(principal, TenantRecord):
