@@ -124,7 +124,7 @@ def test_arithmetic_editor_rejects_invalid_pointer_and_unknown_kind_without_muta
     a = headers["arith-alpha"]
     initial = store.get("arith-alpha")
     for candidate in (
-        dict(rule(), fields={"lines": "/items/0", "subtotal": "/subtotal"}),
+        dict(rule(), fields={"lines": "/items//0", "subtotal": "/subtotal"}),
         dict(rule(), kind="unimplemented_model_judgment"),
         dict(rule(), fields={"lines": "/same", "subtotal": "/same/child"}),
     ):
