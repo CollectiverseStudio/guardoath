@@ -211,7 +211,7 @@ def test_demo_reset_can_clear_private_reference_rules_only_via_explicit_demo_res
 
     # Authorized demo-only reset is a server-generated full restore; it MUST
     # clear obsolete synthetic private reference arrays for repeatable demos.
-    reset = api.post("/v1/tenants/current/reset", headers=a)
+    # Every mutation, even an empty reset, must carry JSON media type.\n    reset = api.post("/v1/tenants/current/reset", headers=a, json={})
     assert reset.status_code == 200, reset.text[:250]
     after = store.get("identity-alpha")
     assert after.revision == before.revision + 1
