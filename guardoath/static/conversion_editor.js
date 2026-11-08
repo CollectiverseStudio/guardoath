@@ -38,7 +38,7 @@
       clone(tenant.advanced_conversion_reference_status) : [];
     if (!canEdit) return;
     host.append(el("h3", "Conversion and time comparisons"));
-    host.append(el("p", "Configure unit-load, cold-chain and lifecycle chronology JSON checks. The existing tenant cross_field Engine and stage actions are authoritative. FX conversion rates remain operator-owned and hidden here."));
+    host.append(el("p", "Configure unit-load, cold-chain and lifecycle chronology JSON checks. The existing tenant cross_field Engine and stage actions are authoritative. Nested object and array paths (for example /loads/0/load) are supported within strict JSON limits. FX conversion rates remain operator-owned and hidden here."));
     if (!enabled) {
       host.append(el("p", "Conversion definitions could not be loaded. Reconnect before editing."));
       return;
@@ -198,11 +198,11 @@
         }
         const segments = pointer.slice(1).split("/").map(x =>
           x.replaceAll("~1", "/").replaceAll("~0", "~"));
-        if (segments.some(x => !x || /^\d+$/.test(x)) ||
-            pathsSeen.some(p => p.join("/") === segments.join("/") ||
+        if (segments.some(x => !x) ||
+            pathsSeen.some(p => JSON.stringify(p) === JSON.stringify(segments) ||
               p.every((x,i) => x === segments[i]) ||
               segments.every((x,i) => x === p[i]))) {
-          message.textContent = "Pointers must be distinct, nonoverlapping named object paths.";
+          message.textContent = "Pointers must have nonempty segments and be distinct and nonoverlapping.";
           input.focus(); return;
         }
         pathsSeen.push(segments); values[key] = pointer;
