@@ -785,7 +785,11 @@ async function loadKeys() {
     row.append(revoke); list.append(row);
   }
   if (!data.keys.length) { const row = document.createElement("li"); row.textContent = "No API keys yet."; list.append(row); }
-  $("key-create").disabled = data.keys.length >= data.max_keys;
+  const entitled = application?.tenant?.subscription_active === true;
+  $("key-create").disabled = data.keys.length >= data.max_keys || !entitled;
+  if (!entitled) {
+    $("key-message").textContent = "An active subscription is required to create an API key.";
+  }
 }
 async function keyAction(path, body, done) {
   const text = JSON.stringify(body);
