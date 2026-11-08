@@ -404,6 +404,12 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                             attachments: tuple[bytes, ...] = ()):
         if request.application_id != record.tenant_id:
             raise HTTPException(403, "Credential does not authorize this application")
+        # Account registration alone does not authorize paid validations.
+        # Legacy None is a migration state; existing tenants must be
+        # reconciled with verified billing entitlement before paid-only rollout.
+        if not record.demo and record.subscription_status not in (None, "active"):
+            raise HTTPException(402, "An active subscription is required to run checks",
+                                headers={"Cache-Control": "no-store"})
         # A tenant key runs its record's own checks only. Naming any other profile is refused (not counted).
         version = request.policy_version or TENANT_POLICY_VERSION
         if version not in tenants.policy_versions(record):
@@ -522,6 +528,8 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         return {"tenant_id": current.tenant_id, "display_name": current.display_name, "demo": current.demo,
                 "revision": current.revision, "month": month, "used": current.used(month),
                 "monthly_allowance": current.monthly_allowance, "overage": current.overage,
+                "subscription_status": current.subscription_status or "unverified_legacy",
+                "subscription_active": current.subscription_status == "active",
                 # Each check's action on each stage (2026-11-04); no value = it does not run on that stage.
                 "input_checks": {check_id: current.action(check_id, Stage.INPUT) for check_id in CHECK_IDS},
                 "output_checks": {check_id: current.action(check_id, Stage.OUTPUT) for check_id in CHECK_IDS},
@@ -676,6 +684,42 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         except TenantConflict:
             raise HTTPException(409, "The tenant record changed; reload it and try again") from None
         return JSONResponse(key_list(updated), headers={"Cache-Control": "no-store"})
+
+    @api.post("/v1/register")
+    async def register_account(
+        session: Annotated[str | None, Header(alias=SESSION_HEADER)] = None,
+    ):
+        """Explicit registration creates an account, never a paid entitlement."""
+        if sessions is None or tenants is None or not sessions.registration_enabled:
+            raise HTTPException(404, "Registration is not available")
+        if not session:
+            raise HTTPException(401, "Sign in before registering")
+        try:
+            tenant_id = await run_in_threadpool(sessions.tenant_for, session)
+        except SignInBusy:
+            raise HTTPException(503, "Registration is busy; try again shortly",
+                                headers={"Retry-After": "5"}) from None
+        if tenant_id is None:
+            raise HTTPException(401, "A verified identity-provider sign-in is required")
+        if tenants.store.get(tenant_id) is not None:
+            raise HTTPException(409, "An account is already registered")
+        # Never accept browser-supplied subscription status, tenant ID,
+        # billing claims, validation allowance or API keys.
+        registered = TenantRecord(
+            tenant_id=tenant_id, display_name="My GuardOath account",
+            demo=False, status="active", key_hashes=(),
+            monthly_allowance=0, overage="block",
+            subscription_status="inactive",
+        )
+        try:
+            registered = await run_in_threadpool(tenants.store.create, registered)
+        except TenantConflict:
+            raise HTTPException(409, "An account is already registered") from None
+        return JSONResponse({"tenant_id": registered.tenant_id,
+                             "subscription_status": "inactive",
+                             "can_validate": False,
+                             "next_step": "Choose a subscription to activate checks"},
+                            status_code=201, headers={"Cache-Control": "no-store"})
 
     @api.get("/v1/sign-in")
     async def sign_in_config():
