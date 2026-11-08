@@ -1487,6 +1487,29 @@ test("field comparisons on the record are rules in the table, with their configu
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
   await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
 });
+test("comparison editor shows stage counts and pending changes through add and removal", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo2");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  const summary = page.locator("#comparison-draft-summary");
+  await expect(summary).toContainText("No pending changes.");
+  const baseline = await page.locator("#comparison-drafts li[data-comparison-id]").count();
+  await expect(summary).toContainText(baseline + " comparisons configured");
+  await page.locator("#comparison-id").fill("stage_count_regression");
+  await page.locator("#comparison-left").fill("/invoice/total");
+  await page.locator("#comparison-right").fill("/invoice/limit");
+  await page.locator("#comparison-stage-output").uncheck();
+  await page.locator("#comparison-apply").click();
+  await expect(page.locator('[data-comparison-id="stage_count_regression"]')).toHaveCount(1);
+  await expect(summary).toContainText((baseline + 1) + " comparisons configured");
+  await expect(summary).toContainText("Unsaved changes");
+  await page.getByRole("button", { name: "Remove comparison stage_count_regression" }).click();
+  await expect(summary).toContainText(baseline + " comparisons configured");
+  await expect(summary).toContainText("No pending changes.");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+});
 test("human safety: a person at risk is flagged and the message continues; a harmful answer is blocked", async ({ page }) => {
   // 2026-11-05: the human_safety check (61 wording rules from docs/human-safety-scenarios.md). Only Block stops.
   await page.goto("/dashboard");
