@@ -156,3 +156,73 @@ test("real signed FC-047 reference moves accepted to blocked after tampering, wi
     }
   }
 });
+
+test("FC-044/045/049 coexist: signed tenant status, dashboard and both Engine stages", async ({page, request}) => {
+  const headers = await connect(page);
+  let reset = false;
+  try {
+    const cleared = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(cleared.status()).toBe(200);
+    reset = true;
+    const now = Date.now();
+    const stamp = ms => new Date(ms).toISOString();
+    const definitions = [
+      ["dose", "dose_ceiling", {dose_mg:"/dose_mg"}, {verified_weight_kg:"70",max_mg_per_kg:"10"}, {dose_mg:900}],
+      ["interval", "medication_interval", {administered_at:"/administered_at"}, {previous_administration:"2026-11-01T09:00:00Z",minimum_interval_minutes:"240"}, {administered_at:"2026-11-01T10:00:00Z"}],
+      ["vendor", "invoice_po_vendor", {invoice_vendor_id:"/invoice_vendor_id"}, {approved_vendor_id:"VENDOR1"}, {invoice_vendor_id:"VENDOR2"}],
+    ];
+    const signed = definitions.map(([name,kind,fields,values]) => {
+      const rule = {rule_id:"browser_"+name,kind,fields,reference_values:values,
+        source_id:"synthetic-fixture",reference_version:"v1",
+        verified_at:stamp(now-60000),expires_at:stamp(now+86400000),
+        host_signature:"0".repeat(64),stages:["input","output"]};
+      return JSON.parse(execFileSync("python",["-c",SIGNER],{
+        input:JSON.stringify({rule,tenant:"demo7",key:KEY}),encoding:"utf8",timeout:5000,
+      }));
+    });
+    const prior = await summary(request,headers);
+    const saved = await request.post("/v1/tenants/current/checks",{headers,data:{
+      revision:prior.revision,changes:{comparisons:[],advanced_trusted_reference:signed,
+        input_check_cross_field:"block",output_check_cross_field:"flag"},
+    }});
+    expect(saved.status()).toBe(200);
+    const live = await summary(request,headers);
+    expect(live.revision).toBe(prior.revision+1);
+    expect(live.advanced_trusted_reference_status).toHaveLength(3);
+    for (const [name] of definitions) {
+      expect(live.advanced_trusted_reference_status.find(r=>r.rule_id==="browser_"+name).runtime_integrity)
+        .toBe("accepted");
+    }
+    await connect(page);
+    for (const [name] of definitions) {
+      await expect(page.locator("#trusted-reference-status")).toContainText("browser_"+name);
+      await page.locator("#trusted-reference-status").getByRole("button",{
+        name:"Review output action for host reference browser_"+name,
+      }).click();
+      await expect(page.locator('tr.rule-row[data-rule="business.browser_'+name+'"] [data-stage="output"]'))
+        .toBeFocused();
+    }
+    const baseline = {dose_mg:700,administered_at:"2026-11-01T13:00:00Z",invoice_vendor_id:"VENDOR1"};
+    for (const [stage,action] of [["input","block"],["output","flag"]]) {
+      const check = async payload => {
+        const response = await request.post("/v1/checks/"+stage,{headers,data:{
+          application_id:"demo7",content_format:"json",content:JSON.stringify(payload),
+        }});
+        expect(response.status()).toBe(200);
+        return response.json();
+      };
+      const clean = await check(baseline);
+      expect(clean.evaluation_status).toBe("complete");
+      expect(clean.effective_action).toBe("allow");
+      for (const [name,,,,bad] of definitions) {
+        const failed = await check({...baseline,...bad});
+        expect(failed.evaluation_status).toBe("complete");
+        expect(failed.effective_action).toBe(action);
+        expect(failed.findings.filter(f=>f.rule_id?.startsWith("business.browser_")).map(f=>f.rule_id))
+          .toEqual(["business.browser_"+name]);
+      }
+    }
+  } finally {
+    if (reset) expect((await request.post("/v1/tenants/current/reset",{headers,data:{}})).status()).toBe(200);
+  }
+});
