@@ -45,7 +45,10 @@ test("public identity and conversion editors preserve hidden reference definitio
     expect(protectedState.advanced_conversion_reference_status.map(x=>x.rule_id)).toEqual(["private_fx"]);
     expect(JSON.stringify(protectedState)).not.toContain("SYNTHETIC_PRIVATE_LOT");
     expect(JSON.stringify(protectedState)).not.toContain("SYNTHETIC-PRIVATE-FX");
-    await page.reload();
+    await page.goto("/dashboard");
+    await page.locator("#demo-user").selectOption("demo9");
+    await page.getByRole("button", {name:"Get demo API key",exact:true}).click();
+    await expect(page.locator("#connection-status")).toContainText("Connected to demo9");
     await expect(page.locator("#identity-reference-status")).toContainText("private_lot");
     await expect(page.locator("#conversion-reference-status")).toContainText("private_fx");
     await expect(page.locator("#identity-apply")).toBeEnabled();
