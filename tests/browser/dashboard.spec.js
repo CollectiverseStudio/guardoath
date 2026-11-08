@@ -1789,6 +1789,13 @@ test("CHAT-009 four-turn conditioning and benign examples run through tenant Inp
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
   await page.locator("#tenant-check-input-prompt_attack").selectOption("flag");
   await page.locator("#tenant-check-output-prompt_attack").selectOption("flag");
+  // Verify the canonical tenant revision has saved both stage policies before
+  // examining real Engine findings. A race or failed Save must fail visibly.
+  await page.getByRole("button", { name: "Save checks", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toHaveText(
+    "Saved. The new checks apply from the next check.");
+  await expect(page.locator("#tenant-check-input-prompt_attack")).toHaveValue("flag");
+  await expect(page.locator("#tenant-check-output-prompt_attack")).toHaveValue("flag");
 
   await pickSample(page, "input", "chat-four-turn");
   await expect(page.locator("#input-format")).toHaveValue("json");
