@@ -235,7 +235,7 @@ def test_comparison_32_level_json_limit_matches_customer_warning_and_33_level_is
         data["reference"] = 3
         return json.dumps(data)
 
-    for stage, invalid_action in (("input", "block"), ("output", "flag")):
+    for stage in ("input", "output"):
         acceptable = client.post("/v1/checks/" + stage, headers=headers, json={
             "application_id": TENANT, "content_format": "json",
             "content": document(32)
@@ -251,6 +251,13 @@ def test_comparison_32_level_json_limit_matches_customer_warning_and_33_level_is
         assert too_deep.status_code == 200, too_deep.text[:250]
         result = too_deep.json()
         assert "business.invalid_json" in {f["rule_id"] for f in result["findings"]}
-        assert result["effective_action"] == invalid_action
+        # The enabled required text_security checker also rejects malformed JSON:
+        # failure_action=block takes precedence even when Output cross_field=flag.
+        assert result["evaluation_status"] == "incomplete"
+        assert result["recommended_action"] == result["effective_action"] == "block"
+        inspection = next(r for r in result["checker_results"]
+                          if r["checker_id"] == "text_security")
+        assert inspection["status"] == "error"
+        assert inspection["error_code"] == "invalid_json_for_text_inspection"
         assert '"k":' not in too_deep.text
     assert store.get(TENANT).used(usage_month()) == 4
