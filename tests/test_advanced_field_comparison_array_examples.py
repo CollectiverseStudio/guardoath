@@ -137,14 +137,15 @@ def test_authenticated_tenant_saves_all_advanced_families_with_real_array_exampl
     )
     changes = {family: [rule.model_dump(mode="json")] for family, rule in definitions}
     changes.update(input_check_cross_field="flag", output_check_cross_field="block")
+    initial_revision = store.get(tenant_id).revision
     response = client.post("/v1/tenants/current/checks", headers=headers, json={
-        "revision": store.get(tenant_id).revision, "changes": changes,
+        "revision": initial_revision, "changes": changes,
     })
     assert response.status_code == 200, response.text[:300]
     listing = client.get("/v1/applications/current", headers=headers)
     assert listing.status_code == 200
     saved = listing.json()["tenant"]
-    assert saved["revision"] == rec.revision + 1
+    assert saved["revision"] == initial_revision + 1
     assert all(saved[family][0]["fields"] == rule.model_dump(mode="json")["fields"]
                for family, rule in definitions)
     metadata = {row["rule_id"]: row for row in saved["record_rules"]}
