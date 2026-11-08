@@ -78,7 +78,7 @@ test("conversion/time editor saves a mass rule, runs bad and benign examples, an
   await reset();
 });
 
-test("conversion editor blocks invalid overlapping paths, array offsets, and absent stages",async ({page})=>{
+test("conversion editor blocks overlapping or empty paths and absent stages",async ({page})=>{
   await page.goto("/dashboard");
   await page.locator("#demo-user").selectOption("demo4");
   await page.getByRole("button",{name:"Get demo API key",exact:true}).click();
@@ -91,9 +91,9 @@ test("conversion editor blocks invalid overlapping paths, array offsets, and abs
   await page.locator("#conversion-field-max_kg").fill("/max");
   await page.locator("#conversion-apply").click();
   await expect(page.locator("#conversion-message")).toContainText("nonoverlapping");
-  await page.locator("#conversion-field-load_unit").fill("/item/0");
+  await page.locator("#conversion-field-load_unit").fill("/item//unit");
   await page.locator("#conversion-apply").click();
-  await expect(page.locator("#conversion-message")).toContainText("named object");
+  await expect(page.locator("#conversion-message")).toContainText("nonempty segments");
   await page.locator("#conversion-field-load_unit").fill("/unit");
   await page.locator("#conversion-stage-input").uncheck();
   await page.locator("#conversion-stage-output").uncheck();
