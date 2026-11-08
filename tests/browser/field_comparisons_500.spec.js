@@ -125,3 +125,74 @@ for (const size of [30, 51, 100, 250, 500]) {
     }
   });
 }
+
+
+test("customer can import 500 JSON comparison definitions, save and execute them without a mocked tenant", async ({page, request}) => {
+  const headers = await connect(page);
+  let resetRequired = false;
+  try {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(reset.status(), (await reset.text()).slice(0,200)).toBe(200);
+    resetRequired = true;
+    await connect(page);
+    await page.locator("#comparison-bulk-panel summary").click();
+    const jsonBox = page.locator("#comparison-bulk-json");
+    const importButton = page.locator("#comparison-bulk-import");
+    const confirmation = page.locator("#comparison-bulk-confirm");
+    const summary = page.locator("#comparison-draft-summary");
+    const before = await current(request, headers);
+    const rules = comparisonRules(500);
+    await jsonBox.fill(JSON.stringify(rules));
+    // No implicit wholesale replacement: user confirmation is mandatory.
+    await importButton.click();
+    await expect(page.locator("#comparison-bulk-status")).toContainText("Confirm replacement");
+    await expect(summary).toContainText(before.comparisons.length + " comparisons configured");
+    await confirmation.check();
+    await jsonBox.fill(JSON.stringify([rules[0], rules[0]]));
+    await importButton.click();
+    await expect(page.locator("#comparison-bulk-status")).toContainText("duplicate");
+    await expect(summary).toContainText(before.comparisons.length + " comparisons configured");
+    await jsonBox.fill(JSON.stringify([{...rules[0], stages: ["input", "other"]}]));
+    await importButton.click();
+    await expect(page.locator("#comparison-bulk-status")).toContainText("stages must include");
+    await expect(summary).toContainText(before.comparisons.length + " comparisons configured");
+    await jsonBox.fill(JSON.stringify(rules));
+    await importButton.click();
+    await expect(page.locator("#comparison-bulk-status")).toContainText(
+      "500 comparison definitions staged");
+    await expect(summary).toContainText("500 comparisons configured; 500 Input, 500 Output.");
+    await expect(summary).toContainText("Unsaved changes");
+    expect((await current(request, headers)).comparisons).toEqual(before.comparisons);
+
+    await page.locator("#tenant-check-input-cross_field").selectOption("flag");
+    await page.locator("#tenant-check-output-cross_field").selectOption("block");
+    await page.getByRole("button", {name: "Save checks", exact: true}).click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved.");
+    const after = await current(request, headers);
+    expect(after.comparisons).toEqual(rules);
+    expect(after.revision).toBe(before.revision + 1);
+    await connect(page);
+    await expect(page.locator("#comparison-draft-summary")).toContainText(
+      "500 comparisons configured; 500 Input, 500 Output.");
+    await expect(page.locator("#comparison-draft-summary")).toContainText("No pending changes.");
+
+    for (const stage of ["input", "output"]) {
+      const response = await request.post("/v1/checks/" + stage, {headers, data: {
+        application_id: "demo2", content_format: "json",
+        content: numericPayload(500, true),
+      }});
+      expect(response.status(), (await response.text()).slice(0,200)).toBe(200);
+      const evaluated = await response.json();
+      expect(evaluated.evaluation_status).toBe("complete");
+      const matches = evaluated.findings.filter(f => f.rule_id.startsWith("business.ui_scale_"))
+        .map(f => f.rule_id).sort();
+      expect(matches).toEqual(["business.ui_scale_001", "business.ui_scale_500"]);
+      expect(evaluated.effective_action).toBe(stage === "input" ? "flag" : "block");
+    }
+  } finally {
+    if (resetRequired) {
+      const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+      expect(reset.status(), (await reset.text()).slice(0,200)).toBe(200);
+    }
+  }
+});
