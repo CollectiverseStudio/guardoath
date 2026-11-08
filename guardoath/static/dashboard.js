@@ -701,9 +701,42 @@ async function loadSignIn() {
   }
   const stored = sessionStorage.getItem("guardoath-session");
   if (!stored) return;
+  await showAccountState(stored);
+}
+async function showAccountState(token) {
+  let reply;
+  try {
+    reply = await send("/v1/account/status", {
+      headers: {"X-GuardOath-Session": token}, cache: "no-store"
+    });
+  } catch (_) {
+    $("account-status").textContent = "Cannot verify account status. Retry sign-in.";
+    return;
+  }
+  if (!reply.ok) {
+    if (reply.status === 401) sessionStorage.removeItem("guardoath-session");
+    $("account-status").textContent = "Account verification unavailable (HTTP " + reply.status + ").";
+    return;
+  }
+  const status = await reply.json();
+  $("sign-in").hidden = true;
+  $("sign-out").hidden = false;
+  $("register-account").hidden = status.registered || !status.registration_enabled;
+  if (!status.registered) {
+    $("account-status").textContent = "Google sign-in verified. Registration is required before configuring a tenant. Registering does not activate a paid subscription.";
+    $("connection-status").textContent = "Signed in — account registration pending.";
+    return;
+  }
+  $("account-status").textContent = status.subscription_status === "active"
+    ? "Subscription: active. Your account settings are available."
+    : "Subscription: " + status.subscription_status + ". Paid checks require a verified active subscription.";
   reset(); const attempt = revision;
-  try { await loadApplication(SESSION + stored, attempt); signedIn(true); }
-  catch (error) { sessionStorage.removeItem("guardoath-session"); signedIn(false); $("connection-status").textContent = "Your sign-in has ended. Sign in again."; }
+  try {
+    await loadApplication(SESSION + token, attempt);
+    signedIn(true);
+  } catch (_) {
+    $("connection-status").textContent = "Signed in, but account settings could not be loaded.";
+  }
 }
 async function beginGoogleLogin(intent) {
   if (!signIn) return;
@@ -718,7 +751,24 @@ async function beginGoogleLogin(intent) {
   location.assign(url.toString());
 }
 $("sign-in").addEventListener("click", () => beginGoogleLogin("signin"));
-$("register-account").addEventListener("click", () => beginGoogleLogin("register"));
+$("register-account").addEventListener("click", async () => {
+  const token = sessionStorage.getItem("guardoath-session");
+  if (!token) return beginGoogleLogin("register");
+  const button = $("register-account"); button.disabled = true;
+  try {
+    const response = await send("/v1/register", {
+      method: "POST", cache: "no-store",
+      headers: {"X-GuardOath-Session": token}
+    });
+    if (response.status !== 201 && response.status !== 409) {
+      $("account-status").textContent = "Registration not completed (HTTP " + response.status + ").";
+      return;
+    }
+    await showAccountState(token);
+  } catch (_) {
+    $("account-status").textContent = "Registration unavailable; try again later.";
+  } finally { button.disabled = false; }
+});
 $("sign-out").addEventListener("click", () => {
   sessionStorage.removeItem("guardoath-session"); $("disconnect").click();
   const url = new URL(signIn.logout_url); url.searchParams.set("client_id", signIn.client_id); url.searchParams.set("logout_uri", signIn.redirect_uri);
