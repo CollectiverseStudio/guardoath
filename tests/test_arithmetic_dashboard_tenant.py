@@ -96,7 +96,7 @@ def test_arithmetic_invalid_pointer_cannot_mutate_stored_rule_or_tenant():
     before = store.get("arith-one")
     bad = rules()[0]
     role = next(iter(bad["fields"]))
-    bad["fields"][role] = "/0"
+    bad["fields"][role] = "/batch//invalid"
     result = client.post("/v1/tenants/current/checks", headers=auth, json={
         "revision": before.revision,
         "changes": {"advanced_arithmetic": [bad], "input_check_cross_field": "block"},
