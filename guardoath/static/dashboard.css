@@ -33,3 +33,16 @@
 #tenant-attachment-modes .inline{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center}
 #tenant-attachment-modes select{width:100%;max-width:100%}
 @media(max-width:640px){#tenant-attachment-modes .inline{grid-template-columns:minmax(0,1fr)}}
+
+
+/* Customer-facing bulk comparison editing remains readable at 500 definitions. */
+#comparison-bulk-panel { margin: 14px 0; padding: 12px; border: 1px solid #dfe5ee; border-radius: 8px; }
+#comparison-bulk-panel > summary { cursor: pointer; font-weight: 650; }
+#comparison-bulk-panel > label { display: block; margin: 10px 0 5px; }
+#comparison-bulk-panel #comparison-bulk-json {
+  display: block; width: 100%; min-height: 10rem; resize: vertical;
+  font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+#comparison-bulk-panel button { margin: 8px 8px 8px 0; white-space: normal; }
+#comparison-bulk-panel #comparison-bulk-confirm { width: auto; margin-right: 6px; }
+#comparison-drafts { max-height: 30rem; overflow-y: auto; overflow-x: hidden; }
