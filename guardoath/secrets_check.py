@@ -4,6 +4,8 @@ No verification, network, source echoes, suppression comments, or file scanning.
 """
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
+from threading import BoundedSemaphore
 import base64
 import binascii
 from importlib.metadata import version
@@ -45,6 +47,31 @@ def normalize(value):
 
 class ScanLimit(ValueError):
     pass
+
+
+# Keep secrets scanning off the shared default asyncio worker pool, which
+# also serves tenant/API and other checker work. The same shipped per-check
+# deadline remains authoritative; admission is bounded, never queued without
+# a limit or turned into an Allow result on saturation.
+_SECRETS_EXECUTOR = ThreadPoolExecutor(max_workers=4, thread_name_prefix="guardoath-secrets")
+_SECRETS_SLOTS = BoundedSemaphore(4)
+
+
+class SecretsCapacityExceeded(Exception):
+    pass
+
+
+async def _bounded_secret_scan(scanner, *args):
+    """Reserve a slot until the worker Future finishes, even if wait_for cancels its waiter."""
+    if not _SECRETS_SLOTS.acquire(blocking=False):
+        raise SecretsCapacityExceeded
+    try:
+        future = _SECRETS_EXECUTOR.submit(scanner, *args)
+    except Exception:
+        _SECRETS_SLOTS.release()
+        raise
+    future.add_done_callback(lambda _done: _SECRETS_SLOTS.release())
+    return await asyncio.wrap_future(future)
 
 
 def units(value):
@@ -132,9 +159,11 @@ def build_secret_checker():
 
     async def run(request,policy,stage):
         try:
-            found=await asyncio.to_thread(scan,request,policy,stage)
+            found=await _bounded_secret_scan(scan,request,policy,stage)
         except ScanLimit as exc:
             return CheckerResult(checker_id='secrets',checker_version=checker_version,status='error',error_code=str(exc))
+        except SecretsCapacityExceeded:
+            return CheckerResult(checker_id='secrets',checker_version=checker_version,status='error',error_code='secrets_capacity_exceeded')
         except (ValueError,RecursionError):
             return CheckerResult(checker_id='secrets',checker_version=checker_version,status='error',error_code='invalid_json_for_secrets')
         names={'aws_credentials':'AWS credential or access-key identifier','github_token':'supported GitHub token',
