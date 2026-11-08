@@ -38,6 +38,8 @@
       clone(tenant.advanced_conversion_reference_status) : [];
     if (!canEdit) return;
     host.append(el("h3", "Conversion and time comparisons"));
+    const scope = el("p", "Rule examples demonstrate only the selected conversion rule. Running them checks ALL enabled tenant controls; unrelated comparisons may report additional findings. A synthetic benign sample is not proof of a clean whole-tenant result.");
+    scope.dataset.fieldExampleScope = "conversion"; host.append(scope);
     host.append(el("p", "Configure unit-load, cold-chain and lifecycle chronology JSON checks. The existing tenant cross_field Engine and stage actions are authoritative. Nested object and array paths (for example /loads/0/load) are supported within strict JSON limits. FX conversion rates remain operator-owned and hidden here."));
     if (!enabled) {
       host.append(el("p", "Conversion definitions could not be loaded. Reconnect before editing."));
