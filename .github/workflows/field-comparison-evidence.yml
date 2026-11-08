@@ -75,7 +75,7 @@ jobs:
           path: artifacts/field-comparisons/
           if-no-files-found: error
           retention-days: 14
-      - name: Enforce truthful portfolio and scale acceptance
+      - name: Enforce truthful portfolio, scale and tenant API acceptance
         if: always()
         shell: bash
         env:
