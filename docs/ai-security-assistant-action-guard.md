@@ -103,6 +103,21 @@ The **customer application or AI agent integration** already has a proposed stru
 - Browser + authenticated API end-to-end tests with real host-gateway fixture (no mocked permission/Engine), exact SHA 13 Tests + 3 CodeQL, full release packaging provenance, 15 post-deploy checks.
 - Host SDK/integration must actually block side effects, not merely log GuardOath recommendations. Mock execution target must prove zero side effects on blocked and incomplete paths.
 
+## Product navigation decision — keep Security Event Evidence separate
+
+**Decision (Greg, 2026-11-07):** Do **not** merge SigmaHQ security-event rules into the ordinary AI validation check/rule list. The inputs, trust requirements, execution timing and audience are different. Keep a visibly separate, optional **Security Event Evidence — Windows logs (SigmaHQ)** dashboard group, and clearly label it **Synthetic preview only; no live event ingestion** until real ingestion and enforcement are proven.
+
+| Capability | Trigger/input | What a customer does | Current status |
+|---|---|---|---|
+| AI Input/Output Validation | API chat/structured ML input and model response | Integrates AI application as usual | Existing checks, tenant-dependent |
+| AI Security Assistant | Ordinary user question plus optionally a pasted/redacted suspicious alert or bounded event evidence | Asks AI to explain, not to execute | Dedicated assistant product flow proposed; existing AI check pipeline available |
+| Pre-Execution Action Guard | Agent host supplies proposed command, API request, file operation or tool call **before** side effect | Integrates host-side tool-call interception; no log gathering | Proposed, not live enforcement |
+| Security Event Evidence (SigmaHQ) | **Post-event structured Windows PowerShell/process-creation telemetry** with authenticated trusted source | Today only tries bundled synthetic match/look-alike samples; eventual event ingestion is an optional integration | 228 imported source signatures; synthetic tenant preview only |
+
+**UI language:** no ambiguous generic `Security rules` label; use `Security Event Evidence — Windows logs (SigmaHQ)`. Explain why this is outside AI Input/Output rules, where real evidence would come from (Windows/EDR/SIEM telemetry, not user chat), whether it operates before or after execution, and which features are demos versus operational. Existing saved tenant rule-action controls must remain, but saved Block does **not** claim live blocking when no real-event ingress exists.
+
+**Do not infer trust from pasted metadata:** a user quoting a log in a chat may ask for explanation but does not authorize special Sigma event routing. Action Guard uses a separately authenticated host decision and not a Windows event signature automatically translated into a command detector.
+
 ## Relationship to existing Security Event / SigmaHQ portfolio
 - Retain the 228 imported Windows security-event definitions and immutable provenance under **Security Event Evidence — optional**, not the primary AI rule inventory.
 - They remain post-event, structured, original-logsource-based detectors. They may enrich an Assistant explanation of a verified record, or support a separately authorized ingestion integration in the future.
