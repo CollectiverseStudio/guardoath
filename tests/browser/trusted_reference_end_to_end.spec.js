@@ -183,7 +183,10 @@ test("FC-044/045/049 coexist: signed tenant status, dashboard and both Engine st
     const prior = await summary(request,headers);
     const saved = await request.post("/v1/tenants/current/checks",{headers,data:{
       revision:prior.revision,changes:{comparisons:[],advanced_trusted_reference:signed,
-        input_check_cross_field:"block",output_check_cross_field:"flag"},
+        input_check_cross_field:"block",output_check_cross_field:"flag",
+        // Independent PII still runs and reports the timestamp/identifier;
+        // this tenant explicitly chooses Flag rather than default Block.
+        input_check_pii:"flag",output_check_pii:"flag"},
     }});
     expect(saved.status()).toBe(200);
     const live = await summary(request,headers);
@@ -221,7 +224,13 @@ test("FC-044/045/049 coexist: signed tenant status, dashboard and both Engine st
         })),
       });
       expect(clean.evaluation_status, cleanEvidence).toBe("complete");
-      expect(clean.effective_action, cleanEvidence).toBe("allow");
+      // The ordinary PII detector correctly continues finding timestamp and
+      // identifier candidates. A passing trusted reference is NOT a privacy
+      // bypass; the tenant chose Flag for independent PII, not Off or Allow.
+      expect(clean.effective_action, cleanEvidence).toBe("flag");
+      expect(clean.checker_results.find(c => c.checker_id === "pii")?.status).toBe("flagged");
+      expect(clean.findings.some(f => f.rule_id?.startsWith("pii."))).toBe(true);
+      expect(clean.findings.filter(f => f.rule_id?.startsWith("business.browser_"))).toEqual([]);
       for (const [name,,,,bad] of definitions) {
         const failed = await check({...baseline,...bad});
         expect(failed.evaluation_status).toBe("complete");
