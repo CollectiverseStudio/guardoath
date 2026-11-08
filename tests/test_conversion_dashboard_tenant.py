@@ -272,3 +272,65 @@ def test_reference_route_rejects_unrelated_settings_and_keeps_generic_api_protec
     assert denied.status_code == 422
     assert "UNVERIFIED_FROM_GENERIC_API" not in denied.text
     assert store.get("conversion-alpha") == original
+
+
+
+def test_scoped_conversion_edit_preserves_private_fx_and_runs_both_stages():
+    api, store, headers = setup(protected=True)
+    auth = headers["conversion-alpha"]
+    before = store.get("conversion-alpha")
+    protected = before.advanced_conversion_time[0]
+    saved = api.post("/v1/tenants/current/checks", headers=auth, json={
+        "revision": before.revision,
+        "changes": {
+            "advanced_conversion_time": {"editable": DEFINITIONS},
+            "input_check_cross_field": "block", "output_check_cross_field": "flag",
+        },
+    })
+    assert saved.status_code == 200, saved.text[:300]
+    after = store.get("conversion-alpha")
+    assert after.revision == before.revision + 1
+    assert after.advanced_conversion_time[-1] == protected
+    assert len(summary(api, auth)["advanced_conversion_time"]) == 3
+    assert len(summary(api, auth)["advanced_conversion_reference_status"]) == 1
+    assert "SENSITIVE-FX-REFERENCE" not in saved.text
+    for stage, action in (("input", "block"), ("output", "flag")):
+        good, bad = CONVERSION_TIME_EXAMPLES["unit_load_kg_cap"]
+        result = api.post("/v1/checks/" + stage, headers=auth, json={
+            "application_id": "conversion-alpha", "content_format": "json",
+            "content": json.dumps({"mass": bad, "payment": 10, "payment_ccy": "EUR",
+                                   "invoice": 12, "invoice_ccy": "USD"}),
+        })
+        assert result.status_code == 200
+        assert "business.mass_limit" in {f["rule_id"] for f in result.json()["findings"]}
+        assert result.json()["effective_action"] == action
+    stale = api.post("/v1/tenants/current/checks", headers=auth, json={
+        "revision": before.revision, "changes": {"advanced_conversion_time": {"editable": []}},
+    })
+    assert stale.status_code == 409
+    assert store.get("conversion-alpha") == after
+    removed = api.post("/v1/tenants/current/checks", headers=auth, json={
+        "revision": after.revision, "changes": {"advanced_conversion_time": {"editable": []}},
+    })
+    assert removed.status_code == 200
+    assert store.get("conversion-alpha").advanced_conversion_time == (protected,)
+    assert summary(api, auth)["advanced_conversion_time"] == []
+
+
+def test_scoped_conversion_rejects_private_fx_injection_and_id_collisions():
+    api, store, headers = setup(protected=True)
+    auth = headers["conversion-alpha"]
+    before = store.get("conversion-alpha")
+    for payload in (
+        {"editable": [dict(DEFINITIONS[0], rule_id="private_fx")]},
+        {"editable": [{"rule_id": "untrusted_fx", "kind": "currency_conversion_cap"}]},
+        {"editable": [], "force": True},
+        {"editable": 17},
+        [],
+    ):
+        response = api.post("/v1/tenants/current/checks", headers=auth, json={
+            "revision": before.revision, "changes": {"advanced_conversion_time": payload},
+        })
+        assert response.status_code == 422, response.text[:300]
+        assert "SENSITIVE-FX-REFERENCE" not in response.text
+        assert store.get("conversion-alpha") == before
