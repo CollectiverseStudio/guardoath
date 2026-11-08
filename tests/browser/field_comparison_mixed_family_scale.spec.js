@@ -17,12 +17,12 @@ async function current(request, headers) {
 }
 
 const SIZE = 51;
-function configured() {
+function configured(size = SIZE) {
   const changes = {comparisons: [], advanced_arithmetic: [],
     advanced_identity: [], advanced_conversion_time: [],
     input_check_cross_field: "flag", output_check_cross_field: "block"};
   const good = {};
-  for (let i = 0; i < SIZE; i++) {
+  for (let i = 0; i < size; i++) {
     const number = String(i).padStart(3, "0");
     const rule_id = "mixed_ui_" + number;
     const part = "r" + number;
@@ -52,7 +52,11 @@ function configured() {
   }
   const bad = structuredClone(good);
   bad.r000.a = 9;
-  bad.r050.shipment_order_id = "ORDER-2";
+  const last = "r" + String(size - 1).padStart(3, "0");
+  if ((size - 1) % 4 === 0) bad[last].a = 9;
+  else if ((size - 1) % 4 === 1) bad[last].discount = 30;
+  else if ((size - 1) % 4 === 2) bad[last].shipment_order_id = "ORDER-2";
+  else bad[last].load = 50;
   return {changes, good, bad};
 }
 
@@ -120,6 +124,67 @@ test("authenticated mixed 51-rule FC portfolio renders, saves UI override and ru
     if (shouldReset) {
       const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
       expect(reset.status()).toBe(200);
+    }
+  }
+});
+
+
+test("authenticated 500-rule four-family dashboard renders, persists and evaluates the final rule", async ({page, request}) => {
+  const headers = await connect(page);
+  let resetRequired = false;
+  const size = 500;
+  const lastId = "business.mixed_ui_499";
+  try {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(reset.status()).toBe(200);
+    resetRequired = true;
+    const before = await current(request, headers);
+    const {changes, good, bad} = configured(size);
+    const saved = await request.post("/v1/tenants/current/checks", {headers, data: {
+      revision: before.revision, changes,
+    }});
+    expect(saved.status(), (await saved.text()).slice(0, 200)).toBe(200);
+    await connect(page);
+    const after = await current(request, headers);
+    expect(after.revision).toBe(before.revision + 1);
+    for (const family of ["comparisons", "advanced_arithmetic", "advanced_identity",
+                          "advanced_conversion_time"]) {
+      expect(after[family], family).toHaveLength(125);
+    }
+    await expect(page.locator('tr.rule-row[data-rule^="business.mixed_ui_"]')).toHaveCount(size);
+    await expect(page.locator("#comparison-draft-summary")).toContainText("125 comparisons configured");
+    await page.locator("#rule-search").fill("mixed_ui_499");
+    const last = page.locator('tr.rule-row[data-rule="' + lastId + '"]');
+    await expect(last).toBeVisible();
+    await last.locator('[data-stage="input"]').selectOption("block");
+    await page.getByRole("button", {name: "Save checks", exact: true}).click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved.");
+    const persisted = await current(request, headers);
+    expect(persisted.revision).toBe(after.revision + 1);
+    expect(persisted.input_rule_actions[lastId]).toBe("block");
+    expect(persisted.record_rules.filter(r => r.rule_id.startsWith("business.mixed_ui_")))
+      .toHaveLength(size);
+    await connect(page);
+    await page.locator("#rule-search").fill("mixed_ui_499");
+    await expect(page.locator('tr.rule-row[data-rule="' + lastId + '"] [data-stage="input"]'))
+      .toHaveValue("block");
+    for (const stage of ["input", "output"]) {
+      const result = await check(request, headers, stage, bad);
+      expect(result.evaluation_status).toBe("complete");
+      expect(result.effective_action).toBe("block");
+      const findings = result.findings.filter(f => f.rule_id.startsWith("business.mixed_ui_"))
+        .map(f => f.rule_id).sort();
+      expect(findings).toEqual(["business.mixed_ui_000", lastId]);
+      const benign = await check(request, headers, stage, good);
+      expect(benign.evaluation_status).toBe("complete");
+      expect(benign.effective_action).toBe("allow");
+      expect(benign.findings.filter(f => f.rule_id.startsWith("business.mixed_ui_")))
+        .toHaveLength(0);
+    }
+  } finally {
+    if (resetRequired) {
+      const cleanup = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+      expect(cleanup.status()).toBe(200);
     }
   }
 });
