@@ -149,3 +149,62 @@ def test_missing_and_invalid_json_values_are_not_silently_accepted_in_large_tena
         assert response["evaluation_status"] == "complete"
         assert response["effective_action"] == action
     assert store.get(TENANT).used(usage_month()) == 2
+
+
+def test_501_nested_comparisons_run_without_flat_json_object_limit():
+    """501 ordinary rules are valid when fields are distributed into bounded objects.
+
+    The corresponding flat layout references 1,002 root keys and would exceed
+    the shared parser's per-object limit of 1,000. Neither the server nor the
+    editor should impose an arbitrary 500-comparison ceiling.
+    """
+    size = 501
+    client, store, headers = _client()
+    baseline = store.get(TENANT)
+    comparisons = [
+        {"rule_id": f"nested_{i:03d}",
+         "left": f"/left/field_{i:03d}", "right": f"/right/field_{i:03d}",
+         "operator": "le", "stages": ["input", "output"]}
+        for i in range(size)
+    ]
+    saved = client.post("/v1/tenants/current/checks", headers=headers, json={
+        "revision": baseline.revision,
+        "changes": {"comparisons": comparisons,
+                    "input_check_cross_field": "block",
+                    "output_check_cross_field": "flag"}
+    })
+    assert saved.status_code == 200, saved.text[:300]
+    assert len(store.get(TENANT).comparisons) == 501
+    assert len({r["rule_id"] for r in saved.json()["record_rules"]
+                if r["rule_id"].startswith("business.nested_")}) == 501
+
+    payload = {
+        "left": {f"field_{i:03d}": 1 for i in range(size)},
+        "right": {f"field_{i:03d}": 2 for i in range(size)},
+    }
+    for stage, action in (("input", "block"), ("output", "flag")):
+        clean = client.post("/v1/checks/" + stage, headers=headers, json={
+            "application_id": TENANT, "content_format": "json",
+            "content": json.dumps(payload),
+        })
+        assert clean.status_code == 200, clean.text[:300]
+        assert clean.json()["evaluation_status"] == "complete"
+        assert clean.json()["effective_action"] == "allow"
+
+        payload["left"]["field_000"] = 9
+        payload["left"]["field_500"] = 9
+        flagged = client.post("/v1/checks/" + stage, headers=headers, json={
+            "application_id": TENANT, "content_format": "json",
+            "content": json.dumps(payload),
+        })
+        assert flagged.status_code == 200, flagged.text[:300]
+        result = flagged.json()
+        assert result["evaluation_status"] == "complete"
+        assert result["effective_action"] == action
+        found = {f["rule_id"] for f in result["findings"]
+                 if f["rule_id"].startswith("business.nested_")}
+        assert found == {"business.nested_000", "business.nested_500"}
+        assert '"field_000": 9' not in flagged.text
+        payload["left"]["field_000"] = 1
+        payload["left"]["field_500"] = 1
+    assert store.get(TENANT).used(usage_month()) == 4
