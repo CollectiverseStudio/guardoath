@@ -255,11 +255,12 @@ def test_scoped_identity_edit_preserves_hidden_reference_through_save_and_delete
         assert response.json()["effective_action"] == action
         assert {"business.private_quarantine", "business.order_match",
                 "business.unique_serials"} <= {f["rule_id"] for f in response.json()["findings"]}
+    unchanged = store.get("identity-alpha")
     stale = api.post("/v1/tenants/current/checks", headers=auth, json={
         "revision": before.revision, "changes": {"advanced_identity": {"editable": []}},
     })
     assert stale.status_code == 409
-    assert store.get("identity-alpha") == after
+    assert store.get("identity-alpha") == unchanged
     deleted = api.post("/v1/tenants/current/checks", headers=auth, json={
         "revision": after.revision, "changes": {"advanced_identity": {"editable": []}},
     })
