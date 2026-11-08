@@ -159,6 +159,12 @@ class CognitoSessions:
                 not re.fullmatch(r"http://(?:127\.0\.0\.1|localhost):\d+/dashboard", redirect_uri or ""):
             raise ValueError("GUARDOATH_COGNITO_REDIRECT_URI must be the dashboard address")
         self.pool_id, self.client_id, self.domain, self.redirect_uri = pool_id, client_id, domain, redirect_uri
+        # Opt-in only: requires separately configured Cognito + Google and a
+        # persistent tenant store. No account can be created by an API key.
+        flag = os.getenv("GUARDOATH_SELF_REGISTRATION", "0")
+        if flag not in {"0", "1"}:
+            raise ValueError("GUARDOATH_SELF_REGISTRATION must be 0 or 1")
+        self.registration_enabled = flag == "1"
         self.issuer = f"https://cognito-idp.{self.region}.amazonaws.com/{pool_id}"
         self.jwks_url = self.issuer + "/.well-known/jwks.json"
         self._post, self._get, self._clock, self._wall = post, get, clock, wall
@@ -183,7 +189,9 @@ class CognitoSessions:
         """What the dashboard needs to start a sign-in. Holds no secret: the app client has none."""
         return {"authorize_url": f"https://{self.domain}/oauth2/authorize",
                 "logout_url": f"https://{self.domain}/logout", "client_id": self.client_id,
-                "redirect_uri": self.redirect_uri, "scope": " ".join(SCOPES)}
+                "redirect_uri": self.redirect_uri, "scope": " ".join(SCOPES),
+                "registration_enabled": self.registration_enabled,
+                "google_provider": "Google"}
 
     # Step 1: local checks
 
@@ -309,7 +317,22 @@ class CognitoSessions:
             return None
         if not isinstance(data, dict) or not isinstance(data.get("UserAttributes"), list):
             return None
-        values = [a.get("Value") for a in data["UserAttributes"] if isinstance(a, dict) and a.get("Name") == TENANT_ATTRIBUTE]
-        if len(values) != 1 or not isinstance(values[0], str) or not re.fullmatch(TENANT_ID_PATTERN, values[0]):
+        attributes = {a.get("Name"): a.get("Value") for a in data["UserAttributes"]
+                      if isinstance(a, dict) and isinstance(a.get("Name"), str)}
+        tenant_id = attributes.get(TENANT_ATTRIBUTE)
+        if isinstance(tenant_id, str) and re.fullmatch(TENANT_ID_PATTERN, tenant_id):
+            return tenant_id
+        # A first-time Google/Cognito account does not have custom:tenant_id.
+        # Derive a stable, isolated tenant identifier ONLY from the verified
+        # Cognito subject and issuer. Never use email or browser-supplied IDs:
+        # addresses can change and users may have identical email aliases.
+        # The application must explicitly create this tenant at /v1/register.
+        # Until then normal /v1/applications/current remains unauthorized.
+        if not self.registration_enabled or tenant_id is not None:
             return None
-        return values[0]
+        subject = attributes.get("sub")
+        if (attributes.get("email_verified") != "true" or
+                not isinstance(subject, str) or
+                subject != self.verified_claims(token).get("sub")):
+            return None
+        return "usr-" + hashlib.sha256((self.issuer + "\\0" + subject).encode()).hexdigest()[:28]
