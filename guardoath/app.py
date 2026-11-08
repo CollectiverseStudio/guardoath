@@ -37,6 +37,7 @@ from guardoath.tenant_record import (CHECK_IDS, TENANT_ID_PATTERN, TENANT_POLICY
 from guardoath.tenant_store import TenantConflict, TenantNotFound, UsageLimitReached
 from guardoath.tenant_record import new_key
 from guardoath.record_rules import record_rules
+from guardoath.trusted_reference import reference_is_trusted
 from guardoath.sigma_site import catalog_payload as sigma_catalog_payload, evaluate_fixture as sigma_evaluate_fixture
 from guardoath.agent_activity import compare_actions, InvalidAction
 from guardoath.tenant_sessions import SESSION_HEADER, CognitoSessions, SignInBusy
@@ -582,11 +583,17 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 ],
                 # Read-only host-attested FC metadata for tenant dashboard discovery.
                 # Reference values, source, signature and timestamps remain private.
-                # Snapshot presence does not imply signature/expiry acceptance.
+                # Report the SAME runtime integrity gate used by the shared Engine.
+                # Re-evaluate on each authenticated summary read: missing host key,
+                # bad MAC, invalid values or expired references mean mandatory Block
+                # when active. This is NOT an attestation of external source truth.
+                # Never expose signature, source, timestamps or reference values.
                 "advanced_trusted_reference_status": [
                     {"rule_id": item.rule_id, "kind": item.kind,
                      "stages": [stage.value for stage in item.stages],
-                     "snapshot_present": True}
+                     "snapshot_present": True,
+                     "runtime_integrity": ("accepted" if reference_is_trusted(
+                         item, current.tenant_id) else "blocked")}
                     for item in current.advanced_trusted_reference
                 ],
                  "sigma_rule_actions": dict(sorted(current.sigma_rule_actions.items()))}

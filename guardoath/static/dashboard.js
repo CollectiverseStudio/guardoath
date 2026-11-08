@@ -285,7 +285,7 @@ function renderTrustedReferenceStatus(tenant, own) {
   if (host.hidden) return;
   const title = document.createElement("h3"); title.textContent = "Host-attested Field Comparison references"; host.append(title);
   const note = document.createElement("p");
-  note.textContent = "Read-only snapshot inventory. A saved snapshot is not proof of current signature, expiry, provenance, or external accuracy. The Engine enforces those checks at evaluation. Configure Input/Output rule actions below; obtain new signed reference snapshots from the authorized operator workflow.";
+  note.textContent = "Read-only snapshot inventory. Snapshot presence is not proof of current signature or expiry. Runtime integrity reflects the server's CURRENT signature, validity-window and reference-value checks, not independent source accuracy or clinical/regulatory authorization. If runtime integrity is blocked, an enabled rule makes the whole validation incomplete/Block even in observe mode. Obtain independently verified, newly signed reference snapshots from the authorized operator workflow.";
   host.append(note);
   if (!rules.length) {
     const empty = document.createElement("p"); empty.textContent = "No host-attested Field Comparison snapshots on this tenant."; host.append(empty);
@@ -295,8 +295,14 @@ function renderTrustedReferenceStatus(tenant, own) {
   for (const rule of rules) {
     const item = document.createElement("li"); item.dataset.trustedReferenceId = rule.rule_id;
     const label = document.createElement("span");
+    const integrity = rule.runtime_integrity === "accepted"
+      ? "accepted (signature, value and expiry only; external truth not verified)"
+      : rule.runtime_integrity === "blocked"
+        ? "blocked (active validation will Block; contact the host operator)"
+        : "not reported (check with the host operator)";
     label.textContent = rule.rule_id + " · " + rule.kind + " · stages: " + rule.stages.join(", ") +
-      " · saved snapshot: " + (rule.snapshot_present ? "present" : "not present");
+      " · saved snapshot: " + (rule.snapshot_present ? "present" : "not present") +
+      " · runtime integrity: " + integrity;
     item.append(label);
     for (const stage of ["input", "output"]) {
       if (!rule.stages.includes(stage)) continue;

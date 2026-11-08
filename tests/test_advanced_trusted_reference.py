@@ -227,6 +227,7 @@ def test_host_reference_dashboard_status_is_private_safe_and_tenant_scoped(monke
     assert status == [{
         "rule_id": "permit_cap", "kind": "permit_cap",
         "stages": ["input", "output"], "snapshot_present": True,
+        "runtime_integrity": "accepted",
     }]
     assert "permit_limit" not in json.dumps(status)
     for private in ("host-verified-reference", item.host_signature,
@@ -236,3 +237,41 @@ def test_host_reference_dashboard_status_is_private_safe_and_tenant_scoped(monke
     neighbor = api.get("/v1/applications/current", headers=headers["reference-b"])
     assert neighbor.status_code == 200
     assert neighbor.json()["tenant"]["advanced_trusted_reference_status"] == []
+
+
+def test_authenticated_runtime_integrity_status_tracks_host_key_and_tampering(monkeypatch):
+    """Status uses Engine's actual trust gate; a saved snapshot alone is never 'ready'."""
+    good = make("permit_cap")
+    tampered = make("invoice_po_vendor").model_copy(update={"host_signature": "f" * 64})
+    secret = "synthetic-runtime-integrity-demo-secret-0123456789"
+    token = demo_key(TENANT, secret)
+    record = TenantRecord(
+        tenant_id=TENANT, display_name="Reference status", demo=True,
+        monthly_allowance=20, overage="block", key_hashes=(key_hash(token),),
+        input_check_text_security="flag",
+        advanced_trusted_reference=(good, tampered),
+    )
+    store = MemoryTenantStore((record,))
+    headers = {"Authorization": "Bearer " + token}
+    monkeypatch.setenv(SIGNING_KEY_ENV, KEY)
+    with TestClient(create_app(engine=demo_engine(), credentials={},
+                               tenants=TenantService(store, default_checkers(), secret))) as api:
+        def statuses():
+            response = api.get("/v1/applications/current", headers=headers)
+            assert response.status_code == 200
+            assert response.headers.get("cache-control") in (None, "no-store")
+            rows = response.json()["tenant"]["advanced_trusted_reference_status"]
+            serialized = json.dumps(rows)
+            for value in (KEY, good.host_signature, good.source_id,
+                          good.verified_at, good.expires_at, "50", "VENDOR1"):
+                assert value not in serialized
+            return {item["rule_id"]: item["runtime_integrity"] for item in rows}
+
+        assert statuses() == {"permit_cap": "accepted", "invoice_po_vendor": "blocked"}
+        monkeypatch.setenv(SIGNING_KEY_ENV, "different-host-key-for-synthetic-testing-only")
+        assert statuses() == {"permit_cap": "blocked", "invoice_po_vendor": "blocked"}
+        monkeypatch.setenv(SIGNING_KEY_ENV, KEY)
+        assert statuses()["permit_cap"] == "accepted"
+        monkeypatch.delenv(SIGNING_KEY_ENV)
+        assert statuses() == {"permit_cap": "blocked", "invoice_po_vendor": "blocked"}
+        assert store.get(TENANT).used(usage_month()) == 0
