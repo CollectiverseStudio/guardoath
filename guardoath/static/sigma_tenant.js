@@ -15,11 +15,14 @@ window.sigmaTenant = (() => {
     details.id = "tenant-sigma-group";
     details.className = "sigma-tenant-group";
     const summary = document.createElement("summary");
-    summary.textContent = "Security event rules (SigmaHQ) — 228 source rules";
+    summary.textContent = "Security Event Evidence — Windows logs (SigmaHQ, 228 rules)";
     details.append(summary);
     const help = document.createElement("p"); help.className = "hint";
-    help.textContent = "Saved on this tenant record: each Windows event rule is Off, Allow, Flag or Block. These do NOT check AI messages. Only server-owned synthetic event evaluation is wired; real event ingestion is not active.";
+    help.textContent = "Separate optional category, not an AI input/output check. Input: trusted Windows process-creation or PowerShell event telemetry (typically collected by endpoint/SIEM tools), NOT chat questions, AI responses, or proposed commands. Current status: bundled synthetic event examples ONLY; no customer log ingestion, live monitoring, or pre-execution enforcement. Each Off/Allow/Flag/Block choice is saved to this tenant, but currently applies only to synthetic previews.";
     details.append(help);
+    const guide = document.createElement("p"); guide.className = "hint";
+    guide.textContent = "For AI questions about suspicious activity, use the AI Security Assistant workflow (planned). For checking an AI tool call BEFORE it runs, use Pre-Execution Action Guard (planned). These are different capabilities from post-event Sigma matching.";
+    details.append(guide);
     const search = document.createElement("input"); search.id = "sigma-rule-search";
     search.type = "search"; search.placeholder = "Search event rules";
     search.setAttribute("aria-label", "Search security event rules");
