@@ -256,6 +256,11 @@ def build_pii_checker():
             for part in parts:
                 part.analyze("Call +1 202-555-0147 or 082 123 4567", [entity])
     word_pattern = regex.compile(r"\w+")
+    # Warm one dedicated worker during checker initialization, outside the
+    # 500-ms request window. The executor otherwise creates its first thread
+    # on the first customer scan, adding avoidable OS scheduling overhead.
+    # This task receives no tenant input and does not consume scan slots.
+    _PII_EXECUTOR.submit(lambda: None).result()
     checker_version = f"privacy-patterns-{SOURCE_VERSION}/guardoath-patterns-7"
 
     # regex's concurrent=True releases the GIL while scanning immutable input strings.
