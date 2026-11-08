@@ -196,7 +196,7 @@
       limitWarning.hidden = !warnings.length;
       limitWarning.textContent = warnings.length
         ? "JSON structure warning: " + warnings.join("; ") +
-          ". The shared Engine accepts at most 1,000 keys per JSON object and at most 32 nested JSON containers. A fully populated document with these fields cannot pass. Distribute keys across objects with no more than 1,000 children each, keep nesting within 32 levels, or separate the stages; the draft has not been modified."
+          ". The shared Engine accepts at most 1,000 keys in any one JSON object, including nested objects, and at most 32 nested JSON containers. A fully populated document with these fields cannot pass. Use nested objects with no more than 1,000 children each and keep nesting within 32 levels, or split the stages; the draft has not been modified."
         : "";
       list.replaceChildren();
       if (!draft.length) list.append(element("li", "No number or date comparisons on this record."));
