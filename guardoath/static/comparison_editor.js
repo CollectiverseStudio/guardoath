@@ -135,6 +135,8 @@
     host.replaceChildren(); host.hidden = !enabled;
     if (!enabled) return;
     host.append(element("h3", "Field comparison rules"));
+    const note = element("p", "Rule examples demonstrate the selected comparison only. Running them evaluates ALL enabled tenant rules on that stage; other findings or schema errors may also appear. These examples do not change tenant settings.");
+    note.dataset.fieldExampleScope = "ordinary"; host.append(note);
     host.append(element("p", "Create, edit or remove number and calendar-date comparisons on your record. Apply a draft here, then Save checks. A rule runs only on its selected stages where Field comparisons is on. If no rules remain on a stage, turn that check off there before saving."));
     if (!available) {
       host.append(element("p", "Comparison definitions could not be loaded. Reconnect before editing."));
