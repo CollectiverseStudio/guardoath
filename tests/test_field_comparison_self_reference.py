@@ -37,7 +37,7 @@ def test_same_valid_field_is_impossible_or_non_discriminating_with_real_engine(o
     assert result.evaluation_status == "complete"
     assert [f.rule_id for f in result.findings] == (["business.self_rule"] if expected else [])
     assert result.recommended_action == (Action.FLAG if expected else Action.ALLOW)
-    assert value not in str(result.findings)
+    assert str(value) not in str(result.findings)
     opposite = Stage.OUTPUT if stage == Stage.INPUT else Stage.INPUT
     assert run(comparison, {"field": value}, opposite).findings == ()
 
