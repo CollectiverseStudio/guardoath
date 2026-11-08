@@ -5,7 +5,7 @@ import asyncio
 from bisect import bisect_right
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
-from threading import BoundedSemaphore
+from threading import BoundedSemaphore, Event
 import json
 from time import monotonic
 
@@ -36,6 +36,24 @@ _PII_SLOTS = BoundedSemaphore(4)
 
 class PiiCapacityExceeded(Exception):
     """Local PII capacity is occupied; never interpret this as a clean scan."""
+
+
+def _warm_pii_workers():
+    """Prime exactly the existing four bounded workers, without tenant data.
+
+    Release every probe before awaiting completion so competing first-time
+    checker constructors cannot deadlock while sharing the same executor.
+    All of this is outside the per-request monotonic deadline and does not
+    acquire any of the four _PII_SLOTS used by real scans.
+    """
+    release = Event()
+    try:
+        probes = tuple(_PII_EXECUTOR.submit(release.wait) for _ in range(4))
+    finally:
+        release.set()
+    for probe in probes:
+        probe.result()
+
 
 
 async def _bounded_local_scan(scanner, *args):
@@ -256,11 +274,12 @@ def build_pii_checker():
             for part in parts:
                 part.analyze("Call +1 202-555-0147 or 082 123 4567", [entity])
     word_pattern = regex.compile(r"\w+")
-    # Warm one dedicated worker during checker initialization, outside the
-    # 500-ms request window. The executor otherwise creates its first thread
-    # on the first customer scan, adding avoidable OS scheduling overhead.
-    # This task receives no tenant input and does not consume scan slots.
-    _PII_EXECUTOR.submit(lambda: None).result()
+    # Warm every bounded privacy worker during checker initialization, outside
+    # the 500-ms request window. The first concurrent caller otherwise pays
+    # for three OS thread starts after a previous single-worker warm-up.
+    # Event-held jobs force the executor to create all four workers before
+    # releasing them; they contain no tenant input and consume no scan slots.
+    _warm_pii_workers()
     checker_version = f"privacy-patterns-{SOURCE_VERSION}/guardoath-patterns-7"
 
     # regex's concurrent=True releases the GIL while scanning immutable input strings.
