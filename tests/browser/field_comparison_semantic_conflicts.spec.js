@@ -104,7 +104,8 @@ test("dashboard warns on unsatisfiable same-stage scalar/object and mixed date/n
     expect(gotOutput.effective_action).toBe("block");
     expect(new Set(gotOutput.findings.filter(x => x.rule_id.startsWith("business.")).map(x => x.rule_id)))
       .toEqual(new Set(["business.path_scalar", "business.path_descendant"]));
-    expect(out.text()).not.toContain('"root":9');
+    const outputBody = await out.text();
+    expect(outputBody).not.toContain('"root":9');
   } finally {
     if (resetRequired) {
       const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
