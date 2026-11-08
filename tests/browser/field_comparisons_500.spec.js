@@ -48,8 +48,8 @@ for (const size of [30, 51, 100, 250, 500]) {
     try {
       // Explicitly clean the shared demo tenant before changing its authoritative
       // record; the next test does not inherit persisted drafts or revisions.
-      const reset = await request.post("/v1/tenants/current/reset", {headers});
-      expect(reset.ok()).toBeTruthy();
+      const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+      expect(reset.ok(), "Demo reset rejected (HTTP " + reset.status() + "): " + (await reset.text()).slice(0,200)).toBeTruthy();
       resetRequired = true;
       const before = await current(request, headers);
       const rules = comparisonRules(size);
@@ -119,8 +119,8 @@ for (const size of [30, 51, 100, 250, 500]) {
       // assertion fails. Use the independent API request fixture, not a page
       // navigation in teardown that can hide the original browser failure.
       if (resetRequired) {
-        const cleanup = await request.post("/v1/tenants/current/reset", {headers});
-        expect(cleanup.ok()).toBeTruthy();
+        const cleanup = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+        expect(cleanup.ok(), "Demo cleanup rejected (HTTP " + cleanup.status() + "): " + (await cleanup.text()).slice(0,200)).toBeTruthy();
       }
     }
   });
