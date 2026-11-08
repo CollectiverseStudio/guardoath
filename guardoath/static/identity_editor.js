@@ -37,7 +37,7 @@
       clone(tenant.advanced_identity_reference_status) : [];
     if (!canEdit) return;
     host.append(el("h3", "Identity and collection comparisons"));
-    host.append(el("p", "Configure exact order-ID equality and unique serial-number checks for JSON. Each saved rule uses the same tenant cross_field Engine and Input/Output rule actions. Trusted quarantine/scope reference sets are never exposed or editable here."));
+    host.append(el("p", "Configure exact order-ID equality and unique serial-number checks for JSON. Each saved rule uses the same tenant cross_field Engine and Input/Output rule actions. Nested object and array paths (for example /shipments/0/order_id) are supported within strict JSON limits. Trusted quarantine/scope reference sets are never exposed or editable here."));
     if (!enabled) {
       host.append(el("p", "Identity definitions could not be loaded. Reconnect before editing."));
       return;
@@ -196,11 +196,11 @@
         }
         const segments = pointer.slice(1).split("/").map(x =>
           x.replaceAll("~1", "/").replaceAll("~0", "~"));
-        if (segments.some(x => !x || /^\d+$/.test(x)) ||
-            pathsSeen.some(p => p.join("/") === segments.join("/") ||
+        if (segments.some(x => !x) ||
+            pathsSeen.some(p => JSON.stringify(p) === JSON.stringify(segments) ||
               p.every((x,i) => x === segments[i]) ||
               segments.every((x,i) => x === p[i]))) {
-          message.textContent = "Pointers must be distinct, nonoverlapping named object paths.";
+          message.textContent = "Pointers must have nonempty segments and be distinct and nonoverlapping.";
           input.focus(); return;
         }
         pathsSeen.push(segments); values[key] = pointer;
