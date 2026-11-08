@@ -4224,3 +4224,9 @@ Read the current main coordination top override first, then AGENTS, latest commi
 - Read current governance override and AGENTS.md; inspected current main commits and FC Issues #28/#31. Atlas remains sole FC owner.
 - Changed `guardoath/static/comparison_editor.js` in commit `d03ce0572836f27dcc0e5ec8580423e2071e976f`: authenticated dashboard's comparison editor now shows total draft comparison count, Input/Output stage counts, and an accessible live unsaved-changes notice directing users to Save checks. Existing revisioned tenant persistence and Engine semantics unchanged.
 - Verification pending: no browser execution or exact-SHA CI evidence available in this session; do not claim green or deployed. Next: browser assertions for count changes on add/edit/remove, save/reload, and 500-row usability; full CI and production parity before release.
+
+### 2026-11-07 — Atlas — comparison draft browser regression
+
+- Re-read current main coordination and AGENTS, confirmed sole FC ownership and latest main, inspected existing Playwright comparison coverage.
+- Commit `affd0b02a7982340aecc0c9cb2b26d2d3671ced2` adds a real browser test in `tests/browser/dashboard.spec.js` for tenant demo2: initial comparison count, draft add with Input-only stage, accessible pending notice, remove, restored count and clean state. No backend or tenant policy semantics changed.
+- Browser test not executed here; exact-SHA CI and production deployment are NOT verified. Follow-up: run Playwright and complete save/reload and large-tenant interaction coverage; inspect individual CI jobs and fix any failures.
