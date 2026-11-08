@@ -195,3 +195,27 @@ def test_generic_checks_api_refuses_to_provision_unverified_reference_identity()
     assert response.status_code == 422
     assert "CLAIMED_TRUSTED_LOT" not in response.text
     assert store.get("identity-alpha") == original
+
+
+def test_demo_reset_can_clear_private_reference_rules_only_via_explicit_demo_reset():
+    api, store, headers = setup(protected=True)
+    a = headers["identity-alpha"]
+    before = store.get("identity-alpha")
+    assert before.demo and before.advanced_identity
+    # Ordinary tenant checks API cannot replace/delete a protected reference.
+    rejected = api.post("/v1/tenants/current/checks", headers=a, json={
+        "revision": before.revision, "changes": {"advanced_identity": []},
+    })
+    assert rejected.status_code == 422
+    assert store.get("identity-alpha") == before
+
+    # Authorized demo-only reset is a server-generated full restore; it MUST
+    # clear obsolete synthetic private reference arrays for repeatable demos.
+    reset = api.post("/v1/tenants/current/reset", headers=a)
+    assert reset.status_code == 200, reset.text[:250]
+    after = store.get("identity-alpha")
+    assert after.revision == before.revision + 1
+    assert after.advanced_identity == ()
+    assert after.input_check_text_security == "block"
+    assert "SECRET_LOT_001" not in reset.text
+    assert summary(api, a)["advanced_identity_reference_status"] == []
