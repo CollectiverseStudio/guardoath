@@ -32,6 +32,9 @@
       return;
     }
     const summary = element("p"); summary.id = "comparison-draft-summary"; summary.setAttribute("role", "status"); summary.setAttribute("aria-live", "polite");
+    const limitWarning = element("p"); limitWarning.id = "comparison-structure-warning";
+    limitWarning.setAttribute("role", "status"); limitWarning.setAttribute("aria-live", "polite");
+    limitWarning.hidden = true;
     const list = element("ul"); list.id = "comparison-drafts";
     const form = element("form"); form.id = "comparison-form";
     const controls = {};
@@ -61,7 +64,7 @@
     const apply = element("button", "Add to pending changes"); apply.id = "comparison-apply"; apply.type = "submit";
     const cancel = element("button", "Cancel edit"); cancel.type = "button"; cancel.hidden = true;
     const message = element("p"); message.id = "comparison-message"; message.setAttribute("role", "status");
-    form.append(apply, cancel, message); host.append(summary, list, form);
+    form.append(apply, cancel, message); host.append(summary, limitWarning, list, form);
     // A customer with hundreds of ordinary comparisons needs a usable import path,
     // not 500 manual Add clicks or a hidden API. Import changes only the draft;
     // the existing revisioned Save checks and shared Engine remain authoritative.
@@ -150,6 +153,26 @@
     function draw() {
       const pending = JSON.stringify(original) !== JSON.stringify(draft);
       summary.textContent = `${draft.length} comparison${draft.length === 1 ? "" : "s"} configured; ${draft.filter(rule => rule.stages.includes("input")).length} Input, ${draft.filter(rule => rule.stages.includes("output")).length} Output.${pending ? " Unsaved changes — select Save checks to persist." : " No pending changes."}`;
+      // The shared Engine's JSON decoder allows at most 1,000 members in any
+      // object. Detect guaranteed flat-document overflow by counting unique
+      // top-level pointer keys per stage. This is a planning warning, not a
+      // comparison-count cap: nested documents can support >500 comparisons.
+      const warnings = [];
+      for (const stage of ["input", "output"]) {
+        const roots = new Set();
+        for (const rule of draft) {
+          if (!rule.stages.includes(stage)) continue;
+          for (const pointer of [rule.left, rule.right]) {
+            roots.add(pointer.slice(1).split("/")[0].replace(/~1/g, "/").replace(/~0/g, "~"));
+          }
+        }
+        if (roots.size > 1000) warnings.push(stage + " references " + roots.size + " distinct top-level fields");
+      }
+      limitWarning.hidden = !warnings.length;
+      limitWarning.textContent = warnings.length
+        ? "JSON structure warning: " + warnings.join("; ") +
+          ". The shared Engine accepts at most 1,000 keys in any one JSON object. A fully populated flat document cannot pass these comparisons. Use nested objects (up to 32 levels) or split the stages; the draft has not been modified."
+        : "";
       list.replaceChildren();
       if (!draft.length) list.append(element("li", "No number or date comparisons on this record."));
       for (const item of draft) {
