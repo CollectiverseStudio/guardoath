@@ -237,4 +237,11 @@ class TenantService:
             raise TenantNotFound(tenant_id)
         if not current.demo:
             raise NotADemoUser("Only demo users can be reset to the demo defaults")
-        return self.change_checks(tenant_id, demo_defaults(), current.revision)
+        # This is an explicit authorized reset of a demo-only record to the
+        # server-owned defaults, not a generic tenant-edited checks update.
+        # Synthetic demo reference arrays must be clearable even when their
+        # ordinary checks endpoint is intentionally reference-immutable.
+        # The demo guard above is mandatory: production tenant keys cannot
+        # use reset to erase protected reference data.
+        return self.change_checks(tenant_id, demo_defaults(), current.revision,
+                                  reference_management=True)
