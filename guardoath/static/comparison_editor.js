@@ -19,6 +19,98 @@
     }
     return result;
   }
+  // Graph analysis is advisory only. Rules still run through the tenant-owned
+  // shared Engine. Per stage and type, a <= path that returns through a strict
+  // edge is impossible; a non-strict cycle forces its vertices to equality.
+  // Restrict reports here to 3+ distinct fields; same-pair contradictions
+  // already have a separate warning. Iterative traversal stays bounded at scale.
+  function multiFieldConflicts(rules, stage) {
+    const key = pointer => JSON.stringify(pointer.slice(1).split("/").map(
+      segment => segment.replace(/~1/g, "/").replace(/~0/g, "~")));
+    const graphs = new Map();
+    for (const rule of rules) {
+      if (!rule.stages.includes(stage)) continue;
+      let g = graphs.get(rule.value_type);
+      if (!g) {
+        g = {forward: new Map(), backward: new Map(), edges: [], different: []};
+        graphs.set(rule.value_type, g);
+      }
+      const a = key(rule.left), b = key(rule.right);
+      if (a === b) continue; // handled by self-comparison warning
+      for (const node of [a, b]) {
+        if (!g.forward.has(node)) {g.forward.set(node, []); g.backward.set(node, []);}
+      }
+      const edge = (from, to, strict) => {
+        g.forward.get(from).push(to);
+        g.backward.get(to).push(from);
+        g.edges.push({from, to, strict});
+      };
+      switch (rule.operator) {
+        case "lt": edge(a, b, true); break;
+        case "le": edge(a, b, false); break;
+        case "gt": edge(b, a, true); break;
+        case "ge": edge(b, a, false); break;
+        case "eq": edge(a, b, false); edge(b, a, false); break;
+        case "ne": g.different.push([a, b]); break;
+      }
+    }
+    let orderCycles = 0, forcedEqualDifferences = 0;
+    for (const g of graphs.values()) {
+      const visited = new Set(), finished = [];
+      for (const start of g.forward.keys()) {
+        if (visited.has(start)) continue;
+        const stack = [{node: start, index: 0}];
+        visited.add(start);
+        while (stack.length) {
+          const current = stack[stack.length - 1];
+          const outgoing = g.forward.get(current.node);
+          if (current.index === outgoing.length) {
+            finished.push(current.node); stack.pop(); continue;
+          }
+          const next = outgoing[current.index++];
+          if (!visited.has(next)) {
+            visited.add(next);
+            stack.push({node: next, index: 0});
+          }
+        }
+      }
+      const component = new Map(), sizes = [];
+      for (let i = finished.length - 1; i >= 0; i--) {
+        const start = finished[i];
+        if (component.has(start)) continue;
+        const id = sizes.length, stack = [start];
+        component.set(start, id);
+        let size = 0;
+        while (stack.length) {
+          const current = stack.pop();
+          size++;
+          for (const neighbor of g.backward.get(current)) {
+            if (!component.has(neighbor)) {
+              component.set(neighbor, id); stack.push(neighbor);
+            }
+          }
+        }
+        sizes.push(size);
+      }
+      const strictCycles = new Set();
+      for (const {from, to, strict} of g.edges) {
+        const id = component.get(from);
+        if (strict && id === component.get(to) && sizes[id] >= 3)
+          strictCycles.add(id);
+      }
+      orderCycles += strictCycles.size;
+      const forcedDifferentPairs = new Set();
+      for (const [a, b] of g.different) {
+        const id = component.get(a);
+        if (id === component.get(b) && sizes[id] >= 3) {
+          const pair = a < b ? [a, b] : [b, a];
+          forcedDifferentPairs.add(JSON.stringify([id, ...pair]));
+        }
+      }
+      forcedEqualDifferences += forcedDifferentPairs.size;
+    }
+    return {orderCycles, forcedEqualDifferences};
+  }
   function render(host, tenant, enabled, changed) {
     original = Array.isArray(tenant.comparisons) ? copy(tenant.comparisons) : [];
     draft = copy(original); editing = null;
@@ -249,8 +341,8 @@
         // Detect unsatisfiable conditions on the SAME pair of typed fields.
         // Normalize reversed operands and decoded JSON Pointer segments,
         // then intersect their allowed ordering signs (<, =, >).
-        // This proves pairwise contradictions only: longer cycles can also be
-        // unsatisfiable and remain the shared Engine's responsibility.
+        // Separate bounded graph analysis below also detects longer
+        // directed ordering cycles and indirectly forced equality.
         const canonicalPointer = pointer => JSON.stringify(pointer.slice(1).split("/").map(
           segment => segment.replace(/~1/g, "/").replace(/~0/g, "~")));
         const allowedSigns = {
@@ -277,12 +369,20 @@
         if (contradictoryPairs)
           logicWarnings.push(stage + " has " + contradictoryPairs +
             " pair(s) of fields with mutually incompatible comparison conditions");
+        const {orderCycles, forcedEqualDifferences} = multiFieldConflicts(draft, stage);
+        if (orderCycles)
+          logicWarnings.push(stage + " has " + orderCycles +
+            " impossible multi-field ordering cycle(s) involving 3+ fields");
+        if (forcedEqualDifferences)
+          logicWarnings.push(stage + " has " + forcedEqualDifferences +
+            " not-equal comparison(s) contradicted by equality forced through 3+ fields");
       }
       logicWarning.hidden = !logicWarnings.length;
       logicWarning.textContent = logicWarnings.length
         ? "Logical comparison warning: " + logicWarnings.join("; ") +
           ". Self-comparisons test a field against itself; conflicting rules for the same two" +
           " fields can also require mutually impossible results, including with reversed operands." +
+           " Longer ordering cycles and indirect equality conflicts may also be impossible." +
           " Missing or invalid field values may still be reported. Review pointers, operators" +
           " and stages. Draft and saved tenant remain unchanged."
         : "";
