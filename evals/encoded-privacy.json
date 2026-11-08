@@ -1527,7 +1527,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -1549,7 +1549,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -1571,7 +1571,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -1593,7 +1593,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -1615,7 +1615,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -1637,7 +1637,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -1659,7 +1659,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -1681,7 +1681,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -1703,7 +1703,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -1725,7 +1725,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -1747,7 +1747,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -1769,7 +1769,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -1791,7 +1791,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -1813,7 +1813,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -1835,7 +1835,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -1857,7 +1857,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -1879,7 +1879,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -1901,7 +1901,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -1923,7 +1923,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "error",
           "encoded_pii": "error"
@@ -1945,7 +1945,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "error",
           "encoded_pii": "error"
@@ -1967,7 +1967,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "error",
           "encoded_pii": "error"
@@ -1989,7 +1989,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "error",
           "encoded_pii": "error"
@@ -2011,7 +2011,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -2033,7 +2033,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -2055,7 +2055,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -2077,7 +2077,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -2099,7 +2099,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -2121,7 +2121,7 @@
       "expected": {
         "evaluation_status": "incomplete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "passed",
           "encoded_pii": "error"
@@ -2191,7 +2191,7 @@
       "expected": {
         "evaluation_status": "complete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "flagged",
           "encoded_pii": "flagged"
@@ -2216,7 +2216,7 @@
       "expected": {
         "evaluation_status": "complete",
         "recommended_action": "block",
-        "effective_action": "allow",
+        "effective_action": "block",
         "checker_statuses": {
           "pii": "flagged",
           "encoded_pii": "flagged"
