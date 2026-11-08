@@ -580,6 +580,15 @@ def test_verified_google_registration_creates_unsubscribed_tenant_without_paid_a
     refused = client.post("/v1/checks/input", headers=signed(session),
                           json={"application_id": tenant_id, "content": "Hello"})
     assert refused.status_code == 402
+    # Tenant settings cannot self-upgrade billing entitlement or allowance.
+    tamper = client.post("/v1/tenants/current/checks", headers=signed(session), json={
+        "revision": record.revision, "changes": {
+            "subscription_status": "active", "monthly_allowance": 10000,
+        }
+    })
+    assert tamper.status_code in (403, 422)
+    assert tenants.store.get(tenant_id).subscription_status == "inactive"
+    assert tenants.store.get(tenant_id).monthly_allowance == 0
     assert tenants.store.get(tenant_id).usage == {}
     after = client.get("/v1/account/status", headers=signed(session))
     assert after.json()["registered"] is True
