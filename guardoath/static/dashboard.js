@@ -465,8 +465,43 @@ function updateFormatNote(id) {
   note.hidden = !note.textContent;
 }
 async function reloadApplication() { reset(); const attempt = revision; await loadApplication(key, attempt); }
+// Drafts in separate Field Comparisons editors share one tenant rule namespace.
+ // The server remains authoritative; catch accidental cross-family collisions
+ // before any save (including Run's automatic save) and do not discard drafts.
+function fieldComparisonIdCollision(changes) {
+  const tenant = application?.tenant;
+  if (!tenant) return null;
+  const families = [
+    ["comparisons", "ordinary comparisons"],
+    ["advanced_arithmetic", "arithmetic comparisons"],
+    ["advanced_identity", "identity comparisons"],
+    ["advanced_conversion_time", "conversion/time comparisons"],
+    ["advanced_trusted_reference", "host-signed reference comparisons"],
+    ["advanced_statistical_drift", "statistical drift comparisons"]
+  ];
+  const seen = new Map();
+  for (const [field, label] of families) {
+    const rules = Object.prototype.hasOwnProperty.call(changes, field) ? changes[field] : tenant[field];
+    if (!Array.isArray(rules)) continue;
+    for (const rule of rules) {
+      if (!rule || typeof rule.rule_id !== "string") continue;
+      const prior = seen.get(rule.rule_id);
+      if (prior) {
+        return "Field comparison rule IDs must be unique across all families (" +
+          prior + " and " + label +
+          "). Change or remove a pending duplicate in its editor before saving. No settings were saved.";
+      }
+      seen.set(rule.rule_id, label);
+    }
+  }
+  return null;
+}
 async function saveTenant(path, body, done) {
   if (!application?.tenant || busy) return false;
+  if (path === "/v1/tenants/current/checks") {
+    const collision = fieldComparisonIdCollision(body?.changes || {});
+    if (collision) { $("tenant-message").textContent = collision; return false; }
+  }
   $("tenant-save").disabled = $("tenant-reset").disabled = true;
   let message = done, saved = false;
   try {
@@ -549,7 +584,8 @@ $("tenant-save").addEventListener("click", () => {
 // A changed setting is not used until it is saved; running a check saves it first (see execute).
 function showUnsaved(prefix = "") {
   const changes = pendingChanges(), tenant = application?.tenant;
-  $("tenant-message").textContent = prefix + (Object.keys(changes).length ? "Unsaved changes. Save checks, or run a check: running saves them first." : "");
+  const collision = fieldComparisonIdCollision(changes);
+  $("tenant-message").textContent = prefix + (collision || (Object.keys(changes).length ? "Unsaved changes. Save checks, or run a check: running saves them first." : ""));
   // The line above the test lists the saved checks; say which panel changes are not saved yet.
   const status = $("profile-status");
   if (status && tenant) {
