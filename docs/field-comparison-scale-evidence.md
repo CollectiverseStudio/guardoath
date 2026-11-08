@@ -74,3 +74,16 @@ Seven harness tests cover both-stage51-rule violation completeness and original
 IDs, complete benign measurement, real schema reporting, generated output scope,
 timeout evidence, sanitized child errors and a real bounded child. No security
 assertion, privacy budget, fail-closed behavior or test timeout was relaxed.
+
+
+## Current release-gate contract (2026-11-07; supersedes historical acceptance limitations)
+
+The **Observed run** above is historical 2026-11-05 evidence from before the tenant/model 50-comparison cap was removed. It must not be cited as the current live product ceiling or the current performance benchmark. Likewise, the archived `docs/evidence/field-comparisons-current-source-acceptance.json` is tied to its own recorded prior commit, not automatically to the latest `main`.
+
+The dedicated `.github/workflows/field-comparison-evidence.yml` gate now executes **three independent checks at the same exact triggering GitHub SHA**, rather than accepting component measurements alone:
+
+1. **Strict portfolio:** `python -m tools.field_comparison_portfolio` must verify complete Input/Output witness findings, distinguish proven unsatisfiable combinations from merely unavailable examples, and refuse unknown/incomplete results.
+2. **Bounded component scale:** `python -m tools.field_comparison_scale --samples 3 --timeout 10` must establish truthful 30/51/100/250/500 measurements without weakening resource limits or treating timeouts as passes.
+3. **Actual authenticated integration scale:** `python -m pytest -q tests/test_field_comparison_large_tenant_api.py` must save and reload tenant-owned 30/51/100/250/500 comparisons, evaluate both stages through the shared Engine, enforce stage actions, return every relevant violation, isolate tenants and reject stale revisions. The fresh JUnit XML accompanies the synthetic portfolio/scale reports.
+
+An error in **any** of the three gates marks the workflow as failed, while preserving the available reports as a 14-day GitHub Actions artifact with the exact source SHA and per-gate status. This scoped workflow now triggers on relevant Engine, tenant, API, dashboard wiring, ordinary-comparison editor and 500-rule browser acceptance changes on `main`; it is not a CI outcome by itself. The normal Tests browser job must separately pass the actual dashboard workflows; CodeQL, the production source parity check and 15 live verification checks remain mandatory. Do not promote an old artifact or a green component benchmark into exact-head tenant/browser release acceptance.
