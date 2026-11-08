@@ -16,6 +16,19 @@ test("advanced conversion array-index example flows through saved tenant, dashbo
   const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
   expect(reset.status()).toBe(200);
   try {
+    // The demo baseline contains two legitimate, unrelated ordinary comparisons.
+    // This scenario must explicitly isolate the advanced rule instead of silently
+    // ignoring their real findings or weakening the all-findings assertion.
+    const baseline = await getTenant();
+    expect(baseline.comparisons.map(rule => rule.rule_id).sort())
+      .toEqual(["date_order", "refund_limit"]);
+    const isolate = await request.post("/v1/tenants/current/checks", {headers, data: {
+      revision: baseline.revision, changes: {comparisons: []}
+    }});
+    expect(isolate.status()).toBe(200);
+    const isolated = await getTenant();
+    expect(isolated.revision).toBe(baseline.revision + 1);
+    expect(isolated.comparisons).toEqual([]);
     await page.reload();
     await page.locator("#demo-user").selectOption("demo4");
     await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
