@@ -15,6 +15,13 @@ from tools.pii_reliability_probe import summarize
 
 ROOT = Path(__file__).resolve().parents[1]
 SUITES = (
+    # The all-suite collection's exact observed tail regression (2026-11-08):
+    # the initial email scan flags, then the mandatory redaction recheck can
+    # hit the unchanged 500-ms budget under runner/worker contention.
+    # Exercise the same source case/policy via the real Engine on every round.
+    ("local", "evals/local.json", "policies/playground.json", (
+        "redaction.email",
+    )),
     ("privacy", "evals/privacy.json", "policies/privacy-batch.json", (
         "phone_number1.input", "phone_number1.output",
         "date_of_birth1.input", "date_of_birth1.output",
@@ -59,7 +66,7 @@ async def run_matrix(rounds=20):
         "groups": groups,
         "notes": (
             "Synthetic fixed case IDs and aggregate statuses only; no source contents.",
-            "This includes previous 505.215ms phone, 542.812ms Korean RRN, DOB and redaction cases.",
+            "This includes observed 505.215ms phone, 542.812ms Korean RRN, DOB, and the shipped redaction.email mandatory recheck tail.",
             "End-to-end timing is diagnostic, not the individual checker deadline.",
             "A green finite sample alone cannot prove permanent latency resolution.",
         ),
