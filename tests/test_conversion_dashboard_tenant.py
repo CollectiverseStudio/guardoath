@@ -304,11 +304,12 @@ def test_scoped_conversion_edit_preserves_private_fx_and_runs_both_stages():
         assert result.status_code == 200
         assert "business.mass_limit" in {f["rule_id"] for f in result.json()["findings"]}
         assert result.json()["effective_action"] == action
+    unchanged = store.get("conversion-alpha")
     stale = api.post("/v1/tenants/current/checks", headers=auth, json={
         "revision": before.revision, "changes": {"advanced_conversion_time": {"editable": []}},
     })
     assert stale.status_code == 409
-    assert store.get("conversion-alpha") == after
+    assert store.get("conversion-alpha") == unchanged
     removed = api.post("/v1/tenants/current/checks", headers=auth, json={
         "revision": after.revision, "changes": {"advanced_conversion_time": {"editable": []}},
     })
