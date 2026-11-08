@@ -12,7 +12,7 @@ from time import monotonic
 from guardoath.json_data import parse_json
 from guardoath.privacy_catalog import (CONTEXT_BOOST, CONTEXT_SCORE_FLOOR, CONTEXT_WORDS_BEFORE,
                                        CORE_ENTITIES, PATTERN_ENTITIES)
-from guardoath.sensitive_fields import SensitiveFieldLimit, field_spans
+from guardoath.sensitive_fields import SensitiveFieldLimit, field_spans, label_type
 from guardoath.models import Action, CheckerResult, Finding, Stage
 
 LABELED_FIELD = "labeled_field"
@@ -272,6 +272,10 @@ def build_pii_checker():
         deadline = monotonic() + policy.timeout_ms / 1000
         entities = {}
         field_budget = [0]
+        # Bounded, request-local memo for fields that proved clean. Repeated
+        # ordinary JSON leaves need not run every recognizer again; never
+        # reuse positives, transformed values, or labeled-field budget work.
+        clean_texts = set()
         sensitive_key = False
         disabled = set(policy.disabled_privacy_entities)
         # Types whose rule the tenant turned off (rule_actions) are not looked for: never reported or redacted.
@@ -287,6 +291,16 @@ def build_pii_checker():
             return remaining
 
         def process_text(text, hint=""):
+            check_deadline()
+            # Labeled fields consume a document-wide 64-candidate budget. Never
+            # memoize them (or text containing possible label assignments):
+            # each occurrence must still count and fail closed at the limit.
+            can_reuse = (len(text) <= 256 and
+                         (not policy.detect_labeled_sensitive_data or
+                          (not label_type(hint) and ":" not in text and "=" not in text)))
+            cache_key = (text, hint) if can_reuse else None
+            if cache_key is not None and cache_key in clean_texts:
+                return text, False
             candidates = []
 
             def found(entity, source, tier, start, end, score=1.0):
@@ -387,6 +401,8 @@ def build_pii_checker():
                 entities.setdefault(entity, set()).add(source)
                 spans.append((start, end, entity))
             if not redact or not spans:
+                if not spans and cache_key is not None and len(clean_texts) < 256:
+                    clean_texts.add(cache_key)
                 return text, bool(spans)
             # Merge overlapping spans to avoid preserving a fragment of a value. A span inside
             # a longer one keeps the longer span's label (an email address contains a domain);
