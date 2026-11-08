@@ -25,7 +25,7 @@ async function evaluate(request, headers, stage, content) {
   return response.json();
 }
 
-const ids = ["business.ui_spend", "business.ui_subtotal", "business.ui_load"];
+const ids = ["business.ui_load", "business.ui_spend", "business.ui_subtotal"];
 const violating = {
   order: {
     spend: 120, limit: 100, subtotal: 100,
