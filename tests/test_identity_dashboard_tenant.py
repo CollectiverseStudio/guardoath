@@ -220,3 +220,71 @@ def test_demo_reset_can_clear_private_reference_rules_only_via_explicit_demo_res
     assert after.input_check_text_security == "block"
     assert "SECRET_LOT_001" not in reset.text
     assert summary(api, a)["advanced_identity_reference_status"] == []
+
+
+
+def test_scoped_identity_edit_preserves_hidden_reference_through_save_and_delete():
+    api, store, headers = setup(protected=True)
+    auth = headers["identity-alpha"]
+    before = store.get("identity-alpha")
+    protected = before.advanced_identity[0]
+    saved = api.post("/v1/tenants/current/checks", headers=auth, json={
+        "revision": before.revision,
+        "changes": {
+            "advanced_identity": {"editable": RULES},
+            "input_check_cross_field": "block",
+            "output_check_cross_field": "flag",
+        },
+    })
+    assert saved.status_code == 200, saved.text[:300]
+    after = store.get("identity-alpha")
+    assert after.revision == before.revision + 1
+    assert after.advanced_identity[-1] == protected
+    assert summary(api, auth)["advanced_identity"] == RULES
+    assert len(summary(api, auth)["advanced_identity_reference_status"]) == 1
+    assert "SECRET_LOT_001" not in saved.text
+    assert "SECRET_LOT_001" not in json.dumps(summary(api, auth))
+    for stage, action in (("input", "block"), ("output", "flag")):
+        response = api.post("/v1/checks/" + stage, headers=auth, json={
+            "application_id": "identity-alpha", "content_format": "json",
+            "content": json.dumps({"lot": "SECRET_LOT_001", "order_id": "ORDER1",
+                                   "shipment_order_id": "ORDER2", "serials": ["X1", "X1"]}),
+        })
+        assert response.status_code == 200
+        assert response.json()["evaluation_status"] == "complete"
+        assert response.json()["effective_action"] == action
+        assert {"business.private_quarantine", "business.order_match",
+                "business.unique_serials"} <= {f["rule_id"] for f in response.json()["findings"]}
+    stale = api.post("/v1/tenants/current/checks", headers=auth, json={
+        "revision": before.revision, "changes": {"advanced_identity": {"editable": []}},
+    })
+    assert stale.status_code == 409
+    assert store.get("identity-alpha") == after
+    deleted = api.post("/v1/tenants/current/checks", headers=auth, json={
+        "revision": after.revision, "changes": {"advanced_identity": {"editable": []}},
+    })
+    assert deleted.status_code == 200, deleted.text[:300]
+    assert store.get("identity-alpha").advanced_identity == (protected,)
+    assert summary(api, auth)["advanced_identity"] == []
+
+
+def test_scoped_identity_refuses_reference_spoofing_and_private_id_collisions():
+    api, store, headers = setup(protected=True)
+    auth = headers["identity-alpha"]
+    before = store.get("identity-alpha")
+    for payload in (
+        {"editable": [{"rule_id": "unauthorized", "kind": "quarantine_exclusion",
+                       "fields": {"requested_lot": "/lot"},
+                       "trusted_values": ["CLAIMED_PRIVATE"]}]},
+        {"editable": [dict(RULES[0], rule_id="private_quarantine")]},
+        {"editable": [], "overwrite_hidden": True},
+        {"editable": "not-a-list"},
+        [],
+    ):
+        answer = api.post("/v1/tenants/current/checks", headers=auth, json={
+            "revision": before.revision, "changes": {"advanced_identity": payload},
+        })
+        assert answer.status_code == 422, answer.text[:200]
+        assert "SECRET_LOT_001" not in answer.text
+        assert "CLAIMED_PRIVATE" not in answer.text
+        assert store.get("identity-alpha") == before
