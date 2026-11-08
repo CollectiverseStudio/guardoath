@@ -61,7 +61,7 @@ test("dashboard generated array-path examples run with genuine tenant stage acti
     const example = await chooseRuleExample(page, "input", "array_zero", "reported");
     expect(typeof example.order.items[0].price).toBe("number");
     await page.locator("#run-input").click();
-    await expect(page.locator("#input-results")).toContainText("business.array_zero");
+    await expect(page.locator('#input-results button[aria-label="Review input rule settings for business.array_zero"]')).toHaveCount(1);
     const input = await request.post("/v1/checks/input", {headers, data: {
       application_id: "demo2", content_format: "json", content: JSON.stringify(example)
     }});
@@ -74,7 +74,7 @@ test("dashboard generated array-path examples run with genuine tenant stage acti
 
     await chooseRuleExample(page, "output", "array_one", "reported");
     await page.locator("#run-output").click();
-    await expect(page.locator("#output-results")).toContainText("business.array_one");
+    await expect(page.locator('#output-results button[aria-label="Review output rule settings for business.array_one"]')).toHaveCount(1);
     const outputContent = await page.locator("#output-content").inputValue();
     const output = await request.post("/v1/checks/output", {headers, data: {
       application_id: "demo2", content_format: "json", content: outputContent
