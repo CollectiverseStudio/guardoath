@@ -405,7 +405,7 @@ def test_redirects_are_not_followed_and_only_https_is_used():
 def site(sessions, cognito):
     key, digest = new_key("acme")
     customer = TenantRecord(tenant_id="acme", display_name="Acme", key_hashes=(digest,), check_secrets="flag",
-                            monthly_allowance=100)
+                            monthly_allowance=100, subscription_status="active")
     tenants = TenantService(MemoryTenantStore((*demo_records(key_secret=SECRET), customer)), CHECKERS, SECRET)
     client = TestClient(create_app(engine=demo_engine(), credentials={}, tenants=tenants, sessions=sessions))
     return client, tenants, key, tenant_user(cognito, "acme")
@@ -607,4 +607,4 @@ def test_registration_requires_explicit_opt_in_and_cannot_accept_a_subscription_
     client, tenants, _, session = site
     assert client.post("/v1/register", headers=signed(session),
                        json={"subscription_status": "active"}).status_code == 404
-    assert tenants.store.get("acme").subscription_status is None
+    assert tenants.store.get("acme").subscription_status == "active"
