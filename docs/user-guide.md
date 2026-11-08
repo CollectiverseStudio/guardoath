@@ -1084,6 +1084,25 @@ check. Only examples applicable to the active profile are shown, to keep the
 expanding catalogs manageable. There are 86 input / 89 output examples across
 all groups. No AI answer is generated or provider called.
 
+### Customer bulk-import workflow for Field Comparisons (FC-001–030; ordinary number/date)
+
+The authenticated **Field comparison rules** dashboard editor now offers **Bulk JSON import / export (30–500+ comparisons)**. This is a customer-operable route for hundreds of deterministic ordinary rules without writing tenant API scripts or adding them individually. Open the panel and choose **Load current draft into JSON box** to inspect/copy the definitions, or paste a JSON array and explicitly tick **I understand this replaces the entire ordinary comparison draft**, then choose **Stage JSON replacement**. The pending summary shows the draft count and Input/Output totals. Nothing is sent to the API yet: inspect any removals, turn on the Input/Output **Field comparisons** checks for the stages you intend to evaluate, and select the existing **Save checks** button. This uses the same tenant revision check and shared Engine as the single-rule editor. Reconnect to confirm saved definitions and use the normal Input/Output test controls to inspect findings.
+
+A two-rule example (the format can be extended to 500+ definitions without a hard comparison-count ceiling):
+
+```json
+[
+  {"rule_id":"refund_cap","left":"/refund","right":"/purchase",
+   "operator":"le","value_type":"number","stages":["input","output"]},
+  {"rule_id":"delivery_window","left":"/delivery","right":"/ship_by",
+   "operator":"le","value_type":"date","stages":["output"]}
+]
+```
+
+Valid operators are `lt`, `le`, `eq`, `ne`, `ge`, and `gt`; dates use `YYYY-MM-DD`. Use absolute JSON pointers (e.g., `/invoice/total`) and unique rule IDs across every comparison family on that tenant. The editor rejects malformed JSON, unsupported fields/operators, duplicate/reserved IDs, invalid pointers, and empty or duplicate stage selections **before replacing the local draft**. A rejected import does not change the draft or the tenant. Importing `[]` stages removal of ordinary comparisons; it does not delete advanced comparisons or private reference sets. Input is limited to 512,000 characters in the bulk editor and the server continues to enforce its independent maximum serialized tenant record size. Do not treat front-end validation as authorization or compliance verification.
+
+The **Stage JSON replacement** operation is not a Save. If another client changes the tenant revision before Save, a stale request is rejected; re-fetch and reconcile instead of overwriting. Tenant API responses and validation outcomes remain the source of truth. Browser source `tests/browser/field_comparisons_500.spec.js` exercises confirmation, malformed and duplicate rejection, staging without server changes, a real authenticated 500-rule Save/reconnect and both-stage Engine findings; CI execution of this new case is still required before production acceptance.
+
 ### Submitted-field comparisons
 
 | Check / use case | Example | Expected behavior |
