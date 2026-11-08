@@ -359,7 +359,8 @@ def test_trading_codes_counts_against_the_same_limit(sessions, cognito):
 def test_the_public_configuration_has_no_secret(sessions):
     assert sessions.public_config() == {
         "authorize_url": f"https://{DOMAIN}/oauth2/authorize", "logout_url": f"https://{DOMAIN}/logout",
-        "client_id": CLIENT, "redirect_uri": REDIRECT, "scope": "openid email aws.cognito.signin.user.admin"}
+        "client_id": CLIENT, "redirect_uri": REDIRECT, "scope": "openid email aws.cognito.signin.user.admin",
+        "registration_enabled": False, "google_provider": "Google"}
 
 
 @pytest.mark.parametrize("args", [
@@ -547,3 +548,63 @@ def test_without_sign_in_configured_the_endpoints_say_so_and_sessions_are_refuse
 def test_sign_in_needs_tenant_records(sessions):
     with pytest.raises(ValueError, match="needs tenant records"):
         create_app(engine=demo_engine(), credentials={"k": "demo"}, sessions=sessions)
+
+
+def test_verified_google_registration_creates_unsubscribed_tenant_without_paid_access(sessions, cognito):
+    """Sign-in is identity, registration is storage, subscription is separate."""
+    sessions.registration_enabled = True
+    session = token(sub="first-time-google-user")
+    cognito.users[session] = [
+        {"Name": "email", "Value": "verified@example.invalid"},
+        {"Name": "email_verified", "Value": "true"},
+        {"Name": "sub", "Value": "first-time-google-user"},
+    ]
+    tenants = TenantService(MemoryTenantStore(), CHECKERS, SECRET)
+    client = TestClient(create_app(engine=demo_engine(), credentials={},
+                                   tenants=tenants, sessions=sessions))
+    before = client.get("/v1/account/status", headers=signed(session))
+    assert before.status_code == 200 and before.json()["registered"] is False
+    assert before.json()["can_validate"] is False
+    response = client.post("/v1/register", headers=signed(session))
+    assert response.status_code == 201
+    tenant_id = response.json()["tenant_id"]
+    assert tenant_id.startswith("usr-")
+    assert response.json()["subscription_status"] == "inactive"
+    assert response.json()["can_validate"] is False
+    record = tenants.store.get(tenant_id)
+    assert record.subscription_status == "inactive"
+    assert record.key_hashes == () and record.monthly_allowance == 0
+    assert record.overage == "block" and record.demo is False
+    assert client.post("/v1/register", headers=signed(session)).status_code == 409
+    assert client.get("/v1/applications/current", headers=signed(session)).status_code == 200
+    refused = client.post("/v1/checks/input", headers=signed(session),
+                          json={"application_id": tenant_id, "content": "Hello"})
+    assert refused.status_code == 402
+    assert tenants.store.get(tenant_id).usage == {}
+    after = client.get("/v1/account/status", headers=signed(session))
+    assert after.json()["registered"] is True
+    assert after.json()["subscription_status"] == "inactive"
+    assert after.json()["can_validate"] is False
+
+
+def test_registration_refuses_unverified_and_duplicate_cognito_attributes(sessions, cognito):
+    sessions.registration_enabled = True
+    tenants = TenantService(MemoryTenantStore(), CHECKERS, SECRET)
+    client = TestClient(create_app(engine=demo_engine(), credentials={},
+                                   tenants=tenants, sessions=sessions))
+    for idx, attributes in enumerate((
+        [{"Name": "sub", "Value": "first"}, {"Name": "email_verified", "Value": "false"}],
+        [{"Name": "sub", "Value": "first"}, {"Name": "email_verified", "Value": "true"},
+         {"Name": "sub", "Value": "first"}],
+    )):
+        candidate = token(sub=f"candidate-{idx}")
+        cognito.users[candidate] = attributes
+        assert client.post("/v1/register", headers=signed(candidate)).status_code == 401
+    assert tenants.store.tenant_ids() == ()
+
+
+def test_registration_requires_explicit_opt_in_and_cannot_accept_a_subscription_claim(site):
+    client, tenants, _, session = site
+    assert client.post("/v1/register", headers=signed(session),
+                       json={"subscription_status": "active"}).status_code == 404
+    assert tenants.store.get("acme").subscription_status is None
