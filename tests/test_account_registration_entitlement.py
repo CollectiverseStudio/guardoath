@@ -22,7 +22,7 @@ class VerifiedSessionStub:
 def make_client():
     store = MemoryTenantStore()
     app = create_app(engine=demo_engine(), credentials={},
-                     tenants=TenantService(store, default_checkers(), "test-session-secret"),
+                     tenants=TenantService(store, default_checkers(), "test-session-secret-with-minimum-32-bytes"),
                      sessions=VerifiedSessionStub())
     return TestClient(app), store
 
