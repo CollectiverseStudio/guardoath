@@ -2677,3 +2677,19 @@ Full user scenarios, examples, proposed contracts, dashboard requirements, 8 ass
 **Security Event Evidence — Windows logs (SigmaHQ)** is an optional, distinct group, not another AI Input/Output rule family. Its inputs are structured post-execution Windows PowerShell/process telemetry, normally supplied by an authorized event collector or security-monitoring system—not an ordinary chat question and not an AI agent's proposed tool call. **The current dashboard tests only bundled synthetic match/look-alike fixtures. It cannot receive actual customer logs and does not enforce real-event Block decisions.** Stored tenant Off/Allow/Flag/Block settings configure those synthetic previews today; do not interpret a saved Block setting as active protection of Windows systems.
 
 Use **AI Input/Output validation** for messages and responses; the **AI Security Assistant** design for a user asking AI to *explain* supplied suspicious activity; and the separate **Pre-Execution Action Guard** design for an authenticated agent host asking GuardOath to validate a command/API/file/tool action *before execution*. The two new experiences are specifications, not shipped production gates. See [AI security capabilities and boundary table](ai-security-assistant-action-guard.md#product-navigation-decision--keep-security-event-evidence-separate).
+
+
+### AI Agent Security — compare intended and reported actions (initial diagnostic, available in source)
+
+The authenticated dashboard now includes an **AI Agent Security — intended vs. reported actions** comparison panel. Connect a tenant, select Matching / Changed command / Missing observation, and select **Compare actions (no execution)**. Or supply two JSON objects with `tool`, `target`, `arguments`. Supported illustrative tools are `shell.run`, `http.request`, `file.write`, `file.delete`; the combined canonical JSON representation is bounded to 8 KiB. API clients use authenticated `POST /v1/agent-activity/compare`, for example:
+
+```json
+{
+  "proposed": {"tool": "shell.run", "target": "host-42", "arguments": {"command": "Get-Process"}},
+  "observed": {"tool": "shell.run", "target": "host-42", "arguments": {"command": "Get-Process"}}
+}
+```
+
+`observed` is optional; if omitted, the result is `no_observation`. The result is `matching_unverified` or `mismatch`, with stable finding IDs when missing/mismatched and `authorization: not_granted` in **all** cases. Raw commands, targets, credentials and hashes are never returned by this diagnostic endpoint. Tenant authentication is required and the response is no-store. Malformed/unsupported/oversized evidence is rejected, not treated as clean.
+
+**Limitations / safety:** This compares *two caller-supplied descriptions*. It does **not** establish that a command executed, prove event authenticity, authorize a tool, issue a permit, prevent side effects or persist an execution log. A matching result cannot permit execution. The current product slice is intentionally diagnostic-only; the authenticated host-side pre-execution enforcement, trusted collector receipt verification, durable event timeline, tenant-configurable agent action policy and security assistant explanation UI remain future work. The 228 Sigma Windows event rules remain a separate optional synthetic preview, not automatically invoked against these JSON reports. No external collector installation is needed to try this panel.
