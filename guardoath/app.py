@@ -685,6 +685,38 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             raise HTTPException(409, "The tenant record changed; reload it and try again") from None
         return JSONResponse(key_list(updated), headers={"Cache-Control": "no-store"})
 
+    @api.get("/v1/account/status")
+    async def account_status(
+        session: Annotated[str | None, Header(alias=SESSION_HEADER)] = None,
+    ):
+        """Account identity and entitlement state, never a payment assertion.
+
+        Available before tenant registration, but only for a verified Cognito
+        session. The browser must not infer subscription access from OAuth.
+        """
+        if sessions is None or tenants is None:
+            raise HTTPException(404, "Customer sign-in is not available")
+        if not session:
+            raise HTTPException(401, "Sign in to view account status")
+        try:
+            tenant_id = await run_in_threadpool(sessions.tenant_for, session)
+        except SignInBusy:
+            raise HTTPException(503, "Sign-in checks are busy; try again shortly",
+                                headers={"Retry-After": "5"}) from None
+        if tenant_id is None:
+            raise HTTPException(401, "Invalid or expired sign-in")
+        record = tenants.store.get(tenant_id)
+        registered = record is not None and record.status == "active" and not record.demo
+        return JSONResponse({
+            "registered": registered,
+            "registration_enabled": bool(sessions.registration_enabled),
+            "tenant_id": tenant_id if registered else None,
+            "display_name": record.display_name if registered else None,
+            "subscription_status": (record.subscription_status or "unverified_legacy")
+                                   if registered else "not_registered",
+            "can_validate": bool(registered and record.subscription_status == "active"),
+        }, headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"})
+
     @api.post("/v1/register")
     async def register_account(
         session: Annotated[str | None, Header(alias=SESSION_HEADER)] = None,
