@@ -2803,3 +2803,15 @@ The real authenticated Playwright test `tests/browser/field_comparison_draft_id_
 The separate `Secrets Reliability Gate` workflow now executes actual shipped local Secrets suite cases through the shared Engine, on Ubuntu Python 3.12/3.13 and Windows Python 3.12. Run `python -m tools.secrets_reliability_gate --rounds 20` from the repository root to repeat five existing cases, including the **original `evals/secrets.json::benign.13`** whose earlier CI executions exceeded 500 ms. The fixed inventory additionally includes `benign.14`, GitHub token Input/Output positives, and a literal credential-assignment case. It uses `policies/secrets-batch.json` unchanged and checks complete status, exact full case expectations, no checker error, and source-free aggregate timings. A failure exits nonzero. No prompt, synthetic secret, token, or redacted value is included in the aggregate output.
 
 This verifies the actual production-source pattern checker under its **original 500-ms per-check timeout**; end-to-end Engine timing is diagnostic and must not be mistaken for the checker deadline. The workflow does not weaken detection assertions or allow one green sample to erase historical intermittent failures. PII/redaction original-case gates remain independent.
+
+
+### Secrets simultaneous-caller 500-ms acceptance
+
+The shipped Secrets reliability gate now includes **four real simultaneous Engine callers** per stress round, matching the existing four-worker admission bound without increasing it. The gate uses the same five existing synthetic source cases and same `policies/secrets-batch.json` **500-ms** deadline, checks every case ID and every original positive/benign expectation with no suppressed findings, and fails the run on any timeout, incomplete evaluation or unexpected result. Run from the repository root:
+
+```sh
+python -m tools.secrets_reliability_gate --rounds 20
+python -m tools.secrets_reliability_gate --rounds 10 --concurrency 4
+```
+
+The first command provides the original sequential repeat baseline; the second exercises bounded contention and yields four times as many results per case. The three-platform Secrets Reliability Gate requires both. Only fixed case identifiers, counts and numeric timing are reported, never source strings or credentials. This is *test evidence*, not a claim that the app has gained any new tenant control or that every OS scheduling tail is solved.
