@@ -31,6 +31,7 @@
       host.append(element("p", "Comparison definitions could not be loaded. Reconnect before editing."));
       return;
     }
+    const summary = element("p"); summary.id = "comparison-draft-summary"; summary.setAttribute("role", "status"); summary.setAttribute("aria-live", "polite");
     const list = element("ul"); list.id = "comparison-drafts";
     const form = element("form"); form.id = "comparison-form";
     const controls = {};
@@ -60,13 +61,15 @@
     const apply = element("button", "Add to pending changes"); apply.id = "comparison-apply"; apply.type = "submit";
     const cancel = element("button", "Cancel edit"); cancel.type = "button"; cancel.hidden = true;
     const message = element("p"); message.id = "comparison-message"; message.setAttribute("role", "status");
-    form.append(apply, cancel, message); host.append(list, form);
+    form.append(apply, cancel, message); host.append(summary, list, form);
     function clear() {
       editing = null; form.reset(); controls.id.disabled = false;
       controls.input.checked = controls.output.checked = true;
       apply.textContent = "Add to pending changes"; cancel.hidden = true;
     }
     function draw() {
+      const pending = JSON.stringify(original) !== JSON.stringify(draft);
+      summary.textContent = `${draft.length} comparison${draft.length === 1 ? "" : "s"} configured; ${draft.filter(rule => rule.stages.includes("input")).length} Input, ${draft.filter(rule => rule.stages.includes("output")).length} Output.${pending ? " Unsaved changes — select Save checks to persist." : " No pending changes."}`;
       list.replaceChildren();
       if (!draft.length) list.append(element("li", "No number or date comparisons on this record."));
       for (const item of draft) {
