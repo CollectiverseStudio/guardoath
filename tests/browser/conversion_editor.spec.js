@@ -102,7 +102,7 @@ test("conversion editor blocks overlapping or empty paths and absent stages",asy
   await expect(page.locator('[data-conversion-id="bad_conversion"]')).toHaveCount(0);
 });
 
-test("conversion editor never exposes FX rates and locks writes when protected FX metadata exists",async ({page})=>{
+test("conversion editor keeps private FX hidden while allowing public rule drafts",async ({page})=>{
   // API data is already protected in Python tenant tests; this replaces only the
   // reference status metadata to exercise the browser's fail-closed presentation.
   await page.route("**/v1/applications/current",async route=>{
@@ -120,9 +120,9 @@ test("conversion editor never exposes FX rates and locks writes when protected F
   await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
   await expect(page.locator("#conversion-reference-status")).toContainText("signed_fx_test");
   await expect(page.locator("#conversion-reference-status")).toContainText("read-only");
-  await expect(page.locator("#conversion-apply")).toBeDisabled();
-  await expect(page.locator("#conversion-id")).toBeDisabled();
-  await expect(page.locator("#conversion-field-load")).toBeDisabled();
+  await expect(page.locator("#conversion-apply")).toBeEnabled();
+  await expect(page.locator("#conversion-id")).toBeEnabled();
+  await expect(page.locator("#conversion-field-load")).toBeEnabled();
   await expect(page.locator("#conversion-editor")).not.toContainText("trusted_rate_numerator");
   await expect(page.locator("#conversion-editor")).not.toContainText("rate_asof");
 });
