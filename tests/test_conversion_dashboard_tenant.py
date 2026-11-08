@@ -238,7 +238,8 @@ def test_reference_management_route_is_owner_scoped_and_cannot_bypass_tenant_aut
     # Production evaluation-only tenant keys are not reference administrators.
     response = api.post("/v1/tenants/current/references", headers=headers, json=body)
     assert response.status_code == 403
-    assert store.get("reference-owner") == record
+    # Compare to the actual stored baseline, not the unpersisted constructor.
+    assert store.get("reference-owner") == persisted
 
 
 def test_reference_route_rejects_unrelated_settings_and_keeps_generic_api_protected():
