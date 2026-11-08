@@ -1809,7 +1809,15 @@ test("CHAT-009 four-turn conditioning and benign examples run through tenant Inp
   await page.locator("#demo-user").selectOption("demo7");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo7");
+  // Reset is async and re-renders the entire tenant checks table. Do not race
+  // stage selection with that reload or a successful Save can appear to undo
+  // the action before the four-turn Engine test is even reached.
+  const resetResponse = page.waitForResponse(r =>
+    r.url().endsWith("/v1/tenants/current/reset") && r.request().method() === "POST");
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  expect((await resetResponse).ok()).toBe(true);
+  await expect(page.locator("#tenant-message")).toContainText("Reset to the demo defaults.");
+  await expect(page.locator("#tenant-check-input-prompt_attack")).toHaveValue("");
   await page.locator("#tenant-check-input-prompt_attack").selectOption("flag");
   await page.locator("#tenant-check-output-prompt_attack").selectOption("flag");
   // Verify the canonical tenant revision has saved both stage policies before
