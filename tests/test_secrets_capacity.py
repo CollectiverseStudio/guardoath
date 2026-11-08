@@ -60,3 +60,26 @@ def test_shipped_secrets_policy_still_matches_core_token_on_dedicated_executor()
     assert result.evaluation_status == "complete"
     assert "secrets.github_token" in {f.rule_id for f in result.findings}
     assert token not in result.model_dump_json()
+
+
+def test_shipped_500ms_benign_13_source_fixture_repeated_without_timeout():
+    """Repeat the exact 2026-11-08 benign.13 CI timeout case, not a proxy."""
+    import json
+    from pathlib import Path
+    fixture = json.loads((Path(__file__).resolve().parents[1] / "evals" / "secrets.json").read_text())
+    case = next(c for c in fixture["cases"] if c["case_id"] == "benign.13")
+    assert case["stage"] == "input"
+    assert case["request"]["policy_version"] == "secrets-extended-v1"
+    policies = load_policies("policies/secrets-batch.json")
+    policy = next(p for p in policies if p.version == case["request"]["policy_version"])
+    assert policy.timeout_ms == 500
+    engine = Engine(policies, default_checkers())
+    request = CheckRequest.model_validate(case["request"])
+    for trial in range(20):
+        result = asyncio.run(engine.check(request, Stage.INPUT))
+        statuses = {c.checker_id: c.status for c in result.checker_results}
+        assert result.evaluation_status == case["expected"]["evaluation_status"], (trial, statuses)
+        assert statuses == case["expected"]["checker_statuses"], (trial, statuses)
+        assert result.recommended_action == case["expected"]["recommended_action"]
+        assert not result.findings
+        assert request.content not in result.model_dump_json()
