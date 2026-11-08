@@ -37,7 +37,7 @@
     host.replaceChildren(); host.hidden = !enabled;
     if (!enabled) return;
     host.append(node("h3", "Advanced arithmetic comparisons — eight deterministic rule types"));
-    host.append(node("p", "Define exact arithmetic and conservation rules using JSON pointers. No model call or outside reference. Save checks to persist a draft on this tenant; switch Field comparisons on for each selected stage and choose the rule action in the unified table. Numeric arrays or objects must match the chosen rule's expected structure."));
+    host.append(node("p", "Define exact arithmetic and conservation rules using JSON pointers. No model call or outside reference. Save checks to persist a draft on this tenant; switch Field comparisons on for each selected stage and choose the rule action in the unified table. Nested JSON objects and arrays are supported; use canonical zero-based array segments such as /invoices/0/total. The bounded JSON parser still limits array size and nesting."));
     if (!available) { host.append(node("p", "Arithmetic definitions are unavailable. Reconnect before editing.")); return; }
     const list = node("ul"); list.id = "arithmetic-drafts";
     const form = node("form"); form.id = "arithmetic-form";
@@ -152,11 +152,11 @@
           input.focus(); return;
         }
         const path = value.slice(1).split("/").map(part => part.replaceAll("~1", "/").replaceAll("~0", "~"));
-        if (path.some(part => !part || /^\d+$/.test(part))) {
-          message.textContent = "Pointers must address named object fields, not array positions or empty segments.";
+        if (path.some(part => !part)) {
+          message.textContent = "Pointers cannot contain empty JSON Pointer segments.";
           input.focus(); return;
         }
-        if (segments.some(prev => prev.join("/") === path.join("/") ||
+        if (segments.some(prev => JSON.stringify(prev) === JSON.stringify(path) ||
             prev.every((part, i) => part === path[i]) || path.every((part, i) => part === prev[i]))) {
           message.textContent = "Arithmetic pointers must be distinct and nonoverlapping."; input.focus(); return;
         }
