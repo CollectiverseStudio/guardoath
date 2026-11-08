@@ -2849,3 +2849,25 @@ GuardOath uses **Cognito hosted OAuth authorization code with PKCE**, selecting 
 **Important:** Google login and registration are **not payment verification**. An inactive registered account can review account/settings, but `POST /v1/checks/input` and `/output` refuse paid checks with HTTP 402 and do not meter them. `POST /v1/tenants/current/keys` likewise refuses creating production API keys with HTTP 402 until a verified active subscription is present; the dashboard disables the **Create API key** button and explains why. Existing keys may still be revoked for security. The billing module currently produces usage settlement records only; it does not process subscriptions, ingest authenticated Stripe webhooks, or verify current payment entitlement. There is **no checkout or paid activation claim** until a separately implemented, authenticated billing reconciler marks the server-owned status active after verifying payment and all usage gates enforce entitlement. `subscription_status=None` on legacy records is a migration state requiring an explicit billing audit; it is not proof of payment and must be reconciled before production paid-only rollout.
 
 **Deployment prerequisites:** Configure the Cognito pool, public app client and domain, enable Google as a federated IdP, add the exact `https://guardoath.com/dashboard` callback and sign-out URL, and set all four `GUARDOATH_COGNITO_*` environment values. Opt in to `GUARDOATH_SELF_REGISTRATION=1` only with a persistent tenant store, tested external identity provider, validated pool custom attributes, monitoring, and a verified entitlement activation workflow. Without that configuration, no live Google sign-in or registration is available. No Google client secret should enter the browser or repository. Browser mocks and unit tests do not demonstrate production Google OAuth success.
+
+
+## Privacy and secret scanner unavailable: hard release gate (2026-11-08)
+
+When an **enabled** Input or Output PII, encoded-PII or Secrets scanner times out,
+exhausts capacity, is unavailable or reports an error, the shared Engine returns
+`evaluation_status: incomplete` with **recommended and effective Block**, including
+for tenants in observe mode or using `failure_action: flag`. No absence of a
+finding is treated as a successful scan. Independent completed check findings
+are still returned so customers can diagnose configuration without losing the
+other evidence; private payloads and exception text are never included.
+
+An attempted PII redaction whose mandatory transformed-content recheck fails
+returns **redaction withheld** with no cleaned content and effective Block, even
+in observe mode. Successful completed scans retain the tenant's configured
+Flag, Allow, Block or Redact behavior; ordinary non-privacy check failures
+continue to use the saved failure action unless another explicit hard gate
+applies. The dashboard's existing Input/Output result and hold controls show
+these Engine decisions. API clients must require a **complete** evaluation and
+apply the effective action before sending content to AI or returning its answer.
+This safety contract does **not** prove the intermittent shipped 500-ms PII and
+Secrets latency tails resolved; the exact-source reliability gates remain open.

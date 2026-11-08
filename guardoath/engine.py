@@ -198,8 +198,18 @@ class Engine:
                 for reference in active_trusted_references)
         )
         results = await run_rules(request)
+        # An enabled privacy/secret scanner which did not finish cannot authorize
+        # release, even when the tenant observes other checks or normally flags
+        # incomplete generic checks. A timeout/capacity error is not a clean scan.
+        privacy_incomplete = any(
+            rule.checker_id in {"pii", "encoded_pii", "secrets"}
+            and result.status in {"error", "skipped", "unsupported"}
+            for rule, result in zip(rules, results)
+        )
         actions = [Action.ALLOW]
-        incomplete = False
+        incomplete = privacy_incomplete
+        if privacy_incomplete:
+            actions.append(Action.BLOCK)
         for rule, result in zip(rules, results):
             if result.status == "flagged":
                 override = rule.on_input_finding if stage == Stage.INPUT else rule.on_output_finding
@@ -242,13 +252,16 @@ class Engine:
                     if not rechecks or any(c.status not in {"passed", "flagged"} for c in rechecks):
                         incomplete = True
                     actions.append(Action.BLOCK)
+        # Withheld redaction must never be treated as a safe observed preview:
+        # a failed mandatory second pass has not verified the transformed text.
+        privacy_fail_closed = privacy_incomplete or redaction.status == "withheld"
         recommended = max(actions, key=PRIORITY.__getitem__)
         return CheckResponse(
             check_id=str(uuid4()), application_id=request.application_id,
             policy_version=policy.version, applied_validation_packs=applied_packs, stage=stage, mode=policy.mode,
             evaluation_status="incomplete" if incomplete else "complete",
             recommended_action=recommended,
-            effective_action=(Action.BLOCK if untrusted_reference else
+            effective_action=(Action.BLOCK if untrusted_reference or privacy_fail_closed else
                               Action.ALLOW if policy.mode == "observe" else recommended),
             findings=tuple(f for r in results for f in r.findings),
             checker_results=tuple(results), simulated=any(r.simulated for r in results),
