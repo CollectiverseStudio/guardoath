@@ -125,6 +125,11 @@ def build_secret_checker():
         found=set()
         terms=[(rule.rule_id,normalize(rule.term)) for rule in policy.confidential_terms if stage in rule.stages]
         count=total=0
+        # One request can repeat the same JSON key/value thousands of times.
+        # Findings are sets, so matching identical text with identical field
+        # context is idempotent. Keep this bounded, request-local index only;
+        # NEVER deduplicate encoded-payload accounting, which is per occurrence.
+        inspected=set()
         def remaining():
             value=deadline-monotonic()
             if value<=0: raise TimeoutError('Local secret scan deadline')
@@ -134,6 +139,11 @@ def build_secret_checker():
             if value.strip() and not REFERENCE.fullmatch(value.strip(),timeout=remaining()):
                 found.add('credential_assignment')
         def inspect(text,field=False):
+            remaining()
+            identity=(text,bool(field))
+            if identity in inspected:
+                return
+            inspected.add(identity)
             for name,pattern,validate in patterns:
                 for match in pattern.finditer(text,timeout=remaining()):
                     remaining()
