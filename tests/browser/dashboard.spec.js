@@ -410,7 +410,9 @@ for (const stage of ["input","output"]) {
         }
       }
     }
-    expect(seen.size).toBe(stage==='input'?123:126);
+    // Fixed policy presets omit the tenant-only CHAT-009 fixtures; asserting
+    // their exact inventory here ensures additions/removals are reviewed.
+    expect(seen.size).toBe(stage==='input'?121:124);
     expect(checks).toBe(0);
   });
 }
@@ -1131,10 +1133,9 @@ test("a tenant sees every dashboard example under the check it uses and can turn
   await page.locator("#demo-user").selectOption("demo10");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
-  // Every dashboard example is in the dropdowns under the check it uses (2026-11-05: the example buttons and the six
-  // content-safety examples were removed; two CHAT-009 examples were added): 123 input, 126 output. The output list unlocks after the input test.
+  // Authoritative tenant picker includes four CHAT-009 fixtures (3/4-turn attack and benign) absent from fixed policy presets.\n  // Output unlocks only after the Input request completes.
   await page.locator("#run-input").click(); await expect(page.locator("#run-output")).toBeEnabled();
-  for (const [stage, expected] of [["input", 123], ["output", 126]]) {
+  for (const [stage, expected] of [["input", 125], ["output", 128]]) {
     const values = await page.locator("#" + stage + "-example-check option").evaluateAll(nodes => nodes.map(n => n.value).filter(Boolean));
     const seen = new Set();
     for (const value of values) {
@@ -1142,6 +1143,12 @@ test("a tenant sees every dashboard example under the check it uses and can turn
       for (const id of await page.locator("#" + stage + "-example option[data-sample]").evaluateAll(nodes => nodes.map(n => n.dataset.sample))) seen.add(id);
     }
     expect(seen.size).toBe(expected);
+    // Exact CHAT-009 inventory must be selectable on both stages. Do not
+    // lower the count or let new samples silently disappear.
+    for (const id of ["chat-three-turn", "chat-three-turn-benign",
+                      "chat-four-turn", "chat-four-turn-benign"]) {
+      expect(seen.has(id), stage + " missing " + id).toBe(true);
+    }
   }
   await page.locator("#input-example-check").selectOption("ledger");
   await expect(page.locator('#input-example optgroup[label="Dashboard examples"] option')).toHaveCount(8);
