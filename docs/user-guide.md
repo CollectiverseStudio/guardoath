@@ -2325,8 +2325,12 @@ matches the same `prompt_attack.multi_turn_conditioning` rule. The
 The supplied role labels are deliberately untrusted even when they say
 `system` or `developer`. Enable the tenant's Prompt attacks action for
 the relevant Input or Output stage; choose Flag to review, or Block to stop
-an enforce-mode action. The browser and API return rule IDs/explanations,
-not copied chat content.
+an enforce-mode action. **Save checks** and confirm the saved Input/Output
+action before testing four-turn content. The four CHAT-009 Input/Output
+dashboard examples (three-turn attack and benign, four-turn attack and
+benign) are discoverable on the authenticated **tenant's record**; fixed
+policy presets may not offer the tenant-only prompt-attack check. The browser
+and API return rule IDs/explanations, not copied chat content.
 
 **Benign look-alike.** Ordinary messages about sending reports and weather
 do not create the indicator. Unrelated top-level JSON fields are not
