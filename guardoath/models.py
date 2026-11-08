@@ -124,8 +124,8 @@ class AdvancedArithmeticRule(Contract):
             if not isinstance(pointer, str) or len(pointer) > 200 or not pointer.startswith("/") or re.search(r"~(?![01])", pointer):
                 raise ValueError("Arithmetic fields require absolute JSON Pointers")
             segments = tuple(x.replace("~1", "/").replace("~0", "~") for x in pointer[1:].split("/"))
-            if any(not x or x.isdigit() for x in segments):
-                raise ValueError("Arithmetic pointers require object fields, not positional indices")
+            if any(not x for x in segments):
+                raise ValueError("Arithmetic pointers require nonempty JSON Pointer segments")
             decoded.append(segments)
         if len(set(decoded)) != len(decoded) or any(
                 p == q[:len(p)] or q == p[:len(q)]
@@ -173,8 +173,8 @@ class AdvancedConversionTimeRule(Contract):
                     not pointer.startswith("/") or re.search(r"~(?![01])", pointer)):
                 raise ValueError("Conversion/time fields require absolute JSON Pointers")
             segments = tuple(x.replace("~1", "/").replace("~0", "~") for x in pointer[1:].split("/"))
-            if any(not x or x.isdigit() for x in segments):
-                raise ValueError("Conversion/time pointers require object fields")
+            if any(not x for x in segments):
+                raise ValueError("Conversion/time pointers require nonempty JSON Pointer segments")
             decoded.append(segments)
         if len(set(decoded)) != len(decoded) or any(
                 a == b[:len(a)] or b == a[:len(b)]
@@ -232,8 +232,8 @@ class AdvancedIdentityRule(Contract):
             if not isinstance(pointer, str) or len(pointer) > 200 or not pointer.startswith("/") or re.search(r"~(?![01])", pointer):
                 raise ValueError("Identity fields require absolute JSON Pointers")
             segments = tuple(x.replace("~1", "/").replace("~0", "~") for x in pointer[1:].split("/"))
-            if any(not x or x.isdigit() for x in segments):
-                raise ValueError("Identity fields require object fields, not positional indices")
+            if any(not x for x in segments):
+                raise ValueError("Identity pointers require nonempty JSON Pointer segments")
             decoded.append(segments)
         if len(set(decoded)) != len(decoded) or any(
                 p == q[:len(p)] or q == p[:len(q)]
