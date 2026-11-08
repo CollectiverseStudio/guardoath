@@ -189,8 +189,9 @@ class TenantService:
                         raise ChangeRejected("Scoped comparisons accept only an editable list")
                     incoming = incoming["editable"]
                 if not isinstance(incoming, (list, tuple)) or any(
-                        (item.get("kind") if isinstance(item, dict) else getattr(item, "kind", None))
-                        not in public_kinds for item in incoming):
+                        not isinstance(kind := (
+                            item.get("kind") if isinstance(item, dict) else getattr(item, "kind", None)
+                        ), str) or kind not in public_kinds for item in incoming):
                     raise ChangeRejected("Only non-reference comparison kinds may be saved here")
                 protected = [rule for rule in stored if rule.kind in protected_kinds]
                 if protected and not scoped:
