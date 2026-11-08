@@ -11,6 +11,6 @@ module.exports = defineConfig({
   webServer: {
     command: "python -m uvicorn guardoath.app:app --host 127.0.0.1 --port 8777 --no-access-log",
     url: "http://127.0.0.1:8777/healthz", timeout: 60000,
-    env: { GUARDOATH_CHECKS_PER_MINUTE: "60000", GUARDOATH_BURST: "1000", GUARDOATH_API_KEY: "playwright-test-key", GUARDOATH_ENABLE_PII: "1", GUARDOATH_POLICY_FILE: "policies/playground.json", GUARDOATH_TENANT_STORE: "memory", GUARDOATH_DEMO_KEY_SECRET: "playwright-demo-key-secret-0123456789" },
+    env: { GUARDOATH_CHECKS_PER_MINUTE: "60000", GUARDOATH_BURST: "1000", GUARDOATH_API_KEY: "playwright-test-key", GUARDOATH_ENABLE_PII: "1", GUARDOATH_POLICY_FILE: "policies/playground.json", GUARDOATH_TENANT_STORE: "memory", GUARDOATH_DEMO_KEY_SECRET: "playwright-demo-key-secret-0123456789", GUARDOATH_REFERENCE_SIGNING_KEY: "synthetic-playwright-host-signing-key-not-for-production-0123456789" },
   },
 });
