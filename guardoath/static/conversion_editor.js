@@ -15,12 +15,13 @@
   };
   let original = [], draft = [], enabled = false, protectedRules = [];
   function delta() {
-    if (!enabled || protectedRules.length) return null;
-    return JSON.stringify(original) === JSON.stringify(draft) ? null : clone(draft);
+    if (!enabled || JSON.stringify(original) === JSON.stringify(draft)) return null;
+    // Scoped replacement leaves server-owned FX rules untouched.
+    return protectedRules.length ? {editable: clone(draft)} : clone(draft);
   }
   function actions(stage, previous) {
     const result = {...previous};
-    if (!enabled || protectedRules.length) return result;
+    if (!enabled) return result;
     for (const item of original) {
       const kept = draft.find(rule => rule.rule_id === item.rule_id);
       if (!kept || !kept.stages.includes(stage)) delete result["business." + item.rule_id];
@@ -56,10 +57,10 @@
           item.stages.join(", ") + " · FX reference configured: " +
           (item.reference_configured ? "yes" : "no")));
       }
-      references.append(el("p", "FX reference rules remain read-only. All conversion/time edits are locked while an FX rule exists, because a full-array save must never overwrite a private versioned rate. Use authorized reference management."));
+      references.append(el("p", "Protected FX references remain read-only. Ordinary conversion/time rules can still be edited; Save checks submits only public definitions and the server preserves private FX rates under the tenant revision. Use authorized reference management for FX rules."));
     }
     host.append(references);
-    const locked = protectedRules.length > 0;
+    const locked = false; // Protected FX reference rows are never in the editable draft.
     const list = el("ul"); list.id = "conversion-drafts";
     const form = el("form"); form.id = "conversion-form";
     const message = el("p"); message.id = "conversion-message";
@@ -181,7 +182,7 @@
     form.addEventListener("submit", event => {
       event.preventDefault();
       if (locked) {
-        message.textContent = "Protected FX reference-backed rules prevent editing this conversion/time array.";
+        message.textContent = "Protected FX references cannot be edited in this public rule editor.";
         return;
       }
       if (!form.reportValidity()) return;
@@ -221,7 +222,7 @@
       message.textContent = "Conversion rule pending. Save checks to persist it.";
     });
     drawFields();
-    for (const input of form.querySelectorAll("input, select, button")) input.disabled = locked;
+    for (const input of form.querySelectorAll("input, select, button")) input.disabled = false;
     draw();
   }
   window.conversionEditor = {render, delta, actions};
