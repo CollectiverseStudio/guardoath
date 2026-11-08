@@ -90,3 +90,18 @@ def test_registration_allows_only_empty_untyped_post_and_retains_global_ingress_
     record = store.get("usr-test-account")
     assert record is not None and record.subscription_status == "inactive"
     assert record.key_hashes == () and record.monthly_allowance == 0
+
+
+def test_registered_without_payment_cannot_issue_customer_api_key():
+    client, store = make_client()
+    headers = {SESSION_HEADER: "verified-test-token"}
+    created = client.post("/v1/register", headers=headers)
+    assert created.status_code == 201
+    # No bearer key is minted by account creation or subsequent owner requests
+    # while the authoritative subscription is inactive.
+    denied = client.post("/v1/tenants/current/keys", headers=headers, json={})
+    assert denied.status_code == 402, denied.text
+    assert "subscription" in denied.json()["detail"]
+    record = store.get("usr-test-account")
+    assert record.subscription_status == "inactive"
+    assert record.key_hashes == () and record.usage == {}
