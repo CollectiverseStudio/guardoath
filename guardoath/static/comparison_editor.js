@@ -49,7 +49,8 @@
       return control;
     }
     field("id", "Comparison ID").maxLength = 80;
-    controls.id.pattern = "[a-zA-Z0-9_.\\-]{1,80}";
+    controls.id.pattern = "[a-z][a-z0-9_]{0,79}";
+    form.append(element("p", "Comparison IDs must start with a lowercase letter and use only lowercase letters, digits and underscores (1–80 characters). This matches the tenant rule IDs accepted by the API."));
     field("left", "Left JSON pointer").maxLength = 200;
     field("operator", "Comparison", [["le", "≤ at most"], ["lt", "< less than"], ["eq", "= equal"], ["ne", "≠ different"], ["ge", "≥ at least"], ["gt", "> greater than"]]);
     field("right", "Right JSON pointer").maxLength = 200;
@@ -106,7 +107,7 @@
         if (!rule || typeof rule !== "object" || Array.isArray(rule)) return fail("expected an object.");
         if (Object.keys(rule).some(key => !allowed.has(key))) return fail("unknown field; use only rule_id, left, right, operator, value_type and stages.");
         const id = rule.rule_id;
-        if (typeof id !== "string" || !/^[A-Za-z0-9_.-]{1,80}$/.test(id)) return fail("invalid rule_id.");
+        if (typeof id !== "string" || !/^[a-z][a-z0-9_]{0,79}$/.test(id)) return fail("invalid rule_id; use a lowercase letter followed by lowercase letters, digits or underscores (1–80 characters).");
         if (ids.has(id) || (!existing.has(id) && otherIds.has("business." + id))) return fail("duplicate or reserved rule_id.");
         ids.add(id);
         for (const name of ["left", "right"]) {
