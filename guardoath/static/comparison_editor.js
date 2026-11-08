@@ -192,11 +192,43 @@
         // requires at least 33 containers regardless of field naming.
         if (deepest > 32)
           warnings.push(stage + " requires at least " + deepest + " nested JSON containers");
+        // A field used as a scalar in one comparison cannot simultaneously
+        // be the parent object of another comparison's field. Likewise, a
+        // single value cannot be both a number and a calendar date. Detect
+        // these per stage; two different stage documents may legitimately
+        // reuse a JSON Pointer with different types/structures.
+        // JSON.stringify(parts) preserves escaped pointer segment boundaries
+        // and cannot conflate /a~1b with /a/b.
+        const leaves = new Map();
+        for (const rule of draft) {
+          if (!rule.stages.includes(stage)) continue;
+          for (const pointer of [rule.left, rule.right]) {
+            const parts = pointer.slice(1).split("/").map(
+              item => item.replace(/~1/g, "/").replace(/~0/g, "~"));
+            const key = JSON.stringify(parts);
+            if (!leaves.has(key)) leaves.set(key, {parts, types: new Set()});
+            leaves.get(key).types.add(rule.value_type);
+          }
+        }
+        let mixedTypes = 0;
+        const scalarParents = new Set();
+        for (const {parts, types} of leaves.values()) {
+          if (types.size > 1) mixedTypes++;
+          for (let i = 1; i < parts.length; i++) {
+            const ancestor = JSON.stringify(parts.slice(0, i));
+            if (leaves.has(ancestor)) scalarParents.add(ancestor);
+          }
+        }
+        if (mixedTypes)
+          warnings.push(stage + " has " + mixedTypes + " field(s) used as both number and calendar date");
+        if (scalarParents.size)
+          warnings.push(stage + " has " + scalarParents.size + " scalar/object JSON pointer conflict(s)");
       }
       limitWarning.hidden = !warnings.length;
       limitWarning.textContent = warnings.length
         ? "JSON structure warning: " + warnings.join("; ") +
-          ". The shared Engine accepts at most 1,000 keys in any one JSON object, including nested objects, and at most 32 nested JSON containers. A fully populated document with these fields cannot pass. Use nested objects with no more than 1,000 children each and keep nesting within 32 levels, or split the stages; the draft has not been modified."
+          ". The shared Engine accepts at most 1,000 keys in any one JSON object, including nested objects, and at most 32 nested JSON containers. A fully populated document with these fields cannot pass. Use nested objects with no more than 1,000 children each and keep nesting within 32 levels, or split the stages; the draft has not been modified." +
+          " Resolve incompatible number/date fields or scalar/object paths by assigning distinct pointers or stages."
         : "";
       list.replaceChildren();
       if (!draft.length) list.append(element("li", "No number or date comparisons on this record."));
