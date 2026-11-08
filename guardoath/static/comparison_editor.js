@@ -35,6 +35,9 @@
     const limitWarning = element("p"); limitWarning.id = "comparison-structure-warning";
     limitWarning.setAttribute("role", "status"); limitWarning.setAttribute("aria-live", "polite");
     limitWarning.hidden = true;
+    const logicWarning = element("p"); logicWarning.id = "comparison-logic-warning";
+    logicWarning.setAttribute("role", "status"); logicWarning.setAttribute("aria-live", "polite");
+    logicWarning.hidden = true;
     const list = element("ul"); list.id = "comparison-drafts";
     const form = element("form"); form.id = "comparison-form";
     const controls = {};
@@ -65,7 +68,7 @@
     const apply = element("button", "Add to pending changes"); apply.id = "comparison-apply"; apply.type = "submit";
     const cancel = element("button", "Cancel edit"); cancel.type = "button"; cancel.hidden = true;
     const message = element("p"); message.id = "comparison-message"; message.setAttribute("role", "status");
-    form.append(apply, cancel, message); host.append(summary, limitWarning, list, form);
+    form.append(apply, cancel, message); host.append(summary, limitWarning, logicWarning, list, form);
     // A customer with hundreds of ordinary comparisons needs a usable import path,
     // not 500 manual Add clicks or a hidden API. Import changes only the draft;
     // the existing revisioned Save checks and shared Engine remain authoritative.
@@ -160,6 +163,7 @@
       // 1,002 fields under one nested map cannot pass when fully populated.
       // This is advisory and never imposes a tenant comparison-count cap.
       const warnings = [];
+      const logicWarnings = [];
       for (const stage of ["input", "output"]) {
         const scopes = new Map(); // JSON-pointer prefix -> unique direct children
         let deepest = 0; // scalar at /a/b/c requires three nested JSON containers
@@ -224,7 +228,32 @@
           warnings.push(stage + " has " + mixedTypes + " field(s) used as both number and calendar date");
         if (scalarParents.size)
           warnings.push(stage + " has " + scalarParents.size + " scalar/object JSON pointer conflict(s)");
+        // A rule that compares a field to ITSELF cannot measure two values.
+        // Canonicalize decoded JSON Pointer segments, not display strings:
+        // /a~1b is distinct from /a/b. Stage scopes are independent.
+        let impossibleSelf = 0, vacuousSelf = 0;
+        for (const rule of draft) {
+          if (!rule.stages.includes(stage)) continue;
+          const canonical = pointer => JSON.stringify(pointer.slice(1).split("/").map(
+            item => item.replace(/~1/g, "/").replace(/~0/g, "~")));
+          if (canonical(rule.left) !== canonical(rule.right)) continue;
+          if (["lt", "gt", "ne"].includes(rule.operator)) impossibleSelf++;
+          else if (["le", "ge", "eq"].includes(rule.operator)) vacuousSelf++;
+        }
+        if (impossibleSelf)
+          logicWarnings.push(stage + " has " + impossibleSelf +
+            " self-comparison(s) that always violate for valid values (lt/gt/ne)");
+        if (vacuousSelf)
+          logicWarnings.push(stage + " has " + vacuousSelf +
+            " self-comparison(s) that cannot detect a comparison difference (le/ge/eq)");
       }
+      logicWarning.hidden = !logicWarnings.length;
+      logicWarning.textContent = logicWarnings.length
+        ? "Logical comparison warning: " + logicWarnings.join("; ") +
+          ". Both operands point to the same field. Valid values cannot satisfy lt/gt/ne" +
+          " or create a comparison difference for le/ge/eq. Missing or invalid field values" +
+          " may still be reported. Select different pointers or stages. Draft and saved tenant remain unchanged."
+        : "";
       limitWarning.hidden = !warnings.length;
       limitWarning.textContent = warnings.length
         ? "JSON structure warning: " + warnings.join("; ") +
