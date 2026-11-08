@@ -80,7 +80,16 @@ class FieldComparison(Contract):
     right: str = Field(min_length=1, max_length=200)
     operator: Literal["lt", "le", "eq", "ge", "gt", "ne"]
     value_type: Literal["number", "date"] = "number"
-    stages: tuple[Stage, ...] = Field(default=(Stage.INPUT, Stage.OUTPUT), min_length=1)
+    stages: tuple[Stage, ...] = Field(default=(Stage.INPUT, Stage.OUTPUT), min_length=1, max_length=2)
+
+    @model_validator(mode="after")
+    def unique_stages(self):
+        # The customer bulk editor rejects duplicate stage names; the
+        # authoritative tenant API must enforce the same contract even when
+        # settings are submitted directly, without silently normalizing.
+        if len(set(self.stages)) != len(self.stages):
+            raise ValueError("Comparison stages must be distinct")
+        return self
 
     @field_validator("left", "right")
     @classmethod
