@@ -170,7 +170,14 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
       .toHaveValue("block");
     for (const stage of ["input", "output"]) {
       const result = await check(request, headers, stage, bad);
-      expect(result.evaluation_status).toBe("complete");
+      // Preserve exact fail-closed contract and expose ONLY checker IDs/status,
+      // error codes and bounded timings when an intermittent 500-rule run fails.
+      // Never echo customer content, findings, or configuration.
+      const checkerEvidence = result.checker_results.map(({checker_id, status, error_code, latency_ms}) =>
+        ({checker_id, status, error_code, latency_ms}));
+      expect(result.evaluation_status,
+        JSON.stringify({stage, total_latency_ms: result.total_latency_ms,
+          checkerEvidence})).toBe("complete");
       expect(result.effective_action).toBe("block");
       const findings = result.findings.filter(f => f.rule_id.startsWith("business.mixed_ui_"))
         .map(f => f.rule_id).sort();
