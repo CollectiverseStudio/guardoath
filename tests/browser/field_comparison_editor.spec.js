@@ -98,6 +98,11 @@ test("comparison IDs enforce native HTML v-pattern validation before a draft can
   expect(await page.locator("#comparison-id").evaluate(e => e.validity.patternMismatch)).toBe(true);
   await page.locator("#comparison-apply").click();
   await expect(page.locator('#comparison-drafts [data-comparison-id="invalid space"]')).toHaveCount(0);
+  // Existing test previously treated a hyphen/dot ID as valid even though
+  // the authoritative tenant record rejects it. Preserve native validation
+  // and require full parity with the server's lowercase rule namespace.
   await page.locator("#comparison-id").fill("valid_rule-1.x");
+  expect(await page.locator("#comparison-id").evaluate(e => e.validity.patternMismatch)).toBe(true);
+  await page.locator("#comparison-id").fill("valid_rule_1");
   expect(await page.locator("#comparison-id").evaluate(e => e.validity.patternMismatch)).toBe(false);
 });
