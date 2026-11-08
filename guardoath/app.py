@@ -405,9 +405,12 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         if request.application_id != record.tenant_id:
             raise HTTPException(403, "Credential does not authorize this application")
         # Account registration alone does not authorize paid validations.
-        # Legacy None is a migration state; existing tenants must be
-        # reconciled with verified billing entitlement before paid-only rollout.
-        if not record.demo and record.subscription_status not in (None, "active"):
+        # When customer sign-in is configured, legacy/unverified records
+        # fail closed until their paid entitlement is explicitly migrated.
+        # Older API-only deployments without customer sessions retain their
+        # existing legacy behavior during migration; they must not be treated
+        # as paid production onboarding.
+        if not record.demo and sessions is not None and record.subscription_status != "active":
             raise HTTPException(402, "An active subscription is required to run checks",
                                 headers={"Cache-Control": "no-store"})
         # A tenant key runs its record's own checks only. Naming any other profile is refused (not counted).
