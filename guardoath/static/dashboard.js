@@ -492,7 +492,10 @@ function fieldComparisonIdCollision(changes) {
   ];
   const seen = new Map();
   for (const [field, label] of families) {
-    const rules = Object.prototype.hasOwnProperty.call(changes, field) ? changes[field] : tenant[field];
+    const submitted = Object.prototype.hasOwnProperty.call(changes, field) ? changes[field] : tenant[field];
+    // Scoped drafts contain public rule edits only; protected values stay on server.
+    const rules = Array.isArray(submitted) ? submitted :
+      (submitted && Array.isArray(submitted.editable) ? submitted.editable : tenant[field]);
     if (!Array.isArray(rules)) continue;
     for (const rule of rules) {
       if (!rule || typeof rule.rule_id !== "string") continue;
@@ -503,6 +506,21 @@ function fieldComparisonIdCollision(changes) {
           "). Change or remove a pending duplicate in its editor before saving. No settings were saved.";
       }
       seen.set(rule.rule_id, label);
+    }
+  }
+  // Protected reference values are hidden, but their public rule IDs still
+  // occupy the tenant-wide namespace and must be checked before Save or Run.
+  for (const [field, label] of [
+    ["advanced_identity_reference_status", "protected identity references"],
+    ["advanced_conversion_reference_status", "protected FX references"],
+    ["advanced_trusted_reference_status", "host-signed references"]
+  ]) {
+    for (const item of tenant[field] || []) {
+      if (!item || typeof item.rule_id !== "string") continue;
+      const prior = seen.get(item.rule_id);
+      if (prior) return "Field comparison rule IDs must be unique across all families (" +
+        prior + " and " + label + "). Change the pending duplicate before saving. No settings were saved.";
+      seen.set(item.rule_id, label);
     }
   }
   return null;
