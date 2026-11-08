@@ -22,9 +22,11 @@ CASES = (
 DEADLINE_MS = 500
 
 
-async def run_gate(rounds: int = 20):
+async def run_gate(rounds: int = 20, concurrency: int = 1):
     if type(rounds) is not int or not 1 <= rounds <= 100:
         raise ValueError("Rounds must be 1..100")
+    if type(concurrency) is not int or not 1 <= concurrency <= 4:
+        raise ValueError("Concurrency must be 1..4")
     from guardoath.checkers import default_checkers
     from guardoath.config import load_policies
     from guardoath.engine import Engine
@@ -46,13 +48,19 @@ async def run_gate(rounds: int = 20):
     subset = suite.model_copy(update={"cases": selected})
     samples = {case: [] for case in CASES}
     for _ in range(rounds):
-        report = await evaluate(subset, engine)
-        if len(report["cases"]) != len(CASES):
-            raise ValueError("Incomplete suite evaluation")
-        for row in report["cases"]:
-            if row["case_id"] not in samples:
-                raise ValueError("Unknown case")
-            samples[row["case_id"]].append(row)
+        # Run each real five-case suite simultaneously across up to four
+        # callers, the actual bounded Secrets worker capacity. This exposes
+        # contention that sequential cases cannot exercise. Do not add queue
+        # slack, retry incomplete results, or change the shipped 500-ms policy.
+        batch = await asyncio.gather(*(evaluate(subset, engine)
+                                       for _ in range(concurrency)))
+        for report in batch:
+            if len(report["cases"]) != len(CASES):
+                raise ValueError("Incomplete suite evaluation")
+            if {row["case_id"] for row in report["cases"]} != set(CASES):
+                raise ValueError("Missing/duplicate suite case")
+            for row in report["cases"]:
+                samples[row["case_id"]].append(row)
     groups = []
     for case in CASES:
         rows = samples[case]
@@ -69,7 +77,7 @@ async def run_gate(rounds: int = 20):
         })
     return {"schema_version": 1, "source": "shipped-secrets-suite",
             "shipped_checker_deadline_ms": DEADLINE_MS,
-            "rounds": rounds, "cases": groups,
+            "rounds": rounds, "concurrency": concurrency, "cases": groups,
             "accepted": all(not row["failed_contracts"] for row in groups),
             "note": "Engine timings are not checker deadlines; green finite samples do not prove tail elimination."}
 
@@ -77,9 +85,10 @@ async def run_gate(rounds: int = 20):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rounds", type=int, default=20)
+    parser.add_argument("--concurrency", type=int, default=1)
     args = parser.parse_args(argv)
     try:
-        result = asyncio.run(run_gate(args.rounds))
+        result = asyncio.run(run_gate(args.rounds, args.concurrency))
     except Exception:
         print(json.dumps({"schema_version": 1, "accepted": False, "reason": "gate_unavailable"}))
         return 2
