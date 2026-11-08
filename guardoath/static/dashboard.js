@@ -110,6 +110,11 @@ function coverage() {
 async function loadApplication(token, attempt) {
   const data = await api("/v1/applications/current", null, token); if (attempt !== revision) return;
     key = token; application = data; $("api-key").value = ""; $("policy").replaceChildren();
+    const sub = data.tenant?.subscription_status;
+    $("subscription-status").hidden = !sub || data.tenant?.demo;
+    $("subscription-status").textContent = sub === "active" ? "Subscription active."
+      : sub === "unverified_legacy" ? "Subscription needs billing verification."
+      : "Account registered. No active subscription: paid checks are unavailable.";
     for (const policy of data.policies) { const option = document.createElement("option"); option.value = policy.version; option.textContent = (profileHelp[policy.version] ? profileHelp[policy.version].name + " (" + policy.version + ")" : policy.version) + " · " + policy.mode + " mode"; $("policy").append(option); }
     // A tenant runs only its record's checks, so it has no profile to choose: the profile choice is for the local
     // developer key only, which starts on the combined conversation profile.
@@ -657,7 +662,12 @@ loadDemoUsers();
 // code for a session; the session stays in this tab (sessionStorage) and is sent only to this server.
 let signIn = null;
 function b64url(buffer) { return btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
-function signedIn(on) { $("sign-in").hidden = on; $("sign-out").hidden = !on; $("keys-panel").hidden = !on; if (on) loadKeys(); }
+function signedIn(on) {
+  $("sign-in").hidden = on;
+  $("register-account").hidden = on || !signIn?.registration_enabled;
+  $("sign-out").hidden = !on;
+  $("keys-panel").hidden = !on; if (on) loadKeys();
+}
 async function loadSignIn() {
   let response;
   try { response = await send("/v1/sign-in", {cache: "no-store"}); } catch (error) { return; }
@@ -673,7 +683,21 @@ async function loadSignIn() {
     const text = JSON.stringify({code, code_verifier: verifier});
     const reply = await send("/v1/sign-in/token", {method: "POST", cache: "no-store", headers: await requestHeaders("", text), body: text});
     if (!reply.ok) { $("connection-status").textContent = "Sign-in failed. Sign in again."; return; }
-    sessionStorage.setItem("guardoath-session", (await reply.json()).access_token);
+    const token = (await reply.json()).access_token;
+    sessionStorage.setItem("guardoath-session", token);
+    const intent = sessionStorage.getItem("guardoath-sign-in-intent");
+    sessionStorage.removeItem("guardoath-sign-in-intent");
+    if (intent === "register") {
+      const response = await send("/v1/register", {
+        method: "POST", cache: "no-store",
+        headers: {"X-GuardOath-Session": token}
+      });
+      if (response.status !== 201 && response.status !== 409) {
+        sessionStorage.removeItem("guardoath-session");
+        $("connection-status").textContent = "Registration could not be completed; try again.";
+        return;
+      }
+    }
   }
   const stored = sessionStorage.getItem("guardoath-session");
   if (!stored) return;
@@ -681,7 +705,7 @@ async function loadSignIn() {
   try { await loadApplication(SESSION + stored, attempt); signedIn(true); }
   catch (error) { sessionStorage.removeItem("guardoath-session"); signedIn(false); $("connection-status").textContent = "Your sign-in has ended. Sign in again."; }
 }
-$("sign-in").addEventListener("click", async () => {
+async function beginGoogleLogin(intent) {
   if (!signIn) return;
   const verifier = b64url(crypto.getRandomValues(new Uint8Array(32))), state = b64url(crypto.getRandomValues(new Uint8Array(16)));
   const challenge = b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
@@ -689,8 +713,12 @@ $("sign-in").addEventListener("click", async () => {
   const url = new URL(signIn.authorize_url);
   for (const [name, value] of Object.entries({response_type: "code", client_id: signIn.client_id, redirect_uri: signIn.redirect_uri,
       scope: signIn.scope, state, code_challenge: challenge, code_challenge_method: "S256"})) url.searchParams.set(name, value);
+  url.searchParams.set("identity_provider", "Google");
+  sessionStorage.setItem("guardoath-sign-in-intent", intent);
   location.assign(url.toString());
-});
+}
+$("sign-in").addEventListener("click", () => beginGoogleLogin("signin"));
+$("register-account").addEventListener("click", () => beginGoogleLogin("register"));
 $("sign-out").addEventListener("click", () => {
   sessionStorage.removeItem("guardoath-session"); $("disconnect").click();
   const url = new URL(signIn.logout_url); url.searchParams.set("client_id", signIn.client_id); url.searchParams.set("logout_uri", signIn.redirect_uri);
