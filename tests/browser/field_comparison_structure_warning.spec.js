@@ -78,7 +78,8 @@ test("customer saves 501 split-nested comparisons in dashboard and runs both rea
     const before = await request.get("/v1/applications/current", {headers});
     expect(before.status()).toBe(200);
     const starting = (await before.json()).tenant;
-    expect(starting.comparisons).toHaveLength(0);
+    // Demo reset restores its published two-rule default; it is not an empty policy.
+    expect(starting.comparisons.map(rule => rule.rule_id)).toEqual(["date_order", "refund_limit"]);
 
     const definitions = rules(501, true);
     await page.locator("#comparison-bulk-panel > summary").click();
@@ -91,7 +92,7 @@ test("customer saves 501 split-nested comparisons in dashboard and runs both rea
     // Draft import has not written anything; the existing Save is revisioned
     // and the current tenant record alone determines Input/Output actions.
     const preSave = await request.get("/v1/applications/current", {headers});
-    expect((await preSave.json()).tenant.comparisons).toHaveLength(0);
+    expect((await preSave.json()).tenant.comparisons).toEqual(starting.comparisons);
     await page.locator("#tenant-check-input-cross_field").selectOption("flag");
     await page.locator("#tenant-check-output-cross_field").selectOption("block");
     await page.getByRole("button", {name: "Save checks", exact: true}).click();
