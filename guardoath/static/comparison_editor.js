@@ -161,11 +161,13 @@
       const warnings = [];
       for (const stage of ["input", "output"]) {
         const scopes = new Map(); // JSON-pointer prefix -> unique direct children
+        let deepest = 0; // scalar at /a/b/c requires three nested JSON containers
         for (const rule of draft) {
           if (!rule.stages.includes(stage)) continue;
           for (const pointer of [rule.left, rule.right]) {
             const parts = pointer.slice(1).split("/").map(
               item => item.replace(/~1/g, "/").replace(/~0/g, "~"));
+            deepest = Math.max(deepest, parts.length);
             let prefix = "";
             for (const part of parts) {
               if (!scopes.has(prefix)) scopes.set(prefix, new Set());
@@ -185,11 +187,16 @@
         }
         if (largestNested > 1000)
           warnings.push(stage + " references " + largestNested + " distinct fields within a nested object");
+        // The strict JSON decoder counts all nested objects and arrays and rejects
+        // depth > 32. A fully populated scalar leaf at a 33-segment JSON Pointer
+        // requires at least 33 containers regardless of field naming.
+        if (deepest > 32)
+          warnings.push(stage + " requires at least " + deepest + " nested JSON containers");
       }
       limitWarning.hidden = !warnings.length;
       limitWarning.textContent = warnings.length
         ? "JSON structure warning: " + warnings.join("; ") +
-          ". The shared Engine accepts at most 1,000 keys in any one JSON object, including nested objects. A fully populated document with these fields cannot pass. Use nested objects with at most 1,000 distinct children per object (up to 32 levels), or split the stages; the draft has not been modified."
+          ". The shared Engine accepts at most 1,000 keys per JSON object and at most 32 nested JSON containers. A fully populated document with these fields cannot pass. Distribute keys across objects with no more than 1,000 children each, keep nesting within 32 levels, or separate the stages; the draft has not been modified."
         : "";
       list.replaceChildren();
       if (!draft.length) list.append(element("li", "No number or date comparisons on this record."));
