@@ -117,6 +117,49 @@ test("deep valid tenant rules persist but unusable arithmetic and identity Try s
     await expect(page.getByRole("button", {name: "Try benign input identity sample_identity"}))
       .toHaveCount(1);
 
+    // Exercise the actual customer Try -> playground -> shared Engine path.
+    // The selected rule's synthetic witness is not necessarily a clean
+    // whole-tenant witness: other enabled rules may also find violations.
+    const sampleFor = (id, kind) => {
+      const rule = after.record_rules.find(x => x.rule_id === "business." + id);
+      expect(rule).toBeTruthy();
+      return kind === "violating" ? rule.example : rule.look_alike;
+    };
+    const tryAndRun = async (stage, family, id, kind) => {
+      await page.getByRole("button", {name: "Try " + kind + " " + stage + " " + family + " " + id}).click();
+      await expect(page.locator("#" + stage + "-format")).toHaveValue("json");
+      expect(await page.locator("#" + stage + "-content").inputValue()).toBe(sampleFor(id, kind));
+      const pending = page.waitForResponse(r => r.url().endsWith("/v1/checks/" + stage) &&
+        r.request().method() === "POST");
+      await page.locator("#run-" + stage).click();
+      const response = await pending;
+      expect(response.status(), (await response.text()).slice(0, 160)).toBe(200);
+      const report = await response.json();
+      const selected = report.findings.filter(x => x.rule_id === "business." + id);
+      expect(selected.length > 0, "Selected rule must match its claimed " + kind + " example")
+        .toBe(kind === "violating");
+    };
+    await tryAndRun("input", "arithmetic", "sample_arith", "violating");
+    await tryAndRun("input", "identity", "sample_identity", "benign");
+    // A complete, benign input (rather than one rule's isolated witness)
+    // authorizes the Output stage. A previous incomplete sample cannot
+    // silently grant Output access.
+    const cleanDocument = {deep: {invoice: {
+      subtotal: 100, discount: 10, tax: 8, shipping: 5, total: 103
+    }, ids: {order_id: "ORDER1", shipment_order_id: "ORDER1"}}};
+    await page.locator("#input-format").selectOption("json");
+    await page.locator("#input-content").fill(JSON.stringify(cleanDocument));
+    const completeInput = page.waitForResponse(r => r.url().endsWith("/v1/checks/input") &&
+      r.request().method() === "POST");
+    await page.locator("#run-input").click();
+    const completeReport = await (await completeInput).json();
+    expect(completeReport.evaluation_status).toBe("complete");
+    expect(completeReport.effective_action).toBe("allow");
+    await expect(page.locator("#run-output")).toBeEnabled();
+    await tryAndRun("output", "identity", "sample_identity", "violating");
+    await tryAndRun("output", "arithmetic", "sample_arith", "benign");
+    expect((await tenant(request, headers)).revision).toBe(after.revision);
+
     const good = {deep: {invoice: {subtotal: 100, discount: 10, tax: 8, shipping: 5, total: 103},
       ids: {order_id: "ORDER1", shipment_order_id: "ORDER1"}}};
     const bad = structuredClone(good);
