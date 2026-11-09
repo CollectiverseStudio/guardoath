@@ -91,6 +91,11 @@ test("customer sees concurrent-schema warning when testing another rule; engine 
       "Checks reporting findings: schema");
     await expect(page.locator("#input-results .check-attribution")).toContainText(
       "All enabled checks participate in the final policy decision");
+    // The customer sees the real returned rule ID, not just an ambiguous
+    // description. This is independent of whichever example was selected.
+    await expect(page.locator("#input-results .finding-rule-id").first()).toHaveText("schema.invalid");
+    await expect(page.locator("#input-results .finding-rule-id")).toHaveCount(
+      fromDashboard.findings.filter(f => f.rule_id === "schema.invalid").length);
     expect((await tenant(request, headers)).revision).toBe(saved.revision);
     expect(JSON.stringify(fromDashboard.findings)).not.toContain("unrelated");
 
