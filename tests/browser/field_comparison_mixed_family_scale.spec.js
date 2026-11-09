@@ -154,6 +154,29 @@ test("authenticated mixed 51-rule FC portfolio renders, saves UI override and ru
     expect(outputFiltered.effective_action).toBe("block");
     expect(outputFiltered.findings.map(f => f.rule_id)
       .filter(id => id.startsWith("business.mixed_ui_"))).toEqual(["business.mixed_ui_000"]);
+
+    // Prove the customer's actual two-stage dashboard flow shows the filtered
+    // findings, rather than merely trusting the tenant API result. Safe Input
+    // allows a proposed Output; Output still blocks for the first rule.
+    await page.locator("#input-format").selectOption("json");
+    await page.locator("#input-content").fill(JSON.stringify(good));
+    const browserInput = page.waitForResponse(r =>
+      r.url().endsWith("/v1/checks/input") && r.request().method() === "POST");
+    await page.locator("#run-input").click();
+    const acceptedInput = await (await browserInput).json();
+    expect(acceptedInput.effective_action).toBe("allow");
+    await expect(page.locator("#run-output")).toBeEnabled();
+    await page.locator("#output-format").selectOption("json");
+    await page.locator("#output-content").fill(JSON.stringify(bad));
+    const browserOutput = page.waitForResponse(r =>
+      r.url().endsWith("/v1/checks/output") && r.request().method() === "POST");
+    await page.locator("#run-output").click();
+    const blockedOutput = await (await browserOutput).json();
+    expect(blockedOutput.effective_action).toBe("block");
+    const displayIds = (await page.locator("#output-results .finding-rule-id").allTextContents())
+      .filter(id => id.startsWith("business.mixed_ui_"));
+    expect(displayIds).toEqual(["business.mixed_ui_000"]);
+    await expect(page.locator("#answer")).toBeHidden();
     expect((await current(request, headers)).revision).toBe(outputOff.revision);
   } finally {
     if (shouldReset) {
