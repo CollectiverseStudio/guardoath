@@ -7,6 +7,12 @@ on:
       - "guardoath/business.py"
       - "guardoath/models.py"
       - "guardoath/record_rules.py"
+      # FC-031–050 use the same tenant Engine but live in advanced-family modules.
+      # Their source and customer regression edits must re-run strict original
+      # FC-001–030 witnesses plus 30/51/100/250/500 mixed-family evidence.
+      - "guardoath/advanced_*.py"
+      - "tests/test_fc*.py"
+      - "tests/browser/fc*.spec.js"
       - "guardoath/engine.py"
       - "guardoath/tenant_record.py"
       - "tools/field_comparison_portfolio.py"
