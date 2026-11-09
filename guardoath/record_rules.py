@@ -553,29 +553,40 @@ def conversion_time_rule(rule) -> dict:
     def document(values):
         return _field_document(rule.fields, values)
     samples = CONVERSION_TIME_EXAMPLES.get(rule.kind)
-    # A genuinely absent return is a valid lifecycle condition. Offer a
-    # customer example only when the same shared evaluator verifies it.
-    # Certain legacy layouts put mandatory delivery inside a recorded return
-    # object, making an otherwise plausible three-field example invalid.
-    no_return_example = None
-    if rule.kind == "lifecycle_chronology" and samples:
+    # Validate every customer-visible sample using the same strict JSON
+    # admission and conversion/time evaluator used by the shared Engine.
+    # Previously only no-return examples were checked, so deeply nested
+    # pointers could still advertise invalid full-return samples as benign.
+    example = look_alike = no_return_example = None
+    if samples:
         from guardoath.advanced_conversion_time import _valid
         from guardoath.json_data import parse_json
-        try:
-            candidate = _field_document(
-                {role: pointer for role, pointer in rule.fields.items() if role != "return_at"},
-                {role: value for role, value in samples[0].items() if role != "return_at"},
+
+        def checked_sample(values, expected_valid):
+            try:
+                candidate = document(values)
+                if bool(_valid(rule, parse_json(candidate))) is expected_valid:
+                    return candidate
+            except (ValueError, KeyError, IndexError, TypeError, OverflowError, ArithmeticError):
+                pass
+            # Never advertise a JSON-rejected or mislabeled example as valid.
+            return None
+
+        example = checked_sample(samples[1], False)
+        look_alike = checked_sample(samples[0], True)
+        if rule.kind == "lifecycle_chronology":
+            # Optional return means the event is genuinely absent, not that
+            # an existing return record has a missing nested timestamp.
+            no_return_example = checked_sample(
+                {role: value for role, value in samples[0].items() if role != "return_at"}, True
             )
-            # Passing the rule alone is insufficient: the shared checker first
-            # enforces the JSON byte, nesting, item and finite-number limits.
-            if _valid(rule, parse_json(candidate)):
-                no_return_example = candidate
-        except (ValueError, KeyError, IndexError, TypeError, OverflowError, ArithmeticError):
-            # Never advertise an unchecked or failing example as benign.
-            pass
-    unavailable = None if samples else {
+
+    unavailable = {
         "code": "private_tenant_reference",
         "reason": "FX reference-backed conversion cannot display tenant-owned rate or reference as a sample.",
+    } if samples is None else {
+        "code": "sample_unavailable",
+        "reason": "This pointer layout has no JSON-admissible, rule-verified sample for the selected outcome.",
     }
     return {
         "rule_id": COMPARISON_PREFIX + rule.rule_id,
@@ -583,11 +594,11 @@ def conversion_time_rule(rule) -> dict:
         "title": f"Conversion/time constraint {rule.rule_id}: {rule.kind}",
         "use_case": f"Validate bounded {rule.kind.replace('_', ' ')} from tenant-configured JSON fields.",
         "severity": "high",
-        "example": document(samples[1]) if samples else None,
-        "look_alike": document(samples[0]) if samples else None,
+        "example": example,
+        "look_alike": look_alike,
         "no_return_example": no_return_example,
-        "example_unavailable": unavailable,
-        "look_alike_unavailable": unavailable,
+        "example_unavailable": unavailable if example is None else None,
+        "look_alike_unavailable": unavailable if look_alike is None else None,
         "needs_setting": None,
         "needs_checks": [],
         "content_format": "json",
