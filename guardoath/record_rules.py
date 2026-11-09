@@ -234,6 +234,27 @@ def _field_document(fields: dict, values: dict) -> str:
     }), separators=(",", ":"))
 
 
+
+def _checked_advanced_sample(rule, values, expected_valid, validator):
+    """Only publish synthetic JSON that the real API admits and this rule verifies.
+
+    A valid tenant pointer may still produce an oversized or too-deep example.
+    This function changes customer-facing *examples*, never rule enforcement;
+    it neither reads nor publishes trusted reference snapshots.
+    """
+    from guardoath.json_data import parse_json
+
+    try:
+        candidate = _field_document(rule.fields, values)
+        if len(candidate) > MAX_CONTENT_CHARS:
+            return None
+        if bool(validator(rule, parse_json(candidate))) is expected_valid:
+            return candidate
+    except (ValueError, KeyError, IndexError, TypeError, OverflowError, ArithmeticError):
+        pass
+    return None
+
+
 def _passes(payload, comparison) -> bool:
     """The cross_field checker's own value rules (guardoath.business) for one comparison."""
     from decimal import DecimalException
@@ -460,18 +481,23 @@ def arithmetic_rule(rule) -> dict:
     clean, variable, unsafe_value = ARITHMETIC_EXAMPLES[rule.kind]
     clean = dict(clean)
     unsafe = {**clean, variable: unsafe_value}
-    def document(values):
-        return _field_document(rule.fields, values)
+    from guardoath.advanced_arithmetic import _valid
+    def document(values, expected_valid):
+        return _checked_advanced_sample(rule, values, expected_valid, _valid)
+    unavailable = {
+        "code": "sample_unavailable",
+        "reason": "This pointer layout has no JSON-admissible, rule-verified sample for the selected outcome.",
+    }
     return {
         "rule_id": COMPARISON_PREFIX + rule.rule_id,
         "control_id": "cross_field",
         "title": f"Advanced arithmetic {rule.rule_id}: {rule.kind}",
         "use_case": f"Validate exact bounded {rule.kind.replace('_', ' ')} relationships in submitted JSON.",
         "severity": "high",
-        "example": document(unsafe),
-        "look_alike": document(clean),
-        "example_unavailable": None,
-        "look_alike_unavailable": None,
+        "example": (example := document(unsafe, False)),
+        "look_alike": (look_alike := document(clean, True)),
+        "example_unavailable": unavailable if example is None else None,
+        "look_alike_unavailable": unavailable if look_alike is None else None,
         "needs_setting": None,
         "needs_checks": [],
         "content_format": "json",
@@ -495,23 +521,29 @@ IDENTITY_EXAMPLES = {
 
 
 def identity_rule(rule) -> dict:
-    def document(values):
-        return _field_document(rule.fields, values)
+    from guardoath.advanced_identity import _valid
+    def document(values, expected_valid):
+        return _checked_advanced_sample(rule, values, expected_valid, _valid)
     samples = IDENTITY_EXAMPLES.get(rule.kind)
-    unavailable = None if samples else {
+    unavailable = {
         "code": "private_tenant_reference",
         "reason": "A reference-backed rule cannot disclose tenant-trusted values as sample JSON.",
+    } if samples is None else {
+        "code": "sample_unavailable",
+        "reason": "This pointer layout has no JSON-admissible, rule-verified sample for the selected outcome.",
     }
+    example = document(samples[1], False) if samples else None
+    look_alike = document(samples[0], True) if samples else None
     return {
         "rule_id": COMPARISON_PREFIX + rule.rule_id,
         "control_id": "cross_field",
         "title": f"Identity constraint {rule.rule_id}: {rule.kind}",
         "use_case": f"Validate {rule.kind.replace('_', ' ')} using the tenant's configured policy.",
         "severity": "high",
-        "example": document(samples[1]) if samples else None,
-        "look_alike": document(samples[0]) if samples else None,
-        "example_unavailable": unavailable,
-        "look_alike_unavailable": unavailable,
+        "example": example,
+        "look_alike": look_alike,
+        "example_unavailable": unavailable if example is None else None,
+        "look_alike_unavailable": unavailable if look_alike is None else None,
         "needs_setting": None,
         "needs_checks": [],
         "content_format": "json",
