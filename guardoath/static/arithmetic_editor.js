@@ -107,10 +107,19 @@
         // Saved rules already have synthetic witness and benign controls from
         // the authoritative record-rule generator. Use them in the same
         // authenticated Input/Output playground, never a second evaluator.
-        const saved = original.some(entry => entry.rule_id === rule.rule_id);
+        const persisted = original.find(entry => entry.rule_id === rule.rule_id);
+        const sameDefinition = persisted &&
+          persisted.kind === rule.kind &&
+          Object.keys(persisted.fields).length === Object.keys(rule.fields).length &&
+          Object.entries(persisted.fields).every(([key, value]) => rule.fields[key] === value) &&
+          persisted.stages.length === rule.stages.length &&
+          persisted.stages.every(stage => rule.stages.includes(stage));
+        if (persisted && !sameDefinition) {
+          item.append(node("p", "Unsaved arithmetic rule changes: Save checks before using refreshed examples."));
+        }
         const catalog = (tenant.record_rules || []).find(entry =>
           entry.rule_id === "business." + rule.rule_id);
-        if (saved && catalog) {
+        if (sameDefinition && catalog) {
           if (catalog.example_unavailable || catalog.look_alike_unavailable) {
             item.append(node("p", "Some synthetic examples are unavailable under the strict JSON admission or selected rule contract. The saved rule still runs; use shallower JSON pointers to restore example buttons."));
           }
