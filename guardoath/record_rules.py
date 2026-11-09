@@ -553,6 +553,23 @@ def conversion_time_rule(rule) -> dict:
     def document(values):
         return _field_document(rule.fields, values)
     samples = CONVERSION_TIME_EXAMPLES.get(rule.kind)
+    # A genuinely absent return is a valid lifecycle condition. Offer a
+    # customer example only when the same shared evaluator verifies it.
+    # Certain legacy layouts put mandatory delivery inside a recorded return
+    # object, making an otherwise plausible three-field example invalid.
+    no_return_example = None
+    if rule.kind == "lifecycle_chronology" and samples:
+        from guardoath.advanced_conversion_time import _valid
+        try:
+            candidate = _field_document(
+                {role: pointer for role, pointer in rule.fields.items() if role != "return_at"},
+                {role: value for role, value in samples[0].items() if role != "return_at"},
+            )
+            if _valid(rule, json.loads(candidate)):
+                no_return_example = candidate
+        except (ValueError, KeyError, IndexError, TypeError, OverflowError, ArithmeticError):
+            # Never advertise an unchecked or failing example as benign.
+            pass
     unavailable = None if samples else {
         "code": "private_tenant_reference",
         "reason": "FX reference-backed conversion cannot display tenant-owned rate or reference as a sample.",
@@ -565,6 +582,7 @@ def conversion_time_rule(rule) -> dict:
         "severity": "high",
         "example": document(samples[1]) if samples else None,
         "look_alike": document(samples[0]) if samples else None,
+        "no_return_example": no_return_example,
         "example_unavailable": unavailable,
         "look_alike_unavailable": unavailable,
         "needs_setting": None,
