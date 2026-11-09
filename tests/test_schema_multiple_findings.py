@@ -69,8 +69,9 @@ def test_schema_error_reporting_is_bounded_without_silently_passing(stage):
     assert result.evaluation_status == "complete"
     schema_findings = [f for f in result.findings if f.rule_id.startswith("schema.")]
     assert len(schema_findings) == 65
-    assert sum(f.rule_id == "schema.invalid" for f in schema_findings) == 64
-    assert schema_findings[-1].rule_id == "schema.too_many_errors"
+    assert sum(f.rule_id == "schema.invalid" for f in schema_findings) == 65
+    assert schema_findings[-1].rule_id == "schema.invalid"
+    assert schema_findings[-1].explanation == "Additional schema violations exceed the reporting limit."
     assert result.effective_action == Action.BLOCK
     for i in range(70):
         assert f"field_{i}" not in result.model_dump_json()
