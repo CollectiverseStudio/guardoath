@@ -63,6 +63,7 @@ test("customer sees concurrent-schema warning when testing another rule; engine 
 
     // Selecting another check's example cannot disable schema enforcement.
     await page.locator("#input-format").selectOption("json");
+    await expect(page.locator("#input-policy-scope")).toContainText("Every JSON message");
     await page.locator("#input-example-check").selectOption("general");
     await expect(page.locator("#input-policy-scope")).toBeVisible();
     await expect(page.locator("#input-policy-scope")).toContainText("JSON Schema check also validates");
