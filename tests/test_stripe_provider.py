@@ -73,3 +73,24 @@ def test_missing_secret_fails_before_network():
     with pytest.raises(SubscriptionReconciliationError):
         fetch_subscription(BINDING, "", opener=fake(subscription(), calls=calls))
     assert calls == []
+
+
+def test_default_http_client_disables_redirects(monkeypatch):
+    """The authorization header must not travel to a redirect destination."""
+    import urllib.request
+    built = []
+
+    class DummyOpener:
+        def open(self, request, timeout):
+            return Response(subscription())
+
+    def build(*handlers):
+        built.extend(handlers)
+        return DummyOpener()
+
+    monkeypatch.setattr(urllib.request, "build_opener", build)
+    assert fetch_subscription(BINDING, KEY).active
+    assert len(built) == 1
+    assert built[0].redirect_request(None, None, 302, "Found",
+                                     {"Location": "https://attacker.example"},
+                                     "https://attacker.example") is None
