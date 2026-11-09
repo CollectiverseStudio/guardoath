@@ -13,6 +13,10 @@ on:
       - "guardoath/advanced_*.py"
       - "tests/test_fc*.py"
       - "tests/browser/fc*.spec.js"
+      # Also gate customer workflows named field_comparison_* and
+      # advanced_field_comparison_* (real tenant/browser coverage).
+      - "tests/browser/*field_comparison*.spec.js"
+      - "tests/test_*field_comparison*.py"
       - "guardoath/engine.py"
       - "guardoath/tenant_record.py"
       - "tools/field_comparison_portfolio.py"
