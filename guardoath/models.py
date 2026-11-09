@@ -206,6 +206,12 @@ class AdvancedConversionTimeRule(Contract):
             if (any(not s for s in event) or len(event) >= len(return_parts)
                     or event != return_parts[:len(event)]):
                 raise ValueError("Return event must be a strict ancestor of return_at")
+            # The optional event must not contain a mandatory timestamp: that
+            # makes the event inevitably present and a missing return fail.
+            if any(event == tuple(s.replace("~1", "/").replace("~0", "~")
+                                  for s in self.fields[role][1:].split("/"))[:len(event)]
+                   for role in ("order_at", "shipment_at", "delivery_at")):
+                raise ValueError("Return event cannot contain mandatory lifecycle timestamps")
         reference = (self.source_currency, self.destination_currency,
                      self.trusted_rate_numerator, self.trusted_rate_denominator,
                      self.rate_reference, self.rate_asof)
