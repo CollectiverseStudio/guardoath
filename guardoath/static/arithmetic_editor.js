@@ -111,6 +111,9 @@
         const catalog = (tenant.record_rules || []).find(entry =>
           entry.rule_id === "business." + rule.rule_id);
         if (saved && catalog) {
+          if (catalog.example_unavailable || catalog.look_alike_unavailable) {
+            item.append(node("p", "Some synthetic examples are unavailable under the strict JSON admission or selected rule contract. The saved rule still runs; use shallower JSON pointers to restore example buttons."));
+          }
           for (const stage of rule.stages) {
             for (const [name, sample] of [["violating", catalog.example],
                                           ["benign", catalog.look_alike]]) {
