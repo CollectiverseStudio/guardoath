@@ -161,6 +161,9 @@ class AdvancedConversionTimeRule(Contract):
                   "cold_chain_excursion", "lifecycle_chronology"]
     fields: dict[str, str] = Field(min_length=3, max_length=4)
     stages: tuple[Stage, ...] = Field(default=(Stage.INPUT, Stage.OUTPUT), min_length=1)
+    # FC-050 optional event root; its absence means no return recorded yet,
+    # while a present root with a missing timestamp fails validation.
+    return_event_pointer: str | None = Field(default=None, max_length=200)
     # FX reference is a bounded, tenant-saved, versioned ratio. This asserts
     # tenancy of the setting, not external attestation of a market exchange rate.
     source_currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
@@ -191,6 +194,18 @@ class AdvancedConversionTimeRule(Contract):
             raise ValueError("Conversion/time pointers must not overlap")
         if len(set(self.stages)) != len(self.stages):
             raise ValueError("Conversion/time stages must be distinct")
+        if self.return_event_pointer is not None:
+            pointer = self.return_event_pointer
+            if self.kind != "lifecycle_chronology":
+                raise ValueError("Only lifecycle chronology may set return_event_pointer")
+            if not pointer.startswith("/") or re.search(r"~(?![01])", pointer):
+                raise ValueError("Return event needs an absolute JSON Pointer")
+            event = tuple(s.replace("~1", "/").replace("~0", "~") for s in pointer[1:].split("/"))
+            return_parts = tuple(s.replace("~1", "/").replace("~0", "~")
+                                 for s in self.fields["return_at"][1:].split("/"))
+            if (any(not s for s in event) or len(event) >= len(return_parts)
+                    or event != return_parts[:len(event)]):
+                raise ValueError("Return event must be a strict ancestor of return_at")
         reference = (self.source_currency, self.destination_currency,
                      self.trusted_rate_numerator, self.trusted_rate_denominator,
                      self.rate_reference, self.rate_asof)

@@ -46,6 +46,10 @@ def _return_event_path(rule, pointer):
     optional node is the scalar itself. Use encoded pointer segments directly
     so escaped slashes and tildes retain their JSON Pointer meaning.
     """
+    if rule.return_event_pointer is not None:
+        # Tenant-owned event root disambiguates optional branches whose
+        # mandatory timestamp paths live elsewhere in the document.
+        return rule.return_event_pointer
     segments = pointer[1:].split("/")
     shared_boundaries = []
     for role, required in rule.fields.items():

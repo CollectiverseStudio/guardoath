@@ -87,6 +87,11 @@
       ["lifecycle_chronology", "Order / shipment / delivery / return time ordering"]
     ]);
     const paths = el("div"); paths.id = "conversion-fields"; form.append(paths);
+    const eventRow = el("div"), eventLabel = el("label", "Optional return event JSON pointer"), eventPointer = el("input");
+    eventPointer.id = "conversion-return-event-pointer"; eventPointer.type = "text";
+    eventPointer.maxLength = 200; eventPointer.autocomplete = "off";
+    eventPointer.placeholder = "/returns/latest"; eventLabel.htmlFor = eventPointer.id;
+    eventRow.append(eventLabel, eventPointer); form.append(eventRow);
     const stages = el("fieldset"); stages.append(el("legend", "Evaluate on"));
     for (const stage of ["input", "output"]) {
       const input = el("input"); input.id = "conversion-stage-" + stage;
@@ -104,6 +109,8 @@
     let editing = null;
     function drawFields(values = {}) {
       paths.replaceChildren();
+      eventRow.hidden = controls.kind.value !== "lifecycle_chronology";
+      if (eventRow.hidden) eventPointer.value = "";
       for (const key of TYPES[controls.kind.value]) {
         const div = el("div"), label = el("label", key + " JSON pointer"), input = el("input");
         input.type = "text"; input.required = true; input.maxLength = 200;
@@ -134,6 +141,7 @@
           editing = rule.rule_id;
           controls.id.value = rule.rule_id; controls.id.disabled = true;
           controls.kind.value = rule.kind; drawFields(rule.fields);
+          eventPointer.value = rule.return_event_pointer || "";
           controls.input.checked = rule.stages.includes("input");
           controls.output.checked = rule.stages.includes("output");
           apply.textContent = "Update pending conversion rule"; cancel.hidden = false;
@@ -210,12 +218,28 @@
         }
         pathsSeen.push(segments); values[key] = pointer;
       }
+      let returnEvent = null;
+      if (controls.kind.value === "lifecycle_chronology" && eventPointer.value.trim()) {
+        const pointer = eventPointer.value.trim();
+        const segments = str => str.slice(1).split("/").map(s =>
+          s.replaceAll("~1", "/").replaceAll("~0", "~"));
+        const event = pointer.startsWith("/") && !/~(?![01])/.test(pointer)
+          ? segments(pointer) : [];
+        const time = segments(values.return_at);
+        if (!event.length || event.some(s => !s) || event.length >= time.length ||
+            !event.every((s, i) => s === time[i])) {
+          message.textContent = "Return event must be an absolute JSON pointer to a parent of return_at.";
+          eventPointer.focus(); return;
+        }
+        returnEvent = pointer;
+      }
       const exists = (tenant.record_rules || []).some(r => r.rule_id === "business." + id);
       if (draft.some(x => x.rule_id === id && x.rule_id !== editing) ||
           (editing === null && exists && !original.some(x => x.rule_id === id))) {
         message.textContent = "Rule ID already exists on the tenant."; return;
       }
       const item = {rule_id:id, kind:controls.kind.value, fields:values, stages:selected};
+      if (returnEvent !== null) item.return_event_pointer = returnEvent;
       if (editing !== null) draft = draft.map(x => x.rule_id === editing ? item : x);
       else draft.push(item);
       clear(); draw(); changed();
