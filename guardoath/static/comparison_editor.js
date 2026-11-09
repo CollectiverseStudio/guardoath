@@ -207,12 +207,27 @@
       acknowledge.checked = false;
       bulkStatus.textContent = draft.length + " current draft comparisons loaded into the JSON box; not saved.";
     });
+    // A draft in another FC family has not entered tenant.record_rules yet.
+    // Reject its ID before replacing hundreds of ordinary rules; the shared
+    // Save-time namespace check remains the authoritative final guard.
+    function otherPendingIds() {
+      const ids = new Set();
+      for (const name of ["arithmeticEditor", "identityEditor", "conversionEditor"]) {
+        const editor = window[name];
+        const pending = editor && typeof editor.delta === "function" ? editor.delta() : null;
+        if (Array.isArray(pending)) for (const rule of pending) {
+          if (rule && typeof rule.rule_id === "string") ids.add(rule.rule_id);
+        }
+      }
+      return ids;
+    }
     function importRules(raw) {
       if (!Array.isArray(raw)) throw Error("Use a JSON array of comparison objects.");
       const allowed = new Set(["rule_id", "left", "right", "operator", "value_type", "stages"]);
       const operators = new Set(["lt", "le", "eq", "ge", "gt", "ne"]);
       const ids = new Set();
       const existing = new Set(original.map(rule => rule.rule_id));
+      const pendingAdvancedIds = otherPendingIds();
       const otherIds = new Set((tenant.record_rules || [])
         .filter(rule => rule && typeof rule.rule_id === "string")
         .map(rule => rule.rule_id));
@@ -222,7 +237,9 @@
         if (Object.keys(rule).some(key => !allowed.has(key))) return fail("unknown field; use only rule_id, left, right, operator, value_type and stages.");
         const id = rule.rule_id;
         if (typeof id !== "string" || !/^[a-z][a-z0-9_]{0,79}$/.test(id)) return fail("invalid rule_id; use a lowercase letter followed by lowercase letters, digits or underscores (1–80 characters).");
-        if (ids.has(id) || (!existing.has(id) && otherIds.has("business." + id))) return fail("duplicate or reserved rule_id.");
+        if (ids.has(id) || pendingAdvancedIds.has(id) ||
+            (!existing.has(id) && otherIds.has("business." + id)))
+          return fail("duplicate or reserved rule_id, including pending advanced-family changes.");
         ids.add(id);
         for (const name of ["left", "right"]) {
           const pointer = rule[name];
@@ -450,7 +467,8 @@
       }
       const duplicate = draft.some(rule => rule.rule_id === id && rule.rule_id !== editing) ||
         (editing !== id && !original.some(rule => rule.rule_id === id) &&
-         (tenant.record_rules || []).some(rule => rule.rule_id === "business." + id));
+         (tenant.record_rules || []).some(rule => rule.rule_id === "business." + id)) ||
+        otherPendingIds().has(id);
       if (duplicate) { message.textContent = "That comparison ID is already used. Choose a different ID."; return; }
       const item = {rule_id: id, left: controls.left.value, right: controls.right.value,
                     operator: controls.operator.value, value_type: controls.type.value, stages: selected};
