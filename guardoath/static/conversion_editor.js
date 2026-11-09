@@ -91,7 +91,9 @@
     eventPointer.id = "conversion-return-event-pointer"; eventPointer.type = "text";
     eventPointer.maxLength = 200; eventPointer.autocomplete = "off";
     eventPointer.placeholder = "/returns/latest"; eventLabel.htmlFor = eventPointer.id;
-    eventRow.append(eventLabel, eventPointer); form.append(eventRow);
+    eventRow.append(eventLabel, eventPointer,
+      el("p", "Point to an optional return record, never to a parent of required order, shipment or delivery timestamps. Absent event: allowed; recorded incomplete return: finding."));
+    form.append(eventRow);
     const stages = el("fieldset"); stages.append(el("legend", "Evaluate on"));
     for (const stage of ["input", "output"]) {
       const input = el("input"); input.id = "conversion-stage-" + stage;
@@ -229,6 +231,13 @@
         if (!event.length || event.some(s => !s) || event.length >= time.length ||
             !event.every((s, i) => s === time[i])) {
           message.textContent = "Return event must be an absolute JSON pointer to a parent of return_at.";
+          eventPointer.focus(); return;
+        }
+        if (["order_at", "shipment_at", "delivery_at"].some(role => {
+          const required = segments(values[role]);
+          return event.length <= required.length && event.every((s, i) => s === required[i]);
+        })) {
+          message.textContent = "Return event cannot contain mandatory order, shipment, or delivery timestamps.";
           eventPointer.focus(); return;
         }
         returnEvent = pointer;
