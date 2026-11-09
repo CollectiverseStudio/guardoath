@@ -1415,10 +1415,13 @@ function buildExamplePicker(stage, list) {
   const pick = document.createElement("select"); pick.id = stage + "-example"; pick.setAttribute("aria-label", "Example in this check");
   pick.append(new Option("Choose an example\u2026", ""));
   const note = document.createElement("p"); note.className = "hint"; note.id = stage + "-example-note";
+  let displayedEntries = [];
   const fill = () => {
     pick.replaceChildren(new Option("Choose an example\u2026", "")); note.textContent = "";
-    const item = usable.find(i => i.control_id === check.value); if (!item) return;
-    const entries = examplesFor(item, stage);
+    const item = usable.find(i => i.control_id === check.value);
+    displayedEntries = item ? examplesFor(item, stage) : [];
+    if (!item) return;
+    const entries = displayedEntries;
     for (const [kind, title] of [["reported", "Reported: the check finds it"], ["look-alike", "Not reported: a look-alike"], ["dashboard", "Dashboard examples"]]) {
       const group = document.createElement("optgroup"); group.label = title;
       entries.forEach((entry, index) => {
@@ -1447,7 +1450,8 @@ function buildExamplePicker(stage, list) {
   });
   box.append(heading, check, pick, note);
   $(stage + "-samples").prepend(box);
-  examplePickers[stage] = {check, pick, fill, usable, heading};
+  examplePickers[stage] = {check, pick, fill, usable, heading,
+    entries: () => displayedEntries, revision: application?.tenant?.revision ?? null};
 }
 function refreshExamplePickers() {
   for (const stage of ["input", "output"]) {
@@ -1463,8 +1467,24 @@ function refreshExamplePickers() {
     }
     picker.heading.textContent = "Every " + stage + " example, by check (" + (picker.usable.length - 1) + " checks, " + total + " examples)";
     if (picker.check.value) {
-      const kept = picker.pick.value; picker.fill();
-      picker.pick.value = [...picker.pick.options].some(option => option.value === kept) ? kept : "";
+      // Numeric option indices are local to one list. If a draft hides a saved
+      // comparison or a saved revision regenerates examples, an old index can
+      // point at a DIFFERENT rule. Preserve a selection only if the exact
+      // entry and authoritative tenant revision are unchanged; never place
+      // customer examples into DOM data attributes for identity checks.
+      const kept = picker.pick.value;
+      const previous = picker.entries().find((entry, index) => entryValue(entry, index) === kept);
+      const revision = application?.tenant?.revision ?? null;
+      const sameRevision = picker.revision === revision;
+      picker.fill();
+      const next = picker.entries().find((entry, index) => entryValue(entry, index) === kept);
+      const sameEntry = previous && next && previous.kind === next.kind &&
+        previous.label === next.label && previous.format === next.format &&
+        previous.text === next.text && previous.sample?.id === next.sample?.id;
+      picker.pick.value = sameRevision && sameEntry ? kept : "";
+      picker.revision = revision;
+    } else {
+      picker.revision = application?.tenant?.revision ?? null;
     }
   }
 }
