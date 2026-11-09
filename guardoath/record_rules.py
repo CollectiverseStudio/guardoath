@@ -565,6 +565,10 @@ def conversion_time_rule(rule) -> dict:
         def checked_sample(values, expected_valid):
             try:
                 candidate = document(values)
+                # The API's CheckRequest.content limit (32,000 characters)
+                # is stricter than the standalone JSON parser's byte limit.
+                if len(candidate) > MAX_CONTENT_CHARS:
+                    return None
                 if bool(_valid(rule, parse_json(candidate))) is expected_valid:
                     return candidate
             except (ValueError, KeyError, IndexError, TypeError, OverflowError, ArithmeticError):
