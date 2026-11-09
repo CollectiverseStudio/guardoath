@@ -40,7 +40,7 @@
     host.append(el("h3", "Identity and collection comparisons"));
     const scope = el("p", "Rule examples demonstrate only the selected identity rule. Running them checks ALL enabled tenant controls, including unrelated comparisons; additional findings or schema errors may appear. No reference-backed tenant values are exposed.");
     scope.dataset.fieldExampleScope = "identity"; host.append(scope);
-    host.append(el("p", "Configure exact order-ID equality and unique serial-number checks for JSON. Each saved rule uses the same tenant cross_field Engine and Input/Output rule actions. Nested object and array paths (for example /shipments/0/order_id) are supported within strict JSON limits. Trusted quarantine/scope reference sets are never exposed or editable here."));
+    host.append(el("p", "Configure exact order-ID equality and unique serial-number checks for JSON. Each saved rule uses the same tenant cross_field Engine and Input/Output rule actions. Nested object and array paths (for example /shipments/0/order_id) are supported within strict JSON limits. Trusted quarantine/scope reference sets are never exposed or editable here. For a configured protected scope-subset rule, an explicit empty requested-scopes array means no permissions requested and passes; missing, null, malformed, oversized, or unauthorized scopes still produce a finding. Run a JSON Input/Output check to test the saved rule."));
     if (!enabled) {
       host.append(el("p", "Identity definitions could not be loaded. Reconnect before editing."));
       return;
