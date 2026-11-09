@@ -520,3 +520,77 @@ def test_fc050_event_boundary_must_not_contain_mandatory_timestamp_paths():
     valid = {**base, "fields": {**base["fields"], "delivery_at": "/delivery/at"}}
     accepted = AdvancedConversionTimeRule.model_validate(valid)
     assert accepted.return_event_pointer == "/returns"
+
+
+@pytest.mark.parametrize("name,fields,expected_absent", [
+    (
+        "indexed_array",
+        RULE["fields"],
+        True,
+    ),
+    (
+        "disjoint_return_branch",
+        {
+            "order_at": "/order/at",
+            "shipment_at": "/shipment/at",
+            "delivery_at": "/delivery/at",
+            "return_at": "/returns/latest/at",
+        },
+        True,
+    ),
+    (
+        "recorded_return_contains_delivery",
+        {
+            "order_at": "/life/order",
+            "shipment_at": "/life/shipment",
+            "delivery_at": "/life/return/received",
+            "return_at": "/life/return/details/0/at",
+        },
+        False,
+    ),
+])
+def test_customer_no_return_sample_only_when_real_engine_accepts_it(name, fields, expected_absent):
+    """Dashboard examples must not turn a malformed recorded return into a fake benign case.
+
+    Check the authenticated tenant listing AND both actual Engine stages; an
+    implementation that merely deletes the return_at leaf would fail for the
+    shared-delivery layout. The customer example has synthetic data only.
+    """
+    rule = {
+        **RULE,
+        "rule_id": "sample_" + name,
+        "fields": fields,
+    }
+    api, store, headers = _client()
+    before = store.get(TENANT)
+    saved = api.post("/v1/tenants/current/checks", headers=headers, json={
+        "revision": before.revision,
+        "changes": {
+            "advanced_conversion_time": [rule],
+            "input_check_cross_field": "block",
+            "output_check_cross_field": "flag",
+        },
+    })
+    assert saved.status_code == 200, saved.text[:200]
+    response = api.get("/v1/applications/current", headers=headers)
+    assert response.status_code == 200
+    metadata = next(
+        item for item in response.json()["tenant"]["record_rules"]
+        if item["rule_id"] == "business." + rule["rule_id"]
+    )
+    assert (metadata["no_return_example"] is not None) is expected_absent
+    for stage in ("input", "output"):
+        # The ordinary full-history look-alike always passes.
+        passing = _check(api, headers, stage, json.loads(metadata["look_alike"]))
+        assert passing["effective_action"] == "allow"
+        assert not any(row["rule_id"] == metadata["rule_id"] for row in passing["findings"])
+        if expected_absent:
+            without_return = json.loads(metadata["no_return_example"])
+            checked = _check(api, headers, stage, without_return)
+            assert checked["evaluation_status"] == "complete"
+            assert checked["effective_action"] == "allow"
+            assert not any(row["rule_id"] == metadata["rule_id"] for row in checked["findings"])
+            assert "return_at" not in json.dumps(without_return)
+        else:
+            assert metadata["no_return_example"] is None
+    assert store.get(TENANT).advanced_conversion_time[0].rule_id == rule["rule_id"]
