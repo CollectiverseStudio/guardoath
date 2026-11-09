@@ -128,3 +128,66 @@ test("FC-050 explicit return-event boundary persists through the dashboard and p
     }
   }
 });
+
+
+test("FC-050 strict JSON depth retains saved rule but hides all misleading Try examples", async ({page, request}) => {
+  const headers = await connect(page);
+  let resetRequired = false;
+  try {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(reset.status()).toBe(200);
+    resetRequired = true;
+    const read = async () => {
+      const response = await request.get("/v1/applications/current", {headers});
+      expect(response.status()).toBe(200);
+      return (await response.json()).tenant;
+    };
+    const before = await read();
+    const parent = "/" + Array(33).fill("n").join("/");
+    const fields = Object.fromEntries(
+      ["order_at", "shipment_at", "delivery_at", "return_at"].map(
+        role => [role, parent + "/" + role]));
+    const saved = await request.post("/v1/tenants/current/checks", {headers, data: {
+      revision: before.revision,
+      changes: {
+        advanced_conversion_time: [{
+          rule_id: "ui_json_depth", kind: "lifecycle_chronology", fields,
+          stages: ["input", "output"]
+        }],
+        input_check_cross_field: "block", output_check_cross_field: "flag",
+      },
+    }});
+    expect(saved.status(), (await saved.text()).slice(0, 200)).toBe(200);
+    const tenant = await read();
+    expect(tenant.revision).toBe(before.revision + 1);
+    expect(tenant.advanced_conversion_time).toHaveLength(1);
+    const rule = tenant.record_rules.find(r => r.rule_id === "business.ui_json_depth");
+    expect(rule).toBeDefined();
+    for (const field of ["example", "look_alike", "no_return_example"]) {
+      expect(rule[field]).toBeNull();
+    }
+    expect(rule.look_alike_unavailable.code).toBe("sample_unavailable");
+
+    // The customer can still inspect and edit the persisted rule, but the
+    // dashboard must not offer a known JSON-rejected payload as "benign".
+    await connect(page);
+    await page.locator("#rule-search").fill("ui_json_depth");
+    await expect(page.locator('tr.rule-row[data-rule="business.ui_json_depth"]')).toBeVisible();
+    for (const stage of ["input", "output"]) {
+      for (const outcome of ["benign", "violating", "no-return"]) {
+        await expect(page.getByRole("button", {
+          name: "Try " + outcome + " " + stage + " conversion ui_json_depth"
+        })).toHaveCount(0);
+      }
+    }
+    await page.getByRole("button", {name: "Edit conversion ui_json_depth"}).click();
+    await expect(page.locator("#conversion-field-return_at")).toHaveValue(parent + "/return_at");
+    await page.locator("#conversion-cancel").click();
+    expect((await read()).revision).toBe(tenant.revision);
+  } finally {
+    if (resetRequired) {
+      const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+      expect(reset.status()).toBe(200);
+    }
+  }
+});
