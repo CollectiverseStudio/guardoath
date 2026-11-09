@@ -461,6 +461,34 @@ function checkChanged(id, stage) {
 // On a message in the other format the check is skipped, the result is incomplete and the record's failure action
 // applies (Block by default). Greg 2026-11-04: keep that, and warn here.
 const formatNeeds = {schema: "json", cross_field: "json", matched_outcomes: "json", evidence: "json", tool_calls: "json", ledger: "json", timestamps: "json", graph: "json", completeness: "text", csv_formula: "text"};
+// Example selection is not a per-check security bypass. The normal dashboard
+// always executes the complete saved tenant policy. Explain overlapping schema
+// and required format checks *before* a different check's example is run.
+function updatePolicyScopeNotes() {
+  for (const stage of ["input", "output"]) {
+    const note = $(stage + "-policy-scope");
+    if (!note) continue;
+    const policy = currentPolicy();
+    if (!application || !policy) { note.hidden = true; note.textContent = ""; continue; }
+    const format = $(stage + "-format").value;
+    const enabled = (policy.checks || []).filter(check =>
+      (!check.stages || check.stages.includes(stage)) && checkIsOn(check.id, stage));
+    const incompatible = enabled.filter(check => formatNeeds[check.id] && formatNeeds[check.id] !== format);
+    const selected = (examplePickers[stage]?.check?.value || "");
+    let message = "";
+    if (incompatible.length) {
+      const names = incompatible.map(check => check.id === "schema" ? "JSON Schema" : (checkNames[check.id] || check.id));
+      message = "Full-policy test: " + names.join(", ") + " cannot inspect " +
+        (format === "json" ? "JSON" : "text") + " messages. A required check may be skipped, leaving the result incomplete and subject to the tenant failure action (often Block). Selecting another check's example does not disable these checks.";
+    } else if (format === "json" && enabled.some(check => check.id === "schema") && selected && selected !== "schema") {
+      message = "Full-policy test: the enabled JSON Schema check also validates this " +
+        "sample from another check. A well-formed JSON message can still violate your saved " +
+        "schema and be flagged or blocked. Choosing an example does not isolate its check.";
+    }
+    note.textContent = message;
+    note.hidden = !message;
+  }
+}
 function formatWarning(id) {
   const needs = formatNeeds[id]; if (!needs) return "";
   const other = needs === "json" ? "text" : "JSON";
@@ -1438,7 +1466,7 @@ function buildExamplePicker(stage, list) {
         "Saved comparison-rule examples are hidden while their definitions have unsaved changes. Select Save checks, then reload the saved tenant to obtain current rule examples. Other preset check examples may still be offered.";
     }
   };
-  check.addEventListener("change", fill);
+  check.addEventListener("change", () => { fill(); updatePolicyScopeNotes(); });
   pick.addEventListener("change", () => {
     const item = usable.find(i => i.control_id === check.value); if (!item || pick.value === "") return;
     if (busy || (stage === "output" && outputLocked())) { pick.value = ""; return; }
@@ -1447,6 +1475,7 @@ function buildExamplePicker(stage, list) {
     reset(stage === "output");
     $(stage + "-format").value = example.format || "text"; $(stage + "-content").value = example.text;
     exampleNote(stage, entry.sample || null);
+    updatePolicyScopeNotes();
   });
   box.append(heading, check, pick, note);
   $(stage + "-samples").prepend(box);
@@ -1487,6 +1516,7 @@ function refreshExamplePickers() {
       picker.revision = application?.tenant?.revision ?? null;
     }
   }
+  updatePolicyScopeNotes();
 }
 loadExampleCatalog().then(list => { for (const stage of ["input", "output"]) buildExamplePicker(stage, list); refreshExamplePickers(); })
   .catch(() => { for (const stage of ["input", "output"]) { const note = document.createElement("p"); note.className = "hint"; note.textContent = "The full example list could not be loaded right now. Reload the page to try again."; $(stage + "-samples").after(note); } });
