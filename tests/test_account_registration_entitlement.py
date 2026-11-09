@@ -134,7 +134,7 @@ def test_checkout_route_requires_verified_session_and_server_provisioning():
     assert client.post("/v1/billing/checkout", headers=headers).status_code == 403
     assert client.post("/v1/register", headers=headers).status_code == 201
     response = client.post("/v1/billing/checkout", headers=headers)
-    assert response.status_code == 409, response.text
+    assert response.status_code == 503, response.text
     assert store.get("usr-test-account").subscription_status == "inactive"
     assert store.get("usr-test-account").usage == {}
 
