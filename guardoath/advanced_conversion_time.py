@@ -42,12 +42,24 @@ def _valid(rule, payload):
     for name, pointer in rule.fields.items():
         try:
             values[name] = resolve(payload, pointer)
-        except (KeyError, IndexError):
-            # A return may be absent before any return event: object-key
-            # absence raises KeyError, while an unpopulated JSON-array slot
-            # (for example /events/3/at on a three-event timeline) raises
-            # IndexError. Only the optional return field may be absent;
-            # required order/shipment/delivery fields still fail closed.
+        except KeyError:
+            # Absence of the *return event* is legitimate; absence of its
+            # timestamp in a present event is malformed. For example,
+            # /events/3/at may be omitted if /events/3 does not exist, but
+            # /events/3={} must fail closed instead of silently passing.
+            if rule.kind == "lifecycle_chronology" and name == "return_at":
+                parent = pointer.rsplit("/", 1)[0]
+                if not parent:
+                    # A root-level /return_at field is itself the event.
+                    continue
+                try:
+                    resolve(payload, parent)
+                except (KeyError, IndexError):
+                    continue
+            raise
+        except IndexError:
+            # An absent array slot for an optional return is legitimate.
+            # Malformed populated events still fail under KeyError/ValueError.
             if rule.kind == "lifecycle_chronology" and name == "return_at":
                 continue
             raise
