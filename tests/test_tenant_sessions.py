@@ -360,7 +360,34 @@ def test_the_public_configuration_has_no_secret(sessions):
     assert sessions.public_config() == {
         "authorize_url": f"https://{DOMAIN}/oauth2/authorize", "logout_url": f"https://{DOMAIN}/logout",
         "client_id": CLIENT, "redirect_uri": REDIRECT, "scope": "openid email aws.cognito.signin.user.admin",
-        "registration_enabled": False, "google_provider": "Google"}
+        "registration_enabled": False, "google_provider": None}
+
+def test_google_sign_in_and_registration_are_not_advertised_without_provider(monkeypatch):
+    # Source registration must not claim production readiness when the stack
+    # still supports only the native COGNITO IdP.
+    monkeypatch.delenv("GUARDOATH_SELF_REGISTRATION", raising=False)
+    monkeypatch.delenv("GUARDOATH_GOOGLE_LOGIN_ENABLED", raising=False)
+    disabled = CognitoSessions(POOL, CLIENT, DOMAIN, REDIRECT)
+    assert disabled.public_config()["google_provider"] is None
+    assert disabled.public_config()["registration_enabled"] is False
+
+    monkeypatch.setenv("GUARDOATH_GOOGLE_LOGIN_ENABLED", "1")
+    enabled = CognitoSessions(POOL, CLIENT, DOMAIN, REDIRECT)
+    assert enabled.public_config()["google_provider"] == "Google"
+    assert enabled.public_config()["registration_enabled"] is False
+
+    monkeypatch.setenv("GUARDOATH_SELF_REGISTRATION", "1")
+    registering = CognitoSessions(POOL, CLIENT, DOMAIN, REDIRECT)
+    assert registering.public_config()["registration_enabled"] is True
+    assert registering.public_config()["google_provider"] == "Google"
+
+    monkeypatch.setenv("GUARDOATH_GOOGLE_LOGIN_ENABLED", "0")
+    with pytest.raises(ValueError, match="registration requires"):
+        CognitoSessions(POOL, CLIENT, DOMAIN, REDIRECT)
+    monkeypatch.setenv("GUARDOATH_GOOGLE_LOGIN_ENABLED", "invalid")
+    with pytest.raises(ValueError, match="GUARDOATH_GOOGLE_LOGIN_ENABLED"):
+        CognitoSessions(POOL, CLIENT, DOMAIN, REDIRECT)
+
 
 
 @pytest.mark.parametrize("args", [
