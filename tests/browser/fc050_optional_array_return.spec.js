@@ -179,6 +179,49 @@ test("FC-050 indexed optional return passes before return and blocks an invalid 
         "business.ui_count_limit", "business.ui_optional_return"
       ]);
     expect(missingReturnTimestamp.effective_action).toBe("flag");
+
+    // A customer can also save a deeper return path. Once its fourth event
+    // exists, missing nested object/array data must fail closed instead of
+    // being misclassified as an unrecorded, optional return event.
+    const nestedBaseline = await read();
+    const nestedSaved = await request.post("/v1/tenants/current/checks", {headers, data: {
+      revision: nestedBaseline.revision, changes: {
+        advanced_conversion_time: [{
+          rule_id: "ui_optional_return", kind: "lifecycle_chronology",
+          fields: {
+            order_at: "/events/0/at", shipment_at: "/events/1/at",
+            delivery_at: "/events/2/at", return_at: "/events/3/details/0/at"
+          },
+          stages: ["input", "output"]
+        }]
+      }
+    }});
+    expect(nestedSaved.status(), (await nestedSaved.text()).slice(0, 200)).toBe(200);
+    await connect(page);
+    const nestedPolicy = await read();
+    expect(nestedPolicy.advanced_conversion_time[0].fields.return_at)
+      .toBe("/events/3/details/0/at");
+    await page.locator("#rule-search").fill("ui_optional_return");
+    await expect(page.locator('tr.rule-row[data-rule="business.ui_optional_return"]')).toBeVisible();
+    await page.locator("#rule-search").fill("");
+
+    const cleanNested = await jointRequest("input", {
+      ...beforeReturn, summary: {count: 2, limit: 3}
+    });
+    expect(cleanNested.evaluation_status).toBe("complete");
+    expect(cleanNested.findings.filter(f => f.rule_id.startsWith("business."))).toEqual([]);
+    for (const fourth of [{}, {details: []}, {details: [{}]}]) {
+      const incompleteNested = await jointRequest("output", {
+        events: [...beforeReturn.events, fourth],
+        summary: {count: 4, limit: 3}
+      });
+      expect(incompleteNested.evaluation_status).toBe("complete");
+      expect(incompleteNested.findings.filter(f => f.rule_id.startsWith("business."))
+        .map(f => f.rule_id).sort()).toEqual([
+          "business.ui_count_limit", "business.ui_optional_return"
+        ]);
+      expect(incompleteNested.effective_action).toBe("flag");
+    }
   } finally {
     if (resetRequired) {
       const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
