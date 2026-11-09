@@ -222,7 +222,9 @@
       }
       const exists = (tenant.record_rules || []).some(r => r.rule_id === "business." + id);
       if (draft.some(x => x.rule_id === id && x.rule_id !== editing) ||
-          (editing === null && exists && !original.some(x => x.rule_id === id))) {
+          (editing === null && exists && !original.some(x => x.rule_id === id)) ||
+          (window.comparisonEditor &&
+           window.comparisonEditor.otherFamilyDraftHasId(id, "advanced_identity"))) {
         message.textContent = "Rule ID already exists on the tenant."; return;
       }
       const item = {rule_id:id, kind:controls.kind.value, fields:values, stages:selected,
