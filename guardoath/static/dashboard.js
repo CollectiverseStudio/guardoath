@@ -1345,6 +1345,29 @@ function dashboardExamples(item, stage) {
       && (!s.stages || s.stages.includes(stage)) && sampleAvailable(s, stage))
     .map(s => ({kind: "dashboard", label: stage === "output" ? (s.outputLabel || s.label) : s.label, sample: s, value: "sample:" + s.id}));
 }
+// Record-generated examples describe a SAVED tenant revision, not a pending
+// customer draft. Ordinary comparisons are solved as a portfolio, so changing
+// even one ordinary definition invalidates the saved examples for all ordinary
+// comparisons. Advanced families use their own definitions; hide only that
+// family's saved examples while its draft differs. The generic Input/Output
+// example dropdown must use this same guard as the individual editor buttons.
+function pendingFieldExampleIds() {
+  const tenant = application?.tenant;
+  const hidden = new Set();
+  if (!tenant || !ownChecksSelected()) return hidden;
+  for (const [editor, field] of [
+    [window.comparisonEditor, "comparisons"],
+    [window.arithmeticEditor, "advanced_arithmetic"],
+    [window.identityEditor, "advanced_identity"],
+    [window.conversionEditor, "advanced_conversion_time"]
+  ]) {
+    if (!editor || typeof editor.delta !== "function" || editor.delta() === null) continue;
+    for (const rule of tenant[field] || []) {
+      if (rule && typeof rule.rule_id === "string") hidden.add("business." + rule.rule_id);
+    }
+  }
+  return hidden;
+}
 function examplesFor(item, stage) {
   if (!(item.stages || []).includes(stage)) return [];
   if (item.general) return dashboardExamples(item, stage);
@@ -1352,7 +1375,10 @@ function examplesFor(item, stage) {
     .map(e => ({kind, label: e.label, format: e.format || "text", text: e.text}));
   const rules = [];
   // Catalog rules, plus the connected tenant's own comparisons and sections for this check (its record only).
-  const recordRules = (application?.tenant?.record_rules || []).filter(rule => rule.control_id === item.control_id && (rule.stages || []).includes(stage));
+  const pendingIds = item.control_id === "cross_field" ? pendingFieldExampleIds() : new Set();
+  const recordRules = (application?.tenant?.record_rules || []).filter(rule =>
+    rule.control_id === item.control_id && (rule.stages || []).includes(stage)
+    && !pendingIds.has(rule.rule_id));
   for (const rule of [...(item.rules || []), ...recordRules].sort((a, b) => collator.compare(a.title, b.title))) {
     const name = rule.title + " \u00b7 " + rule.rule_id + (rule.needs_setting ? " (needs " + rule.needs_setting + ")" : "");
     // Document-check rules are written in JSON (content_format, 2026-11-04).
@@ -1404,6 +1430,10 @@ function buildExamplePicker(stage, list) {
     if (item.general) return;
     if (currentPolicy() && !checkIsOn(item.control_id, stage)) note.textContent = item.name + " is off on this record: turn it on under Checks to see it report these examples.";
     else if (panelCheck(item.control_id, stage) !== null && panelCheck(item.control_id, stage) !== savedCheck(item.control_id, stage)) note.textContent = item.name + " is set to " + settingNames[panelCheck(item.control_id, stage)] + " for " + stage + " in the checks panel (not saved yet; running a check saves it first).";
+    if (item.control_id === "cross_field" && pendingFieldExampleIds().size) {
+      note.textContent += (note.textContent ? " " : "") +
+        "Saved comparison-rule examples are hidden while their definitions have unsaved changes. Select Save checks, then reload the saved tenant to obtain current rule examples. Other preset check examples may still be offered.";
+    }
   };
   check.addEventListener("change", fill);
   pick.addEventListener("change", () => {
