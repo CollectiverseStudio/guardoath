@@ -299,9 +299,13 @@ each check's code.
 Since 2026-11-02 a customer record's settings change only through a signed-in session; its API keys only
 run checks, so a leaked production key cannot change settings or keys.
 
-- Accounts are users of an Amazon Cognito user pool (Lite plan): email, password and a required
-  authenticator app. There is no public sign-up; an administrator creates each user with the read-only
-  attribute `custom:tenant_id`. One user belongs to one tenant.
+- The user pool supports native administrator-created accounts with password and authenticator-app
+  MFA, and optionally a **Google OAuth provider**. Native accounts require the immutable
+  `custom:tenant_id` binding. New Google customers instead register one deterministic tenant
+  from the verified Cognito subject and issuer using `POST /v1/register`.
+  Google provider and public GuardOath registration are both disabled by default in the
+  deployment template and require explicit verified configuration. Registration creates
+  inactive, unpaid tenants with no API keys; it does not grant paid access.
 - The dashboard signs in with the pool's hosted sign-in page (authorization code with PKCE) and keeps the
   session in the browser tab (sessionStorage). It sends the session in `X-GuardOath-Session`.
 - `guardoath/tenant_sessions.py` checks every session in two steps:
@@ -321,7 +325,11 @@ run checks, so a leaked production key cannot change settings or keys.
   and `POST /v1/tenants/current/keys/revoke`.
 - Demo users have no accounts. Their demo key still changes their own demo record.
 - Settings: `GUARDOATH_COGNITO_POOL_ID`, `GUARDOATH_COGNITO_CLIENT_ID`, `GUARDOATH_COGNITO_DOMAIN`,
-  `GUARDOATH_COGNITO_REDIRECT_URI` (all four or none). The deploy template sets them.
+  `GUARDOATH_COGNITO_REDIRECT_URI` (all four or none), plus explicit `GUARDOATH_GOOGLE_LOGIN_ENABLED`
+  and `GUARDOATH_SELF_REGISTRATION` flags. When registration is enabled but Google login is
+  unavailable, startup fails closed. `GET /v1/sign-in` only advertises Google when enabled,
+  so the dashboard does not offer a broken login. The deploy template sets these flags;
+  see `deploy/aws/README.md` for the external credentials and real login acceptance.
 
 
 ### CSV formula protection in the tenant record
