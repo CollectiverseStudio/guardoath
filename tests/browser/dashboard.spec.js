@@ -1492,7 +1492,12 @@ test("comparison editor shows stage counts and pending changes through add and r
   await page.locator("#demo-user").selectOption("demo2");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
+  const resetDone = page.waitForResponse(response =>
+    response.url().endsWith("/v1/tenants/current/reset") &&
+    response.request().method() === "POST");
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  expect((await resetDone).status()).toBe(200);
+  await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
   const summary = page.locator("#comparison-draft-summary");
   await expect(summary).toContainText("No pending changes.");
   const baseline = await page.locator("#comparison-drafts li[data-comparison-id]").count();
