@@ -120,6 +120,41 @@ test("authenticated mixed 51-rule FC portfolio renders, saves UI override and ru
       expect(benign.effective_action).toBe("allow");
       expect(benign.findings.filter(f => f.rule_id.startsWith("business.mixed_ui_"))).toHaveLength(0);
     }
+
+    // Customer can turn OFF one advanced identity rule on Output without
+    // disabling its Input evaluation or any of the other 50 comparisons.
+    // Exercise the normal per-rule stage select, revisioned Save and Engine,
+    // not a mocked response or a cross-field check-wide bypass.
+    await page.locator("#rule-search").fill("mixed_ui_050");
+    await page.locator('tr.rule-row[data-rule="business.mixed_ui_050"] [data-stage="output"]')
+      .selectOption("off");
+    await page.getByRole("button", {name: "Save checks", exact: true}).click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved.");
+    const outputOff = await current(request, headers);
+    expect(outputOff.revision).toBe(changed.revision + 1);
+    expect(outputOff.output_rule_actions["business.mixed_ui_050"]).toBe("off");
+    expect(outputOff.input_rule_actions["business.mixed_ui_050"]).toBe("block");
+    expect(outputOff.record_rules.filter(x => x.rule_id.startsWith("business.mixed_ui_"))).toHaveLength(SIZE);
+    await connect(page);
+    await page.locator("#rule-search").fill("mixed_ui_050");
+    const savedRow = page.locator('tr.rule-row[data-rule="business.mixed_ui_050"]');
+    await expect(savedRow.locator('[data-stage="output"]')).toHaveValue("off");
+    await expect(savedRow.locator(".effect-output")).toHaveText("Output: Off (own setting)");
+    await expect(savedRow.locator(".effect-input")).toHaveText("Input: Block (own setting)");
+
+    const stillInput = await check(request, headers, "input", bad);
+    expect(stillInput.evaluation_status).toBe("complete");
+    expect(stillInput.effective_action).toBe("block");
+    expect(stillInput.findings.map(f => f.rule_id)
+      .filter(id => id.startsWith("business.mixed_ui_")).sort()).toEqual(expected);
+    const outputFiltered = await check(request, headers, "output", bad);
+    expect(outputFiltered.evaluation_status).toBe("complete");
+    // The remaining ordinary violation still blocks; the disabled identity
+    // rule must not be reported as an independent Output finding.
+    expect(outputFiltered.effective_action).toBe("block");
+    expect(outputFiltered.findings.map(f => f.rule_id)
+      .filter(id => id.startsWith("business.mixed_ui_"))).toEqual(["business.mixed_ui_000"]);
+    expect((await current(request, headers)).revision).toBe(outputOff.revision);
   } finally {
     if (shouldReset) {
       const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
