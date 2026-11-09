@@ -707,6 +707,51 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             raise HTTPException(409, "The tenant record changed; reload it and try again") from None
         return JSONResponse(key_list(updated), headers={"Cache-Control": "no-store"})
 
+    @api.post("/v1/billing/checkout")
+    async def billing_checkout(
+        session: Annotated[str | None, Header(alias=SESSION_HEADER)] = None,
+    ):
+        """Authenticated Checkout for an already provisioned Stripe billing account.
+
+        Registration alone never establishes a Stripe customer binding, and
+        a checkout redirect never activates validation entitlement.
+        """
+        from guardoath.billing import BillingMode
+        from guardoath.stripe_checkout import StripeCheckoutError, create_checkout_session
+        import secrets
+        if sessions is None or tenants is None:
+            raise HTTPException(404, "Customer billing is not available")
+        if not session:
+            raise HTTPException(401, "Sign in to subscribe")
+        try:
+            tenant_id = await run_in_threadpool(sessions.tenant_for, session)
+        except SignInBusy:
+            raise HTTPException(503, "Sign-in checks are busy; try again shortly") from None
+        if tenant_id is None:
+            raise HTTPException(401, "Invalid or expired sign-in")
+        current = tenants.store.get(tenant_id)
+        if current is None or current.demo or current.status != "active":
+            raise HTTPException(403, "Register an account before subscribing")
+        if current.subscription_status == "active":
+            raise HTTPException(409, "Subscription already active; use billing management")
+        if current.billing_mode != BillingMode.STRIPE or not current.payer_id:
+            raise HTTPException(409, "Stripe customer provisioning is required before checkout")
+        api_key = os.getenv("GUARDOATH_STRIPE_SECRET_KEY", "")
+        price_id = os.getenv("GUARDOATH_STRIPE_PRICE_ID", "")
+        if not api_key or not price_id:
+            raise HTTPException(503, "Subscription checkout is not configured")
+        try:
+            url = await run_in_threadpool(create_checkout_session,
+                customer_id=current.payer_id, price_id=price_id,
+                tenant_id=current.tenant_id, api_key=api_key,
+                success_url="https://guardoath.com/dashboard?checkout=success",
+                cancel_url="https://guardoath.com/dashboard?checkout=cancel",
+                idempotency_key="checkout-" + secrets.token_hex(24))
+        except StripeCheckoutError:
+            raise HTTPException(503, "Unable to start subscription checkout") from None
+        return JSONResponse({"checkout_url": url}, headers={
+            "Cache-Control": "no-store", "Referrer-Policy": "no-referrer"})
+
     @api.get("/v1/account/status")
     async def account_status(
         session: Annotated[str | None, Header(alias=SESSION_HEADER)] = None,
