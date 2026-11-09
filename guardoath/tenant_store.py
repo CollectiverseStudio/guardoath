@@ -72,6 +72,26 @@ class MemoryTenantStore:
             self._records[tenant_id] = updated
             return updated
 
+    def bind_stripe_customer(self, tenant_id: str, customer_id: str,
+                             expected_revision: int) -> TenantRecord:
+        """Bind a server-provisioned Stripe customer once, with revision guard."""
+        from guardoath.billing import BillingMode
+        if not isinstance(customer_id, str) or not customer_id.startswith("cus_") or not customer_id[4:].replace("_", "").isalnum():
+            raise ValueError("Invalid Stripe customer ID")
+        with self._lock:
+            current = self._records.get(tenant_id)
+            if current is None:
+                raise TenantNotFound(tenant_id)
+            if current.revision != expected_revision:
+                raise TenantConflict("The tenant record changed; reload it and try again")
+            if current.demo or current.payer_id or current.billing_mode != BillingMode.INTERNAL or current.subscription_status != "inactive":
+                raise ValueError("Stripe customer binding cannot replace an existing billing account")
+            updated = TenantRecord.model_validate({**current.model_dump(),
+                "billing_mode": BillingMode.STRIPE, "payer_id": customer_id,
+                "revision": current.revision + 1, "updated_at": _now()})
+            self._records[tenant_id] = updated
+            return updated
+
     def apply_verified_subscription(self, tenant_id: str, *, customer_id: str,
                                     subscription_id: str, provider_subscription: dict,
                                     expected_revision: int) -> TenantRecord:
