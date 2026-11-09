@@ -109,3 +109,18 @@ def test_registered_without_payment_cannot_issue_customer_api_key():
     record = store.get("usr-test-account")
     assert record.subscription_status == "inactive"
     assert record.key_hashes == () and record.usage == {}
+
+
+def test_unpaid_registration_cannot_run_output_checks_or_accrue_usage():
+    """Input and output must enforce the same subscription boundary."""
+    client, store = make_client()
+    headers = {SESSION_HEADER: "verified-test-token"}
+    assert client.post("/v1/register", headers=headers).status_code == 201
+    for stage in ("input", "output"):
+        response = client.post(f"/v1/checks/{stage}", headers=headers, json={
+            "application_id": "usr-test-account",
+            "content": "Harmless test content", "content_format": "text",
+        })
+        assert response.status_code == 402, (stage, response.text)
+        assert store.get("usr-test-account").usage == {}
+    assert store.get("usr-test-account").key_hashes == ()
