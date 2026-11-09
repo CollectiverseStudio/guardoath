@@ -1614,6 +1614,12 @@ function render(stage, result) {
     else if (check.error_code) { const error = document.createElement("p"); error.textContent = "Check unavailable: " + check.error_code; row.append(error); }
     for (const finding of check.findings) {
       const detail = document.createElement("div"); detail.className = "finding";
+      // Stable server-issued catalog identifier helps customers distinguish
+      // schema.invalid from the unrelated rule they intended to test. Render
+      // text only; never put submitted content, private JSON paths or values
+      // into the DOM or into a diagnostic URL.
+      const ruleId = document.createElement("code"); ruleId.className = "finding-rule-id";
+      ruleId.textContent = finding.rule_id; detail.append(ruleId);
       const description = document.createElement("p"); description.textContent = finding.explanation; detail.append(description);
       if (application?.tenant && ownChecksSelected()) {
         const button = document.createElement("button"); button.type = "button"; button.className = "secondary";
