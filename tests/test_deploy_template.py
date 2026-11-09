@@ -372,7 +372,9 @@ def test_google_sign_in_is_explicitly_provisionable_without_customer_secrets_in_
     env = template["Resources"]["SiteFunction"]["Properties"]["Environment"]["Variables"]
     assert env["GUARDOATH_SELF_REGISTRATION"] == {"Ref": "EnableSelfRegistration"}
     assert "GoogleOAuthClientSecret" not in json.dumps(env)
-    assert not any("GOOGLE" in name for name in env)
+    assert env["GUARDOATH_GOOGLE_LOGIN_ENABLED"] == {"Ref": "EnableGoogleLogin"}
+    assert all("SECRET" not in name and "CLIENT_ID" not in name
+               for name in env if name.startswith("GUARDOATH_GOOGLE_"))
     assert template["Outputs"]["GoogleLoginConfigured"]["Value"] == {
         "Fn::If": ["GoogleLoginEnabled", "true", "false"]
     }
