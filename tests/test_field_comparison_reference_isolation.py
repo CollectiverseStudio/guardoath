@@ -142,10 +142,17 @@ def test_collection_bounds_apply_even_when_values_otherwise_satisfy_rule(tenants
     assert response.status_code == 200
     body = response.json()
     assert body["evaluation_status"] == "complete"
-    valid = count in (1, 128)
-    assert {f["rule_id"] for f in body["findings"]} == (
-        set() if valid else {"business.scope_guard", "business.serial_guard"})
-    assert body["effective_action"] == ("allow" if valid else "block")
+    # A present empty scope request grants nothing and is an authorized
+    # subset; FC-040 independently requires a nonempty serial inventory.
+    # Neither rule can silently accept an oversized 129-member collection.
+    expected = ({
+        0: {"business.serial_guard"},
+        1: set(),
+        128: set(),
+        129: {"business.scope_guard", "business.serial_guard"},
+    })[count]
+    assert {f["rule_id"] for f in body["findings"]} == expected
+    assert body["effective_action"] == ("allow" if not expected else "block")
 
 
 @pytest.mark.parametrize("stage", ["input", "output"])
