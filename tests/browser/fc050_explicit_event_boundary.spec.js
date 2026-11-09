@@ -84,6 +84,21 @@ test("FC-050 explicit return-event boundary persists through the dashboard and p
       expect(response.status()).toBe(200);
       return response.json();
     };
+    const publicRule = saved.record_rules.find(
+      item => item.rule_id === "business.ui_explicit_event");
+    expect(publicRule.no_return_example).toBeTruthy();
+    const noReturnButton = page.getByRole("button", {
+      name: "Try no-return input conversion ui_explicit_event"
+    });
+    await expect(noReturnButton).toBeVisible();
+    await noReturnButton.click();
+    await expect(page.locator("#input-format")).toHaveValue("json");
+    const loaded = JSON.parse(await page.locator("#input-content").inputValue());
+    expect(loaded).toEqual(JSON.parse(publicRule.no_return_example));
+    const acceptedNoReturn = await check("input", loaded);
+    expect(acceptedNoReturn.evaluation_status).toBe("complete");
+    expect(acceptedNoReturn.findings.filter(f => f.rule_id.startsWith("business.")))
+      .toEqual([]);
     const clean = await check("input", baseline);
     expect(clean.evaluation_status).toBe("complete");
     expect(clean.findings.filter(f => f.rule_id.startsWith("business."))).toEqual([]);
