@@ -653,3 +653,40 @@ def test_no_return_customer_sample_respects_strict_json_depth_admission():
     assert actual["no_return_example"] is None
     assert actual["example_unavailable"]["code"] == "sample_unavailable"
     assert actual["look_alike_unavailable"]["code"] == "sample_unavailable"
+
+
+def test_conversion_samples_respect_32000_character_api_admission():
+    """Even parser-valid JSON must obey CheckRequest's smaller text ceiling.
+
+    Sparse-but-valid array pointers can produce a 50k synthetic sample with
+    only 22 levels of nesting. None of the customer Try buttons may falsely
+    advertise that payload as usable in the actual authenticated API.
+    """
+    from types import SimpleNamespace
+    from guardoath.json_data import parse_json
+    from guardoath.models import CheckRequest
+    from guardoath.record_rules import _field_document, record_rules
+
+    parent = "/a" + "/999/k" * 10
+    fields = {role: parent + "/" + role
+              for role in ("order_at", "shipment_at", "delivery_at", "return_at")}
+    full = _field_document(fields, {
+        "order_at": ORDER, "shipment_at": SHIPMENT,
+        "delivery_at": DELIVERY, "return_at": AFTER,
+    })
+    assert len(full) > 32_000
+    assert parse_json(full)  # no 32-level, 1,000-item or JSON byte violation
+    with pytest.raises(ValueError):
+        CheckRequest(application_id=TENANT, policy_version="test",
+                     content_format="json", content=full)
+
+    rule = AdvancedConversionTimeRule.model_validate({
+        **RULE, "rule_id": "api_content_limit", "fields": fields,
+    })
+    metadata = record_rules(SimpleNamespace(
+        comparisons=(), required_sections=(), advanced_conversion_time=(rule,),
+    ))["business.api_content_limit"]
+    assert all(metadata[name] is None
+               for name in ("example", "look_alike", "no_return_example"))
+    assert metadata["example_unavailable"]["code"] == "sample_unavailable"
+    assert metadata["look_alike_unavailable"]["code"] == "sample_unavailable"
