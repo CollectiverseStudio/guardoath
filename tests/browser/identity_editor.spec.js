@@ -119,7 +119,7 @@ test("FC-048 empty requested-scopes use real tenant and authenticated Input/Outp
     expect(reset.status()).toBe(200);
     resetRequired = true;
     const prior = await summary();
-    const saved = await request.post("/v1/tenants/current/checks", {headers, data: {
+    const saved = await request.post("/v1/tenants/current/references", {headers, data: {
       revision: prior.revision, changes: {
         comparisons: [],
         advanced_identity: [{
