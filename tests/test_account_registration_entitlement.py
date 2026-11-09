@@ -137,3 +137,15 @@ def test_checkout_route_requires_verified_session_and_server_provisioning():
     assert response.status_code == 409, response.text
     assert store.get("usr-test-account").subscription_status == "inactive"
     assert store.get("usr-test-account").usage == {}
+
+
+def test_billing_portal_requires_owner_and_existing_stripe_customer():
+    client, store = make_client()
+    headers = {SESSION_HEADER: "verified-test-token"}
+    assert client.post("/v1/billing/portal").status_code == 401
+    assert client.post("/v1/billing/portal", headers={SESSION_HEADER: "invalid"}).status_code == 401
+    assert client.post("/v1/billing/portal", headers=headers).status_code == 403
+    assert client.post("/v1/register", headers=headers).status_code == 201
+    response = client.post("/v1/billing/portal", headers=headers)
+    assert response.status_code == 409, response.text
+    assert store.get("usr-test-account").subscription_status == "inactive"
