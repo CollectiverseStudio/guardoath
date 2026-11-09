@@ -129,11 +129,16 @@ def test_unpaid_registration_cannot_run_output_checks_or_accrue_usage():
 def test_checkout_route_requires_verified_session_and_server_provisioning():
     client, store = make_client()
     headers = {SESSION_HEADER: "verified-test-token"}
-    assert client.post("/v1/billing/checkout").status_code == 401
-    assert client.post("/v1/billing/checkout", headers={SESSION_HEADER: "invalid"}).status_code == 401
-    assert client.post("/v1/billing/checkout", headers=headers).status_code == 403
+    # Billing has no customer-supplied price/status body, but global JSON
+    # admission still applies to POST. Authenticate a correctly typed empty
+    # request; an untyped body is independently rejected without a provider call.
+    assert client.post("/v1/billing/checkout", content=b"{}").status_code == 415
+    assert client.post("/v1/billing/checkout", json={}).status_code == 401
+    assert client.post("/v1/billing/checkout", headers={SESSION_HEADER: "invalid"},
+                       json={}).status_code == 401
+    assert client.post("/v1/billing/checkout", headers=headers, json={}).status_code == 403
     assert client.post("/v1/register", headers=headers).status_code == 201
-    response = client.post("/v1/billing/checkout", headers=headers)
+    response = client.post("/v1/billing/checkout", headers=headers, json={})
     assert response.status_code == 503, response.text
     assert store.get("usr-test-account").subscription_status == "inactive"
     assert store.get("usr-test-account").usage == {}
@@ -142,10 +147,12 @@ def test_checkout_route_requires_verified_session_and_server_provisioning():
 def test_billing_portal_requires_owner_and_existing_stripe_customer():
     client, store = make_client()
     headers = {SESSION_HEADER: "verified-test-token"}
-    assert client.post("/v1/billing/portal").status_code == 401
-    assert client.post("/v1/billing/portal", headers={SESSION_HEADER: "invalid"}).status_code == 401
-    assert client.post("/v1/billing/portal", headers=headers).status_code == 403
+    assert client.post("/v1/billing/portal", content=b"{}").status_code == 415
+    assert client.post("/v1/billing/portal", json={}).status_code == 401
+    assert client.post("/v1/billing/portal", headers={SESSION_HEADER: "invalid"},
+                       json={}).status_code == 401
+    assert client.post("/v1/billing/portal", headers=headers, json={}).status_code == 403
     assert client.post("/v1/register", headers=headers).status_code == 201
-    response = client.post("/v1/billing/portal", headers=headers)
+    response = client.post("/v1/billing/portal", headers=headers, json={})
     assert response.status_code == 409, response.text
     assert store.get("usr-test-account").subscription_status == "inactive"
