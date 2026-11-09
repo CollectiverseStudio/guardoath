@@ -66,7 +66,7 @@ async def schema_check(request: CheckRequest, policy: Policy, stage: Stage) -> C
     for error in errors:
         if len(findings) == max_findings:
             findings.append(Finding(
-                rule_id="schema.too_many_errors", category="structure", severity="high",
+                rule_id="schema.invalid", category="structure", severity="high",
                 explanation="Additional schema violations exceed the reporting limit.",
             ))
             break
