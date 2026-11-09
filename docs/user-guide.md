@@ -2261,6 +2261,8 @@ These four controls use the same `cross_field` checker and the **saved tenant re
 | FC-043 `cold_chain_excursion` | 10:00Z to 10:45Z with a 30-minute allowance fails. | Exactly 30 minutes passes. Start/end must be explicit-offset ISO 8601 datetimes, elapsed duration nonnegative and no more than 366 days, allowance integer 0–527040 minutes. The checker compares timestamps, **not** proof that sensor events are genuine or complete. |
 | FC-050 `lifecycle_chronology` | Shipment at 12:00Z after a delivery at 11:00Z fails. | `order_at ≤ shipment_at ≤ delivery_at ≤ return_at` when return exists; `return_at` may be genuinely absent before any return. A supplied null/invalid return timestamp fails. Timestamps must carry timezone offsets; this is ordering validation, not cross-system attestation. |
 
+**FC-050 with an indexed event history:** In **Conversion and time comparisons** in the authenticated dashboard, choose `lifecycle_chronology`, set `order_at=/events/0/at`, `shipment_at=/events/1/at`, `delivery_at=/events/2/at`, and `return_at=/events/3/at`; select Input/Output and **Save checks**. A submitted `events` array with only the first three chronologically ordered events passes because no return event exists yet (the fourth array index is absent). An existing fourth event with an invalid/null timestamp or a return earlier than delivery fails; a missing required shipment/delivery event also fails. Input/Output actions and each rule override remain tenant-controlled, and **Review rule settings** opens the saved customer rule. This does not verify that events came from an authoritative logistics system.
+
 FC-035 configuration example (illustrative internal reference; store it only through authorized tenant settings):
 
 ```json
