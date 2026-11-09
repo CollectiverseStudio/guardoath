@@ -102,13 +102,19 @@ def test_optional_array_return_is_real_tenant_setting_and_both_stage_engine_cont
     clean_after_return = _events(ORDER, SHIPMENT, DELIVERY, AFTER)
     invalid_reverse = _events(ORDER, SHIPMENT, DELIVERY, BEFORE)
     invalid_null = _events(ORDER, SHIPMENT, DELIVERY, None)
+    # Once an actual return event exists, its timestamp is mandatory.
+    # Treating the absent /events/3/at key as an optional absent *event*
+    # would silently accept malformed lifecycle records.
+    present_return_missing_time = {
+        "events": [{"at": ORDER}, {"at": SHIPMENT}, {"at": DELIVERY}, {}]
+    }
     missing_mandatory = _events(ORDER, SHIPMENT)
     for stage, action in (("input", "block"), ("output", "flag")):
         for clean in (clean_before_return, clean_after_return):
             result = _check(api, headers, stage, clean)
             assert not any(f["rule_id"] == "business.optional_array_return" for f in result["findings"])
             assert result["effective_action"] == "allow"
-        for bad in (invalid_reverse, invalid_null, missing_mandatory):
+        for bad in (invalid_reverse, invalid_null, present_return_missing_time, missing_mandatory):
             result = _check(api, headers, stage, bad)
             assert {f["rule_id"] for f in result["findings"]} == {"business.optional_array_return"}
             assert result["effective_action"] == action
