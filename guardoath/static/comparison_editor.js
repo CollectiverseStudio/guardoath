@@ -215,7 +215,11 @@
       for (const name of ["arithmeticEditor", "identityEditor", "conversionEditor"]) {
         const editor = window[name];
         const pending = editor && typeof editor.delta === "function" ? editor.delta() : null;
-        if (Array.isArray(pending)) for (const rule of pending) {
+        // Protected identity/FX reference sets use {editable: [...]} so
+        // ordinary edits cannot silently collide with those scoped drafts.
+        const rules = Array.isArray(pending) ? pending :
+          pending && Array.isArray(pending.editable) ? pending.editable : [];
+        for (const rule of rules) {
           if (rule && typeof rule.rule_id === "string") ids.add(rule.rule_id);
         }
       }
