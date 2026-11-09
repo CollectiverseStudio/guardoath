@@ -76,6 +76,31 @@ def test_arrays_and_trusted_sets_are_bounded_and_not_submitted_authority():
     assert evaluate((scopes,), {"scopes": ["read:item"]}).findings == ()
 
 
+def test_fc048_explicit_no_scopes_is_a_valid_subset_but_missing_or_invalid_is_not():
+    """FC-048 is an authorization subset check, not a nonempty-list schema rule."""
+    scopes = rule(CASES[3])
+    serials = rule(CASES[2])
+    for stage in (Stage.INPUT, Stage.OUTPUT):
+        empty = evaluate((scopes,), {"scopes": []}, stage)
+        assert empty.evaluation_status == "complete"
+        assert empty.findings == () and empty.effective_action == Action.ALLOW
+        for invalid in ({}, {"scopes": None}, {"scopes": True},
+                        {"scopes": "read:item"}, {"scopes": ["admin:write"]},
+                        {"scopes": ["read:item"] * 129}):
+            blocked = evaluate((scopes,), invalid, stage)
+            assert blocked.evaluation_status == "complete"
+            assert {f.rule_id for f in blocked.findings} == {
+                "business.authorized_scope_subset"
+            }
+            assert blocked.effective_action == Action.BLOCK
+            assert "admin:write" not in str(blocked.findings)
+        # Serial inventory cardinality is unchanged. An empty inventory is not
+        # evidence of uniqueness in FC-040's required nonempty serial list.
+        no_serials = evaluate((serials,), {"serials": []}, stage)
+        assert {f.rule_id for f in no_serials.findings} == {"business.serial_unique"}
+        assert no_serials.effective_action == Action.BLOCK
+
+
 def test_invalid_trusted_reference_configuration_rejected():
     with pytest.raises(ValidationError):
         AdvancedIdentityRule(rule_id="lot", kind="quarantine_exclusion",
@@ -152,4 +177,29 @@ def test_authenticated_tenant_persists_trusted_sets_and_controls_both_stages():
         assert len([f for f in body["findings"] if f["rule_id"].startswith("business.")]) == count
         assert body["effective_action"] == action
         assert "QLOT8" not in response.text
-    assert store.get(tenant).used(usage_month()) == 2
+    # Same authoritative saved tenant, authenticated API and both stages:
+    # an explicit zero-scope request must not produce a spurious denial,
+    # while the missing field must still fail closed.
+    no_scope_payload = {"order_id": "ORD1", "shipment_order_id": "ORD1",
+                        "lot": "LOT9", "serials": ["SER1", "SER2"], "scopes": []}
+    for stage in ("input", "output"):
+        clean = client.post("/v1/checks/" + stage, headers=h, json={
+            "application_id": tenant, "content_format": "json",
+            "content": json.dumps(no_scope_payload),
+        })
+        assert clean.status_code == 200, clean.text[:300]
+        assert clean.json()["evaluation_status"] == "complete"
+        assert not [f for f in clean.json()["findings"]
+                    if f["rule_id"].startswith("business.")]
+        assert clean.json()["effective_action"] == "allow"
+        missing = client.post("/v1/checks/" + stage, headers=h, json={
+            "application_id": tenant, "content_format": "json",
+            "content": json.dumps({k: v for k, v in no_scope_payload.items()
+                                   if k != "scopes"}),
+        })
+        assert missing.status_code == 200, missing.text[:300]
+        assert [f["rule_id"] for f in missing.json()["findings"]
+                if f["rule_id"].startswith("business.")] == [
+                    "business.authorized_scope_subset"
+                ]
+    assert store.get(tenant).used(usage_month()) == 6
