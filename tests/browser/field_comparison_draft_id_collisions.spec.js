@@ -24,7 +24,7 @@ async function evaluate(request, headers, stage, content) {
   return response.json();
 }
 
-test("cross-family duplicate pending ID never saves or runs, then corrected revisions execute both stages", async ({page, request}) => {
+test("cross-family pending duplicate is rejected in UI and server, then corrected Save executes both stages", async ({page, request}) => {
   const headers = await connect(page);
   let cleanup = false;
   try {
@@ -53,37 +53,43 @@ test("cross-family duplicate pending ID never saves or runs, then corrected revi
     await page.locator("#arithmetic-field-lines").fill("/order/lines");
     await page.locator("#arithmetic-field-subtotal").fill("/order/subtotal");
     await page.locator("#arithmetic-apply").click();
-    await expect(page.locator('[data-arithmetic-id="ui_same"]')).toHaveCount(1);
-    await expect(page.locator("#tenant-message")).toContainText(
-      "ordinary comparisons and arithmetic comparisons");
-
-    // Save is rejected in the actual dashboard before any authenticated POST.
-    // It neither discards drafts nor writes the authoritative tenant record.
-    const sent = [];
-    page.on("request", r => {
-      if (r.method() === "POST" && r.url().endsWith("/v1/tenants/current/checks")) sent.push(r.url());
-    });
-    await page.getByRole("button", {name: "Save checks", exact: true}).click();
-    await expect(page.locator("#tenant-message")).toContainText("No settings were saved.");
-    expect(sent).toHaveLength(0);
-    expect((await record(request, headers)).revision).toBe(before.revision);
-    await expect(page.locator('[data-comparison-id="ui_same"]')).toHaveCount(1);
-    await expect(page.locator('[data-arithmetic-id="ui_same"]')).toHaveCount(1);
-
-    // Run has an automatic Save path; it must fail closed as well, without
-    // accidentally exercising stale saved settings and claiming a clean pass.
-    await page.locator("#input-format").selectOption("json");
-    await page.locator("#input-content").fill(JSON.stringify({order: {
-      spend: 120, limit: 100, lines: [{quantity: 2, unit_price: 40}], subtotal: 90
-    }}));
-    await page.locator("#run-input").click();
-    await expect(page.locator("#run-error")).toContainText("check changes were not saved");
-    await expect(page.locator("#result-status")).toHaveText("Not checked");
-    expect(sent).toHaveLength(0);
-    expect((await record(request, headers)).revision).toBe(before.revision);
-
-    await page.getByRole("button", {name: "Remove arithmetic ui_same"}).click();
+    // Immediate customer-side rejection is stricter than the former
+    // Save-time-only duplicate detection. It leaves ordinary draft intact
+    // and never stages a conflicting arithmetic rule.
     await expect(page.locator('[data-arithmetic-id="ui_same"]')).toHaveCount(0);
+    await expect(page.locator("#arithmetic-message")).toContainText("Rule ID already exists");
+    await expect(page.locator('[data-comparison-id="ui_same"]')).toHaveCount(1);
+    const sent = [];
+    page.on("request", request => {
+      if (request.method() === "POST" && request.url().endsWith("/v1/tenants/current/checks"))
+        sent.push(request.url());
+    });
+    expect(sent).toHaveLength(0);
+    expect((await record(request, headers)).revision).toBe(before.revision);
+
+    // Do not rely only on the browser guard: a direct authenticated attempt
+    // to save duplicate IDs across two families must also be rejected by the
+    // authoritative tenant model, leaving the revision and policy untouched.
+    const illegal = await request.post("/v1/tenants/current/checks", {headers, data: {
+      revision: before.revision,
+      changes: {
+        comparisons: [{
+          rule_id: "ui_same", left: "/order/spend", right: "/order/limit",
+          operator: "le", value_type: "number", stages: ["input", "output"]
+        }],
+        advanced_arithmetic: [{
+          rule_id: "ui_same", kind: "invoice_line_subtotal",
+          fields: {lines: "/order/lines", subtotal: "/order/subtotal"},
+          stages: ["input", "output"]
+        }],
+        input_check_cross_field: "flag", output_check_cross_field: "block"
+      }
+    }});
+    expect(illegal.status(), (await illegal.text()).slice(0, 200)).toBe(422);
+    expect((await record(request, headers)).revision).toBe(before.revision);
+    await expect(page.locator('[data-arithmetic-id="ui_same"]')).toHaveCount(0);
+    expect(sent).toHaveLength(0);
+
     await page.locator("#arithmetic-id").fill("ui_subtotal");
     await page.locator("#arithmetic-field-lines").fill("/order/lines");
     await page.locator("#arithmetic-field-subtotal").fill("/order/subtotal");
