@@ -93,17 +93,19 @@ def _valid(rule, payload):
             try:
                 resolve(payload, event_pointer)
             except (KeyError, IndexError):
-                # If a distinct-root event is an indexed return, only a
-                # genuinely absent collection or an empty array is optional.
-                # A present wrong-typed container (e.g. {}) cannot silently
-                # masquerade as an unrecorded return.
+                # An indexed return may share an array with mandatory events:
+                # /events/0..2 are recorded while optional /events/3 is not.
+                # A genuinely missing collection is also optional, but a
+                # wrong-typed collection or a gap before the configured index
+                # must never be treated as a clean, absent return. Only the
+                # *next* unfilled slot is an optional unrecorded event.
                 event_parts = event_pointer.rsplit("/", 1)
                 if len(event_parts) == 2 and event_parts[1].isdecimal():
                     try:
                         collection = resolve(payload, event_parts[0])
                     except (KeyError, IndexError):
                         continue
-                    if not isinstance(collection, list) or collection:
+                    if not isinstance(collection, list) or len(collection) != int(event_parts[1]):
                         raise ValueError("invalid_return_event_collection")
                 continue
             raise
