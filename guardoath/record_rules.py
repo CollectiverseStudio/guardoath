@@ -476,9 +476,7 @@ def arithmetic_rule(rule) -> dict:
         "needs_checks": [],
         "content_format": "json",
         "configuration": f"{rule.kind} with pointers " + ", ".join(
-            f"{name}={pointer}" for name, pointer in rule.fields.items()) +
-            (f" · return event={rule.return_event_pointer}" if rule.return_event_pointer else "") +
-            " · runs on " + stage_names(rule.stages),
+            f"{name}={pointer}" for name, pointer in rule.fields.items()) + " · runs on " + stage_names(rule.stages),
         "stages": [getattr(stage, "value", stage) for stage in rule.stages],
         "record_rule": True,
     }
@@ -574,6 +572,7 @@ def conversion_time_rule(rule) -> dict:
         "content_format": "json",
         "configuration": f"{rule.kind} with pointers " + ", ".join(
             f"{role}={pointer}" for role, pointer in rule.fields.items()) +
+            (f" · return event={rule.return_event_pointer}" if rule.return_event_pointer else "") +
             " · runs on " + stage_names(rule.stages) +
             (" · versioned tenant FX reference (values private)" if rule.kind == "currency_conversion_cap" else ""),
         "stages": [getattr(stage, "value", stage) for stage in rule.stages],
