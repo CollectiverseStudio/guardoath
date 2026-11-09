@@ -146,6 +146,26 @@ class DynamoDBTenantStore:
                                                "revision": current.revision + 1, "updated_at": _now()})
         return self._replace(tenant_id, current, updated)
 
+    def apply_verified_subscription(self, tenant_id: str, *, customer_id: str,
+                                    subscription_id: str, provider_subscription: dict,
+                                    expected_revision: int) -> TenantRecord:
+        """Persist a verified Stripe entitlement with revision-conditional write."""
+        from guardoath.billing import BillingMode
+        from guardoath.subscription_reconciliation import StripeBinding, reconcile_subscription
+        current = self.get(tenant_id)
+        if current is None:
+            raise TenantNotFound(tenant_id)
+        if current.revision != expected_revision:
+            raise TenantConflict("The tenant record changed; reload it and try again")
+        if current.demo or current.billing_mode != BillingMode.STRIPE or current.payer_id != customer_id:
+            raise ValueError("Tenant has no matching Stripe billing account")
+        decision = reconcile_subscription(StripeBinding(tenant_id, customer_id, subscription_id),
+                                          provider_subscription)
+        updated = TenantRecord.model_validate({**current.model_dump(),
+            "subscription_status": decision.status, "revision": current.revision + 1,
+            "updated_at": _now()})
+        return self._replace(tenant_id, current, updated)
+
     def count_check(self, tenant_id: str, month: str | None = None) -> tuple[int, bool]:
         """Count one check for the month. Returns (used, over_allowance). Same rules as the memory store."""
         month = month or usage_month()
