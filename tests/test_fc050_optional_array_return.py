@@ -179,3 +179,26 @@ def test_optional_root_return_field_can_be_absent_but_not_null():
         assert [f.rule_id for f in conversion_time_findings(invalid, (root_rule,), stage)] == [
             "business.root_return_event"
         ]
+
+
+def test_same_object_optional_return_timestamp_remains_omittable():
+    """An optional scalar alongside mandatory timestamps is not a return object."""
+    from guardoath.advanced_conversion_time import conversion_time_findings
+
+    rule = AdvancedConversionTimeRule.model_validate({
+        "rule_id": "same_object_optional_return",
+        "kind": "lifecycle_chronology",
+        "fields": {
+            "order_at": "/life/order_at",
+            "shipment_at": "/life/shipment_at",
+            "delivery_at": "/life/delivery_at",
+            "return_at": "/life/return_at",
+        },
+        "stages": ["input", "output"],
+    })
+    life = {"order_at": ORDER, "shipment_at": SHIPMENT, "delivery_at": DELIVERY}
+    for stage in ("input", "output"):
+        assert conversion_time_findings({"life": life}, (rule,), stage) == ()
+        assert conversion_time_findings({"life": {**life, "return_at": AFTER}}, (rule,), stage) == ()
+        found = conversion_time_findings({"life": {**life, "return_at": None}}, (rule,), stage)
+        assert [f.rule_id for f in found] == ["business.same_object_optional_return"]
