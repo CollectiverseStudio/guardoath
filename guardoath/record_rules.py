@@ -535,11 +535,16 @@ CONVERSION_TIME_EXAMPLES = {
         {"excursion_start": "2026-11-06T10:00:00Z", "excursion_end": "2026-11-06T10:45:00Z",
          "allowed_minutes": 30},
     ),
+    # Populate the optional return in *both* generated examples. When a
+    # customer's delivery timestamp lives within the same recorded return
+    # object as return_at, omitting return_at makes the supposed clean sample
+    # fail the actual tenant rule. A three-event message remains independently
+    # valid where the fourth event is genuinely absent.
     "lifecycle_chronology": (
         {"order_at": "2026-11-06T09:00:00Z", "shipment_at": "2026-11-06T10:00:00Z",
-         "delivery_at": "2026-11-06T11:00:00Z"},
+         "delivery_at": "2026-11-06T11:00:00Z", "return_at": "2026-11-06T13:00:00Z"},
         {"order_at": "2026-11-06T09:00:00Z", "shipment_at": "2026-11-06T12:00:00Z",
-         "delivery_at": "2026-11-06T11:00:00Z"},
+         "delivery_at": "2026-11-06T11:00:00Z", "return_at": "2026-11-06T13:00:00Z"},
     ),
 }
 

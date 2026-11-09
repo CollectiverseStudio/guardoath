@@ -332,3 +332,60 @@ def test_optional_event_boundary_is_not_hidden_by_a_close_mandatory_sibling():
             }
             assert all(ORDER not in f["explanation"] and DELIVERY not in f["explanation"]
                        for f in result["findings"])
+
+
+def test_fc050_dashboard_samples_execute_as_advertised_with_shared_return_parent():
+    """The customer-visible look-alike must pass the saved tenant rule.
+
+    A mandatory delivery timestamp inside the return record makes a generated
+    three-field example malformed, even though an entirely unrecorded return
+    remains optional for normal event-array configurations.
+    """
+    rule = {
+        **RULE,
+        "rule_id": "sample_shared_return_record",
+        "fields": {
+            "order_at": "/life/order",
+            "shipment_at": "/life/shipment",
+            "delivery_at": "/life/return/received",
+            "return_at": "/life/return/details/0/at",
+        },
+    }
+    api, store, headers = _client()
+    baseline = store.get(TENANT)
+    saved = api.post("/v1/tenants/current/checks", headers=headers, json={
+        "revision": baseline.revision,
+        "changes": {
+            "advanced_conversion_time": [rule],
+            "input_check_cross_field": "block",
+            "output_check_cross_field": "flag",
+        },
+    })
+    assert saved.status_code == 200, saved.text[:250]
+    listing = api.get("/v1/applications/current", headers=headers)
+    assert listing.status_code == 200
+    sample = next(
+        item for item in listing.json()["tenant"]["record_rules"]
+        if item["rule_id"] == "business.sample_shared_return_record"
+    )
+    clean = json.loads(sample["look_alike"])
+    violating = json.loads(sample["example"])
+    assert clean["life"]["return"]["details"][0]["at"] == AFTER.replace("12:00", "13:00")
+    assert violating["life"]["return"]["details"][0]["at"] == clean["life"]["return"]["details"][0]["at"]
+    for stage, action in (("input", "block"), ("output", "flag")):
+        clean_response = _check(api, headers, stage, clean)
+        assert not any(
+            found["rule_id"] == "business.sample_shared_return_record"
+            for found in clean_response["findings"]
+        )
+        assert clean_response["effective_action"] == "allow"
+        invalid_response = _check(api, headers, stage, violating)
+        assert {found["rule_id"] for found in invalid_response["findings"]} == {
+            "business.sample_shared_return_record"
+        }
+        assert invalid_response["effective_action"] == action
+        assert all(
+            ORDER not in found["explanation"] and AFTER not in found["explanation"]
+            for found in invalid_response["findings"]
+        )
+    assert store.get(TENANT).advanced_conversion_time[0].rule_id == rule["rule_id"]

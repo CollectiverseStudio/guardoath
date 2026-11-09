@@ -248,6 +248,26 @@ test("FC-050 indexed optional return passes before return and blocks an invalid 
     await expect(page.locator('tr.rule-row[data-rule="business.ui_optional_return"]')).toBeVisible();
     await page.locator("#rule-search").fill("");
 
+    // The customer-visible sample JSON must exercise this exact saved rule.
+    // Without return_at, the generated three-field "look-alike" used to fail
+    // because delivery_at itself establishes that /life/return is recorded.
+    const customerSample = (await read()).record_rules.find(
+      r => r.rule_id === "business.ui_optional_return");
+    expect(customerSample).toBeTruthy();
+    const cleanSample = JSON.parse(customerSample.look_alike);
+    const badSample = JSON.parse(customerSample.example);
+    expect(cleanSample.life.return.details[0].at).toBe("2026-11-06T13:00:00Z");
+    const cleanSampleResult = await jointRequest("input", {
+      ...cleanSample, summary: {count: 2, limit: 3}
+    });
+    expect(cleanSampleResult.findings.filter(f => f.rule_id.startsWith("business."))).toEqual([]);
+    const badSampleResult = await jointRequest("output", {
+      ...badSample, summary: {count: 2, limit: 3}
+    });
+    expect(badSampleResult.findings.filter(f => f.rule_id.startsWith("business."))
+      .map(f => f.rule_id)).toEqual(["business.ui_optional_return"]);
+    expect(badSampleResult.effective_action).toBe("flag");
+
     const siblingGood = await jointRequest("output", {
       life: {order: "2026-11-06T09:00:00Z", shipment: "2026-11-06T10:00:00Z",
         return: {received: "2026-11-06T11:00:00Z", details: [{at: "2026-11-06T12:00:00Z"}]}},
