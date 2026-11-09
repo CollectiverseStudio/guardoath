@@ -56,16 +56,30 @@ async def schema_check(request: CheckRequest, policy: Policy, stage: Stage) -> C
         return CheckerResult(checker_id="schema", checker_version="2", status="flagged",
                              findings=(Finding(rule_id="schema.invalid_json", category="structure",
                                                severity="high", explanation="Content is malformed JSON or exceeds supported strict-JSON limits."),))
-    error = next(Draft202012Validator(schema, format_checker=FORMAT_CHECKER).iter_errors(payload), None)
-    valid = error is None
-    # Never use ValidationError.message, paths, values, schema text or field names.
-    reason = SCHEMA_MESSAGES.get(error.validator, "The structured payload does not satisfy the configured schema.") if error else ""
-    return CheckerResult(
-        checker_id="schema", checker_version="2", status="passed" if valid else "flagged",
-        findings=() if valid else (Finding(
+    # Collect multiple independent failures instead of silently returning
+    # only the first. Bound error traversal and emitted findings: adversarial
+    # documents must not turn diagnostic reporting into an unbounded workload.
+    # Never copy submitted content, schema names, JSON paths or raw errors.
+    max_findings = 64
+    errors = Draft202012Validator(schema, format_checker=FORMAT_CHECKER).iter_errors(payload)
+    findings = []
+    for error in errors:
+        if len(findings) == max_findings:
+            findings.append(Finding(
+                rule_id="schema.too_many_errors", category="structure", severity="high",
+                explanation="Additional schema violations exceed the reporting limit.",
+            ))
+            break
+        findings.append(Finding(
             rule_id="schema.invalid", category="structure", severity="high",
-            explanation=reason,
-        ),),
+            explanation=SCHEMA_MESSAGES.get(
+                error.validator, "The structured payload does not satisfy the configured schema."
+            ),
+        ))
+    return CheckerResult(
+        checker_id="schema", checker_version="2",
+        status="flagged" if findings else "passed",
+        findings=tuple(findings),
     )
 
 
