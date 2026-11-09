@@ -1567,6 +1567,24 @@ function reviewFindingRule(ruleId, checkerId, stage) {
 function render(stage, result) {
   const box = $(stage + "-results"); box.replaceChildren(); const title = document.createElement("h3"); title.textContent = stage === "input" ? "Input checks" : "Output checks"; box.append(title);
   const summary = document.createElement("p"); summary.textContent = "Recommended: " + result.recommended_action + " · Effective: " + result.effective_action + " · " + result.total_latency_ms.toFixed(1) + " ms"; box.append(summary);
+  // A full-policy Block is not necessarily caused by the example's selected
+  // check. Identify every contributing finding/incomplete checker, without
+  // claiming any single checker independently decided the final action.
+  // All labels come from safe checker identifiers, never private content.
+  const reported = (result.checker_results || []).filter(c =>
+    c.status === "flagged" && (c.findings || []).length);
+  const incomplete = (result.checker_results || []).filter(c =>
+    ["error", "unsupported", "skipped"].includes(c.status));
+  if (reported.length || incomplete.length) {
+    const diagnostic = document.createElement("p");
+    diagnostic.className = "check-attribution";
+    const names = checks => [...new Set(checks.map(c => c.checker_id))].join(", ");
+    diagnostic.textContent =
+      (reported.length ? "Checks reporting findings: " + names(reported) + ". " : "") +
+      (incomplete.length ? "Incomplete or skipped checks: " + names(incomplete) + ". " : "") +
+      "All enabled checks participate in the final policy decision; a finding is not necessarily the check that caused Block.";
+    box.append(diagnostic);
+  }
   if (Array.isArray(result.attachments)) {
     const attachments = document.createElement("section"); attachments.className = "attachment-receipts";
     const title = document.createElement("h4"); title.textContent = "Actual file inspection"; attachments.append(title);
