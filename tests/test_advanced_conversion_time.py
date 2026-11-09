@@ -247,7 +247,8 @@ def test_authenticated_tenant_api_saves_all_four_and_enforces_stage_actions():
     assert store.get(other).used(usage_month()) == 0
 
 
-def test_fc050_distinct_root_empty_return_array_is_optional_but_recorded_item_is_not():
+@pytest.mark.parametrize("explicit_event_root", [None, "/returns/0"], ids=["inferred", "configured"])
+def test_fc050_distinct_root_empty_return_array_is_optional_but_recorded_item_is_not(explicit_event_root):
     """An empty return collection is benign; an existing incomplete element is not."""
     timestamp_fields = {
         "order_at": "/order/at",
@@ -256,7 +257,8 @@ def test_fc050_distinct_root_empty_return_array_is_optional_but_recorded_item_is
         "return_at": "/returns/0/at",
     }
     item = AdvancedConversionTimeRule(
-        rule_id="array_return", kind="lifecycle_chronology", fields=timestamp_fields)
+        rule_id="array_return", kind="lifecycle_chronology", fields=timestamp_fields,
+        return_event_pointer=explicit_event_root)
     required = {
         "order": {"at": "2026-11-06T09:00:00Z"},
         "shipment": {"at": "2026-11-06T10:00:00Z"},
@@ -270,6 +272,7 @@ def test_fc050_distinct_root_empty_return_array_is_optional_but_recorded_item_is
         for malformed in (
             {**required, "returns": {}},
             {**required, "returns": {"unexpected": 1}},
+            {**required, "returns": "not_a_collection"},
             {**required, "returns": [{}]},
             {**required, "returns": [{"at": None}]},
             {**required, "returns": [{"at": "2026-11-06T08:00:00Z"}]},
