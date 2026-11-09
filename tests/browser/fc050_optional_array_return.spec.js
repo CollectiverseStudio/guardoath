@@ -222,6 +222,63 @@ test("FC-050 indexed optional return passes before return and blocks an invalid 
         ]);
       expect(incompleteNested.effective_action).toBe("flag");
     }
+
+    // An earlier mandatory sibling establishes the return-record boundary.
+    // A later, closer sibling must not move that boundary into an absent
+    // details array and silently approve an incomplete recorded return.
+    const siblingBaseline = await read();
+    const siblingSaved = await request.post("/v1/tenants/current/checks", {headers, data: {
+      revision: siblingBaseline.revision, changes: {
+        advanced_conversion_time: [{
+          rule_id: "ui_optional_return", kind: "lifecycle_chronology",
+          fields: {
+            order_at: "/life/order", shipment_at: "/life/shipment",
+            delivery_at: "/life/return/received",
+            return_at: "/life/return/details/0/at"
+          },
+          stages: ["input", "output"]
+        }]
+      }
+    }});
+    expect(siblingSaved.status(), (await siblingSaved.text()).slice(0, 200)).toBe(200);
+    await connect(page);
+    const siblingRule = (await read()).advanced_conversion_time[0];
+    expect(siblingRule.fields.return_at).toBe("/life/return/details/0/at");
+    await page.locator("#rule-search").fill("ui_optional_return");
+    await expect(page.locator('tr.rule-row[data-rule="business.ui_optional_return"]')).toBeVisible();
+    await page.locator("#rule-search").fill("");
+
+    const siblingGood = await jointRequest("output", {
+      life: {order: "2026-11-06T09:00:00Z", shipment: "2026-11-06T10:00:00Z",
+        return: {received: "2026-11-06T11:00:00Z", details: [{at: "2026-11-06T12:00:00Z"}]}},
+      summary: {count: 2, limit: 3}
+    });
+    expect(siblingGood.findings.filter(f => f.rule_id.startsWith("business."))).toEqual([]);
+
+    await page.locator("#input-format").selectOption("json");
+    await page.locator("#input-content").fill(JSON.stringify({
+      life: {order: "2026-11-06T09:00:00Z", shipment: "2026-11-06T10:00:00Z",
+        return: {received: "2026-11-06T11:00:00Z"}},
+      summary: {count: 2, limit: 3}
+    }));
+    const siblingInputRequest = page.waitForResponse(r =>
+      r.url().endsWith("/v1/checks/input") && r.request().method() === "POST");
+    await page.locator("#run-input").click();
+    const siblingInput = await (await siblingInputRequest).json();
+    expect(siblingInput.evaluation_status).toBe("complete");
+    expect(siblingInput.findings.filter(f => f.rule_id.startsWith("business."))
+      .map(f => f.rule_id)).toEqual(["business.ui_optional_return"]);
+    expect(siblingInput.effective_action).toBe("block");
+    await expect(page.locator('#input-results button[aria-label="Review input rule settings for business.ui_optional_return"]')).toHaveCount(1);
+
+    const siblingOutput = await jointRequest("output", {
+      life: {order: "2026-11-06T09:00:00Z", shipment: "2026-11-06T10:00:00Z",
+        return: {received: "2026-11-06T11:00:00Z", details: []}},
+      summary: {count: 2, limit: 3}
+    });
+    expect(siblingOutput.findings.filter(f => f.rule_id.startsWith("business."))
+      .map(f => f.rule_id)).toEqual(["business.ui_optional_return"]);
+    expect(siblingOutput.effective_action).toBe("flag");
   } finally {
     if (resetRequired) {
       const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
