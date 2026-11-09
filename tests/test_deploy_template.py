@@ -321,7 +321,9 @@ def test_the_dashboard_client_has_no_secret_and_cannot_change_its_tenant(templat
     assert client["AllowedOAuthScopes"] == ["openid", "email", "aws.cognito.signin.user.admin"]
     assert client["CallbackURLs"] == client["LogoutURLs"] == [{"Fn::Sub": "https://${DomainName}/dashboard"}]
     assert "custom:tenant_id" in client["ReadAttributes"] and "custom:tenant_id" not in client["WriteAttributes"]
-    assert client["SupportedIdentityProviders"] == ["COGNITO"] and client["PreventUserExistenceErrors"] == "ENABLED"
+    assert client["SupportedIdentityProviders"] == {"Fn::If": [
+        "GoogleLoginEnabled", ["COGNITO", {"Ref": "GoogleIdentityProvider"}], ["COGNITO"]
+    ]} and client["PreventUserExistenceErrors"] == "ENABLED"
 
 
 def test_the_site_function_gets_the_sign_in_settings(template):
@@ -330,3 +332,47 @@ def test_the_site_function_gets_the_sign_in_settings(template):
     assert env["GUARDOATH_COGNITO_CLIENT_ID"] == {"Ref": "UserPoolClient"}
     assert env["GUARDOATH_COGNITO_DOMAIN"] == {"Fn::Sub": "${SignInDomainPrefix}.auth.${AWS::Region}.amazoncognito.com"}
     assert env["GUARDOATH_COGNITO_REDIRECT_URI"] == {"Fn::Sub": "https://${DomainName}/dashboard"}
+
+
+def test_google_sign_in_is_explicitly_provisionable_without_customer_secrets_in_lambda(template):
+    """The original stack advertised Google but only installed COGNITO."""
+    parameters = template["Parameters"]
+    assert parameters["EnableGoogleLogin"]["Default"] == "0"
+    assert parameters["EnableSelfRegistration"]["Default"] == "0"
+    assert parameters["GoogleOAuthClientSecret"]["NoEcho"] is True
+    assert parameters["GoogleOAuthClientSecret"]["Default"] == ""
+    assert parameters["GoogleOAuthClientId"]["Default"] == ""
+    rules = template["Rules"]["GoogleConfiguration"]["Assertions"]
+    assert len(rules) == 2
+    assert "GoogleOAuthClientId" in json.dumps(rules[0]["Assert"])
+    assert "GoogleOAuthClientSecret" in json.dumps(rules[0]["Assert"])
+    assert "EnableSelfRegistration" in json.dumps(rules[1]["Assert"])
+    assert "EnableGoogleLogin" in json.dumps(rules[1]["Assert"])
+    assert template["Conditions"]["GoogleLoginEnabled"] == {
+        "Fn::Equals": [{"Ref": "EnableGoogleLogin"}, "1"]
+    }
+
+    google = template["Resources"]["GoogleIdentityProvider"]
+    assert google["Type"] == "AWS::Cognito::UserPoolIdentityProvider"
+    assert google["Condition"] == "GoogleLoginEnabled"
+    assert google["Properties"]["UserPoolId"] == {"Ref": "UserPool"}
+    assert google["Properties"]["ProviderType"] == google["Properties"]["ProviderName"] == "Google"
+    assert google["Properties"]["ProviderDetails"] == {
+        "client_id": {"Ref": "GoogleOAuthClientId"},
+        "client_secret": {"Ref": "GoogleOAuthClientSecret"},
+        "authorize_scopes": "email profile openid"
+    }
+    assert google["Properties"]["AttributeMapping"] == {
+        "email": "email", "email_verified": "email_verified"
+    }
+    client = template["Resources"]["UserPoolClient"]["Properties"]
+    assert client["SupportedIdentityProviders"]["Fn::If"][1][1] == {"Ref": "GoogleIdentityProvider"}
+    assert "custom:tenant_id" not in client["WriteAttributes"]
+
+    env = template["Resources"]["SiteFunction"]["Properties"]["Environment"]["Variables"]
+    assert env["GUARDOATH_SELF_REGISTRATION"] == {"Ref": "EnableSelfRegistration"}
+    assert "GoogleOAuthClientSecret" not in json.dumps(env)
+    assert not any("GOOGLE" in name for name in env)
+    assert template["Outputs"]["GoogleLoginConfigured"]["Value"] == {
+        "Fn::If": ["GoogleLoginEnabled", "true", "false"]
+    }
