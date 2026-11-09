@@ -42,8 +42,12 @@ def _valid(rule, payload):
     for name, pointer in rule.fields.items():
         try:
             values[name] = resolve(payload, pointer)
-        except KeyError:
-            # A return is legitimately absent before the item has been returned.
+        except (KeyError, IndexError):
+            # A return may be absent before any return event: object-key
+            # absence raises KeyError, while an unpopulated JSON-array slot
+            # (for example /events/3/at on a three-event timeline) raises
+            # IndexError. Only the optional return field may be absent;
+            # required order/shipment/delivery fields still fail closed.
             if rule.kind == "lifecycle_chronology" and name == "return_at":
                 continue
             raise
