@@ -475,18 +475,22 @@ function updatePolicyScopeNotes() {
       (!check.stages || check.stages.includes(stage)) && checkIsOn(check.id, stage));
     const incompatible = enabled.filter(check => formatNeeds[check.id] && formatNeeds[check.id] !== format);
     const selected = (examplePickers[stage]?.check?.value || "");
-    let message = "";
+    const warnings = [];
     if (incompatible.length) {
       const names = incompatible.map(check => check.id === "schema" ? "JSON Schema" : (checkNames[check.id] || check.id));
-      message = "Full-policy test: " + names.join(", ") + " cannot inspect " +
-        (format === "json" ? "JSON" : "text") + " messages. A required check may be skipped, leaving the result incomplete and subject to the tenant failure action (often Block). Selecting another check's example does not disable these checks.";
-    } else if (format === "json" && enabled.some(check => check.id === "schema") && selected && selected !== "schema") {
-      message = "Full-policy test: the enabled JSON Schema check also validates this " +
-        "sample from another check. A well-formed JSON message can still violate your saved " +
-        "schema and be flagged or blocked. Choosing an example does not isolate its check.";
+      warnings.push("Full-policy test: " + names.join(", ") + " cannot inspect " +
+        (format === "json" ? "JSON" : "text") + " messages. A required check may be skipped, leaving the result incomplete and subject to the tenant failure action (often Block). Selecting another check's example does not disable these checks.");
     }
-    note.textContent = message;
-    note.hidden = !message;
+    // More than one incompatibility can occur at once: never conceal the
+    // independently running JSON Schema validator behind a text-only check's
+    // format warning when testing an unrelated JSON rule.
+    if (format === "json" && enabled.some(check => check.id === "schema") && selected && selected !== "schema") {
+      warnings.push("The enabled JSON Schema check also validates this sample from another check. " +
+        "A well-formed JSON message can still violate your saved schema and be flagged or blocked. " +
+        "Choosing an example does not isolate its check.");
+    }
+    note.textContent = warnings.join(" ");
+    note.hidden = !warnings.length;
   }
 }
 function formatWarning(id) {
