@@ -6,6 +6,7 @@ the shared API would reject for depth or content length. All values are syntheti
 """
 import json
 
+from guardoath.business import exact_number
 import pytest
 from fastapi.testclient import TestClient
 
@@ -59,7 +60,8 @@ def test_all_nonreference_examples_are_rule_certified_at_normal_json_depth(famil
     for name, expected in (("example", False), ("look_alike", True)):
         sample = metadata[name]
         assert isinstance(sample, str) and len(sample) <= 32_000
-        assert bool(validator(rule, parse_json(sample))) is expected
+        parse_json(sample)  # strict shared admission precedes exact Decimal decode
+        assert bool(validator(rule, json.loads(sample, parse_float=exact_number))) is expected
 
 
 @pytest.mark.parametrize("family,kind", CASES)
