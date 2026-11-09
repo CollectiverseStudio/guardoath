@@ -19,15 +19,31 @@ test("public identity and conversion editors preserve hidden reference definitio
     expect(reset.status()).toBe(200);
     resetRequired = true;
     const initial = await summary();
-    const plain = await request.post("/v1/tenants/current/checks",{headers,data:{
+    // The reset demo starts with ordinary comparison templates. A live
+    // cross_field check with *no* rules must fail admission rather than
+    // persisting an incomplete policy; assert the actual API boundary.
+    const emptyEnabled = await request.post("/v1/tenants/current/checks",{headers,data:{
       revision:initial.revision, changes:{
         comparisons:[],input_check_cross_field:"block",output_check_cross_field:"flag"
       }
     }});
+    expect(emptyEnabled.status()).toBe(422);
+    expect((await summary()).revision).toBe(initial.revision);
+
+    // First clear the reset templates and turn cross_field off atomically.
+    // Then the owner-only references endpoint installs private definitions
+    // and enables both stages *in the same revisioned transaction*.
+    const plain = await request.post("/v1/tenants/current/checks",{headers,data:{
+      revision:initial.revision, changes:{
+        comparisons:[],input_check_cross_field:null,output_check_cross_field:null
+      }
+    }});
     expect(plain.status(),(await plain.text()).slice(0,150)).toBe(200);
     const current = await summary();
+    expect(current.comparisons).toEqual([]);
     const references = await request.post("/v1/tenants/current/references",{headers,data:{
       revision:current.revision, changes:{
+        input_check_cross_field:"block",output_check_cross_field:"flag",
         advanced_identity:[{rule_id:"private_lot",kind:"quarantine_exclusion",
           fields:{requested_lot:"/lot"},trusted_values:["SYNTHETIC_PRIVATE_LOT"],
           stages:["input","output"]}],
