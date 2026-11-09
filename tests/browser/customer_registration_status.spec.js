@@ -118,3 +118,98 @@ test("registered but unpaid customer sees inactive plan and cannot click Create 
 
 
 });
+
+
+test("deployment without Google provider does not advertise a broken login or registration", async ({page}) => {
+  await page.route("**/v1/sign-in", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      authorize_url: "https://example.invalid/oauth2/authorize",
+      logout_url: "https://example.invalid/logout",
+      client_id: "synthetic", redirect_uri: "http://localhost/dashboard",
+      scope: "openid email", registration_enabled: false, google_provider: null
+    })
+  }));
+  await page.goto("/dashboard");
+  await expect(page.locator("#sign-in-box")).toBeVisible();
+  await expect(page.locator("#sign-in")).toBeHidden();
+  await expect(page.locator("#register-account")).toBeHidden();
+  await expect(page.locator("#account-status")).toContainText("not yet configured");
+});
+
+
+test("verified Google session survives transient registration failure and retries as unpaid", async ({page, request}) => {
+  const issued = await request.post("/v1/demo-users/demo2/key", {data: {}});
+  expect(issued.status()).toBe(200);
+  const demoKey = (await issued.json()).api_key;
+  const original = await request.get("/v1/applications/current", {
+    headers: {"X-GuardOath-Key": demoKey}
+  });
+  expect(original.status()).toBe(200);
+  const application = await original.json();
+  application.application_id = "usr-retry-unpaid";
+  application.tenant = {
+    ...application.tenant, tenant_id: "usr-retry-unpaid", display_name: "New customer",
+    demo: false, subscription_status: "inactive", subscription_active: false,
+    monthly_allowance: 0, used: 0
+  };
+  await page.addInitScript(() => {
+    sessionStorage.setItem("guardoath-session", "synthetic-ui-session-only");
+  });
+  await page.route("**/v1/sign-in", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      authorize_url: "https://example.invalid/oauth2/authorize",
+      logout_url: "https://example.invalid/logout", client_id: "synthetic",
+      redirect_uri: "http://localhost/dashboard", scope: "openid email",
+      registration_enabled: true, google_provider: "Google"
+    })
+  }));
+  let registered = false, calls = 0;
+  await page.route("**/v1/account/status", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      registered, registration_enabled: true,
+      tenant_id: registered ? "usr-retry-unpaid" : null,
+      subscription_status: registered ? "inactive" : "not_registered",
+      can_validate: false
+    })
+  }));
+  await page.route("**/v1/register", async route => {
+    calls++;
+    expect(route.request().method()).toBe("POST");
+    expect(route.request().headers()["x-guardoath-session"]).toBe("synthetic-ui-session-only");
+    expect(route.request().headers()["content-type"]).toContain("application/json");
+    expect(route.request().postData()).toBe("{}");
+    if (calls === 1) {
+      await route.fulfill({status: 503, contentType: "application/json",
+        body: JSON.stringify({detail: "Registration unavailable"})});
+    } else {
+      registered = true;
+      await route.fulfill({status: 201, contentType: "application/json",
+        body: JSON.stringify({
+          tenant_id: "usr-retry-unpaid", subscription_status: "inactive",
+          can_validate: false, next_step: "Choose a subscription"
+        })});
+    }
+  });
+  await page.route("**/v1/applications/current", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify(application)
+  }));
+  await page.route("**/v1/tenants/current/keys", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({keys: [], max_keys: 2})
+  }));
+
+  await page.goto("/dashboard");
+  await expect(page.locator("#register-account")).toBeVisible();
+  await page.locator("#register-account").click();
+  await expect(page.locator("#account-status")).toContainText("Registration not completed (HTTP 503)");
+  expect(await page.evaluate(() => sessionStorage.getItem("guardoath-session")))
+    .toBe("synthetic-ui-session-only");
+  await expect(page.locator("#register-account")).toBeEnabled();
+  await page.locator("#register-account").click();
+  await expect(page.locator("#account-status")).toContainText("Subscription: inactive");
+  await expect(page.locator("#register-account")).toBeHidden();
+  await expect(page.locator("#key-create")).toBeDisabled();
+  expect(calls).toBe(2);
+});
