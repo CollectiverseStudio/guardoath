@@ -178,7 +178,9 @@
       }
       const existing = (tenant.record_rules || []).some(rule => rule.rule_id === "business." + id);
       if (draft.some(rule => rule.rule_id === id && rule.rule_id !== editing) ||
-          (editing === null && existing && !original.some(rule => rule.rule_id === id))) {
+          (editing === null && existing && !original.some(rule => rule.rule_id === id)) ||
+          (window.comparisonEditor &&
+           window.comparisonEditor.otherFamilyDraftHasId(id, "advanced_arithmetic"))) {
         message.textContent = "Rule ID already exists on the tenant."; return;
       }
       const rule = {rule_id: id, kind: type.value, fields: pointers, stages};
