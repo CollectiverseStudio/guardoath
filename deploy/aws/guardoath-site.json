@@ -61,6 +61,37 @@
    "Default": "guardoath-sign-in",
    "AllowedPattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$",
    "Description": "Prefix of the tenant sign-in page: <prefix>.auth.<region>.amazoncognito.com. Must be unused in the region."
+  },
+  "EnableGoogleLogin": {
+   "Type": "String",
+   "Default": "0",
+   "AllowedValues": [
+    "0",
+    "1"
+   ],
+   "Description": "Explicitly opt in to the Google OAuth provider after verifying credentials and reviewing Cognito costs."
+  },
+  "GoogleOAuthClientId": {
+   "Type": "String",
+   "Default": "",
+   "AllowedPattern": "^$|^[0-9A-Za-z_.-]+\\.apps\\.googleusercontent\\.com$",
+   "Description": "Google OAuth Web Application client ID; only used when EnableGoogleLogin=1."
+  },
+  "GoogleOAuthClientSecret": {
+   "Type": "String",
+   "Default": "",
+   "NoEcho": true,
+   "MaxLength": 256,
+   "Description": "Google OAuth Web Application client secret. Supply securely as a NoEcho stack parameter; never commit to source or Lambda environment."
+  },
+  "EnableSelfRegistration": {
+   "Type": "String",
+   "Default": "0",
+   "AllowedValues": [
+    "0",
+    "1"
+   ],
+   "Description": "Opt-in customer registration after verified Google OAuth configuration; registration never grants a paid entitlement."
   }
  },
  "Rules": {
@@ -76,6 +107,76 @@
       ]
      },
      "AssertDescription": "Deploy in us-east-1: the CloudFront certificate and the CLOUDFRONT-scope web ACL must be there."
+    }
+   ]
+  },
+  "GoogleConfiguration": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Or": [
+       {
+        "Fn::Equals": [
+         {
+          "Ref": "EnableGoogleLogin"
+         },
+         "0"
+        ]
+       },
+       {
+        "Fn::And": [
+         {
+          "Fn::Not": [
+           {
+            "Fn::Equals": [
+             {
+              "Ref": "GoogleOAuthClientId"
+             },
+             ""
+            ]
+           }
+          ]
+         },
+         {
+          "Fn::Not": [
+           {
+            "Fn::Equals": [
+             {
+              "Ref": "GoogleOAuthClientSecret"
+             },
+             ""
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "Google login needs a Google OAuth Web Application client ID and nonempty private secret when enabled."
+    },
+    {
+     "Assert": {
+      "Fn::Or": [
+       {
+        "Fn::Equals": [
+         {
+          "Ref": "EnableSelfRegistration"
+         },
+         "0"
+        ]
+       },
+       {
+        "Fn::Equals": [
+         {
+          "Ref": "EnableGoogleLogin"
+         },
+         "1"
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "Public self-registration requires Google login to be enabled."
     }
    ]
   }
@@ -227,6 +328,9 @@
       },
       "GUARDOATH_COGNITO_REDIRECT_URI": {
        "Fn::Sub": "https://${DomainName}/dashboard"
+      },
+      "GUARDOATH_SELF_REGISTRATION": {
+       "Ref": "EnableSelfRegistration"
       }
      }
     }
@@ -825,9 +929,20 @@
       "Fn::Sub": "https://${DomainName}/dashboard"
      }
     ],
-    "SupportedIdentityProviders": [
-     "COGNITO"
-    ],
+    "SupportedIdentityProviders": {
+     "Fn::If": [
+      "GoogleLoginEnabled",
+      [
+       "COGNITO",
+       {
+        "Ref": "GoogleIdentityProvider"
+       }
+      ],
+      [
+       "COGNITO"
+      ]
+     ]
+    },
     "ExplicitAuthFlows": [
      "ALLOW_REFRESH_TOKEN_AUTH"
     ],
@@ -849,6 +964,30 @@
     "WriteAttributes": [
      "email"
     ]
+   }
+  },
+  "GoogleIdentityProvider": {
+   "Type": "AWS::Cognito::UserPoolIdentityProvider",
+   "Condition": "GoogleLoginEnabled",
+   "Properties": {
+    "UserPoolId": {
+     "Ref": "UserPool"
+    },
+    "ProviderName": "Google",
+    "ProviderType": "Google",
+    "ProviderDetails": {
+     "client_id": {
+      "Ref": "GoogleOAuthClientId"
+     },
+     "client_secret": {
+      "Ref": "GoogleOAuthClientSecret"
+     },
+     "authorize_scopes": "email profile openid"
+    },
+    "AttributeMapping": {
+     "email": "email",
+     "email_verified": "email_verified"
+    }
    }
   }
  },
@@ -906,6 +1045,30 @@
    "Value": {
     "Fn::Sub": "${SignInDomainPrefix}.auth.${AWS::Region}.amazoncognito.com"
    }
+  },
+  "GoogleLoginConfigured": {
+   "Value": {
+    "Fn::If": [
+     "GoogleLoginEnabled",
+     "true",
+     "false"
+    ]
+   }
+  },
+  "SelfRegistrationConfigured": {
+   "Value": {
+    "Ref": "EnableSelfRegistration"
+   }
+  }
+ },
+ "Conditions": {
+  "GoogleLoginEnabled": {
+   "Fn::Equals": [
+    {
+     "Ref": "EnableGoogleLogin"
+    },
+    "1"
+   ]
   }
  }
 }
