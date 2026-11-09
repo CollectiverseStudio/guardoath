@@ -27,6 +27,16 @@ test("FC-050 optional indexed return is configured in dashboard and enforced on 
     const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
     expect(reset.status()).toBe(200);
     needsReset = true;
+    // The default demo has unrelated ordinary comparison pointers. Keep all
+    // privacy checks enabled, but flag normal timestamp PII findings so they
+    // do not mask the Field Comparison action under test.
+    const initial = await tenant(request, headers);
+    const isolated = await request.post("/v1/tenants/current/checks", {headers, data: {
+      revision: initial.revision, changes: {
+        comparisons: [], input_check_pii: "flag", output_check_pii: "flag"
+      }
+    }});
+    expect(isolated.status(), (await isolated.text()).slice(0, 160)).toBe(200);
     const before = await tenant(request, headers);
     await connect(page);
 
@@ -95,7 +105,17 @@ test("FC-050 optional indexed return is configured in dashboard and enforced on 
       r.request().method() === "POST");
     await page.locator("#run-input").click();
     const inputResult = await (await inputCall).json();
+    expect(inputResult.evaluation_status).toBe("complete");
     expect(inputResult.findings.map(f => f.rule_id)).not.toContain("business.fc050_return");
+    await expect(page.locator("#run-output")).toBeEnabled();
+    await page.getByRole("button", {name: "Try no-return output conversion fc050_return"}).click();
+    await expect(page.locator("#output-format")).toHaveValue("json");
+    const outputCall = page.waitForResponse(r => r.url().endsWith("/v1/checks/output") &&
+      r.request().method() === "POST");
+    await page.locator("#run-output").click();
+    const outputResult = await (await outputCall).json();
+    expect(outputResult.evaluation_status).toBe("complete");
+    expect(outputResult.findings.map(f => f.rule_id)).not.toContain("business.fc050_return");
   } finally {
     if (needsReset) {
       const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
