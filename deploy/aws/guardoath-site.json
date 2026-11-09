@@ -331,6 +331,9 @@
       },
       "GUARDOATH_SELF_REGISTRATION": {
        "Ref": "EnableSelfRegistration"
+      },
+      "GUARDOATH_GOOGLE_LOGIN_ENABLED": {
+       "Ref": "EnableGoogleLogin"
       }
      }
     }
