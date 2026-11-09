@@ -68,6 +68,12 @@ def _return_event_path(rule, pointer):
     # entirely absent return. Exclude unrelated-root fields from the boundary
     # calculation, as they cannot establish where this return record begins.
     common = min(shared_boundaries) if shared_boundaries else 0
+    # A distinct-root optional return may be an array element, such as
+    # /returns/0/at. An empty /returns collection means no return has been
+    # recorded, not an incomplete event. Inspect the indexed element itself.
+    # An explicit return_event_pointer continues to take precedence.
+    if common == 0 and len(segments) >= 3 and segments[1].isdecimal():
+        return "/" + "/".join(segments[:2])
     return "/" + "/".join(segments[:min(common + 1, len(segments))])
 
 
