@@ -137,4 +137,9 @@ def test_authenticated_tenant_persists_deep_rule_and_hides_bad_examples_in_api(f
         assert result["evaluation_status"] == "incomplete"
         assert any(f["rule_id"] == "business.invalid_json" for f in result["findings"])
         assert raw_sample not in checked.text
-    assert store.get(tenant_id) == saved
+    # The two authenticated Engine calls are metered even when their *inner*
+    # JSON cannot be admitted. Usage increments must not be confused with a
+    # tenant-policy edit, stale revision, or a successful validation.
+    after = store.get(tenant_id)
+    assert sum(after.usage.values()) == sum(saved.usage.values()) + 2
+    assert after.model_dump(exclude={"usage"}) == saved.model_dump(exclude={"usage"})
