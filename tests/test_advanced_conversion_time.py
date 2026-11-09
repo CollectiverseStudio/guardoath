@@ -268,6 +268,8 @@ def test_fc050_distinct_root_empty_return_array_is_optional_but_recorded_item_is
             assert clean.evaluation_status == "complete"
             assert clean.findings == () and clean.effective_action == Action.ALLOW
         for malformed in (
+            {**required, "returns": {}},
+            {**required, "returns": {"unexpected": 1}},
             {**required, "returns": [{}]},
             {**required, "returns": [{"at": None}]},
             {**required, "returns": [{"at": "2026-11-06T08:00:00Z"}]},
