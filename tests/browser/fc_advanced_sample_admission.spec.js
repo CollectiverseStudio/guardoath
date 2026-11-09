@@ -53,7 +53,11 @@ test("deep valid tenant rules persist but unusable arithmetic and identity Try s
     const current = await tenant(request, headers);
     expect(current.revision).toBe(initial.revision + 1);
     expect(current.advanced_arithmetic).toEqual(deep.advanced_arithmetic);
-    expect(current.advanced_identity).toEqual(deep.advanced_identity);
+    // The authoritative model normalizes non-reference identity rules with
+    // an explicitly empty trusted-values set; that is not a leaked reference.
+    expect(current.advanced_identity).toHaveLength(1);
+    expect(current.advanced_identity[0]).toMatchObject(deep.advanced_identity[0]);
+    expect(current.advanced_identity[0].trusted_values).toEqual([]);
     for (const id of ["sample_arith", "sample_identity"]) {
       const row = current.record_rules.find(x => x.rule_id === "business." + id);
       expect(row).toBeTruthy();
