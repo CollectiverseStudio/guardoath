@@ -70,6 +70,13 @@ test("deep valid tenant rules persist but unusable arithmetic and identity Try s
     await connect(page);
     await expect(page.locator('[data-arithmetic-id="sample_arith"]')).toHaveCount(1);
     await expect(page.locator('[data-identity-id="sample_identity"]')).toHaveCount(1);
+    // An absent Try button must not leave the customer guessing why.
+    for (const selector of ['[data-arithmetic-id="sample_arith"]',
+                            '[data-identity-id="sample_identity"]']) {
+      await expect(page.locator(selector)).toContainText("strict JSON admission");
+      await expect(page.locator(selector)).toContainText("saved rule still runs");
+      await expect(page.locator(selector)).toContainText("shallower JSON pointers");
+    }
     for (const family of ["arithmetic", "identity"]) {
       for (const kind of ["violating", "benign"]) {
         for (const stage of ["input", "output"]) {
@@ -97,6 +104,10 @@ test("deep valid tenant rules persist but unusable arithmetic and identity Try s
       expect(typeof row.look_alike).toBe("string");
     }
     await connect(page);
+    for (const selector of ['[data-arithmetic-id="sample_arith"]',
+                            '[data-identity-id="sample_identity"]']) {
+      await expect(page.locator(selector)).not.toContainText("strict JSON admission");
+    }
     await expect(page.getByRole("button", {name: "Try violating input arithmetic sample_arith"}))
       .toHaveCount(1);
     await expect(page.getByRole("button", {name: "Try benign output arithmetic sample_arith"}))
