@@ -11,6 +11,25 @@
   function delta() {
     return available && JSON.stringify(original) !== JSON.stringify(draft) ? copy(draft) : null;
   }
+  // Inspect only pending public rule IDs. Protected reference values never
+  // enter another editor's draft or this shared tenant-wide name check.
+  function otherFamilyDraftHasId(id, owner) {
+    for (const [family, name] of [
+      ["comparisons", "comparisonEditor"],
+      ["advanced_arithmetic", "arithmeticEditor"],
+      ["advanced_identity", "identityEditor"],
+      ["advanced_conversion_time", "conversionEditor"]
+    ]) {
+      if (family === owner) continue;
+      const editor = window[name];
+      const pending = editor && typeof editor.delta === "function" ? editor.delta() : null;
+      // Owner-provisioned identity/FX references have a scoped editable delta.
+      const rules = Array.isArray(pending) ? pending :
+        pending && Array.isArray(pending.editable) ? pending.editable : [];
+      if (rules.some(rule => rule && rule.rule_id === id)) return true;
+    }
+    return false;
+  }
   function actions(stage, current) {
     const result = {...current};
     for (const item of original) {
@@ -482,5 +501,5 @@
     });
     draw();
   }
-  window.comparisonEditor = {render, delta, actions};
+  window.comparisonEditor = {render, delta, actions, otherFamilyDraftHasId};
 })();
