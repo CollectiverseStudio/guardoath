@@ -72,6 +72,33 @@ class MemoryTenantStore:
             self._records[tenant_id] = updated
             return updated
 
+    def apply_verified_subscription(self, tenant_id: str, *, customer_id: str,
+                                    subscription_id: str, provider_subscription: dict,
+                                    expected_revision: int) -> TenantRecord:
+        """Atomically apply an independently fetched Stripe subscription snapshot.
+
+        The caller must obtain provider_subscription through the server-side Stripe
+        client, never from a webhook body or customer input. A binding is required
+        on the existing tenant; this method cannot establish one.
+        """
+        from guardoath.billing import BillingMode
+        from guardoath.subscription_reconciliation import StripeBinding, reconcile_subscription
+        with self._lock:
+            current = self._records.get(tenant_id)
+            if current is None:
+                raise TenantNotFound(tenant_id)
+            if current.revision != expected_revision:
+                raise TenantConflict("The tenant record changed; reload it and try again")
+            if current.demo or current.billing_mode != BillingMode.STRIPE or current.payer_id != customer_id:
+                raise ValueError("Tenant has no matching Stripe billing account")
+            decision = reconcile_subscription(StripeBinding(tenant_id, customer_id, subscription_id),
+                                              provider_subscription)
+            updated = TenantRecord.model_validate({**current.model_dump(),
+                "subscription_status": decision.status, "revision": current.revision + 1,
+                "updated_at": _now()})
+            self._records[tenant_id] = updated
+            return updated
+
     def count_check(self, tenant_id: str, month: str | None = None) -> tuple[int, bool]:
         """Count one check for the month. Returns (used, over_allowance).
 
