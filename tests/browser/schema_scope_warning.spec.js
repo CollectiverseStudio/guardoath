@@ -85,6 +85,12 @@ test("customer sees concurrent-schema warning when testing another rule; engine 
     expect(fromDashboard.findings.map(f => f.rule_id)).toContain("schema.invalid");
     await expect(page.locator("#input-results")).toContainText("A required field is missing.");
     await expect(page.locator("#input-results")).toContainText("An unexpected field is present.");
+    // The customer can now distinguish the actual schema finding from the
+    // unrelated check they meant to test, without implying an isolated run.
+    await expect(page.locator("#input-results .check-attribution")).toContainText(
+      "Checks reporting findings: schema");
+    await expect(page.locator("#input-results .check-attribution")).toContainText(
+      "All enabled checks participate in the final policy decision");
     expect((await tenant(request, headers)).revision).toBe(saved.revision);
     expect(JSON.stringify(fromDashboard.findings)).not.toContain("unrelated");
 
