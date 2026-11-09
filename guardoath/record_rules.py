@@ -560,12 +560,15 @@ def conversion_time_rule(rule) -> dict:
     no_return_example = None
     if rule.kind == "lifecycle_chronology" and samples:
         from guardoath.advanced_conversion_time import _valid
+        from guardoath.json_data import parse_json
         try:
             candidate = _field_document(
                 {role: pointer for role, pointer in rule.fields.items() if role != "return_at"},
                 {role: value for role, value in samples[0].items() if role != "return_at"},
             )
-            if _valid(rule, json.loads(candidate)):
+            # Passing the rule alone is insufficient: the shared checker first
+            # enforces the JSON byte, nesting, item and finite-number limits.
+            if _valid(rule, parse_json(candidate)):
                 no_return_example = candidate
         except (ValueError, KeyError, IndexError, TypeError, OverflowError, ArithmeticError):
             # Never advertise an unchecked or failing example as benign.
