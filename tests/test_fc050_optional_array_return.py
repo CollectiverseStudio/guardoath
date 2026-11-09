@@ -594,3 +594,29 @@ def test_customer_no_return_sample_only_when_real_engine_accepts_it(name, fields
         else:
             assert metadata["no_return_example"] is None
     assert store.get(TENANT).advanced_conversion_time[0].rule_id == rule["rule_id"]
+
+
+def test_no_return_customer_sample_respects_strict_json_depth_admission():
+    """The per-rule chronology alone can pass JSON that the shared checker rejects.
+
+    The dashboard must never advertise such a sample as a clean check; this
+    regression preserves the shipped 32-container JSON limit rather than
+    increasing it or bypassing the parser.
+    """
+    from types import SimpleNamespace
+    from guardoath.record_rules import record_rules
+
+    parent = "/" + "/".join(["nested"] * 33)
+    fields = {
+        "order_at": parent + "/order_at",
+        "shipment_at": parent + "/shipment_at",
+        "delivery_at": parent + "/delivery_at",
+        "return_at": parent + "/return_at",
+    }
+    rule = AdvancedConversionTimeRule.model_validate({
+        **RULE, "rule_id": "strict_json_sample_depth", "fields": fields,
+    })
+    metadata = record_rules(SimpleNamespace(
+        comparisons=(), required_sections=(), advanced_conversion_time=(rule,),
+    ))["business.strict_json_sample_depth"]
+    assert metadata["no_return_example"] is None
