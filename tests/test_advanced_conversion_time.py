@@ -245,3 +245,39 @@ def test_authenticated_tenant_api_saves_all_four_and_enforces_stage_actions():
     assert intruder.status_code == 403
     assert store.get(tenant).used(usage_month()) == 2
     assert store.get(other).used(usage_month()) == 0
+
+
+def test_fc050_distinct_root_empty_return_array_is_optional_but_recorded_item_is_not():
+    """An empty return collection is benign; an existing incomplete element is not."""
+    timestamp_fields = {
+        "order_at": "/order/at",
+        "shipment_at": "/shipment/at",
+        "delivery_at": "/delivery/at",
+        "return_at": "/returns/0/at",
+    }
+    item = AdvancedConversionTimeRule(
+        rule_id="array_return", kind="lifecycle_chronology", fields=timestamp_fields)
+    required = {
+        "order": {"at": "2026-11-06T09:00:00Z"},
+        "shipment": {"at": "2026-11-06T10:00:00Z"},
+        "delivery": {"at": "2026-11-06T11:00:00Z"},
+    }
+    for stage in (Stage.INPUT, Stage.OUTPUT):
+        for absent in ({**required}, {**required, "returns": []}):
+            clean = evaluate((item,), absent, stage)
+            assert clean.evaluation_status == "complete"
+            assert clean.findings == () and clean.effective_action == Action.ALLOW
+        for malformed in (
+            {**required, "returns": [{}]},
+            {**required, "returns": [{"at": None}]},
+            {**required, "returns": [{"at": "2026-11-06T08:00:00Z"}]},
+        ):
+            blocked = evaluate((item,), malformed, stage)
+            assert blocked.evaluation_status == "complete"
+            assert {finding.rule_id for finding in blocked.findings} == {
+                "business.array_return"
+            }
+            assert blocked.effective_action == Action.BLOCK
+            assert "2026-11-06" not in str(blocked.findings)
+        valid_return = {**required, "returns": [{"at": "2026-11-06T12:00:00Z"}]}
+        assert evaluate((item,), valid_return, stage).findings == ()
