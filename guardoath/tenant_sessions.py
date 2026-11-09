@@ -165,6 +165,12 @@ class CognitoSessions:
         if flag not in {"0", "1"}:
             raise ValueError("GUARDOATH_SELF_REGISTRATION must be 0 or 1")
         self.registration_enabled = flag == "1"
+        google = os.getenv("GUARDOATH_GOOGLE_LOGIN_ENABLED", "0")
+        if google not in {"0", "1"}:
+            raise ValueError("GUARDOATH_GOOGLE_LOGIN_ENABLED must be 0 or 1")
+        self.google_enabled = google == "1"
+        if self.registration_enabled and not self.google_enabled:
+            raise ValueError("Public registration requires a configured Google login provider")
         self.issuer = f"https://cognito-idp.{self.region}.amazonaws.com/{pool_id}"
         self.jwks_url = self.issuer + "/.well-known/jwks.json"
         self._post, self._get, self._clock, self._wall = post, get, clock, wall
@@ -191,7 +197,7 @@ class CognitoSessions:
                 "logout_url": f"https://{self.domain}/logout", "client_id": self.client_id,
                 "redirect_uri": self.redirect_uri, "scope": " ".join(SCOPES),
                 "registration_enabled": self.registration_enabled,
-                "google_provider": "Google"}
+                "google_provider": "Google" if self.google_enabled else None}
 
     # Step 1: local checks
 
