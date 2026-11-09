@@ -202,3 +202,69 @@ def test_same_object_optional_return_timestamp_remains_omittable():
         assert conversion_time_findings({"life": {**life, "return_at": AFTER}}, (rule,), stage) == ()
         found = conversion_time_findings({"life": {**life, "return_at": None}}, (rule,), stage)
         assert [f.rule_id for f in found] == ["business.same_object_optional_return"]
+
+
+def test_nested_array_return_event_requires_complete_timestamp_through_tenant_api():
+    """A recorded fourth event may not hide a missing deeper array timestamp.
+
+    This exercises the saved rule, same shared Engine, both tenant stages and
+    the real hosted API. An unrecorded fourth event remains legitimate.
+    """
+    nested = {
+        **RULE,
+        "rule_id": "nested_array_return",
+        "fields": {**RULE["fields"], "return_at": "/events/3/details/0/at"},
+    }
+    api, store, headers = _client()
+    initial = store.get(TENANT)
+    saved = api.post("/v1/tenants/current/checks", headers=headers, json={
+        "revision": initial.revision,
+        "changes": {
+            "advanced_conversion_time": [nested],
+            "input_check_cross_field": "block",
+            "output_check_cross_field": "flag",
+        },
+    })
+    assert saved.status_code == 200, saved.text[:200]
+    persisted = store.get(TENANT)
+    assert persisted.revision == initial.revision + 1
+    assert persisted.advanced_conversion_time[0].fields["return_at"] == nested["fields"]["return_at"]
+    listing = api.get("/v1/applications/current", headers=headers)
+    assert listing.status_code == 200
+    assert "business.nested_array_return" in {
+        row["rule_id"] for row in listing.json()["tenant"]["record_rules"]
+    }
+
+    first_three = [{"at": ORDER}, {"at": SHIPMENT}, {"at": DELIVERY}]
+    good = [
+        {"events": first_three},
+        {"events": first_three + [{"details": [{"at": AFTER}]}]},
+    ]
+    bad = [
+        # The fourth event exists. Only the nested timestamp is missing.
+        {"events": first_three + [{}]},
+        {"events": first_three + [{"details": []}]},
+        {"events": first_three + [{"details": [{}]}]},
+        {"events": first_three + [{"details": [{"at": None}]}]},
+        {"events": first_three + [{"details": [{"at": BEFORE}]}]},
+        # The missing third *mandatory* event is never optional.
+        {"events": first_three[:2]},
+    ]
+    for stage, action in (("input", "block"), ("output", "flag")):
+        for document in good:
+            response = _check(api, headers, stage, document)
+            assert response["effective_action"] == "allow"
+            assert not any(
+                item["rule_id"] == "business.nested_array_return"
+                for item in response["findings"]
+            )
+        for document in bad:
+            response = _check(api, headers, stage, document)
+            assert response["effective_action"] == action
+            assert {item["rule_id"] for item in response["findings"]} == {
+                "business.nested_array_return"
+            }
+            assert all(
+                ORDER not in item["explanation"] and BEFORE not in item["explanation"]
+                for item in response["findings"]
+            )
