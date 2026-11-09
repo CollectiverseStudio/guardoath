@@ -135,9 +135,9 @@ test("customer saves and executes ordinary, arithmetic and conversion rules toge
     // Actual dashboard must identify all three independently enforced rule IDs,
     // not just name the shared cross_field checker. No mock API/UI responses.
     await expect(page.locator("#input-results .finding-rule-id").filter({hasText: /^business\.ui_(load|spend|subtotal)$/})).toHaveCount(ids.length);
-    const shownIds = (await page.locator("#input-results .finding-rule-id").allTextContents())
+    const inputShownIds = (await page.locator("#input-results .finding-rule-id").allTextContents())
       .filter(value => ids.includes(value)).sort();
-    expect(shownIds).toEqual(ids.slice().sort());
+    expect(inputShownIds).toEqual(ids.slice().sort());
     for (const id of ids) {
       await expect(page.locator('#input-results button[aria-label="Review input rule settings for ' + id + '"]'))
         .toHaveCount(1);
@@ -153,9 +153,9 @@ test("customer saves and executes ordinary, arithmetic and conversion rules toge
     expect(output.effective_action).toBe("block");
     expect(ownFindings(output)).toEqual(ids);
     await expect(page.locator("#output-results .finding-rule-id").filter({hasText: /^business\.ui_(load|spend|subtotal)$/})).toHaveCount(ids.length);
-    const shownIds = (await page.locator("#output-results .finding-rule-id").allTextContents())
+    const outputShownIds = (await page.locator("#output-results .finding-rule-id").allTextContents())
       .filter(value => ids.includes(value)).sort();
-    expect(shownIds).toEqual(ids.slice().sort());
+    expect(outputShownIds).toEqual(ids.slice().sort());
     for (const id of ids) {
       await expect(page.locator('#output-results button[aria-label="Review output rule settings for ' + id + '"]'))
         .toHaveCount(1);
