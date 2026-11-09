@@ -100,16 +100,20 @@ def test_authenticated_tenant_persists_deep_rule_and_hides_bad_examples_in_api(f
     client = TestClient(create_app(engine=demo_engine(), credentials={},
                                    tenants=TenantService(store, default_checkers(), secret)))
     headers = {"Authorization": "Bearer " + token}
+    # The MemoryTenantStore persists a revisioned record; the unsaved
+    # constructor default is revision 0 and is not an API-valid revision.
+    initial = store.get(tenant_id)
+    assert initial.revision >= 1
     rule = _rule(family, kind, deep=True)
     response = client.post("/v1/tenants/current/checks", headers=headers, json={
-        "revision": baseline.revision,
+        "revision": initial.revision,
         "changes": {family: [rule.model_dump(mode="json")],
                     "input_check_cross_field": "flag",
                     "output_check_cross_field": "block"},
     })
     assert response.status_code == 200, response.text[:200]
     saved = store.get(tenant_id)
-    assert saved.revision == baseline.revision + 1
+    assert saved.revision == initial.revision + 1
     assert getattr(saved, family) == (rule,)
     listing = client.get("/v1/applications/current", headers=headers)
     assert listing.status_code == 200
