@@ -6,6 +6,8 @@ still produce findings on both stages. All documents and tenants are synthetic.
 """
 import json
 
+import pytest
+
 from fastapi.testclient import TestClient
 
 from guardoath.app import create_app, demo_engine
@@ -471,3 +473,50 @@ def test_explicit_disjoint_return_event_uses_saved_tenant_and_rejects_incomplete
     assert rejected.status_code == 422
     assert store.get(TENANT).revision == persisted.revision
     assert store.get(TENANT).advanced_conversion_time == (expected,)
+
+def test_fc050_event_boundary_must_not_contain_mandatory_timestamp_paths():
+    """A required event inside an optional root makes valid returns appear incomplete."""
+    base = {
+        **RULE,
+        "rule_id": "invalid_optional_event_root",
+        "fields": {
+            "order_at": "/order/at",
+            "shipment_at": "/shipment/at",
+            "delivery_at": "/returns/delivered/at",
+            "return_at": "/returns/latest/at",
+        },
+        "return_event_pointer": "/returns",
+    }
+    # Escaped slash segments obey the same structural rules.
+    for candidate in (
+        base,
+        {
+            **base,
+            "fields": {
+                **base["fields"],
+                "delivery_at": "/audit~1returns/delivered/at",
+                "return_at": "/audit~1returns/latest/at",
+            },
+            "return_event_pointer": "/audit~1returns",
+        },
+    ):
+        with pytest.raises(ValueError, match="cannot contain mandatory lifecycle timestamps"):
+            AdvancedConversionTimeRule.model_validate(candidate)
+        api, store, headers = _client()
+        before = store.get(TENANT)
+        rejected = api.post("/v1/tenants/current/checks", headers=headers, json={
+            "revision": before.revision,
+            "changes": {
+                "advanced_conversion_time": [candidate],
+                "input_check_cross_field": "block",
+                "output_check_cross_field": "flag",
+            },
+        })
+        assert rejected.status_code == 422
+        assert store.get(TENANT) == before
+
+    # A disjoint optional return event is still allowed, even when another
+    # required field lives elsewhere within the same document.
+    valid = {**base, "fields": {**base["fields"], "delivery_at": "/delivery/at"}}
+    accepted = AdvancedConversionTimeRule.model_validate(valid)
+    assert accepted.return_event_pointer == "/returns"
