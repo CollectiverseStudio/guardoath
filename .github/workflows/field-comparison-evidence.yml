@@ -24,6 +24,11 @@ on:
       - "guardoath/static/comparison_editor.js"
       - "guardoath/static/arithmetic_editor.js"
       - "guardoath/static/identity_editor.js"
+      # Protected FC-048 subset and FC-040 serial boundaries are covered by
+      # real Engine/tenant tests and a customer authenticated browser test.
+      - "tests/test_advanced_identity.py"
+      - "tests/test_field_comparison_reference_isolation.py"
+      - "tests/browser/identity_editor.spec.js"
       - "guardoath/static/conversion_editor.js"
       - "tests/browser/field_comparison_unsaved_examples.spec.js"
       - "tests/test_field_comparison_large_tenant_api.py"
