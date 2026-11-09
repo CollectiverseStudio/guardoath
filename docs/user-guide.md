@@ -2252,6 +2252,8 @@ These checks enforce the tenant's own authenticated configuration; **they do not
 
 ### Field Comparisons Batch C — FC-035, FC-042, FC-043, FC-050 (tenant conversion/time rules)
 
+**FC-050 shared event arrays:** With required `order_at=/events/0/at`, `shipment_at=/events/1/at`, `delivery_at=/events/2/at`, and optional `return_at=/events/3/at`, an `events` array containing exactly the first three complete records is a valid unrecorded return. It is **not** necessary for the array to be empty: index 3 is the next unused slot. A fourth element with no timestamp, null/invalid/out-of-order timestamp, a non-array events container, or a configured skipped return index such as `/events/4/at` with only three records fails the saved rule. The same rules apply when the customer supplies the optional event parent explicitly. Mandatory order/shipment/delivery entries are never optional; validation is tenant-controlled at both stages and never establishes external timestamp truth.
+
 **FC-050 optional return arrays:** For separate-root event payloads such as `{"order":{"at":"..."},"shipment":{"at":"..."},"delivery":{"at":"..."},"returns":[]}`, the rule may point `return_at` to `/returns/0/at`. An absent return collection or empty return list means no return was recorded; an existing return element without its timestamp, a null timestamp, or a return earlier than delivery produces a finding. The same behavior applies on Input and Output. When the event boundary cannot be inferred unambiguously, configure `return_event_pointer` explicitly (for example `/returns/0`) using the authenticated Conversion/Time editor. This validates the submitted event sequence, not the external truth of the shipment timestamps.
 
 
