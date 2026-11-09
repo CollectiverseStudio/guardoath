@@ -620,3 +620,36 @@ def test_no_return_customer_sample_respects_strict_json_depth_admission():
         comparisons=(), required_sections=(), advanced_conversion_time=(rule,),
     ))["business.strict_json_sample_depth"]
     assert metadata["no_return_example"] is None
+    # The original full-return samples must also be withheld: the strict
+    # admission parser rejects their 33-container payload before FC-050 runs.
+    assert metadata["look_alike"] is None
+    assert metadata["example"] is None
+    for field in ("example_unavailable", "look_alike_unavailable"):
+        assert metadata[field]["code"] == "sample_unavailable"
+        assert "JSON-admissible" in metadata[field]["reason"]
+
+    # Verify the authoritative revisioned tenant/API listing too, rather than
+    # just a direct helper call. The rule itself remains usable/configurable.
+    api, store, headers = _client()
+    previous = store.get(TENANT)
+    saved = api.post("/v1/tenants/current/checks", headers=headers, json={
+        "revision": previous.revision,
+        "changes": {
+            "advanced_conversion_time": [rule.model_dump(mode="json")],
+            "input_check_cross_field": "block",
+            "output_check_cross_field": "flag",
+        },
+    })
+    assert saved.status_code == 200, saved.text[:200]
+    listed = api.get("/v1/applications/current", headers=headers)
+    assert listed.status_code == 200
+    tenant = listed.json()["tenant"]
+    assert tenant["revision"] == previous.revision + 1
+    assert len(tenant["advanced_conversion_time"]) == 1
+    actual = next(item for item in tenant["record_rules"]
+                  if item["rule_id"] == "business.strict_json_sample_depth")
+    assert actual["example"] is None
+    assert actual["look_alike"] is None
+    assert actual["no_return_example"] is None
+    assert actual["example_unavailable"]["code"] == "sample_unavailable"
+    assert actual["look_alike_unavailable"]["code"] == "sample_unavailable"
