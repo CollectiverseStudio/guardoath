@@ -37,37 +37,43 @@ def _duration(start, end):
             difference.microseconds)
 
 
+def _return_event_path(rule, pointer):
+    """Find the optional event node, not merely the immediate timestamp parent.
+
+    For /events/3/details/at with required /events/0/at, the optional node
+    is /events/3. If that node is recorded, all of its required timestamp
+    descendants must exist. For same-object scalar /life/return_at, the
+    optional node is the scalar itself. Use encoded pointer segments directly
+    so escaped slashes and tildes retain their JSON Pointer meaning.
+    """
+    segments = pointer[1:].split("/")
+    common = 0
+    for role, required in rule.fields.items():
+        if role == "return_at":
+            continue
+        other = required[1:].split("/")
+        shared = 0
+        while shared < min(len(segments), len(other)) and segments[shared] == other[shared]:
+            shared += 1
+        common = max(common, shared)
+    return "/" + "/".join(segments[:min(common + 1, len(segments))])
+
+
 def _valid(rule, payload):
     values = {}
     for name, pointer in rule.fields.items():
         try:
             values[name] = resolve(payload, pointer)
-        except KeyError:
-            # Absence of the *return event* is legitimate; absence of its
-            # timestamp in a present event is malformed. For example,
-            # /events/3/at may be omitted if /events/3 does not exist, but
-            # /events/3={} must fail closed instead of silently passing.
-            if rule.kind == "lifecycle_chronology" and name == "return_at":
-                parent = pointer.rsplit("/", 1)[0]
-                # A scalar /life/return_at alongside /life/order_at etc.
-                # is itself the optional event and may be absent even when
-                # /life exists. An independent /events/3/at or
-                # /times/return/at refers instead to a separate event object.
-                required_parents = {
-                    path.rsplit("/", 1)[0] for role, path in rule.fields.items()
-                    if role != "return_at"
-                }
-                if not parent or parent in required_parents:
-                    continue
-                try:
-                    resolve(payload, parent)
-                except (KeyError, IndexError):
-                    continue
-            raise
-        except IndexError:
-            # An absent array slot for an optional return is legitimate.
-            # Malformed populated events still fail under KeyError/ValueError.
-            if rule.kind == "lifecycle_chronology" and name == "return_at":
+        except (KeyError, IndexError):
+            if rule.kind != "lifecycle_chronology" or name != "return_at":
+                raise
+            # Missing the entire optional return event is valid. A present
+            # return event with a missing nested timestamp or array element
+            # is malformed, even if resolve() raised IndexError rather than
+            # KeyError. Never treat an existing incomplete event as absent.
+            try:
+                resolve(payload, _return_event_path(rule, pointer))
+            except (KeyError, IndexError):
                 continue
             raise
     with localcontext() as ctx:
