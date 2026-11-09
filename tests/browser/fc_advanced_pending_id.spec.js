@@ -80,6 +80,31 @@ test("staged ordinary rule ID is rejected by all three advanced editors before S
     await page.locator("#arithmetic-id").fill("unique_invoice");
     await page.locator("#arithmetic-apply").click();
     await expect(page.locator('[data-arithmetic-id="unique_invoice"]')).toHaveCount(1);
+    // Pending advanced IDs are also exclusive across the remaining advanced
+    // families, even before any tenant Save or server catalog registration.
+    await page.locator("#identity-id").fill("unique_invoice");
+    await page.locator("#identity-apply").click();
+    await expect(page.locator("#identity-message")).toContainText("Rule ID already exists");
+    await expect(page.locator('[data-identity-id="unique_invoice"]')).toHaveCount(0);
+    await page.locator("#conversion-id").fill("unique_invoice");
+    await page.locator("#conversion-apply").click();
+    await expect(page.locator("#conversion-message")).toContainText("Rule ID already exists");
+    await expect(page.locator('[data-conversion-id="unique_invoice"]')).toHaveCount(0);
+
+    // Identity -> conversion is likewise blocked; remove the temporary unique
+    // identity draft before saving the intended ordinary + arithmetic pair.
+    await page.locator("#identity-id").fill("unique_identity");
+    await page.locator("#identity-apply").click();
+    await expect(page.locator('[data-identity-id="unique_identity"]')).toHaveCount(1);
+    await page.locator("#conversion-id").fill("unique_identity");
+    await page.locator("#conversion-apply").click();
+    await expect(page.locator("#conversion-message")).toContainText("Rule ID already exists");
+    await expect(page.locator('[data-conversion-id="unique_identity"]')).toHaveCount(0);
+    const stillSaved = await record(request, headers);
+    expect(stillSaved.revision).toBe(baseline.revision);
+    await page.getByRole("button", {name: "Remove identity unique_identity"}).click();
+    await expect(page.locator('[data-identity-id="unique_identity"]')).toHaveCount(0);
+
     await page.locator("#tenant-check-input-cross_field").selectOption("flag");
     await page.locator("#tenant-check-output-cross_field").selectOption("block");
     await page.getByRole("button", {name: "Save checks", exact: true}).click();
