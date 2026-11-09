@@ -746,6 +746,9 @@ async function showAccountState(token) {
   $("sign-in").hidden = true;
   $("sign-out").hidden = false;
   $("register-account").hidden = status.registered || !status.registration_enabled;
+  $("billing-subscribe").hidden = !status.registered || status.subscription_status === "active";
+  $("billing-manage").hidden = !status.registered;
+
   if (!status.registered) {
     $("account-status").textContent = "Google sign-in verified. Registration is required before configuring a tenant. Registering does not activate a paid subscription.";
     $("connection-status").textContent = "Signed in — account registration pending.";
@@ -1620,3 +1623,36 @@ $("run").addEventListener("click", () => execute("both"));
 $("batch-run").addEventListener("toggle", buttons);
 $("run-input").addEventListener("click", () => execute("input"));
 $("run-output").addEventListener("click", () => execute("output"));
+
+async function openBillingSession(endpoint, field, buttonId) {
+  const token = sessionStorage.getItem("guardoath-session");
+  if (!token) { $("account-status").textContent = "Sign in to manage billing."; return; }
+  const button = $(buttonId); button.disabled = true;
+  try {
+    const response = await send(endpoint, {method: "POST",
+      headers: {"X-GuardOath-Session": token, "Content-Type": "application/json"},
+      body: "{}", cache: "no-store"});
+    if (!response.ok) {
+      const message = response.status === 409 ? "Billing setup is not yet available for this account."
+        : response.status === 503 ? "Billing is temporarily unavailable."
+        : "Billing request failed (HTTP " + response.status + ").";
+      $("account-status").textContent = message;
+      return;
+    }
+    const data = await response.json();
+    const target = data[field];
+    const parsed = typeof target === "string" ? new URL(target) : null;
+    const expected = field === "checkout_url" ? "checkout.stripe.com" : "billing.stripe.com";
+    if (!parsed || parsed.protocol !== "https:" || parsed.hostname !== expected || parsed.username || parsed.password) {
+      $("account-status").textContent = "Billing provider returned an invalid destination.";
+      return;
+    }
+    location.assign(target);
+  } catch (_) {
+    $("account-status").textContent = "Unable to reach billing. Please retry.";
+  } finally { button.disabled = false; }
+}
+$("billing-subscribe").addEventListener("click", () =>
+  openBillingSession("/v1/billing/checkout", "checkout_url", "billing-subscribe"));
+$("billing-manage").addEventListener("click", () =>
+  openBillingSession("/v1/billing/portal", "portal_url", "billing-manage"));
