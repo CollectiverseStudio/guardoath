@@ -19,7 +19,6 @@ async function tenant(request, headers) {
 
 test("customer sees concurrent-schema warning when testing another rule; engine still blocks invalid JSON", async ({page, request}) => {
   const headers = await connect(page);
-  console.log("[schema-scope] initial authenticated connection");
   let cleanup = false;
   try {
     const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
@@ -39,8 +38,10 @@ test("customer sees concurrent-schema warning when testing another rule; engine 
     expect(change.status(), (await change.text()).slice(0, 160)).toBe(200);
     const saved = await tenant(request, headers);
     await connect(page);
-    console.log("[schema-scope] saved schema and reconnected");
-    await page.locator("#policy").selectOption("tenant");
+    // Authenticated tenants automatically use their authoritative tenant policy.
+    // The profile selector lives inside a hidden developer-only details panel,
+    // so trying to selectOption there hangs waiting for visibility.
+    await expect(page.locator("#policy")).toHaveValue("tenant");
     await expect(page.locator("#tenant-check-input-schema")).toHaveValue("block");
     await expect(page.locator("#tenant-check-output-schema")).toHaveValue("block");
 
@@ -53,7 +54,6 @@ test("customer sees concurrent-schema warning when testing another rule; engine 
     await expect(page.locator("#input-policy-scope")).toContainText("incomplete");
     await expect(page.locator("#output-policy-scope")).toContainText("JSON Schema");
 
-    console.log("[schema-scope] pre-run scope warnings passed");
     const plain = await request.post("/v1/checks/input", {headers, data: {
       application_id: "demo3", content_format: "text",
       content: "Explain the reimbursement policy."
@@ -72,7 +72,6 @@ test("customer sees concurrent-schema warning when testing another rule; engine 
     await expect(page.locator("#input-policy-scope")).toContainText("JSON Schema check also validates");
     await expect(page.locator("#input-policy-scope")).toContainText("Choosing an example does not isolate");
 
-    console.log("[schema-scope] JSON/example warnings passed");
     const malformedForPolicy = JSON.stringify({unrelated: "safe"});
     const direct = await request.post("/v1/checks/input", {headers, data: {
       application_id: "demo3", content_format: "json", content: malformedForPolicy
@@ -81,13 +80,11 @@ test("customer sees concurrent-schema warning when testing another rule; engine 
     const directResult = await direct.json();
     expect(directResult.findings.map(f => f.rule_id)).toContain("schema.invalid");
 
-    console.log("[schema-scope] direct JSON API finding passed");
     await page.locator("#input-content").fill(malformedForPolicy);
     const inputCall = page.waitForResponse(r => r.url().endsWith("/v1/checks/input") &&
       r.request().method() === "POST");
     await page.locator("#run-input").click();
     const fromDashboard = await (await inputCall).json();
-    console.log("[schema-scope] dashboard Input API response received");
     expect(fromDashboard.findings.map(f => f.rule_id)).toContain("schema.invalid");
     await expect(page.locator("#input-results")).toContainText("A required field is missing.");
     await expect(page.locator("#input-results")).toContainText("An unexpected field is present.");
@@ -102,20 +99,16 @@ test("customer sees concurrent-schema warning when testing another rule; engine 
     await expect(page.locator("#input-results .finding-rule-id").first()).toHaveText("schema.invalid");
     await expect(page.locator("#input-results .finding-rule-id")).toHaveCount(
       fromDashboard.findings.filter(f => f.rule_id === "schema.invalid").length);
-    console.log("[schema-scope] browser finding assertions passed");
     expect((await tenant(request, headers)).revision).toBe(saved.revision);
     expect(JSON.stringify(fromDashboard.findings)).not.toContain("unrelated");
 
-    console.log("[schema-scope] revision and privacy assertions passed");
     const good = await request.post("/v1/checks/input", {headers, data: {
       application_id: "demo3", content_format: "json",
       content: JSON.stringify({question: "Where can I find the policy?"})
     }});
     expect(good.status(), (await good.text()).slice(0, 160)).toBe(200);
     expect((await good.json()).checker_results.find(c => c.checker_id === "schema").status).toBe("passed");
-    console.log("[schema-scope] benign positive passed");
   } finally {
-    console.log("[schema-scope] cleanup started");
     if (cleanup) {
       const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
       expect(reset.status(), (await reset.text()).slice(0, 160)).toBe(200);
