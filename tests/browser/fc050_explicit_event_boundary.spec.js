@@ -41,6 +41,15 @@ test("FC-050 explicit return-event boundary persists through the dashboard and p
       await page.locator("#conversion-field-" + name).fill(pointer);
     }
     await expect(page.locator("#conversion-return-event-pointer")).toBeVisible();
+    // A required delivery event cannot live in a supposedly optional root.
+    const beforeInvalid = await read();
+    await page.locator("#conversion-field-delivery_at").fill("/returns/delivered/at");
+    await page.locator("#conversion-return-event-pointer").fill("/returns");
+    await page.locator("#conversion-apply").click();
+    await expect(page.locator("#conversion-message")).toContainText("cannot contain mandatory");
+    await expect(page.locator('[data-conversion-id="ui_explicit_event"]')).toHaveCount(0);
+    expect((await read()).revision).toBe(beforeInvalid.revision);
+    await page.locator("#conversion-field-delivery_at").fill(pointers.delivery_at);
     await page.locator("#conversion-return-event-pointer").fill("/returns/latest");
     await page.locator("#conversion-apply").click();
     await expect(page.locator('[data-conversion-id="ui_explicit_event"]')).toHaveCount(1);
