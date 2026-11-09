@@ -93,4 +93,17 @@ test("registered but unpaid customer sees inactive plan and cannot click Create 
   await expect(page.locator("#keys-panel")).toBeVisible();
   await expect(page.locator("#key-create")).toBeDisabled();
   await expect(page.locator("#key-message")).toContainText("active subscription");
+  await expect(page.locator("#billing-subscribe")).toBeVisible();
+  await expect(page.locator("#billing-manage")).toBeVisible();
+  let checkoutCalls = 0;
+  await page.route("**/v1/billing/checkout", async route => {
+    checkoutCalls++;
+    expect(route.request().headers()["x-guardoath-session"]).toBe("synthetic-ui-session-only");
+    await route.fulfill({status: 409, contentType: "application/json",
+      body: JSON.stringify({detail: "Stripe customer provisioning is required"})});
+  });
+  await page.locator("#billing-subscribe").click();
+  await expect(page.locator("#account-status")).toContainText("Billing setup is not yet available");
+  expect(checkoutCalls).toBe(1);
+
 });
