@@ -2881,3 +2881,12 @@ these Engine decisions. API clients must require a **complete** evaluation and
 apply the effective action before sending content to AI or returning its answer.
 This safety contract does **not** prove the intermittent shipped 500-ms PII and
 Secrets latency tails resolved; the exact-source reliability gates remain open.
+
+
+### FC-050: Try a legitimately unrecorded return in the dashboard
+
+After saving a **lifecycle chronology** comparison, the authenticated **Conversion and time comparisons** editor offers a **Try no-return Input example** (and Output example when Output editing is available) only if the shared Engine has independently verified a synthetic three-timestamp document against **that exact saved rule**. Select the example button and run the existing Input or Output check. It checks the same tenant policy and all other enabled controls; unrelated rules can still find problems.
+
+The example includes an ordered shipment history but **does not create a return event**. For example, if the saved pointers are `/order/at`, `/shipment/at`, `/delivery/at`, and `/returns/latest/at`, the sample contains order, shipment and delivery timestamps but no `/returns/latest` event. If a mandatory delivery timestamp is inside an existing return object (a legacy shared-parent configuration), merely removing `return_at` would be an incomplete recorded return; GuardOath does **not** offer a misleading no-return example for that configuration. The normal **Try benign** example remains available with a complete synthetic return.
+
+These examples prove only **structural chronology validation** in the existing Engine, not whether a shipment or return really occurred. They use synthetic data and never expose private FX or host-signed reference values. The API tenant rule metadata supplies the optional `no_return_example` only for eligible saved FC-050 rules; otherwise it is `null`. This does not change the authoritative saved tenant actions, the enforcement budget, or the rule's actual optional-return semantics.
