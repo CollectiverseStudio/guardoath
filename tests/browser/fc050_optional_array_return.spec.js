@@ -32,7 +32,13 @@ test("FC-050 indexed optional return passes before return and blocks an invalid 
     expect(baseline.comparisons.map(r => r.rule_id).sort()).toEqual(["date_order", "refund_limit"]);
     // Remove baseline cross-field comparisons to isolate the new rule's findings.
     const cleared = await request.post("/v1/tenants/current/checks", {headers, data: {
-      revision: baseline.revision, changes: {comparisons: []}
+      revision: baseline.revision, changes: {
+        comparisons: [],
+        // Real PII date-time detection can independently flag these synthetic
+        // event timestamps. Keep that checker enabled and preserve findings,
+        // but do not let its default Block obscure the FC-050 acceptance path.
+        input_check_pii: "flag", output_check_pii: "flag"
+      }
     }});
     expect(cleared.status(), (await cleared.text()).slice(0, 200)).toBe(200);
     await connect(page);
@@ -79,8 +85,15 @@ test("FC-050 indexed optional return passes before return and blocks an invalid 
     await page.locator("#run-input").click();
     const input = await (await inputRequest).json();
     expect(input.evaluation_status).toBe("complete");
-    expect(input.effective_action).toBe("allow");
-    expect(input.findings.filter(f => f.rule_id === "business.ui_optional_return")).toEqual([]);
+    const evidence = {
+      checkers: input.checker_results.map(({checker_id, status, error_code}) => ({checker_id, status, error_code})),
+      ruleIds: input.findings.map(f => f.rule_id)
+    };
+    expect(input.findings.filter(f => f.rule_id.startsWith("business.")), JSON.stringify(evidence)).toEqual([]);
+    // Preserve and surface the independent privacy finding, not turn off PII
+    // to make a comparison test green. Flagged Input remains eligible for Output.
+    expect(input.findings.some(f => f.rule_id.startsWith("pii.")), JSON.stringify(evidence)).toBe(true);
+    expect(input.effective_action, JSON.stringify(evidence)).toBe("flag");
     await expect(page.locator("#run-output")).toBeEnabled();
 
     // An actual fourth return event must be ordered; the optional rule does not
