@@ -690,3 +690,36 @@ def test_conversion_samples_respect_32000_character_api_admission():
                for name in ("example", "look_alike", "no_return_example"))
     assert metadata["example_unavailable"]["code"] == "sample_unavailable"
     assert metadata["look_alike_unavailable"]["code"] == "sample_unavailable"
+
+
+@pytest.mark.parametrize("explicit_event_root", [False, True], ids=["inferred", "configured"])
+def test_shared_event_array_allows_only_next_optional_return_slot(explicit_event_root):
+    """FC-050 optional return is the next slot, not a phantom absent gap.
+
+    /events/0..2 are required and present; /events/3 is an optional,
+    *unrecorded* event even though the shared events array is nonempty.
+    /events/4 with a missing slot 3 is not the next return and must fail.
+    An existing fourth event without a timestamp also fails closed.
+    """
+    from guardoath.advanced_conversion_time import conversion_time_findings
+
+    base = _events(ORDER, SHIPMENT, DELIVERY)
+    for return_index in (3, 4):
+        rule = AdvancedConversionTimeRule.model_validate({
+            **RULE, "rule_id": "shared_optional_return",
+            "fields": {**RULE["fields"], "return_at": f"/events/{return_index}/at"},
+            "return_event_pointer": (
+                f"/events/{return_index}" if explicit_event_root else None
+            ),
+        })
+        for stage in ("input", "output"):
+            findings = conversion_time_findings(base, (rule,), stage)
+            assert [finding.rule_id for finding in findings] == (
+                [] if return_index == 3 else ["business.shared_optional_return"]
+            )
+            if return_index == 3:
+                malformed = {"events": base["events"] + [{}]}
+                present = conversion_time_findings(malformed, (rule,), stage)
+                assert [f.rule_id for f in present] == ["business.shared_optional_return"]
+                ordered = _events(ORDER, SHIPMENT, DELIVERY, AFTER)
+                assert conversion_time_findings(ordered, (rule,), stage) == ()
