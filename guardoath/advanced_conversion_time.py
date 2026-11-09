@@ -49,8 +49,15 @@ def _valid(rule, payload):
             # /events/3={} must fail closed instead of silently passing.
             if rule.kind == "lifecycle_chronology" and name == "return_at":
                 parent = pointer.rsplit("/", 1)[0]
-                if not parent:
-                    # A root-level /return_at field is itself the event.
+                # A scalar /life/return_at alongside /life/order_at etc.
+                # is itself the optional event and may be absent even when
+                # /life exists. An independent /events/3/at or
+                # /times/return/at refers instead to a separate event object.
+                required_parents = {
+                    path.rsplit("/", 1)[0] for role, path in rule.fields.items()
+                    if role != "return_at"
+                }
+                if not parent or parent in required_parents:
                     continue
                 try:
                     resolve(payload, parent)
