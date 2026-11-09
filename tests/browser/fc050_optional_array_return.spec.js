@@ -121,6 +121,51 @@ test("FC-050 indexed optional return passes before return and blocks an invalid 
     expect(result.evaluation_status).toBe("complete");
     expect(result.effective_action).toBe("block");
     expect(result.findings.map(f => f.rule_id)).toContain("business.ui_optional_return");
+
+    // Coexistence is essential: missing optional return must not suppress an
+    // independent ordinary comparison. The customer sees BOTH saved rules in
+    // the authenticated dashboard and the Engine returns every real failure.
+    const jointBefore = await read();
+    const jointSaved = await request.post("/v1/tenants/current/checks", {headers, data: {
+      revision: jointBefore.revision, changes: {
+        comparisons: [{
+          rule_id: "ui_count_limit", left: "/summary/count",
+          right: "/summary/limit", operator: "le", value_type: "number",
+          stages: ["input", "output"]
+        }]
+      }
+    }});
+    expect(jointSaved.status(), (await jointSaved.text()).slice(0, 200)).toBe(200);
+    await connect(page);
+    await page.locator("#rule-search").fill("ui_count_limit");
+    await expect(page.locator('tr.rule-row[data-rule="business.ui_count_limit"]')).toBeVisible();
+    await page.locator("#rule-search").fill("");
+
+    const jointRequest = async (stage, payload) => {
+      const response = await request.post("/v1/checks/" + stage, {headers, data: {
+        application_id: "demo4", content_format: "json", content: JSON.stringify(payload)
+      }});
+      expect(response.status()).toBe(200);
+      return response.json();
+    };
+    const quantityOnly = await jointRequest("input", {
+      ...beforeReturn, summary: {count: 4, limit: 3}
+    });
+    expect(quantityOnly.evaluation_status).toBe("complete");
+    expect(quantityOnly.findings.filter(f => f.rule_id.startsWith("business."))
+      .map(f => f.rule_id)).toEqual(["business.ui_count_limit"]);
+    expect(quantityOnly.effective_action).toBe("block");
+
+    const both = await jointRequest("output", {
+      events: [...beforeReturn.events, {at: "2026-11-06T08:00:00Z"}],
+      summary: {count: 4, limit: 3}
+    });
+    expect(both.evaluation_status).toBe("complete");
+    expect(both.findings.filter(f => f.rule_id.startsWith("business."))
+      .map(f => f.rule_id).sort()).toEqual([
+        "business.ui_count_limit", "business.ui_optional_return"
+      ]);
+    expect(both.effective_action).toBe("flag");
   } finally {
     if (resetRequired) {
       const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
