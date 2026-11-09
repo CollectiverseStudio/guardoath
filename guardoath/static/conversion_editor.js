@@ -162,8 +162,13 @@
         const example = (tenant.record_rules || []).find(x => x.rule_id === "business." + rule.rule_id);
         if (saved && example) {
           for (const stage of rule.stages) {
-            for (const [label, sample] of [["violating", example.example],
-                                           ["benign", example.look_alike]]) {
+            // The Engine-certified no-return sample exists only when the
+            // saved FC-050 layout truly allows the return record to be absent.
+            const samples = [["violating", example.example], ["benign", example.look_alike]];
+            if (rule.kind === "lifecycle_chronology") {
+              samples.push(["no-return", example.no_return_example]);
+            }
+            for (const [label, sample] of samples) {
               if (typeof sample !== "string") continue;
               const button = el("button", "Try " + label + " " + stage + " example");
               button.type = "button";
