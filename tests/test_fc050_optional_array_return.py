@@ -129,3 +129,53 @@ def test_optional_array_return_is_real_tenant_setting_and_both_stage_engine_cont
     })
     assert rejected.status_code == 409
     assert store.get(TENANT).advanced_conversion_time == (validated,)
+
+
+
+def test_optional_nested_return_object_requires_timestamp_when_object_is_present():
+    """A missing optional event and a recorded event missing its timestamp differ."""
+    from guardoath.advanced_conversion_time import conversion_time_findings
+
+    nested_rule = AdvancedConversionTimeRule.model_validate({
+        "rule_id": "nested_return_event",
+        "kind": "lifecycle_chronology",
+        "fields": {
+            "order_at": "/times/order",
+            "shipment_at": "/times/shipment",
+            "delivery_at": "/times/delivery",
+            "return_at": "/times/return/at",
+        },
+        "stages": ["input", "output"],
+    })
+    base = {"times": {"order": ORDER, "shipment": SHIPMENT, "delivery": DELIVERY}}
+    present = {"times": {**base["times"], "return": {"at": AFTER}}}
+    invalid = {"times": {**base["times"], "return": {}}}
+    for stage in ("input", "output"):
+        assert conversion_time_findings(base, (nested_rule,), stage) == ()
+        assert conversion_time_findings(present, (nested_rule,), stage) == ()
+        findings = conversion_time_findings(invalid, (nested_rule,), stage)
+        assert [f.rule_id for f in findings] == ["business.nested_return_event"]
+        assert "2026-11-06" not in findings[0].explanation
+
+
+def test_optional_root_return_field_can_be_absent_but_not_null():
+    from guardoath.advanced_conversion_time import conversion_time_findings
+
+    root_rule = AdvancedConversionTimeRule.model_validate({
+        "rule_id": "root_return_event",
+        "kind": "lifecycle_chronology",
+        "fields": {
+            "order_at": "/times/order",
+            "shipment_at": "/times/shipment",
+            "delivery_at": "/times/delivery",
+            "return_at": "/return_at",
+        },
+        "stages": ["input", "output"],
+    })
+    base = {"times": {"order": ORDER, "shipment": SHIPMENT, "delivery": DELIVERY}}
+    for stage in ("input", "output"):
+        assert conversion_time_findings(base, (root_rule,), stage) == ()
+        invalid = {**base, "return_at": None}
+        assert [f.rule_id for f in conversion_time_findings(invalid, (root_rule,), stage)] == [
+            "business.root_return_event"
+        ]
