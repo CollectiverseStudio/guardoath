@@ -89,9 +89,22 @@ def _valid(rule, payload):
             # return event with a missing nested timestamp or array element
             # is malformed, even if resolve() raised IndexError rather than
             # KeyError. Never treat an existing incomplete event as absent.
+            event_pointer = _return_event_path(rule, pointer)
             try:
-                resolve(payload, _return_event_path(rule, pointer))
+                resolve(payload, event_pointer)
             except (KeyError, IndexError):
+                # If a distinct-root event is an indexed return, only a
+                # genuinely absent collection or an empty array is optional.
+                # A present wrong-typed container (e.g. {}) cannot silently
+                # masquerade as an unrecorded return.
+                event_parts = event_pointer.rsplit("/", 1)
+                if len(event_parts) == 2 and event_parts[1].isdecimal():
+                    try:
+                        collection = resolve(payload, event_parts[0])
+                    except (KeyError, IndexError):
+                        continue
+                    if not isinstance(collection, list) or collection:
+                        raise ValueError("invalid_return_event_collection")
                 continue
             raise
     with localcontext() as ctx:
