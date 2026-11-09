@@ -47,7 +47,7 @@ def _return_event_path(rule, pointer):
     so escaped slashes and tildes retain their JSON Pointer meaning.
     """
     segments = pointer[1:].split("/")
-    common = 0
+    shared_boundaries = []
     for role, required in rule.fields.items():
         if role == "return_at":
             continue
@@ -55,7 +55,15 @@ def _return_event_path(rule, pointer):
         shared = 0
         while shared < min(len(segments), len(other)) and segments[shared] == other[shared]:
             shared += 1
-        common = max(common, shared)
+        if shared:
+            shared_boundaries.append(shared)
+    # A close mandatory sibling must not push the optional boundary deeper
+    # than an earlier mandatory sibling permits. For example, /life/return
+    # may already be recorded even when /life/return/details is absent. The
+    # deepest shared prefix would wrongly treat its missing timestamp as an
+    # entirely absent return. Exclude unrelated-root fields from the boundary
+    # calculation, as they cannot establish where this return record begins.
+    common = min(shared_boundaries) if shared_boundaries else 0
     return "/" + "/".join(segments[:min(common + 1, len(segments))])
 
 

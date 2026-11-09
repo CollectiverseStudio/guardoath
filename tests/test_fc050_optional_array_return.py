@@ -268,3 +268,67 @@ def test_nested_array_return_event_requires_complete_timestamp_through_tenant_ap
                 ORDER not in item["explanation"] and BEFORE not in item["explanation"]
                 for item in response["findings"]
             )
+
+
+def test_optional_event_boundary_is_not_hidden_by_a_close_mandatory_sibling():
+    """A recorded return cannot disappear when another required path shares its subtree.
+
+    Using only the deepest mandatory common prefix would select
+    /life/return/details as the optional node. If details was absent it
+    would wrongly accept the return even though /life/return exists.
+    """
+    rule = {
+        **RULE,
+        "rule_id": "shared_return_parent_boundary",
+        "fields": {
+            "order_at": "/life/order",
+            "shipment_at": "/life/shipment",
+            "delivery_at": "/life/return/received",
+            "return_at": "/life/return/details/0/at",
+        },
+    }
+    api, store, headers = _client()
+    baseline = store.get(TENANT)
+    saved = api.post("/v1/tenants/current/checks", headers=headers, json={
+        "revision": baseline.revision,
+        "changes": {
+            "advanced_conversion_time": [rule],
+            "input_check_cross_field": "block",
+            "output_check_cross_field": "flag",
+        },
+    })
+    assert saved.status_code == 200, saved.text[:200]
+    actual = store.get(TENANT)
+    assert actual.revision == baseline.revision + 1
+    assert actual.advanced_conversion_time[0].fields == rule["fields"]
+    listing = api.get("/v1/applications/current", headers=headers)
+    assert listing.status_code == 200
+    assert "business.shared_return_parent_boundary" in {
+        row["rule_id"] for row in listing.json()["tenant"]["record_rules"]
+    }
+
+    base = {"life": {"order": ORDER, "shipment": SHIPMENT,
+                     "return": {"received": DELIVERY}}}
+    valid = {"life": {"order": ORDER, "shipment": SHIPMENT,
+                      "return": {"received": DELIVERY,
+                                 "details": [{"at": AFTER}]}}}
+    invalid = [
+        base,
+        {"life": {"order": ORDER, "shipment": SHIPMENT,
+                  "return": {"received": DELIVERY, "details": []}}},
+        {"life": {"order": ORDER, "shipment": SHIPMENT,
+                  "return": {"received": DELIVERY, "details": [{}]}}},
+    ]
+    for stage, action in (("input", "block"), ("output", "flag")):
+        good = _check(api, headers, stage, valid)
+        assert good["effective_action"] == "allow"
+        assert not any(f["rule_id"] == "business.shared_return_parent_boundary"
+                       for f in good["findings"])
+        for document in invalid:
+            result = _check(api, headers, stage, document)
+            assert result["effective_action"] == action
+            assert {f["rule_id"] for f in result["findings"]} == {
+                "business.shared_return_parent_boundary"
+            }
+            assert all(ORDER not in f["explanation"] and DELIVERY not in f["explanation"]
+                       for f in result["findings"])
