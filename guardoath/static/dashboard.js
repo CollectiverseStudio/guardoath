@@ -484,10 +484,13 @@ function updatePolicyScopeNotes() {
     // More than one incompatibility can occur at once: never conceal the
     // independently running JSON Schema validator behind a text-only check's
     // format warning when testing an unrelated JSON rule.
-    if (format === "json" && enabled.some(check => check.id === "schema") && selected && selected !== "schema") {
-      warnings.push("The enabled JSON Schema check also validates this sample from another check. " +
-        "A well-formed JSON message can still violate your saved schema and be flagged or blocked. " +
-        "Choosing an example does not isolate its check.");
+    if (format === "json" && enabled.some(check => check.id === "schema")) {
+      warnings.push(selected && selected !== "schema"
+        ? "The enabled JSON Schema check also validates this sample from another check. " +
+          "A well-formed JSON message can still violate your saved schema and be flagged or blocked. " +
+          "Choosing an example does not isolate its check."
+        : "JSON Schema is enabled for this stage. Every JSON message, including one pasted " +
+          "to test another check, must satisfy the saved schema or it can be flagged or blocked.");
     }
     note.textContent = warnings.join(" ");
     note.hidden = !warnings.length;
