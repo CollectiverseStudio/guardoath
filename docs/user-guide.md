@@ -2012,6 +2012,12 @@ The `csv_formula` local checker is an **integrated tenant-controlled, opt-in CSV
 
 ## Unified structured ML and conversational LLM validation in one request
 
+The existing authenticated dashboard's **Input schema** and **Output schema** controls now report up to **64 independent JSON Schema violations** per evaluated message, rather than reporting only the first one. Each violation appears as a generic `schema.invalid` finding with a fixed error-type explanation; if further violations exist, a final `schema.too_many_errors` finding makes the reporting limit explicit. GuardOath does not disclose field names, JSON paths, submitted values, or private schema text in these findings. The saved tenant's stage-specific schema check actions and one shared validation Engine still determine Block/Flag/Allow behavior. JSON Schema validation does not establish the truth of submitted data or replace semantic chat validation.
+
+Example: configure both stage schemas with required integer `age` (minimum 18), required string `code` (minimum four characters), and no additional properties. Submitting age 15, code `x`, and an unexpected field produces three generic structural findings in the same response. Correcting all three produces no structural findings. A document with more than 64 structural violations remains invalid and produces the explicit limit finding. This behavior is covered by `tests/test_schema_multiple_findings.py` for both stages.
+
+
+
 **Purpose:** A single tenant may validate both machine-readable ML features and natural-language chat questions before the same request reaches an AI model. This uses the **existing** `schema` and `prompt_attack` checks, **not** a separate policy engine or a newly invented semantic classifier. A JSON request can contain both kinds of values. A validator's findings are one decision input; the integrating application must honor `effective_action` and prevent model invocation on an enforced Block.
 
 **Tenant configuration:** Enable `input_check_schema` with `input_schema` on the tenant record; enable `input_check_prompt_attack` independently. Both checks run on the Input stage of a JSON request. Configure Block, Flag, Allow or Off per check and per supported individual rule. `output_check_prompt_attack` can be separately enabled for Output. The tenant record remains authoritative, and a tenant cannot disable every check. An example schema can require `age` as an integer in the inclusive range 18–100 and `question` as a nonempty string.
