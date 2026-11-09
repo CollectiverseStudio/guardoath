@@ -124,3 +124,16 @@ def test_unpaid_registration_cannot_run_output_checks_or_accrue_usage():
         assert response.status_code == 402, (stage, response.text)
         assert store.get("usr-test-account").usage == {}
     assert store.get("usr-test-account").key_hashes == ()
+
+
+def test_checkout_route_requires_verified_session_and_server_provisioning():
+    client, store = make_client()
+    headers = {SESSION_HEADER: "verified-test-token"}
+    assert client.post("/v1/billing/checkout").status_code == 401
+    assert client.post("/v1/billing/checkout", headers={SESSION_HEADER: "invalid"}).status_code == 401
+    assert client.post("/v1/billing/checkout", headers=headers).status_code == 403
+    assert client.post("/v1/register", headers=headers).status_code == 201
+    response = client.post("/v1/billing/checkout", headers=headers)
+    assert response.status_code == 409, response.text
+    assert store.get("usr-test-account").subscription_status == "inactive"
+    assert store.get("usr-test-account").usage == {}
