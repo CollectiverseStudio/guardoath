@@ -2252,6 +2252,10 @@ These checks enforce the tenant's own authenticated configuration; **they do not
 
 ### Field Comparisons Batch C — FC-035, FC-042, FC-043, FC-050 (tenant conversion/time rules)
 
+**FC-050 optional return arrays:** For separate-root event payloads such as `{"order":{"at":"..."},"shipment":{"at":"..."},"delivery":{"at":"..."},"returns":[]}`, the rule may point `return_at` to `/returns/0/at`. An absent return collection or empty return list means no return was recorded; an existing return element without its timestamp, a null timestamp, or a return earlier than delivery produces a finding. The same behavior applies on Input and Output. When the event boundary cannot be inferred unambiguously, configure `return_event_pointer` explicitly (for example `/returns/0`) using the authenticated Conversion/Time editor. This validates the submitted event sequence, not the external truth of the shipment timestamps.
+
+
+
 These four controls use the same `cross_field` checker and the **saved tenant record**, not an independent model or service. Set `input_check_cross_field` / `output_check_cross_field` to `block`, `flag` or `allow`, and populate `advanced_conversion_time` with one or more rules. Each rule has a unique lowercase `rule_id`, a `kind`, a `fields` mapping from the required logical role to an **absolute JSON Pointer** (such as `/invoice/amount`), and `stages` (`input`, `output` or both). Configure stage-specific `business.<rule_id>` settings under `input_rule_actions` / `output_rule_actions` to override the check, or `off` to skip only that rule. Every applicable failure is returned, with private fixed explanations.
 
 | Template | Input example and expected behavior | Legitimate boundary / limitation |
