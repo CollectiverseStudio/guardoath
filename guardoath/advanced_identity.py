@@ -19,8 +19,11 @@ def _identifier(value):
     return value
 
 
-def _members(value):
-    if not isinstance(value, list) or not 1 <= len(value) <= MAX_MEMBERS:
+def _members(value, *, allow_empty=False):
+    # A present [] means no scopes requested: the empty set is a subset of
+    # every trusted scope set. Serial-number inventories still require one
+    # value. Missing/null/wrong types and >MAX_MEMBERS are always invalid.
+    if not isinstance(value, list) or len(value) > MAX_MEMBERS or (not value and not allow_empty):
         raise ValueError("invalid_member_array")
     return [_identifier(item) for item in value]
 
@@ -35,7 +38,7 @@ def _valid(rule, payload):
         ids = _members(fields["serials"])
         return len(set(ids)) == len(ids)
     if rule.kind == "authorized_scope_subset":
-        requested = _members(fields["requested_scopes"])
+        requested = _members(fields["requested_scopes"], allow_empty=True)
         return set(requested).issubset(rule.trusted_values)
     return False
 
