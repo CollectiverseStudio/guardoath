@@ -158,9 +158,19 @@
           draw(); changed(); message.textContent = "Removal pending. Save checks to apply it.";
         });
         item.append(edit, remove);
-        const saved = original.some(x => x.rule_id === rule.rule_id);
+        const persisted = original.find(x => x.rule_id === rule.rule_id);
+        const sameDefinition = persisted &&
+          persisted.kind === rule.kind &&
+          Object.keys(persisted.fields).length === Object.keys(rule.fields).length &&
+          Object.entries(persisted.fields).every(([key, value]) => rule.fields[key] === value) &&
+          persisted.stages.length === rule.stages.length &&
+          persisted.stages.every(stage => rule.stages.includes(stage)) &&
+          (persisted.return_event_pointer || null) === (rule.return_event_pointer || null);
+        if (persisted && !sameDefinition) {
+          item.append(el("p", "Unsaved conversion/time rule changes: Save checks before using refreshed examples."));
+        }
         const example = (tenant.record_rules || []).find(x => x.rule_id === "business." + rule.rule_id);
-        if (saved && example) {
+        if (sameDefinition && example) {
           for (const stage of rule.stages) {
             // The Engine-certified no-return sample exists only when the
             // saved FC-050 layout truly allows the return record to be absent.
