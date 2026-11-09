@@ -722,8 +722,8 @@ loadDemoUsers();
 let signIn = null;
 function b64url(buffer) { return btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
 function signedIn(on) {
-  $("sign-in").hidden = on;
-  $("register-account").hidden = on || !signIn?.registration_enabled;
+  $("sign-in").hidden = on || signIn?.google_provider !== "Google";
+  $("register-account").hidden = on || !signIn?.registration_enabled || signIn?.google_provider !== "Google";
   $("sign-out").hidden = !on;
   $("keys-panel").hidden = !on; if (on) loadKeys();
 }
@@ -733,6 +733,9 @@ async function loadSignIn() {
   if (!response.ok) return;  // 404 = this server has no tenant sign-in
   signIn = await response.json().catch(() => null); if (!signIn) return;
   $("sign-in-box").hidden = false; signedIn(false);
+  if (signIn.google_provider !== "Google") {
+    $("account-status").textContent = "Google sign-in is not yet configured on this deployment. No new customer registration is available.";
+  }
   const query = new URLSearchParams(location.search), code = query.get("code"), state = query.get("state");
   if (code || query.get("error")) {
     history.replaceState(null, "", location.pathname);
@@ -740,20 +743,33 @@ async function loadSignIn() {
     sessionStorage.removeItem("guardoath-state"); sessionStorage.removeItem("guardoath-verifier");
     if (!code || !expected || state !== expected || !verifier) { $("connection-status").textContent = "Sign-in did not complete. Sign in again."; return; }
     const text = JSON.stringify({code, code_verifier: verifier});
-    const reply = await send("/v1/sign-in/token", {method: "POST", cache: "no-store", headers: await requestHeaders("", text), body: text});
+    let reply;
+    try {
+      reply = await send("/v1/sign-in/token", {method: "POST", cache: "no-store", headers: await requestHeaders("", text), body: text});
+    } catch (_) {
+      $("connection-status").textContent = "Sign-in service unavailable. Sign in again.";
+      return;
+    }
     if (!reply.ok) { $("connection-status").textContent = "Sign-in failed. Sign in again."; return; }
     const token = (await reply.json()).access_token;
     sessionStorage.setItem("guardoath-session", token);
     const intent = sessionStorage.getItem("guardoath-sign-in-intent");
     sessionStorage.removeItem("guardoath-sign-in-intent");
     if (intent === "register") {
-      const response = await send("/v1/register", {
-        method: "POST", cache: "no-store",
-        headers: {"X-GuardOath-Session": token}
-      });
+      let response;
+      try {
+        response = await send("/v1/register", {
+          method: "POST", cache: "no-store",
+          headers: await requestHeaders(SESSION + token, "{}"), body: "{}"
+        });
+      } catch (_) {
+        await showAccountState(token);
+        $("account-status").textContent = "Registration service unavailable. Your verified sign-in is retained; select Register to retry.";
+        return;
+      }
       if (response.status !== 201 && response.status !== 409) {
-        sessionStorage.removeItem("guardoath-session");
-        $("connection-status").textContent = "Registration could not be completed; try again.";
+        await showAccountState(token);
+        $("account-status").textContent = "Registration not completed (HTTP " + response.status + "). Your verified sign-in is retained; select Register to retry.";
         return;
       }
     }
@@ -801,7 +817,7 @@ async function showAccountState(token) {
   }
 }
 async function beginGoogleLogin(intent) {
-  if (!signIn) return;
+  if (!signIn || signIn.google_provider !== "Google") return;
   const verifier = b64url(crypto.getRandomValues(new Uint8Array(32))), state = b64url(crypto.getRandomValues(new Uint8Array(16)));
   const challenge = b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
   sessionStorage.setItem("guardoath-verifier", verifier); sessionStorage.setItem("guardoath-state", state);
@@ -820,7 +836,7 @@ $("register-account").addEventListener("click", async () => {
   try {
     const response = await send("/v1/register", {
       method: "POST", cache: "no-store",
-      headers: {"X-GuardOath-Session": token}
+      headers: await requestHeaders(SESSION + token, "{}"), body: "{}"
     });
     if (response.status !== 201 && response.status !== 409) {
       $("account-status").textContent = "Registration not completed (HTTP " + response.status + ").";
