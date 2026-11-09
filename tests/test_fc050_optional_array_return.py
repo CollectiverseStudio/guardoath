@@ -117,7 +117,9 @@ def test_optional_array_return_is_real_tenant_setting_and_both_stage_engine_cont
     # Same tenant revision must reject concurrent stale updates, not erase the rule.
     rejected = api.post("/v1/tenants/current/checks", headers=headers, json={
         "revision": baseline.revision,
-        "changes": {"advanced_conversion_time": []},
+        # Change a valid action so stale-revision admission is tested independently
+        # of the legitimate 422 safeguard against removing the only active rule.
+        "changes": {"input_check_cross_field": "flag"},
     })
     assert rejected.status_code == 409
     assert store.get(TENANT).advanced_conversion_time == (validated,)
