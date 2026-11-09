@@ -101,3 +101,95 @@ test("identity form rejects overlapping or empty pointers and absent stages with
   await expect(page.locator("#identity-message")).toContainText("Choose Input");
   await expect(page.locator('[data-identity-id="invalid_identity"]')).toHaveCount(0);
 });
+
+test("FC-048 empty requested-scopes use real tenant and authenticated Input/Output dashboard without leaking reference values", async ({page, request}) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo6");
+  await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo6");
+  const headers = {Authorization: "Bearer " + await page.locator("#demo-key-value").inputValue()};
+  const summary = async () => {
+    const res = await request.get("/v1/applications/current", {headers});
+    expect(res.status()).toBe(200);
+    return (await res.json()).tenant;
+  };
+  let resetRequired = false;
+  try {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(reset.status()).toBe(200);
+    resetRequired = true;
+    const prior = await summary();
+    const saved = await request.post("/v1/tenants/current/checks", {headers, data: {
+      revision: prior.revision, changes: {
+        comparisons: [],
+        advanced_identity: [{
+          rule_id: "browser_scope_zero", kind: "authorized_scope_subset",
+          fields: {requested_scopes: "/scopes"}, trusted_values: ["private:authorized"],
+          stages: ["input", "output"]
+        }],
+        input_check_cross_field: "block", output_check_cross_field: "flag",
+      }
+    }});
+    expect(saved.status(), (await saved.text()).slice(0, 200)).toBe(200);
+    const live = await summary();
+    expect(live.revision).toBe(prior.revision + 1);
+    // Only a status view belongs in the customer dashboard. The tenant's
+    // trusted scope list must never leak to the public settings response.
+    expect(live.advanced_identity).toEqual([]);
+    expect(live.advanced_identity_reference_status).toEqual([{
+      rule_id: "browser_scope_zero", kind: "authorized_scope_subset",
+      stages: ["input", "output"], reference_configured: true
+    }]);
+    expect(JSON.stringify(live)).not.toContain("private:authorized");
+
+    await page.goto("/dashboard");
+    await page.locator("#demo-user").selectOption("demo6");
+    await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+    await expect(page.locator("#connection-status")).toContainText("Connected to demo6");
+    await expect(page.locator("#identity-reference-status")).toContainText("browser_scope_zero");
+    await expect(page.locator("#identity-reference-status")).toContainText("trusted reference configured: yes");
+    await expect(page.locator("#identity-reference-status")).not.toContainText("private:authorized");
+
+    const noPermissions = JSON.stringify({scopes: []});
+    await page.locator("#input-format").selectOption("json");
+    await page.locator("#input-content").fill(noPermissions);
+    const inputResponse = page.waitForResponse(res =>
+      res.url().endsWith("/v1/checks/input") && res.request().method() === "POST");
+    await page.locator("#run-input").click();
+    const input = await (await inputResponse).json();
+    expect(input.evaluation_status).toBe("complete");
+    expect(input.findings.map(f => f.rule_id)).not.toContain("business.browser_scope_zero");
+    expect(input.effective_action).toBe("allow");
+
+    await page.locator("#output-format").selectOption("json");
+    await page.locator("#output-content").fill(noPermissions);
+    const outputResponse = page.waitForResponse(res =>
+      res.url().endsWith("/v1/checks/output") && res.request().method() === "POST");
+    await page.locator("#run-output").click();
+    const output = await (await outputResponse).json();
+    expect(output.evaluation_status).toBe("complete");
+    expect(output.findings.map(f => f.rule_id)).not.toContain("business.browser_scope_zero");
+    expect(output.effective_action).toBe("allow");
+
+    for (const stage of ["input", "output"]) {
+      for (const payload of [{}, {scopes: null}, {scopes: ["untrusted:scope"]}]) {
+        const response = await request.post("/v1/checks/" + stage, {headers, data: {
+          application_id: "demo6", content_format: "json",
+          content: JSON.stringify(payload),
+        }});
+        expect(response.status()).toBe(200);
+        const result = await response.json();
+        expect(result.evaluation_status).toBe("complete");
+        expect(result.findings.map(f => f.rule_id)).toContain("business.browser_scope_zero");
+        expect(result.effective_action).toBe(stage === "input" ? "block" : "flag");
+        expect(JSON.stringify(result)).not.toContain("private:authorized");
+      }
+    }
+    expect((await summary()).revision).toBe(live.revision);
+  } finally {
+    if (resetRequired) {
+      const clean = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+      expect(clean.status()).toBe(200);
+    }
+  }
+});
