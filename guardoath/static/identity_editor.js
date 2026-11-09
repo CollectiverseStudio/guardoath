@@ -149,6 +149,9 @@
         const saved = original.some(x => x.rule_id === rule.rule_id);
         const example = (tenant.record_rules || []).find(x => x.rule_id === "business." + rule.rule_id);
         if (saved && example) {
+          if (example.example_unavailable || example.look_alike_unavailable) {
+            item.append(el("p", "Some synthetic examples are unavailable under the strict JSON admission or selected rule contract. The saved rule still runs; use shallower JSON pointers to restore examples when permitted. Private reference values are never shown."));
+          }
           for (const stage of rule.stages) {
             for (const [label, sample] of [["violating", example.example],
                                            ["benign", example.look_alike]]) {
