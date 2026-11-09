@@ -49,6 +49,19 @@ async function expectPickerRule(page, id, count) {
   await expect(page.locator("#input-example option").filter({hasText: "business." + id})).toHaveCount(count);
 }
 
+// Each saved example uses a positional <option> value in the shared picker.
+// Removing pending rules must clear that selection rather than leaving the
+// same index pointing to a different existing customer's rule.
+async function selectSavedRuleExample(page, id) {
+  const option = page.locator("#input-example option")
+    .filter({hasText: "business." + id}).first();
+  await expect(option).toHaveCount(1);
+  const key = await option.getAttribute("value");
+  await page.locator("#input-example").selectOption(key);
+  await expect(page.locator("#input-example")).toHaveValue(key);
+  expect(key).not.toBe("");
+}
+
 test("pending ordinary and advanced definitions hide stale common picker witnesses until tenant Save", async ({page, request}) => {
   const headers = await connect(page);
   let resetRequired = false;
@@ -73,10 +86,12 @@ test("pending ordinary and advanced definitions hide stale common picker witness
     await page.locator("#input-example-check").selectOption("cross_field");
     for (const id of ids) await expectPickerRule(page, id, 2);
 
+    await selectSavedRuleExample(page, ids[0]);
     await page.getByRole("button", {name: "Edit comparison " + ids[0]}).click();
     await page.locator("#comparison-left").fill("/ordinary/a_v2");
     await page.locator("#comparison-apply").click();
     await expectPickerRule(page, ids[0], 0);
+    await expect(page.locator("#input-example")).toHaveValue("");
     for (const id of ids.slice(1)) await expectPickerRule(page, id, 2);
     await expect(page.locator("#input-example-note")).toContainText(
       "Saved comparison-rule examples are hidden");
@@ -87,10 +102,12 @@ test("pending ordinary and advanced definitions hide stale common picker witness
       ["conversion", ids[3], "#conversion-field-load", "/load/amount_v2"]
     ];
     for (const [family, id, field, pointer] of edits) {
+      await selectSavedRuleExample(page, id);
       await page.getByRole("button", {name: "Edit " + family + " " + id}).click();
       await page.locator(field).fill(pointer);
       await page.locator("#" + family + "-apply").click();
       await expectPickerRule(page, id, 0);
+      await expect(page.locator("#input-example")).toHaveValue("");
     }
     // The typed tenant policy remains unchanged until the revisioned Save.
     for (const id of ids) await expectPickerRule(page, id, 0);
