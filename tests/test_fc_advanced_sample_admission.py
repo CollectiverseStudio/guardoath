@@ -124,9 +124,10 @@ def test_authenticated_tenant_persists_deep_rule_and_hides_bad_examples_in_api(f
             "application_id": tenant_id, "content_format": "json",
             "content": raw_sample,
         })
-        assert checked.status_code == 200
-        result = checked.json()
-        assert result["effective_action"] == "block"  # strict admission fail-closed
-        assert result["evaluation_status"] != "complete"
+        # CheckRequest rejects over-deep JSON before launching the Engine.
+        # HTTP 422 is the correct fail-closed API admission, not a fabricated
+        # status=200 incomplete evaluation or a bypass of the size/depth limit.
+        assert checked.status_code == 422
+        assert checked.json() == {"detail": "Invalid check request"}
         assert raw_sample not in checked.text
     assert store.get(tenant_id) == saved
