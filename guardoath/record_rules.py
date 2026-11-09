@@ -242,13 +242,19 @@ def _checked_advanced_sample(rule, values, expected_valid, validator):
     This function changes customer-facing *examples*, never rule enforcement;
     it neither reads nor publishes trusted reference snapshots.
     """
+    from guardoath.business import exact_number
     from guardoath.json_data import parse_json
 
     try:
         candidate = _field_document(rule.fields, values)
         if len(candidate) > MAX_CONTENT_CHARS:
             return None
-        if bool(validator(rule, parse_json(candidate))) is expected_valid:
+        # Match the shared cross_field Engine's two-pass JSON contract:
+        # strict parse for admission, then Decimal float tokens for exact
+        # arithmetic (raw Python floats would falsely reject valid cases).
+        parse_json(candidate)
+        exact_payload = json.loads(candidate, parse_float=exact_number)
+        if bool(validator(rule, exact_payload)) is expected_valid:
             return candidate
     except (ValueError, KeyError, IndexError, TypeError, OverflowError, ArithmeticError):
         pass
