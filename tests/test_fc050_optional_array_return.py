@@ -389,3 +389,85 @@ def test_fc050_dashboard_samples_execute_as_advertised_with_shared_return_parent
             for found in invalid_response["findings"]
         )
     assert store.get(TENANT).advanced_conversion_time[0].rule_id == rule["rule_id"]
+
+
+
+def test_explicit_disjoint_return_event_uses_saved_tenant_and_rejects_incomplete_records():
+    """The return event is optional; its timestamp is required once recorded."""
+    from pydantic import ValidationError
+    import pytest
+
+    config = {
+        **RULE,
+        "rule_id": "explicit_return_event",
+        "fields": {
+            "order_at": "/order/at",
+            "shipment_at": "/shipment/at",
+            "delivery_at": "/delivery/at",
+            "return_at": "/returns/latest/at",
+        },
+        "return_event_pointer": "/returns/latest",
+    }
+    expected = AdvancedConversionTimeRule.model_validate(config)
+    for invalid in ("/returns/latest/at", "/returns/other", "/returns/~2latest", "", "/"):
+        with pytest.raises(ValidationError):
+            AdvancedConversionTimeRule.model_validate({**config, "return_event_pointer": invalid})
+
+    api, store, headers = _client()
+    baseline = store.get(TENANT)
+    saved = api.post("/v1/tenants/current/checks", headers=headers, json={
+        "revision": baseline.revision,
+        "changes": {
+            "advanced_conversion_time": [config],
+            "input_check_cross_field": "block",
+            "output_check_cross_field": "flag",
+        },
+    })
+    assert saved.status_code == 200, saved.text[:250]
+    persisted = store.get(TENANT)
+    assert persisted.advanced_conversion_time == (expected,)
+    public = api.get("/v1/applications/current", headers=headers)
+    assert public.status_code == 200
+    assert public.json()["tenant"]["advanced_conversion_time"][0]["return_event_pointer"] == "/returns/latest"
+    assert "business.explicit_return_event" in {
+        row["rule_id"] for row in public.json()["tenant"]["record_rules"]
+    }
+
+    base = {
+        "order": {"at": ORDER},
+        "shipment": {"at": SHIPMENT},
+        "delivery": {"at": DELIVERY},
+        "returns": {},  # Return branch exists, but no return event is recorded.
+    }
+    good = [base, {**base, "returns": {"latest": {"at": AFTER}}}]
+    bad = [
+        {**base, "returns": {"latest": {}}},
+        {**base, "returns": {"latest": None}},
+        {**base, "returns": {"latest": {"at": None}}},
+        {**base, "returns": {"latest": {"at": BEFORE}}},
+        {**base, "shipment": {}},
+    ]
+    for stage, action in (("input", "block"), ("output", "flag")):
+        for document in good:
+            result = _check(api, headers, stage, document)
+            assert result["effective_action"] == "allow"
+            assert not any(row["rule_id"] == "business.explicit_return_event"
+                           for row in result["findings"])
+        for document in bad:
+            result = _check(api, headers, stage, document)
+            assert result["effective_action"] == action
+            assert {row["rule_id"] for row in result["findings"]} == {
+                "business.explicit_return_event"
+            }
+            assert all(ORDER not in row["explanation"] and BEFORE not in row["explanation"]
+                       for row in result["findings"])
+
+    rejected = api.post("/v1/tenants/current/checks", headers=headers, json={
+        "revision": persisted.revision,
+        "changes": {"advanced_conversion_time": [
+            {**config, "return_event_pointer": "/returns/other"}
+        ]},
+    })
+    assert rejected.status_code == 422
+    assert store.get(TENANT).revision == persisted.revision
+    assert store.get(TENANT).advanced_conversion_time == (expected,)
