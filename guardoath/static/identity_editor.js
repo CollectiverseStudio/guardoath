@@ -146,9 +146,18 @@
           draw(); changed(); message.textContent = "Removal pending. Save checks to apply it.";
         });
         item.append(edit, remove);
-        const saved = original.some(x => x.rule_id === rule.rule_id);
+        const persisted = original.find(x => x.rule_id === rule.rule_id);
+        const sameDefinition = persisted &&
+          persisted.kind === rule.kind &&
+          Object.keys(persisted.fields).length === Object.keys(rule.fields).length &&
+          Object.entries(persisted.fields).every(([key, value]) => rule.fields[key] === value) &&
+          persisted.stages.length === rule.stages.length &&
+          persisted.stages.every(stage => rule.stages.includes(stage));
+        if (persisted && !sameDefinition) {
+          item.append(el("p", "Unsaved identity rule changes: Save checks before using refreshed examples."));
+        }
         const example = (tenant.record_rules || []).find(x => x.rule_id === "business." + rule.rule_id);
-        if (saved && example) {
+        if (sameDefinition && example) {
           if (example.example_unavailable || example.look_alike_unavailable) {
             item.append(el("p", "Some synthetic examples are unavailable under the strict JSON admission or selected rule contract. The saved rule still runs; use shallower JSON pointers to restore examples when permitted. Private reference values are never shown."));
           }
