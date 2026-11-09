@@ -123,3 +123,66 @@ test("bulk and individual ordinary drafts reject unsaved advanced IDs, then dist
     }
   }
 });
+
+test("protected identity reference makes scoped editable draft collisions visible to ordinary bulk import", async ({page, request}) => {
+  const headers = await connect(page);
+  let cleanup = false;
+  try {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(reset.status(), (await reset.text()).slice(0, 200)).toBe(200);
+    cleanup = true;
+    const initial = await current(request, headers);
+    const cleared = await request.post("/v1/tenants/current/checks", {headers, data: {
+      revision: initial.revision, changes: {comparisons: []}
+    }});
+    expect(cleared.status(), (await cleared.text()).slice(0, 200)).toBe(200);
+    const beforeReference = await current(request, headers);
+    const provision = await request.post("/v1/tenants/current/references", {headers, data: {
+      revision: beforeReference.revision, changes: {
+        advanced_identity: [{rule_id: "protected_scope", kind: "authorized_scope_subset",
+          fields: {requested_scopes: "/scopes"}, trusted_values: ["private:read"],
+          stages: ["input", "output"]}],
+        input_check_cross_field: "flag", output_check_cross_field: "flag"
+      }
+    }});
+    expect(provision.status(), (await provision.text()).slice(0, 200)).toBe(200);
+    const saved = await current(request, headers);
+    expect(saved.advanced_identity).toEqual([]);
+    expect(saved.advanced_identity_reference_status.map(r => r.rule_id))
+      .toContain("protected_scope");
+    expect(JSON.stringify(saved)).not.toContain("private:read");
+
+    await connect(page);
+    await expect(page.locator("#identity-reference-status"))
+      .toContainText("protected_scope");
+    await page.locator("#identity-id").fill("pending_protected_dupe");
+    await page.locator("#identity-kind").selectOption("order_id_match");
+    await page.locator("#identity-field-order_id").fill("/order/id");
+    await page.locator("#identity-field-shipment_order_id").fill("/shipment/order_id");
+    await page.locator("#identity-apply").click();
+    await expect(page.locator('[data-identity-id="pending_protected_dupe"]'))
+      .toHaveCount(1);
+
+    await page.locator("#comparison-bulk-panel summary").click();
+    await page.locator("#comparison-bulk-json").fill(JSON.stringify([{
+      rule_id: "pending_protected_dupe", left: "/amount", right: "/limit",
+      operator: "le", value_type: "number", stages: ["input", "output"]
+    }]));
+    await page.locator("#comparison-bulk-confirm").check();
+    await page.locator("#comparison-bulk-import").click();
+    await expect(page.locator("#comparison-bulk-status"))
+      .toContainText("duplicate or reserved rule_id");
+    await expect(page.locator('[data-comparison-id="pending_protected_dupe"]'))
+      .toHaveCount(0);
+    const after = await current(request, headers);
+    expect(after.revision).toBe(saved.revision);
+    expect(after.advanced_identity_reference_status)
+      .toEqual(saved.advanced_identity_reference_status);
+    expect(JSON.stringify(after)).not.toContain("private:read");
+  } finally {
+    if (cleanup) {
+      const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+      expect(reset.status(), (await reset.text()).slice(0, 200)).toBe(200);
+    }
+  }
+});
