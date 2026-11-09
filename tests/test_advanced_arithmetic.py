@@ -179,7 +179,17 @@ def test_authenticated_saved_tenant_arithmetic_two_stage_actions_and_one_meter()
         assert body["evaluation_status"] == "complete"
         assert {f["rule_id"] for f in body["findings"] if f["rule_id"].startswith("business.")} == ids
         assert body["effective_action"] == action
-        assert "1000" not in response.text
+        # Keep the no-customer-amount-echo contract across *every* response
+        # field while excluding only legitimate numeric execution timings.
+        # A checker latency of 1000.x ms is not a leak of the 1000 emissions
+        # value and must not turn a privacy regression into a false failure.
+        sanitized = dict(body)
+        sanitized.pop("total_latency_ms", None)
+        sanitized["checker_results"] = [
+            {key: value for key, value in checker.items() if key != "latency_ms"}
+            for checker in body["checker_results"]
+        ]
+        assert "1000" not in json.dumps(sanitized)
     assert store.get(name).used(usage_month()) == 2
 
 
