@@ -752,6 +752,39 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         return JSONResponse({"checkout_url": url}, headers={
             "Cache-Control": "no-store", "Referrer-Policy": "no-referrer"})
 
+    @api.post("/v1/billing/portal")
+    async def billing_portal(
+        session: Annotated[str | None, Header(alias=SESSION_HEADER)] = None,
+    ):
+        """Only the verified account owner may open their Stripe billing portal."""
+        from guardoath.billing import BillingMode
+        from guardoath.stripe_portal import StripePortalError, create_portal_session
+        if sessions is None or tenants is None:
+            raise HTTPException(404, "Customer billing is not available")
+        if not session:
+            raise HTTPException(401, "Sign in to manage billing")
+        try:
+            tenant_id = await run_in_threadpool(sessions.tenant_for, session)
+        except SignInBusy:
+            raise HTTPException(503, "Sign-in checks are busy; try again shortly") from None
+        if tenant_id is None:
+            raise HTTPException(401, "Invalid or expired sign-in")
+        current = tenants.store.get(tenant_id)
+        if current is None or current.demo or current.status != "active":
+            raise HTTPException(403, "Register an account before managing billing")
+        if current.billing_mode != BillingMode.STRIPE or not current.payer_id:
+            raise HTTPException(409, "No Stripe billing account is associated with this tenant")
+        api_key = os.getenv("GUARDOATH_STRIPE_SECRET_KEY", "")
+        if not api_key:
+            raise HTTPException(503, "Billing management is not configured")
+        try:
+            url = await run_in_threadpool(create_portal_session,
+                customer_id=current.payer_id, api_key=api_key)
+        except StripePortalError:
+            raise HTTPException(503, "Unable to open billing management") from None
+        return JSONResponse({"portal_url": url}, headers={
+            "Cache-Control": "no-store", "Referrer-Policy": "no-referrer"})
+
     @api.get("/v1/account/status")
     async def account_status(
         session: Annotated[str | None, Header(alias=SESSION_HEADER)] = None,
