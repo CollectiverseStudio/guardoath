@@ -70,8 +70,13 @@ def test_fc050_optional_return_preserves_other_rule_findings_in_both_stages():
     ))
     headers = {"Authorization": "Bearer " + token}
 
+    # Persistence assigns revision 1 to a newly created tenant. Use the
+    # authoritative saved revision, never the unsaved model's default 0.
+    baseline = store.get(TENANT)
+    assert baseline.revision >= 1
+
     saved = api.post("/v1/tenants/current/checks", headers=headers, json={
-        "revision": record.revision,
+        "revision": baseline.revision,
         "changes": {
             "comparisons": [ORDINARY],
             "advanced_conversion_time": [FC050],
@@ -81,7 +86,7 @@ def test_fc050_optional_return_preserves_other_rule_findings_in_both_stages():
     })
     assert saved.status_code == 200, saved.text[:200]
     persisted = store.get(TENANT)
-    assert persisted.revision == record.revision + 1
+    assert persisted.revision == baseline.revision + 1
     assert len(persisted.comparisons) == 1
     assert len(persisted.advanced_conversion_time) == 1
 
@@ -123,7 +128,7 @@ def test_fc050_optional_return_preserves_other_rule_findings_in_both_stages():
 
     # An invalid candidate update must not change the saved two-family policy.
     stale = api.post("/v1/tenants/current/checks", headers=headers, json={
-        "revision": record.revision,
+        "revision": baseline.revision,
         "changes": {"input_check_cross_field": "flag"},
     })
     assert stale.status_code == 409
