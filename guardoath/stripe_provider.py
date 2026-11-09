@@ -33,7 +33,13 @@ def fetch_subscription(binding: StripeBinding, api_key: str, *,
         "Accept": "application/json",
         "Stripe-Version": "2025-02-24.acacia",
     })
-    send = opener or urllib.request.urlopen
+    # Do not follow redirects: Stripe credentials must never be forwarded to
+    # another host, including a provider-supplied Location header.
+    class _NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            return None
+
+    send = opener or urllib.request.build_opener(_NoRedirect()).open
     try:
         with send(request, timeout=timeout) as response:
             if getattr(response, "status", 200) != 200:
