@@ -606,7 +606,7 @@ def test_no_return_customer_sample_respects_strict_json_depth_admission():
     from types import SimpleNamespace
     from guardoath.record_rules import record_rules
 
-    parent = "/" + "/".join(["nested"] * 33)
+    parent = "/" + "/".join(["n"] * 33)
     fields = {
         "order_at": parent + "/order_at",
         "shipment_at": parent + "/shipment_at",
