@@ -119,9 +119,18 @@ test("FC-048 empty requested-scopes use real tenant and authenticated Input/Outp
     expect(reset.status()).toBe(200);
     resetRequired = true;
     const prior = await summary();
+    // A demo reset includes unrelated ordinary comparisons; remove those via
+    // the ordinary settings route first. The protected scope set can only be
+    // provisioned through its separate authenticated owner reference route.
+    const cleared = await request.post("/v1/tenants/current/checks", {headers, data: {
+      revision: prior.revision, changes: {comparisons: []}
+    }});
+    expect(cleared.status(), (await cleared.text()).slice(0, 200)).toBe(200);
+    const isolated = await summary();
+    expect(isolated.revision).toBe(prior.revision + 1);
+    expect(isolated.comparisons).toEqual([]);
     const saved = await request.post("/v1/tenants/current/references", {headers, data: {
-      revision: prior.revision, changes: {
-        comparisons: [],
+      revision: isolated.revision, changes: {
         advanced_identity: [{
           rule_id: "browser_scope_zero", kind: "authorized_scope_subset",
           fields: {requested_scopes: "/scopes"}, trusted_values: ["private:authorized"],
@@ -132,7 +141,7 @@ test("FC-048 empty requested-scopes use real tenant and authenticated Input/Outp
     }});
     expect(saved.status(), (await saved.text()).slice(0, 200)).toBe(200);
     const live = await summary();
-    expect(live.revision).toBe(prior.revision + 1);
+    expect(live.revision).toBe(isolated.revision + 1);
     // Only a status view belongs in the customer dashboard. The tenant's
     // trusted scope list must never leak to the public settings response.
     expect(live.advanced_identity).toEqual([]);
