@@ -166,6 +166,19 @@ test("FC-050 indexed optional return passes before return and blocks an invalid 
         "business.ui_count_limit", "business.ui_optional_return"
       ]);
     expect(both.effective_action).toBe("flag");
+
+    // A fourth event object without its timestamp is not the same as an
+    // absent fourth event. Real tenant API must report both failing rules.
+    const missingReturnTimestamp = await jointRequest("output", {
+      events: [...beforeReturn.events, {}],
+      summary: {count: 4, limit: 3}
+    });
+    expect(missingReturnTimestamp.evaluation_status).toBe("complete");
+    expect(missingReturnTimestamp.findings.filter(f => f.rule_id.startsWith("business."))
+      .map(f => f.rule_id).sort()).toEqual([
+        "business.ui_count_limit", "business.ui_optional_return"
+      ]);
+    expect(missingReturnTimestamp.effective_action).toBe("flag");
   } finally {
     if (resetRequired) {
       const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
