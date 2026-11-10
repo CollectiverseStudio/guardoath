@@ -515,3 +515,10 @@ test("Stripe success redirect does not activate an unpaid account", async ({page
   await expect(page.locator("#billing-manage")).toBeHidden();
   await expect(page.locator("#billing-subscribe")).toBeVisible();
 });
+
+test("public demo does not expose customer API-key management", async ({page}) => {
+  await page.goto("/dashboard");
+  await expect(page.locator("#keys-panel")).toBeHidden();
+  await expect(page.locator("#key-create")).toBeHidden();
+  await expect(page.locator("#sign-in-box")).toBeVisible();
+});
