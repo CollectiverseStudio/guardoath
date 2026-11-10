@@ -9,6 +9,7 @@ import argparse
 import json
 import os
 import re
+import tempfile
 from pathlib import Path
 
 from guardoath.json_data import MAX_JSON_BYTES, parse_json
@@ -63,16 +64,21 @@ def main(argv=None):
     # fail closed at runtime. Refuse to create a misleading operator artifact.
     if not reference_is_trusted(signed, args.tenant, key=key):
         parser.error("Reference validity window is not currently acceptable; no attestation created")
-    # Generate the complete JSON before reserving a private output path.
-    # A partially written reference is never a usable attestation: fsync must
-    # succeed or the newly created artifact is removed. Never overwrite an
-    # existing destination, including a symlink, even after a failed write.
+    # Serialize before touching storage. Publishing directly at the destination
+    # exposes partial signed JSON while it is being written, even if later
+    # removed on a caught exception (or left behind after process termination).
+    # Write a private temporary file in the destination directory, sync the
+    # full contents, and hard-link it into place atomically. os.link refuses
+    # existing destinations, including symlinks: do not use os.replace().
     try:
         contents = (json.dumps(signed.model_dump(mode="json"), indent=2) + "\n").encode("utf-8")
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        fd = os.open(args.output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        fd, temporary_name = tempfile.mkstemp(
+            prefix="." + args.output.name + ".", suffix=".tmp",
+            dir=args.output.parent)
     except (OSError, ValueError):
         parser.error("Cannot create private attestation output; require a new writable destination")
+    temporary = Path(temporary_name)
     try:
         try:
             with os.fdopen(fd, "wb") as handle:
@@ -80,18 +86,26 @@ def main(argv=None):
                 handle.flush()
                 os.fsync(handle.fileno())
         except BaseException:
-            # fdopen may fail before taking ownership of the descriptor.
+            # fdopen may fail before accepting responsibility for the descriptor.
             try:
                 os.close(fd)
             except OSError:
                 pass
             raise
+        # The output name does not exist until the complete private file has
+        # passed fsync. Hard-link publication is same-filesystem and exclusive.
+        # No signed bytes are ever streamed directly through the public name.
+        os.link(temporary, args.output)
     except BaseException:
-        try:
-            args.output.unlink()
-        except OSError:
-            pass
         parser.error("Private attestation write failed; no valid artifact created")
+    finally:
+        try:
+            temporary.unlink()
+        except OSError:
+            # A process/storage failure may leave a private mode-0600 temporary
+            # file. It is NOT a valid published attestation; operators must
+            # keep this directory private and clean orphaned .tmp files.
+            pass
     print("Host attestation created; verify and save the resulting tenant rule through the authenticated settings API.")
     return 0
 
