@@ -284,3 +284,93 @@ test("Google login starts Cognito authorization code with PKCE and explicit Goog
   expect(auth.searchParams.get("code_challenge")).toMatch(/^[A-Za-z0-9_-]{43}$/);
   expect(auth.searchParams.get("state")).toMatch(/^[A-Za-z0-9_-]{22}$/);
 });
+
+
+test("Google OAuth callback preserves verified session after transient automatic registration failure", async ({page, request}) => {
+  const demo = await request.post("/v1/demo-users/demo2/key", {data: {}});
+  expect(demo.status()).toBe(200);
+  const summary = await request.get("/v1/applications/current", {
+    headers: {"X-GuardOath-Key": (await demo.json()).api_key}
+  });
+  expect(summary.status()).toBe(200);
+  const application = await summary.json();
+  application.application_id = "usr-oauth-callback-unpaid";
+  application.tenant = {
+    ...application.tenant,
+    tenant_id: "usr-oauth-callback-unpaid", display_name: "Registered Google account",
+    demo: false, subscription_status: "inactive", subscription_active: false,
+    monthly_allowance: 0, used: 0
+  };
+  await page.addInitScript(() => {
+    sessionStorage.setItem("guardoath-state", "synthetic-oauth-state");
+    sessionStorage.setItem("guardoath-verifier", "v".repeat(43));
+    sessionStorage.setItem("guardoath-sign-in-intent", "register");
+  });
+  await page.route("**/v1/sign-in", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      authorize_url: "https://example.invalid/oauth2/authorize",
+      logout_url: "https://example.invalid/logout",
+      client_id: "synthetic", redirect_uri: "http://localhost/dashboard",
+      scope: "openid email aws.cognito.signin.user.admin",
+      registration_enabled: true, google_provider: "Google"
+    })
+  }));
+  let tokenCalls = 0;
+  await page.route("**/v1/sign-in/token", async route => {
+    tokenCalls++;
+    expect(route.request().headers()["content-type"]).toContain("application/json");
+    expect(route.request().headers()["x-amz-content-sha256"]).toMatch(/^[a-f0-9]{64}$/);
+    expect(JSON.parse(route.request().postData())).toEqual({
+      code: "test-code", code_verifier: "v".repeat(43)
+    });
+    await route.fulfill({status: 200, contentType: "application/json",
+      body: JSON.stringify({access_token: "synthetic-oauth-session", expires_in: 3600})});
+  });
+  let registered = false;
+  let attempts = 0;
+  await page.route("**/v1/register", async route => {
+    attempts++;
+    expect(route.request().headers()["x-guardoath-session"]).toBe("synthetic-oauth-session");
+    expect(route.request().postData()).toBe("{}");
+    expect(route.request().headers()["x-amz-content-sha256"]).toMatch(/^[a-f0-9]{64}$/);
+    if (attempts === 1) {
+      await route.fulfill({status: 503, contentType: "application/json",
+        body: JSON.stringify({detail: "Temporary registration failure"})});
+    } else {
+      registered = true;
+      await route.fulfill({status: 201, contentType: "application/json",
+        body: JSON.stringify({tenant_id: "usr-oauth-callback-unpaid",
+          subscription_status: "inactive", can_validate: false})});
+    }
+  });
+  await page.route("**/v1/account/status", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      registered, registration_enabled: true,
+      tenant_id: registered ? "usr-oauth-callback-unpaid" : null,
+      subscription_status: registered ? "inactive" : "not_registered",
+      can_validate: false
+    })
+  }));
+  await page.route("**/v1/applications/current", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify(application)
+  }));
+  await page.route("**/v1/tenants/current/keys", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({keys: [], max_keys: 2})
+  }));
+
+  await page.goto("/dashboard?code=test-code&state=synthetic-oauth-state");
+  await expect(page.locator("#account-status")).toContainText("Registration not completed (HTTP 503)");
+  expect(page.url()).not.toContain("code=test-code");
+  expect(await page.evaluate(() => sessionStorage.getItem("guardoath-session")))
+    .toBe("synthetic-oauth-session");
+  await expect(page.locator("#register-account")).toBeVisible();
+  await page.locator("#register-account").click();
+  await expect(page.locator("#account-status")).toContainText("Subscription: inactive");
+  await expect(page.locator("#register-account")).toBeHidden();
+  await expect(page.locator("#key-create")).toBeDisabled();
+  expect(tokenCalls).toBe(1);
+  expect(attempts).toBe(2);
+});
