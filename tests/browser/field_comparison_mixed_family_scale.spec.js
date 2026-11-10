@@ -199,6 +199,10 @@ test("authenticated mixed 51-rule FC portfolio renders, saves UI override and ru
     // A staged check-wide Off is not the saved policy. The customer note
     // must identify the unsaved draft, then the real saved Off after Save.
     await page.locator("#tenant-check-input-cross_field").selectOption("");
+    // A staged check-wide Off is NOT an authoritative saved Off. The ordinary
+    // editor must not prematurely label the existing saved comparison disabled.
+    const ordinaryFirst = page.locator('li[data-comparison-id="mixed_ui_000"]');
+    await expect(ordinaryFirst).not.toContainText("Saved input Field comparisons check is Off.");
     await page.locator("#input-example-check").selectOption("general");
     await page.locator("#input-example-check").selectOption("cross_field");
     await expect(page.locator("#input-example-note")).toContainText("not saved yet");
@@ -213,6 +217,18 @@ test("authenticated mixed 51-rule FC portfolio renders, saves UI override and ru
     await page.locator("#input-example-check").selectOption("cross_field");
     await expect(page.locator("#input-example-note")).toContainText("off on this record");
     await expect(page.locator("#input-example-note")).not.toContainText("not saved yet");
+    // After revisioned Save and reconnect, the customer sees why this
+    // otherwise enabled ordinary rule cannot run on Input. Output's check
+    // remains enabled and only the independently disabled identity rule is Off.
+    const savedOrdinary = page.locator('li[data-comparison-id="mixed_ui_000"]');
+    await expect(savedOrdinary).toContainText("Saved input Field comparisons check is Off.");
+    await expect(savedOrdinary).toContainText("regardless of its own rule action");
+    await expect(savedOrdinary).not.toContainText("Saved output Field comparisons check is Off.");
+    const identityOff = page.locator('li[data-identity-id="mixed_ui_050"]');
+    await expect(identityOff).toContainText("Saved output rule action is Off.");
+    const finalSaved = await current(request, headers);
+    expect(finalSaved.revision).toBe(checkWideOff.revision);
+    expect(finalSaved.output_checks.cross_field).toBe("flag");
   } finally {
     if (shouldReset) {
       const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
