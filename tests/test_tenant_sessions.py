@@ -394,8 +394,9 @@ def test_google_sign_in_and_registration_are_not_advertised_without_provider(mon
     assert registering.public_config()["google_provider"] == "Google"
 
     monkeypatch.setenv("GUARDOATH_GOOGLE_LOGIN_ENABLED", "0")
-    with pytest.raises(ValueError, match="registration requires"):
-        CognitoSessions(POOL, CLIENT, DOMAIN, REDIRECT)
+    native = CognitoSessions(POOL, CLIENT, DOMAIN, REDIRECT)
+    assert native.public_config()["registration_enabled"] is True
+    assert native.public_config()["google_provider"] is None
     monkeypatch.setenv("GUARDOATH_GOOGLE_LOGIN_ENABLED", "invalid")
     with pytest.raises(ValueError, match="GUARDOATH_GOOGLE_LOGIN_ENABLED"):
         CognitoSessions(POOL, CLIENT, DOMAIN, REDIRECT)
@@ -587,6 +588,30 @@ def test_without_sign_in_configured_the_endpoints_say_so_and_sessions_are_refuse
 def test_sign_in_needs_tenant_records(sessions):
     with pytest.raises(ValueError, match="needs tenant records"):
         create_app(engine=demo_engine(), credentials={"k": "demo"}, sessions=sessions)
+
+
+def test_verified_native_email_registration_creates_unpaid_tenant_without_google(sessions, cognito):
+    sessions.google_enabled = False
+    sessions.registration_enabled = True
+    access = token(sub="native-customer")
+    cognito.users[access] = [
+        {"Name": "email", "Value": "native@example.invalid"},
+        {"Name": "email_verified", "Value": "true"},
+        {"Name": "sub", "Value": "native-customer"},
+    ]
+    tenants = TenantService(MemoryTenantStore(), CHECKERS, SECRET)
+    client = TestClient(create_app(engine=demo_engine(), credentials={},
+                                   tenants=tenants, sessions=sessions))
+    before = client.get("/v1/account/status", headers=signed(access))
+    assert before.status_code == 200 and before.json()["registered"] is False
+    response = client.post("/v1/register", headers=signed(access))
+    assert response.status_code == 201
+    tenant = tenants.store.get(response.json()["tenant_id"])
+    assert tenant is not None and tenant.subscription_status == "inactive"
+    assert tenant.key_hashes == () and tenant.monthly_allowance == 0
+    assert client.post("/v1/register", headers=signed(access)).status_code == 409
+    assert client.get("/v1/account/status", headers=signed(access)).json()["can_validate"] is False
+    assert client.post("/v1/tenants/current/keys", headers=signed(access), json={}).status_code == 402
 
 
 def test_verified_google_registration_creates_unsubscribed_tenant_without_paid_access(sessions, cognito):
