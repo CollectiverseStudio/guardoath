@@ -584,4 +584,8 @@ test("customer API-key management sends signed-in session, never pasted API key"
   await expect(page.locator("#key-new")).toHaveValue("gok_example_once");
   expect(creates).toBe(1);
   expect(reads).toBeGreaterThan(0);
+  // The one-time plaintext credential must not survive sign-out.
+  await page.locator("#sign-out").click();
+  await expect(page.locator("#keys-panel")).toBeHidden();
+  await expect(page.locator("#key-new")).toHaveValue("");
 });
