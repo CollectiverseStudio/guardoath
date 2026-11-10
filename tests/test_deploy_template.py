@@ -51,7 +51,8 @@ def test_only_services_with_a_free_allowance_or_covered_by_the_free_plan_are_use
                      "AWS::CertificateManager::Certificate", "AWS::WAFv2::WebACL", "AWS::CloudFront::Distribution",
                      "AWS::Route53::RecordSet", "AWS::PricingPlanManager::Subscription", "AWS::CloudWatch::Alarm",
                      # Tenant sign-in: Cognito Lite, free for 10,000 monthly active users per account or organization.
-                     "AWS::Cognito::UserPool", "AWS::Cognito::UserPoolDomain", "AWS::Cognito::UserPoolClient"}
+                     "AWS::Cognito::UserPool", "AWS::Cognito::UserPoolDomain", "AWS::Cognito::UserPoolClient",
+                     "AWS::Cognito::UserPoolIdentityProvider"}
 
 
 def test_the_free_plan_covers_the_distribution_web_acl_and_hosted_zone(template):
