@@ -172,10 +172,13 @@
         const example = (tenant.record_rules || []).find(x => x.rule_id === "business." + rule.rule_id);
         if (sameDefinition && example) {
           for (const stage of rule.stages) {
-            // Explicit saved Off is authoritative for this stage. An example
-            // can still be tried against the complete tenant policy, but it
-            // must not be presented as proof this disabled rule was evaluated.
-            if (tenant[stage + "_rule_actions"]?.["business." + rule.rule_id] === "off") {
+            // The saved parent check governs whether ANY comparison runs.
+            // A pending dashboard change is not yet tenant-authoritative.
+            // Keep the independent own-rule Off message when the check runs.
+            const savedChecks = tenant[stage + "_checks"] || {};
+            if (!savedChecks.cross_field || savedChecks.cross_field === "off") {
+              item.append(el("p", "Saved " + stage + " Field comparisons check is Off. This rule is not evaluated on " + stage + " regardless of its own rule action; examples still test other enabled tenant checks."));
+            } else if (tenant[stage + "_rule_actions"]?.["business." + rule.rule_id] === "off") {
               item.append(el("p", "Saved " + stage + " rule action is Off. Examples remain available for full-policy testing, but this rule will not report a finding on " + stage + " until you enable and Save checks."));
             }
             // The Engine-certified no-return sample exists only when the
