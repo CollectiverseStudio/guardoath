@@ -37,7 +37,7 @@ def verify(cfn, cognito, aws_lambda, *, stack_name="guardoath-site",
     result["scope"] = "deployment configuration only; live Google account roundtrip not tested"
     get_public = get_public or _get_public
 
-    # Do not return a partially passing result on a failed AWS/HTTP fetch.
+    # Even a single missing/inaccessible AWS/HTTP requirement makes readiness false.
     try:
         stack = cfn.describe_stacks(StackName=stack_name)["Stacks"][0]
         outputs = {item["OutputKey"]: item["OutputValue"]
@@ -68,7 +68,7 @@ def verify(cfn, cognito, aws_lambda, *, stack_name="guardoath-site",
         result["cognito_client_google"] = (
             "Google" in client.get("SupportedIdentityProviders", ())
             and "COGNITO" in client.get("SupportedIdentityProviders", ())
-            and client.get("GenerateSecret") is False
+            and not client.get("ClientSecret")
         )
         callback = domain.rstrip("/") + "/dashboard"
         result["cognito_callback"] = (
@@ -97,7 +97,7 @@ def verify(cfn, cognito, aws_lambda, *, stack_name="guardoath-site",
         )
         result["public_callback"] = public.get("redirect_uri") == callback
         result["public_client_binding"] = public.get("client_id") == client_id
-    except (LookupError, KeyError, IndexError, TypeError, ValueError, OSError, Exception):
+    except Exception:
         # Error details may contain credentials, tenant IDs or request context.
         # Keep them out of logs and console. False checks distinguish incomplete.
         pass
