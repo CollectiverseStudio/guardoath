@@ -225,3 +225,29 @@ test("verified Google session survives transient registration failure and retrie
   await expect(page.locator("#key-create")).toBeDisabled();
   expect(calls).toBe(2);
 });
+
+
+test("a disabled signed-in identity cannot register or see tenant controls", async ({page}) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem("guardoath-session", "synthetic-disabled-session");
+  });
+  await page.route("**/v1/sign-in", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      authorize_url: "https://example.invalid/oauth2/authorize",
+      logout_url: "https://example.invalid/logout",
+      client_id: "synthetic", redirect_uri: "http://localhost/dashboard",
+      scope: "openid email", registration_enabled: true, google_provider: "Google"
+    })
+  }));
+  await page.route("**/v1/account/status", route => route.fulfill({
+    status: 403, contentType: "application/json",
+    body: JSON.stringify({detail: "Account is unavailable; contact support"})
+  }));
+  await page.goto("/dashboard");
+  await expect(page.locator("#account-status")).toContainText("unavailable");
+  await expect(page.locator("#account-status")).toContainText("Contact support");
+  await expect(page.locator("#register-account")).toBeHidden();
+  await expect(page.locator("#sign-out")).toBeVisible();
+  await expect(page.locator("#keys-panel")).toBeHidden();
+});
