@@ -604,19 +604,47 @@ async function saveTenant(path, body, done) {
     const collision = fieldComparisonIdCollision(body?.changes || {});
     if (collision) { $("tenant-message").textContent = collision; return false; }
   }
+  // A server-side save may finish after the customer signs out, switches
+  // tenants, or edits a newer draft. Never reload that newer connection or
+  // misreport an earlier tenant's result as its saved configuration.
+  const ownerKey = key, ownerTenantId = application.tenant.tenant_id;
+  let ownerAttempt = revision;
+  const stillOwner = () => key === ownerKey &&
+    application?.tenant?.tenant_id === ownerTenantId &&
+    revision === ownerAttempt &&
+    (!ownerKey.startsWith(SESSION) ||
+      sessionStorage.getItem("guardoath-session") === ownerKey.slice(SESSION.length));
   $("tenant-save").disabled = $("tenant-reset").disabled = true;
   let message = done, saved = false;
   try {
     const text = JSON.stringify(body);
-    const response = await send(path, {method: "POST", cache: "no-store", headers: await requestHeaders(key, text), body: text});
+    const response = await send(path, {method: "POST", cache: "no-store",
+      headers: await requestHeaders(ownerKey, text), body: text});
+    if (!stillOwner()) return false;
     const data = await response.json().catch(() => ({}));
+    if (!stillOwner()) return false;
     saved = response.ok;
     if (!response.ok) message = response.status === 409 ? "Someone else changed this record. It has been reloaded; check the values and save again." : (typeof data.detail === "string" ? data.detail : "The change was not saved (HTTP " + response.status + ").");
     if (response.ok || response.status === 409) {
-      try { await reloadApplication(); } catch (error) { message += " The record could not be reloaded; connect again to see the current values."; }
+      // Use the originating credential, not the mutable current key. A
+      // connection switch during the reload is rejected by loadApplication.
+      reset(); ownerAttempt = revision;
+      try { await loadApplication(ownerKey, ownerAttempt); }
+      catch (error) { message += " The record could not be reloaded; connect again to see the current values."; }
+      if (!stillOwner()) return false;
     }
-  } catch (error) { message = "The change was not saved."; saved = false; }
-  finally { $("tenant-reset").disabled = false; $("tenant-save").disabled = !ownChecksSelected(); $("tenant-message").textContent = message; }
+  } catch (error) {
+    if (!stillOwner()) return false;
+    message = "The change was not saved."; saved = false;
+  } finally {
+    // A stale completion cannot unlock, erase or relabel another tenant's
+    // newer draft; its server-side write remains revision-authoritative.
+    if (stillOwner()) {
+      $("tenant-reset").disabled = false;
+      $("tenant-save").disabled = !ownChecksSelected();
+      $("tenant-message").textContent = message;
+    }
+  }
   return saved;
 }
 // What the checks panel shows but the record does not have yet: one field per check and stage, one rule map per stage.
