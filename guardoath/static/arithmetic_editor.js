@@ -119,9 +119,11 @@
         }
         const catalog = (tenant.record_rules || []).find(entry =>
           entry.rule_id === "business." + rule.rule_id);
-        if (sameDefinition && catalog) {
-          if (catalog.example_unavailable || catalog.look_alike_unavailable) {
-            item.append(node("p", "Some synthetic examples are unavailable under the strict JSON admission or selected rule contract. The saved rule still runs; use shallower JSON pointers to restore example buttons."));
+        if (sameDefinition) {
+          if (!catalog) {
+            item.append(node("p", "No record-generated examples are available for this saved rule. Stage settings still apply; test an appropriate JSON document using the shared tenant Engine."));
+          } else if (catalog.example_unavailable || catalog.look_alike_unavailable) {
+            item.append(node("p", "Some synthetic examples are unavailable under the strict JSON admission or selected rule contract. The saved definition remains subject to stage check and rule actions; use shallower JSON pointers to restore example buttons."));
           }
           for (const stage of rule.stages) {
             // The saved parent check governs whether ANY comparison runs.
@@ -133,8 +135,8 @@
             } else if (tenant[stage + "_rule_actions"]?.["business." + rule.rule_id] === "off") {
               item.append(node("p", "Saved " + stage + " rule action is Off. Examples remain available for full-policy testing, but this rule will not report a finding on " + stage + " until you enable and Save checks."));
             }
-            for (const [name, sample] of [["violating", catalog.example],
-                                          ["benign", catalog.look_alike]]) {
+            for (const [name, sample] of [["violating", catalog?.example],
+                                          ["benign", catalog?.look_alike]]) {
               if (typeof sample !== "string") continue;
               const button = node("button", "Try " + name + " " + stage + " example");
               button.type = "button";
