@@ -1,5 +1,21 @@
 const {test, expect} = require("@playwright/test");
 
+// A synthetic owner session must serve the authenticated PSI-reference GET.
+// The real local backend correctly rejects synthetic tokens with HTTP 401;
+// failing to scope this fixture would falsely exercise sign-out instead of
+// the registered customer's settings and Field Comparisons dashboard.
+async function mockOwnerDriftForSession(page, application, token) {
+  await page.route("**/v1/tenants/current/statistical-drift", route => {
+    expect(route.request().headers()["x-guardoath-session"]).toBe(token);
+    expect(route.request().headers()["x-guardoath-key"]).toBeUndefined();
+    return route.fulfill({
+      status: 200, contentType: "application/json",
+      body: JSON.stringify({revision: application.tenant.revision, rules: []})
+    });
+  });
+}
+
+
 // UI-only contract for an already verified first-time Cognito session.
 // The server's cryptographic Cognito and account registration/entitlement
 // checks are separately tested in Python; these browser stubs do not stand
@@ -87,6 +103,7 @@ test("registered but unpaid customer sees inactive plan and cannot click Create 
     status: 200, contentType: "application/json",
     body: JSON.stringify({keys: [], max_keys: 2})
   }));
+  await mockOwnerDriftForSession(page, application, "synthetic-ui-session-only");
   await page.goto("/dashboard");
   await expect(page.locator("#account-status")).toContainText("Subscription: inactive");
   await expect(page.locator("#subscription-status")).toContainText("No active subscription");
@@ -203,6 +220,7 @@ test("verified Google session survives transient registration failure and retrie
     status: 200, contentType: "application/json", body: JSON.stringify({keys: [], max_keys: 2})
   }));
 
+  await mockOwnerDriftForSession(page, application, "synthetic-ui-session-only");
   await page.goto("/dashboard");
   await expect(page.locator("#register-account")).toBeVisible();
   await page.locator("#register-account").click();
@@ -244,7 +262,7 @@ test("a disabled signed-in identity cannot register or see tenant controls", asy
 });
 
 
-test("Google login starts Cognito authorization code with PKCE and explicit Google provider", async ({page}) => {
+test("Cognito sign-in uses PKCE and does not force optional Google federation", async ({page}) => {
   await page.route("**/v1/sign-in", route => route.fulfill({
     status: 200, contentType: "application/json",
     body: JSON.stringify({
@@ -257,7 +275,7 @@ test("Google login starts Cognito authorization code with PKCE and explicit Goog
   }));
   await page.goto("/dashboard");
   await expect(page.locator("#sign-in")).toBeVisible();
-  await expect(page.locator("#sign-in")).toHaveText("Sign in with Google");
+  await expect(page.locator("#sign-in")).toHaveText("Sign in to GuardOath");
   await expect(page.locator("#register-account")).toBeVisible();
   await page.route("https://example.invalid/oauth2/authorize**", route => route.fulfill({
     status: 200, contentType: "text/html", body: "<html><body>OAuth stub</body></html>"
@@ -266,7 +284,7 @@ test("Google login starts Cognito authorization code with PKCE and explicit Goog
     r.url().startsWith("https://example.invalid/oauth2/authorize"));
   await page.locator("#sign-in").click();
   const auth = new URL((await authRequest).url());
-  expect(auth.searchParams.get("identity_provider")).toBe("Google");
+  expect(auth.searchParams.get("identity_provider")).toBeNull(); // Native remains available when Google is configured.
   expect(auth.searchParams.get("response_type")).toBe("code");
   expect(auth.searchParams.get("client_id")).toBe("synthetic");
   expect(auth.searchParams.get("redirect_uri")).toBe("http://localhost/dashboard");
@@ -352,6 +370,7 @@ test("Google OAuth callback preserves verified session after transient automatic
     body: JSON.stringify({keys: [], max_keys: 2})
   }));
 
+  await mockOwnerDriftForSession(page, application, "synthetic-oauth-session");
   await page.goto("/dashboard?code=test-code&state=synthetic-oauth-state");
   await expect(page.locator("#account-status")).toContainText("Registration not completed (HTTP 503)");
   expect(page.url()).not.toContain("code=test-code");
@@ -510,6 +529,7 @@ test("Stripe success redirect does not activate an unpaid account", async ({page
     status: 200, contentType: "application/json",
     body: JSON.stringify({keys: [], max_keys: 2})
   }));
+  await mockOwnerDriftForSession(page, application, "synthetic-checkout-session");
   await page.goto("/dashboard?checkout=success");
   await expect(page.locator("#account-status")).toContainText("pending verification");
   await expect(page.locator("#key-create")).toBeDisabled();
@@ -580,6 +600,7 @@ test("customer API-key management sends signed-in session, never pasted API key"
         body: JSON.stringify({keys: [], max_keys: 2})});
     }
   });
+  await mockOwnerDriftForSession(page, application, "verified-session-for-ui");
   await page.goto("/dashboard");
   await expect(page.locator("#keys-panel")).toBeVisible();
   await expect(page.locator("#customer-key-connect")).toBeVisible();
@@ -594,4 +615,89 @@ test("customer API-key management sends signed-in session, never pasted API key"
   await page.locator("#sign-out").click();
   await expect(page.locator("#keys-panel")).toBeHidden();
   await expect(page.locator("#key-new")).toHaveValue("");
+});
+
+
+test("late successful account-status response cannot resurrect a replaced customer session", async ({page}) => {
+  await page.addInitScript(() => sessionStorage.setItem("guardoath-session", "old-status-session"));
+  await page.route("**/v1/sign-in", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({authorize_url: "https://example.invalid/oauth2/authorize",
+      logout_url: "https://example.invalid/logout", client_id: "synthetic",
+      redirect_uri: "http://localhost/dashboard", scope: "openid email",
+      registration_enabled: true, google_provider: null})
+  }));
+  let statusStarted;
+  const requestStarted = new Promise(resolve => {statusStarted = resolve;});
+  let finishStatus;
+  const release = new Promise(resolve => {finishStatus = resolve;});
+  let oldOwnerLoads = 0;
+  await page.route("**/v1/applications/current", async route => {
+    oldOwnerLoads++;
+    await route.fulfill({status: 401, contentType: "application/json", body: "{}"});
+  });
+  await page.route("**/v1/account/status", async route => {
+    expect(route.request().headers()["x-guardoath-session"]).toBe("old-status-session");
+    statusStarted();
+    await release;
+    await route.fulfill({status: 200, contentType: "application/json",
+      body: JSON.stringify({registered: true, registration_enabled: true,
+        tenant_id: "old-tenant", subscription_status: "active", can_validate: true})});
+  });
+  await page.goto("/dashboard");
+  await requestStarted;
+  await page.evaluate(() => sessionStorage.setItem("guardoath-session", "replacement-session"));
+  finishStatus();
+  await expect(page.locator("#sign-in")).toBeVisible();
+  await expect(page.locator("#keys-panel")).toBeHidden();
+  await expect(page.locator("#tenant-panel")).toBeHidden();
+  expect(await page.evaluate(() => sessionStorage.getItem("guardoath-session")))
+    .toBe("replacement-session");
+  expect(oldOwnerLoads).toBe(0);
+});
+
+test("late tenant-settings response cannot install an old owner's application after session replacement", async ({page, request}) => {
+  const issued = await request.post("/v1/demo-users/demo2/key", {data: {}});
+  expect(issued.status()).toBe(200);
+  const original = await request.get("/v1/applications/current", {
+    headers: {"X-GuardOath-Key": (await issued.json()).api_key}
+  });
+  expect(original.status()).toBe(200);
+  const application = await original.json();
+  application.application_id = "usr-old-owner";
+  application.tenant = {...application.tenant, tenant_id: "usr-old-owner", demo: false,
+    subscription_status: "active", subscription_active: true};
+  await page.addInitScript(() => sessionStorage.setItem("guardoath-session", "old-tenant-session"));
+  await page.route("**/v1/sign-in", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({authorize_url: "https://example.invalid/oauth2/authorize",
+      logout_url: "https://example.invalid/logout", client_id: "synthetic",
+      redirect_uri: "http://localhost/dashboard", scope: "openid email",
+      registration_enabled: true, google_provider: null})
+  }));
+  await page.route("**/v1/account/status", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({registered: true, registration_enabled: true,
+      tenant_id: "usr-old-owner", subscription_status: "active", can_validate: true})
+  }));
+  let tenantStarted;
+  const requestStarted = new Promise(resolve => {tenantStarted = resolve;});
+  let finishTenant;
+  const release = new Promise(resolve => {finishTenant = resolve;});
+  await page.route("**/v1/applications/current", async route => {
+    expect(route.request().headers()["x-guardoath-session"]).toBe("old-tenant-session");
+    tenantStarted();
+    await release;
+    await route.fulfill({status: 200, contentType: "application/json",
+      body: JSON.stringify(application)});
+  });
+  await page.goto("/dashboard");
+  await requestStarted;
+  await page.evaluate(() => sessionStorage.setItem("guardoath-session", "replacement-session"));
+  finishTenant();
+  await expect(page.locator("#tenant-panel")).toBeHidden();
+  await expect(page.locator("#keys-panel")).toBeHidden();
+  await expect(page.locator("#connection-status")).not.toContainText("Connected to usr-old-owner");
+  expect(await page.evaluate(() => sessionStorage.getItem("guardoath-session")))
+    .toBe("replacement-session");
 });
