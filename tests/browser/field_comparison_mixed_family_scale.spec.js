@@ -246,6 +246,45 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
       expect(benign.findings.filter(f => f.rule_id.startsWith("business.mixed_ui_")))
         .toHaveLength(0);
     }
+    // Regression: at a 500-rule FOUR-FAMILY scale, disabling just the
+    // last conversion rule on Output must not disable its Input evaluation,
+    // drop the other 499 definitions, or relax a different Output Block.
+    // This is a real dashboard edit, authenticated revisioned Save and Engine,
+    // not a synthetic policy or a second validation implementation.
+    await page.locator("#rule-search").fill("mixed_ui_499");
+    await page.locator('tr.rule-row[data-rule="' + lastId + '"] [data-stage="output"]')
+      .selectOption("off");
+    await page.getByRole("button", {name: "Save checks", exact: true}).click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved.");
+    const outputOff500 = await current(request, headers);
+    expect(outputOff500.revision).toBe(persisted.revision + 1);
+    expect(outputOff500.output_rule_actions[lastId]).toBe("off");
+    expect(outputOff500.input_rule_actions[lastId]).toBe("block");
+    expect(outputOff500.record_rules.filter(r => r.rule_id.startsWith("business.mixed_ui_")))
+      .toHaveLength(size);
+    for (const family of ["comparisons", "advanced_arithmetic", "advanced_identity",
+                          "advanced_conversion_time"]) {
+      expect(outputOff500[family], family).toHaveLength(125);
+    }
+    await connect(page);
+    await page.locator("#rule-search").fill("mixed_ui_499");
+    const restored = page.locator('tr.rule-row[data-rule="' + lastId + '"]');
+    await expect(restored.locator('[data-stage="output"]')).toHaveValue("off");
+    await expect(restored.locator(".effect-output")).toHaveText("Output: Off (own setting)");
+    await expect(restored.locator(".effect-input")).toHaveText("Input: Block (own setting)");
+
+    const inputAfterOff = await check(request, headers, "input", bad);
+    expect(inputAfterOff.evaluation_status).toBe("complete");
+    expect(inputAfterOff.effective_action).toBe("block");
+    expect(inputAfterOff.findings.filter(f => f.rule_id.startsWith("business.mixed_ui_"))
+      .map(f => f.rule_id).sort()).toEqual(["business.mixed_ui_000", lastId]);
+
+    const outputAfterOff = await check(request, headers, "output", bad);
+    expect(outputAfterOff.evaluation_status).toBe("complete");
+    expect(outputAfterOff.effective_action).toBe("block");
+    expect(outputAfterOff.findings.filter(f => f.rule_id.startsWith("business.mixed_ui_"))
+      .map(f => f.rule_id)).toEqual(["business.mixed_ui_000"]);
+    expect((await current(request, headers)).revision).toBe(outputOff500.revision);
   } finally {
     if (resetRequired) {
       const cleanup = await request.post("/v1/tenants/current/reset", {headers, data: {}});
