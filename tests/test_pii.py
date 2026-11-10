@@ -48,7 +48,13 @@ def test_real_local_findings(engine, content, rule):
 def test_benign_lookalikes(engine, content):
     result = scan(engine, content)
     assert result.findings == ()
-    assert result.recommended_action == "allow"
+    # A no-finding timeout is not a clean benign result. On intermittent CI
+    # failures report only private-safe checker status/code/latency, never text.
+    diagnostic = tuple((check.checker_id, check.status, check.error_code, check.latency_ms)
+                       for check in result.checker_results)
+    assert result.evaluation_status == "complete", diagnostic
+    assert all(check.status == "passed" for check in result.checker_results), diagnostic
+    assert result.recommended_action == "allow", diagnostic
 
 
 @pytest.mark.parametrize("content", [
