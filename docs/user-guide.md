@@ -2906,6 +2906,28 @@ it does not modify the authoritative tenant Engine or admission deadlines.
 
 ### Customer email/password or optional Google sign-in, registration and paid access
 
+**Public demo without sign-in:** Select a demo user (for example `demo4`) and
+**Get demo API key**. This separate public action uses the server-issued demo
+credential to load only that selected demo tenant's existing Input/Output checks,
+rule editors and real shared Engine. It does **not** use or expose the hidden
+existing-customer API-key field. GuardOath verifies that the issued key resolves
+to exactly the selected demo tenant, refusing a missing, non-demo or mismatched
+tenant; an unsuccessful demo connection cannot unlock the Run button or claim
+the selected tenant's rules are loaded. Public demo keys are temporary examples,
+not customer ownership, subscription verification or a production entitlement.
+
+**Customer controls:** The **Existing customer application API key** field is
+behind sign-in, not next to the public demo selector. After verified customer
+sign-in, an existing key may be used for evaluation-only API access, but a
+pasted key cannot authenticate account ownership, create/revoke keys, manage
+billing or elevate a demo to a paid subscription. Managing keys and saved tenant
+settings requires the verified owner session and the backend's paid-access
+checks; a public demo remains available without a customer login. The real
+browser regression `tests/browser/public_demo_connection.spec.js` exercises
+public demo connectivity and a rejected cross-tenant response, while
+`tests/browser/customer_registration_status.spec.js` covers signed-in
+customer key controls. Neither test replaces live Cognito or Stripe acceptance.
+
 **Authentication choices:** Customers may register with a verified email address and password through Cognito's hosted sign-up page, without Google. Google sign-in is a separate optional federated provider. Both methods use the same verified Cognito session, the same tenant-backed dashboard and the same paid-entitlement gate. Cognito native signup requires EnableSelfRegistration=1 in the AWS stack; Google additionally requires EnableGoogleLogin=1 and its OAuth credentials. Email verification and configured MFA remain required. A source checkout alone does not activate Google sign-in. The AWS stack must explicitly configure the Google OAuth Web client and Cognito Google provider, then enable registration. The Google authorized redirect URI is the Cognito `/oauth2/idpresponse` endpoint, not the dashboard; Cognito returns the authorization code to `https://guardoath.com/dashboard`. Without the Google provider flag, the dashboard labels the existing invited-account Cognito login **Sign in to GuardOath** (native password/MFA via the hosted page) and hides Google self-registration; it never claims a Google login is configured. Production operation requires a real Google-account sign-in, registration, sign-out and repeat login against persistent tenant storage, verified-email mapping and separate paid-entitlement checks. See `deploy/aws/README.md` for full prerequisites and security/cost guidance.
 
 **Disabled accounts cannot re-register:** if a previously created tenant has been disabled, the account-status API returns HTTP 403 rather than misleadingly reporting that no account exists. The customer dashboard hides Register and key/settings controls, shows a contact-support message and still permits Sign out. The existing authoritative tenant is never replaced by a new registration, and the disabled account remains unable to validate until explicitly restored.
