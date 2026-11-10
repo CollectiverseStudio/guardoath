@@ -330,9 +330,9 @@ def build_pii_checker():
                     candidates.append((start, end, entity, source, tier, score))
             # A proof that a pattern consumes N decimal digits permits only
             # an impossible-match skip. All other patterns still run normally.
-            digits = sum(character.isdigit() for character in text)
+            digit_count = sum(character.isdigit() for character in text)
             for recognizer, pattern, required_digits in patterns:
-                if digits < required_digits:
+                if digit_count < required_digits:
                     continue
                 remaining = check_deadline()
                 for match in pattern.finditer(text, timeout=remaining, concurrent=True):
@@ -379,7 +379,7 @@ def build_pii_checker():
 
                 for entity, parts, custom, compiled, context, phone_digits in active:
                     remaining = check_deadline()
-                    if phone_digits and digits < phone_digits:
+                    if phone_digits and digit_count < phone_digits:
                         continue
                     if custom:
                         for part in parts:
@@ -392,7 +392,7 @@ def build_pii_checker():
                         continue
                     recognizer = parts[0]
                     for pattern, base_score, shortest, split, required_digits in compiled:
-                        if len(text) < shortest or digits < required_digits:
+                        if len(text) < shortest or digit_count < required_digits:
                             continue
                         remaining = check_deadline()
                         if split:
