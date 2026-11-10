@@ -132,84 +132,50 @@ table is empty (the app never ran), so:
 While it exists the kept table costs $0 (10/10 provisioned units, inside the 25/25 always-free units).
 If the table has items, do not delete it: the stack was live before, and the data must be kept.
 
-## Customer Google sign-in and registration (explicitly opt in)
+## Customer email/password registration and optional Google sign-in
 
-The previous deployed template created a Cognito app client with **only** `COGNITO` enabled, while
-the dashboard always tried `identity_provider=Google`. Its Lambda configuration also omitted
-`GUARDOATH_SELF_REGISTRATION`, leaving self-registration disabled. Those are deployment
-configuration blockers, not defects that a green Python test or a GitHub push can solve.
+The Cognito user pool supports native email/password authentication and optionally Google federation.
+`EnableSelfRegistration=1` enables public native Cognito sign-up; it does **not** require Google.
+`EnableGoogleLogin=1` separately enables Google, and requires the Google OAuth Web client ID
+and secret supplied securely as CloudFormation parameters. Both switches default to `0`.
+When registration is disabled, existing invited native accounts may still sign in.
 
-The current template supports a Google identity provider through explicit, validated parameters:
-`EnableGoogleLogin` (default `0`), `GoogleOAuthClientId` (default empty),
-`GoogleOAuthClientSecret` (a `NoEcho` value, default empty), and
-`EnableSelfRegistration` (default `0`). When Google is enabled, the provider is
-created and the public Cognito app client enables `Google` alongside `COGNITO`.
-The Lambda receives **flags only**; neither Google credential is put in Lambda
-environment variables, logged, or stored in the repository. The registration flag
-may not be enabled without enabling Google login, and an enabled provider cannot
-be deployed with missing Google credentials.
+Cognito verifies email and requires the configured MFA before GuardOath accepts a new identity.
+The server validates Cognito's signed access token, live GetUser response, verified email,
+and matching subject; a Google user must additionally have trusted provider identity metadata.
+The tenant ID is derived from the verified Cognito subject, never the email address or a browser claim.
+`POST /v1/register` creates a tenant with inactive subscription, zero paid allowance and no API keys.
+Only trusted billing reconciliation can activate paid access.
 
-### External Google OAuth configuration
+The dashboard redirects to the Cognito hosted authorization page with code+PKCE.
+It does not force the Google identity provider; when Google is configured, Cognito offers it as an
+optional sign-in method alongside native credentials. Both methods return to
+`https://guardoath.com/dashboard`. A user who signs in but has not registered is offered
+Register; registration and subscription purchase are distinct actions.
 
-Create an **OAuth 2.0 Web application client** under Google Auth Platform.
-Configure its Google OAuth consent and testing/publishing status to permit the
-accounts intended to register. Use this **Google authorized redirect URI**
-(the *Cognito* callback, not the GuardOath dashboard callback):
+### Optional Google OAuth configuration
+
+Create a Google OAuth 2.0 Web application and configure the Google authorized redirect URI:
 
 `https://<SignInDomainPrefix>.auth.us-east-1.amazoncognito.com/oauth2/idpresponse`
 
-The Cognito app client's own code+PKCE callback and logout URI are both
-`https://guardoath.com/dashboard`. The server requires the Cognito-confirmed **Google federated identity** (`identities` provider name/type and the Google-prefixed Cognito username), validates the verified email and matching signed Cognito subject, then derives the first-time tenant identity. A native Cognito account with only a verified email cannot create a Google self-registration tenant. `POST /v1/register` persists that identity as an inactive tenant. Cognito must map Google's
-`email_verified` claim into its user profile and the app client must grant
-write permission for the mapped `email_verified` attribute (alongside
-`email`); otherwise the user may sign in without a verified-email attribute,
-and GuardOath correctly denies registration. The template enforces this
-mapping/write-access requirement and keeps `custom:tenant_id` non-writable. No email/password, signed token,
-client secret, tenant ID or payment claim is provided by the browser to create
-an entitlement.
+Supply its client ID and secret as secure stack parameters; do not commit or log secrets.
+Cognito must map Google's verified-email attribute, and the app client must permit the
+mapped `email` and `email_verified` attributes. The custom tenant binding remains non-writable.
+The Google configuration preflight is:
 
-In the existing CloudFormation stack parameters, supply the actual Google Web
-client ID and secret securely (do **not** paste them in a commit, ticket or shell
-history); set `EnableGoogleLogin=1`. After verifying Google redirects and
-reviewing the applicable Cognito charges, set `EnableSelfRegistration=1`.
-A new tenant has status `inactive`, allowance `0`, and no API keys. A
-registration retry after temporary HTTP 503 retains the verified browser session,
-so the customer can retry without purchasing or logging in again.
+`python -m tools.verify_google_registration --profile collectiverse-prod`
 
-**Read-only configuration preflight:** After deploying and configuring an external
-Google OAuth Web application, use `python -m tools.verify_google_registration
---profile collectiverse-prod` from the repository root. It checks CloudFormation
-outputs, Cognito Google IdP and verified-email mapping, the Cognito public app
-client's mapped-attribute write permissions, the Lambda enablement flags, and
-the live public sign-in API.
-It prints only a fixed set of boolean results, never IDs or secrets. Exit `0`
-means these configuration requirements passed and a *real Google browser
-roundtrip still must be performed*; exit `2` means incomplete/unverifiable.
-It makes no AWS writes or customer tenant changes. Source parity and the 15
-post-deployment release checks remain separate.
+This preflight checks configuration only, not a real Google browser sign-in or paid entitlement.
 
-**Verify the actual deployed stack, not the template alone:** inspect the
-Cognito app client for Google support and the Google IdP's verified-email
-mapping, the Lambda's two enablement flags, and the public `GET /v1/sign-in`
-configuration. Then complete a real browser roundtrip using a Google account:
-first sign-in, register, inactive status, denied paid check and API-key creation,
-sign out, sign back in, unchanged tenant identity and settings. Repeat with a
-second Google account to verify isolation. If you cannot complete these steps,
-**do not claim Google registration is operational**. Paid plan activation and
-Stripe webhook reconciliation are separate obligations (Issue #37).
+### Release verification
 
-The template defaults to **disabled** Google registration until the external
-credential/configuration and cost review are finished; it never presents a
-functional Google sign-in button on a deployment that only has the native
-Cognito provider. Existing native, admin-created users remain supported on
-the user pool; this browser provides the Google path only.
-
-### Legacy native Cognito account administration
-
-If you intentionally still provision a native Cognito user, an administrator
-must create the user and set its immutable tenant attribute. This is separate
-from Google self-registration and is not the new-customer journey. Native
-accounts are not automatically paid or eligible to issue API keys.
+For native email/password, verify new sign-up, email confirmation, MFA, registration,
+inactive subscription, refused paid validation/API-key creation, sign-out and repeat sign-in,
+and isolation between two customer accounts. If Google is enabled, repeat the same checks
+using a real Google account. Verify Stripe checkout, trusted subscription reconciliation,
+and post-payment entitlement separately. Source changes do not activate production until
+the stack and site are deployed and all release checks pass.
 
 ## Prove whether the latest GitHub source is actually available on guardoath.com
 
