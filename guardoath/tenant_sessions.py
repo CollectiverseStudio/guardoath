@@ -159,8 +159,8 @@ class CognitoSessions:
                 not re.fullmatch(r"http://(?:127\.0\.0\.1|localhost):\d+/dashboard", redirect_uri or ""):
             raise ValueError("GUARDOATH_COGNITO_REDIRECT_URI must be the dashboard address")
         self.pool_id, self.client_id, self.domain, self.redirect_uri = pool_id, client_id, domain, redirect_uri
-        # Opt-in only: requires separately configured Cognito + Google and a
-        # persistent tenant store. No account can be created by an API key.
+        # Public registration requires a persistent tenant store and a verified
+        # Cognito identity; Google federation is optional. API keys cannot register.
         flag = os.getenv("GUARDOATH_SELF_REGISTRATION", "0")
         if flag not in {"0", "1"}:
             raise ValueError("GUARDOATH_SELF_REGISTRATION must be 0 or 1")
@@ -169,8 +169,6 @@ class CognitoSessions:
         if google not in {"0", "1"}:
             raise ValueError("GUARDOATH_GOOGLE_LOGIN_ENABLED must be 0 or 1")
         self.google_enabled = google == "1"
-        if self.registration_enabled and not self.google_enabled:
-            raise ValueError("Public registration requires a configured Google login provider")
         self.issuer = f"https://cognito-idp.{self.region}.amazonaws.com/{pool_id}"
         self.jwks_url = self.issuer + "/.well-known/jwks.json"
         self._post, self._get, self._clock, self._wall = post, get, clock, wall
@@ -333,38 +331,42 @@ class CognitoSessions:
         tenant_id = attributes.get(TENANT_ATTRIBUTE)
         if isinstance(tenant_id, str) and re.fullmatch(TENANT_ID_PATTERN, tenant_id):
             return tenant_id
-        # A first-time Google/Cognito account does not have custom:tenant_id.
-        # Derive a stable, isolated tenant identifier ONLY from the verified
-        # Cognito subject and issuer. Never use email or browser-supplied IDs:
-        # addresses can change and users may have identical email aliases.
-        # The application must explicitly create this tenant at /v1/register.
-        # Until then normal /v1/applications/current remains unauthorized.
+        # New native or Google-federated users have no tenant binding yet.
+        # Derive the tenant only from the verified Cognito subject and issuer.
+        # Neither email nor browser input is an authority for tenant ownership.
         if not self.registration_enabled or tenant_id is not None:
             return None
         subject = attributes.get("sub")
-        # Do not let a native Cognito user who merely has a verified email
-        # self-register through a Google-only customer enrollment flow.
-        # Cognito GetUser includes the provider identities for federated users;
-        # unlinked Google profiles also carry its stable Google_ username.
-        raw_identities = attributes.get("identities")
-        if not isinstance(raw_identities, str) or len(raw_identities) > 4096:
+        claims = self.verified_claims(token)
+        if (attributes.get("email_verified") != "true" or
+                not isinstance(subject, str) or not claims or
+                subject != claims.get("sub") or
+                not isinstance(attributes.get("email"), str) or
+                not attributes["email"] or len(attributes["email"]) > 320):
             return None
-        try:
-            identities = json.loads(raw_identities)
-        except (ValueError, RecursionError):
-            return None
-        google = (isinstance(identities, list) and 1 <= len(identities) <= 5 and
-                  any(isinstance(item, dict) and
-                      item.get("providerName") == "Google" and
-                      item.get("providerType") == "Google" and
-                      isinstance(item.get("userId"), str) and
-                      1 <= len(item["userId"]) <= 256
-                      for item in identities))
         username = data.get("Username")
-        if (not google or not isinstance(username, str) or
-                not username.casefold().startswith("google_") or
-                attributes.get("email_verified") != "true" or
-                not isinstance(subject, str) or
-                subject != self.verified_claims(token).get("sub")):
+        if not isinstance(username, str) or not username:
             return None
+        raw_identities = attributes.get("identities")
+        if raw_identities is None:
+            # Native Cognito email/password account, verified by GetUser.
+            # A federated-looking username without provider evidence is refused.
+            if username.casefold().startswith("google_"):
+                return None
+        else:
+            if not self.google_enabled or not isinstance(raw_identities, str) or len(raw_identities) > 4096:
+                return None
+            try:
+                identities = json.loads(raw_identities)
+            except (ValueError, RecursionError):
+                return None
+            google = (isinstance(identities, list) and 1 <= len(identities) <= 5 and
+                      any(isinstance(item, dict) and
+                          item.get("providerName") == "Google" and
+                          item.get("providerType") == "Google" and
+                          isinstance(item.get("userId"), str) and
+                          1 <= len(item["userId"]) <= 256
+                          for item in identities))
+            if not google or not username.casefold().startswith("google_"):
+                return None
         return "usr-" + hashlib.sha256((self.issuer + "\\0" + subject).encode()).hexdigest()[:28]
