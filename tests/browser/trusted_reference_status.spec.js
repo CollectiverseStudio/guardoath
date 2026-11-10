@@ -10,6 +10,9 @@ test("host-attested tenant reference panel exposes only safe status and navigate
         stages: ["input", "output"], snapshot_present: true,
         runtime_integrity: "blocked"
       }];
+      body.tenant.input_checks.cross_field = "block";
+      body.tenant.output_checks.cross_field = "flag";
+      body.tenant.output_rule_actions["business.synthetic_signed_rule"] = "off";
     }
     await route.fulfill({response, json:body});
   });
@@ -24,6 +27,8 @@ test("host-attested tenant reference panel exposes only safe status and navigate
   await expect(panel).toContainText("saved snapshot: present");
   await expect(panel).toContainText("runtime integrity: blocked");
   await expect(panel).toContainText("active validation will Block");
+  await expect(panel).toContainText("Input: active (check block; rule inherits check)");
+  await expect(panel).toContainText("Output: Off (individual rule Off)");
   await expect(panel).toContainText("not proof of current signature");
   await expect(panel).not.toContainText("host_signature");
   await expect(panel).not.toContainText("reference_values");
