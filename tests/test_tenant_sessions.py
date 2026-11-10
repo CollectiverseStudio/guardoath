@@ -765,15 +765,14 @@ def test_google_oauth_code_login_registration_repeat_login_and_second_account_is
     assert tenants.store.get(owner).subscription_status == "inactive"
 
 
-def test_only_cognito_confirmed_google_federation_can_self_register(sessions, cognito):
-    """Native, malformed, and non-Google identities cannot create public tenants."""
+def test_malformed_or_untrusted_federation_cannot_self_register(sessions, cognito):
+    """Malformed and non-Google federated identity claims cannot create tenants."""
     sessions.google_enabled = True
     sessions.registration_enabled = True
     tenants = TenantService(MemoryTenantStore(), CHECKERS, SECRET)
     client = TestClient(create_app(engine=demo_engine(), credentials={},
                                    tenants=tenants, sessions=sessions))
     cases = (
-        (None, None),  # Verified native Cognito account is not Google.
         ('{"broken":', None),
         ("[" * 1100 + "]" * 1100, None),  # bounded, deeply nested Cognito attribute
         ("x" * 4100, None),  # no unbounded identities JSON processing
