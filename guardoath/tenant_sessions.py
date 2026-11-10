@@ -326,7 +326,7 @@ class CognitoSessions:
         names = [a.get("Name") for a in data["UserAttributes"] if isinstance(a, dict)]
         # Duplicated security identity attributes must never become trusted by
         # last-write-wins dictionary construction.
-        if any(names.count(name) > 1 for name in (TENANT_ATTRIBUTE, "sub", "email_verified")):
+        if any(names.count(name) > 1 for name in (TENANT_ATTRIBUTE, "sub", "email_verified", "identities")):
             return None
         attributes = {a.get("Name"): a.get("Value") for a in data["UserAttributes"]
                       if isinstance(a, dict) and isinstance(a.get("Name"), str)}
@@ -342,7 +342,28 @@ class CognitoSessions:
         if not self.registration_enabled or tenant_id is not None:
             return None
         subject = attributes.get("sub")
-        if (attributes.get("email_verified") != "true" or
+        # Do not let a native Cognito user who merely has a verified email
+        # self-register through a Google-only customer enrollment flow.
+        # Cognito GetUser includes the provider identities for federated users;
+        # unlinked Google profiles also carry its stable Google_ username.
+        raw_identities = attributes.get("identities")
+        if not isinstance(raw_identities, str) or len(raw_identities) > 4096:
+            return None
+        try:
+            identities = json.loads(raw_identities)
+        except ValueError:
+            return None
+        google = (isinstance(identities, list) and 1 <= len(identities) <= 5 and
+                  any(isinstance(item, dict) and
+                      item.get("providerName") == "Google" and
+                      item.get("providerType") == "Google" and
+                      isinstance(item.get("userId"), str) and
+                      1 <= len(item["userId"]) <= 256
+                      for item in identities))
+        username = data.get("Username")
+        if (not google or not isinstance(username, str) or
+                not username.casefold().startswith("google_") or
+                attributes.get("email_verified") != "true" or
                 not isinstance(subject, str) or
                 subject != self.verified_claims(token).get("sub")):
             return None
