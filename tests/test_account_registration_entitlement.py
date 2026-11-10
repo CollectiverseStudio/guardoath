@@ -156,3 +156,24 @@ def test_billing_portal_requires_owner_and_existing_stripe_customer():
     response = client.post("/v1/billing/portal", headers=headers, json={})
     assert response.status_code == 409, response.text
     assert store.get("usr-test-account").subscription_status == "inactive"
+
+
+def test_disabled_registered_identity_cannot_register_again_or_appear_unregistered():
+    # Existing disabled tenants are not new customers; a misleading
+    # 'not registered' status would otherwise cause an impossible retry loop.
+    from guardoath.tenant_record import TenantRecord
+    client, store = make_client()
+    store.create(TenantRecord(
+        tenant_id="usr-test-account", display_name="Disabled account",
+        status="disabled", demo=False, monthly_allowance=0,
+        key_hashes=(), input_check_text_security="block",
+        output_check_text_security="block", subscription_status="inactive",
+    ))
+    headers = {SESSION_HEADER: "verified-test-token"}
+    status = client.get("/v1/account/status", headers=headers)
+    assert status.status_code == 403
+    assert status.json() == {"detail": "Account is unavailable; contact support"}
+    assert client.post("/v1/register", headers=headers, json={}).status_code == 409
+    assert client.get("/v1/applications/current", headers=headers).status_code == 401
+    assert store.get("usr-test-account").status == "disabled"
+    assert store.get("usr-test-account").usage == {}
