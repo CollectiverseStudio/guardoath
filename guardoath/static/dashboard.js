@@ -919,7 +919,20 @@ async function loadKeys() {
     $("key-list").replaceChildren();
     return;
   }
-  const data = await response.json();
+  // Ignore a response belonging to an earlier sign-in or tenant.
+  if (sessionStorage.getItem("guardoath-session") !== token ||
+      application?.tenant?.demo !== false) return;
+  let data;
+  try { data = await response.json(); } catch (_) {
+    $("key-create").disabled = true;
+    $("key-message").textContent = "Invalid API key response. Please retry.";
+    return;
+  }
+  if (!data || !Array.isArray(data.keys) || !Number.isInteger(data.max_keys)) {
+    $("key-create").disabled = true;
+    $("key-message").textContent = "Invalid API key response. Please retry.";
+    return;
+  }
   const list = $("key-list"); list.replaceChildren();
   for (const item of data.keys) {
     const row = document.createElement("li"); row.textContent = "Key " + item.key_id + "\u2026 ";
@@ -941,10 +954,20 @@ async function keyAction(path, body, done) {
     return;
   }
   const text = JSON.stringify(body);
-  const response = await send(path, {method: "POST", cache: "no-store",
-    headers: await requestHeaders(SESSION + token, text), body: text});
+  $("key-create").disabled = true;
+  let response;
+  try {
+    response = await send(path, {method: "POST", cache: "no-store",
+      headers: await requestHeaders(SESSION + token, text), body: text});
+  } catch (_) {
+    $("key-message").textContent = "API key request failed. Please retry.";
+    await loadKeys();
+    return;
+  }
+  if (sessionStorage.getItem("guardoath-session") !== token ||
+      application?.tenant?.demo !== false) return;
   const data = await response.json().catch(() => ({}));
-  $("key-new").value = response.ok && data.api_key ? data.api_key : "";
+  $("key-new").value = response.ok && typeof data.api_key === "string" ? data.api_key : "";
   $("key-message").textContent = response.ok ? done : (typeof data.detail === "string" ? data.detail : "The change was not saved (HTTP " + response.status + ").");
   await loadKeys();
 }
