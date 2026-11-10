@@ -1469,7 +1469,13 @@ function examplesFor(item, stage) {
     rule.control_id === item.control_id && (rule.stages || []).includes(stage)
     && !pendingIds.has(rule.rule_id));
   for (const rule of [...(item.rules || []), ...recordRules].sort((a, b) => collator.compare(a.title, b.title))) {
-    const name = rule.title + " \u00b7 " + rule.rule_id + (rule.needs_setting ? " (needs " + rule.needs_setting + ")" : "");
+    const savedAction = application?.tenant?.[stage + "_rule_actions"]?.[rule.rule_id];
+    // Do not imply that a reported example will trigger a rule whose own
+    // persisted Input/Output action is Off. Keep it selectable to demonstrate
+    // the full tenant policy and to help the customer enable it deliberately.
+    const offLabel = savedAction === "off" ? " (saved " + stage + " rule Off; not evaluated)" : "";
+    const name = rule.title + " \u00b7 " + rule.rule_id +
+      (rule.needs_setting ? " (needs " + rule.needs_setting + ")" : "") + offLabel;
     // Document-check rules are written in JSON (content_format, 2026-11-04).
     if (rule.example) rules.push({kind: "reported", label: name, format: rule.content_format || "text", text: rule.example});
     if (rule.look_alike) rules.push({kind: "look-alike", label: name, format: rule.content_format || "text", text: rule.look_alike});
@@ -1486,7 +1492,7 @@ function panelCheck(id, stage = "input") {
 }
 function checkIsOn(id, stage = "input") {
   const shown = panelCheck(id, stage);
-  if (shown !== null) return Boolean(shown);
+  if (shown !== null) return Boolean(shown) && shown !== "off";
   const policy = currentPolicy(); return !!policy && policy.checks.some(c => c.id === id && (!c.stages || c.stages.includes(stage)));
 }
 function buildExamplePicker(stage, list) {
@@ -1520,8 +1526,13 @@ function buildExamplePicker(stage, list) {
       if (group.children.length) pick.append(group);
     }
     if (item.general) return;
-    if (currentPolicy() && !checkIsOn(item.control_id, stage)) note.textContent = item.name + " is off on this record: turn it on under Checks to see it report these examples.";
-    else if (panelCheck(item.control_id, stage) !== null && panelCheck(item.control_id, stage) !== savedCheck(item.control_id, stage)) note.textContent = item.name + " is set to " + settingNames[panelCheck(item.control_id, stage)] + " for " + stage + " in the checks panel (not saved yet; running a check saves it first).";
+    // Distinguish a pending Off draft from a persisted Off configuration.
+    // String "off" is truthy in JavaScript; the checker is NOT enabled.
+    if (panelCheck(item.control_id, stage) !== null &&
+        panelCheck(item.control_id, stage) !== savedCheck(item.control_id, stage))
+      note.textContent = item.name + " is set to " + settingNames[panelCheck(item.control_id, stage)] + " for " + stage + " in the checks panel (not saved yet; running a check saves it first).";
+    else if (currentPolicy() && !checkIsOn(item.control_id, stage))
+      note.textContent = item.name + " is off on this record: turn it on under Checks to see it report these examples.";
     if (item.control_id === "cross_field" && pendingFieldExampleIds().size) {
       note.textContent += (note.textContent ? " " : "") +
         "Saved comparison-rule examples are hidden while their definitions have unsaved changes. Select Save checks, then reload the saved tenant to obtain current rule examples. Other preset check examples may still be offered.";
