@@ -722,7 +722,11 @@ loadDemoUsers();
 let signIn = null;
 function b64url(buffer) { return btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
 function signedIn(on) {
-  $("sign-in").hidden = on || signIn?.google_provider !== "Google";
+  // Native administrator-invited Cognito customers must still be able to sign
+  // in when the optional Google provider is disabled. Never label that path as
+  // Google, and never offer self-registration without the verified provider.
+  $("sign-in").hidden = on;
+  $("sign-in").textContent = signIn?.google_provider === "Google" ? "Sign in with Google" : "Sign in to GuardOath";
   $("register-account").hidden = on || !signIn?.registration_enabled || signIn?.google_provider !== "Google";
   $("sign-out").hidden = !on;
   $("keys-panel").hidden = !on; if (on) loadKeys();
@@ -734,7 +738,7 @@ async function loadSignIn() {
   signIn = await response.json().catch(() => null); if (!signIn) return;
   $("sign-in-box").hidden = false; signedIn(false);
   if (signIn.google_provider !== "Google") {
-    $("account-status").textContent = "Google sign-in is not yet configured on this deployment. No new customer registration is available.";
+    $("account-status").textContent = "Google registration is not configured on this deployment. Existing invited customers can still sign in with their GuardOath account.";
   }
   const query = new URLSearchParams(location.search), code = query.get("code"), state = query.get("state");
   if (code || query.get("error")) {
@@ -817,14 +821,14 @@ async function showAccountState(token) {
   }
 }
 async function beginGoogleLogin(intent) {
-  if (!signIn || signIn.google_provider !== "Google") return;
+  if (!signIn || (intent === "register" && signIn.google_provider !== "Google")) return;
   const verifier = b64url(crypto.getRandomValues(new Uint8Array(32))), state = b64url(crypto.getRandomValues(new Uint8Array(16)));
   const challenge = b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
   sessionStorage.setItem("guardoath-verifier", verifier); sessionStorage.setItem("guardoath-state", state);
   const url = new URL(signIn.authorize_url);
   for (const [name, value] of Object.entries({response_type: "code", client_id: signIn.client_id, redirect_uri: signIn.redirect_uri,
       scope: signIn.scope, state, code_challenge: challenge, code_challenge_method: "S256"})) url.searchParams.set(name, value);
-  url.searchParams.set("identity_provider", "Google");
+  if (signIn.google_provider === "Google") url.searchParams.set("identity_provider", "Google");
   sessionStorage.setItem("guardoath-sign-in-intent", intent);
   location.assign(url.toString());
 }
