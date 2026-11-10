@@ -10,7 +10,7 @@ import sys
 import pytest
 
 from guardoath.models import AdvancedTrustedReferenceRule
-from guardoath.trusted_reference import SIGNING_KEY_ENV, reference_is_trusted
+from guardoath.trusted_reference import SIGNING_KEY_ENV, reference_is_trusted, sign_reference
 
 KEY = "synthetic-signing-cli-key-for-regression-only-0123456789"
 TENANT = "signing-regression"
@@ -293,6 +293,24 @@ def test_operator_never_silently_resigns_existing_signed_snapshot(tmp_path, sign
     assert signature not in result.stdout + result.stderr
     assert KEY not in result.stdout + result.stderr
     assert "SYNTHETIC_VENDOR_ONLY" not in result.stdout + result.stderr
+    assert "Traceback" not in result.stderr
+
+
+def test_operator_refuses_to_resign_a_genuinely_valid_signed_snapshot(tmp_path):
+    """Previously valid signed references require a fresh independent unsigned draft."""
+    original = AdvancedTrustedReferenceRule.model_validate(draft())
+    signed = original.model_copy(update={
+        "host_signature": sign_reference(original, TENANT, KEY),
+    })
+    assert reference_is_trusted(signed, TENANT, key=KEY)
+    raw = signed.model_dump_json()
+    result, source, output = run_cli(tmp_path, raw)
+    assert result.returncode == 2
+    assert not output.exists()
+    assert source.read_text() == raw
+    assert "Unsigned attestation placeholder required" not in result.stderr
+    assert signed.host_signature not in result.stdout + result.stderr
+    assert KEY not in result.stdout + result.stderr
     assert "Traceback" not in result.stderr
 
 
