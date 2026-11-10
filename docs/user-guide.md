@@ -2863,6 +2863,29 @@ The first command provides the original sequential repeat baseline; the second e
 
 ### Field Comparisons — mixed ordinary and advanced portfolio at 30–500 rules
 
+### Field Comparisons — stage-Off examples and saved-versus-unsaved settings
+
+In a saved tenant, a rule can be **Off for Output** but **Block for Input**.
+The rule remains configured, and examples are still offered to inspect the
+**whole tenant** without changing policy. GuardOath's shared Input/Output example
+picker marks any such sample **“saved output rule Off; not evaluated”** rather
+than implying that a “Reported” example will trigger the disabled rule. The
+arithmetic, identity and conversion/time editors likewise show a saved stage-Off
+warning beside available synthetic example buttons. These are informational;
+**no stage is automatically enabled or granted a subscription**. Other enabled
+rules, privacy checks and file-inspection failure actions continue to apply.
+To exercise that specific rule, select an appropriate Input/Output action in
+**Field comparisons**, choose **Save checks**, reconnect and rerun the example.
+
+The Field comparisons check itself has a separate stage setting. Selecting
+**Off** in the customer checks panel without saving is a **pending** change:
+the example-picker note explicitly says **not saved yet**. After **Save checks**
+and reconnect, the picker identifies that stage as **off on this record**.
+Examples are retained for configuration and evaluation, but the rule or entire
+check being Off never constitutes a successful validation. This behavior is
+covered by real authenticated 51- and 500-rule four-family dashboard acceptance;
+it does not modify the authoritative tenant Engine or admission deadlines.
+
 One tenant can combine ordinary number/date comparisons (FC-001–030) with the arithmetic, identity and conversion/time checks (FC-031–050). Every configured rule appears in the **authenticated dashboard's Field comparisons** rule list with Input/Output stage selectors and a stable `business.<rule_id>` identifier. Rule IDs must be unique across these families. Save checks persists all edited family definitions and per-rule actions together under the tenant's revision; the same shared Engine evaluates every enabled rule and reports all findings, including findings whose configured action is Allow. A stale revision or duplicate ID is rejected without partially updating a tenant.
 
 The strict integration test `tests/test_field_comparison_mixed_family_scale.py` saves and executes **30, 51, 100, 250 and 500 total mixed-family rules** through the authenticated tenant API with no mock checker or artificially raised comparison limit. Each size includes an ordinary less-than-or-equal comparison, discount cap arithmetic, order/shipment identity matching and a weight cap unit conversion. The submitted JSON uses synthetic, distinct fields for each rule. Two real violating rules (first and last) must both be reported on **both** stages, despite a per-rule Allow/Flag override; benign payloads must not produce portfolio findings. This asserts scale and isolation rather than merely counting stored definitions.
