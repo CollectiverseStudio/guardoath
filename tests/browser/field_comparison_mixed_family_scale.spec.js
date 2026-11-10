@@ -323,6 +323,48 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
     expect(outputAfterOff.findings.filter(f => f.rule_id.startsWith("business.mixed_ui_"))
       .map(f => f.rule_id)).toEqual(["business.mixed_ui_000"]);
     expect((await current(request, headers)).revision).toBe(outputOff500.revision);
+
+    // The first rule is an ORDINARY comparison, not an advanced conversion.
+    // Demonstrate the same saved Input/Output independence through its own
+    // customer editor at a full 500-rule scale. Neither the existing advanced
+    // Output-Off setting nor the other 498 definitions may be lost.
+    await page.locator("#rule-search").fill("mixed_ui_000");
+    await expect(page.locator('li[data-comparison-id="mixed_ui_000"]'))
+      .not.toContainText("Saved output rule action is Off.");
+    await page.locator('tr.rule-row[data-rule="business.mixed_ui_000"] [data-stage="output"]')
+      .selectOption("off");
+    await page.getByRole("button", {name: "Save checks", exact: true}).click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved.");
+    const ordinaryOff = await current(request, headers);
+    expect(ordinaryOff.revision).toBe(outputOff500.revision + 1);
+    expect(ordinaryOff.output_rule_actions["business.mixed_ui_000"]).toBe("off");
+    expect(ordinaryOff.output_rule_actions[lastId]).toBe("off");
+    expect(ordinaryOff.input_rule_actions[lastId]).toBe("block");
+    for (const family of ["comparisons", "advanced_arithmetic", "advanced_identity",
+                          "advanced_conversion_time"]) {
+      expect(ordinaryOff[family]).toHaveLength(125);
+    }
+    await connect(page);
+    await page.locator("#rule-search").fill("mixed_ui_000");
+    const ordinaryEditorRow = page.locator('li[data-comparison-id="mixed_ui_000"]');
+    await expect(ordinaryEditorRow).toContainText("Saved output rule action is Off.");
+    await expect(ordinaryEditorRow).not.toContainText("Saved input rule action is Off.");
+    await expect(page.locator('tr.rule-row[data-rule="business.mixed_ui_000"] [data-stage="input"]'))
+      .not.toHaveValue("off");
+
+    // Even if both violating Output rules are Off, the two Input findings
+    // remain exact and independently enforced. No checker is globally disabled.
+    const inputStillChecked = await check(request, headers, "input", bad);
+    expect(inputStillChecked.evaluation_status).toBe("complete");
+    expect(inputStillChecked.effective_action).toBe("block");
+    expect(inputStillChecked.findings.filter(f => f.rule_id.startsWith("business.mixed_ui_"))
+      .map(f => f.rule_id).sort()).toEqual(["business.mixed_ui_000", lastId]);
+    const outputWithBothOff = await check(request, headers, "output", bad);
+    expect(outputWithBothOff.evaluation_status).toBe("complete");
+    expect(outputWithBothOff.effective_action).toBe("allow");
+    expect(outputWithBothOff.findings.filter(f => f.rule_id.startsWith("business.mixed_ui_")))
+      .toHaveLength(0);
+    expect((await current(request, headers)).revision).toBe(ordinaryOff.revision);
   } finally {
     if (resetRequired) {
       const cleanup = await request.post("/v1/tenants/current/reset", {headers, data: {}});
