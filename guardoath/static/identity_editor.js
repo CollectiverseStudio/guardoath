@@ -157,9 +157,11 @@
           item.append(el("p", "Unsaved identity rule changes: Save checks before using refreshed examples."));
         }
         const example = (tenant.record_rules || []).find(x => x.rule_id === "business." + rule.rule_id);
-        if (sameDefinition && example) {
-          if (example.example_unavailable || example.look_alike_unavailable) {
-            item.append(el("p", "Some synthetic examples are unavailable under the strict JSON admission or selected rule contract. The saved rule still runs; use shallower JSON pointers to restore examples when permitted. Private reference values are never shown."));
+        if (sameDefinition) {
+          if (!example) {
+            item.append(el("p", "No record-generated examples are available for this saved rule. Stage settings still apply; test an appropriate JSON document using the shared tenant Engine. Private reference values remain hidden."));
+          } else if (example.example_unavailable || example.look_alike_unavailable) {
+            item.append(el("p", "Some synthetic examples are unavailable under the strict JSON admission or selected rule contract. The saved definition remains subject to stage check and rule actions; use shallower JSON pointers to restore examples when permitted. Private reference values are never shown."));
           }
           for (const stage of rule.stages) {
             // The saved parent check governs whether ANY comparison runs.
@@ -171,8 +173,8 @@
             } else if (tenant[stage + "_rule_actions"]?.["business." + rule.rule_id] === "off") {
               item.append(el("p", "Saved " + stage + " rule action is Off. Examples remain available for full-policy testing, but this rule will not report a finding on " + stage + " until you enable and Save checks."));
             }
-            for (const [label, sample] of [["violating", example.example],
-                                           ["benign", example.look_alike]]) {
+            for (const [label, sample] of [["violating", example?.example],
+                                           ["benign", example?.look_alike]]) {
               if (typeof sample !== "string") continue;
               const button = el("button", "Try " + label + " " + stage + " example");
               button.type = "button";
