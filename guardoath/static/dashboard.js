@@ -882,6 +882,15 @@ async function beginCustomerLogin(intent) {
   const challenge = b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
   sessionStorage.setItem("guardoath-verifier", verifier); sessionStorage.setItem("guardoath-state", state);
   const url = new URL(signIn.authorize_url);
+  // Cognito Hosted UI has a dedicated sign-up route. Do not send new
+  // customers back to the sign-in page when they select Register.
+  if (intent === "register") {
+    if (!url.pathname.endsWith("/oauth2/authorize")) {
+      $("account-status").textContent = "Registration URL is not configured correctly.";
+      return;
+    }
+    url.pathname = url.pathname.slice(0, -"/oauth2/authorize".length) + "/signup";
+  }
   for (const [name, value] of Object.entries({response_type: "code", client_id: signIn.client_id, redirect_uri: signIn.redirect_uri,
       scope: signIn.scope, state, code_challenge: challenge, code_challenge_method: "S256"})) url.searchParams.set(name, value);
   sessionStorage.setItem("guardoath-sign-in-intent", intent);
