@@ -92,7 +92,10 @@ async function api(path, body, token = key) {
   }
   if (!response.ok && response.status === 429) throw new Error("Monthly check limit reached for this user. Choose another demo user or try again next month.");
   if (!response.ok && response.status === 401 && typeof token === "string" && token.startsWith(SESSION)) {
-    expireCustomerSession();
+    // A superseded in-flight request must not log out a newly signed-in
+    // customer whose session was replaced while the old request ran.
+    if (sessionStorage.getItem("guardoath-session") === token.slice(SESSION.length))
+      expireCustomerSession();
     throw new Error("Your sign-in has expired or been revoked. Sign in again.");
   }
   if (!response.ok) throw new Error(response.status === 401 ? "The API key was not accepted." : response.status === 422 ? "Check the required fields, content length, and selected format." : "The check could not be completed (HTTP " + response.status + ").");
@@ -810,7 +813,8 @@ async function showAccountState(token) {
   }
   if (!reply.ok) {
     if (reply.status === 401) {
-      expireCustomerSession();
+      if (sessionStorage.getItem("guardoath-session") === token)
+        expireCustomerSession();
       return;
     }
     if (reply.status === 403) {
