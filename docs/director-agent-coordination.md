@@ -17,3 +17,10 @@ Updated 2026-11-09. Greg explicitly authorized replacing the empty coordination 
 - Authentication implementation commits: dc91106, 5463187, eedc4e8, e0d04ef, ca6f191, c4b46ac, 4bf055c, b17f50f, e574daa, 163d005.
 - Current release status: source commits made; end-to-end production registration and payment verification pending.
 - Next focus: authenticated Stripe checkout, reconciliation, paid entitlement, browser customer journey and CI. No separate Director gate.
+
+## 2026-11-09 Atlas billing UI batch
+- Changed: `guardoath/static/dashboard.js`, `tests/browser/customer_registration_status.spec.js`.
+- Commits: ab0f005, f939ac9, 923bd2e, fc1482b.
+- Checkout success query string does not grant entitlement; unpaid account shows verification pending, cannot create an API key, and cannot open paid billing management.
+- Added browser regression for checkout success without server-confirmed active subscription; updated unpaid customer portal expectations.
+- CI and live Stripe/browser verification: not yet confirmed. Production not deployed in this batch.
