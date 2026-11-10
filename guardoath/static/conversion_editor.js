@@ -170,7 +170,10 @@
           item.append(el("p", "Unsaved conversion/time rule changes: Save checks before using refreshed examples."));
         }
         const example = (tenant.record_rules || []).find(x => x.rule_id === "business." + rule.rule_id);
-        if (sameDefinition && example) {
+        if (sameDefinition) {
+          if (!example) {
+            item.append(el("p", "No record-generated examples are available for this saved rule. Stage settings still apply; test an appropriate JSON document using the shared tenant Engine. Private FX references remain hidden."));
+          }
           for (const stage of rule.stages) {
             // The saved parent check governs whether ANY comparison runs.
             // A pending dashboard change is not yet tenant-authoritative.
@@ -183,9 +186,9 @@
             }
             // The Engine-certified no-return sample exists only when the
             // saved FC-050 layout truly allows the return record to be absent.
-            const samples = [["violating", example.example], ["benign", example.look_alike]];
+            const samples = [["violating", example?.example], ["benign", example?.look_alike]];
             if (rule.kind === "lifecycle_chronology") {
-              samples.push(["no-return", example.no_return_example]);
+              samples.push(["no-return", example?.no_return_example]);
             }
             for (const [label, sample] of samples) {
               if (typeof sample !== "string") continue;
