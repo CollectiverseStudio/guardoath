@@ -898,8 +898,28 @@ $("sign-out").addEventListener("click", () => {
   location.assign(url.toString());
 });
 async function loadKeys() {
-  const response = await send("/v1/tenants/current/keys", {cache: "no-store", headers: await requestHeaders(key)});
-  const data = response.ok ? await response.json() : {keys: [], max_keys: 2};
+  const token = sessionStorage.getItem("guardoath-session");
+  if (!token || application?.tenant?.demo !== false) {
+    $("keys-panel").hidden = true;
+    return;
+  }
+  let response;
+  try {
+    response = await send("/v1/tenants/current/keys", {
+      cache: "no-store", headers: await requestHeaders(SESSION + token)
+    });
+  } catch (_) {
+    $("key-create").disabled = true;
+    $("key-message").textContent = "Cannot load API keys. Please retry after reconnecting.";
+    return;
+  }
+  if (!response.ok) {
+    $("key-create").disabled = true;
+    $("key-message").textContent = "API key access could not be verified (HTTP " + response.status + ").";
+    $("key-list").replaceChildren();
+    return;
+  }
+  const data = await response.json();
   const list = $("key-list"); list.replaceChildren();
   for (const item of data.keys) {
     const row = document.createElement("li"); row.textContent = "Key " + item.key_id + "\u2026 ";
@@ -915,8 +935,14 @@ async function loadKeys() {
   }
 }
 async function keyAction(path, body, done) {
+  const token = sessionStorage.getItem("guardoath-session");
+  if (!token || application?.tenant?.demo !== false) {
+    $("keys-panel").hidden = true;
+    return;
+  }
   const text = JSON.stringify(body);
-  const response = await send(path, {method: "POST", cache: "no-store", headers: await requestHeaders(key, text), body: text});
+  const response = await send(path, {method: "POST", cache: "no-store",
+    headers: await requestHeaders(SESSION + token, text), body: text});
   const data = await response.json().catch(() => ({}));
   $("key-new").value = response.ok && data.api_key ? data.api_key : "";
   $("key-message").textContent = response.ok ? done : (typeof data.detail === "string" ? data.detail : "The change was not saved (HTTP " + response.status + ").");
