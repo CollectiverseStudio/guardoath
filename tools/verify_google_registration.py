@@ -19,6 +19,7 @@ CHECKS = (
     "google_idp",
     "email_verified_mapping",
     "cognito_client_google",
+    "email_verified_writable",
     "cognito_callback",
     "cognito_scopes",
     "lambda_google_enabled",
@@ -69,6 +70,12 @@ def verify(cfn, cognito, aws_lambda, *, stack_name="guardoath-site",
             "Google" in client.get("SupportedIdentityProviders", ())
             and "COGNITO" in client.get("SupportedIdentityProviders", ())
             and not client.get("ClientSecret")
+        )
+        # A mapped IdP attribute must be writable by the Cognito app client,
+        # otherwise Google federation can fail before registration is reached.
+        result["email_verified_writable"] = (
+            "email_verified" in client.get("WriteAttributes", ())
+            and "email" in client.get("WriteAttributes", ())
         )
         callback = domain.rstrip("/") + "/dashboard"
         result["cognito_callback"] = (
