@@ -42,3 +42,8 @@ Updated 2026-11-09. Greg explicitly authorized replacing the empty coordination 
 - Commits 3521f30, 2e6cafc, d79bb62: dashboard HTML now distinguishes public demo key connection from customer sign-in; API key management panel is displayed only for a signed-in, non-demo tenant. Browser regression asserts public demo hides customer key controls.
 - API keys remain usable for programmatic validation after issuance; owner session is required for management.
 - CI and live deployment not yet verified.
+
+## 2026-11-09 Atlas customer key session authority
+- Commits be9e49e and 4927514: dashboard key listing/create/revoke explicitly use the current signed-in Cognito session and refuse demo/key-only contexts. Key listing fails closed when owner verification fails.
+- Browser regression verifies X-GuardOath-Session and absence of X-GuardOath-Key during customer key management.
+- CI and live production browser verification pending.
