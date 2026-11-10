@@ -469,7 +469,13 @@
           row.append(element("p", "Unsaved comparison changes: Save checks before testing the updated rule."));
         } else if (savedDefinition) {
           for (const stage of item.stages) {
-            if (tenant[stage + "_rule_actions"]?.["business." + item.rule_id] === "off") {
+            // Stage-wide Off takes precedence over this rule's own action:
+            // a saved per-rule Block cannot run while its parent check is Off.
+            // Read the saved tenant record, never the mutable dashboard draft.
+            const stageChecks = tenant[stage + "_checks"] || {};
+            if (!stageChecks.cross_field || stageChecks.cross_field === "off") {
+              row.append(element("p", "Saved " + stage + " Field comparisons check is Off. This rule is not evaluated on " + stage + " regardless of its own rule action; testing examples still runs other enabled checks."));
+            } else if (tenant[stage + "_rule_actions"]?.["business." + item.rule_id] === "off") {
               row.append(element("p", "Saved " + stage + " rule action is Off. This rule is not evaluated on " + stage + "; testing examples still runs all other enabled tenant rules."));
             }
           }
