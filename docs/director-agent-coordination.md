@@ -76,3 +76,7 @@ Updated 2026-11-09. Greg explicitly authorized replacing the empty coordination 
 ## 2026-11-09 Atlas existing customer key connection gate
 - Commits 1c01609, 70e8501: existing application-key connection requires a current signed-in, non-demo customer before switching into API-key-only evaluation; browser test asserts customer key field visible after sign-in. Public demo path remains independent.
 - CI and live deployment remain unverified.
+
+## 2026-11-09 Atlas explicit signup route
+- Commits 82becbd and e3fca7b: Register button now opens Cognito Hosted UI /signup instead of /oauth2/authorize, retaining OAuth PKCE, redirect URI and optional Google provider. Browser regression updated to assert /signup.
+- Registration button remains conditional on server registration_enabled; production stack EnableSelfRegistration must be 1. No AWS access/CI confirmation in this session, so production not changed.
