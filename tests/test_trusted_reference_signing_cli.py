@@ -209,3 +209,69 @@ def test_operator_writes_current_valid_reference_and_rejects_duplicate_destinati
     assert destination2 == destination
     assert result2.returncode == 2
     assert destination.read_bytes() == original
+
+
+def test_cli_attestation_runs_through_authenticated_tenant_api_and_engine(tmp_path, monkeypatch):
+    """Operator CLI -> persisted tenant -> customer API -> one shared Engine."""
+    from fastapi.testclient import TestClient
+
+    from guardoath.app import create_app, demo_engine
+    from guardoath.checkers import default_checkers
+    from guardoath.hosted import TenantService
+    from guardoath.tenant_record import TenantRecord, demo_key, key_hash
+    from guardoath.tenant_store import MemoryTenantStore
+
+    result, _, output = run_cli(tmp_path, json.dumps(draft()))
+    assert result.returncode == 0
+    signed = AdvancedTrustedReferenceRule.model_validate_json(output.read_text())
+    monkeypatch.setenv(SIGNING_KEY_ENV, KEY)
+    secret = "synthetic-operator-cli-api-secret-01234567890123456789"
+    token = demo_key(TENANT, secret)
+    record = TenantRecord(
+        tenant_id=TENANT, display_name="Synthetic operator reference", demo=True,
+        overage="block", monthly_allowance=20, key_hashes=(key_hash(token),),
+        input_check_text_security="flag", output_check_text_security="flag",
+    )
+    tenants = TenantService(MemoryTenantStore((record,)), default_checkers(), secret)
+    headers = {"Authorization": "Bearer " + token}
+    with TestClient(create_app(engine=demo_engine(), credentials={}, tenants=tenants)) as api:
+        before = api.get("/v1/applications/current", headers=headers)
+        assert before.status_code == 200
+        revision = before.json()["tenant"]["revision"]
+        save = api.post("/v1/tenants/current/checks", headers=headers, json={
+            "revision": revision,
+            "changes": {
+                "advanced_trusted_reference": [signed.model_dump(mode="json")],
+                "input_check_cross_field": "block",
+                "output_check_cross_field": "flag",
+            },
+        })
+        assert save.status_code == 200, save.text[:150]
+        summary = api.get("/v1/applications/current", headers=headers)
+        assert summary.status_code == 200
+        live = summary.json()["tenant"]
+        assert live["revision"] == revision + 1
+        assert live["advanced_trusted_reference_status"] == [{
+            "rule_id": "signed_vendor", "kind": "invoice_po_vendor",
+            "stages": ["input", "output"],
+            "snapshot_present": True, "runtime_integrity": "accepted",
+        }]
+        assert signed.host_signature not in summary.text
+        assert "SYNTHETIC_VENDOR_ONLY" not in summary.text
+        assert KEY not in summary.text
+
+        for stage, action in (("input", "block"), ("output", "flag")):
+            for vendor, expected in (("SYNTHETIC_VENDOR_ONLY", "allow"),
+                                     ("OTHER_SYNTHETIC_VENDOR", action)):
+                response = api.post("/v1/checks/" + stage, headers=headers, json={
+                    "application_id": TENANT, "content_format": "json",
+                    "content": json.dumps({"vendor": vendor}),
+                })
+                assert response.status_code == 200, response.text[:150]
+                body = response.json()
+                assert body["evaluation_status"] == "complete"
+                assert body["effective_action"] == expected
+                if vendor != "SYNTHETIC_VENDOR_ONLY":
+                    assert "business.signed_vendor" in {f["rule_id"] for f in body["findings"]}
+                assert signed.host_signature not in response.text
+                assert KEY not in response.text
