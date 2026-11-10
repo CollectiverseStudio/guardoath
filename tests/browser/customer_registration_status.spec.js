@@ -462,12 +462,13 @@ test("native email registration is offered with Google disabled", async ({page})
   await page.goto("/dashboard");
   await expect(page.locator("#sign-in")).toHaveText("Sign in to GuardOath");
   await expect(page.locator("#register-account")).toBeVisible();
-  await page.route("https://example.invalid/oauth2/authorize**", route => route.fulfill({
+  await page.route("https://example.invalid/signup**", route => route.fulfill({
     status: 200, contentType: "text/html", body: "<html>Native Cognito sign-up stub</html>"
   }));
-  const pending = page.waitForRequest(r => r.url().startsWith("https://example.invalid/oauth2/authorize"));
+  const pending = page.waitForRequest(r => r.url().startsWith("https://example.invalid/signup"));
   await page.locator("#register-account").click();
   const target = new URL((await pending).url());
+  expect(target.pathname).toBe("/signup");
   expect(target.searchParams.get("identity_provider")).toBeNull();
   expect(target.searchParams.get("code_challenge_method")).toBe("S256");
 });
