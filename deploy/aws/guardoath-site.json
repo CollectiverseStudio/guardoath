@@ -1062,6 +1062,11 @@
    "Value": {
     "Ref": "EnableSelfRegistration"
    }
+  },
+  "UserPoolClientId": {
+   "Value": {
+    "Ref": "UserPoolClient"
+   }
   }
  },
  "Conditions": {
