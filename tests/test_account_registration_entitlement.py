@@ -273,3 +273,24 @@ def test_malformed_stripe_configuration_never_creates_customer(monkeypatch):
         assert store.get("usr-test-account").payer_id is None
         assert store.get("usr-test-account").subscription_status == "inactive"
     assert calls == []
+
+
+def test_application_api_key_cannot_manage_customer_keys():
+    """Programmatic API credentials are never account-management sessions."""
+    from guardoath.tenant_record import TenantRecord
+    from guardoath.tenant_store import new_key
+    client, store = make_client()
+    token, digest = new_key("usr-test-account")
+    store.create(TenantRecord(
+        tenant_id="usr-test-account", display_name="Paid customer",
+        status="active", demo=False, monthly_allowance=100,
+        key_hashes=(digest,), input_check_text_security="block",
+        output_check_text_security="block", subscription_status="active",
+    ))
+    api_headers = {"X-GuardOath-Key": token}
+    assert client.get("/v1/tenants/current/keys", headers=api_headers).status_code == 403
+    assert client.post("/v1/tenants/current/keys", headers=api_headers,
+                       json={}).status_code == 403
+    assert client.post("/v1/tenants/current/keys/revoke", headers=api_headers,
+                       json={"key_id": digest[:12]}).status_code == 403
+    assert store.get("usr-test-account").key_hashes == (digest,)
