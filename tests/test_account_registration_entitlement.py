@@ -251,3 +251,25 @@ def test_missing_stripe_price_does_not_create_or_bind_customer(monkeypatch):
     assert tenant.payer_id is None
     assert tenant.subscription_status == "inactive"
     assert tenant.key_hashes == ()
+
+
+def test_malformed_stripe_configuration_never_creates_customer(monkeypatch):
+    from guardoath import stripe_customer
+    calls = []
+    monkeypatch.setattr(stripe_customer, "create_customer",
+                        lambda **kwargs: calls.append(kwargs))
+    for secret, price in (
+        ("pk_test_public", "price_valid"),
+        ("sk_test_" + "a" * 32, "not-a-price"),
+        ("sk_test_" + "a" * 32, "price_"),
+        ("sk_test_" + "a" * 32, "price_invalid value"),
+    ):
+        monkeypatch.setenv("GUARDOATH_STRIPE_SECRET_KEY", secret)
+        monkeypatch.setenv("GUARDOATH_STRIPE_PRICE_ID", price)
+        client, store = make_client()
+        headers = {SESSION_HEADER: "verified-test-token"}
+        assert client.post("/v1/register", headers=headers).status_code == 201
+        assert client.post("/v1/billing/checkout", headers=headers, json={}).status_code == 503
+        assert store.get("usr-test-account").payer_id is None
+        assert store.get("usr-test-account").subscription_status == "inactive"
+    assert calls == []
