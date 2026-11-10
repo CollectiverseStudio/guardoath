@@ -290,7 +290,7 @@ def test_operator_never_silently_resigns_existing_signed_snapshot(tmp_path, sign
     assert "Traceback" not in result.stderr
 
 
-@pytest.mark.parametrize("failure", ["durability_sync", "open_file_wrapper"])
+@pytest.mark.parametrize("failure", ["durability_sync", "open_file_wrapper", "atomic_publish"])
 def test_operator_does_not_leave_partial_private_attestation_on_io_failure(
         tmp_path, monkeypatch, capsys, failure):
     """A failed write/sync cannot leave a misleading signed artifact on disk."""
@@ -307,8 +307,10 @@ def test_operator_does_not_leave_partial_private_attestation_on_io_failure(
 
     if failure == "durability_sync":
         monkeypatch.setattr(signer.os, "fsync", unavailable)
-    else:
+    elif failure == "open_file_wrapper":
         monkeypatch.setattr(signer.os, "fdopen", unavailable)
+    else:
+        monkeypatch.setattr(signer.os, "link", unavailable)
 
     with pytest.raises(SystemExit) as error:
         signer.main(["--tenant", TENANT, "--input", str(source), "--output", str(output)])
@@ -320,7 +322,73 @@ def test_operator_does_not_leave_partial_private_attestation_on_io_failure(
     assert KEY not in captured.out + captured.err
     assert "Traceback" not in captured.err
     assert not output.exists()
+    assert not list(tmp_path.glob(".signed.json.*.tmp"))
     assert source.read_text() == original
+
+
+def test_host_attestation_publishes_only_after_private_temp_is_fully_synced(
+        tmp_path, monkeypatch):
+    """A reader never observes a partial or unsynced final signed artifact."""
+    from tools import sign_trusted_reference as signer
+
+    unsigned = tmp_path / "unsigned.json"
+    destination = tmp_path / "signed.json"
+    unsigned.write_text(json.dumps(draft()))
+    monkeypatch.setenv(SIGNING_KEY_ENV, KEY)
+    actual_sync = signer.os.fsync
+    observed = []
+
+    def check_before_publish(fd):
+        assert not destination.exists()
+        temporaries = list(tmp_path.glob(".signed.json.*.tmp"))
+        assert len(temporaries) == 1
+        temp = temporaries[0]
+        unsigned_rule = AdvancedTrustedReferenceRule.model_validate_json(temp.read_bytes())
+        assert reference_is_trusted(unsigned_rule, TENANT, key=KEY)
+        if os.name != "nt":
+            assert temp.stat().st_mode & 0o777 == 0o600
+        observed.append(True)
+        return actual_sync(fd)
+
+    monkeypatch.setattr(signer.os, "fsync", check_before_publish)
+    assert signer.main([
+        "--tenant", TENANT, "--input", str(unsigned), "--output", str(destination),
+    ]) == 0
+    assert observed == [True]
+    assert destination.exists()
+    assert not list(tmp_path.glob(".signed.json.*.tmp"))
+    assert reference_is_trusted(
+        AdvancedTrustedReferenceRule.model_validate_json(destination.read_bytes()),
+        TENANT, key=KEY)
+
+
+def test_atomic_attestation_publish_never_overwrites_racing_destination(
+        tmp_path, monkeypatch, capsys):
+    """Another publisher winning the output name cannot be overwritten/deleted."""
+    from tools import sign_trusted_reference as signer
+
+    source = tmp_path / "unsigned.json"
+    destination = tmp_path / "signed.json"
+    source.write_text(json.dumps(draft()))
+    monkeypatch.setenv(SIGNING_KEY_ENV, KEY)
+    marker = "PRIVATE_SYNTHETIC_COMPETING_ATTESTATION"
+
+    def competing_writer(_private_file, target):
+        Path(target).write_text(marker)
+        raise FileExistsError("do not disclose competing private output")
+
+    monkeypatch.setattr(signer.os, "link", competing_writer)
+    with pytest.raises(SystemExit) as error:
+        signer.main([
+            "--tenant", TENANT, "--input", str(source), "--output", str(destination),
+        ])
+    assert error.value.code == 2
+    assert destination.read_text() == marker
+    assert not list(tmp_path.glob(".signed.json.*.tmp"))
+    captured = capsys.readouterr()
+    assert marker not in captured.out + captured.err
+    assert KEY not in captured.out + captured.err
+    assert "Traceback" not in captured.err
 
 
 @pytest.mark.skipif(os.name == "nt", reason="Symlink privileges vary by Windows environment")
