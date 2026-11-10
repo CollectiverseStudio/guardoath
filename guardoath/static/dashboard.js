@@ -648,7 +648,8 @@ async function saveTenant(path, body, done) {
     if (stillOwner()) {
       $("tenant-reset").disabled = false;
       $("tenant-save").disabled = !ownChecksSelected();
-      if (reloaded || sameDraft()) $("tenant-message").textContent = message;
+      $("tenant-message").textContent = reloaded || sameDraft() ? message :
+        "An earlier save may have changed this tenant while you edited. Your newer draft was kept; reconnect to compare saved values before saving again.";
     }
   }
   return saved;
