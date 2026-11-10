@@ -3025,3 +3025,8 @@ The **Sign out** control clears customer session, pasted application key, one-ti
 ### Owner session isolation for delayed API-key responses
 
 The signed-in customer API-key list and one-time key creation response are bound to both the requesting Cognito session and its saved tenant. An account switch, sign-out or tenant change while a response body is being read discards the old response without showing the previous owner's key IDs or newly issued one-time secret. A pasted application API key cannot manage owner keys and this protection grants no subscription entitlement. `tests/browser/customer_key_session_races.spec.js` covers held JSON responses; release also requires final-SHA Playwright, backend authorization and live verification.
+
+
+### Revoked owner access to API-key management
+
+If a signed-in customer's API-key list, creation or revocation request returns HTTP 401, GuardOath immediately clears their Cognito session, tenant settings, key list and one-time plaintext secret and restores **Sign in**. This is the same fail-closed recovery already used for authenticated tenant and validation requests, even before an application is connected. A late 401 from a superseded owner cannot log out a replacement customer, and a public demo API key cannot impersonate an owner session. Sign in again before managing keys; an application API key cannot restore account ownership. Customer browser tests: `tests/browser/customer_key_session_races.spec.js`. Final-SHA Playwright and live Cognito/entitlement checks remain required before production release.

@@ -1012,6 +1012,13 @@ async function loadKeys() {
     return;
   }
   if (!currentCustomerKeyOwner(token, tenantId)) return;
+  // Unlike api(), owner key management uses send() directly. A revoked
+  // Cognito session must clear owner state; a stale 401 from an earlier
+  // owner must not sign out a replacement session/tenant.
+  if (response.status === 401) {
+    expireCustomerSession();
+    return;
+  }
   if (!response.ok) {
     $("key-create").disabled = true;
     $("key-message").textContent = "API key access could not be verified (HTTP " + response.status + ").";
@@ -1067,6 +1074,12 @@ async function keyAction(path, body, done) {
     return;
   }
   if (!currentCustomerKeyOwner(token, tenantId)) return;
+  // Treat revoked owner create/revoke access as a session-expiry boundary.
+  // Do not read or display the unauthorized response's key/body.
+  if (response.status === 401) {
+    expireCustomerSession();
+    return;
+  }
   const data = await response.json().catch(() => ({}));
   // Never disclose an old owner's one-time secret when a delayed JSON body
   // completes after an account or tenant switch.
