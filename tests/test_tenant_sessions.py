@@ -679,6 +679,37 @@ def test_registration_refuses_unverified_and_duplicate_cognito_attributes(sessio
     assert tenants.store.tenant_ids() == ()
 
 
+def test_native_registration_rejects_unverified_missing_and_mismatched_identity(sessions, cognito):
+    sessions.google_enabled = False
+    sessions.registration_enabled = True
+    tenants = TenantService(MemoryTenantStore(), CHECKERS, SECRET)
+    client = TestClient(create_app(engine=demo_engine(), credentials={},
+                                   tenants=tenants, sessions=sessions))
+    cases = (
+        [{"Name": "email", "Value": "user@example.invalid"},
+         {"Name": "email_verified", "Value": "false"},
+         {"Name": "sub", "Value": "native-0"}],
+        [{"Name": "email", "Value": "user@example.invalid"},
+         {"Name": "email_verified", "Value": "true"},
+         {"Name": "sub", "Value": "other-subject"}],
+        [{"Name": "email_verified", "Value": "true"},
+         {"Name": "sub", "Value": "native-2"}],
+        [{"Name": "email", "Value": "user@example.invalid"},
+         {"Name": "email_verified", "Value": "true"},
+         {"Name": "sub", "Value": "native-3"},
+         {"Name": "sub", "Value": "native-3"}],
+        [{"Name": "email", "Value": "user@example.invalid"},
+         {"Name": "email_verified", "Value": "true"},
+         {"Name": "sub", "Value": "native-4"},
+         google_identity("untrusted-google")],
+    )
+    for index, attributes in enumerate(cases):
+        access = token(sub=f"native-{index}")
+        cognito.users[access] = attributes
+        assert client.post("/v1/register", headers=signed(access)).status_code == 401, index
+    assert tenants.store.tenant_ids() == ()
+
+
 def test_registration_requires_explicit_opt_in_and_cannot_accept_a_subscription_claim(site):
     client, tenants, _, session = site
     assert client.post("/v1/register", headers=signed(session),
