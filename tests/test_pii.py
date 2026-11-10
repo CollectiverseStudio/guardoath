@@ -57,6 +57,22 @@ def test_benign_lookalikes(engine, content):
     assert result.recommended_action == "allow", diagnostic
 
 
+
+def test_valid_ssn_scan_preserves_digit_prefilter_state(engine):
+    # A validated nine-digit SSN exercises the core recognizer before copied
+    # patterns. Their prefilter still needs the original INTEGER field count:
+    # do not overwrite it with the candidate's STRING digits.
+    result = scan(engine, "Employee SSN: 219-09-9999; review for validation")
+    diagnostic = tuple((check.checker_id, check.status, check.error_code, check.latency_ms)
+                       for check in result.checker_results)
+    assert result.evaluation_status == "complete", diagnostic
+    assert all(check.status == "flagged" for check in result.checker_results), diagnostic
+    assert "pii.us_ssn" in {f.rule_id for f in result.findings}
+    assert result.recommended_action == "flag"
+    assert "219-09-9999" not in result.model_dump_json()
+
+
+
 @pytest.mark.parametrize("content", [
     r'{"email":"jane\u0040example.com"}',
     r'{"jane\u0040example.com":"key"}',
