@@ -120,7 +120,7 @@ test("registered but unpaid customer sees inactive plan and cannot click Create 
 });
 
 
-test("deployment without Google provider does not advertise a broken login or registration", async ({page}) => {
+test("deployment without Google provider preserves invited Cognito login and withholds Google registration", async ({page}) => {
   await page.route("**/v1/sign-in", route => route.fulfill({
     status: 200, contentType: "application/json",
     body: JSON.stringify({
