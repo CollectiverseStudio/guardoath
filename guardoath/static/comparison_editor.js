@@ -456,6 +456,24 @@
       for (const item of draft) {
         const row = element("li"); row.dataset.comparisonId = item.rule_id;
         row.append(element("span", item.rule_id + ": " + item.left + " " + item.operator + " " + item.right + " (" + item.value_type + "; " + item.stages.join(", ") + ") "));
+        // The ordinary editor must expose the same saved per-stage Off state
+        // as the advanced-family editors. A pending definition is not yet the
+        // tenant's authoritative saved rule, so do not label it as such.
+        const persisted = original.find(rule => rule.rule_id === item.rule_id);
+        const savedDefinition = persisted &&
+          persisted.left === item.left && persisted.right === item.right &&
+          persisted.operator === item.operator && persisted.value_type === item.value_type &&
+          persisted.stages.length === item.stages.length &&
+          persisted.stages.every(stage => item.stages.includes(stage));
+        if (persisted && !savedDefinition) {
+          row.append(element("p", "Unsaved comparison changes: Save checks before testing the updated rule."));
+        } else if (savedDefinition) {
+          for (const stage of item.stages) {
+            if (tenant[stage + "_rule_actions"]?.["business." + item.rule_id] === "off") {
+              row.append(element("p", "Saved " + stage + " rule action is Off. This rule is not evaluated on " + stage + "; testing examples still runs all other enabled tenant rules."));
+            }
+          }
+        }
         const edit = element("button", "Edit"); edit.type = "button"; edit.setAttribute("aria-label", "Edit comparison " + item.rule_id);
         edit.addEventListener("click", () => {
           editing = item.rule_id; controls.id.value = item.rule_id; controls.id.disabled = true;
