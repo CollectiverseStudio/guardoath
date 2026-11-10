@@ -579,6 +579,7 @@ def test_sign_in_needs_tenant_records(sessions):
 
 def test_verified_google_registration_creates_unsubscribed_tenant_without_paid_access(sessions, cognito):
     """Sign-in is identity, registration is storage, subscription is separate."""
+    sessions.google_enabled = True
     sessions.registration_enabled = True
     session = token(sub="first-time-google-user")
     cognito.users[session] = [
@@ -624,6 +625,7 @@ def test_verified_google_registration_creates_unsubscribed_tenant_without_paid_a
 
 
 def test_registration_refuses_unverified_and_duplicate_cognito_attributes(sessions, cognito):
+    sessions.google_enabled = True
     sessions.registration_enabled = True
     tenants = TenantService(MemoryTenantStore(), CHECKERS, SECRET)
     client = TestClient(create_app(engine=demo_engine(), credentials={},
