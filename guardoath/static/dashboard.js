@@ -794,7 +794,17 @@ async function showAccountState(token) {
   }
   if (!reply.ok) {
     if (reply.status === 401) sessionStorage.removeItem("guardoath-session");
-    $("account-status").textContent = "Account verification unavailable (HTTP " + reply.status + ").";
+    if (reply.status === 403) {
+      // Disabled/demo-bound records cannot be re-registered. Keep sign-out
+      // available, but expose no tenant keys or settings.
+      $("sign-in").hidden = true;
+      $("register-account").hidden = true;
+      $("sign-out").hidden = false;
+      $("keys-panel").hidden = true;
+      $("account-status").textContent = "This account is unavailable. Contact support; creating another registration will not restore access.";
+    } else {
+      $("account-status").textContent = "Account verification unavailable (HTTP " + reply.status + ").";
+    }
     return;
   }
   const status = await reply.json();
