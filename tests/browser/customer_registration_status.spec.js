@@ -528,6 +528,8 @@ test("public demo does not expose customer API-key management", async ({page}) =
   }));
   await page.goto("/dashboard");
   await expect(page.locator("#keys-panel")).toBeHidden();
+  await expect(page.locator("#customer-key-connect")).toBeHidden();
+  await expect(page.locator("#api-key")).toBeHidden();
   await expect(page.locator("#key-create")).toBeHidden();
   await expect(page.locator("#sign-in-box")).toBeVisible();
 });
@@ -579,6 +581,7 @@ test("customer API-key management sends signed-in session, never pasted API key"
   });
   await page.goto("/dashboard");
   await expect(page.locator("#keys-panel")).toBeVisible();
+  await expect(page.locator("#customer-key-connect")).toBeVisible();
   await expect(page.locator("#key-create")).toBeEnabled();
   await page.locator("#key-create").click();
   await expect(page.locator("#key-new")).toHaveValue("gok_example_once");
