@@ -2887,6 +2887,8 @@ The same authenticated browser suite also includes **500 mixed rules (125 per fa
 
 Limits: the published synthetic samples illustrate individual rules; they do not guarantee every other enabled rule passes. A 500-rule portfolio may exceed sample rendering or individual payload limits, in which case examples must be reported unavailable, not falsely marked clean. The customer must still supply payloads within GuardOath's input JSON limits and decide which stages and actions to enable. Host-signed trusted-reference checks retain independent signing/provenance acceptance and are never made trusted by submitting a JSON value or dashboard draft.
 
+**Delayed Save when switching tenants or editing again:** **Save checks** sends a revisioned write to the tenant that was connected when you clicked. If you then sign out, connect another tenant, or edit a newer local draft before that write finishes, its later response cannot replace the current tenant's Field Comparisons settings or report the older operation as a Save of the newer tenant. A newer draft on the same tenant stays visible with an explicit reconnect-and-compare warning, because the earlier request may already have updated the server record. Reconnect and review the authoritative saved revision before saving again; do not assume a pending edit was persisted. The authenticated browser regressions in `tests/browser/field_comparison_save_session_races.spec.js` exercise real server writes with delayed responses, both across tenants and across successive drafts. This is a customer UI/session isolation measure, not cancellation of a server-side transaction and not a new action or security bypass.
+
 
 ### Field Comparisons — stage-Off examples and saved-versus-unsaved settings
 
