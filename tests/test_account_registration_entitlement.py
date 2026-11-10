@@ -229,3 +229,25 @@ def test_checkout_provider_failure_never_activates_subscription(monkeypatch):
     assert tenant.subscription_status == "inactive"
     assert tenant.key_hashes == () and tenant.usage == {}
     assert client.post("/v1/tenants/current/keys", headers=headers, json={}).status_code == 402
+
+
+def test_missing_stripe_price_does_not_create_or_bind_customer(monkeypatch):
+    """Incomplete billing configuration must fail before any Stripe write."""
+    from guardoath import stripe_customer
+    calls = []
+    def unexpected_customer(**kwargs):
+        calls.append(kwargs)
+        raise AssertionError("Customer must not be provisioned")
+    monkeypatch.setattr(stripe_customer, "create_customer", unexpected_customer)
+    monkeypatch.setenv("GUARDOATH_STRIPE_SECRET_KEY", "sk_test_" + "a" * 32)
+    monkeypatch.delenv("GUARDOATH_STRIPE_PRICE_ID", raising=False)
+    client, store = make_client()
+    headers = {SESSION_HEADER: "verified-test-token"}
+    assert client.post("/v1/register", headers=headers).status_code == 201
+    response = client.post("/v1/billing/checkout", headers=headers, json={})
+    assert response.status_code == 503
+    assert calls == []
+    tenant = store.get("usr-test-account")
+    assert tenant.payer_id is None
+    assert tenant.subscription_status == "inactive"
+    assert tenant.key_hashes == ()
