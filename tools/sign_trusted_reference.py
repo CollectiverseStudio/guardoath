@@ -63,15 +63,35 @@ def main(argv=None):
     # fail closed at runtime. Refuse to create a misleading operator artifact.
     if not reference_is_trusted(signed, args.tenant, key=key):
         parser.error("Reference validity window is not currently acceptable; no attestation created")
-    # Signed clinical/permit/PO snapshots can be sensitive. Create with
-    # owner-only mode, never overwrite an existing file or follow a symlink.
+    # Generate the complete JSON before reserving a private output path.
+    # A partially written reference is never a usable attestation: fsync must
+    # succeed or the newly created artifact is removed. Never overwrite an
+    # existing destination, including a symlink, even after a failed write.
     try:
+        contents = (json.dumps(signed.model_dump(mode="json"), indent=2) + "\n").encode("utf-8")
         args.output.parent.mkdir(parents=True, exist_ok=True)
         fd = os.open(args.output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            handle.write(json.dumps(signed.model_dump(mode="json"), indent=2) + "\n")
-    except OSError:
+    except (OSError, ValueError):
         parser.error("Cannot create private attestation output; require a new writable destination")
+    try:
+        try:
+            with os.fdopen(fd, "wb") as handle:
+                handle.write(contents)
+                handle.flush()
+                os.fsync(handle.fileno())
+        except BaseException:
+            # fdopen may fail before taking ownership of the descriptor.
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+            raise
+    except BaseException:
+        try:
+            args.output.unlink()
+        except OSError:
+            pass
+        parser.error("Private attestation write failed; no valid artifact created")
     print("Host attestation created; verify and save the resulting tenant rule through the authenticated settings API.")
     return 0
 
