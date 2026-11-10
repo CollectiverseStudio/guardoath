@@ -522,3 +522,57 @@ test("public demo does not expose customer API-key management", async ({page}) =
   await expect(page.locator("#key-create")).toBeHidden();
   await expect(page.locator("#sign-in-box")).toBeVisible();
 });
+
+test("customer API-key management sends signed-in session, never pasted API key", async ({page, request}) => {
+  const issued = await request.post("/v1/demo-users/demo2/key", {data: {}});
+  expect(issued.status()).toBe(200);
+  const demoKey = (await issued.json()).api_key;
+  const summary = await request.get("/v1/applications/current", {
+    headers: {"X-GuardOath-Key": demoKey}
+  });
+  const application = await summary.json();
+  application.application_id = "usr-authenticated-keys";
+  application.tenant = {...application.tenant, tenant_id: "usr-authenticated-keys",
+    demo: false, subscription_status: "active", subscription_active: true};
+  await page.addInitScript(() => {
+    sessionStorage.setItem("guardoath-session", "verified-session-for-ui");
+  });
+  await page.route("**/v1/sign-in", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({authorize_url: "https://example.invalid/oauth2/authorize",
+      logout_url: "https://example.invalid/logout", client_id: "synthetic",
+      redirect_uri: "http://localhost/dashboard", scope: "openid email",
+      registration_enabled: true, google_provider: null})
+  }));
+  await page.route("**/v1/account/status", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({registered: true, registration_enabled: true,
+      tenant_id: "usr-authenticated-keys", subscription_status: "active",
+      can_validate: true})
+  }));
+  await page.route("**/v1/applications/current", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify(application)
+  }));
+  let reads = 0, creates = 0;
+  await page.route("**/v1/tenants/current/keys", async route => {
+    const headers = route.request().headers();
+    expect(headers["x-guardoath-session"]).toBe("verified-session-for-ui");
+    expect(headers["x-guardoath-key"]).toBeUndefined();
+    if (route.request().method() === "POST") {
+      creates++;
+      await route.fulfill({status: 200, contentType: "application/json",
+        body: JSON.stringify({api_key: "gok_example_once"})});
+    } else {
+      reads++;
+      await route.fulfill({status: 200, contentType: "application/json",
+        body: JSON.stringify({keys: [], max_keys: 2})});
+    }
+  });
+  await page.goto("/dashboard");
+  await expect(page.locator("#keys-panel")).toBeVisible();
+  await expect(page.locator("#key-create")).toBeEnabled();
+  await page.locator("#key-create").click();
+  await expect(page.locator("#key-new")).toHaveValue("gok_example_once");
+  expect(creates).toBe(1);
+  expect(reads).toBeGreaterThan(0);
+});
