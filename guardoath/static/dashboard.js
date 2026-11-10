@@ -609,6 +609,11 @@ async function saveTenant(path, body, done) {
   // misreport an earlier tenant's result as its saved configuration.
   const ownerKey = key, ownerTenantId = application.tenant.tenant_id;
   let ownerAttempt = revision;
+  // Editing a new unsaved rule/check draft does not necessarily call reset().
+  // Compare the submitted UI draft as well as connection identity.
+  const submittedDraft = JSON.stringify(pendingChanges());
+  const sameDraft = () => JSON.stringify(pendingChanges()) === submittedDraft;
+  let reloaded = false;
   const stillOwner = () => key === ownerKey &&
     application?.tenant?.tenant_id === ownerTenantId &&
     revision === ownerAttempt &&
@@ -620,9 +625,9 @@ async function saveTenant(path, body, done) {
     const text = JSON.stringify(body);
     const response = await send(path, {method: "POST", cache: "no-store",
       headers: await requestHeaders(ownerKey, text), body: text});
-    if (!stillOwner()) return false;
+    if (!stillOwner() || !sameDraft()) return false;
     const data = await response.json().catch(() => ({}));
-    if (!stillOwner()) return false;
+    if (!stillOwner() || !sameDraft()) return false;
     saved = response.ok;
     if (!response.ok) message = response.status === 409 ? "Someone else changed this record. It has been reloaded; check the values and save again." : (typeof data.detail === "string" ? data.detail : "The change was not saved (HTTP " + response.status + ").");
     if (response.ok || response.status === 409) {
@@ -632,9 +637,10 @@ async function saveTenant(path, body, done) {
       try { await loadApplication(ownerKey, ownerAttempt); }
       catch (error) { message += " The record could not be reloaded; connect again to see the current values."; }
       if (!stillOwner()) return false;
+      reloaded = true;
     }
   } catch (error) {
-    if (!stillOwner()) return false;
+    if (!stillOwner() || !sameDraft()) return false;
     message = "The change was not saved."; saved = false;
   } finally {
     // A stale completion cannot unlock, erase or relabel another tenant's
@@ -642,7 +648,7 @@ async function saveTenant(path, body, done) {
     if (stillOwner()) {
       $("tenant-reset").disabled = false;
       $("tenant-save").disabled = !ownChecksSelected();
-      $("tenant-message").textContent = message;
+      if (reloaded || sameDraft()) $("tenant-message").textContent = message;
     }
   }
   return saved;
