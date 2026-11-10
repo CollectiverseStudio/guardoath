@@ -625,7 +625,16 @@ async function saveTenant(path, body, done) {
     const text = JSON.stringify(body);
     const response = await send(path, {method: "POST", cache: "no-store",
       headers: await requestHeaders(ownerKey, text), body: text});
-    if (!stillOwner() || !sameDraft()) return false;
+    if (!stillOwner()) return false;
+    // Tenant writes use send() rather than api(); a revoked Cognito session
+    // must still fail closed. Do this before parsing an untrusted error body,
+    // and only for the original owner: an earlier tenant's delayed 401 must
+    // never sign out a replacement customer. Demo/API-key 401 is not Cognito.
+    if (response.status === 401 && ownerKey.startsWith(SESSION)) {
+      expireCustomerSession();
+      return false;
+    }
+    if (!sameDraft()) return false;
     const data = await response.json().catch(() => ({}));
     if (!stillOwner() || !sameDraft()) return false;
     saved = response.ok;
