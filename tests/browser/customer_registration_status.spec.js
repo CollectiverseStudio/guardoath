@@ -251,3 +251,36 @@ test("a disabled signed-in identity cannot register or see tenant controls", asy
   await expect(page.locator("#sign-out")).toBeVisible();
   await expect(page.locator("#keys-panel")).toBeHidden();
 });
+
+
+test("Google login starts Cognito authorization code with PKCE and explicit Google provider", async ({page}) => {
+  await page.route("**/v1/sign-in", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      authorize_url: "https://example.invalid/oauth2/authorize",
+      logout_url: "https://example.invalid/logout",
+      client_id: "synthetic", redirect_uri: "http://localhost/dashboard",
+      scope: "openid email aws.cognito.signin.user.admin",
+      registration_enabled: true, google_provider: "Google"
+    })
+  }));
+  await page.goto("/dashboard");
+  await expect(page.locator("#sign-in")).toBeVisible();
+  await expect(page.locator("#sign-in")).toHaveText("Sign in with Google");
+  await expect(page.locator("#register-account")).toBeVisible();
+  await page.route("https://example.invalid/oauth2/authorize**", route => route.fulfill({
+    status: 200, contentType: "text/html", body: "<html><body>OAuth stub</body></html>"
+  }));
+  const authRequest = page.waitForRequest(r =>
+    r.url().startsWith("https://example.invalid/oauth2/authorize"));
+  await page.locator("#sign-in").click();
+  const auth = new URL((await authRequest).url());
+  expect(auth.searchParams.get("identity_provider")).toBe("Google");
+  expect(auth.searchParams.get("response_type")).toBe("code");
+  expect(auth.searchParams.get("client_id")).toBe("synthetic");
+  expect(auth.searchParams.get("redirect_uri")).toBe("http://localhost/dashboard");
+  expect(auth.searchParams.get("scope")).toContain("aws.cognito.signin.user.admin");
+  expect(auth.searchParams.get("code_challenge_method")).toBe("S256");
+  expect(auth.searchParams.get("code_challenge")).toMatch(/^[A-Za-z0-9_-]{43}$/);
+  expect(auth.searchParams.get("state")).toMatch(/^[A-Za-z0-9_-]{22}$/);
+});
