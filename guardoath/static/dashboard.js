@@ -91,6 +91,10 @@ async function api(path, body, token = key) {
     throw new Error((response.status === 429 ? "Application limit reached." : "Service capacity reached.") + (Number.isSafeInteger(seconds) && seconds > 0 ? " Retry in " + seconds + (seconds === 1 ? " second." : " seconds.") : " Try again shortly."));
   }
   if (!response.ok && response.status === 429) throw new Error("Monthly check limit reached for this user. Choose another demo user or try again next month.");
+  if (!response.ok && response.status === 401 && typeof token === "string" && token.startsWith(SESSION)) {
+    expireCustomerSession();
+    throw new Error("Your sign-in has expired or been revoked. Sign in again.");
+  }
   if (!response.ok) throw new Error(response.status === 401 ? "The API key was not accepted." : response.status === 422 ? "Check the required fields, content length, and selected format." : "The check could not be completed (HTTP " + response.status + ").");
   return response.json();
 }
@@ -782,6 +786,18 @@ async function loadSignIn() {
   if (!stored) return;
   await showAccountState(stored);
 }
+function expireCustomerSession() {
+  // Reuse the same cleanup as manual Disconnect, including tenant policy,
+  // pending results and API-key controls. Never interpret session loss as
+  // unpaid registration or leave customer credentials visible.
+  $("disconnect").click();
+  $("sign-in").hidden = false;
+  $("register-account").hidden = true;
+  $("sign-out").hidden = true;
+  $("billing-subscribe").hidden = true;
+  $("billing-manage").hidden = true;
+  $("account-status").textContent = "Your sign-in has expired or been revoked. Sign in again.";
+}
 async function showAccountState(token) {
   let reply;
   try {
@@ -794,15 +810,7 @@ async function showAccountState(token) {
   }
   if (!reply.ok) {
     if (reply.status === 401) {
-      // An expired/revoked Cognito session must never leave stale tenant
-      // settings, API-key controls, or a hidden sign-in button on screen.
-      $("disconnect").click();
-      $("sign-in").hidden = false;
-      $("register-account").hidden = true;
-      $("sign-out").hidden = true;
-      $("billing-subscribe").hidden = true;
-      $("billing-manage").hidden = true;
-      $("account-status").textContent = "Your sign-in has expired or been revoked. Sign in again.";
+      expireCustomerSession();
       return;
     }
     if (reply.status === 403) {
@@ -838,7 +846,8 @@ async function showAccountState(token) {
     await loadApplication(SESSION + token, attempt);
     signedIn(true);
   } catch (_) {
-    $("connection-status").textContent = "Signed in, but account settings could not be loaded.";
+    if (sessionStorage.getItem("guardoath-session"))
+      $("connection-status").textContent = "Signed in, but account settings could not be loaded.";
   }
 }
 async function beginGoogleLogin(intent) {
