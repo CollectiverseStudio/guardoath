@@ -730,11 +730,11 @@ let signIn = null;
 function b64url(buffer) { return btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
 function signedIn(on) {
   // Native administrator-invited Cognito customers must still be able to sign
-  // in when the optional Google provider is disabled. Never label that path as
-  // Google, and never offer self-registration without the verified provider.
+  // in using native Cognito credentials or optional Google federation.
+  // Registration is independent of the Google provider.
   $("sign-in").hidden = on;
-  $("sign-in").textContent = signIn?.google_provider === "Google" ? "Sign in with Google" : "Sign in to GuardOath";
-  $("register-account").hidden = on || !signIn?.registration_enabled || signIn?.google_provider !== "Google";
+  $("sign-in").textContent = "Sign in to GuardOath";
+  $("register-account").hidden = on || !signIn?.registration_enabled;
   $("sign-out").hidden = !on;
   $("keys-panel").hidden = !on; if (on) loadKeys();
 }
@@ -744,8 +744,8 @@ async function loadSignIn() {
   if (!response.ok) return;  // 404 = this server has no tenant sign-in
   signIn = await response.json().catch(() => null); if (!signIn) return;
   $("sign-in-box").hidden = false; signedIn(false);
-  if (signIn.google_provider !== "Google") {
-    $("account-status").textContent = "Google registration is not configured on this deployment. Existing invited customers can still sign in with their GuardOath account.";
+  if (!signIn.registration_enabled) {
+    $("account-status").textContent = "Public registration is not enabled on this deployment. Existing customers can sign in.";
   }
   const query = new URLSearchParams(location.search), code = query.get("code"), state = query.get("state");
   if (code || query.get("error")) {
@@ -838,7 +838,7 @@ async function showAccountState(token) {
   $("billing-manage").hidden = !status.registered;
 
   if (!status.registered) {
-    $("account-status").textContent = "Google sign-in verified. Registration is required before configuring a tenant. Registering does not activate a paid subscription.";
+    $("account-status").textContent = "Sign-in verified. Registration is required before configuring a tenant. Registering does not activate a paid subscription.";
     $("connection-status").textContent = "Signed in — account registration pending.";
     return;
   }
@@ -854,22 +854,21 @@ async function showAccountState(token) {
       $("connection-status").textContent = "Signed in, but account settings could not be loaded.";
   }
 }
-async function beginGoogleLogin(intent) {
-  if (!signIn || (intent === "register" && signIn.google_provider !== "Google")) return;
+async function beginCustomerLogin(intent) {
+  if (!signIn || (intent === "register" && !signIn.registration_enabled)) return;
   const verifier = b64url(crypto.getRandomValues(new Uint8Array(32))), state = b64url(crypto.getRandomValues(new Uint8Array(16)));
   const challenge = b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
   sessionStorage.setItem("guardoath-verifier", verifier); sessionStorage.setItem("guardoath-state", state);
   const url = new URL(signIn.authorize_url);
   for (const [name, value] of Object.entries({response_type: "code", client_id: signIn.client_id, redirect_uri: signIn.redirect_uri,
       scope: signIn.scope, state, code_challenge: challenge, code_challenge_method: "S256"})) url.searchParams.set(name, value);
-  if (signIn.google_provider === "Google") url.searchParams.set("identity_provider", "Google");
   sessionStorage.setItem("guardoath-sign-in-intent", intent);
   location.assign(url.toString());
 }
-$("sign-in").addEventListener("click", () => beginGoogleLogin("signin"));
+$("sign-in").addEventListener("click", () => beginCustomerLogin("signin"));
 $("register-account").addEventListener("click", async () => {
   const token = sessionStorage.getItem("guardoath-session");
-  if (!token) return beginGoogleLogin("register");
+  if (!token) return beginCustomerLogin("register");
   const button = $("register-account"); button.disabled = true;
   try {
     const response = await send("/v1/register", {
