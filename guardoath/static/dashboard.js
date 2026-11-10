@@ -835,7 +835,13 @@ async function showAccountState(token) {
   $("sign-out").hidden = false;
   $("register-account").hidden = status.registered || !status.registration_enabled;
   $("billing-subscribe").hidden = !status.registered || status.subscription_status === "active";
-  $("billing-manage").hidden = !status.registered;
+  $("billing-manage").hidden = !status.registered || status.subscription_status !== "active";
+  // Stripe's return URL is navigation only, never proof of paid entitlement.
+  // The authoritative account status returned by the server controls access.
+  const checkoutReturn = new URLSearchParams(location.search).get("checkout");
+  if (checkoutReturn === "success" && status.subscription_status !== "active") {
+    $("account-status").textContent = "Checkout returned. Payment activation is pending verification; paid access remains disabled.";
+  }
 
   if (!status.registered) {
     $("account-status").textContent = "Sign-in verified. Registration is required before configuring a tenant. Registering does not activate a paid subscription.";
