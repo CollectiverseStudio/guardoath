@@ -793,7 +793,18 @@ async function showAccountState(token) {
     return;
   }
   if (!reply.ok) {
-    if (reply.status === 401) sessionStorage.removeItem("guardoath-session");
+    if (reply.status === 401) {
+      // An expired/revoked Cognito session must never leave stale tenant
+      // settings, API-key controls, or a hidden sign-in button on screen.
+      $("disconnect").click();
+      $("sign-in").hidden = false;
+      $("register-account").hidden = true;
+      $("sign-out").hidden = true;
+      $("billing-subscribe").hidden = true;
+      $("billing-manage").hidden = true;
+      $("account-status").textContent = "Your sign-in has expired or been revoked. Sign in again.";
+      return;
+    }
     if (reply.status === 403) {
       // Disabled/demo-bound records cannot be re-registered. Keep sign-out
       // available, but expose no tenant keys or settings.
