@@ -750,6 +750,8 @@ def test_only_cognito_confirmed_google_federation_can_self_register(sessions, co
     cases = (
         (None, None),  # Verified native Cognito account is not Google.
         ('{"broken":', None),
+        ("[" * 1100 + "]" * 1100, None),  # bounded, deeply nested Cognito attribute
+        ("x" * 4100, None),  # no unbounded identities JSON processing
         (json.dumps([{"providerName": "Facebook", "providerType": "Facebook",
                       "userId": "fb-id"}]), None),
         (json.dumps([{"providerName": "Google", "providerType": "Google"}]), None),
@@ -794,3 +796,16 @@ def test_duplicate_google_identity_attribute_cannot_register(sessions, cognito):
     ]
     assert client.post("/v1/register", headers=signed(candidate), json={}).status_code == 401
     assert tenants.store.tenant_ids() == ()
+
+
+def test_invited_native_tenant_still_works_when_google_self_registration_enabled(site):
+    client, tenants, _, session = site
+    # Existing administrators who have custom:tenant_id retain access; only
+    # creation of NEW self-registered tenants is restricted to Google federation.
+    configured = client.app if hasattr(client, "app") else None
+    # The authenticated native session is already bound to an existing tenant.
+    response = client.get("/v1/account/status", headers=signed(session))
+    assert response.status_code == 200
+    assert response.json()["registered"] is True
+    assert response.json()["tenant_id"] == "acme"
+    assert tenants.store.get("acme").subscription_status == "active"
