@@ -798,14 +798,23 @@ def test_duplicate_google_identity_attribute_cannot_register(sessions, cognito):
     assert tenants.store.tenant_ids() == ()
 
 
-def test_invited_native_tenant_still_works_when_google_self_registration_enabled(site):
-    client, tenants, _, session = site
-    # Existing administrators who have custom:tenant_id retain access; only
-    # creation of NEW self-registered tenants is restricted to Google federation.
-    configured = client.app if hasattr(client, "app") else None
-    # The authenticated native session is already bound to an existing tenant.
-    response = client.get("/v1/account/status", headers=signed(session))
-    assert response.status_code == 200
-    assert response.json()["registered"] is True
-    assert response.json()["tenant_id"] == "acme"
-    assert tenants.store.get("acme").subscription_status == "active"
+def test_invited_native_tenant_still_works_when_google_self_registration_enabled(sessions, cognito):
+    sessions.google_enabled = True
+    sessions.registration_enabled = True
+    native = tenant_user(cognito, "acme", sub="native-invited-subject")
+    # Existing administrator-invited users with custom:tenant_id remain
+    # authorized even as new public registration requires Google federation.
+    record = TenantRecord(tenant_id="acme", display_name="Invited tenant",
+                          check_secrets="flag", monthly_allowance=20,
+                          subscription_status="active")
+    tenants = TenantService(MemoryTenantStore((record,)), CHECKERS, SECRET)
+    client = TestClient(create_app(engine=demo_engine(), credentials={},
+                                   tenants=tenants, sessions=sessions))
+    status = client.get("/v1/account/status", headers=signed(native))
+    assert status.status_code == 200
+    assert status.json()["registered"] is True
+    assert status.json()["tenant_id"] == "acme"
+    assert status.json()["can_validate"] is True
+    assert client.get("/v1/applications/current", headers=signed(native)).status_code == 200
+    assert client.post("/v1/register", headers=signed(native), json={}).status_code == 409
+    assert tenants.store.tenant_ids() == ("acme",)
