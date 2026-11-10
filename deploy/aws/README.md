@@ -161,7 +161,12 @@ accounts intended to register. Use this **Google authorized redirect URI**
 The Cognito app client's own code+PKCE callback and logout URI are both
 `https://guardoath.com/dashboard`. The server checks the ID provider's verified
 identity, requires a verified email to derive the first-time tenant identity,
-and `POST /v1/register` persists the tenant. No email/password, signed token,
+and `POST /v1/register` persists the tenant. Cognito must map Google's
+`email_verified` claim into its user profile and the app client must grant
+write permission for the mapped `email_verified` attribute (alongside
+`email`); otherwise the user may sign in without a verified-email attribute,
+and GuardOath correctly denies registration. The template enforces this
+mapping/write-access requirement and keeps `custom:tenant_id` non-writable. No email/password, signed token,
 client secret, tenant ID or payment claim is provided by the browser to create
 an entitlement.
 
