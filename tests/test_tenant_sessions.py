@@ -738,3 +738,59 @@ def test_google_oauth_code_login_registration_repeat_login_and_second_account_is
     assert created_other.json()["subscription_status"] == "inactive"
     assert len(tenants.store.tenant_ids()) == 2
     assert tenants.store.get(owner).subscription_status == "inactive"
+
+
+def test_only_cognito_confirmed_google_federation_can_self_register(sessions, cognito):
+    """Native, malformed, and non-Google identities cannot create public tenants."""
+    sessions.google_enabled = True
+    sessions.registration_enabled = True
+    tenants = TenantService(MemoryTenantStore(), CHECKERS, SECRET)
+    client = TestClient(create_app(engine=demo_engine(), credentials={},
+                                   tenants=tenants, sessions=sessions))
+    cases = (
+        (None, None),  # Verified native Cognito account is not Google.
+        ('{"broken":', None),
+        (json.dumps([{"providerName": "Facebook", "providerType": "Facebook",
+                      "userId": "fb-id"}]), None),
+        (json.dumps([{"providerName": "Google", "providerType": "Google"}]), None),
+        (json.dumps([{"providerName": "Google", "providerType": "OIDC",
+                      "userId": "google-id"}]), None),
+        (json.dumps([{"providerName": "Google", "providerType": "Google",
+                      "userId": "google-id"}]), "native-invited-user"),
+        (json.dumps([{"providerName": "Google", "providerType": "Google",
+                      "userId": "google-id"}] * 6), None),
+    )
+    for index, (identities, username) in enumerate(cases):
+        subject = "registration-negative-" + str(index)
+        access = token(sub=subject)
+        attrs = [
+            {"Name": "sub", "Value": subject},
+            {"Name": "email_verified", "Value": "true"},
+            {"Name": "email", "Value": "verified@example.invalid"},
+        ]
+        if identities is not None:
+            attrs.append({"Name": "identities", "Value": identities})
+        cognito.users[access] = attrs
+        if username is not None:
+            cognito.usernames[access] = username
+        result = client.get("/v1/account/status", headers=signed(access))
+        assert result.status_code == 401, index
+        assert client.post("/v1/register", headers=signed(access), json={}).status_code == 401
+    assert tenants.store.tenant_ids() == ()
+
+
+def test_duplicate_google_identity_attribute_cannot_register(sessions, cognito):
+    sessions.google_enabled = True
+    sessions.registration_enabled = True
+    tenants = TenantService(MemoryTenantStore(), CHECKERS, SECRET)
+    client = TestClient(create_app(engine=demo_engine(), credentials={},
+                                   tenants=tenants, sessions=sessions))
+    candidate = token(sub="duplicate-identities")
+    cognito.users[candidate] = [
+        {"Name": "sub", "Value": "duplicate-identities"},
+        {"Name": "email_verified", "Value": "true"},
+        google_identity("google-one"),
+        google_identity("google-two"),
+    ]
+    assert client.post("/v1/register", headers=signed(candidate), json={}).status_code == 401
+    assert tenants.store.tenant_ids() == ()
