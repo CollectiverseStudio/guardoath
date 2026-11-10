@@ -120,7 +120,7 @@ test("registered but unpaid customer sees inactive plan and cannot click Create 
 });
 
 
-test("deployment without Google provider preserves invited Cognito login and withholds Google registration", async ({page}) => {
+test("deployment without registration preserves native Cognito login", async ({page}) => {
   await page.route("**/v1/sign-in", route => route.fulfill({
     status: 200, contentType: "application/json",
     body: JSON.stringify({
@@ -135,7 +135,7 @@ test("deployment without Google provider preserves invited Cognito login and wit
   await expect(page.locator("#sign-in")).toBeVisible();
   await expect(page.locator("#sign-in")).toHaveText("Sign in to GuardOath");
   await expect(page.locator("#register-account")).toBeHidden();
-  await expect(page.locator("#account-status")).toContainText("Google registration is not configured");
+  await expect(page.locator("#account-status")).toContainText("Public registration is not enabled");
   await page.route("https://example.invalid/oauth2/authorize**", route => route.fulfill({
     status: 200, contentType: "text/html", body: "<html><body>Native Cognito login stub</body></html>"
   }));
@@ -456,4 +456,27 @@ test("revoked customer session during tenant settings load clears state and perm
   await expect(page.locator("#billing-manage")).toBeHidden();
   expect(await page.evaluate(() => sessionStorage.getItem("guardoath-session"))).toBeNull();
   expect(requested).toBe(1);
+});
+
+test("native email registration is offered with Google disabled", async ({page}) => {
+  await page.route("**/v1/sign-in", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      authorize_url: "https://example.invalid/oauth2/authorize",
+      logout_url: "https://example.invalid/logout",
+      client_id: "synthetic", redirect_uri: "http://localhost/dashboard",
+      scope: "openid email", registration_enabled: true, google_provider: null
+    })
+  }));
+  await page.goto("/dashboard");
+  await expect(page.locator("#sign-in")).toHaveText("Sign in to GuardOath");
+  await expect(page.locator("#register-account")).toBeVisible();
+  await page.route("https://example.invalid/oauth2/authorize**", route => route.fulfill({
+    status: 200, contentType: "text/html", body: "<html>Native Cognito sign-up stub</html>"
+  }));
+  const pending = page.waitForRequest(r => r.url().startsWith("https://example.invalid/oauth2/authorize"));
+  await page.locator("#register-account").click();
+  const target = new URL((await pending).url());
+  expect(target.searchParams.get("identity_provider")).toBeNull();
+  expect(target.searchParams.get("code_challenge_method")).toBe("S256");
 });
