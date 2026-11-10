@@ -322,6 +322,10 @@ def test_the_dashboard_client_has_no_secret_and_cannot_change_its_tenant(templat
     assert client["AllowedOAuthScopes"] == ["openid", "email", "aws.cognito.signin.user.admin"]
     assert client["CallbackURLs"] == client["LogoutURLs"] == [{"Fn::Sub": "https://${DomainName}/dashboard"}]
     assert "custom:tenant_id" in client["ReadAttributes"] and "custom:tenant_id" not in client["WriteAttributes"]
+    # Google email verification is required before creating a new tenant.
+    # A mapped IdP attribute must be writable by the Cognito app client,
+    # otherwise Cognito omits it and registration always fails closed.
+    assert set(client["WriteAttributes"]) == {"email", "email_verified"}
     assert client["SupportedIdentityProviders"] == {"Fn::If": [
         "GoogleLoginEnabled", ["COGNITO", {"Ref": "GoogleIdentityProvider"}], ["COGNITO"]
     ]} and client["PreventUserExistenceErrors"] == "ENABLED"
