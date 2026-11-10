@@ -141,6 +141,11 @@ test("authenticated mixed 51-rule FC portfolio renders, saves UI override and ru
     await expect(savedRow.locator('[data-stage="output"]')).toHaveValue("off");
     await expect(savedRow.locator(".effect-output")).toHaveText("Output: Off (own setting)");
     await expect(savedRow.locator(".effect-input")).toHaveText("Input: Block (own setting)");
+    // The editor must tell customers the saved Output rule is Off even when
+    // offering synthetic examples to exercise the rest of their tenant policy.
+    const identityEditorRow = page.locator('li[data-identity-id="mixed_ui_050"]');
+    await expect(identityEditorRow).toContainText("Saved output rule action is Off.");
+    await expect(identityEditorRow).not.toContainText("Saved input rule action is Off.");
 
     const stillInput = await check(request, headers, "input", bad);
     expect(stillInput.evaluation_status).toBe("complete");
@@ -166,6 +171,18 @@ test("authenticated mixed 51-rule FC portfolio renders, saves UI override and ru
     const acceptedInput = await (await browserInput).json();
     expect(acceptedInput.effective_action).toBe("allow");
     await expect(page.locator("#run-output")).toBeEnabled();
+    await page.locator("#output-example-check").selectOption("cross_field");
+    const offSamples = page.locator("#output-example option")
+      .filter({hasText: "business.mixed_ui_050"});
+    await expect(offSamples).toHaveCount(2);
+    expect((await offSamples.allTextContents()).every(x =>
+      x.includes("(saved output rule Off; not evaluated)"))).toBe(true);
+    await page.locator("#input-example-check").selectOption("cross_field");
+    const inputSamples = page.locator("#input-example option")
+      .filter({hasText: "business.mixed_ui_050"});
+    await expect(inputSamples).toHaveCount(2);
+    expect((await inputSamples.allTextContents()).every(x =>
+      !x.includes("rule Off; not evaluated"))).toBe(true);
     await page.locator("#output-format").selectOption("json");
     await page.locator("#output-content").fill(JSON.stringify(bad));
     const browserOutput = page.waitForResponse(r =>
@@ -178,6 +195,24 @@ test("authenticated mixed 51-rule FC portfolio renders, saves UI override and ru
     expect(displayIds).toEqual(["business.mixed_ui_000"]);
     await expect(page.locator("#answer")).toBeHidden();
     expect((await current(request, headers)).revision).toBe(outputOff.revision);
+
+    // A staged check-wide Off is not the saved policy. The customer note
+    // must identify the unsaved draft, then the real saved Off after Save.
+    await page.locator("#tenant-check-input-cross_field").selectOption("");
+    await page.locator("#input-example-check").selectOption("general");
+    await page.locator("#input-example-check").selectOption("cross_field");
+    await expect(page.locator("#input-example-note")).toContainText("not saved yet");
+    expect((await current(request, headers)).input_checks.cross_field).toBe("flag");
+    await page.getByRole("button", {name: "Save checks", exact: true}).click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved.");
+    const checkWideOff = await current(request, headers);
+    expect(checkWideOff.revision).toBe(outputOff.revision + 1);
+    expect(checkWideOff.input_checks.cross_field || "").toBe("");
+    expect(checkWideOff.output_rule_actions["business.mixed_ui_050"]).toBe("off");
+    await connect(page);
+    await page.locator("#input-example-check").selectOption("cross_field");
+    await expect(page.locator("#input-example-note")).toContainText("off on this record");
+    await expect(page.locator("#input-example-note")).not.toContainText("not saved yet");
   } finally {
     if (shouldReset) {
       const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
@@ -272,6 +307,9 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
     await expect(restored.locator('[data-stage="output"]')).toHaveValue("off");
     await expect(restored.locator(".effect-output")).toHaveText("Output: Off (own setting)");
     await expect(restored.locator(".effect-input")).toHaveText("Input: Block (own setting)");
+    const conversionEditorRow = page.locator('li[data-conversion-id="mixed_ui_499"]');
+    await expect(conversionEditorRow).toContainText("Saved output rule action is Off.");
+    await expect(conversionEditorRow).not.toContainText("Saved input rule action is Off.");
 
     const inputAfterOff = await check(request, headers, "input", bad);
     expect(inputAfterOff.evaluation_status).toBe("complete");
