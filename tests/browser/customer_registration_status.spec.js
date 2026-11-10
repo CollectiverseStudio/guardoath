@@ -583,6 +583,8 @@ test("customer API-key management sends signed-in session, never pasted API key"
   await expect(page.locator("#keys-panel")).toBeVisible();
   await expect(page.locator("#customer-key-connect")).toBeVisible();
   await expect(page.locator("#key-create")).toBeEnabled();
+  // The existing-key connection is offered only inside the authenticated view.
+  await expect(page.locator("#api-key")).toBeVisible();
   await page.locator("#key-create").click();
   await expect(page.locator("#key-new")).toHaveValue("gok_example_once");
   expect(creates).toBe(1);
