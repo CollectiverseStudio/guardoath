@@ -14,6 +14,7 @@ from guardoath.privacy_catalog import (CONTEXT_BOOST, CONTEXT_SCORE_FLOOR, CONTE
                                        CORE_ENTITIES, PATTERN_ENTITIES)
 from guardoath.sensitive_fields import SensitiveFieldLimit, field_spans, label_type
 from guardoath.models import Action, CheckerResult, Finding, Stage
+from guardoath.privacy_digit_prefilter import minimum_decimal_digits
 
 LABELED_FIELD = "labeled_field"
 PATTERN = "pattern"
@@ -240,7 +241,8 @@ def build_pii_checker():
             return extractor(pattern_text).fqdn != ""
 
     recognizers = (OfflineEmailRecognizer(), CreditCardRecognizer(), UsSsnRecognizer())
-    patterns = tuple((recognizer, regex.compile(pattern.regex, recognizer.global_regex_flags))
+    patterns = tuple((recognizer, regex.compile(pattern.regex, recognizer.global_regex_flags),
+                      minimum_decimal_digits(pattern.regex, verbose=bool(recognizer.global_regex_flags & regex.VERBOSE)))
                      for recognizer in recognizers for pattern in recognizer.patterns)
     context_pattern = regex.compile(r"(?i)\b(?:ssns?|social[\s_-]*security(?:[\s_-]*number)?)\b")
 
@@ -258,7 +260,8 @@ def build_pii_checker():
         custom = getattr(type(recognizer), "analyze") is not getattr(PatternRecognizer, "analyze")
         compiled = () if custom else tuple(
             (regex.compile(pattern.regex, recognizer.global_regex_flags), pattern.score, shortest_match(pattern.regex),
-             split_lookaheads(pattern.regex, recognizer.global_regex_flags, regex))
+             split_lookaheads(pattern.regex, recognizer.global_regex_flags, regex),
+             minimum_decimal_digits(pattern.regex, verbose=bool(recognizer.global_regex_flags & regex.VERBOSE)))
             for pattern in recognizer.patterns)
         # One phone recognizer per region, so the request deadline is checked between regions.
         regions = getattr(recognizer, "supported_regions", ()) if custom else ()
@@ -325,7 +328,12 @@ def build_pii_checker():
             def found(entity, source, tier, start, end, score=1.0):
                 if entity not in off:
                     candidates.append((start, end, entity, source, tier, score))
-            for recognizer, pattern in patterns:
+            # A proof that a pattern consumes N decimal digits permits only
+            # an impossible-match skip. All other patterns still run normally.
+            digits = sum(character.isdigit() for character in text)
+            for recognizer, pattern, required_digits in patterns:
+                if digits < required_digits:
+                    continue
                 remaining = check_deadline()
                 for match in pattern.finditer(text, timeout=remaining, concurrent=True):
                     if monotonic() >= deadline:
@@ -369,7 +377,6 @@ def build_pii_checker():
                         score = min(max(score + CONTEXT_BOOST, CONTEXT_SCORE_FLOOR), 1.0)
                     return score if score >= minimum else None
 
-                digits = sum(c.isdigit() for c in text)
                 for entity, parts, custom, compiled, context, phone_digits in active:
                     remaining = check_deadline()
                     if phone_digits and digits < phone_digits:
@@ -384,8 +391,8 @@ def build_pii_checker():
                         check_deadline()
                         continue
                     recognizer = parts[0]
-                    for pattern, base_score, shortest, split in compiled:
-                        if len(text) < shortest:
+                    for pattern, base_score, shortest, split, required_digits in compiled:
+                        if len(text) < shortest or digits < required_digits:
                             continue
                         remaining = check_deadline()
                         if split:
