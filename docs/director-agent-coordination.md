@@ -24,3 +24,8 @@ Updated 2026-11-09. Greg explicitly authorized replacing the empty coordination 
 - Checkout success query string does not grant entitlement; unpaid account shows verification pending, cannot create an API key, and cannot open paid billing management.
 - Added browser regression for checkout success without server-confirmed active subscription; updated unpaid customer portal expectations.
 - CI and live Stripe/browser verification: not yet confirmed. Production not deployed in this batch.
+
+## 2026-11-09 Atlas checkout API regression
+- Commit f1449b5: tests/test_account_registration_entitlement.py adds mocked Stripe customer provisioning and checkout success/failure cases.
+- Expected: Stripe customer binding can persist, but a returned checkout URL or provider failure never grants active subscription, paid checks or API keys. Repeat checkout reuses the existing customer.
+- CI status unavailable from GitHub connector; live browser and AWS verification pending. No production deployment.
