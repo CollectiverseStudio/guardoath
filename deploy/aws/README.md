@@ -159,9 +159,7 @@ accounts intended to register. Use this **Google authorized redirect URI**
 `https://<SignInDomainPrefix>.auth.us-east-1.amazoncognito.com/oauth2/idpresponse`
 
 The Cognito app client's own code+PKCE callback and logout URI are both
-`https://guardoath.com/dashboard`. The server checks the ID provider's verified
-identity, requires a verified email to derive the first-time tenant identity,
-and `POST /v1/register` persists the tenant. Cognito must map Google's
+`https://guardoath.com/dashboard`. The server requires the Cognito-confirmed **Google federated identity** (`identities` provider name/type and the Google-prefixed Cognito username), validates the verified email and matching signed Cognito subject, then derives the first-time tenant identity. A native Cognito account with only a verified email cannot create a Google self-registration tenant. `POST /v1/register` persists that identity as an inactive tenant. Cognito must map Google's
 `email_verified` claim into its user profile and the app client must grant
 write permission for the mapped `email_verified` attribute (alongside
 `email`); otherwise the user may sign in without a verified-email attribute,
@@ -181,8 +179,9 @@ so the customer can retry without purchasing or logging in again.
 **Read-only configuration preflight:** After deploying and configuring an external
 Google OAuth Web application, use `python -m tools.verify_google_registration
 --profile collectiverse-prod` from the repository root. It checks CloudFormation
-outputs, Cognito Google IdP and email verification mapping, the Cognito public
-app client, the Lambda enablement flags, and the live public sign-in API.
+outputs, Cognito Google IdP and verified-email mapping, the Cognito public app
+client's mapped-attribute write permissions, the Lambda enablement flags, and
+the live public sign-in API.
 It prints only a fixed set of boolean results, never IDs or secrets. Exit `0`
 means these configuration requirements passed and a *real Google browser
 roundtrip still must be performed*; exit `2` means incomplete/unverifiable.
