@@ -2913,7 +2913,13 @@ rule editors and real shared Engine. It does **not** use or expose the hidden
 existing-customer API-key field. GuardOath verifies that the issued key resolves
 to exactly the selected demo tenant, refusing a missing, non-demo or mismatched
 tenant; an unsuccessful demo connection cannot unlock the Run button or claim
-the selected tenant's rules are loaded. Public demo keys are temporary examples,
+the selected tenant's rules are loaded. A missing or malformed application policy
+summary is rejected before its key can be used in the dashboard; even if loading
+fails after starting, the dashboard clears the in-memory key, saved-policy
+controls, subscription indicator and tenant panel. Select **Get demo API key**
+again after a temporary service failure to reconnect. A non-demo tenant cannot
+be accepted through this public path even when its ID matches the selection.
+Public demo keys are temporary examples,
 not customer ownership, subscription verification or a production entitlement.
 
 **Customer controls:** The **Existing customer application API key** field is
