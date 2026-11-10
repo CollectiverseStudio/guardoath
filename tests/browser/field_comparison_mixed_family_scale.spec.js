@@ -203,6 +203,14 @@ test("authenticated mixed 51-rule FC portfolio renders, saves UI override and ru
     // editor must not prematurely label the existing saved comparison disabled.
     const ordinaryFirst = page.locator('li[data-comparison-id="mixed_ui_000"]');
     await expect(ordinaryFirst).not.toContainText("Saved input Field comparisons check is Off.");
+    // All advanced editors must also use the SAVED parent stage, not the
+    // pending check selector. No premature "Off" while this edit is unsaved.
+    const arithmeticFirst = page.locator('li[data-arithmetic-id="mixed_ui_001"]');
+    const identityFirst = page.locator('li[data-identity-id="mixed_ui_050"]');
+    const conversionFirst = page.locator('li[data-conversion-id="mixed_ui_003"]');
+    for (const row of [arithmeticFirst, identityFirst, conversionFirst]) {
+      await expect(row).not.toContainText("Saved input Field comparisons check is Off.");
+    }
     await page.locator("#input-example-check").selectOption("general");
     await page.locator("#input-example-check").selectOption("cross_field");
     await expect(page.locator("#input-example-note")).toContainText("not saved yet");
@@ -224,8 +232,18 @@ test("authenticated mixed 51-rule FC portfolio renders, saves UI override and ru
     await expect(savedOrdinary).toContainText("Saved input Field comparisons check is Off.");
     await expect(savedOrdinary).toContainText("regardless of its own rule action");
     await expect(savedOrdinary).not.toContainText("Saved output Field comparisons check is Off.");
+    // All four customer-editable comparison families share the same saved
+    // cross_field check. The advanced editors must explain a parent Input Off,
+    // independent of each rule's own Output action and its example buttons.
+    for (const row of [arithmeticFirst, identityFirst, conversionFirst]) {
+      await expect(row).toContainText("Saved input Field comparisons check is Off.");
+      await expect(row).toContainText("regardless of its own rule action");
+      await expect(row).not.toContainText("Saved output Field comparisons check is Off.");
+    }
     const identityOff = page.locator('li[data-identity-id="mixed_ui_050"]');
     await expect(identityOff).toContainText("Saved output rule action is Off.");
+    await expect(page.locator('li[data-identity-id="mixed_ui_002"]'))
+      .not.toContainText("Saved output rule action is Off.");
     const finalSaved = await current(request, headers);
     expect(finalSaved.revision).toBe(checkWideOff.revision);
     expect(finalSaved.output_checks.cross_field).toBe("block");
