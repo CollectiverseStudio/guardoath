@@ -965,7 +965,8 @@
      "custom:tenant_id"
     ],
     "WriteAttributes": [
-     "email"
+     "email",
+     "email_verified"
     ]
    }
   },
