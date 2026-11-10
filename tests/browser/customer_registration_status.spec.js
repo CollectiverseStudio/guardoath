@@ -132,9 +132,21 @@ test("deployment without Google provider does not advertise a broken login or re
   }));
   await page.goto("/dashboard");
   await expect(page.locator("#sign-in-box")).toBeVisible();
-  await expect(page.locator("#sign-in")).toBeHidden();
+  await expect(page.locator("#sign-in")).toBeVisible();
+  await expect(page.locator("#sign-in")).toHaveText("Sign in to GuardOath");
   await expect(page.locator("#register-account")).toBeHidden();
-  await expect(page.locator("#account-status")).toContainText("not yet configured");
+  await expect(page.locator("#account-status")).toContainText("Google registration is not configured");
+  await page.route("https://example.invalid/oauth2/authorize**", route => route.fulfill({
+    status: 200, contentType: "text/html", body: "<html><body>Native Cognito login stub</body></html>"
+  }));
+  const authRequest = page.waitForRequest(r => r.url().startsWith("https://example.invalid/oauth2/authorize"));
+  await page.locator("#sign-in").click();
+  const redirect = new URL((await authRequest).url());
+  expect(redirect.searchParams.get("identity_provider")).toBeNull();
+  expect(redirect.searchParams.get("response_type")).toBe("code");
+  expect(redirect.searchParams.get("code_challenge_method")).toBe("S256");
+  expect(redirect.searchParams.get("code_challenge")).toBeTruthy();
+  expect(redirect.searchParams.get("state")).toBeTruthy();
 });
 
 
