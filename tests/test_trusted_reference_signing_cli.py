@@ -391,6 +391,41 @@ def test_atomic_attestation_publish_never_overwrites_racing_destination(
     assert "Traceback" not in captured.err
 
 
+
+def test_concurrent_operator_attestations_publish_exactly_once(tmp_path, monkeypatch):
+    """Two authorized signers racing for one name cannot overwrite one another."""
+    from concurrent.futures import ThreadPoolExecutor
+    from tools import sign_trusted_reference as signer
+
+    monkeypatch.setenv(SIGNING_KEY_ENV, KEY)
+    output = tmp_path / "signed.json"
+    sources = []
+    for revision in ("v1", "v2"):
+        item = draft()
+        item["reference_version"] = revision
+        source = tmp_path / ("unsigned-" + revision + ".json")
+        source.write_text(json.dumps(item))
+        sources.append(source)
+
+    def publish(source):
+        try:
+            return signer.main([
+                "--tenant", TENANT, "--input", str(source),
+                "--output", str(output),
+            ])
+        except SystemExit as failure:
+            return failure.code
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(publish, sources))
+    assert sorted(results) == [0, 2]
+    assert not list(tmp_path.glob(".signed.json.*.tmp"))
+    signed = AdvancedTrustedReferenceRule.model_validate_json(output.read_bytes())
+    assert signed.reference_version in ("v1", "v2")
+    assert reference_is_trusted(signed, TENANT, key=KEY)
+    assert all(source.exists() for source in sources)
+
+
 @pytest.mark.skipif(os.name == "nt", reason="Symlink privileges vary by Windows environment")
 def test_operator_never_follows_an_existing_private_output_symlink(tmp_path):
     """The exclusive output path must never replace or dereference a private target."""
