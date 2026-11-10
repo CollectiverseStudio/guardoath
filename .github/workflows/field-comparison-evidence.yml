@@ -41,6 +41,11 @@ on:
       - "tests/test_advanced_trusted_reference.py"
       - "tests/test_trusted_reference_value_validity.py"
       - "tests/test_trusted_reference_signing_cli.py"
+      # Time-window/identity replay and tenant-scoped FX reference admission
+      # are release-critical even when only their test contract changes.
+      - "tests/test_trusted_reference_interval_bounds.py"
+      - "tests/test_signed_reference_tenant_replay.py"
+      - "tests/test_fx_reference_timestamp_admission.py"
       - "tests/browser/trusted_reference_end_to_end.spec.js"
       - "tests/browser/trusted_reference_status.spec.js"
       - "tests/browser/field_comparison_unsaved_examples.spec.js"
@@ -90,7 +95,7 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
-          python -m pytest -q tests/test_advanced_trusted_reference.py tests/test_trusted_reference_value_validity.py tests/test_trusted_reference_signing_cli.py tests/test_field_comparison_reference_isolation.py --junitxml=artifacts/field-comparisons/trusted-reference-junit.xml
+          python -m pytest -q tests/test_advanced_trusted_reference.py tests/test_trusted_reference_value_validity.py tests/test_trusted_reference_signing_cli.py tests/test_field_comparison_reference_isolation.py tests/test_trusted_reference_interval_bounds.py tests/test_signed_reference_tenant_replay.py tests/test_fx_reference_timestamp_admission.py --junitxml=artifacts/field-comparisons/trusted-reference-junit.xml
       - name: Record provenance and per-step gate results
         if: always()
         shell: bash
