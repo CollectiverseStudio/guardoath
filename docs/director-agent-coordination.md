@@ -47,3 +47,7 @@ Updated 2026-11-09. Greg explicitly authorized replacing the empty coordination 
 - Commits be9e49e and 4927514: dashboard key listing/create/revoke explicitly use the current signed-in Cognito session and refuse demo/key-only contexts. Key listing fails closed when owner verification fails.
 - Browser regression verifies X-GuardOath-Session and absence of X-GuardOath-Key during customer key management.
 - CI and live production browser verification pending.
+
+## 2026-11-09 Atlas key management resilience
+- Commits 05162d5 and 69bd290: ignore stale key API responses when customer session changes, reject malformed key-list responses, disable key creation on failures, handle key mutation network errors without exposing old credentials.
+- CI status unavailable; browser/production validation outstanding.
