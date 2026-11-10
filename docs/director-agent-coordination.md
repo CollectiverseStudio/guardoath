@@ -59,3 +59,7 @@ Updated 2026-11-09. Greg explicitly authorized replacing the empty coordination 
 ## 2026-11-09 Atlas paid owner key lifecycle regression
 - Commit 9efedc3: backend regression covers paid signed-in owner listing, one-time key creation, two-key limit, revocation, and denial of account management using a newly issued application API key.
 - Tests committed but not executed locally (GitHub checkout network unavailable); CI status not confirmed. Production remains held.
+
+## 2026-11-09 Atlas CI manual dispatch
+- Commit 8fd0573: .github/workflows/tests.yml now supports workflow_dispatch in addition to push and pull_request, permitting an explicit full Tests run on main without another code change.
+- This connector does not expose workflow dispatch or push-run listing; no CI pass is claimed. Production remains gated on verified jobs and browser checks.
