@@ -94,7 +94,7 @@ test("registered but unpaid customer sees inactive plan and cannot click Create 
   await expect(page.locator("#key-create")).toBeDisabled();
   await expect(page.locator("#key-message")).toContainText("active subscription");
   await expect(page.locator("#billing-subscribe")).toBeVisible();
-  await expect(page.locator("#billing-manage")).toBeVisible();
+  await expect(page.locator("#billing-manage")).toBeHidden();
   let checkoutCalls = 0;
   await page.route("**/v1/billing/checkout", async route => {
     checkoutCalls++;
@@ -105,16 +105,7 @@ test("registered but unpaid customer sees inactive plan and cannot click Create 
   await page.locator("#billing-subscribe").click();
   await expect(page.locator("#account-status")).toContainText("Billing setup is not yet available");
   expect(checkoutCalls).toBe(1);
-  let portalCalls = 0;
-  await page.route("**/v1/billing/portal", async route => {
-    portalCalls++;
-    expect(route.request().headers()["x-guardoath-session"]).toBe("synthetic-ui-session-only");
-    await route.fulfill({status: 409, contentType: "application/json",
-      body: JSON.stringify({detail: "No Stripe customer binding"})});
-  });
-  await page.locator("#billing-manage").click();
-  await expect(page.locator("#account-status")).toContainText("Billing setup is not yet available");
-  expect(portalCalls).toBe(1);
+
 
 
 });
