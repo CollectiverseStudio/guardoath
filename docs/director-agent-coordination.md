@@ -67,3 +67,8 @@ Updated 2026-11-09. Greg explicitly authorized replacing the empty coordination 
 ## 2026-11-09 Atlas one-time key secret lifecycle
 - Commits 47c6b93 and 8045435: signedIn(false) clears the one-time plaintext API key, list and controls; browser regression checks sign-out hides panel and erases key field.
 - CI not confirmed; production release remains gated.
+
+## 2026-11-09 Atlas public dashboard key field correction
+- Greg observed existing application API-key field outside sign-in. Confirmed in dashboard.html.
+- Commits 9a5d696, 35db586, 76e33b1: hide customer-key-connect until signedIn(true), preserve public demo selector and demo API key, browser test checks field hidden publicly and visible for signed-in customer.
+- Source committed, CI and production deployment not verified.
