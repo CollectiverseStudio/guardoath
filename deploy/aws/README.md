@@ -173,6 +173,17 @@ A new tenant has status `inactive`, allowance `0`, and no API keys. A
 registration retry after temporary HTTP 503 retains the verified browser session,
 so the customer can retry without purchasing or logging in again.
 
+**Read-only configuration preflight:** After deploying and configuring an external
+Google OAuth Web application, use `python -m tools.verify_google_registration
+--profile collectiverse-prod` from the repository root. It checks CloudFormation
+outputs, Cognito Google IdP and email verification mapping, the Cognito public
+app client, the Lambda enablement flags, and the live public sign-in API.
+It prints only a fixed set of boolean results, never IDs or secrets. Exit `0`
+means these configuration requirements passed and a *real Google browser
+roundtrip still must be performed*; exit `2` means incomplete/unverifiable.
+It makes no AWS writes or customer tenant changes. Source parity and the 15
+post-deployment release checks remain separate.
+
 **Verify the actual deployed stack, not the template alone:** inspect the
 Cognito app client for Google support and the Google IdP's verified-email
 mapping, the Lambda's two enablement flags, and the public `GET /v1/sign-in`
