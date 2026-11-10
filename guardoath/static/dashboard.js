@@ -913,6 +913,8 @@ async function loadKeys() {
     $("key-message").textContent = "Cannot load API keys. Please retry after reconnecting.";
     return;
   }
+  if (sessionStorage.getItem("guardoath-session") !== token ||
+      application?.tenant?.demo !== false) return;
   if (!response.ok) {
     $("key-create").disabled = true;
     $("key-message").textContent = "API key access could not be verified (HTTP " + response.status + ").";
