@@ -115,7 +115,13 @@ function coverage() {
   refreshExamplePickers();
 }
 async function loadApplication(token, attempt, expectedDemoTenant = null) {
-  const data = await api("/v1/applications/current", null, token); if (attempt !== revision) return;
+  const data = await api("/v1/applications/current", null, token);
+  // An earlier owner request can complete after a new Cognito session has
+  // replaced it, without a full page reset. Never show another session's
+  // tenant, settings or API-key controls from that stale response.
+  if (attempt !== revision ||
+      (token.startsWith(SESSION) &&
+       sessionStorage.getItem("guardoath-session") !== token.slice(SESSION.length))) return;
   // A key issued through the public demo path must resolve to that exact demo
   // tenant. A customer key or a mismatched tenant is never a demo credential.
   if (!data || typeof data !== "object" || !Array.isArray(data.policies) ||
@@ -900,6 +906,9 @@ async function showAccountState(token) {
     return;
   }
   const status = await reply.json();
+  // A successful but delayed status check must not resurrect the old owner
+  // after sign-out, token exchange, or session replacement.
+  if (sessionStorage.getItem("guardoath-session") !== token) return;
   $("sign-in").hidden = true;
   $("sign-out").hidden = false;
   $("register-account").hidden = status.registered || !status.registration_enabled;
@@ -921,6 +930,7 @@ async function showAccountState(token) {
   reset(); const attempt = revision;
   try {
     await loadApplication(SESSION + token, attempt);
+    if (sessionStorage.getItem("guardoath-session") !== token || attempt !== revision) return;
     signedIn(true);
   } catch (_) {
     if (sessionStorage.getItem("guardoath-session"))
