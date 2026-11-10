@@ -821,7 +821,12 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         if tenant_id is None:
             raise HTTPException(401, "Invalid or expired sign-in")
         record = tenants.store.get(tenant_id)
-        registered = record is not None and record.status == "active" and not record.demo
+        # A disabled or demo-bound tenant is NOT an unregistered customer.
+        # Otherwise the dashboard would offer Register even though the
+        # authoritative record already exists and the create must return 409.
+        if record is not None and (record.status != "active" or record.demo):
+            raise HTTPException(403, "Account is unavailable; contact support")
+        registered = record is not None
         return JSONResponse({
             "registered": registered,
             "registration_enabled": bool(sessions.registration_enabled),
