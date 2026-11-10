@@ -736,6 +736,7 @@ function signedIn(on) {
   $("sign-in").textContent = "Sign in to GuardOath";
   $("register-account").hidden = on || !signIn?.registration_enabled;
   $("sign-out").hidden = !on;
+  $("customer-key-connect").hidden = !on;
   // A newly created secret is shown only during its authenticated session.
   // Clear it immediately on sign-out, switching to a demo key, or expiry.
   if (!on) {
