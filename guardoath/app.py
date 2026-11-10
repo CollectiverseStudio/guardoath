@@ -738,7 +738,10 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         # Otherwise an unpaid account can acquire an unusable billing binding.
         api_key = os.getenv("GUARDOATH_STRIPE_SECRET_KEY", "")
         price_id = os.getenv("GUARDOATH_STRIPE_PRICE_ID", "")
-        if not api_key or not price_id:
+        if (not isinstance(api_key, str) or not api_key.startswith(("sk_test_", "sk_live_"))
+                or len(api_key) < 16 or not api_key.isascii()
+                or not isinstance(price_id, str) or not price_id.startswith("price_")
+                or not price_id[6:].replace("_", "").isalnum()):
             raise HTTPException(503, "Subscription checkout is not configured")
         if current.billing_mode == BillingMode.INTERNAL and not current.payer_id:
             from guardoath.stripe_customer import StripeCustomerError, create_customer
