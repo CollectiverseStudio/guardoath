@@ -410,3 +410,50 @@ test("expired Cognito session clears stored identity and restores customer sign-
   expect(await page.evaluate(() => sessionStorage.getItem("guardoath-session"))).toBeNull();
   expect(checks).toBe(1);
 });
+
+
+test("revoked customer session during tenant settings load clears state and permits new login", async ({page}) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem("guardoath-session", "revoked-after-status");
+  });
+  await page.route("**/v1/sign-in", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      authorize_url: "https://example.invalid/oauth2/authorize",
+      logout_url: "https://example.invalid/logout",
+      client_id: "synthetic", redirect_uri: "http://localhost/dashboard",
+      scope: "openid email aws.cognito.signin.user.admin",
+      registration_enabled: true, google_provider: "Google"
+    })
+  }));
+  await page.route("**/v1/account/status", route => {
+    expect(route.request().headers()["x-guardoath-session"]).toBe("revoked-after-status");
+    return route.fulfill({
+      status: 200, contentType: "application/json",
+      body: JSON.stringify({
+        registered: true, registration_enabled: true, tenant_id: "usr-revoked",
+        subscription_status: "active", can_validate: true
+      })
+    });
+  });
+  let requested = 0;
+  await page.route("**/v1/applications/current", route => {
+    requested++;
+    expect(route.request().headers()["x-guardoath-session"]).toBe("revoked-after-status");
+    return route.fulfill({
+      status: 401, contentType: "application/json",
+      body: JSON.stringify({detail: "Session was revoked"})
+    });
+  });
+  await page.goto("/dashboard");
+  await expect(page.locator("#account-status")).toContainText("expired or been revoked");
+  await expect(page.locator("#sign-in")).toBeVisible();
+  await expect(page.locator("#register-account")).toBeHidden();
+  await expect(page.locator("#sign-out")).toBeHidden();
+  await expect(page.locator("#keys-panel")).toBeHidden();
+  await expect(page.locator("#tenant-panel")).toBeHidden();
+  await expect(page.locator("#billing-subscribe")).toBeHidden();
+  await expect(page.locator("#billing-manage")).toBeHidden();
+  expect(await page.evaluate(() => sessionStorage.getItem("guardoath-session"))).toBeNull();
+  expect(requested).toBe(1);
+});
