@@ -831,10 +831,10 @@
         ],
         "AdminCreateUserConfig": {
           "AllowAdminCreateUserOnly": {
-            "Fn::Not": [
-              {
-                "Condition": "SelfRegistrationEnabled"
-              }
+            "Fn::If": [
+              "SelfRegistrationEnabled",
+              false,
+              true
             ]
           }
         },
