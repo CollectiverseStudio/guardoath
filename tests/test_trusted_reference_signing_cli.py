@@ -323,14 +323,19 @@ def test_operator_does_not_leave_partial_private_attestation_on_io_failure(
     assert source.read_text() == original
 
 
-def test_operator_never_removes_a_preexisting_private_destination_on_write_refusal(tmp_path):
-    """Exclusive creation fails without touching an earlier valid or private file."""
+@pytest.mark.skipif(os.name == "nt", reason="Symlink privileges vary by Windows environment")
+def test_operator_never_follows_an_existing_private_output_symlink(tmp_path):
+    """The exclusive output path must never replace or dereference a private target."""
     source = tmp_path / "unsigned.json"
     output = tmp_path / "signed.json"
+    existing = tmp_path / "private-original.json"
     source.write_text(json.dumps(draft()))
     sentinel = "PRIVATE_SYNTHETIC_EXISTING_ATTESTATION"
-    output.write_text(sentinel)
+    existing.write_text(sentinel)
+    output.symlink_to(existing)
     result = invoke_cli(source, output)
     assert result.returncode == 2
-    assert output.read_text() == sentinel
+    assert output.is_symlink()
+    assert existing.read_text() == sentinel
     assert sentinel not in result.stdout + result.stderr
+    assert KEY not in result.stdout + result.stderr
