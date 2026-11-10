@@ -836,13 +836,6 @@ async function showAccountState(token) {
   $("register-account").hidden = status.registered || !status.registration_enabled;
   $("billing-subscribe").hidden = !status.registered || status.subscription_status === "active";
   $("billing-manage").hidden = !status.registered || status.subscription_status !== "active";
-  // Stripe's return URL is navigation only, never proof of paid entitlement.
-  // The authoritative account status returned by the server controls access.
-  const checkoutReturn = new URLSearchParams(location.search).get("checkout");
-  if (checkoutReturn === "success" && status.subscription_status !== "active") {
-    $("account-status").textContent = "Checkout returned. Payment activation is pending verification; paid access remains disabled.";
-  }
-
   if (!status.registered) {
     $("account-status").textContent = "Sign-in verified. Registration is required before configuring a tenant. Registering does not activate a paid subscription.";
     $("connection-status").textContent = "Signed in — account registration pending.";
@@ -851,6 +844,11 @@ async function showAccountState(token) {
   $("account-status").textContent = status.subscription_status === "active"
     ? "Subscription: active. Your account settings are available."
     : "Subscription: " + status.subscription_status + ". Paid checks require a verified active subscription.";
+  // A checkout return is not payment proof; only server-verified entitlement grants access.
+  if (new URLSearchParams(location.search).get("checkout") === "success" &&
+      status.subscription_status !== "active") {
+    $("account-status").textContent = "Checkout returned. Payment activation is pending verification; paid access remains disabled.";
+  }
   reset(); const attempt = revision;
   try {
     await loadApplication(SESSION + token, attempt);
