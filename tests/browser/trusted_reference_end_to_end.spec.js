@@ -204,6 +204,68 @@ test("real signed FC-047 reference moves accepted to blocked after tampering, wi
     for (const secret of [KEY, signed.host_signature, signed.source_id, signed.reference_values.permit_limit]) {
       expect(publicStatus).not.toContain(secret);
     }
+
+    // Re-activating a previously disabled parent check must NOT treat its
+    // persisted, tampered host reference as accepted. The same signed rule is
+    // still invalid; only the tenant's saved stage action changed.
+    await page.locator("#tenant-check-input-cross_field").selectOption("block");
+    await expect(page.locator("#trusted-reference-status"))
+      .toContainText("blocked (all saved stages Off; enabling one will Block until re-attested)");
+    await page.getByRole("button", {name: "Save checks", exact: true}).click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved.");
+    const reenabled = await summary(request, headers);
+    expect(reenabled.revision).toBe(disabledParent.revision + 1);
+    expect(reenabled.input_checks.cross_field).toBe("block");
+    expect(reenabled.output_rule_actions["business.real_browser_permit"]).toBe("off");
+    expect(reenabled.advanced_trusted_reference_status[0].runtime_integrity).toBe("blocked");
+    await connect(page);
+    await expect(page.locator("#trusted-reference-status"))
+      .toContainText("blocked (active validation will Block; contact the host operator)");
+    await expect(page.locator("#trusted-reference-status"))
+      .toContainText("Input: active (check block; rule inherits check)");
+    await expect(page.locator("#trusted-reference-status"))
+      .toContainText("Output: Off (individual rule Off)");
+    const stillInvalid = await evaluate(request, headers, "input", 40);
+    expect(stillInvalid.evaluation_status).toBe("incomplete");
+    expect(stillInvalid.effective_action).toBe("block");
+    expect(stillInvalid.findings.map(f => f.rule_id))
+      .toContain("business.real_browser_permit");
+    const outputStillOff = await evaluate(request, headers, "output", 40);
+    expect(outputStillOff.evaluation_status).toBe("complete");
+    expect(outputStillOff.findings.some(f => f.rule_id === "business.real_browser_permit")).toBe(false);
+
+    // Independent host re-attestation in this synthetic fixture restores the
+    // ORIGINAL valid snapshot. No customer-supplied accepted flag, new key or
+    // browser-side authority is introduced. Input resumes enforcement while
+    // the customer's saved Output Off decision remains intact.
+    const reattested = await request.post("/v1/tenants/current/checks", {
+      headers, data: {
+        revision: reenabled.revision,
+        changes: {advanced_trusted_reference: [signed]},
+      },
+    });
+    expect(reattested.status(), (await reattested.text()).slice(0, 150)).toBe(200);
+    const restored = await summary(request, headers);
+    expect(restored.revision).toBe(reenabled.revision + 1);
+    expect(restored.advanced_trusted_reference_status[0].runtime_integrity).toBe("accepted");
+    expect(restored.output_rule_actions["business.real_browser_permit"]).toBe("off");
+    await connect(page);
+    await expect(page.locator("#trusted-reference-status"))
+      .toContainText("runtime integrity: accepted");
+    expect((await evaluate(request, headers, "input", 40)).effective_action).toBe("allow");
+    const violationAfterAttestation = await evaluate(request, headers, "input", 60);
+    expect(violationAfterAttestation.evaluation_status).toBe("complete");
+    expect(violationAfterAttestation.effective_action).toBe("block");
+    expect(violationAfterAttestation.findings.map(f => f.rule_id))
+      .toContain("business.real_browser_permit");
+    const outputAfterAttestation = await evaluate(request, headers, "output", 60);
+    expect(outputAfterAttestation.evaluation_status).toBe("complete");
+    expect(outputAfterAttestation.findings.some(f => f.rule_id === "business.real_browser_permit"))
+      .toBe(false);
+    const finalPanel = await page.locator("#trusted-reference-status").innerText();
+    for (const secret of [KEY, signed.host_signature, signed.source_id, signed.reference_values.permit_limit]) {
+      expect(finalPanel).not.toContain(secret);
+    }
   } finally {
     if (resetRequired) {
       const cleanup = await request.post("/v1/tenants/current/reset", {headers, data: {}});
