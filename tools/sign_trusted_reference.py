@@ -47,6 +47,12 @@ def main(argv=None):
         rule = AdvancedTrustedReferenceRule.model_validate(parse_json(raw.decode("utf-8")))
         if not reference_values_are_valid(rule):
             raise ValueError("Invalid declared reference value")
+        # Never silently re-sign an already attested snapshot. The operator
+        # must independently reverify the source and submit a fresh unsigned
+        # draft with the documented placeholder, rather than laundering an
+        # expired, cross-tenant or otherwise untrusted signature.
+        if rule.host_signature != "0" * 64:
+            raise ValueError("Unsigned attestation placeholder required")
     except (OSError, UnicodeError, ValueError):
         # ValidationError includes submitted values; never print its text or
         # an input path from an OS error into operator diagnostic logs.
