@@ -2,6 +2,14 @@ name: Tests
 on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
+# Each main push otherwise leaves another 13-job test matrix running, often
+# including overlapping Chrome/Playwright launches. Only the newest main SHA
+# can be released; cancel superseded *push* runs to conserve CI capacity.
+# Pull-request and manual run groups include their SHA so they retain their
+# own full individual job receipts and are not preempted by a main push.
+concurrency:
+  group: guardoath-tests-${{ github.ref }}-${{ github.event_name == 'push' && 'latest-main-push' || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
 jobs:
   test:
     runs-on: ubuntu-latest
