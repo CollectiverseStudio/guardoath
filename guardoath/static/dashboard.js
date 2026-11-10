@@ -684,8 +684,13 @@ $("tenant-checks").addEventListener("change", event => {
 });
 $("tenant-reset").addEventListener("click", () => saveTenant("/v1/tenants/current/reset", {}, "Reset to the demo defaults."));
 $("connect").addEventListener("click", async () => {
+  // Application keys may execute checks, but cannot authenticate account owners.
+  // Never let a pasted key silently replace an authenticated customer session.
+  if (!sessionStorage.getItem("guardoath-session") || application?.tenant?.demo !== false) {
+    $("connection-status").textContent = "Sign in to connect an existing customer API key.";
+    return;
+  }
   const token = $("api-key").value.trim(); if (!token || busy) return;
-  // Connecting with an API key leaves any signed-in session.
   sessionStorage.removeItem("guardoath-session"); if (signIn) signedIn(false);
   reset(); const attempt = revision; $("connect").disabled = true;
   key = ""; application = null; $("tenant-panel").hidden = true; buttons(); $("run").disabled = true; $("policy").disabled = true;
