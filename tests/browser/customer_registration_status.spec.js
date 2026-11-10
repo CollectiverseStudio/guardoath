@@ -517,6 +517,15 @@ test("Stripe success redirect does not activate an unpaid account", async ({page
 });
 
 test("public demo does not expose customer API-key management", async ({page}) => {
+  await page.route("**/v1/sign-in", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      authorize_url: "https://example.invalid/oauth2/authorize",
+      logout_url: "https://example.invalid/logout", client_id: "synthetic",
+      redirect_uri: "http://localhost/dashboard", scope: "openid email",
+      registration_enabled: true, google_provider: null
+    })
+  }));
   await page.goto("/dashboard");
   await expect(page.locator("#keys-panel")).toBeHidden();
   await expect(page.locator("#key-create")).toBeHidden();
