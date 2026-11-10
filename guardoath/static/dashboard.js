@@ -118,6 +118,11 @@ async function loadApplication(token, attempt, expectedDemoTenant = null) {
   const data = await api("/v1/applications/current", null, token); if (attempt !== revision) return;
   // A key issued through the public demo path must resolve to that exact demo
   // tenant. A customer key or a mismatched tenant is never a demo credential.
+  if (!data || typeof data !== "object" || !Array.isArray(data.policies) ||
+      !data.policies.every(policy => policy && typeof policy.version === "string" &&
+        typeof policy.mode === "string" && Array.isArray(policy.checks))) {
+    throw new Error("The application settings response was invalid.");
+  }
   if (expectedDemoTenant !== null &&
       (data.tenant?.demo !== true || data.tenant?.tenant_id !== expectedDemoTenant)) {
     throw new Error("The demo key did not match the selected demo user.");
@@ -709,11 +714,22 @@ async function connectWithKey(token, expectedDemoTenant = null) {
   reset(); const attempt = revision; $("connect").disabled = true;
   key = ""; application = null; $("tenant-panel").hidden = true; buttons(); $("run").disabled = true; $("policy").disabled = true;
   $("resource-limits").textContent = ""; $("disconnect").disabled = true;
+  $("subscription-status").hidden = true; $("subscription-status").textContent = "";
   try {
     await loadApplication(token, attempt, expectedDemoTenant);
     return attempt === revision && application !== null;
   } catch (error) {
-    if (attempt === revision) $("connection-status").textContent = error.message || "Connection failed.";
+    if (attempt === revision) {
+      // A malformed/truncated application response can throw after partial UI
+      // rendering. Do not retain any usable key, tenant, policy or controls.
+      key = ""; application = null;
+      $("tenant-panel").hidden = true; $("policy").replaceChildren(); $("policy").disabled = true;
+      $("run").disabled = true; $("run-input").disabled = true; $("run-output").disabled = true;
+      $("disconnect").disabled = true; $("demo-key-value").value = "";
+      $("subscription-status").hidden = true; $("subscription-status").textContent = "";
+      $("resource-limits").textContent = "";
+      $("connection-status").textContent = error.message || "Connection failed.";
+    }
     return false;
   } finally { $("connect").disabled = false; }
 }
