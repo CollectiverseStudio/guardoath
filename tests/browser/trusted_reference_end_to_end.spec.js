@@ -176,12 +176,12 @@ test("real signed FC-047 reference moves accepted to blocked after tampering, wi
     expect(safeOutput.findings.some(f => f.rule_id === "business.real_browser_permit")).toBe(false);
     expect((await evaluate(request, headers, "input", 40)).effective_action).toBe("block");
 
-    await page.locator("#tenant-check-input-cross_field").selectOption("off");
+    await page.locator("#tenant-check-input-cross_field").selectOption("");
     await page.getByRole("button", {name: "Save checks", exact: true}).click();
     await expect(page.locator("#tenant-message")).toContainText("Saved.");
     const disabledParent = await summary(request, headers);
     expect(disabledParent.revision).toBe(disabledRule.revision + 1);
-    expect(disabledParent.input_checks.cross_field).toBe("off");
+    expect(disabledParent.input_checks.cross_field).toBeNull();
     expect(disabledParent.advanced_trusted_reference_status[0].runtime_integrity).toBe("blocked");
     await connect(page);
     await expect(page.locator("#trusted-reference-status"))
