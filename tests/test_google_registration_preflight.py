@@ -30,8 +30,9 @@ class CloudFormation:
 
 
 class Cognito:
-    def __init__(self, *, email_verified=True, client_secret=None):
-        self.email_verified, self.client_secret = email_verified, client_secret
+    def __init__(self, *, email_verified=True, email_writable=True, client_secret=None):
+        self.email_verified, self.email_writable = email_verified, email_writable
+        self.client_secret = client_secret
 
     def describe_identity_provider(self, *, UserPoolId, ProviderName):
         assert UserPoolId == POOL and ProviderName == "Google"
@@ -57,6 +58,7 @@ class Cognito:
             "AllowedOAuthFlows": ["code"],
             "AllowedOAuthScopes": ["openid", "email", "aws.cognito.signin.user.admin"],
             "ClientSecret": self.client_secret,
+            "WriteAttributes": ["email", "email_verified"] if self.email_writable else ["email"],
         }}
 
 
@@ -100,6 +102,7 @@ def test_unconfigured_or_mismatched_stack_can_never_be_declared_ready():
         (CloudFormation(google="false"), Cognito(), Lambda()),
         (CloudFormation(registration="0"), Cognito(), Lambda()),
         (CloudFormation(), Cognito(email_verified=False), Lambda()),
+        (CloudFormation(), Cognito(email_writable=False), Lambda()),
         (CloudFormation(), Cognito(client_secret="UNEXPECTED_CLIENT_SECRET"), Lambda()),
         (CloudFormation(), Cognito(), Lambda(google="0")),
         (CloudFormation(), Cognito(), Lambda(registration="0")),
