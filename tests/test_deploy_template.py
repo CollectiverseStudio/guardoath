@@ -306,8 +306,10 @@ def test_tenant_sign_in_uses_the_free_lite_plan_with_required_authenticator_mfa(
     # A new user pool defaults to Essentials; Lite is chosen explicitly.
     assert pool["UserPoolTier"] == "LITE"
     assert pool["MfaConfiguration"] == "ON" and pool["EnabledMfas"] == ["SOFTWARE_TOKEN_MFA"]
-    # Only an administrator creates accounts: there is no public sign-up.
-    assert pool["AdminCreateUserConfig"] == {"AllowAdminCreateUserOnly": True}
+    # Native self-registration is controlled independently of Google federation.
+    assert pool["AdminCreateUserConfig"] == {
+        "AllowAdminCreateUserOnly": {"Fn::Not": [{"Condition": "SelfRegistrationEnabled"}]}
+    }
     assert pool["EmailConfiguration"] == {"EmailSendingAccount": "COGNITO_DEFAULT"}
     assert pool["DeletionProtection"] == "ACTIVE" and template["Resources"]["UserPool"]["DeletionPolicy"] == "Retain"
     (attribute,) = pool["Schema"]
@@ -348,11 +350,12 @@ def test_google_sign_in_is_explicitly_provisionable_without_customer_secrets_in_
     assert parameters["GoogleOAuthClientSecret"]["Default"] == ""
     assert parameters["GoogleOAuthClientId"]["Default"] == ""
     rules = template["Rules"]["GoogleConfiguration"]["Assertions"]
-    assert len(rules) == 2
+    assert len(rules) == 1
     assert "GoogleOAuthClientId" in json.dumps(rules[0]["Assert"])
     assert "GoogleOAuthClientSecret" in json.dumps(rules[0]["Assert"])
-    assert "EnableSelfRegistration" in json.dumps(rules[1]["Assert"])
-    assert "EnableGoogleLogin" in json.dumps(rules[1]["Assert"])
+    assert template["Conditions"]["SelfRegistrationEnabled"] == {
+        "Fn::Equals": [{"Ref": "EnableSelfRegistration"}, "1"]
+    }
     assert template["Conditions"]["GoogleLoginEnabled"] == {
         "Fn::Equals": [{"Ref": "EnableGoogleLogin"}, "1"]
     }
