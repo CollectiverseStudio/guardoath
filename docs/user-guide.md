@@ -21,7 +21,9 @@ py -3.13 start_dashboard.py
 The launcher prepares its own environment, prints a fresh application API key,
 and opens http://127.0.0.1:8000/dashboard. Copy the key into **Application API key**
 and select **Connect**. Keep that PowerShell window open; Ctrl+C stops the server.
-A restart gives you a new key. The dashboard checks the message and proposed
+A restart gives you a new key. `python start_dashboard.py --help` displays
+launcher options without preparing the virtual environment, downloading
+dependencies or starting a server. The dashboard checks the message and proposed
 answer you provide; it does not generate the AI answer. The default launcher
 keeps all checks local. GuardOath sends no content to an outside service.
 

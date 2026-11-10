@@ -1,5 +1,6 @@
 """Exercise the real launcher process without bootstrapping or external traffic."""
 
+import ast
 import importlib.util
 import json
 import os
@@ -16,6 +17,22 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / 'start_dashboard.py'
 PII_AVAILABLE = all(importlib.util.find_spec(name) is not None for name in ('tldextract', 'phonenumbers'))
+
+
+def test_launcher_help_path_defers_runtime_imports():
+    # Keep the existing subprocess --help check and its 10s deadline intact.
+    # These modules are needed for running/installing the dashboard, not for CLI help.
+    tree = ast.parse(SCRIPT.read_text(encoding='utf-8'))
+    eager = set()
+    for statement in tree.body:
+        if isinstance(statement, ast.Import):
+            eager.update(alias.name.split('.')[0] for alias in statement.names)
+        elif isinstance(statement, ast.ImportFrom) and statement.module:
+            eager.add(statement.module.split('.')[0])
+    assert not eager.intersection({
+        'subprocess', 'venv', 'urllib', 'webbrowser', 'hashlib',
+        'json', 'threading', 'socket', 'secrets', 'time',
+    })
 
 
 def test_help_does_not_install_or_start_server():

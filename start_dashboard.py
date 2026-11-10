@@ -1,21 +1,8 @@
 """Run the complete local dashboard: python start_dashboard.py [--port 8001]."""
 
 import argparse
-import hashlib
-import json
-import os
 from pathlib import Path
-import secrets
-import socket
-import subprocess
 import sys
-import threading
-from datetime import datetime, timezone
-import time
-import urllib.error
-import urllib.request
-import venv
-import webbrowser
 
 ROOT = Path(__file__).resolve().parent
 ENVIRONMENT = ROOT / '.dashboard-venv'
@@ -32,6 +19,12 @@ def port_number(value):
 
 
 def prepare_environment(reinstall=False):
+    # Environment setup is expensive; argument help/errors must not import it.
+    import hashlib
+    import os
+    import subprocess
+    import venv
+
     interpreter = ENVIRONMENT / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
     fingerprint = hashlib.sha256((ROOT / 'pyproject.toml').read_bytes() +
                                  sys.version.encode() + sys.executable.encode()).hexdigest()
@@ -50,6 +43,11 @@ def prepare_environment(reinstall=False):
 
 
 def open_when_ready(url):
+    import time
+    import urllib.error
+    import urllib.request
+    import webbrowser
+
     # Do not send localhost requests through an inherited HTTP proxy.
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     deadline = time.monotonic() + 20
@@ -65,6 +63,11 @@ def open_when_ready(url):
 
 
 def serve(port, browser=True):
+    import os
+    import secrets
+    import socket
+    import threading
+
     key = secrets.token_urlsafe(32)
     # Deliberately choose the complete local profile, independent of old setup.
     # Demo users demo1-demo10 are kept in memory for this run; their keys change on every start.
@@ -117,6 +120,14 @@ def main():
     if sys.version_info[:2] < (3, 11):
         print('The complete dashboard needs Python 3.11 or newer.', file=sys.stderr)
         return 1
+    # The --help and invalid-argument paths terminate before loading setup,
+    # networking, process or browser modules. This matters under loaded CI.
+    import subprocess
+    if args.evaluate:
+        import json
+        import secrets
+        from datetime import datetime, timezone
+        import webbrowser
     try:
         if args.serve:
             return serve(args.port, not args.no_browser)
