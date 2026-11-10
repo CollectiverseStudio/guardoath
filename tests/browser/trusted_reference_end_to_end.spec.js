@@ -149,6 +149,54 @@ test("real signed FC-047 reference moves accepted to blocked after tampering, wi
       expect(failedClosed.findings.map(f => f.rule_id))
         .toContain("business.real_browser_permit");
     }
+
+    // Customer UI must not imply an invalid host reference Blocks a stage
+    // after that individual rule or its parent cross_field check is saved Off.
+    // Keep the tampered reference invalid: no re-signing or mocked Engine.
+    await expect(page.locator("#trusted-reference-status"))
+      .toContainText("Input: active (check block; rule inherits check)");
+    await expect(page.locator("#trusted-reference-status"))
+      .toContainText("Output: active (check flag; rule inherits check)");
+    const outRow = page.locator(
+      'tr.rule-row[data-rule="business.real_browser_permit"] [data-stage="output"]');
+    await outRow.selectOption("off");
+    await page.getByRole("button", {name: "Save checks", exact: true}).click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved.");
+    const disabledRule = await summary(request, headers);
+    expect(disabledRule.revision).toBe(blocked.revision + 1);
+    expect(disabledRule.output_rule_actions["business.real_browser_permit"]).toBe("off");
+    expect(disabledRule.advanced_trusted_reference_status[0].runtime_integrity).toBe("blocked");
+    await connect(page);
+    await expect(page.locator("#trusted-reference-status"))
+      .toContainText("Output: Off (individual rule Off)");
+    await expect(page.locator("#trusted-reference-status"))
+      .toContainText("Input: active (check block; rule inherits check)");
+    const safeOutput = await evaluate(request, headers, "output", 40);
+    expect(safeOutput.evaluation_status).toBe("complete");
+    expect(safeOutput.findings.some(f => f.rule_id === "business.real_browser_permit")).toBe(false);
+    expect((await evaluate(request, headers, "input", 40)).effective_action).toBe("block");
+
+    await page.locator("#tenant-check-input-cross_field").selectOption("off");
+    await page.getByRole("button", {name: "Save checks", exact: true}).click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved.");
+    const disabledParent = await summary(request, headers);
+    expect(disabledParent.revision).toBe(disabledRule.revision + 1);
+    expect(disabledParent.input_checks.cross_field).toBe("off");
+    expect(disabledParent.advanced_trusted_reference_status[0].runtime_integrity).toBe("blocked");
+    await connect(page);
+    await expect(page.locator("#trusted-reference-status"))
+      .toContainText("Input: Off (Field comparisons check Off)");
+    await expect(page.locator("#trusted-reference-status"))
+      .toContainText("Output: Off (individual rule Off)");
+    for (const stage of ["input", "output"]) {
+      const disabled = await evaluate(request, headers, stage, 40);
+      expect(disabled.evaluation_status).toBe("complete");
+      expect(disabled.findings.some(f => f.rule_id === "business.real_browser_permit")).toBe(false);
+    }
+    const publicStatus = await page.locator("#trusted-reference-status").innerText();
+    for (const secret of [KEY, signed.host_signature, signed.source_id, signed.reference_values.permit_limit]) {
+      expect(publicStatus).not.toContain(secret);
+    }
   } finally {
     if (resetRequired) {
       const cleanup = await request.post("/v1/tenants/current/reset", {headers, data: {}});
