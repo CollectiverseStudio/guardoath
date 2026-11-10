@@ -480,3 +480,47 @@ test("native email registration is offered with Google disabled", async ({page})
   expect(target.searchParams.get("identity_provider")).toBeNull();
   expect(target.searchParams.get("code_challenge_method")).toBe("S256");
 });
+
+test("Stripe success redirect does not activate an unpaid account", async ({page, request}) => {
+  const issued = await request.post("/v1/demo-users/demo2/key", {data: {}});
+  expect(issued.status()).toBe(200);
+  const demoKey = (await issued.json()).api_key;
+  const summary = await request.get("/v1/applications/current", {
+    headers: {"X-GuardOath-Key": demoKey}
+  });
+  const application = await summary.json();
+  application.application_id = "usr-checkout-pending";
+  application.tenant = {
+    ...application.tenant, tenant_id: "usr-checkout-pending", demo: false,
+    subscription_status: "inactive", subscription_active: false,
+    monthly_allowance: 0
+  };
+  await page.addInitScript(() => {
+    sessionStorage.setItem("guardoath-session", "synthetic-checkout-session");
+  });
+  await page.route("**/v1/sign-in", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({authorize_url: "https://example.invalid/oauth2/authorize",
+      logout_url: "https://example.invalid/logout", client_id: "synthetic",
+      redirect_uri: "http://localhost/dashboard", scope: "openid email",
+      registration_enabled: true, google_provider: null})
+  }));
+  await page.route("**/v1/account/status", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({registered: true, registration_enabled: true,
+      tenant_id: "usr-checkout-pending", subscription_status: "inactive",
+      can_validate: false})
+  }));
+  await page.route("**/v1/applications/current", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify(application)
+  }));
+  await page.route("**/v1/tenants/current/keys", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({keys: [], max_keys: 2})
+  }));
+  await page.goto("/dashboard?checkout=success");
+  await expect(page.locator("#account-status")).toContainText("pending verification");
+  await expect(page.locator("#key-create")).toBeDisabled();
+  await expect(page.locator("#billing-manage")).toBeHidden();
+  await expect(page.locator("#billing-subscribe")).toBeVisible();
+});
