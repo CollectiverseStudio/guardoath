@@ -114,8 +114,14 @@ function coverage() {
   if (policy?.version.startsWith("privacy-encoded")) $("profile-status").textContent += " One labeled Base64/hex layer only. No recursive or unlabeled decoding and no encoded-value redaction. Incomplete scans hold the answer.";
   refreshExamplePickers();
 }
-async function loadApplication(token, attempt) {
+async function loadApplication(token, attempt, expectedDemoTenant = null) {
   const data = await api("/v1/applications/current", null, token); if (attempt !== revision) return;
+  // A key issued through the public demo path must resolve to that exact demo
+  // tenant. A customer key or a mismatched tenant is never a demo credential.
+  if (expectedDemoTenant !== null &&
+      (data.tenant?.demo !== true || data.tenant?.tenant_id !== expectedDemoTenant)) {
+    throw new Error("The demo key did not match the selected demo user.");
+  }
     key = token; application = data; $("api-key").value = ""; $("policy").replaceChildren();
     const sub = data.tenant?.subscription_status;
     $("subscription-status").hidden = !sub || data.tenant?.demo;
@@ -697,6 +703,20 @@ $("tenant-checks").addEventListener("change", event => {
   showUnsaved(cleared ? (checkNames[check] || check) + " now redacts on " + stage + ", so the own " + stage + " settings of " + cleared + (cleared === 1 ? " rule were" : " rules were") + " cleared (a redacting check allows only Off for single rules). " : "");
 });
 $("tenant-reset").addEventListener("click", () => saveTenant("/v1/tenants/current/reset", {}, "Reset to the demo defaults."));
+// Share the existing tenant/Engine connection path without treating a public
+// demo credential as a customer-owner login or exposing the customer key form.
+async function connectWithKey(token, expectedDemoTenant = null) {
+  reset(); const attempt = revision; $("connect").disabled = true;
+  key = ""; application = null; $("tenant-panel").hidden = true; buttons(); $("run").disabled = true; $("policy").disabled = true;
+  $("resource-limits").textContent = ""; $("disconnect").disabled = true;
+  try {
+    await loadApplication(token, attempt, expectedDemoTenant);
+    return attempt === revision && application !== null;
+  } catch (error) {
+    if (attempt === revision) $("connection-status").textContent = error.message || "Connection failed.";
+    return false;
+  } finally { $("connect").disabled = false; }
+}
 $("connect").addEventListener("click", async () => {
   // Application keys may execute checks, but cannot authenticate account owners.
   // Never let a pasted key silently replace an authenticated customer session.
@@ -706,12 +726,7 @@ $("connect").addEventListener("click", async () => {
   }
   const token = $("api-key").value.trim(); if (!token || busy) return;
   sessionStorage.removeItem("guardoath-session"); if (signIn) signedIn(false);
-  reset(); const attempt = revision; $("connect").disabled = true;
-  key = ""; application = null; $("tenant-panel").hidden = true; buttons(); $("run").disabled = true; $("policy").disabled = true;
-  $("resource-limits").textContent = ""; $("disconnect").disabled = true;
-  try { await loadApplication(token, attempt);
-  } catch (error) { if (attempt === revision) $("connection-status").textContent = error.message || "Connection failed."; }
-  finally { $("connect").disabled = false; }
+  await connectWithKey(token);
 });
 $("disconnect").addEventListener("click", () => {
   sessionStorage.removeItem("guardoath-session"); if (signIn) signedIn(false);
@@ -738,7 +753,13 @@ $("demo-key").addEventListener("click", async () => {
     const response = await send("/v1/demo-users/" + encodeURIComponent(tenant) + "/key", {method: "POST", cache: "no-store", headers: await requestHeaders("", "{}"), body: "{}"});
     if (!response.ok) throw new Error(response.status === 404 ? "That demo user is not available." : "The demo key could not be issued (HTTP " + response.status + ").");
     const data = await response.json();
-    $("demo-key-value").value = data.api_key; $("api-key").value = data.api_key; $("connect").click();
+    const demoToken = typeof data.api_key === "string" ? data.api_key.trim() : "";
+    if (!demoToken) throw new Error("The demo key response was invalid.");
+    // Never reuse the hidden, signed-in customer key entry point for a public demo.
+    // A demo switches only into key-based evaluation, not account management.
+    sessionStorage.removeItem("guardoath-session"); if (signIn) signedIn(false);
+    $("api-key").value = ""; $("demo-key-value").value = "";
+    if (await connectWithKey(demoToken, tenant)) $("demo-key-value").value = demoToken;
   } catch (error) { $("connection-status").textContent = error.message || "The demo key could not be issued."; }
   finally { $("demo-key").disabled = false; }
 });
