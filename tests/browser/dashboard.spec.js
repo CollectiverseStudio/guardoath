@@ -1,9 +1,22 @@
 const { test, expect } = require("@playwright/test");
-async function connect(page) {
-  await page.goto("/dashboard");
+// Local developer-policy acceptance still validates the REAL backend profiles
+// through the configured test API key. Production intentionally hides customer
+// API-key entry until sign-in; this explicit test-only setup supplies its owner
+// prerequisite without asserting Cognito authentication. Other browser tests
+// verify actual public-demo and customer-session authorization separately.
+async function connectDeveloperPolicyFixture(page, navigate = true) {
+  if (navigate) await page.goto("/dashboard");
+  await page.evaluate(() => {
+    sessionStorage.setItem("guardoath-session", "synthetic-local-policy-fixture");
+    application = {tenant: {demo: false}};
+    document.getElementById("customer-key-connect").hidden = false;
+  });
   await page.getByLabel("Application API key").fill("playwright-test-key");
-  await page.getByRole("button", { name: "Connect", exact: true }).click();
+  await page.getByRole("button", {name: "Connect", exact: true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo");
+}
+async function connect(page) {
+  await connectDeveloperPolicyFixture(page);
   await expect(page.locator("#advanced")).toHaveAttribute("open", "");
   await page.locator(".batch-run > summary").click();
 }
@@ -288,9 +301,7 @@ test("dashboard links to the developer guide on this site", async ({ page }) => 
 
 
 test("normal conversation needs no profile selection and follows four stages", async ({page}) => {
-  await page.goto("/dashboard");
-  await page.getByLabel("Application API key").fill("playwright-test-key");
-  await page.getByRole("button",{name:"Connect",exact:true}).click();
+  await connectDeveloperPolicyFixture(page);
   await expect(page.locator("#run-input")).toBeEnabled();
   await expect(page.locator("#advanced")).toHaveAttribute("open", "");
   await expect(page.locator("#policy")).toHaveValue("conversation-v1");
@@ -566,8 +577,7 @@ test('dashboard examples are offered only once an application profile is loaded'
   await page.goto('/dashboard');
   await page.locator('#input-example-check').selectOption('general');
   await expect(page.locator('#input-example option[data-sample]')).toHaveCount(0);
-  await page.getByLabel('Application API key').fill('playwright-test-key');
-  await page.getByRole('button',{name:'Connect',exact:true}).click();
+  await connectDeveloperPolicyFixture(page, false);
   await expect(page.locator('#connection-status')).toContainText('Connected to demo');
   await page.locator('#input-example-check').selectOption('general');
   await expect(page.locator('#input-example option[data-sample="clean"]')).toHaveCount(1);
@@ -989,9 +999,7 @@ test("the conversation box holds every step and Advanced starts open", async ({ 
   expect(new Set(widths).size).toBe(1);
 });
 test("the proposed answer stays empty and locked until the input test passes", async ({page}) => {
-  await page.goto("/dashboard");
-  await page.getByLabel("Application API key").fill("playwright-test-key");
-  await page.getByRole("button",{name:"Connect",exact:true}).click();
+  await connectDeveloperPolicyFixture(page);
   await expect(page.locator("#run-input")).toBeEnabled();
   const answer = page.locator("#output-content");
   await expect(answer).toHaveValue(""); await expect(answer).not.toBeEditable();
@@ -1040,9 +1048,7 @@ test("a demo user has no profile to choose and runs its record's checks", async 
   expect(sent).toEqual(["tenant"]);
   // Disconnecting and connecting a local developer key shows the profile choice again.
   await page.getByRole("button", { name: "Disconnect", exact: true }).click();
-  await page.getByLabel("Application API key").fill("playwright-test-key");
-  await page.getByRole("button", { name: "Connect", exact: true }).click();
-  await expect(page.locator("#connection-status")).toContainText("Connected to demo");
+  await connectDeveloperPolicyFixture(page, false);
   await expect(page.locator("#advanced")).toBeVisible();
 });
 test("requests carry the key header and the body hash CloudFront needs", async ({ page }) => {

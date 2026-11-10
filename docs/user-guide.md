@@ -2934,6 +2934,8 @@ be accepted through this public path even when its ID matches the selection.
 Public demo keys are temporary examples,
 not customer ownership, subscription verification or a production entitlement.
 
+**Public-demo Disconnect:** The Disconnect button stays visible next to the public demo area, even though the customer application-key field remains hidden until owner sign-in. After selecting **Get demo API key**, click **Disconnect** to erase that demo credential and disable both check stages. The button starts disabled before any connection, and disconnecting does not grant access to customer key management or change saved tenant policy.
+
 **Customer controls:** The **Existing customer application API key** field is
 behind sign-in, not next to the public demo selector. After verified customer
 sign-in, an existing key may be used for evaluation-only API access, but a

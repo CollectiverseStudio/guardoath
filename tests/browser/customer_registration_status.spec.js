@@ -762,3 +762,22 @@ test("late tenant-settings response cannot install an old owner's application af
   expect(await page.evaluate(() => sessionStorage.getItem("guardoath-session")))
     .toBe("replacement-session");
 });
+
+test("a public demo can disconnect without exposing signed-in customer key entry", async ({page}) => {
+  await page.goto("/dashboard");
+  const ownerEntry = page.locator("#customer-key-connect");
+  const disconnect = page.getByRole("button", {name: "Disconnect", exact: true});
+  await expect(ownerEntry).toBeHidden();
+  await expect(disconnect).toBeVisible();
+  await expect(disconnect).toBeDisabled();
+  await page.locator("#demo-user").selectOption("demo4");
+  await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
+  await expect(disconnect).toBeEnabled();
+  await expect(ownerEntry).toBeHidden();
+  await disconnect.click();
+  await expect(page.locator("#demo-key-value")).toHaveValue("");
+  await expect(page.locator("#run-input")).toBeDisabled();
+  await expect(disconnect).toBeDisabled();
+  await expect(ownerEntry).toBeHidden();
+});
