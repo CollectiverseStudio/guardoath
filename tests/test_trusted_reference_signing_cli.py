@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta, timezone
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -194,7 +195,12 @@ def test_operator_refuses_invalid_tenant_id_without_writing_or_echoing(tmp_path,
     result = invoke_cli(source, destination, tenant=tenant)
     assert result.returncode == 2
     assert not destination.exists()
-    assert tenant not in result.stdout + result.stderr
+    # Single-character invalid identifiers can be ordinary letters in
+    # argparse's fixed usage text. Check that the supplied identifier does
+    # not appear as a standalone value, rather than banning that character.
+    transcript = result.stdout + result.stderr
+    assert re.search(r"(?<![A-Za-z0-9])" + re.escape(tenant) +
+                     r"(?![A-Za-z0-9])", transcript) is None
     assert KEY not in result.stdout + result.stderr
     assert "Traceback" not in result.stderr
 
