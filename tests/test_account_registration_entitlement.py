@@ -294,3 +294,34 @@ def test_application_api_key_cannot_manage_customer_keys():
     assert client.post("/v1/tenants/current/keys/revoke", headers=api_headers,
                        json={"key_id": digest[:12]}).status_code == 403
     assert store.get("usr-test-account").key_hashes == (digest,)
+
+
+def test_signed_in_customer_can_list_create_and_revoke_keys_only_with_active_plan():
+    """Owner sessions manage keys; API keys remain separate from account authority."""
+    from guardoath.tenant_record import TenantRecord, new_key
+    client, store = make_client()
+    existing_token, existing_digest = new_key("usr-test-account")
+    store.create(TenantRecord(
+        tenant_id="usr-test-account", display_name="Subscribed account",
+        status="active", demo=False, monthly_allowance=100,
+        key_hashes=(existing_digest,), input_check_text_security="block",
+        output_check_text_security="block", subscription_status="active",
+    ))
+    headers = {SESSION_HEADER: "verified-test-token"}
+    listed = client.get("/v1/tenants/current/keys", headers=headers)
+    assert listed.status_code == 200, listed.text
+    assert listed.json()["keys"] == [{"key_id": existing_digest[:12]}]
+    assert "api_key" not in listed.text
+    created = client.post("/v1/tenants/current/keys", headers=headers, json={})
+    assert created.status_code == 200, created.text
+    new_token = created.json()["api_key"]
+    assert new_token != existing_token
+    assert len(store.get("usr-test-account").key_hashes) == 2
+    assert client.post("/v1/tenants/current/keys", headers=headers, json={}).status_code == 409
+    assert client.post("/v1/tenants/current/keys/revoke", headers=headers,
+                       json={"key_id": existing_digest[:12]}).status_code == 200
+    assert len(store.get("usr-test-account").key_hashes) == 1
+    assert existing_digest not in store.get("usr-test-account").key_hashes
+    assert client.get("/v1/tenants/current/keys", headers={
+        "X-GuardOath-Key": new_token
+    }).status_code == 403
