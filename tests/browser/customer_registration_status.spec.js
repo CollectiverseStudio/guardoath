@@ -417,6 +417,9 @@ test("expired Cognito session clears stored identity and restores customer sign-
   await expect(page.locator("#tenant-panel")).toBeHidden();
   await expect(page.locator("#billing-subscribe")).toBeHidden();
   await expect(page.locator("#billing-manage")).toBeHidden();
+  // Revocation precedes application connection; the disabled Disconnect
+  // control must not prevent clearing a rejected Cognito session.
+  await expect(page.locator("#disconnect")).toBeDisabled();
   expect(await page.evaluate(() => sessionStorage.getItem("guardoath-session"))).toBeNull();
   expect(checks).toBe(1);
 });
@@ -464,6 +467,7 @@ test("revoked customer session during tenant settings load clears state and perm
   await expect(page.locator("#tenant-panel")).toBeHidden();
   await expect(page.locator("#billing-subscribe")).toBeHidden();
   await expect(page.locator("#billing-manage")).toBeHidden();
+  await expect(page.locator("#disconnect")).toBeDisabled();
   expect(await page.evaluate(() => sessionStorage.getItem("guardoath-session"))).toBeNull();
   expect(requested).toBe(1);
 });
@@ -611,10 +615,17 @@ test("customer API-key management sends signed-in session, never pasted API key"
   await expect(page.locator("#key-new")).toHaveValue("gok_example_once");
   expect(creates).toBe(1);
   expect(reads).toBeGreaterThan(0);
-  // The one-time plaintext credential must not survive sign-out.
-  await page.locator("#sign-out").click();
-  await expect(page.locator("#keys-panel")).toBeHidden();
-  await expect(page.locator("#key-new")).toHaveValue("");
+  // Cognito sign-out navigates away; inspect the synchronous cleanup in
+  // the authenticated document, before the external logout page replaces it.
+  const cleared = await page.evaluate(() => {
+    document.querySelector("#sign-out").click();
+    return {
+      session: sessionStorage.getItem("guardoath-session"),
+      panelHidden: document.querySelector("#keys-panel").hidden,
+      oneTimeKey: document.querySelector("#key-new").value
+    };
+  });
+  expect(cleared).toEqual({session: null, panelHidden: true, oneTimeKey: ""});
 });
 
 

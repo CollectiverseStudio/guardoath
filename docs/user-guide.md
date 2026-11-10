@@ -3013,3 +3013,8 @@ Stage the edit in the appropriate editor, select **Save checks**, and reload/rec
 
 **Selected examples are revision-bound.** The Input/Output dropdown clears a previously chosen example if a draft removes its saved rule, changes which rule occupies its former list position, or a newly saved tenant revision regenerates that example. A numeric dropdown position is never evidence that a different rule has the same sample. After editing or saving, explicitly choose an available example again; the content already in the input editor is not silently submitted, and running it still uses the authoritative current tenant Engine. No customer example text is stored in DOM option attributes to track this selection.
 
+
+
+### Expired customer sessions and one-time API keys
+
+If Cognito rejects a session while the customer is signing in or while tenant settings are loading, GuardOath clears the stored session and loaded tenant settings immediately, even before an application has connected and the **Disconnect** button is enabled. Sign in again before managing tenant policy or keys; an API key cannot replace the owner session. Signing out also removes the one-time plaintext key from the authenticated page before redirecting to Cognito's logout page. A returned checkout URL or sign-in status alone does not grant a paid subscription.

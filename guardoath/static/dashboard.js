@@ -750,12 +750,16 @@ $("connect").addEventListener("click", async () => {
   sessionStorage.removeItem("guardoath-session"); if (signIn) signedIn(false);
   await connectWithKey(token);
 });
-$("disconnect").addEventListener("click", () => {
+function clearConnection() {
+  // Also used by session revocation before an application has connected.
+  // Clicking a disabled Disconnect button is a browser no-op; cleanup must
+  // never depend on whether the button is currently enabled.
   sessionStorage.removeItem("guardoath-session"); if (signIn) signedIn(false);
   key = ""; application = null; $("api-key").value = ""; $("demo-key-value").value = ""; $("tenant-panel").hidden = true; $("resource-limits").textContent = ""; reset(); $("profile-status").textContent = "Connect to load the combined conversation profile.";
   $("policy").replaceChildren(); $("policy").disabled = true; $("run").disabled = true; $("disconnect").disabled = true;
   $("connection-status").textContent = "Disconnected. Key removed from this tab’s memory.";
-});
+}
+$("disconnect").addEventListener("click", clearConnection);
 const demoUnavailable = "Demo users could not be loaded right now. Reload the page to try again.";
 async function loadDemoUsers() {
   let response;
@@ -865,10 +869,10 @@ async function loadSignIn() {
   await showAccountState(stored);
 }
 function expireCustomerSession() {
-  // Reuse the same cleanup as manual Disconnect, including tenant policy,
-  // pending results and API-key controls. Never interpret session loss as
-  // unpaid registration or leave customer credentials visible.
-  $("disconnect").click();
+  // Use the same cleanup as manual Disconnect even if no API connection
+  // exists yet (and Disconnect is disabled). Otherwise a rejected login
+  // could leave its revoked token in sessionStorage while hiding the UI.
+  clearConnection();
   $("sign-in").hidden = false;
   $("register-account").hidden = true;
   $("sign-out").hidden = true;
