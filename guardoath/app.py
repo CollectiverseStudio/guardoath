@@ -734,11 +734,14 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             raise HTTPException(403, "Register an account before subscribing")
         if current.subscription_status == "active":
             raise HTTPException(409, "Subscription already active; use billing management")
+        # Fail before creating a Stripe customer when checkout is not configured.
+        # Otherwise an unpaid account can acquire an unusable billing binding.
+        api_key = os.getenv("GUARDOATH_STRIPE_SECRET_KEY", "")
+        price_id = os.getenv("GUARDOATH_STRIPE_PRICE_ID", "")
+        if not api_key or not price_id:
+            raise HTTPException(503, "Subscription checkout is not configured")
         if current.billing_mode == BillingMode.INTERNAL and not current.payer_id:
             from guardoath.stripe_customer import StripeCustomerError, create_customer
-            api_key = os.getenv("GUARDOATH_STRIPE_SECRET_KEY", "")
-            if not api_key:
-                raise HTTPException(503, "Subscription checkout is not configured")
             try:
                 customer_id = await run_in_threadpool(create_customer,
                     tenant_id=current.tenant_id, api_key=api_key,
@@ -751,10 +754,6 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 raise HTTPException(503, "Stripe customer provisioning failed") from None
         if current.billing_mode != BillingMode.STRIPE or not current.payer_id:
             raise HTTPException(409, "Stripe customer provisioning is required before checkout")
-        api_key = os.getenv("GUARDOATH_STRIPE_SECRET_KEY", "")
-        price_id = os.getenv("GUARDOATH_STRIPE_PRICE_ID", "")
-        if not api_key or not price_id:
-            raise HTTPException(503, "Subscription checkout is not configured")
         try:
             url = await run_in_threadpool(create_checkout_session,
                 customer_id=current.payer_id, price_id=price_id,
