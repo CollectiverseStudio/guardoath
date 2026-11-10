@@ -63,3 +63,7 @@ Updated 2026-11-09. Greg explicitly authorized replacing the empty coordination 
 ## 2026-11-09 Atlas CI manual dispatch
 - Commit 8fd0573: .github/workflows/tests.yml now supports workflow_dispatch in addition to push and pull_request, permitting an explicit full Tests run on main without another code change.
 - This connector does not expose workflow dispatch or push-run listing; no CI pass is claimed. Production remains gated on verified jobs and browser checks.
+
+## 2026-11-09 Atlas one-time key secret lifecycle
+- Commits 47c6b93 and 8045435: signedIn(false) clears the one-time plaintext API key, list and controls; browser regression checks sign-out hides panel and erases key field.
+- CI not confirmed; production release remains gated.
