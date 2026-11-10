@@ -75,7 +75,11 @@ def test_real_signing_cli_rejects_overflow_and_accepts_boundary(tmp_path, previo
     root = Path(__file__).resolve().parents[1]
     item = reference(previous)
     source, output = tmp_path / "unsigned.json", tmp_path / "signed.json"
-    source.write_text(item.model_dump_json())
+    # The operator CLI only accepts fresh unsigned drafts. The signed object
+    # above is reserved for runtime trust/overflow tests; do not silently
+    # re-attest it in this CLI boundary regression.
+    unsigned = item.model_copy(update={"host_signature": "0" * 64}).model_dump_json()
+    source.write_text(unsigned)
     env = dict(os.environ, PYTHONPATH=str(root))
     env[SIGNING_KEY_ENV] = KEY
     result = subprocess.run(
@@ -85,7 +89,7 @@ def test_real_signing_cli_rejects_overflow_and_accepts_boundary(tmp_path, previo
     )
     assert result.returncode == expected
     assert output.exists() == (expected == 0)
-    assert source.read_text() == item.model_dump_json()
+    assert source.read_text() == unsigned
     for private in (KEY, item.host_signature, item.source_id, previous):
         assert private not in result.stdout + result.stderr
     assert "Traceback" not in result.stderr
