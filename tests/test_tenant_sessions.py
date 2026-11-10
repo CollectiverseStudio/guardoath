@@ -126,6 +126,7 @@ class FakeCognito:
 
     def __init__(self):
         self.users = {}            # token -> list of attributes
+        self.usernames = {}        # optional Cognito username override
         self.codes = {}            # code -> access token
         self.jwks = {"keys": [jwk()]}
         self.calls = []
@@ -139,10 +140,14 @@ class FakeCognito:
         self.calls.append(url)
         if url == GETUSER_URL:
             assert headers["X-Amz-Target"] == "AWSCognitoIdentityProviderService.GetUser"
-            attributes = self.users.get(json.loads(body)["AccessToken"])
+            access = json.loads(body)["AccessToken"]
+            attributes = self.users.get(access)
             if attributes is None:
                 return 400, b'{"__type": "NotAuthorizedException"}'
-            return 200, json.dumps({"Username": "user-1", "UserAttributes": attributes}).encode()
+            subject = next((a.get("Value") for a in attributes if a.get("Name") == "sub"), "unknown")
+            federated = any(a.get("Name") == "identities" for a in attributes)
+            username = self.usernames.get(access, ("Google_" + str(subject)) if federated else "user-1")
+            return 200, json.dumps({"Username": username, "UserAttributes": attributes}).encode()
         if url == f"https://{DOMAIN}/oauth2/token":
             form = dict(urllib.parse.parse_qsl(body.decode()))
             assert form["grant_type"] == "authorization_code" and form["client_id"] == CLIENT
@@ -155,6 +160,13 @@ class FakeCognito:
 
     def count(self, url):
         return self.calls.count(url)
+
+
+def google_identity(user_id="google-uid"):
+    return {"Name": "identities", "Value": json.dumps([{
+        "providerName": "Google", "providerType": "Google",
+        "userId": user_id, "primary": True
+    }])}
 
 
 def tenant_user(cognito, tenant_id, **changes):
@@ -586,6 +598,7 @@ def test_verified_google_registration_creates_unsubscribed_tenant_without_paid_a
         {"Name": "email", "Value": "verified@example.invalid"},
         {"Name": "email_verified", "Value": "true"},
         {"Name": "sub", "Value": "first-time-google-user"},
+        google_identity("google-first"),
     ]
     tenants = TenantService(MemoryTenantStore(), CHECKERS, SECRET)
     client = TestClient(create_app(engine=demo_engine(), credentials={},
@@ -657,6 +670,7 @@ def test_google_oauth_code_login_registration_repeat_login_and_second_account_is
         {"Name": "email", "Value": "first@example.invalid"},
         {"Name": "email_verified", "Value": "true"},
         {"Name": "sub", "Value": "google-account-one"},
+        google_identity("google-one"),
     ]
     cognito.users[first] = attrs_one
     cognito.codes["google-code-one"] = first
@@ -713,6 +727,7 @@ def test_google_oauth_code_login_registration_repeat_login_and_second_account_is
         {"Name": "email", "Value": "second@example.invalid"},
         {"Name": "email_verified", "Value": "true"},
         {"Name": "sub", "Value": "google-account-two"},
+        google_identity("google-two"),
     ]
     other = client.get("/v1/account/status", headers=signed(second))
     assert other.status_code == 200 and other.json()["registered"] is False
