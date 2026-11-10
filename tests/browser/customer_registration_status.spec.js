@@ -647,7 +647,12 @@ test("late successful account-status response cannot resurrect a replaced custom
   await page.goto("/dashboard");
   await requestStarted;
   await page.evaluate(() => sessionStorage.setItem("guardoath-session", "replacement-session"));
+  const oldReply = page.waitForResponse(r => r.url().endsWith("/v1/account/status") && r.status() === 200);
   finishStatus();
+  await oldReply;
+  // Let the browser consume this exact stale response before asserting that
+  // no authenticated settings request or owner controls were installed.
+  await page.waitForTimeout(75);
   await expect(page.locator("#sign-in")).toBeVisible();
   await expect(page.locator("#keys-panel")).toBeHidden();
   await expect(page.locator("#tenant-panel")).toBeHidden();
@@ -694,7 +699,12 @@ test("late tenant-settings response cannot install an old owner's application af
   await page.goto("/dashboard");
   await requestStarted;
   await page.evaluate(() => sessionStorage.setItem("guardoath-session", "replacement-session"));
+  const oldReply = page.waitForResponse(r => r.url().endsWith("/v1/applications/current") && r.status() === 200);
   finishTenant();
+  await oldReply;
+  // Assert after the stale application payload was delivered, not while the
+  // held request was still pending.
+  await page.waitForTimeout(75);
   await expect(page.locator("#tenant-panel")).toBeHidden();
   await expect(page.locator("#keys-panel")).toBeHidden();
   await expect(page.locator("#connection-status")).not.toContainText("Connected to usr-old-owner");
