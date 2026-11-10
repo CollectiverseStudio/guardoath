@@ -351,7 +351,7 @@ class CognitoSessions:
             return None
         try:
             identities = json.loads(raw_identities)
-        except ValueError:
+        except (ValueError, RecursionError):
             return None
         google = (isinstance(identities, list) and 1 <= len(identities) <= 5 and
                   any(isinstance(item, dict) and
