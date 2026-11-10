@@ -308,7 +308,7 @@ def test_tenant_sign_in_uses_the_free_lite_plan_with_required_authenticator_mfa(
     assert pool["MfaConfiguration"] == "ON" and pool["EnabledMfas"] == ["SOFTWARE_TOKEN_MFA"]
     # Native self-registration is controlled independently of Google federation.
     assert pool["AdminCreateUserConfig"] == {
-        "AllowAdminCreateUserOnly": {"Fn::Not": [{"Condition": "SelfRegistrationEnabled"}]}
+        "AllowAdminCreateUserOnly": {"Fn::If": ["SelfRegistrationEnabled", False, True]}
     }
     assert pool["EmailConfiguration"] == {"EmailSendingAccount": "COGNITO_DEFAULT"}
     assert pool["DeletionProtection"] == "ACTIVE" and template["Resources"]["UserPool"]["DeletionPolicy"] == "Retain"
