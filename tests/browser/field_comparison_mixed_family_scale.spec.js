@@ -229,6 +229,23 @@ test("authenticated mixed 51-rule FC portfolio renders, saves UI override and ru
     const finalSaved = await current(request, headers);
     expect(finalSaved.revision).toBe(checkWideOff.revision);
     expect(finalSaved.output_checks.cross_field).toBe("block");
+    // The UI's two Off explanations must correspond to the REAL shared
+    // Engine, not just strings rendered from tenant configuration. Disabling
+    // the Input check suppresses every comparison on Input, while Output
+    // continues evaluating the ordinary violation and ignores only its
+    // explicitly Off advanced-identity rule.
+    const inputAfterCheckOff = await check(request, headers, "input", bad);
+    expect(inputAfterCheckOff.evaluation_status).toBe("complete");
+    expect(inputAfterCheckOff.findings.filter(f =>
+      f.rule_id.startsWith("business.mixed_ui_"))).toHaveLength(0);
+    expect(inputAfterCheckOff.effective_action).toBe("allow");
+    const outputAfterCheckOff = await check(request, headers, "output", bad);
+    expect(outputAfterCheckOff.evaluation_status).toBe("complete");
+    expect(outputAfterCheckOff.effective_action).toBe("block");
+    expect(outputAfterCheckOff.findings.filter(f =>
+      f.rule_id.startsWith("business.mixed_ui_")).map(f => f.rule_id))
+      .toEqual(["business.mixed_ui_000"]);
+    expect((await current(request, headers)).revision).toBe(checkWideOff.revision);
   } finally {
     if (shouldReset) {
       const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
