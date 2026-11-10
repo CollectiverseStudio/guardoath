@@ -364,6 +364,18 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
     expect(outputWithBothOff.effective_action).toBe("allow");
     expect(outputWithBothOff.findings.filter(f => f.rule_id.startsWith("business.mixed_ui_")))
       .toHaveLength(0);
+
+    // A pending ordinary pointer edit must not present an old saved Off
+    // setting as the state of the changed, unsaved rule.
+    await ordinaryEditorRow.getByRole("button", {name: "Edit comparison mixed_ui_000"}).click();
+    await page.locator("#comparison-left").fill("/r000/new_total");
+    await page.locator("#comparison-apply").click();
+    await expect(ordinaryEditorRow).toContainText("Unsaved comparison changes:");
+    await expect(ordinaryEditorRow).not.toContainText("Saved output rule action is Off.");
+    expect((await current(request, headers)).revision).toBe(ordinaryOff.revision);
+    await connect(page); // reconnect discards the unsaved draft, not the tenant setting
+    await expect(page.locator('li[data-comparison-id="mixed_ui_000"]'))
+      .toContainText("Saved output rule action is Off.");
     expect((await current(request, headers)).revision).toBe(ordinaryOff.revision);
   } finally {
     if (resetRequired) {
