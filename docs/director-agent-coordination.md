@@ -33,3 +33,7 @@ Updated 2026-11-09. Greg explicitly authorized replacing the empty coordination 
 ## 2026-11-09 Atlas Stripe configuration safety fix
 - Commits 4674477 and 6d1a54f: app.py validates both server Stripe secret and price before creating a Stripe customer; test_account_registration_entitlement.py asserts missing price causes HTTP 503 with no provider call or tenant billing binding.
 - CI: connector returned no statuses for preceding main SHA. No live Stripe/AWS deployment performed.
+
+## 2026-11-09 Atlas malformed billing config hardening
+- Commits 078b0c7 and 490e26c: validate Stripe secret shape and price identifier before any Stripe customer creation; regression covers publishable key, invalid/missing price ID, and malformed price.
+- CI and live deployment not yet verified.
