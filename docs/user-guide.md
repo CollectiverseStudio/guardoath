@@ -3018,3 +3018,5 @@ Stage the edit in the appropriate editor, select **Save checks**, and reload/rec
 ### Expired customer sessions and one-time API keys
 
 If Cognito rejects a session while the customer is signing in or while tenant settings are loading, GuardOath clears the stored session and loaded tenant settings immediately, even before an application has connected and the **Disconnect** button is enabled. Sign in again before managing tenant policy or keys; an API key cannot replace the owner session. Signing out also removes the one-time plaintext key from the authenticated page before redirecting to Cognito's logout page. A returned checkout URL or sign-in status alone does not grant a paid subscription.
+
+The **Sign out** control clears customer session, pasted application key, one-time API key field and tenant controls even before the tenant has connected, before Cognito logout redirects the browser.

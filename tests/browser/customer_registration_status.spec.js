@@ -472,6 +472,46 @@ test("revoked customer session during tenant settings load clears state and perm
   expect(requested).toBe(1);
 });
 
+test("pre-connection sign-out clears session, pasted and one-time keys despite disabled Disconnect", async ({page}) => {
+  await page.addInitScript(() => sessionStorage.setItem("guardoath-session", "synthetic-preconnection-signout"));
+  await page.route("**/v1/sign-in", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      authorize_url: "https://example.invalid/oauth2/authorize",
+      logout_url: "https://example.invalid/logout",
+      client_id: "synthetic", redirect_uri: "http://localhost/dashboard",
+      scope: "openid email", registration_enabled: true, google_provider: null
+    })
+  }));
+  await page.route("**/v1/account/status", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      registered: false, registration_enabled: true, tenant_id: null,
+      subscription_status: "not_registered", can_validate: false
+    })
+  }));
+  await page.goto("/dashboard");
+  await expect(page.locator("#sign-out")).toBeVisible();
+  await expect(page.locator("#disconnect")).toBeDisabled();
+  // Inspect cleanup before external Cognito logout navigation replaces DOM.
+  const result = await page.evaluate(() => {
+    document.querySelector("#key-new").value = "synthetic-stale-once";
+    document.querySelector("#api-key").value = "synthetic-stale-app";
+    document.querySelector("#sign-out").click();
+    return {
+      session: sessionStorage.getItem("guardoath-session"),
+      oneTimeKey: document.querySelector("#key-new").value,
+      pastedKey: document.querySelector("#api-key").value,
+      tenantHidden: document.querySelector("#tenant-panel").hidden,
+      keysHidden: document.querySelector("#keys-panel").hidden
+    };
+  });
+  expect(result).toEqual({
+    session: null, oneTimeKey: "", pastedKey: "",
+    tenantHidden: true, keysHidden: true
+  });
+});
+
 test("native email registration is offered with Google disabled", async ({page}) => {
   await page.route("**/v1/sign-in", route => route.fulfill({
     status: 200, contentType: "application/json",

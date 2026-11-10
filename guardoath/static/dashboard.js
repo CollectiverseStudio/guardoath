@@ -981,7 +981,8 @@ $("register-account").addEventListener("click", async () => {
   } finally { button.disabled = false; }
 });
 $("sign-out").addEventListener("click", () => {
-  sessionStorage.removeItem("guardoath-session"); $("disconnect").click();
+  // Clear state even before connection: a disabled Disconnect ignores click().
+  clearConnection();
   const url = new URL(signIn.logout_url); url.searchParams.set("client_id", signIn.client_id); url.searchParams.set("logout_uri", signIn.redirect_uri);
   location.assign(url.toString());
 });
