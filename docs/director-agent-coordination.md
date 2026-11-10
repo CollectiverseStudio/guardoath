@@ -37,3 +37,8 @@ Updated 2026-11-09. Greg explicitly authorized replacing the empty coordination 
 ## 2026-11-09 Atlas malformed billing config hardening
 - Commits 078b0c7 and 490e26c: validate Stripe secret shape and price identifier before any Stripe customer creation; regression covers publishable key, invalid/missing price ID, and malformed price.
 - CI and live deployment not yet verified.
+
+## 2026-11-09 Atlas customer API key visibility
+- Commits 3521f30, 2e6cafc, d79bb62: dashboard HTML now distinguishes public demo key connection from customer sign-in; API key management panel is displayed only for a signed-in, non-demo tenant. Browser regression asserts public demo hides customer key controls.
+- API keys remain usable for programmatic validation after issuance; owner session is required for management.
+- CI and live deployment not yet verified.
