@@ -29,3 +29,7 @@ Updated 2026-11-09. Greg explicitly authorized replacing the empty coordination 
 - Commit f1449b5: tests/test_account_registration_entitlement.py adds mocked Stripe customer provisioning and checkout success/failure cases.
 - Expected: Stripe customer binding can persist, but a returned checkout URL or provider failure never grants active subscription, paid checks or API keys. Repeat checkout reuses the existing customer.
 - CI status unavailable from GitHub connector; live browser and AWS verification pending. No production deployment.
+
+## 2026-11-09 Atlas Stripe configuration safety fix
+- Commits 4674477 and 6d1a54f: app.py validates both server Stripe secret and price before creating a Stripe customer; test_account_registration_entitlement.py asserts missing price causes HTTP 503 with no provider call or tenant billing binding.
+- CI: connector returned no statuses for preceding main SHA. No live Stripe/AWS deployment performed.
