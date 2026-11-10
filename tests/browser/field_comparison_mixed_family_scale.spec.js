@@ -228,7 +228,7 @@ test("authenticated mixed 51-rule FC portfolio renders, saves UI override and ru
     await expect(identityOff).toContainText("Saved output rule action is Off.");
     const finalSaved = await current(request, headers);
     expect(finalSaved.revision).toBe(checkWideOff.revision);
-    expect(finalSaved.output_checks.cross_field).toBe("flag");
+    expect(finalSaved.output_checks.cross_field).toBe("block");
   } finally {
     if (shouldReset) {
       const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
