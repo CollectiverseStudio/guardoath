@@ -51,3 +51,7 @@ Updated 2026-11-09. Greg explicitly authorized replacing the empty coordination 
 ## 2026-11-09 Atlas key management resilience
 - Commits 05162d5 and 69bd290: ignore stale key API responses when customer session changes, reject malformed key-list responses, disable key creation on failures, handle key mutation network errors without exposing old credentials.
 - CI status unavailable; browser/production validation outstanding.
+
+## 2026-11-09 Atlas CI-readiness regression batch
+- Commits 2cea411, c5ecb33, 92d666e: stabilized public-demo browser test with explicit mocked sign-in configuration; added backend regression that programmatic API keys cannot list/create/revoke customer keys, with corrected key generator import.
+- CI: push-triggered Tests workflow exists; GitHub connector commit status empty and workflow-run endpoint only reports pull-request runs, so push CI result remains unverified. Production release still held.
