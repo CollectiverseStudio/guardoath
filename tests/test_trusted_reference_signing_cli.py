@@ -288,3 +288,49 @@ def test_operator_never_silently_resigns_existing_signed_snapshot(tmp_path, sign
     assert KEY not in result.stdout + result.stderr
     assert "SYNTHETIC_VENDOR_ONLY" not in result.stdout + result.stderr
     assert "Traceback" not in result.stderr
+
+
+@pytest.mark.parametrize("failure", ["durability_sync", "open_file_wrapper"])
+def test_operator_does_not_leave_partial_private_attestation_on_io_failure(
+        tmp_path, monkeypatch, capsys, failure):
+    """A failed write/sync cannot leave a misleading signed artifact on disk."""
+    from tools import sign_trusted_reference as signer
+
+    source = tmp_path / "unsigned.json"
+    output = tmp_path / "signed.json"
+    original = json.dumps(draft())
+    source.write_text(original)
+    monkeypatch.setenv(SIGNING_KEY_ENV, KEY)
+
+    def unavailable(*_args, **_kwargs):
+        raise OSError("PRIVATE_SYNTHETIC_STORAGE_ERROR")
+
+    if failure == "durability_sync":
+        monkeypatch.setattr(signer.os, "fsync", unavailable)
+    else:
+        monkeypatch.setattr(signer.os, "fdopen", unavailable)
+
+    with pytest.raises(SystemExit) as error:
+        signer.main(["--tenant", TENANT, "--input", str(source), "--output", str(output)])
+    assert error.value.code == 2
+    captured = capsys.readouterr()
+    assert "Private attestation write failed" in captured.err
+    assert "PRIVATE_SYNTHETIC_STORAGE_ERROR" not in captured.out + captured.err
+    assert "SYNTHETIC_VENDOR_ONLY" not in captured.out + captured.err
+    assert KEY not in captured.out + captured.err
+    assert "Traceback" not in captured.err
+    assert not output.exists()
+    assert source.read_text() == original
+
+
+def test_operator_never_removes_a_preexisting_private_destination_on_write_refusal(tmp_path):
+    """Exclusive creation fails without touching an earlier valid or private file."""
+    source = tmp_path / "unsigned.json"
+    output = tmp_path / "signed.json"
+    source.write_text(json.dumps(draft()))
+    sentinel = "PRIVATE_SYNTHETIC_EXISTING_ATTESTATION"
+    output.write_text(sentinel)
+    result = invoke_cli(source, output)
+    assert result.returncode == 2
+    assert output.read_text() == sentinel
+    assert sentinel not in result.stdout + result.stderr
