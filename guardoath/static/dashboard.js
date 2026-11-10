@@ -302,11 +302,6 @@ function renderTrustedReferenceStatus(tenant, own) {
   for (const rule of rules) {
     const item = document.createElement("li"); item.dataset.trustedReferenceId = rule.rule_id;
     const label = document.createElement("span");
-    const integrity = rule.runtime_integrity === "accepted"
-      ? "accepted (signature, value and expiry only; external truth not verified)"
-      : rule.runtime_integrity === "blocked"
-        ? "blocked (active validation will Block; contact the host operator)"
-        : "not reported (check with the host operator)";
     // Match the persisted tenant actions, not unsaved dropdown values. A bad
     // signature is a hard Block only on stages where both the parent check and
     // this particular host-reference rule are enabled.
@@ -318,6 +313,14 @@ function renderTrustedReferenceStatus(tenant, own) {
       if (action === "off") return title + ": Off (individual rule Off)";
       return title + ": active (check " + parent + "; rule " + (action || "inherits check") + ")";
     });
+    const activeStage = savedStages.some(text => text.includes(": active ("));
+    const integrity = rule.runtime_integrity === "accepted"
+      ? "accepted (signature, value and expiry only; external truth not verified)"
+      : rule.runtime_integrity === "blocked"
+        ? (activeStage
+          ? "blocked (active validation will Block; contact the host operator)"
+          : "blocked (all saved stages Off; enabling one will Block until re-attested)")
+        : "not reported (check with the host operator)";
     label.textContent = rule.rule_id + " · " + rule.kind + " · stages: " + rule.stages.join(", ") +
       " · saved snapshot: " + (rule.snapshot_present ? "present" : "not present") +
       " · runtime integrity: " + integrity + " · saved " + savedStages.join(" · ");
