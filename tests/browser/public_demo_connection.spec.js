@@ -43,3 +43,47 @@ test("public demo refuses a key resolving to a different tenant", async ({page, 
   await expect(page.locator("#keys-panel")).toBeHidden();
   await expect(page.locator("#api-key")).toBeHidden();
 });
+
+test("public demo rejects incomplete application summaries and non-demo tenants, then recovers", async ({page, request}) => {
+  const issued = await request.post("/v1/demo-users/demo4/key", {data: {}});
+  expect(issued.status()).toBe(200);
+  const current = await request.get("/v1/applications/current", {
+    headers: {"X-GuardOath-Key": (await issued.json()).api_key}
+  });
+  expect(current.status()).toBe(200);
+  const original = await current.json();
+  expect(original.tenant.demo).toBe(true);
+
+  await page.goto("/dashboard");
+  await expect(page.locator("#demo-users")).toBeVisible();
+  await page.locator("#demo-user").selectOption("demo4");
+  for (const scenario of ["missing policies", "non-demo account"]) {
+    const invalid = JSON.parse(JSON.stringify(original));
+    if (scenario === "missing policies") delete invalid.policies;
+    else invalid.tenant.demo = false; // Same tenant ID is not sufficient for demo authority.
+    await page.route("**/v1/applications/current", route => route.fulfill({
+      status: 200, contentType: "application/json", body: JSON.stringify(invalid)
+    }));
+    await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+    await expect(page.locator("#connection-status")).toContainText(
+      scenario === "missing policies"
+        ? "The application settings response was invalid."
+        : "The demo key did not match the selected demo user."
+    );
+    await expect(page.locator("#tenant-panel")).toBeHidden();
+    await expect(page.locator("#policy")).toBeDisabled();
+    await expect(page.locator("#run")).toBeDisabled();
+    await expect(page.locator("#run-input")).toBeDisabled();
+    await expect(page.locator("#disconnect")).toBeDisabled();
+    await expect(page.locator("#demo-key-value")).toHaveValue("");
+    await expect(page.locator("#keys-panel")).toBeHidden();
+    await expect(page.locator("#subscription-status")).toBeHidden();
+    await page.unroute("**/v1/applications/current");
+  }
+  await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
+  await expect(page.locator("#policy")).toHaveValue("tenant");
+  await expect(page.locator("#run")).toBeEnabled();
+  await expect(page.locator("#demo-key-value")).not.toHaveValue("");
+  await expect(page.locator("#keys-panel")).toBeHidden();
+});
