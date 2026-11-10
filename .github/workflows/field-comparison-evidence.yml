@@ -85,6 +85,12 @@ jobs:
         shell: bash
         run: |
           python -m pytest -q tests/test_field_comparison_large_tenant_api.py tests/test_field_comparison_mixed_family_scale.py --junitxml=artifacts/field-comparisons/tenant-api-junit.xml
+      - name: Host-signed reference integrity, tenant isolation and signing CLI
+        id: reference
+        continue-on-error: true
+        shell: bash
+        run: |
+          python -m pytest -q tests/test_advanced_trusted_reference.py tests/test_trusted_reference_value_validity.py tests/test_trusted_reference_signing_cli.py tests/test_field_comparison_reference_isolation.py --junitxml=artifacts/field-comparisons/trusted-reference-junit.xml
       - name: Record provenance and per-step gate results
         if: always()
         shell: bash
@@ -92,10 +98,11 @@ jobs:
           PORTFOLIO_RESULT: ${{ steps.portfolio.outcome }}
           SCALE_RESULT: ${{ steps.scale.outcome }}
           TENANT_RESULT: ${{ steps.tenant.outcome }}
+          REFERENCE_RESULT: ${{ steps.reference.outcome }}
         run: |
           mkdir -p artifacts/field-comparisons
           printf '%s\n' "$GITHUB_SHA" > artifacts/field-comparisons/source-commit.txt
-          printf 'portfolio=%s\nscale=%s\ntenant_api=%s\n' "$PORTFOLIO_RESULT" "$SCALE_RESULT" "$TENANT_RESULT" > artifacts/field-comparisons/gate-status.txt
+          printf 'portfolio=%s\nscale=%s\ntenant_api=%s\ntrusted_reference=%s\n' "$PORTFOLIO_RESULT" "$SCALE_RESULT" "$TENANT_RESULT" "$REFERENCE_RESULT" > artifacts/field-comparisons/gate-status.txt
           cat artifacts/field-comparisons/gate-status.txt
       - name: Preserve fresh synthetic reports even when acceptance fails
         if: always()
@@ -112,8 +119,9 @@ jobs:
           PORTFOLIO_RESULT: ${{ steps.portfolio.outcome }}
           SCALE_RESULT: ${{ steps.scale.outcome }}
           TENANT_RESULT: ${{ steps.tenant.outcome }}
+          REFERENCE_RESULT: ${{ steps.reference.outcome }}
         run: |
-          if [ "$PORTFOLIO_RESULT" != "success" ] || [ "$SCALE_RESULT" != "success" ] || [ "$TENANT_RESULT" != "success" ]; then
-            echo "::error::Field Comparison acceptance failed on exact source SHA $GITHUB_SHA (portfolio=$PORTFOLIO_RESULT, scale=$SCALE_RESULT, tenant_api=$TENANT_RESULT). Review synthetic reports/JUnit; do not release."
+          if [ "$PORTFOLIO_RESULT" != "success" ] || [ "$SCALE_RESULT" != "success" ] || [ "$TENANT_RESULT" != "success" ] || [ "$REFERENCE_RESULT" != "success" ]; then
+            echo "::error::Field Comparison acceptance failed on exact source SHA $GITHUB_SHA (portfolio=$PORTFOLIO_RESULT, scale=$SCALE_RESULT, tenant_api=$TENANT_RESULT, trusted_reference=$REFERENCE_RESULT). Review synthetic reports/JUnit; do not release."
             exit 1
           fi
