@@ -72,3 +72,7 @@ Updated 2026-11-09. Greg explicitly authorized replacing the empty coordination 
 - Greg observed existing application API-key field outside sign-in. Confirmed in dashboard.html.
 - Commits 9a5d696, 35db586, 76e33b1: hide customer-key-connect until signedIn(true), preserve public demo selector and demo API key, browser test checks field hidden publicly and visible for signed-in customer.
 - Source committed, CI and production deployment not verified.
+
+## 2026-11-09 Atlas existing customer key connection gate
+- Commits 1c01609, 70e8501: existing application-key connection requires a current signed-in, non-demo customer before switching into API-key-only evaluation; browser test asserts customer key field visible after sign-in. Public demo path remains independent.
+- CI and live deployment remain unverified.
