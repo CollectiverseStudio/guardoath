@@ -644,3 +644,80 @@ def test_registration_requires_explicit_opt_in_and_cannot_accept_a_subscription_
     assert client.post("/v1/register", headers=signed(session),
                        json={"subscription_status": "active"}).status_code == 404
     assert tenants.store.get("acme").subscription_status == "active"
+
+
+def test_google_oauth_code_login_registration_repeat_login_and_second_account_isolation(sessions, cognito):
+    """Real JWT/JWKS/GetUser and HTTP routes, fake external Cognito transport only."""
+    sessions.google_enabled = True
+    sessions.registration_enabled = True
+    first = token(sub="google-account-one")
+    attrs_one = [
+        {"Name": "email", "Value": "first@example.invalid"},
+        {"Name": "email_verified", "Value": "true"},
+        {"Name": "sub", "Value": "google-account-one"},
+    ]
+    cognito.users[first] = attrs_one
+    cognito.codes["google-code-one"] = first
+    tenants = TenantService(MemoryTenantStore(), CHECKERS, SECRET)
+    client = TestClient(create_app(engine=demo_engine(), credentials={},
+                                   tenants=tenants, sessions=sessions))
+
+    config = client.get("/v1/sign-in")
+    assert config.status_code == 200
+    assert config.json()["google_provider"] == "Google"
+    assert config.json()["registration_enabled"] is True
+    assert config.json()["redirect_uri"] == REDIRECT
+
+    exchanged = client.post("/v1/sign-in/token", json={
+        "code": "google-code-one", "code_verifier": VERIFIER})
+    assert exchanged.status_code == 200
+    assert exchanged.json()["access_token"] == first
+    before = client.get("/v1/account/status", headers=signed(first))
+    assert before.status_code == 200
+    assert before.json()["registered"] is False
+    assert before.json()["can_validate"] is False
+
+    created = client.post("/v1/register", headers=signed(first), json={})
+    assert created.status_code == 201
+    owner = created.json()["tenant_id"]
+    assert owner.startswith("usr-")
+    assert created.json()["subscription_status"] == "inactive"
+    assert tenants.store.get(owner).key_hashes == ()
+    assert tenants.store.get(owner).monthly_allowance == 0
+    assert client.post("/v1/register", headers=signed(first), json={}).status_code == 409
+    assert client.get("/v1/account/status", headers=signed(first)).json()["registered"] is True
+    assert client.get("/v1/applications/current", headers=signed(first)).status_code == 200
+    assert client.post("/v1/tenants/current/keys", headers=signed(first), json={}).status_code == 402
+    assert client.post("/v1/checks/input", headers=signed(first), json={
+        "application_id": owner, "content": "safe synthetic question"}).status_code == 402
+
+    # A later verified access token from the same Cognito subject reuses the
+    # same persisted tenant, with no billing or quota upgrade.
+    returned = token(sub="google-account-one", exp=NOW + 3500)
+    cognito.users[returned] = attrs_one
+    cognito.codes["google-code-again"] = returned
+    again = client.post("/v1/sign-in/token", json={
+        "code": "google-code-again", "code_verifier": VERIFIER})
+    assert again.status_code == 200
+    identity = client.get("/v1/account/status", headers=signed(returned)).json()
+    assert identity["registered"] is True
+    assert identity["tenant_id"] == owner
+    assert identity["subscription_status"] == "inactive"
+    assert tenants.store.tenant_ids() == (owner,)
+
+    # Another real verified Cognito subject cannot assume the first tenant.
+    second = token(sub="google-account-two")
+    cognito.users[second] = [
+        {"Name": "email", "Value": "second@example.invalid"},
+        {"Name": "email_verified", "Value": "true"},
+        {"Name": "sub", "Value": "google-account-two"},
+    ]
+    other = client.get("/v1/account/status", headers=signed(second))
+    assert other.status_code == 200 and other.json()["registered"] is False
+    assert client.get("/v1/applications/current", headers=signed(second)).status_code == 401
+    created_other = client.post("/v1/register", headers=signed(second), json={})
+    assert created_other.status_code == 201
+    assert created_other.json()["tenant_id"] != owner
+    assert created_other.json()["subscription_status"] == "inactive"
+    assert len(tenants.store.tenant_ids()) == 2
+    assert tenants.store.get(owner).subscription_status == "inactive"
