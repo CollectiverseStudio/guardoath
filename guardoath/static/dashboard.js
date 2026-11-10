@@ -736,7 +736,11 @@ function signedIn(on) {
   $("sign-in").textContent = "Sign in to GuardOath";
   $("register-account").hidden = on || !signIn?.registration_enabled;
   $("sign-out").hidden = !on;
-  $("keys-panel").hidden = !on; if (on) loadKeys();
+  // Never expose customer key management in the public demo or API-key-only view.
+  const customerSession = on && Boolean(sessionStorage.getItem("guardoath-session")) &&
+    application?.tenant?.demo === false;
+  $("keys-panel").hidden = !customerSession;
+  if (customerSession) loadKeys();
 }
 async function loadSignIn() {
   let response;
