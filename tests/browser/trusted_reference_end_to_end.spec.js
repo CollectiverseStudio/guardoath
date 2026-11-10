@@ -160,6 +160,9 @@ test("real signed FC-047 reference moves accepted to blocked after tampering, wi
     const outRow = page.locator(
       'tr.rule-row[data-rule="business.real_browser_permit"] [data-stage="output"]');
     await outRow.selectOption("off");
+    // Pending UI state must not impersonate the persisted tenant record.
+    await expect(page.locator("#trusted-reference-status"))
+      .toContainText("Output: active (check flag; rule inherits check)");
     await page.getByRole("button", {name: "Save checks", exact: true}).click();
     await expect(page.locator("#tenant-message")).toContainText("Saved.");
     const disabledRule = await summary(request, headers);
@@ -177,6 +180,8 @@ test("real signed FC-047 reference moves accepted to blocked after tampering, wi
     expect((await evaluate(request, headers, "input", 40)).effective_action).toBe("block");
 
     await page.locator("#tenant-check-input-cross_field").selectOption("");
+    await expect(page.locator("#trusted-reference-status"))
+      .toContainText("Input: active (check block; rule inherits check)");
     await page.getByRole("button", {name: "Save checks", exact: true}).click();
     await expect(page.locator("#tenant-message")).toContainText("Saved.");
     const disabledParent = await summary(request, headers);
@@ -188,6 +193,8 @@ test("real signed FC-047 reference moves accepted to blocked after tampering, wi
       .toContainText("Input: Off (Field comparisons check Off)");
     await expect(page.locator("#trusted-reference-status"))
       .toContainText("Output: Off (individual rule Off)");
+    await expect(page.locator("#trusted-reference-status"))
+      .toContainText("blocked (all saved stages Off; enabling one will Block until re-attested)");
     for (const stage of ["input", "output"]) {
       const disabled = await evaluate(request, headers, stage, 40);
       expect(disabled.evaluation_status).toBe("complete");
