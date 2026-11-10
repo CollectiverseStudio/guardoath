@@ -37,11 +37,11 @@ def run_cli(tmp_path, content, *, output=None):
     return invoke_cli(source, destination), source, destination
 
 
-def invoke_cli(source, destination):
+def invoke_cli(source, destination, *, tenant=TENANT):
     env = dict(os.environ, PYTHONPATH=str(ROOT))
     env[SIGNING_KEY_ENV] = KEY
     result = subprocess.run(
-        [sys.executable, "-m", "tools.sign_trusted_reference", "--tenant", TENANT,
+        [sys.executable, "-m", "tools.sign_trusted_reference", "--tenant", tenant,
          "--input", str(source), "--output", str(destination)],
         cwd=ROOT, env=env, capture_output=True, text=True, timeout=10,
     )
@@ -149,3 +149,63 @@ def test_missing_private_input_path_is_not_echoed(tmp_path):
     assert MARKER not in result.stdout + result.stderr
     assert "Traceback" not in result.stderr
     assert not output.exists()
+
+
+@pytest.mark.parametrize("case", [
+    "expired",
+    "not_yet_valid",
+    "reversed_window",
+    "beyond_maximum_lifetime",
+])
+def test_operator_refuses_unusable_reference_window_without_creating_artifact(tmp_path, case):
+    now = datetime.now(timezone.utc)
+    item = draft()
+    if case == "expired":
+        verified, expires = now - timedelta(hours=2), now - timedelta(minutes=1)
+    elif case == "not_yet_valid":
+        verified, expires = now + timedelta(hours=1), now + timedelta(hours=2)
+    elif case == "reversed_window":
+        verified, expires = now - timedelta(minutes=1), now - timedelta(hours=2)
+    else:
+        verified, expires = now - timedelta(minutes=1), now + timedelta(days=367)
+    item["verified_at"] = verified.isoformat()
+    item["expires_at"] = expires.isoformat()
+    result, source, destination = run_cli(tmp_path, json.dumps(item))
+    assert result.returncode == 2
+    assert "no attestation created" in result.stderr
+    assert "Traceback" not in result.stderr
+    assert KEY not in result.stdout + result.stderr
+    assert "SYNTHETIC_VENDOR_ONLY" not in result.stdout + result.stderr
+    assert not destination.exists()
+    assert source.exists()
+
+
+@pytest.mark.parametrize("tenant", [
+    "../other-tenant",
+    "UPPERCASE",
+    "a",
+    "a" * 41,
+    "valid-id;echo-private",
+])
+def test_operator_refuses_invalid_tenant_id_without_writing_or_echoing(tmp_path, tenant):
+    source = tmp_path / "unsigned.json"
+    destination = tmp_path / "signed.json"
+    source.write_text(json.dumps(draft()))
+    result = invoke_cli(source, destination, tenant=tenant)
+    assert result.returncode == 2
+    assert not destination.exists()
+    assert tenant not in result.stdout + result.stderr
+    assert KEY not in result.stdout + result.stderr
+    assert "Traceback" not in result.stderr
+
+
+def test_operator_writes_current_valid_reference_and_rejects_duplicate_destination(tmp_path):
+    result, _, destination = run_cli(tmp_path, json.dumps(draft()))
+    assert result.returncode == 0
+    original = destination.read_bytes()
+    assert reference_is_trusted(
+        AdvancedTrustedReferenceRule.model_validate_json(original), TENANT, key=KEY)
+    result2, _, destination2 = run_cli(tmp_path, json.dumps(draft()))
+    assert destination2 == destination
+    assert result2.returncode == 2
+    assert destination.read_bytes() == original
