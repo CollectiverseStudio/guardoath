@@ -986,9 +986,17 @@ $("sign-out").addEventListener("click", () => {
   const url = new URL(signIn.logout_url); url.searchParams.set("client_id", signIn.client_id); url.searchParams.set("logout_uri", signIn.redirect_uri);
   location.assign(url.toString());
 });
+// A response body can resolve after the account or tenant has switched.
+function currentCustomerKeyOwner(token, tenantId) {
+  return Boolean(token && tenantId) &&
+    sessionStorage.getItem("guardoath-session") === token &&
+    application?.tenant?.demo === false &&
+    application.tenant.tenant_id === tenantId;
+}
 async function loadKeys() {
   const token = sessionStorage.getItem("guardoath-session");
-  if (!token || application?.tenant?.demo !== false) {
+  const tenantId = application?.tenant?.tenant_id;
+  if (!currentCustomerKeyOwner(token, tenantId)) {
     $("keys-panel").hidden = true;
     return;
   }
@@ -998,12 +1006,12 @@ async function loadKeys() {
       cache: "no-store", headers: await requestHeaders(SESSION + token)
     });
   } catch (_) {
+    if (!currentCustomerKeyOwner(token, tenantId)) return;
     $("key-create").disabled = true;
     $("key-message").textContent = "Cannot load API keys. Please retry after reconnecting.";
     return;
   }
-  if (sessionStorage.getItem("guardoath-session") !== token ||
-      application?.tenant?.demo !== false) return;
+  if (!currentCustomerKeyOwner(token, tenantId)) return;
   if (!response.ok) {
     $("key-create").disabled = true;
     $("key-message").textContent = "API key access could not be verified (HTTP " + response.status + ").";
@@ -1011,14 +1019,15 @@ async function loadKeys() {
     return;
   }
   // Ignore a response belonging to an earlier sign-in or tenant.
-  if (sessionStorage.getItem("guardoath-session") !== token ||
-      application?.tenant?.demo !== false) return;
+  if (!currentCustomerKeyOwner(token, tenantId)) return;
   let data;
   try { data = await response.json(); } catch (_) {
+    if (!currentCustomerKeyOwner(token, tenantId)) return;
     $("key-create").disabled = true;
     $("key-message").textContent = "Invalid API key response. Please retry.";
     return;
   }
+  if (!currentCustomerKeyOwner(token, tenantId)) return;
   if (!data || !Array.isArray(data.keys) || !Number.isInteger(data.max_keys)) {
     $("key-create").disabled = true;
     $("key-message").textContent = "Invalid API key response. Please retry.";
@@ -1040,7 +1049,8 @@ async function loadKeys() {
 }
 async function keyAction(path, body, done) {
   const token = sessionStorage.getItem("guardoath-session");
-  if (!token || application?.tenant?.demo !== false) {
+  const tenantId = application?.tenant?.tenant_id;
+  if (!currentCustomerKeyOwner(token, tenantId)) {
     $("keys-panel").hidden = true;
     return;
   }
@@ -1051,13 +1061,16 @@ async function keyAction(path, body, done) {
     response = await send(path, {method: "POST", cache: "no-store",
       headers: await requestHeaders(SESSION + token, text), body: text});
   } catch (_) {
+    if (!currentCustomerKeyOwner(token, tenantId)) return;
     $("key-message").textContent = "API key request failed. Please retry.";
     await loadKeys();
     return;
   }
-  if (sessionStorage.getItem("guardoath-session") !== token ||
-      application?.tenant?.demo !== false) return;
+  if (!currentCustomerKeyOwner(token, tenantId)) return;
   const data = await response.json().catch(() => ({}));
+  // Never disclose an old owner's one-time secret when a delayed JSON body
+  // completes after an account or tenant switch.
+  if (!currentCustomerKeyOwner(token, tenantId)) return;
   $("key-new").value = response.ok && typeof data.api_key === "string" ? data.api_key : "";
   $("key-message").textContent = response.ok ? done : (typeof data.detail === "string" ? data.detail : "The change was not saved (HTTP " + response.status + ").");
   await loadKeys();
