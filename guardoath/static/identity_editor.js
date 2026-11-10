@@ -162,6 +162,12 @@
             item.append(el("p", "Some synthetic examples are unavailable under the strict JSON admission or selected rule contract. The saved rule still runs; use shallower JSON pointers to restore examples when permitted. Private reference values are never shown."));
           }
           for (const stage of rule.stages) {
+            // Explicit saved Off is authoritative for this stage. An example
+            // can still be tried against the complete tenant policy, but it
+            // must not be presented as proof this disabled rule was evaluated.
+            if (tenant[stage + "_rule_actions"]?.["business." + rule.rule_id] === "off") {
+              item.append(el("p", "Saved " + stage + " rule action is Off. Examples remain available for full-policy testing, but this rule will not report a finding on " + stage + " until you enable and Save checks."));
+            }
             for (const [label, sample] of [["violating", example.example],
                                            ["benign", example.look_alike]]) {
               if (typeof sample !== "string") continue;
