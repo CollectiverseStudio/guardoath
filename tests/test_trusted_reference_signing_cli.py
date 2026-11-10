@@ -275,3 +275,16 @@ def test_cli_attestation_runs_through_authenticated_tenant_api_and_engine(tmp_pa
                     assert "business.signed_vendor" in {f["rule_id"] for f in body["findings"]}
                 assert signed.host_signature not in response.text
                 assert KEY not in response.text
+
+
+@pytest.mark.parametrize("signature", ["f" * 64, "1" * 64])
+def test_operator_never_silently_resigns_existing_signed_snapshot(tmp_path, signature):
+    item = draft()
+    item["host_signature"] = signature
+    result, source, output = run_cli(tmp_path, json.dumps(item))
+    assert result.returncode == 2
+    assert source.exists() and not output.exists()
+    assert signature not in result.stdout + result.stderr
+    assert KEY not in result.stdout + result.stderr
+    assert "SYNTHETIC_VENDOR_ONLY" not in result.stdout + result.stderr
+    assert "Traceback" not in result.stderr
