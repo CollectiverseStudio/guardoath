@@ -177,3 +177,55 @@ def test_disabled_registered_identity_cannot_register_again_or_appear_unregister
     assert client.get("/v1/applications/current", headers=headers).status_code == 401
     assert store.get("usr-test-account").status == "disabled"
     assert store.get("usr-test-account").usage == {}
+
+
+def test_stripe_checkout_provisions_customer_without_granting_access(monkeypatch):
+    """A valid Stripe checkout URL is not payment confirmation."""
+    from guardoath import stripe_checkout, stripe_customer
+    calls = []
+    def customer(**kwargs):
+        calls.append(("customer", kwargs["tenant_id"]))
+        return "cus_verified"
+    def checkout(**kwargs):
+        calls.append(("checkout", kwargs["customer_id"], kwargs["tenant_id"]))
+        return "https://checkout.stripe.com/c/pay/cs_test_safe"
+    monkeypatch.setattr(stripe_customer, "create_customer", customer)
+    monkeypatch.setattr(stripe_checkout, "create_checkout_session", checkout)
+    monkeypatch.setenv("GUARDOATH_STRIPE_SECRET_KEY", "sk_test_" + "a" * 32)
+    monkeypatch.setenv("GUARDOATH_STRIPE_PRICE_ID", "price_verified")
+    client, store = make_client()
+    headers = {SESSION_HEADER: "verified-test-token"}
+    assert client.post("/v1/register", headers=headers).status_code == 201
+    response = client.post("/v1/billing/checkout", headers=headers, json={})
+    assert response.status_code == 200, response.text
+    assert response.json()["checkout_url"].startswith("https://checkout.stripe.com/")
+    assert calls == [("customer", "usr-test-account"),
+                     ("checkout", "cus_verified", "usr-test-account")]
+    tenant = store.get("usr-test-account")
+    assert tenant.payer_id == "cus_verified"
+    assert tenant.subscription_status == "inactive"
+    assert tenant.key_hashes == () and tenant.usage == {}
+    assert client.get("/v1/account/status", headers=headers).json()["can_validate"] is False
+    assert client.post("/v1/tenants/current/keys", headers=headers, json={}).status_code == 402
+    # A second checkout reuses the authoritative Stripe customer binding.
+    assert client.post("/v1/billing/checkout", headers=headers, json={}).status_code == 200
+    assert [call[0] for call in calls].count("customer") == 1
+
+
+def test_checkout_provider_failure_never_activates_subscription(monkeypatch):
+    from guardoath import stripe_checkout, stripe_customer
+    monkeypatch.setattr(stripe_customer, "create_customer", lambda **kwargs: "cus_verified")
+    def fail(**kwargs):
+        raise stripe_checkout.StripeCheckoutError("Provider unavailable")
+    monkeypatch.setattr(stripe_checkout, "create_checkout_session", fail)
+    monkeypatch.setenv("GUARDOATH_STRIPE_SECRET_KEY", "sk_test_" + "a" * 32)
+    monkeypatch.setenv("GUARDOATH_STRIPE_PRICE_ID", "price_verified")
+    client, store = make_client()
+    headers = {SESSION_HEADER: "verified-test-token"}
+    assert client.post("/v1/register", headers=headers).status_code == 201
+    response = client.post("/v1/billing/checkout", headers=headers, json={})
+    assert response.status_code == 503
+    tenant = store.get("usr-test-account")
+    assert tenant.subscription_status == "inactive"
+    assert tenant.key_hashes == () and tenant.usage == {}
+    assert client.post("/v1/tenants/current/keys", headers=headers, json={}).status_code == 402
