@@ -736,6 +736,14 @@ function signedIn(on) {
   $("sign-in").textContent = "Sign in to GuardOath";
   $("register-account").hidden = on || !signIn?.registration_enabled;
   $("sign-out").hidden = !on;
+  // A newly created secret is shown only during its authenticated session.
+  // Clear it immediately on sign-out, switching to a demo key, or expiry.
+  if (!on) {
+    $("key-new").value = "";
+    $("key-list").replaceChildren();
+    $("key-message").textContent = "";
+    $("key-create").disabled = true;
+  }
   // Never expose customer key management in the public demo or API-key-only view.
   const customerSession = on && Boolean(sessionStorage.getItem("guardoath-session")) &&
     application?.tenant?.demo === false;
