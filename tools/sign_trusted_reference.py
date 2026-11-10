@@ -79,6 +79,7 @@ def main(argv=None):
     except (OSError, ValueError):
         parser.error("Cannot create private attestation output; require a new writable destination")
     temporary = Path(temporary_name)
+    published = False
     try:
         try:
             with os.fdopen(fd, "wb") as handle:
@@ -96,8 +97,33 @@ def main(argv=None):
         # passed fsync. Hard-link publication is same-filesystem and exclusive.
         # No signed bytes are ever streamed directly through the public name.
         os.link(temporary, args.output)
+        published = True
+        # File fsync makes the bytes durable; a hard link alone does not
+        # guarantee that the new destination directory entry survives a
+        # sudden power loss. On POSIX, sync the parent directory before
+        # reporting an approved attestation. Windows retains the existing
+        # atomic-publication guarantee but cannot use POSIX directory fsync.
+        if os.name != "nt":
+            directory_fd = os.open(
+                args.output.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
     except BaseException:
-        parser.error("Private attestation write failed; no valid artifact created")
+        if published:
+            # A failed directory sync means persistence was NOT established.
+            # Revoke only our own completed hard link, never another process's
+            # file that may have replaced this name. A severe storage failure
+            # can also prevent cleanup: operators must inspect the directory.
+            try:
+                expected = os.stat(temporary, follow_symlinks=False)
+                current = os.stat(args.output, follow_symlinks=False)
+                if (expected.st_dev, expected.st_ino) == (current.st_dev, current.st_ino):
+                    args.output.unlink()
+            except OSError:
+                pass
+        parser.error("Private attestation write failed; no confirmed durable artifact")
     finally:
         try:
             temporary.unlink()

@@ -363,7 +363,7 @@ def test_host_attestation_publishes_only_after_private_temp_is_fully_synced(
     observed = []
 
     def check_before_publish(fd):
-        assert not destination.exists()
+        present = destination.exists()
         temporaries = list(tmp_path.glob(".signed.json.*.tmp"))
         assert len(temporaries) == 1
         temp = temporaries[0]
@@ -371,19 +371,71 @@ def test_host_attestation_publishes_only_after_private_temp_is_fully_synced(
         assert reference_is_trusted(unsigned_rule, TENANT, key=KEY)
         if os.name != "nt":
             assert temp.stat().st_mode & 0o777 == 0o600
-        observed.append(True)
+        # First fsync belongs to the private file, while a second POSIX
+        # fsync must only happen once the full signed file is published.
+        assert present == bool(observed)
+        observed.append(present)
         return actual_sync(fd)
 
     monkeypatch.setattr(signer.os, "fsync", check_before_publish)
     assert signer.main([
         "--tenant", TENANT, "--input", str(unsigned), "--output", str(destination),
     ]) == 0
-    assert observed == [True]
+    assert observed == ([False] if os.name == "nt" else [False, True])
     assert destination.exists()
     assert not list(tmp_path.glob(".signed.json.*.tmp"))
     assert reference_is_trusted(
         AdvancedTrustedReferenceRule.model_validate_json(destination.read_bytes()),
         TENANT, key=KEY)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX directory fsync is unavailable on Windows")
+@pytest.mark.parametrize("competing_replacement", [False, True])
+def test_directory_sync_failure_revokes_only_our_attestation(
+        tmp_path, monkeypatch, capsys, competing_replacement):
+    """Never report success without durable directory metadata on POSIX."""
+    from tools import sign_trusted_reference as signer
+
+    source = tmp_path / "unsigned.json"
+    destination = tmp_path / "signed.json"
+    original = json.dumps(draft())
+    source.write_text(original)
+    monkeypatch.setenv(SIGNING_KEY_ENV, KEY)
+    real_sync = signer.os.fsync
+    calls = []
+    competitor = "PRIVATE_SYNTHETIC_NEW_OUTPUT"
+
+    def fail_after_publication(fd):
+        calls.append(fd)
+        if len(calls) == 2:
+            assert destination.exists()
+            if competing_replacement:
+                # A different operator's replacement must never be unlinked
+                # by the failure handler for this signer.
+                destination.unlink()
+                destination.write_text(competitor)
+            raise OSError("PRIVATE_SYNTHETIC_DIRECTORY_SYNC_ERROR")
+        return real_sync(fd)
+
+    monkeypatch.setattr(signer.os, "fsync", fail_after_publication)
+    with pytest.raises(SystemExit) as error:
+        signer.main([
+            "--tenant", TENANT, "--input", str(source), "--output", str(destination),
+        ])
+    assert error.value.code == 2
+    assert len(calls) == 2
+    if competing_replacement:
+        assert destination.read_text() == competitor
+    else:
+        assert not destination.exists()
+    assert not list(tmp_path.glob(".signed.json.*.tmp"))
+    assert source.read_text() == original
+    transcript = capsys.readouterr().err
+    assert "no confirmed durable artifact" in transcript
+    assert "PRIVATE_SYNTHETIC_DIRECTORY_SYNC_ERROR" not in transcript
+    assert competitor not in transcript
+    assert KEY not in transcript
+    assert "Traceback" not in transcript
 
 
 def test_atomic_attestation_publish_never_overwrites_racing_destination(
