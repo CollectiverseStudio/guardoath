@@ -278,7 +278,7 @@ def test_malformed_stripe_configuration_never_creates_customer(monkeypatch):
 def test_application_api_key_cannot_manage_customer_keys():
     """Programmatic API credentials are never account-management sessions."""
     from guardoath.tenant_record import TenantRecord
-    from guardoath.tenant_store import new_key
+    from guardoath.tenant_record import new_key
     client, store = make_client()
     token, digest = new_key("usr-test-account")
     store.create(TenantRecord(
