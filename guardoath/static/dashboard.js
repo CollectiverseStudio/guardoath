@@ -307,9 +307,20 @@ function renderTrustedReferenceStatus(tenant, own) {
       : rule.runtime_integrity === "blocked"
         ? "blocked (active validation will Block; contact the host operator)"
         : "not reported (check with the host operator)";
+    // Match the persisted tenant actions, not unsaved dropdown values. A bad
+    // signature is a hard Block only on stages where both the parent check and
+    // this particular host-reference rule are enabled.
+    const savedStages = rule.stages.map(stage => {
+      const parent = tenant[stage + "_checks"]?.cross_field;
+      const action = tenant[stage + "_rule_actions"]?.["business." + rule.rule_id];
+      const title = stage === "input" ? "Input" : "Output";
+      if (!parent || parent === "off") return title + ": Off (Field comparisons check Off)";
+      if (action === "off") return title + ": Off (individual rule Off)";
+      return title + ": active (check " + parent + "; rule " + (action || "inherits check") + ")";
+    });
     label.textContent = rule.rule_id + " · " + rule.kind + " · stages: " + rule.stages.join(", ") +
       " · saved snapshot: " + (rule.snapshot_present ? "present" : "not present") +
-      " · runtime integrity: " + integrity;
+      " · runtime integrity: " + integrity + " · saved " + savedStages.join(" · ");
     item.append(label);
     for (const stage of ["input", "output"]) {
       if (!rule.stages.includes(stage)) continue;
