@@ -34,6 +34,15 @@ on:
       - "tests/test_field_comparison_reference_isolation.py"
       - "tests/browser/identity_editor.spec.js"
       - "guardoath/static/conversion_editor.js"
+      # Signed FC-044/045/047/049 are part of the same cross_field Engine,
+      # and customer host-reference status/action changes must not avoid scale gates.
+      - "guardoath/trusted_reference.py"
+      - "tools/sign_trusted_reference.py"
+      - "tests/test_advanced_trusted_reference.py"
+      - "tests/test_trusted_reference_value_validity.py"
+      - "tests/test_trusted_reference_signing_cli.py"
+      - "tests/browser/trusted_reference_end_to_end.spec.js"
+      - "tests/browser/trusted_reference_status.spec.js"
       - "tests/browser/field_comparison_unsaved_examples.spec.js"
       - "tests/test_field_comparison_large_tenant_api.py"
       - "tests/test_field_comparison_mixed_family_scale.py"
