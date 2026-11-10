@@ -55,3 +55,7 @@ Updated 2026-11-09. Greg explicitly authorized replacing the empty coordination 
 ## 2026-11-09 Atlas CI-readiness regression batch
 - Commits 2cea411, c5ecb33, 92d666e: stabilized public-demo browser test with explicit mocked sign-in configuration; added backend regression that programmatic API keys cannot list/create/revoke customer keys, with corrected key generator import.
 - CI: push-triggered Tests workflow exists; GitHub connector commit status empty and workflow-run endpoint only reports pull-request runs, so push CI result remains unverified. Production release still held.
+
+## 2026-11-09 Atlas paid owner key lifecycle regression
+- Commit 9efedc3: backend regression covers paid signed-in owner listing, one-time key creation, two-key limit, revocation, and denial of account management using a newly issued application API key.
+- Tests committed but not executed locally (GitHub checkout network unavailable); CI status not confirmed. Production remains held.
