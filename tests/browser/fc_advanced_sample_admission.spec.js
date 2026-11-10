@@ -74,7 +74,11 @@ test("deep valid tenant rules persist but unusable arithmetic and identity Try s
     for (const selector of ['[data-arithmetic-id="sample_arith"]',
                             '[data-identity-id="sample_identity"]']) {
       await expect(page.locator(selector)).toContainText("strict JSON admission");
-      await expect(page.locator(selector)).toContainText("saved rule still runs");
+      // The saved rule exists, but its effective execution still depends on
+      // the parent stage check and individual rule action. A missing example
+      // must never claim an Off rule unconditionally executes.
+      await expect(page.locator(selector)).toContainText("saved definition remains subject to stage check and rule actions");
+      await expect(page.locator(selector)).toContainText("input, output");
       await expect(page.locator(selector)).toContainText("shallower JSON pointers");
     }
     for (const family of ["arithmetic", "identity"]) {
