@@ -379,10 +379,19 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
     await expect(page.locator('#comparison-drafts li[data-comparison-id="mixed_ui_preview_new"]'))
       .toBeVisible();
     expect((await current(request, headers)).revision).toBe(after.revision);
-    await page.locator("#comparison-bulk-json").fill(JSON.stringify(savedOrdinaryDraft));
+    // A JSON import that only changes object property order and stage order
+    // is semantically identical. It must not request an unnecessary tenant
+    // revision or present a false "unsaved" warning.
+    const equivalentDraft = savedOrdinaryDraft.map(rule => ({
+      stages: [...rule.stages].reverse(), value_type: rule.value_type,
+      right: rule.right, operator: rule.operator, left: rule.left,
+      rule_id: rule.rule_id,
+    }));
+    await page.locator("#comparison-bulk-json").fill(JSON.stringify(equivalentDraft));
     await page.locator("#comparison-bulk-confirm").check();
     await page.locator("#comparison-bulk-import").click();
     await expect(page.locator("#comparison-draft-summary")).toContainText("No pending changes.");
+    expect(await page.evaluate(() => comparisonEditor.delta())).toBeNull();
     await expect(page.locator('#comparison-drafts li[data-comparison-id="mixed_ui_000"]'))
       .toBeVisible();
     expect((await current(request, headers)).revision).toBe(after.revision);
