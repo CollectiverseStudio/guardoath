@@ -94,6 +94,12 @@ test("advanced comparison no-op edits preserve the authenticated tenant revision
     expect(saved.advanced_arithmetic).toHaveLength(1);
     expect(saved.advanced_identity).toHaveLength(1);
     expect(saved.advanced_conversion_time).toHaveLength(1);
+    // The real API returns optional conversion fields as explicit nulls.
+    // Reopening a rule and saving the same form values must not turn those
+    // server defaults into a revision-changing pending modification.
+    expect(saved.advanced_conversion_time[0].return_event_pointer).toBeNull();
+    expect(saved.advanced_conversion_time[0].source_currency).toBeNull();
+    expect(saved.advanced_conversion_time[0].rate_asof).toBeNull();
     // Every advanced family displays the full saved editable portfolio, not
     // a second rule engine or a count truncated by a customer search filter.
     for (const [family, label] of [
@@ -143,6 +149,14 @@ test("advanced comparison no-op edits preserve the authenticated tenant revision
     await expect(page.locator("#identity-draft-summary"))
       .toContainText("Unsaved changes — 0 added, 0 updated, 1 removed.");
     await expect(page.locator("#conversion-draft-summary")).toContainText("No pending changes.");
+    // A real conversion JSON pointer modification is still material;
+    // the null-default normalization must not hide a customer edit.
+    await page.getByRole("button", {name: "Edit conversion mixed_ui_003"}).click();
+    await page.locator("#conversion-field-max_kg").fill("/r003/revised_max_kg");
+    await page.locator("#conversion-apply").click();
+    await expect(page.locator("#conversion-draft-summary"))
+      .toContainText("Unsaved changes — 0 added, 1 updated, 0 removed.");
+    expect(await page.evaluate(() => window.conversionEditor.delta())).not.toBeNull();
     expect((await current(request, headers)).revision).toBe(saved.revision);
   } finally {
     if (resetRequired) {
