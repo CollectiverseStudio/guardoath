@@ -97,6 +97,68 @@ test("malformed checker result envelopes cannot unlock output after a real input
   await expect(page.locator("#run-output")).toBeEnabled();
 });
 
+test("a wrong-stage Input receipt cannot trigger the AI output stage", async ({page}) => {
+  await connect(page);
+  let outputCalls = 0;
+  await page.route("**/v1/checks/output", route => {outputCalls++; return route.continue();});
+  await page.route("**/v1/checks/input", async route => {
+    // Keep the real authenticated backend check and corrupt only its HTTP
+    // response binding, simulating a misrouted/replayed proxy receipt.
+    const response = await route.fetch();
+    expect(response.status()).toBe(200);
+    const checked = await response.json();
+    expect(checked.stage).toBe("input");
+    await route.fulfill({response, json: {...checked, stage: "output"}});
+  });
+  await run(page);
+  await expect(page.locator("#result-status")).toHaveText("Check failed");
+  await expect(page.locator("#run-error")).toContainText("Input validation receipt was invalid");
+  await expect(page.locator("#run-output")).toBeDisabled();
+  await expect(page.locator("#answer")).toBeHidden();
+  expect(outputCalls).toBe(0);
+});
+
+test("a wrong-tenant Output receipt cannot release an answer", async ({page}) => {
+  await connect(page);
+  await page.route("**/v1/checks/output", async route => {
+    const response = await route.fetch();
+    expect(response.status()).toBe(200);
+    const checked = await response.json();
+    expect(checked.stage).toBe("output");
+    await route.fulfill({response, json: {...checked, application_id: "different-tenant"}});
+  });
+  await run(page);
+  await expect(page.locator("#input-gate")).toContainText("Input checks passed");
+  await expect(page.locator("#result-status")).toHaveText("Check failed");
+  await expect(page.locator("#run-error")).toContainText("Output validation receipt was invalid");
+  await expect(page.locator("#answer")).toBeHidden();
+  await expect(page.locator("#run-output")).toBeEnabled();
+});
+
+test("real checker receipts reject corrupted policy, timing and findings before rendering", async ({page}) => {
+  await connect(page);
+  await run(page);
+  const input = await page.evaluate(() => JSON.parse(JSON.stringify(inputResult)));
+  expect(input.evaluation_status).toBe("complete");
+  expect(await page.evaluate(r => receiptMatchesRequest(r, "input", r.application_id, r.policy_version), input))
+    .toBe(true);
+  const first = input.checker_results[0];
+  for (const bad of [
+    {...input, application_id: "different-tenant"},
+    {...input, policy_version: "different-policy"},
+    {...input, stage: "output"},
+    {...input, total_latency_ms: "fast"},
+    {...input, findings: null},
+    {...input, checker_results: [{...first, findings: null}]},
+    {...input, groups: [{group_id: "bad", name: "bad", checker_ids: null}]},
+    {...input, redaction: {status: "ready", content: null, validation_results: []}},
+  ]) {
+    expect(await page.evaluate(({bad, original}) =>
+      receiptMatchesRequest(bad, "input", original.application_id, original.policy_version),
+    {bad, original: input})).toBe(false);
+  }
+});
+
 test("output email finding holds the answer", async ({ page }) => {
   await connect(page); await pickSample(page,"output","email"); await run(page);
   await expect(page.locator("#output-results")).toContainText("Potential email address");
