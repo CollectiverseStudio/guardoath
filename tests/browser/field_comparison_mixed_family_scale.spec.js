@@ -320,6 +320,16 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
     await page.locator("#comparison-filter").fill("");
     await page.locator("#comparison-filter-stage").selectOption("all");
     await expect(page.locator('#comparison-drafts li[data-comparison-id]')).toHaveCount(125);
+    // The revisioned Save path must retain existing ordinary actions and
+    // unrelated advanced-family actions when a 500-rule draft is unchanged.
+    const stageActions = await page.evaluate(() => comparisonEditor.actions("output", {
+      "business.mixed_ui_000": "off", "business.mixed_ui_004": "flag",
+      "business.mixed_ui_001": "block", "non_business_rule": "flag",
+    }));
+    expect(stageActions).toEqual({
+      "business.mixed_ui_000": "off", "business.mixed_ui_004": "flag",
+      "business.mixed_ui_001": "block", "non_business_rule": "flag",
+    });
     // At a real 500-rule scale, all THREE advanced editors must also offer
     // customer-visible draft-only ID/pointer/stage filtering. Neither a filter
     // nor a no-match search can shrink the tenant's authoritative portfolio.
