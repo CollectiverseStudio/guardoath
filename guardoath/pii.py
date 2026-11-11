@@ -192,6 +192,20 @@ def split_lookaheads(expression, flags, regex):
         return None
 
 
+def _last_lookahead_start(pattern, text, *, timeout=None):
+    """Return the last overlapping lookahead start using constant extra space.
+
+    A split lookahead needs only the rightmost matching start to decide which
+    core matches remain eligible. Collecting every match in a list may allocate
+    memory proportional to a large repeated text under the shipped PII budget.
+    Iteration preserves the same regex ordering, flags, timeout, and result.
+    """
+    rightmost = -1
+    for match in pattern.finditer(text, overlapped=True, timeout=timeout, concurrent=True):
+        rightmost = match.start()
+    return rightmost
+
+
 def fewest_phone_digits(recognizer):
     """Fewest digits any number of the recognizer's regions can have, from phone metadata;
     0 for other recognizers. Texts with fewer digits cannot contain a match."""
@@ -397,10 +411,8 @@ def build_pii_checker():
                         remaining = check_deadline()
                         if split:
                             core, lookaheads = split
-                            last = []
-                            for lookahead in lookaheads:
-                                starts = [m.start() for m in lookahead.finditer(text, overlapped=True, timeout=check_deadline(), concurrent=True)]
-                                last.append(starts[-1] if starts else -1)
+                            last = [_last_lookahead_start(lookahead, text, timeout=check_deadline())
+                                    for lookahead in lookaheads]
                             matches = (m for m in core.finditer(text, timeout=remaining, concurrent=True) if m.start() <= min(last))
                         else:
                             matches = pattern.finditer(text, timeout=remaining, concurrent=True)
