@@ -75,6 +75,12 @@ test("demo key request can be retried after a transient first failure", async ({
 
 test("checks are first and optional comparison tooling is clearly explained", async ({ page }) => {
   await page.goto("/dashboard");
+  // This configuration panel is available to an authenticated tenant/demo,
+  // not the unconnected public landing state. Exercise the real customer view.
+  await page.locator("#demo-user").selectOption("demo4");
+  await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
+  await expect(page.locator("#comparison-configuration")).toBeVisible();
   const checks = page.locator("#tenant-checks");
   const optional = page.locator("#comparison-configuration");
   await expect(page.locator("#check-settings-heading")).toHaveText("Your checks and rules");
