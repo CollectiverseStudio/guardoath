@@ -320,7 +320,9 @@ test("a forged redaction-ready receipt cannot release without real second-pass p
   // deadline extension or weakened backend gate is involved.
   const decisions = await page.evaluate(({rechecks, original}) => {
     const receipt = (checks, initial = original) => ({
-      checker_results: initial,
+      // Keep the successful *actual Engine* envelope shape, including its
+      // completion proof. Only change the second-pass evidence in each case.
+      evaluation_status: "complete", checker_results: initial,
       redaction: {status: "ready", content: "[REDACTED_EMAIL_ADDRESS]",
         validation_results: checks},
     });
