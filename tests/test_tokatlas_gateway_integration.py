@@ -121,7 +121,10 @@ def test_redacted_input_is_revalidated_before_direct_or_wrapped_completion(wrapp
 @pytest.mark.parametrize('usage', [{}, {'prompt_tokens': True, 'completion_tokens': 1},
                                    {'prompt_tokens': 1, 'completion_tokens': -1}])
 def test_invalid_measured_usage_is_not_a_clean_gateway_completion(usage, caplog):
-    def transport(*args):
+    # Coroutines still run under the unchanged 500 ms gateway deadline,
+    # without Windows thread-start scheduling changing the expected parse error.
+    # This tests the actual Tokatlas parser, not a mocked ProviderReply.
+    async def transport(*args):
         return json.dumps({'choices': [{'finish_reason': 'stop', 'message': {'content': 'private-rejected-output'}}], 'usage': usage}).encode()
     tenant = TenantRecord(tenant_id='tenant-a', display_name='Tenant A', check_secrets='block')
     gateway = PrototypeGateway({'secrets': fixture_checker}, {'tenant-a': ProviderBinding('tenant-a',
