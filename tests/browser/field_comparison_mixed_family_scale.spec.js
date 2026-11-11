@@ -461,6 +461,13 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
     const ordinaryEditorRow = page.locator('li[data-comparison-id="mixed_ui_000"]');
     await expect(ordinaryEditorRow).toContainText("Saved output rule action is Off.");
     await expect(ordinaryEditorRow).not.toContainText("Saved input rule action is Off.");
+    // The saved-definition index must retain the authoritative Off label
+    // across search filters and re-rendering a 500-rule pending portfolio.
+    await page.locator("#comparison-filter").fill("mixed_ui_004");
+    await expect(page.locator('#comparison-drafts li[data-comparison-id="mixed_ui_000"]')).toHaveCount(0);
+    await page.locator("#comparison-filter").fill("mixed_ui_000");
+    await expect(ordinaryEditorRow).toContainText("Saved output rule action is Off.");
+    await page.locator("#comparison-filter").fill("");
     await expect(page.locator('tr.rule-row[data-rule="business.mixed_ui_000"] [data-stage="input"]'))
       .not.toHaveValue("off");
 
