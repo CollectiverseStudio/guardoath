@@ -35,13 +35,23 @@ test("TSV output file picker independently blocks a formula after clean input", 
   await page.locator("#demo-user").selectOption("demo7");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo7");
+  // Wait for the authoritative reset *and UI reload*. Previously this test
+  // could click Run while the reset was still in flight; execute then raced
+  // a second tenant save, so no /checks/input request was sent.
+  const reset = page.waitForResponse(r => r.url().endsWith("/v1/tenants/current/reset")
+    && r.request().method() === "POST");
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  expect((await reset).status()).toBe(200);
+  await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
   await page.locator("#tenant-check-output-csv_formula").selectOption("block");
+  await page.locator("#input-content").fill("Please summarize this synthetic spreadsheet.");
 
   const input = page.waitForResponse(r => r.url().endsWith("/v1/checks/input")
     && r.request().method() === "POST");
   await page.locator("#run-input").click();
-  expect((await (await input).json()).effective_action).toBe("allow");
+  const inputResult = await (await input).json();
+  expect(inputResult.evaluation_status).toBe("complete");
+  expect(inputResult.effective_action).toBe("allow");
 
   await page.locator("#output-content").fill("Here is the spreadsheet summary.");
   await page.locator("#output-attachments").setInputFiles({
@@ -246,4 +256,44 @@ test("real tenant redacts chat PII while independently scanning clean TSV; forge
     expect((await cleanup).status()).toBe(200);
     await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
   }
+});
+
+test("in-flight tenant reset disables Input checks until the authoritative reload completes", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo7");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo7");
+  await page.locator("#input-content").fill("Hello from a normal synthetic check.");
+
+  let releaseReset;
+  let noticeRequest;
+  const held = new Promise(resolve => { releaseReset = resolve; });
+  const requested = new Promise(resolve => { noticeRequest = resolve; });
+  await page.route("**/v1/tenants/current/reset", async route => {
+    noticeRequest();
+    await held;
+    await route.continue();
+  });
+  const reset = page.waitForResponse(r => r.url().endsWith("/v1/tenants/current/reset")
+    && r.request().method() === "POST");
+  try {
+    await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+    await requested;
+    // The reset is deliberately still outstanding. The customer must not run
+    // a check against the old tenant policy or start another write.
+    await expect(page.locator("#run-input")).toBeDisabled();
+    await expect(page.locator("#run")).toBeDisabled();
+    await expect(page.locator("#tenant-save")).toBeDisabled();
+  } finally {
+    releaseReset();
+  }
+  expect((await reset).status()).toBe(200);
+  await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+  await expect(page.locator("#run-input")).toBeEnabled();
+  const check = page.waitForResponse(r => r.url().endsWith("/v1/checks/input")
+    && r.request().method() === "POST");
+  await page.locator("#run-input").click();
+  const result = await (await check).json();
+  expect(result.evaluation_status).toBe("complete");
+  expect(result.effective_action).toBe("allow");
 });
