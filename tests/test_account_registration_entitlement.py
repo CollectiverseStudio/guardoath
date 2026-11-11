@@ -325,3 +325,95 @@ def test_signed_in_customer_can_list_create_and_revoke_keys_only_with_active_pla
     assert client.get("/v1/tenants/current/keys", headers={
         "X-GuardOath-Key": new_token
     }).status_code == 403
+
+
+def test_public_subscription_price_is_provider_verified_and_read_only(monkeypatch):
+    """Disclose the real recurring amount, without creating a payer or paid access."""
+    import json
+    import urllib.request
+    from guardoath import stripe_customer
+
+    price = {
+        "id": "price_verified", "object": "price", "active": True,
+        "currency": "usd", "unit_amount": 1299,
+        "recurring": {"interval": "month", "interval_count": 1},
+    }
+    calls = []
+    class ProviderResponse:
+        status = 200
+        def __enter__(self):
+            return self
+        def __exit__(self, exc_type, exc, tb):
+            return False
+        def read(self, max_bytes):
+            assert max_bytes == 16385
+            return json.dumps(price).encode("utf-8")
+    class ProviderOpener:
+        def open(self, request, timeout):
+            assert timeout == 5
+            assert request.full_url == "https://api.stripe.com/v1/prices/price_verified"
+            assert request.get_header("Authorization").startswith("Basic ")
+            calls.append(request.full_url)
+            return ProviderResponse()
+    monkeypatch.setattr(urllib.request, "build_opener", lambda *handlers: ProviderOpener())
+    monkeypatch.setattr(stripe_customer, "create_customer",
+                        lambda **kwargs: (_ for _ in ()).throw(
+                            AssertionError("Price lookup must never create Stripe customers")))
+    monkeypatch.setenv("GUARDOATH_STRIPE_SECRET_KEY", "sk_test_" + "a" * 32)
+    monkeypatch.setenv("GUARDOATH_STRIPE_PRICE_ID", "price_verified")
+
+    client, store = make_client()
+    headers = {SESSION_HEADER: "verified-test-token"}
+    assert client.post("/v1/register", headers=headers).status_code == 201
+    before = store.get("usr-test-account")
+    disclosed = client.get("/v1/billing/price")
+    assert disclosed.status_code == 200, disclosed.text
+    assert disclosed.json() == {
+        "unit_amount": 1299, "currency": "USD",
+        "currency_exponent": 2, "interval": "month",
+    }
+    assert disclosed.headers["cache-control"] == "no-store"
+    assert calls == ["https://api.stripe.com/v1/prices/price_verified"]
+    assert store.get("usr-test-account") == before
+    assert store.get("usr-test-account").payer_id is None
+    assert store.get("usr-test-account").subscription_status == "inactive"
+    assert client.post("/v1/tenants/current/keys", headers=headers, json={}).status_code == 402
+
+    # Accept a real Stripe zero-decimal currency without inventing cents.
+    price.update(currency="jpy", unit_amount=1500)
+    yen = client.get("/v1/billing/price")
+    assert yen.status_code == 200
+    assert yen.json()["currency_exponent"] == 0
+
+    # A stale/disabled/mismatched or unsupported provider response must NOT
+    # publish a price that could trigger customer checkout in the dashboard.
+    for mutation in (
+        {"active": False},
+        {"id": "price_other"},
+        {"unit_amount": -1},
+        {"unit_amount": True},
+        {"recurring": {"interval": "week", "interval_count": 1}},
+        {"recurring": {"interval": "month", "interval_count": 2}},
+    ):
+        price.update({
+            "id": "price_verified", "active": True,
+            "unit_amount": 1299, "currency": "usd",
+            "recurring": {"interval": "month", "interval_count": 1},
+        })
+        price.update(mutation)
+        unavailable = client.get("/v1/billing/price")
+        assert unavailable.status_code == 503, (mutation, unavailable.text)
+    assert store.get("usr-test-account") == before
+
+
+def test_public_subscription_price_never_calls_provider_without_server_configuration(monkeypatch):
+    import urllib.request
+    monkeypatch.delenv("GUARDOATH_STRIPE_SECRET_KEY", raising=False)
+    monkeypatch.delenv("GUARDOATH_STRIPE_PRICE_ID", raising=False)
+    monkeypatch.setattr(urllib.request, "build_opener",
+                        lambda *args: (_ for _ in ()).throw(
+                            AssertionError("No provider request without secret and price")))
+    client, store = make_client()
+    reply = client.get("/v1/billing/price")
+    assert reply.status_code == 503
+    assert store.all() == []
