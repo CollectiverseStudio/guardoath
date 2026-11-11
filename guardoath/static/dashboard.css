@@ -46,3 +46,11 @@
 #comparison-bulk-panel button { margin: 8px 8px 8px 0; white-space: normal; }
 #comparison-bulk-panel #comparison-bulk-confirm { width: auto; margin-right: 6px; }
 #comparison-drafts { max-height: 30rem; overflow-y: auto; overflow-x: hidden; }
+
+/* Customer pricing disclosure must precede any Stripe checkout session. */
+.billing-plan{margin:14px 0;padding:16px;border:1px solid #cbd8ed;border-radius:9px;background:#f8fbff;max-width:620px}
+.billing-plan h3{font-size:17px;margin-bottom:8px}
+.billing-plan ul{font-size:13px;line-height:1.7;padding-left:22px;color:#34445b}
+.billing-plan p{font-size:13px}
+.billing-plan .inline{flex-wrap:wrap;margin-top:12px}
+.billing-plan[hidden]{display:none}
