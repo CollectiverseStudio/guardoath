@@ -169,3 +169,27 @@ def test_rule_never_changes_which_characters_are_covered():
         assert {i for start, end, *_ in result for i in range(start, end)} == covered
         assert {(s, e, n, src) for s, e, n, src, tier, _ in candidates if tier == OWN_TIER} <= set(result)
         assert set(result) <= {(s, e, n, src) for s, e, n, src, _tier, _ in candidates}
+
+
+def test_own_only_overlap_fast_path_preserves_distinct_labels_and_deduplicates():
+    # Real labelled fields and the own detectors can describe overlapping
+    # values; the no-pattern path must keep every distinct source/entity.
+    examples = [
+        own(0, 18, "EMAIL_ADDRESS"),
+        own(0, 18, "EMAIL_ADDRESS"),
+        own(0, 18, "CREDIT_CARD"),
+        own(3, 10, "BANK_ACCOUNT", LABELED_FIELD),
+        own(0, 18, "EMAIL_ADDRESS", LABELED_FIELD),
+    ]
+    result = resolve_overlaps(examples)
+    assert result == [
+        (0, 18, "EMAIL_ADDRESS", PATTERN),
+        (0, 18, "CREDIT_CARD", PATTERN),
+        (3, 10, "BANK_ACCOUNT", LABELED_FIELD),
+        (0, 18, "EMAIL_ADDRESS", LABELED_FIELD),
+    ]
+    assert resolve_overlaps([]) == []
+    # Even one genuine pattern must retain the original containment rules.
+    assert kept([*examples, pattern(3, 8, "URL", 1.0)]) == [
+        (0, 18, "CREDIT_CARD"), (0, 18, "EMAIL_ADDRESS"), (3, 10, "BANK_ACCOUNT")
+    ]
