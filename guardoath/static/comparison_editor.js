@@ -390,7 +390,29 @@
     stageFilter.addEventListener("change", drawRows);
     function draw() {
       const pending = JSON.stringify(original) !== JSON.stringify(draft);
-      summary.textContent = `${draft.length} comparison${draft.length === 1 ? "" : "s"} configured; ${draft.filter(rule => rule.stages.includes("input")).length} Input, ${draft.filter(rule => rule.stages.includes("output")).length} Output.${pending ? " Unsaved changes — select Save checks to persist." : " No pending changes."}`;
+      // Bulk replacement must reveal the number of affected saved rules BEFORE
+      // a customer presses the tenant-wide, revisioned Save checks button.
+      // Compare complete definitions, not visible/filtered rows; never echo
+      // fields or customer values into the status message.
+      let added = 0, updated = 0, removed = 0;
+      if (pending) {
+        const draftIds = new Set(draft.map(rule => rule.rule_id));
+        removed = original.filter(rule => !draftIds.has(rule.rule_id)).length;
+        for (const rule of draft) {
+          const saved = savedById.get(rule.rule_id);
+          if (!saved) { added++; continue; }
+          if (saved.left !== rule.left || saved.right !== rule.right ||
+              saved.operator !== rule.operator || saved.value_type !== rule.value_type ||
+              saved.stages.length !== rule.stages.length ||
+              saved.stages.some(stage => !rule.stages.includes(stage))) updated++;
+        }
+      }
+      const pendingDetails = pending
+        ? ` Unsaved changes — ${added} added, ${updated} updated, ${removed} removed.` +
+          (added + updated + removed === 0 ? " Rule ordering or representation changed." : "") +
+          " Select Save checks to persist."
+        : " No pending changes.";
+      summary.textContent = `${draft.length} comparison${draft.length === 1 ? "" : "s"} configured; ${draft.filter(rule => rule.stages.includes("input")).length} Input, ${draft.filter(rule => rule.stages.includes("output")).length} Output.${pendingDetails}`;
       // The shared JSON decoder limits *every* object to 1,000 members,
       // not just the root. Count distinct children at each pointer prefix in
       // each stage. A pair of sibling maps with 501 fields each is valid;
