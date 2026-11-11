@@ -2153,7 +2153,8 @@ async function openBillingSession(endpoint, field, buttonId) {
       headers: {"X-GuardOath-Session": token, "Content-Type": "application/json"},
       body: "{}", cache: "no-store"});
     if (!response.ok) {
-      const message = response.status === 403 ? "Your sign-in is valid, but the registered customer account is unavailable. Refresh account status or contact support; no payment was taken."\n        : response.status === 409 ? "Billing setup is not yet available for this account."
+      const message = response.status === 403 ? "Your sign-in is valid, but the registered customer account is unavailable. Refresh account status or contact support; no payment was taken."
+        : response.status === 409 ? "Billing setup is not yet available for this account."
         : response.status === 503 ? "Billing is temporarily unavailable."
         : "Billing request failed (HTTP " + response.status + ").";
       $("account-status").textContent = message;
