@@ -153,6 +153,9 @@
   }
   function render(host, tenant, enabled, changed) {
     original = Array.isArray(tenant.comparisons) ? copy(tenant.comparisons) : [];
+    // Saved rule definitions are immutable for this render; indexing avoids
+    // quadratic lookup while filtering or editing a large pending portfolio.
+    const savedById = new Map(original.map(rule => [rule.rule_id, rule]));
     draft = copy(original); editing = null;
     available = enabled && Array.isArray(tenant.comparisons);
     host.replaceChildren(); host.hidden = !enabled;
@@ -344,7 +347,7 @@
         // The ordinary editor must expose the same saved per-stage Off state
         // as the advanced-family editors. A pending definition is not yet the
         // tenant's authoritative saved rule, so do not label it as such.
-        const persisted = original.find(rule => rule.rule_id === item.rule_id);
+        const persisted = savedById.get(item.rule_id);
         const savedDefinition = persisted &&
           persisted.left === item.left && persisted.right === item.right &&
           persisted.operator === item.operator && persisted.value_type === item.value_type &&
