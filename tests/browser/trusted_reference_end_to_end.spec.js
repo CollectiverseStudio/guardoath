@@ -191,8 +191,15 @@ test("FC-047 invalid host reference: customer saves individual Output Off withou
       .toContainText("Input: active (check block; rule inherits check)");
     await expect(page.locator("#trusted-reference-status"))
       .toContainText("Output: active (check flag; rule inherits check)");
+    // On a newly connected tenant the rule list is collapsed. Use the same
+    // customer-visible Review action to reveal/focus this saved rule before
+    // editing it; a hidden select must not silently consume the test deadline.
+    await page.locator("#trusted-reference-status").getByRole("button", {
+      name: "Review output action for host reference real_browser_permit",
+    }).click();
     const outRow = page.locator(
       'tr.rule-row[data-rule="business.real_browser_permit"] [data-stage="output"]');
+    await expect(outRow).toBeFocused();
     await outRow.selectOption("off");
     // Pending UI state must not impersonate the persisted tenant record.
     await expect(page.locator("#trusted-reference-status"))
