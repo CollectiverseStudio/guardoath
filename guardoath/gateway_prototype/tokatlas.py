@@ -6,11 +6,12 @@ This module is not registered in the hosted application. No paid calls in tests.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
-from typing import Callable
+from typing import Awaitable, Callable
 
 from guardoath.gateway_prototype.service import ProviderReply
 
@@ -70,7 +71,7 @@ class TokatlasChatAdapter:
     api_key: str = field(repr=False)
     timeout_seconds: float = 10.0
     model_limits: tuple[tuple[str, int], ...] = ()
-    transport: Callable[[str, dict[str, str], bytes, float], bytes] = field(default=_http_post, repr=False)
+    transport: Callable[[str, dict[str, str], bytes, float], bytes | Awaitable[bytes]] = field(default=_http_post, repr=False)
 
     def __post_init__(self):
         if not isinstance(self.api_key, str) or not (8 <= len(self.api_key) <= 512) or any(ord(c) < 33 or ord(c) > 126 for c in self.api_key):
@@ -107,7 +108,14 @@ class TokatlasChatAdapter:
         body = json.dumps(payload, ensure_ascii=True, separators=(",", ":")).encode("utf-8")
         headers = {"Authorization": "Bearer " + self.api_key, "Content-Type": "application/json"}
         try:
-            raw = await asyncio.to_thread(self.transport, ENDPOINT, headers, body, float(self.timeout_seconds))
+            # Synchronous trusted transports are isolated on a worker as before.
+            # Offline coroutine transports avoid OS-thread startup jitter, so a
+            # malformed provider envelope is tested as an error, not a scheduling
+            # timeout. The gateway still enforces the same hard provider deadline.
+            if inspect.iscoroutinefunction(self.transport):
+                raw = await self.transport(ENDPOINT, headers, body, float(self.timeout_seconds))
+            else:
+                raw = await asyncio.to_thread(self.transport, ENDPOINT, headers, body, float(self.timeout_seconds))
             if not isinstance(raw, bytes) or len(raw) > MAX_RESPONSE_BYTES:
                 raise TokatlasProviderError("Tokatlas response exceeds limit")
             result = json.loads(raw, object_pairs_hook=_unique_object,
