@@ -3038,3 +3038,7 @@ The signed-in customer API-key list and one-time key creation response are bound
 ### Revoked owner access to API-key management
 
 If a signed-in customer's API-key list, creation or revocation request returns HTTP 401, GuardOath immediately clears their Cognito session, tenant settings, key list and one-time plaintext secret and restores **Sign in**. This is the same fail-closed recovery already used for authenticated tenant and validation requests, even before an application is connected. A late 401 from a superseded owner cannot log out a replacement customer, and a public demo API key cannot impersonate an owner session. Sign in again before managing keys; an application API key cannot restore account ownership. Customer browser tests: `tests/browser/customer_key_session_races.spec.js`. Final-SHA Playwright and live Cognito/entitlement checks remain required before production release.
+
+### Incomplete checker-result envelopes in the dashboard
+
+An Input API response without a valid nonempty `checker_results` array, or with null/non-object checker entries, is not evidence that validation ran. The customer dashboard keeps the **Run output checks** action disabled rather than proceeding or treating a malformed envelope as a clean pass. This is a UI safety guard, not a replacement for server-side validation: the shared Engine and tenant policy remain authoritative, and incomplete inspection must still fail closed. The existing prepared-answer editor can accept text in advance, but cannot authorize output execution without an accepted Input result.
