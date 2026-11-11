@@ -2153,7 +2153,7 @@ async function openBillingSession(endpoint, field, buttonId) {
       headers: {"X-GuardOath-Session": token, "Content-Type": "application/json"},
       body: "{}", cache: "no-store"});
     if (!response.ok) {
-      const message = response.status === 409 ? "Billing setup is not yet available for this account."
+      const message = response.status === 403 ? "Your sign-in is valid, but the registered customer account is unavailable. Refresh account status or contact support; no payment was taken."\n        : response.status === 409 ? "Billing setup is not yet available for this account."
         : response.status === 503 ? "Billing is temporarily unavailable."
         : "Billing request failed (HTTP " + response.status + ").";
       $("account-status").textContent = message;
@@ -2172,7 +2172,32 @@ async function openBillingSession(endpoint, field, buttonId) {
     $("account-status").textContent = "Unable to reach billing. Please retry.";
   } finally { button.disabled = false; }
 }
-$("billing-subscribe").addEventListener("click", () =>
-  openBillingSession("/v1/billing/checkout", "checkout_url", "billing-subscribe"));
+// Never start a charge from the initial Subscribe click. Disclose the plan first.
+$("billing-subscribe").addEventListener("click", async () => {
+  $("billing-plan").hidden = false;
+  $("billing-continue").disabled = true;
+  $("billing-price").textContent = "Checking current price…";
+  $("billing-plan-status").textContent = "";
+  try {
+    const response = await send("/v1/billing/price", {cache: "no-store"});
+    if (!response.ok) throw new Error("Pricing unavailable");
+    const plan = await response.json();
+    if (!plan || !Number.isSafeInteger(plan.unit_amount) || plan.unit_amount < 0 ||
+        !Number.isInteger(plan.currency_exponent) || plan.currency_exponent < 0 ||
+        plan.currency_exponent > 3 || !["month", "year"].includes(plan.interval) ||
+        !/^[A-Z]{3}$/.test(plan.currency)) throw new Error("Invalid price");
+    const amount = plan.unit_amount / (10 ** plan.currency_exponent);
+    $("billing-price").textContent = new Intl.NumberFormat(undefined, {
+      style: "currency", currency: plan.currency
+    }).format(amount) + " per " + plan.interval;
+    $("billing-continue").disabled = false;
+  } catch (_) {
+    $("billing-price").textContent = "Pricing currently unavailable";
+    $("billing-plan-status").textContent = "Checkout is disabled until the recurring price can be verified.";
+  }
+});
+$("billing-cancel").addEventListener("click", () => { $("billing-plan").hidden = true; });
+$("billing-continue").addEventListener("click", () =>
+  openBillingSession("/v1/billing/checkout", "checkout_url", "billing-continue"));
 $("billing-manage").addEventListener("click", () =>
   openBillingSession("/v1/billing/portal", "portal_url", "billing-manage"));
