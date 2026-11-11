@@ -263,6 +263,54 @@ test("redaction shows a rechecked preview without returning detected values", as
   await expect(page.locator("#answer")).toBeHidden();
 });
 
+test("a forged redaction-ready receipt cannot release without real second-pass proof", async ({page}) => {
+  await connect(page);
+  await profile(page, "redaction-v1");
+  await pickSample(page, "output", "redaction");
+  let realRechecks = null;
+  let intercepted = 0;
+  await page.route("**/v1/checks/output", async route => {
+    // Execute the existing local Engine; alter only the returned envelope to
+    // simulate a truncated or wrongly marked 'ready' response on the wire.
+    const response = await route.fetch();
+    expect(response.status()).toBe(200);
+    const result = await response.json();
+    expect(result.redaction.status).toBe("preview");
+    expect(result.redaction.validation_results.length).toBeGreaterThan(0);
+    realRechecks = result.redaction.validation_results;
+    intercepted++;
+    await route.fulfill({response, json: {
+      ...result, recommended_action: "redact", effective_action: "redact",
+      redaction: {...result.redaction, status: "ready", validation_results: []},
+    }});
+  });
+  await run(page);
+  expect(intercepted).toBe(1);
+  await expect(page.locator("#result-status")).toHaveText("Check failed");
+  await expect(page.locator("#answer")).toBeHidden();
+  await expect(page.locator("#run-error")).toContainText("receipt was invalid");
+
+  // Source-executed client release decisions use actual server-generated
+  // rechecks rather than a fabricated success record. No test-time skip,
+  // deadline extension or weakened backend gate is involved.
+  const decisions = await page.evaluate(rechecks => {
+    const receipt = checks => ({redaction: {
+      status: "ready", content: "[REDACTED_EMAIL_ADDRESS]", validation_results: checks,
+    }});
+    const first = rechecks[0];
+    return {
+      real: goesThrough("redact", receipt(rechecks)),
+      missing: goesThrough("redact", receipt([])),
+      errored: goesThrough("redact", receipt([{...first, status: "error"}])),
+      simulated: goesThrough("redact", receipt([{...first, simulated: true}])),
+      malformed: goesThrough("redact", receipt([null])),
+    };
+  }, realRechecks);
+  expect(decisions).toEqual({
+    real: true, missing: false, errored: false, simulated: false, malformed: false,
+  });
+});
+
 test("redacted preview uses safe text rendering", async ({ page }) => {
   await connect(page); await profile(page,"redaction-v1"); await pickSample(page,"output","redaction");
   await page.locator("#output-content").fill('<img src=x onerror="window.injected=true"> jane@example.com'); await run(page);
