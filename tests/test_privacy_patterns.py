@@ -253,7 +253,7 @@ def test_long_inputs_never_pass_when_the_scan_runs_out_of_time(checkers, text):
 
 def test_lookahead_split_matches_the_pattern_as_written():
     import regex
-    from guardoath.pii import split_lookaheads
+    from guardoath.pii import _bounded_split_lookahead_matches, split_lookaheads
     from guardoath.privacy_patterns import InPanRecognizer
     recognizer = InPanRecognizer()
     low = recognizer.patterns[-1]
@@ -266,8 +266,13 @@ def test_lookahead_split_matches_the_pattern_as_written():
         for lookahead in lookaheads:
             starts = [m.start() for m in lookahead.finditer(text, overlapped=True)]
             last.append(starts[-1] if starts else -1)
-        split = [m.span() for m in core.finditer(text) if m.start() <= min(last)]
-        assert split == [m.span() for m in original.finditer(text)]
+        # Compare the new bounded execution with BOTH the old selector and
+        # the complete original copied pattern; neither may lose a finding.
+        split = [m.span() for m in _bounded_split_lookahead_matches(
+            core, lookaheads, text, lambda: 1.0)]
+        old_selector = [m.span() for m in core.finditer(text)
+                        if m.start() <= min(last)]
+        assert split == old_selector == [m.span() for m in original.finditer(text)]
 
 
 def test_split_lookahead_rightmost_start_preserves_overlap_without_match_lists():
@@ -291,6 +296,58 @@ def test_split_lookahead_rightmost_start_preserves_overlap_without_match_lists()
     # retains only one integer rather than a 32,000-element starts list.
     repeated = "a" * 32000
     assert _last_lookahead_start(regex.compile("a"), repeated, timeout=0.5) == 31999
+
+
+def test_bounded_split_lookaheads_skip_unnecessary_core_scan_and_stop_after_last_hint():
+    import regex
+    from guardoath.pii import _bounded_split_lookahead_matches
+
+    class CountedCore:
+        def __init__(self):
+            self.pattern = regex.compile("a")
+            self.visited = 0
+
+        def finditer(self, text, **kwargs):
+            for match in self.pattern.finditer(text, **kwargs):
+                self.visited += 1
+                yield match
+
+    # No mandatory lookahead match means no core match can be eligible.
+    missing = CountedCore()
+    assert list(_bounded_split_lookahead_matches(
+        missing, (regex.compile("never-present"),), "a " * 16000,
+        lambda: 1.0)) == []
+    assert missing.visited == 0
+
+    # A second mandatory absent lookahead must likewise prevent core scans,
+    # even when the first hint exists early in a long document.
+    also_missing = CountedCore()
+    assert list(_bounded_split_lookahead_matches(
+        also_missing, (regex.compile("token"), regex.compile("never-present")),
+        "a token " + "a " * 16000, lambda: 1.0)) == []
+    assert also_missing.visited == 0
+
+    # A present lookahead may authorize a core start BEFORE itself. Scanning
+    # must stop after the first later, disqualified core, not walk 16k more.
+    early_hint = CountedCore()
+    eligible = list(_bounded_split_lookahead_matches(
+        early_hint, (regex.compile("token"),),
+        "a token " + "a " * 16000, lambda: 1.0))
+    assert [m.span() for m in eligible] == [(0, 1)]
+    assert early_hint.visited == 2
+
+
+def test_bounded_split_lookaheads_preserve_core_match_extending_beyond_hint_start():
+    import regex
+    from guardoath.pii import _bounded_split_lookahead_matches
+
+    # Never truncate the input at the final hint position: a valid core match
+    # may begin before that point and end after it.
+    text = "abc token xyz"
+    core = regex.compile("abc token")
+    matches = list(_bounded_split_lookahead_matches(
+        core, (regex.compile("token"),), text, lambda: 1.0))
+    assert [m.span() for m in matches] == [(0, len("abc token"))]
 
 
 def test_skip_rules_use_pattern_length_and_phone_metadata():
