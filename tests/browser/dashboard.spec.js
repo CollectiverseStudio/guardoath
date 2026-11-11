@@ -1261,7 +1261,7 @@ test("every check and profile explains what it does and why", async ({ page }) =
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
   await expect(page.locator("#tenant-checks .check-help")).toHaveCount(19);
-  await expect(page.locator(".action-legend dt")).toHaveText(["Off", "Block", "Flag", "Allow", "Redact"]);
+  await expect(page.locator("#tenant-checks .action-legend dt")).toHaveText(["Off", "Block", "Flag", "Allow", "Redact"]);
   const help = page.locator("#tenant-help-schema");
   await help.locator("summary").click();
   await expect(help).toContainText("What it checks:");
@@ -1372,8 +1372,9 @@ test("a busy server is retried, so the demo users still appear", async ({ page }
 test("when demo users cannot be loaded the page says so", async ({ page }) => {
   await page.route("**/v1/demo-users", route => route.fulfill({status: 500, contentType: "application/json", body: "{}"}));
   await page.goto("/dashboard");
-  await expect(page.locator("#connection-status")).toHaveText("Demo users could not be loaded right now. Reload the page to try again.");
+  await expect(page.locator("#connection-status")).toContainText("Select Retry loading demo users; no page refresh is required.");
   await expect(page.locator("#demo-users")).toBeHidden();
+  await expect(page.getByRole("button", {name: "Retry loading demo users"})).toBeVisible();
 });
 test("other 429s are not retried", async ({ page }) => {
   let calls = 0;
@@ -1382,7 +1383,7 @@ test("other 429s are not retried", async ({ page }) => {
   await page.goto("/dashboard");
   await page.locator("#demo-user").selectOption("demo1");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
-  await expect(page.locator("#connection-status")).toHaveText("The demo key could not be issued (HTTP 429).");
+  await expect(page.locator("#connection-status")).toContainText("The demo key could not be issued (HTTP 429). Select Get demo API key again to retry; no refresh is needed.");
   expect(calls).toBe(1);
 });
 test("the developer guide opens at a check's section from its What is this? link", async ({ page }) => {
