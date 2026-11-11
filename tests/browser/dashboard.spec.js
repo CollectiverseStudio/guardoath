@@ -8,7 +8,7 @@ async function connectDeveloperPolicyFixture(page, navigate = true) {
   if (navigate) await page.goto("/dashboard");
   await page.evaluate(() => {
     sessionStorage.setItem("guardoath-session", "synthetic-local-policy-fixture");
-    application = {tenant: {demo: false}};
+    application = {tenant: {demo: false}, policies: []};
     document.getElementById("customer-key-connect").hidden = false;
   });
   await page.getByLabel("Application API key").fill("playwright-test-key");
@@ -789,7 +789,9 @@ test('encoded privacy report preserves incomplete cases without decoded content'
 
 for(const name of ['ledger','timestamps','graph','integrity']) {
   test(name+' clean sequence releases the proposed data',async({page})=>{
-    await connect(page);await profile(page,name+'-v1');await run(page);
+    await connect(page);await profile(page,name+'-v1');
+    await expect(page.locator("#profile-status")).toContainText("Bounded local data-contract check only.");
+    await run(page);
     await expect(page.locator('#result-status')).toHaveText('No findings');
     await expect(page.locator('#answer')).toBeVisible();
   });

@@ -14,7 +14,6 @@ function buttons() {
   $("run-output").disabled = busy || !application || !canProceed(inputResult);
   $("input-attachments").disabled = busy || !application?.tenant;
   $("output-attachments").disabled = busy || !application?.tenant || outputLocked();
-  for (const name of ["ledger","timestamps","graph","integrity"]) if (policy?.version === name+"-v1") $("profile-status").textContent += " Bounded local data-contract check only. No fraud detection, relationship authorization, source authenticity or content-safety assessment. Invalid or oversized data stays incomplete; data is never repaired or executed.";
   updateOutputField();
   refreshExamplePickers();
 }
@@ -112,6 +111,7 @@ function coverage() {
   if (policy?.version === "evidence-v1") $("profile-status").textContent += " Citation and quotation consistency against a configured source catalog only. Factual truth, source authenticity and support for each claim are not assessed.";
   if (policy?.version === "tool-calls-v1") $("profile-status").textContent += " Proposed tool names and argument schemas only. No tool is executed or authorized; code, URLs and side effects are not assessed.";
   if (policy?.version.startsWith("privacy-encoded")) $("profile-status").textContent += " One labeled Base64/hex layer only. No recursive or unlabeled decoding and no encoded-value redaction. Incomplete scans hold the answer.";
+  for (const name of ["ledger","timestamps","graph","integrity"]) if (policy?.version === name+"-v1") $("profile-status").textContent += " Bounded local data-contract check only. No fraud detection, relationship authorization, source authenticity or content-safety assessment. Invalid or oversized data stays incomplete; data is never repaired or executed.";
   refreshExamplePickers();
 }
 async function loadApplication(token, attempt, expectedDemoTenant = null) {
