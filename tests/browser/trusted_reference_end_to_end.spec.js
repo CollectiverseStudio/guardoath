@@ -150,6 +150,40 @@ test("real signed FC-047 reference moves accepted to blocked after tampering, wi
         .toContain("business.real_browser_permit");
     }
 
+
+  } finally {
+    if (resetRequired) {
+      const cleanup = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+      expect(cleanup.status()).toBe(200);
+    }
+  }
+});
+
+// These tests each own a reset/cleanup and a real demo tenant revision; they
+// preserve all stage transitions without imposing one 30-second deadline on
+// unrelated customer workflow phases. Browser/tenant API/Engine remain real.
+test("FC-047 invalid host reference: independently saved Output and parent Input Off are honored", async ({page, request}) => {
+  const headers = await connect(page);
+  let resetRequired = false;
+  try {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(reset.status()).toBe(200);
+    resetRequired = true;
+    const signed = signedReference();
+    const tampered = {...signed, reference_values: {permit_limit: "500"}};
+    const prior = await summary(request, headers);
+    const saved = await request.post("/v1/tenants/current/checks", {headers, data: {
+      revision: prior.revision,
+      changes: {comparisons: [], advanced_trusted_reference: [tampered],
+        input_check_cross_field: "block", output_check_cross_field: "flag"},
+    }});
+    expect(saved.status(), (await saved.text()).slice(0, 150)).toBe(200);
+    const blocked = await summary(request, headers);
+    expect(blocked.revision).toBe(prior.revision + 1);
+    expect(blocked.advanced_trusted_reference_status[0].runtime_integrity).toBe("blocked");
+    await connect(page);
+    await expect(page.locator("#trusted-reference-status"))
+      .toContainText("runtime integrity: blocked");
     // Customer UI must not imply an invalid host reference Blocks a stage
     // after that individual rule or its parent cross_field check is saved Off.
     // Keep the tampered reference invalid: no re-signing or mocked Engine.
@@ -205,6 +239,47 @@ test("real signed FC-047 reference moves accepted to blocked after tampering, wi
       expect(publicStatus).not.toContain(secret);
     }
 
+
+  } finally {
+    if (resetRequired) {
+      const cleanup = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+      expect(cleanup.status()).toBe(200);
+    }
+  }
+});
+
+test("FC-047 disabled stages re-enable fail closed until host re-attests original snapshot", async ({page, request}) => {
+  const headers = await connect(page);
+  let resetRequired = false;
+  try {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(reset.status()).toBe(200);
+    resetRequired = true;
+    const signed = signedReference();
+    const tampered = {...signed, reference_values: {permit_limit: "500"}};
+    const prior = await summary(request, headers);
+    // Seed the same authoritative saved Off state reached in the preceding
+    // independent test, rather than relying on order-dependent tenant writes.
+    const saved = await request.post("/v1/tenants/current/checks", {headers, data: {
+      revision: prior.revision,
+      changes: {comparisons: [], advanced_trusted_reference: [tampered],
+        input_check_cross_field: null, output_check_cross_field: "flag",
+        output_rule_actions: {"business.real_browser_permit": "off"}},
+    }});
+    expect(saved.status(), (await saved.text()).slice(0, 150)).toBe(200);
+    const disabledParent = await summary(request, headers);
+    expect(disabledParent.revision).toBe(prior.revision + 1);
+    expect(disabledParent.input_checks.cross_field).toBeNull();
+    expect(disabledParent.output_rule_actions["business.real_browser_permit"]).toBe("off");
+    expect(disabledParent.advanced_trusted_reference_status[0].runtime_integrity).toBe("blocked");
+    await connect(page);
+    await expect(page.locator("#trusted-reference-status"))
+      .toContainText("blocked (all saved stages Off; enabling one will Block until re-attested)");
+    for (const stage of ["input", "output"]) {
+      const disabled = await evaluate(request, headers, stage, 40);
+      expect(disabled.evaluation_status).toBe("complete");
+      expect(disabled.findings.some(f => f.rule_id === "business.real_browser_permit")).toBe(false);
+    }
     // Re-activating a previously disabled parent check must NOT treat its
     // persisted, tampered host reference as accepted. The same signed rule is
     // still invalid; only the tenant's saved stage action changed.
