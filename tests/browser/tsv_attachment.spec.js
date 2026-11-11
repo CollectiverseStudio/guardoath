@@ -134,6 +134,8 @@ test("per-file checker provenance is required before an attachment result can be
     && r.request().method() === "POST");
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
   expect((await reset).status()).toBe(200);
+  await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+  await expect(page.locator("#input-attachments")).toBeEnabled();
   await expect(page.locator("#tenant-attachment-modes")).toContainText("CSV / TSV attachments");
   await page.locator("#tenant-check-input-csv_formula").selectOption("block");
 
@@ -170,4 +172,6 @@ test("per-file checker provenance is required before an attachment result can be
     .toContainText("tsv_structure_recognized_only");
   await expect(page.locator("#input-results")).toContainText("Recommended: block");
   await expect(page.locator("#answer")).toBeHidden();
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
 });
