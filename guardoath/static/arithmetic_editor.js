@@ -64,9 +64,12 @@
   }
   function actions(stage, values) {
     const result = {...values};
+    // Saved rule cleanup must remain linear for 500+ tenant comparisons.
+    // Only this family's removed or stage-disabled IDs may be cleared;
+    // leave other families and host-protected reference actions untouched.
+    const active = new Set(draft.filter(rule => rule.stages.includes(stage)).map(rule => rule.rule_id));
     for (const previous of original) {
-      const existing = draft.find(item => item.rule_id === previous.rule_id);
-      if (!existing || !existing.stages.includes(stage)) delete result["business." + previous.rule_id];
+      if (!active.has(previous.rule_id)) delete result["business." + previous.rule_id];
     }
     return result;
   }
