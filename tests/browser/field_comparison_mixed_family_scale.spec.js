@@ -94,6 +94,15 @@ test("advanced comparison no-op edits preserve the authenticated tenant revision
     expect(saved.advanced_arithmetic).toHaveLength(1);
     expect(saved.advanced_identity).toHaveLength(1);
     expect(saved.advanced_conversion_time).toHaveLength(1);
+    // Every advanced family displays the full saved editable portfolio, not
+    // a second rule engine or a count truncated by a customer search filter.
+    for (const [family, label] of [
+      ["arithmetic", "Saved arithmetic rules: 1. No pending changes."],
+      ["identity", "Saved identity rules: 1. No pending changes."],
+      ["conversion", "Saved conversion/time rules: 1. No pending changes."],
+    ]) {
+      await expect(page.locator("#" + family + "-draft-summary")).toContainText(label);
+    }
 
     for (const [family, id] of [
       ["arithmetic", "mixed_ui_001"],
@@ -105,6 +114,7 @@ test("advanced comparison no-op edits preserve the authenticated tenant revision
       // Editing fields without semantic changes must not queue an accidental
       // update that bumps revision or changes any stage-level behavior.
       await expect(page.locator("#tenant-message")).toHaveText("");
+      await expect(page.locator("#" + family + "-draft-summary")).toContainText("No pending changes.");
     }
     await page.locator("#tenant-save").click();
     await expect(page.locator("#tenant-message")).toHaveText("No changes to save.");
@@ -118,6 +128,16 @@ test("advanced comparison no-op edits preserve the authenticated tenant revision
     await page.locator("#arithmetic-field-discount").fill("/r001/revised_discount");
     await page.locator("#arithmetic-apply").click();
     await expect(page.locator("#tenant-message")).toContainText("Unsaved changes.");
+    await expect(page.locator("#arithmetic-draft-summary"))
+      .toContainText("Unsaved changes — 0 added, 1 updated, 0 removed.");
+    await page.locator("#arithmetic-filter").fill("not-a-saved-id");
+    await expect(page.locator("#arithmetic-filter-status")).toContainText("Showing 0 of 1");
+    await expect(page.locator("#arithmetic-draft-summary"))
+      .toContainText("Unsaved changes — 0 added, 1 updated, 0 removed.");
+    await page.getByRole("button", {name: "Remove identity mixed_ui_002"}).click();
+    await expect(page.locator("#identity-draft-summary"))
+      .toContainText("Unsaved changes — 0 added, 0 updated, 1 removed.");
+    await expect(page.locator("#conversion-draft-summary")).toContainText("No pending changes.");
     expect((await current(request, headers)).revision).toBe(saved.revision);
   } finally {
     if (resetRequired) {
@@ -356,6 +376,11 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
     }
     await expect(page.locator('tr.rule-row[data-rule^="business.mixed_ui_"]')).toHaveCount(size);
     await expect(page.locator("#comparison-draft-summary")).toContainText("125 comparisons configured");
+    for (const [family, label] of [
+      ["arithmetic", "Saved arithmetic rules: 125. No pending changes."],
+      ["identity", "Saved identity rules: 125. No pending changes."],
+      ["conversion", "Saved conversion/time rules: 125. No pending changes."],
+    ]) await expect(page.locator("#" + family + "-draft-summary")).toContainText(label);
     // Customer can locate one ordinary rule inside a saved 500-rule,
     // four-family tenant without removing 124 other ordinary definitions.
     await expect(page.locator("#comparison-filter-status")).toContainText("Showing 125 of 125");
@@ -616,6 +641,8 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
     await page.getByRole("button", {name: "Edit conversion mixed_ui_499"}).click();
     await page.locator("#conversion-stage-output").uncheck();
     await page.locator("#conversion-apply").click();
+    await expect(page.locator("#conversion-draft-summary"))
+      .toContainText("Unsaved changes — 0 added, 1 updated, 0 removed.");
     await expect(page.locator('#conversion-drafts li[data-conversion-id="mixed_ui_499"]')).toHaveCount(0);
     await page.locator("#conversion-filter-stage").selectOption("input");
     await expect(page.locator('li[data-conversion-id="mixed_ui_499"]')).toBeVisible();
