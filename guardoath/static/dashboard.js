@@ -7,7 +7,11 @@ let key = "", application = null, revision = 0, busy = false, inputResult = null
 // stops only when that is Block. Both the recommended and the effective action are read, so observe mode shows what
 // enforce mode would do. Simulated checks (local launcher only) are never a pass.
 const goesThrough = (action, r) => ["allow", "flag"].includes(action) || (action === "redact" && r.redaction?.status === "ready");
-const canProceed = r => Boolean(r) && !r.simulated && r.checker_results.length > 0 && !r.checker_results.some(c => c.simulated)
+// A malformed/incomplete API response is not proof that input checks ran.
+// Fail closed without throwing in the UI gate or unlocking an AI output.
+const canProceed = r => Boolean(r) && !r.simulated && Array.isArray(r.checker_results)
+  && r.checker_results.length > 0
+  && r.checker_results.every(c => c && typeof c === "object" && !c.simulated)
   && goesThrough(r.recommended_action, r) && goesThrough(r.effective_action, r);
 function buttons() {
   $("run").disabled = $("run-input").disabled = busy || !application?.policies.length;
