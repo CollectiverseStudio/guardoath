@@ -128,19 +128,11 @@
     form.append(stageGroup);
     const apply = node("button", "Add pending arithmetic rule"); apply.id = "arithmetic-apply"; apply.type = "submit";
     const cancel = node("button", "Cancel edit"); cancel.type = "button"; cancel.hidden = true;
-    // Guided, deterministic structured-JSON example. The sample is form-only:
-    // the authoritative tenant must be updated by Add pending and Save checks.
-    const sampleHelp = node("p",
-      "Invoice example: two lines, 2 × 40 plus 1 × 30, require a subtotal of 110. " +
-      "A subtotal of 100 violates the rule; 110 is valid. All other enabled tenant " +
-      "checks still run when using its synthetic witness.");
-    sampleHelp.id = "arithmetic-sample-help";
-    const sample = node("button", "Fill example: invoice line amounts must equal subtotal");
-    sample.id = "arithmetic-sample"; sample.type = "button";
-    sample.addEventListener("click", () => {
-      const id = "invoice_lines_match_subtotal";
-      // No overwrites, including a saved rule removed from the current draft,
-      // a protected rule, or an ID held by a different family pending Save.
+    // Customer-owned guided forms. No example changes the tenant or draft
+    // until explicit Add pending and revisioned Save checks in the main UI.
+    function fillExample(id, kind, pointers, example) {
+      // Refuse both saved and removed-but-unsaved IDs, any pending family
+      // collision, and host-protected IDs. Never overwrite a customer rule.
       if (original.some(rule => rule.rule_id === id) ||
           draft.some(rule => rule.rule_id === id) ||
           (tenant.record_rules || []).some(rule => rule.rule_id === "business." + id) ||
@@ -151,16 +143,45 @@
       }
       clear();
       controls.id.value = id;
-      type.value = "invoice_line_subtotal";
-      pointerFields({lines: "/invoice/lines", subtotal: "/invoice/subtotal"});
+      type.value = kind;
+      pointerFields(pointers);
       controls.input.checked = controls.output.checked = true;
       message.textContent = "Example filled, not added or saved. Select Add pending arithmetic rule, " +
         "then Save checks. Enable Field comparisons on Input/Output and select Block " +
-        "to stop violations. Example JSON: {\"invoice\":{\"lines\":[{\"quantity\":2,\"unit_price\":40}," +
-        "{\"quantity\":1,\"unit_price\":30}],\"subtotal\":100}}.";
+        "to stop violations. Example JSON: " + JSON.stringify(example) + ".";
       controls.id.focus();
-    });
-    form.append(sampleHelp, sample);
+    }
+    const sampleHelp = node("p",
+      "Invoice line example: two lines, 2 × 40 plus 1 × 30, require subtotal 110. " +
+      "Subtotal 100 violates; 110 satisfies this rule. Other enabled tenant rules also run.");
+    sampleHelp.id = "arithmetic-sample-help";
+    const sample = node("button", "Fill example: invoice line amounts must equal subtotal");
+    sample.id = "arithmetic-sample"; sample.type = "button";
+    sample.addEventListener("click", () => fillExample("invoice_lines_match_subtotal",
+      "invoice_line_subtotal", {lines: "/invoice/lines", subtotal: "/invoice/subtotal"},
+      {invoice: {lines: [{quantity: 2, unit_price: 40}, {quantity: 1, unit_price: 30}], subtotal: 100}}));
+    const totalHelp = node("p",
+      "Invoice total example: subtotal 100 minus discount 10 plus tax 8 and shipping 2 " +
+      "must total 100. Total 99 violates; 100 satisfies this rule. No payment verification is implied.");
+    totalHelp.id = "arithmetic-invoice-total-help";
+    const totalSample = node("button", "Fill example: invoice total must include discount, tax and shipping");
+    totalSample.id = "arithmetic-sample-invoice-total"; totalSample.type = "button";
+    totalSample.addEventListener("click", () => fillExample("invoice_total_matches", "invoice_total",
+      {subtotal: "/billing/subtotal", discount: "/billing/discount", tax: "/billing/tax",
+       shipping: "/billing/shipping", total: "/billing/total"},
+      {billing: {subtotal: 100, discount: 10, tax: 8, shipping: 2, total: 99}}));
+    const inventoryHelp = node("p",
+      "Inventory example: opening 50 plus received 20 minus shipped 15 and lost 5 " +
+      "must leave closing 50. Closing 51 violates; 50 satisfies this rule. " +
+      "No external stock ledger is consulted.");
+    inventoryHelp.id = "arithmetic-inventory-help";
+    const inventorySample = node("button", "Fill example: inventory movements must balance");
+    inventorySample.id = "arithmetic-sample-inventory"; inventorySample.type = "button";
+    inventorySample.addEventListener("click", () => fillExample("inventory_balances", "inventory_conservation",
+      {opening: "/inventory/opening", received: "/inventory/received",
+       shipped: "/inventory/shipped", lost: "/inventory/lost", closing: "/inventory/closing"},
+      {inventory: {opening: 50, received: 20, shipped: 15, lost: 5, closing: 51}}));
+    form.append(sampleHelp, sample, totalHelp, totalSample, inventoryHelp, inventorySample);
     form.append(apply, cancel, message); host.append(filterBar, filterStatus, preview, list, form);
     searchInput.addEventListener("input", draw);
     stageFilter.addEventListener("change", draw);
