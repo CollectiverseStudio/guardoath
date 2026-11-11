@@ -270,6 +270,29 @@ def test_lookahead_split_matches_the_pattern_as_written():
         assert split == [m.span() for m in original.finditer(text)]
 
 
+def test_split_lookahead_rightmost_start_preserves_overlap_without_match_lists():
+    import regex
+    from guardoath.pii import _last_lookahead_start
+
+    # Compare against the former list-based calculation, including overlapping
+    # matches and a no-match result; the selector must never omit an existing
+    # privacy finding just to meet a latency target.
+    for expression, values in (
+        (r"a", ("", "b", "a", "aaa", "baabaab")),
+        (r"aba", ("", "aba", "ababa", "abaaba", "babababa")),
+        (r"[A-Z]{2}", ("", "AB", "ABCD", "aBCDAA")),
+    ):
+        pattern = regex.compile(expression)
+        for value in values:
+            starts = [m.start() for m in pattern.finditer(value, overlapped=True)]
+            assert _last_lookahead_start(pattern, value) == (starts[-1] if starts else -1)
+
+    # Match-heavy valid request: result is identical, but the implementation
+    # retains only one integer rather than a 32,000-element starts list.
+    repeated = "a" * 32000
+    assert _last_lookahead_start(regex.compile("a"), repeated, timeout=0.5) == 31999
+
+
 def test_skip_rules_use_pattern_length_and_phone_metadata():
     from guardoath.pii import fewest_phone_digits, shortest_match
     from guardoath.privacy_patterns import PhoneRecognizer, UrlRecognizer
