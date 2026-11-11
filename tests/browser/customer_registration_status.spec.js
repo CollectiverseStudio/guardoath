@@ -113,6 +113,13 @@ test("registered but unpaid customer sees inactive plan and cannot click Create 
   await expect(page.locator("#billing-subscribe")).toBeVisible();
   await expect(page.locator("#billing-manage")).toBeHidden();
   let checkoutCalls = 0;
+  let priceCalls = 0;
+  await page.route("**/v1/billing/price", async route => {
+    priceCalls++;
+    expect(route.request().method()).toBe("GET");
+    await route.fulfill({status: 200, contentType: "application/json",
+      body: JSON.stringify({unit_amount: 1299, currency: "USD", currency_exponent: 2, interval: "month"})});
+  });
   await page.route("**/v1/billing/checkout", async route => {
     checkoutCalls++;
     expect(route.request().headers()["x-guardoath-session"]).toBe("synthetic-ui-session-only");
@@ -120,8 +127,16 @@ test("registered but unpaid customer sees inactive plan and cannot click Create 
       body: JSON.stringify({detail: "Stripe customer provisioning is required"})});
   });
   await page.locator("#billing-subscribe").click();
+  await expect(page.locator("#billing-plan")).toBeVisible();
+  await expect(page.locator("#billing-price")).toContainText("$12.99 per month");
+  await expect(page.locator("#billing-continue")).toBeEnabled();
+  expect(priceCalls).toBe(1);
+  // Merely viewing a verified recurring plan must not initiate payment.
+  expect(checkoutCalls).toBe(0);
+  await page.locator("#billing-continue").click();
   await expect(page.locator("#account-status")).toContainText("Billing setup is not yet available");
   expect(checkoutCalls).toBe(1);
+  await expect(page.locator("#key-create")).toBeDisabled();
 
 
 
