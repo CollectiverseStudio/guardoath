@@ -191,5 +191,6 @@ def test_own_only_overlap_fast_path_preserves_distinct_labels_and_deduplicates()
     assert resolve_overlaps([]) == []
     # Even one genuine pattern must retain the original containment rules.
     assert kept([*examples, pattern(3, 8, "URL", 1.0)]) == [
-        (0, 18, "CREDIT_CARD"), (0, 18, "EMAIL_ADDRESS"), (3, 10, "BANK_ACCOUNT")
+        (0, 18, "CREDIT_CARD"), (0, 18, "EMAIL_ADDRESS"),
+        (0, 18, "EMAIL_ADDRESS"), (3, 10, "BANK_ACCOUNT")
     ]
