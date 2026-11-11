@@ -32,9 +32,13 @@
   }
   function actions(stage, current) {
     const result = {...current};
+    // Building one stage membership set keeps revisioned action cleanup linear
+    // even for 500+ tenant-owned comparisons; only saved rules are eligible
+    // for removal, and unrelated actions are left untouched.
+    const activeIds = new Set(draft.filter(rule => rule.stages.includes(stage))
+      .map(rule => rule.rule_id));
     for (const item of original) {
-      const kept = draft.find(rule => rule.rule_id === item.rule_id);
-      if (!kept || !kept.stages.includes(stage)) delete result["business." + item.rule_id];
+      if (!activeIds.has(item.rule_id)) delete result["business." + item.rule_id];
     }
     return result;
   }
