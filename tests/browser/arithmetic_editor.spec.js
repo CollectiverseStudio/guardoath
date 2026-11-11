@@ -2,6 +2,8 @@ const {test, expect} = require("@playwright/test");
 
 test("FC arithmetic editor creates, saves, reloads, edits and evaluates an actual tenant rule", async ({page}) => {
   await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo8");
   await page.getByRole("button", {name:"Get demo API key", exact:true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
@@ -81,6 +83,8 @@ test("FC arithmetic editor creates, saves, reloads, edits and evaluates an actua
 
 test("FC arithmetic dashboard validates pointers, types and stages before saving", async ({page}) => {
   await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo8");
   await page.getByRole("button", {name:"Get demo API key", exact:true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo8");

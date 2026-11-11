@@ -2,6 +2,8 @@ const {test,expect} = require("@playwright/test");
 
 test("identity editor saves, reloads, tests and removes an order match rule", async ({page}) => {
   await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo6");
   await page.getByRole("button", {name:"Get demo API key",exact:true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo6");
@@ -80,6 +82,8 @@ test("identity editor saves, reloads, tests and removes an order match rule", as
 
 test("identity form rejects overlapping or empty pointers and absent stages without saving", async ({page}) => {
   await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo6");
   await page.getByRole("button",{name:"Get demo API key",exact:true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo6");
@@ -104,6 +108,8 @@ test("identity form rejects overlapping or empty pointers and absent stages with
 
 test("FC-048 empty requested-scopes use real tenant and authenticated Input/Output dashboard without leaking reference values", async ({page, request}) => {
   await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo6");
   await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo6");
@@ -152,6 +158,8 @@ test("FC-048 empty requested-scopes use real tenant and authenticated Input/Outp
     expect(JSON.stringify(live)).not.toContain("private:authorized");
 
     await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
     await page.locator("#demo-user").selectOption("demo6");
     await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
     await expect(page.locator("#connection-status")).toContainText("Connected to demo6");

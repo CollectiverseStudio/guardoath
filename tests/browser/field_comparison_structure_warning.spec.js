@@ -17,6 +17,8 @@ function rules(size, nested) {
 
 test("field-comparison bulk editor warns on overfull flat and nested objects but not valid 501-rule split nested", async ({page}) => {
   await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo2");
   await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
@@ -62,6 +64,8 @@ test("field-comparison bulk editor warns on overfull flat and nested objects but
 
 test("customer saves 501 split-nested comparisons in dashboard and runs both real tenant stages", async ({page, request}) => {
   await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo2");
   await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
@@ -72,6 +76,8 @@ test("customer saves 501 split-nested comparisons in dashboard and runs both rea
     expect(reset.status(), (await reset.text()).slice(0,200)).toBe(200);
     resetRequired = true;
     await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
     await page.locator("#demo-user").selectOption("demo2");
     await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
     await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
@@ -108,6 +114,8 @@ test("customer saves 501 split-nested comparisons in dashboard and runs both rea
 
     // Real reconnect rereads the tenant; no mocked GETs or shadow editor state.
     await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
     await page.locator("#demo-user").selectOption("demo2");
     await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
     await expect(page.locator("#comparison-draft-summary")).toContainText("No pending changes.");
@@ -147,6 +155,8 @@ test("customer saves 501 split-nested comparisons in dashboard and runs both rea
 
 test("comparison editor warns for 33-level JSON pointers per stage, but not 32-level paths", async ({page, request}) => {
   await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo2");
   await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo2");

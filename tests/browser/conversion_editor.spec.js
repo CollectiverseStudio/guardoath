@@ -2,6 +2,8 @@ const {test,expect} = require("@playwright/test");
 
 test("conversion/time editor saves a mass rule, runs bad and benign examples, and removes it", async ({page}) => {
   await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo4");
   await page.getByRole("button",{name:"Get demo API key",exact:true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
@@ -80,6 +82,8 @@ test("conversion/time editor saves a mass rule, runs bad and benign examples, an
 
 test("conversion editor blocks overlapping or empty paths and absent stages",async ({page})=>{
   await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo4");
   await page.getByRole("button",{name:"Get demo API key",exact:true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
@@ -115,6 +119,8 @@ test("conversion editor keeps private FX hidden while allowing public rule draft
     await route.fulfill({response,json:body});
   });
   await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo4");
   await page.getByRole("button",{name:"Get demo API key",exact:true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo4");

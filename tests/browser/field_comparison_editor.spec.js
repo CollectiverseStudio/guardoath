@@ -3,6 +3,8 @@ const { test, expect } = require("@playwright/test");
 test("tenant can create, reload, edit stages and remove a comparison from the dashboard", async ({ page }) => {
   async function connect() {
     await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
     await page.locator("#demo-user").selectOption("demo2");
     await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
     await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
@@ -89,6 +91,8 @@ test("tenant can create, reload, edit stages and remove a comparison from the da
 
 test("comparison IDs enforce native HTML v-pattern validation before a draft can be saved", async ({page}) => {
   await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo2");
   await page.getByRole("button", {name:"Get demo API key", exact:true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
@@ -110,6 +114,8 @@ test("comparison IDs enforce native HTML v-pattern validation before a draft can
 
 test("guided refund example stays a draft until authenticated Save and blocks in shared Engine", async ({page, request}) => {
   await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo2");
   await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
@@ -123,6 +129,8 @@ test("guided refund example stays a draft until authenticated Save and blocks in
     const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
     expect(reset.status()).toBe(200);
     await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
     await page.locator("#demo-user").selectOption("demo2");
     await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
     await expect(page.locator("#connection-status")).toContainText("Connected to demo2");

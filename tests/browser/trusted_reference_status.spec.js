@@ -17,6 +17,8 @@ test("host-attested tenant reference panel exposes only safe status and navigate
     await route.fulfill({response, json:body});
   });
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo7");
   await page.getByRole("button", {name:"Get demo API key", exact:true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo7");
@@ -44,6 +46,8 @@ test("host-attested tenant reference panel exposes only safe status and navigate
 
 test("host-attested reference panel has explicit empty inventory, not a fabricated verification claim", async ({page}) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo7");
   await page.getByRole("button", {name:"Get demo API key", exact:true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo7");
@@ -64,6 +68,8 @@ test("host-reference status shows current accepted integrity without claiming ex
     await route.fulfill({response, json: body});
   });
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo7");
   await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo7");

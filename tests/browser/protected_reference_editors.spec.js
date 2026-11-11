@@ -4,6 +4,8 @@ const {test, expect} = require("@playwright/test");
 
 test("public identity and conversion editors preserve hidden reference definitions", async ({page, request}) => {
   await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo9");
   await page.getByRole("button", {name:"Get demo API key",exact:true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo9");
@@ -62,6 +64,8 @@ test("public identity and conversion editors preserve hidden reference definitio
     expect(JSON.stringify(protectedState)).not.toContain("SYNTHETIC_PRIVATE_LOT");
     expect(JSON.stringify(protectedState)).not.toContain("SYNTHETIC-PRIVATE-FX");
     await page.goto("/dashboard");
+  // Explicitly expand optional tools for this advanced-editor acceptance test.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
     await page.locator("#demo-user").selectOption("demo9");
     await page.getByRole("button", {name:"Get demo API key",exact:true}).click();
     await expect(page.locator("#connection-status")).toContainText("Connected to demo9");

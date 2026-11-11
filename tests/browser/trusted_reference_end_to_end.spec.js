@@ -34,6 +34,8 @@ function signedReference() {
 
 async function connect(page) {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo7");
   await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo7");

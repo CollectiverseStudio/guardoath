@@ -6,6 +6,8 @@ const { test, expect } = require("@playwright/test");
 // verify actual public-demo and customer-session authorization separately.
 async function connectDeveloperPolicyFixture(page, navigate = true) {
   if (navigate) await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.evaluate(() => {
     sessionStorage.setItem("guardoath-session", "synthetic-local-policy-fixture");
     application = {tenant: {demo: false}, policies: []};
@@ -47,6 +49,8 @@ test("demo user discovery recovers without refreshing the dashboard", async ({ p
     return route.continue();
   });
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   const retry = page.getByRole("button", {name: "Retry loading demo users"});
   await expect(retry).toBeVisible();
   await retry.click();
@@ -63,6 +67,8 @@ test("demo key request can be retried after a transient first failure", async ({
     return route.continue();
   });
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await expect(page.locator("#demo-users")).toBeVisible();
   await page.locator("#demo-user").selectOption("demo1");
   await page.getByRole("button", {name: "Get demo API key"}).click();
@@ -75,6 +81,8 @@ test("demo key request can be retried after a transient first failure", async ({
 
 test("checks are first and optional comparison tooling is clearly explained", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   // This configuration panel is available to an authenticated tenant/demo,
   // not the unconnected public landing state. Exercise the real customer view.
   await page.locator("#demo-user").selectOption("demo4");
@@ -586,6 +594,8 @@ test("secrets group batch report keeps expected incomplete cases visible", async
 
 test("dashboard links to the developer guide on this site", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await expect(page.getByRole("link",{name:"Developer guide"})).toHaveAttribute("href","/guide");
 });
 
@@ -865,6 +875,8 @@ for(const [id,rule] of [['refund-exceeds','refund_limit'],['date-reversed','date
 
 test('dashboard examples are offered only once an application profile is loaded',async({page})=>{
   await page.goto('/dashboard');
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator('#input-example-check').selectOption('general');
   await expect(page.locator('#input-example option[data-sample]')).toHaveCount(0);
   await connectDeveloperPolicyFixture(page, false);
@@ -1143,6 +1155,8 @@ for(const [sample,rule] of [['iban','iban_code'],['crypto','crypto'],['ip-addres
 }
 test("demo video loads with its full length and size", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   const video = page.locator("#demo-video");
   await expect(video).toBeVisible();
   const meta = await video.evaluate(v => new Promise(resolve => {
@@ -1157,6 +1171,8 @@ test("demo video loads with its full length and size", async ({ page }) => {
 });
 test("choosing a demo user shows its API key and connects", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await expect(page.locator("#demo-users")).toBeVisible();
   await expect(page.locator("#demo-user option")).toHaveCount(10);
   await page.locator("#demo-user").selectOption("demo2");
@@ -1175,6 +1191,8 @@ test("choosing a demo user shows its API key and connects", async ({ page }) => 
 });
 test("a demo user can turn checks off and reset them", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo3");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo3");
@@ -1212,6 +1230,8 @@ test("a demo user can turn single rules off and give one its own action, per sta
   // Since 2026-11-04 the rules sit under their check in one table; "Show rules" opens them. Each rule has an Input
   // and an Output setting.
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo8");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
@@ -1263,6 +1283,8 @@ test("a demo user can turn single rules off and give one its own action, per sta
 });
 test("every check and profile explains what it does and why", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo4");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
@@ -1324,6 +1346,8 @@ test("prepared example mode lets the answer be chosen before the input test", as
 });
 test("a demo user has no profile to choose and runs its record's checks", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await expect(page.locator("#advanced")).toBeHidden();
   await page.locator("#demo-user").selectOption("demo5");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
@@ -1348,6 +1372,8 @@ test("requests carry the key header and the body hash CloudFront needs", async (
   const seen = [];
   page.on("request", r => { if (r.url().includes("/v1/")) seen.push({url: r.url(), method: r.method(), headers: r.headers(), body: r.postData()}); });
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo7");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo7");
@@ -1371,6 +1397,8 @@ test("a busy server is retried, so the demo users still appear", async ({ page }
     await route.fallback();
   });
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await expect(page.locator("#demo-users")).toBeVisible();
   await expect(page.locator("#demo-user option")).toHaveCount(10);
   expect(refused).toBe(2);
@@ -1378,6 +1406,8 @@ test("a busy server is retried, so the demo users still appear", async ({ page }
 test("when demo users cannot be loaded the page says so", async ({ page }) => {
   await page.route("**/v1/demo-users", route => route.fulfill({status: 500, contentType: "application/json", body: "{}"}));
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await expect(page.locator("#connection-status")).toContainText("Select Retry loading demo users; no page refresh is required.");
   await expect(page.locator("#demo-users")).toBeHidden();
   await expect(page.getByRole("button", {name: "Retry loading demo users"})).toBeVisible();
@@ -1387,6 +1417,8 @@ test("other 429s are not retried", async ({ page }) => {
   await page.route("**/v1/demo-users/demo1/key", async route => { calls++;
     await route.fulfill({status: 429, contentType: "application/json", body: JSON.stringify({detail: "Monthly check limit reached"})}); });
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo1");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("The demo key could not be issued (HTTP 429). Select Get demo API key again to retry; no refresh is needed.");
@@ -1402,12 +1434,16 @@ test("the developer guide opens at a check's section from its What is this? link
 });
 test("without tenant sign-in on the server, no sign-in button is shown", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await expect(page.locator("#demo-users")).toBeVisible();
   await expect(page.locator("#sign-in-box")).toBeHidden();
   await expect(page.locator("#keys-panel")).toBeHidden();
 });
 test("every check's examples and every rule's example can be picked", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo9");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo9");
@@ -1429,6 +1465,8 @@ test("every check's examples and every rule's example can be picked", async ({ p
 });
 test("a tenant sees every dashboard example under the check it uses and can turn that check on", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo10");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
@@ -1476,6 +1514,8 @@ test("only Block holds a message: Allow and Flag findings go through, and change
   // Reported 2026-11-03: Personal data set to Allow (not saved), the email example still came back Block and was
   // held. Greg 2026-11-04: a Flag on an input check does not stop the message going to the AI either; only Block does.
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo6");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo6");
@@ -1537,6 +1577,8 @@ test("one table grouped by check lists and searches rules correctly", async ({ p
   // Greg 2026-11-03: Email address took a long time to find, and a rule should default to its check's setting.
   // Greg 2026-11-04: the drop-down grid plus a separate rule table was confusing; one table grouped by category.
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo6");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo6");
@@ -1567,6 +1609,8 @@ test("one table grouped by check lists and searches rules correctly", async ({ p
 });
 test("rule settings inherit independently on input and output", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo6");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo6");
@@ -1592,6 +1636,8 @@ test("rule settings inherit independently on input and output", async ({ page })
 });
 test("rule setting filters honor independent input and output actions", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo6");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo6");
@@ -1622,6 +1668,8 @@ test("rule setting filters honor independent input and output actions", async ({
 });
 test("redaction clears incompatible own actions and category filter scopes results", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo6");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo6");
@@ -1654,6 +1702,8 @@ test("redaction clears incompatible own actions and category filter scopes resul
 test("a rule's row shows the setting in effect on each stage", async ({ page }) => {
   // Greg 2026-11-03 16:44: "all the rules should be in a table to view with the category and what the setting is".
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo7");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo7");
@@ -1685,6 +1735,8 @@ test("a check changed in the panel shows at once in the examples, and the run us
   // Greg 2026-11-03 17:03: Graph structure set to Block (not saved) still showed "Graph structure (4) — off" in the
   // picker, and Run input checks gave Allow because the old record ran.
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo4");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
@@ -1711,6 +1763,8 @@ test("a check that needs JSON warns in the panel and explains the block on a tex
   // 2026-11-04: demo1 had Graph structure on Block, so the live clean-question check came back Block (graph
   // skipped: it needs JSON). Greg chose to keep blocking, with a warning.
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo5");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo5");
@@ -1736,6 +1790,8 @@ test("a check that needs JSON warns in the panel and explains the block on a tex
 test("a document check's rule example is loaded as JSON and reported", async ({ page }) => {
   // 2026-11-04: the document checks' findings are rules, each with a JSON example.
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo2");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
@@ -1755,6 +1811,8 @@ test("a document check's rule example is loaded as JSON and reported", async ({ 
 test("field comparisons on the record are rules in the table, with their configuration and own setting", async ({ page }) => {
   // 2026-11-04: each comparison on a tenant record is a rule of that record (business.<rule_id>).
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo2");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
@@ -1788,6 +1846,8 @@ test("field comparisons on the record are rules in the table, with their configu
 });
 test("comparison editor shows stage counts and pending changes through add and removal", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo2");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
@@ -1817,6 +1877,8 @@ test("comparison editor shows stage counts and pending changes through add and r
 test("human safety: a person at risk is flagged and the message continues; a harmful answer is blocked", async ({ page }) => {
   // 2026-11-05: the human_safety check (61 wording rules from docs/human-safety-scenarios.md). Only Block stops.
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo3");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo3");
@@ -1842,6 +1904,8 @@ test("human safety: a person at risk is flagged and the message continues; a har
 test("prompt attack and harmful content run in GuardOath: a Flag on input lets the message through, a Block on output holds the answer", async ({ page }) => {
   // 2026-11-05 (Greg): GuardOath does this work itself; these checks replace the removed outside-provider checks.
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo7");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo7");
@@ -1868,6 +1932,8 @@ test("prompt attack and harmful content run in GuardOath: a Flag on input lets t
 test("Spanish prompt overrides show as tenant rules and enforce independent dashboard stages", async ({ page }) => {
   // Keep the new rule visible/configurable in the existing tenant UI; API tests verify cross-tenant isolation.
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo7");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo7");
@@ -1901,6 +1967,8 @@ test("Spanish prompt overrides show as tenant rules and enforce independent dash
 });
 test("CSV formula rules use the same tenant settings, examples and dashboard result flow", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo8");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
@@ -1933,6 +2001,8 @@ test("CSV formula rules use the same tenant settings, examples and dashboard res
 
 test("selected browser CSV bytes use authenticated attachment API, ignore claimed PDF type and hold Block", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo8");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
@@ -1963,6 +2033,8 @@ test("selected browser CSV bytes use authenticated attachment API, ignore claime
 
 test("unsupported attachment bytes fail closed despite a misleading CSV MIME claim", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo9");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo9");
@@ -1994,6 +2066,8 @@ test("unsupported attachment bytes fail closed despite a misleading CSV MIME cla
 
 test("over-budget browser file is rejected before reading or sending any attachment API request", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo9");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo9");
@@ -2011,6 +2085,8 @@ test("over-budget browser file is rejected before reading or sending any attachm
 
 test("output file picker retains a passed input and checks actual output bytes separately", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo7");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo7");
@@ -2045,6 +2121,8 @@ test("output file picker retains a passed input and checks actual output bytes s
 
 test("tenant dashboard persists independent attachment Auto/Off modes before real-file inspection", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo10");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
@@ -2088,6 +2166,8 @@ test("tenant dashboard persists independent attachment Auto/Off modes before rea
 test("CHAT-009 three-turn dashboard examples use tenant Input/Output rules, with a benign look-alike", async ({ page }) => {
   // The dashboard picker must exercise the actual shared API, not a decorative sample.
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo7");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo7");
@@ -2127,6 +2207,8 @@ test("CHAT-009 three-turn dashboard examples use tenant Input/Output rules, with
 
 test("CHAT-009 four-turn conditioning and benign examples run through tenant Input/Output API", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo7");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo7");
@@ -2183,6 +2265,8 @@ test("CHAT-009 four-turn conditioning and benign examples run through tenant Inp
 
 test("CSV sample button submits real synthetic input bytes through tenant attachment checks", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo10");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
@@ -2211,6 +2295,8 @@ test("CSV sample button submits real synthetic input bytes through tenant attach
 
 test("Output sample format controls respect the input gate and send actual TSV bytes", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo10");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
@@ -2241,6 +2327,8 @@ test("Output sample format controls respect the input gate and send actual TSV b
 
 test("PII finding opens its editable tenant rule without changing saved policy", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo10");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
@@ -2268,6 +2356,8 @@ test("PII finding opens its editable tenant rule without changing saved policy",
 
 test("Output PII finding navigates to Output-only tenant rule selector without policy mutation", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo10");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
@@ -2297,6 +2387,8 @@ test("Output PII finding navigates to Output-only tenant rule selector without p
 
 test("eight-kind arithmetic editor: tenant create/save/reload/real-Engine finding/edit/remove", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo10");
   await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
@@ -2354,6 +2446,8 @@ test("eight-kind arithmetic editor: tenant create/save/reload/real-Engine findin
 
 test("arithmetic editor rejects malformed, conflicting and incomplete drafts without a tenant write", async ({ page }) => {
   await page.goto("/dashboard");
+  // These tests intentionally opt into the optional advanced configuration.
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo10");
   await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
