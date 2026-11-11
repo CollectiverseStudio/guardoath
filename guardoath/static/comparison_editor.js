@@ -182,6 +182,7 @@
     for (const [value, name] of [["all", "All stages"], ["input", "Input"], ["output", "Output"]]) {
       const option = element("option", name); option.value = value; stageFilter.append(option);
     }
+    stageFilter.value = "all"; // stable default before and after dashboard reconnect
     filterBar.append(filterLabel, filterInput, stageLabel, stageFilter);
     const filterStatus = element("p"); filterStatus.id = "comparison-filter-status";
     filterStatus.setAttribute("role", "status"); filterStatus.setAttribute("aria-live", "polite");
