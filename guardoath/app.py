@@ -743,7 +743,9 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             price = await run_in_threadpool(fetch_price)
         except (OSError, ValueError, UnicodeError):
             raise HTTPException(503, "Subscription pricing unavailable") from None
-        recurring = price.get("recurring") if isinstance(price, dict) else None
+        if not isinstance(price, dict):
+            raise HTTPException(503, "Invalid subscription price response")
+        recurring = price.get("recurring")
         amount = price.get("unit_amount") if isinstance(price, dict) else None
         currency = price.get("currency") if isinstance(price, dict) else None
         interval = recurring.get("interval") if isinstance(recurring, dict) else None
