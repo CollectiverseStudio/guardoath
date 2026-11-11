@@ -11,12 +11,12 @@ test("ordinary tenant sees checks first and advanced configuration closed by def
   await expect(advanced).toBeVisible();
   await expect(advanced).not.toHaveAttribute("open", "");
   await expect(page.locator("#comparison-editor")).toBeHidden();
-  await advanced.locator("summary").click();
+  await advanced.locator(":scope > summary").click();
   await expect(advanced).toHaveAttribute("open", "");
   await expect(page.locator("#comparison-editor")).toBeVisible();
   await expect(advanced).toContainText("Arithmetic comparisons");
   await expect(advanced).toContainText("Host-attested reference status");
-  await advanced.locator("summary").click();
+  await advanced.locator(":scope > summary").click();
   await expect(page.locator("#comparison-editor")).toBeHidden();
   // Merely revealing or collapsing UI must not save or change tenant policy.
   await expect(page.locator("#tenant-message")).not.toContainText("Saved.");
