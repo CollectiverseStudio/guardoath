@@ -492,6 +492,16 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
     await expect(page.locator('#comparison-drafts li[data-comparison-id="mixed_ui_000"]')).toBeVisible();
     await expect(ordinaryEditorRow).toContainText("Unsaved comparison changes:");
     await expect(ordinaryEditorRow).not.toContainText("Saved output rule action is Off.");
+    // Pending Output stage removal must delete only this original ordinary
+    // override. Other ordinary/advanced actions survive the linear lookup.
+    const pendingOutputActions = await page.evaluate(() => comparisonEditor.actions("output", {
+      "business.mixed_ui_000": "off", "business.mixed_ui_004": "flag",
+      "business.mixed_ui_499": "off", "non_business_rule": "block",
+    }));
+    expect(pendingOutputActions).toEqual({
+      "business.mixed_ui_004": "flag",
+      "business.mixed_ui_499": "off", "non_business_rule": "block",
+    });
     expect((await current(request, headers)).revision).toBe(ordinaryOff.revision);
     // A pending advanced conversion stage edit changes the searchable draft,
     // not the persisted Output-Off action or the Engine's 500-rule policy.
