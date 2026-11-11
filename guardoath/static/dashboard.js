@@ -1,6 +1,6 @@
 "use strict";
 const $ = id => document.getElementById(id);
-let key = "", application = null, revision = 0, busy = false, inputResult = null;
+let key = "", application = null, revision = 0, busy = false, tenantSaving = false, inputResult = null;
 // Only Block stops a message or answer (Greg, 2026-11-04). The decision decides, not whether something was found: Allow
 // goes through; Flag goes through and its findings are reported for review; Redact goes through as the cleaned text once
 // it has been checked again (redaction ready). A check that did not finish gets the record's failure action, so it
@@ -126,8 +126,8 @@ const receiptMatchesRequest = (r, stage, appId, policy, expectedFiles = 0) => re
     && Array.isArray(r.redaction.validation_results)
     && (r.redaction.status !== "ready" || redactionRecheckPassed(r))));
 function buttons() {
-  $("run").disabled = $("run-input").disabled = busy || !application?.policies.length;
-  $("run-output").disabled = busy || !application || !canProceed(inputResult);
+  $("run").disabled = $("run-input").disabled = busy || tenantSaving || !application?.policies.length;
+  $("run-output").disabled = busy || tenantSaving || !application || !canProceed(inputResult);
   $("input-attachments").disabled = busy || !application?.tenant;
   $("output-attachments").disabled = busy || !application?.tenant || outputLocked();
   updateOutputField();
@@ -509,7 +509,7 @@ function renderTenant() {
     () => api("/v1/tenants/current/statistical-drift"), showUnsaved);
   for (const id of Object.keys(tenant.input_checks)) { updateFormatNote(id); showCheckEffect(id); }
   buildRuleFinder();
-  $("tenant-save").disabled = !own;
+  $("tenant-save").disabled = tenantSaving || !own;
   $("tenant-reset").hidden = !tenant.demo;
   // The example picker and notes read the panel (checkIsOn), and loadApplication refreshes them before this
   // function rebuilds the panel, so refresh them again now that the panel shows the record (Tests #673).
@@ -715,7 +715,10 @@ function fieldComparisonIdCollision(changes) {
   return null;
 }
 async function saveTenant(path, body, done) {
-  if (!application?.tenant || busy) return false;
+  // Do not overlap a reset/check-settings mutation with another mutation or
+  // a user-triggered check. The tenant revision is authoritative only after
+  // the save response and application reload have completed.
+  if (!application?.tenant || busy || tenantSaving) return false;
   if (path === "/v1/tenants/current/checks") {
     const collision = fieldComparisonIdCollision(body?.changes || {});
     if (collision) { $("tenant-message").textContent = collision; return false; }
@@ -735,7 +738,9 @@ async function saveTenant(path, body, done) {
     revision === ownerAttempt &&
     (!ownerKey.startsWith(SESSION) ||
       sessionStorage.getItem("guardoath-session") === ownerKey.slice(SESSION.length));
+  tenantSaving = true;
   $("tenant-save").disabled = $("tenant-reset").disabled = true;
+  buttons();
   let message = done, saved = false;
   try {
     const text = JSON.stringify(body);
@@ -776,6 +781,8 @@ async function saveTenant(path, body, done) {
       $("tenant-message").textContent = reloaded || sameDraft() ? message :
         "An earlier save may have changed this tenant while you edited. Your newer draft was kept; reconnect to compare saved values before saving again.";
     }
+    tenantSaving = false;
+    buttons();
   }
   return saved;
 }
@@ -2066,7 +2073,7 @@ async function selectedAttachmentBytes(stage) {
   return encoded;
 }
 async function execute(target) {
-  if (!application || busy || (target === "output" && !canProceed(inputResult))) return;
+  if (!application || busy || tenantSaving || (target === "output" && !canProceed(inputResult))) return;
   // Settings changed in the checks panel are saved before the check, so a check always runs what the panel shows.
   // Saving reloads the record, which clears the input result, so an output run becomes a full run with the same
   // proposed answer.
