@@ -106,3 +106,70 @@ test("comparison IDs enforce native HTML v-pattern validation before a draft can
   await page.locator("#comparison-id").fill("valid_rule_1");
   expect(await page.locator("#comparison-id").evaluate(e => e.validity.patternMismatch)).toBe(false);
 });
+
+
+test("guided refund example stays a draft until authenticated Save and blocks in shared Engine", async ({page, request}) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo2");
+  await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
+  const headers = {Authorization: "Bearer " + await page.locator("#demo-key-value").inputValue()};
+  const current = async () => {
+    const response = await request.get("/v1/applications/current", {headers});
+    expect(response.status()).toBe(200);
+    return (await response.json()).tenant;
+  };
+  try {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(reset.status()).toBe(200);
+    await page.goto("/dashboard");
+    await page.locator("#demo-user").selectOption("demo2");
+    await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+    await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
+
+    const baseline = await current();
+    await page.locator("#comparison-sample").click();
+    await expect(page.locator("#comparison-id")).toHaveValue("refund_not_over_paid");
+    await expect(page.locator("#comparison-left")).toHaveValue("/invoice/refund");
+    await expect(page.locator("#comparison-right")).toHaveValue("/invoice/paid");
+    await expect(page.locator("#comparison-message")).toContainText("not added or saved");
+    expect((await current()).comparisons).toEqual(baseline.comparisons);
+    expect((await current()).revision).toBe(baseline.revision);
+
+    await page.locator("#comparison-apply").click();
+    await expect(page.locator("#comparison-draft-summary")).toContainText("1 added");
+    expect((await current()).comparisons).toEqual(baseline.comparisons);
+    await page.locator("#tenant-check-input-cross_field").selectOption("block");
+    await page.locator("#tenant-check-output-cross_field").selectOption("block");
+    await page.getByRole("button", {name: "Save checks", exact: true}).click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved.");
+    const saved = await current();
+    expect(saved.comparisons.find(x => x.rule_id === "refund_not_over_paid")).toEqual({
+      rule_id: "refund_not_over_paid", left: "/invoice/refund", right: "/invoice/paid",
+      operator: "le", value_type: "number", stages: ["input", "output"]
+    });
+
+    for (const stage of ["input", "output"]) {
+      for (const [refund, shouldBlock] of [[75, true], [25, false]]) {
+        const response = await request.post("/v1/checks/" + stage, {headers, data: {
+          application_id: "demo2", content_format: "json",
+          content: JSON.stringify({invoice: {refund, paid: 50}})
+        }});
+        expect(response.status()).toBe(200);
+        const data = await response.json();
+        expect(data.evaluation_status).toBe("complete");
+        const found = data.findings.map(x => x.rule_id).includes("business.refund_not_over_paid");
+        expect(found).toBe(shouldBlock);
+        if (shouldBlock) expect(data.effective_action).toBe("block");
+      }
+    }
+    // A second click must not replace or alter a saved definition.
+    await page.locator("#comparison-sample").click();
+    await expect(page.locator("#comparison-message")).toContainText("already exists");
+    expect((await current()).comparisons).toEqual(saved.comparisons);
+  } finally {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(reset.status()).toBe(200);
+  }
+});
+
