@@ -3138,3 +3138,9 @@ Example that satisfies this *particular* rule:
 ```
 
 This example compares values in **submitted data only**; it does not independently verify payments, approve a refund, or prove that other GuardOath checks will pass. The customer's authoritative tenant check/rule actions and the existing shared Engine determine the effective result, including other findings and malformed JSON. A demo user is a shared sandbox, not a private customer tenant.
+
+### Privacy overlap processing and bounded local checks
+
+The built-in privacy recognizers retain distinct detections when two checks describe the same characters (for example, an email detector and an explicitly labeled sensitive field). Exact duplicate detections from the same detector are reported only once. This behavior does not depend on whether an additional regional privacy pattern matches. In an own-detector-only scan, GuardOath avoids the more expensive regional-pattern overlap analysis; this is an internal performance optimization, **not** a new rule or a change to a tenant's Input/Output settings.
+
+Privacy scans still have the configured bounded execution deadline, including the standard 500-ms limit. If the local checker cannot complete within that deadline, GuardOath returns an incomplete result and blocks according to its fail-closed policy; absence of findings in an incomplete response **does not mean the content was cleared**. This optimization alone does not establish that intermittent timeout behavior is resolved.
