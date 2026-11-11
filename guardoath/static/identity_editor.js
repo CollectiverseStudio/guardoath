@@ -158,7 +158,37 @@
     apply.id = "identity-apply"; apply.type = "submit";
     const cancel = el("button", "Cancel edit");
     cancel.id = "identity-cancel"; cancel.type = "button"; cancel.hidden = true;
-    form.append(apply, cancel, message);
+    // A guided example is only a form fill, not a tenant change or a new
+    // evaluator. Customers must explicitly Add and then Save checks.
+    const sampleHelp = el("p",
+      "Order/shipment example: order A100 and shipment B200 violate ID equality; " +
+      "matching A100 values satisfy this rule. Other tenant checks still apply.");
+    sampleHelp.id = "identity-sample-help";
+    const sample = el("button", "Fill example: shipment order ID must match order");
+    sample.id = "identity-sample"; sample.type = "button";
+    sample.addEventListener("click", () => {
+      const id = "shipment_order_matches";
+      // Refuse collisions, including deleted-but-unsaved, cross-family
+      // drafts and protected reference-backed IDs. Never edit a saved rule.
+      if (original.some(rule => rule.rule_id === id) ||
+          draft.some(rule => rule.rule_id === id) ||
+          (tenant.record_rules || []).some(rule => rule.rule_id === "business." + id) ||
+          (window.comparisonEditor &&
+           window.comparisonEditor.otherFamilyDraftHasId(id, "advanced_identity"))) {
+        message.textContent = "Example rule ID already exists. Edit the existing rule or choose a different ID.";
+        return;
+      }
+      clear();
+      controls.id.value = id;
+      controls.kind.value = "order_id_match";
+      drawFields({order_id: "/order/id", shipment_order_id: "/shipment/order_id"});
+      controls.input.checked = controls.output.checked = true;
+      message.textContent = "Example filled, not added or saved. Choose Add pending identity rule, " +
+        "then Save checks. Enable Field comparisons with Block on each stage to stop violations. " +
+        "Sample JSON: {\"order\":{\"id\":\"A100\"},\"shipment\":{\"order_id\":\"B200\"}}.";
+      controls.id.focus();
+    });
+    form.append(sampleHelp, sample, apply, cancel, message);
     host.append(filterBar, filterStatus, preview, list, form);
     searchInput.addEventListener("input", draw);
     stageFilter.addEventListener("change", draw);
