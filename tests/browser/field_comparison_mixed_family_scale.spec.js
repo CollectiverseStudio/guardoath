@@ -113,8 +113,13 @@ test("advanced comparison no-op edits preserve the authenticated tenant revision
       await page.locator("#" + family + "-apply").click();
       // Editing fields without semantic changes must not queue an accidental
       // update that bumps revision or changes any stage-level behavior.
-      await expect(page.locator("#tenant-message")).toHaveText("");
+      // The tenant status can legitimately report unrelated unsaved controls.
+      // Assert this editor contributed no pending delta; the revision assertion
+      // below still proves the Save did not persist any semantic rule change.
       await expect(page.locator("#" + family + "-draft-summary")).toContainText("No pending changes.");
+      expect(await page.evaluate(name => window[name].delta(), {
+        arithmetic: "arithmeticEditor", identity: "identityEditor", conversion: "conversionEditor"
+      }[family])).toBeNull();
     }
     await page.locator("#tenant-save").click();
     await expect(page.locator("#tenant-message")).toHaveText("No changes to save.");
