@@ -268,6 +268,7 @@ test("a forged redaction-ready receipt cannot release without real second-pass p
   await profile(page, "redaction-v1");
   await pickSample(page, "output", "redaction");
   let realRechecks = null;
+  let originalChecks = null;
   let intercepted = 0;
   await page.route("**/v1/checks/output", async route => {
     // Execute the existing local Engine; alter only the returned envelope to
@@ -278,6 +279,7 @@ test("a forged redaction-ready receipt cannot release without real second-pass p
     expect(result.redaction.status).toBe("preview");
     expect(result.redaction.validation_results.length).toBeGreaterThan(0);
     realRechecks = result.redaction.validation_results;
+    originalChecks = result.checker_results;
     intercepted++;
     await route.fulfill({response, json: {
       ...result, recommended_action: "redact", effective_action: "redact",
@@ -293,22 +295,62 @@ test("a forged redaction-ready receipt cannot release without real second-pass p
   // Source-executed client release decisions use actual server-generated
   // rechecks rather than a fabricated success record. No test-time skip,
   // deadline extension or weakened backend gate is involved.
-  const decisions = await page.evaluate(rechecks => {
-    const receipt = checks => ({redaction: {
-      status: "ready", content: "[REDACTED_EMAIL_ADDRESS]", validation_results: checks,
-    }});
+  const decisions = await page.evaluate(({rechecks, original}) => {
+    const receipt = (checks, initial = original) => ({
+      checker_results: initial,
+      redaction: {status: "ready", content: "[REDACTED_EMAIL_ADDRESS]",
+        validation_results: checks},
+    });
     const first = rechecks[0];
+    const second = {...first, checker_id: "synthetic_second_checker"};
+    const two = [first, second];
     return {
       real: goesThrough("redact", receipt(rechecks)),
       missing: goesThrough("redact", receipt([])),
       errored: goesThrough("redact", receipt([{...first, status: "error"}])),
       simulated: goesThrough("redact", receipt([{...first, simulated: true}])),
       malformed: goesThrough("redact", receipt([null])),
+      omitted: goesThrough("redact", receipt([first], two)),
+      duplicated: goesThrough("redact", receipt([first, first], two)),
+      substituted: goesThrough("redact", receipt([first, {...second, checker_id: "unknown"}], two)),
+      duplicateOriginal: goesThrough("redact", receipt(two, [first, first])),
+      allSelected: goesThrough("redact", receipt(two, two)),
     };
-  }, realRechecks);
+  }, {rechecks: realRechecks, original: originalChecks});
   expect(decisions).toEqual({
     real: true, missing: false, errored: false, simulated: false, malformed: false,
+    omitted: false, duplicated: false, substituted: false, duplicateOriginal: false,
+    allSelected: true,
   });
+});
+
+test("a forged passing redaction recheck from another checker cannot release output", async ({page}) => {
+  await connect(page);
+  await profile(page, "redaction-v1");
+  await pickSample(page, "output", "redaction");
+  let intercepted = 0;
+  await page.route("**/v1/checks/output", async route => {
+    const response = await route.fetch();
+    expect(response.status()).toBe(200);
+    const result = await response.json();
+    expect(result.redaction.status).toBe("preview");
+    expect(result.redaction.validation_results.length).toBeGreaterThan(0);
+    // Preserve count and passing status to isolate the missing identity
+    // contract. The replacement recheck did not validate the selected PII
+    // checker, even though it is a syntactically plausible CheckerResult.
+    const substituted = result.redaction.validation_results.map((check, index) =>
+      index === 0 ? {...check, checker_id: "unselected_checker"} : check);
+    intercepted++;
+    await route.fulfill({response, json: {
+      ...result, recommended_action: "redact", effective_action: "redact",
+      redaction: {...result.redaction, status: "ready", validation_results: substituted},
+    }});
+  });
+  await run(page);
+  expect(intercepted).toBe(1);
+  await expect(page.locator("#result-status")).toHaveText("Check failed");
+  await expect(page.locator("#answer")).toBeHidden();
+  await expect(page.locator("#run-error")).toContainText("receipt was invalid");
 });
 
 test("redacted preview uses safe text rendering", async ({ page }) => {
