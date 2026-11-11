@@ -572,10 +572,17 @@ def test_the_page_follows_the_decision_and_saves_changed_settings_before_a_check
         "goesThrough(r.recommended_action, r) && goesThrough(r.effective_action, r)",
     ):
         assert required in gate, required
-    # Every original/returned checker must have a unique identity. Assert the
-    # customer Input gate AND the pre-render Output receipt enforce this; a
-    # duplicated pass cannot stand in for a checker whose result is absent.
-    assert gate.count("new Set(r.checker_results.map(c => c.checker_id)).size === r.checker_results.length") == 2
+    # Each ordinary message checker is unique. Independent file scans may
+    # repeat the checker ID only when each is scoped to a real file receipt.
+    # The same strict provenance guard protects both the Input gate and the
+    # pre-render Output binding; no unscoped duplicate can substitute a pass.
+    assert gate.count("checkerEvidenceScoped(r") == 2
+    for proof in ("const checkerEvidenceScoped =", "file.index !== i",
+                  "seen.has(identity)", "representedFiles.size === count",
+                  "count !== expectedFiles"):
+        assert proof in gate, proof
+    assert 'receiptMatchesRequest(checked, "input", app, policy, actualFileCounts.input)' in script
+    assert 'receiptMatchesRequest(checked, "output", app, policy, actualFileCounts.output)' in script
     run = script[script.index("async function execute(target)"):]
     run = run[:run.index("\n}\n")]
     assert "pendingChanges()" in run and "saveTenant(" in run and run.index("saveTenant(") < run.index('assess("input")')
