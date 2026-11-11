@@ -75,6 +75,9 @@ test("advanced conversion array-index example flows through saved tenant, dashbo
     expect(safe.loads[0].load).toBe(1000);
 
     await page.reload();
+    // A reload intentionally collapses optional configuration. Open it before
+    // operating the customer-facing saved rule examples.
+    await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
     await page.locator("#demo-user").selectOption("demo4");
     await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
     await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
