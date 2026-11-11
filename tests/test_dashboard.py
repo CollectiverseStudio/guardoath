@@ -556,11 +556,26 @@ def test_the_page_follows_the_decision_and_saves_changed_settings_before_a_check
     panel shows (unsaved changes are saved first). 2026-11-04 (Greg): only Block stops; Flag goes through."""
     from pathlib import Path
     script = (Path(__file__).resolve().parents[1] / "guardoath" / "static" / "dashboard.js").read_text(encoding="utf-8")
-    gate = next(line for line in script.splitlines() if line.startswith("const canProceed = "))
-    gate = script[script.index("const goesThrough = "):script.index("function buttons()")]
+    # A redaction may pass only after the complete, uniquely identified
+    # second-pass result set succeeds. Do not require an obsolete one-line
+    # status literal after the safety check was extracted into a helper.
+    gate = script[script.index("const redactionRecheckPassed = "):script.index("function buttons()")]
     assert "findings.length" not in gate
-    assert '["allow", "flag"].includes(action)' in gate and 'r.redaction?.status === "ready"' in gate
-    assert "goesThrough(r.recommended_action, r) && goesThrough(r.effective_action, r)" in gate
+    for required in (
+        '["allow", "flag"].includes(action)',
+        '(action === "redact" && redactionRecheckPassed(r))',
+        'r?.redaction?.status !== "ready"',
+        'c.status !== "passed" || c.simulated !== false',
+        "originalIds.has(c.checker_id)",
+        "recheckedIds.has(c.checker_id)",
+        "recheckedIds.size === originalIds.size",
+        "goesThrough(r.recommended_action, r) && goesThrough(r.effective_action, r)",
+    ):
+        assert required in gate, required
+    # Every original/returned checker must have a unique identity. Assert the
+    # customer Input gate AND the pre-render Output receipt enforce this; a
+    # duplicated pass cannot stand in for a checker whose result is absent.
+    assert gate.count("new Set(r.checker_results.map(c => c.checker_id)).size === r.checker_results.length") == 2
     run = script[script.index("async function execute(target)"):]
     run = run[:run.index("\n}\n")]
     assert "pendingChanges()" in run and "saveTenant(" in run and run.index("saveTenant(") < run.index('assess("input")')
