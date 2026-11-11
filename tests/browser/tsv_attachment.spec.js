@@ -122,3 +122,52 @@ test("dashboard output TSV sample requires passed input and clears independently
   await expect(page.locator("#output-attachment-note")).toContainText("No file selected");
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
 });
+
+
+test("per-file checker provenance is required before an attachment result can be shown or passed", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo8");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
+
+  const reset = page.waitForResponse(r => r.url().endsWith("/v1/tenants/current/reset")
+    && r.request().method() === "POST");
+  await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  expect((await reset).status()).toBe(200);
+  await expect(page.locator("#tenant-attachment-modes")).toContainText("CSV / TSV attachments");
+  await page.locator("#tenant-check-input-csv_formula").selectOption("block");
+
+  const file = Buffer.from("name\tvalue\nSynthetic\t=2+3", "utf8");
+  await page.locator("#input-attachments").setInputFiles({
+    name: "untrusted.tsv", mimeType: "text/tab-separated-values", buffer: file,
+  });
+
+  // Fetch the real shared Engine response, then strip ONLY its scoped evidence
+  // marker. A 200 response and plausible findings are not sufficient to
+  // authorize a result whose per-file checker provenance is ambiguous.
+  const url = "**/v1/checks/input/attachments";
+  const corrupt = async route => {
+    const response = await route.fetch();
+    expect(response.status()).toBe(200);
+    const payload = await response.json();
+    const check = payload.checker_results.find(c => c.attachment_index === 0);
+    expect(check).toBeDefined();
+    delete check.attachment_index;
+    await route.fulfill({response, json: payload});
+  };
+  await page.route(url, corrupt);
+  await page.locator("#run-input").click();
+  await expect(page.locator("#result-status")).toHaveText("Check failed");
+  await expect(page.locator("#run-error")).toContainText("receipt was invalid");
+  await expect(page.locator("#input-results .attachment-receipts")).toHaveCount(0);
+  await expect(page.locator("#run-output")).toBeDisabled();
+
+  // The real, correctly scoped server response must still display the actual
+  // inspection receipt and the blocking finding without bypassing any checks.
+  await page.unroute(url, corrupt);
+  await page.locator("#run-input").click();
+  await expect(page.locator("#input-results .attachment-receipts"))
+    .toContainText("tsv_structure_recognized_only");
+  await expect(page.locator("#input-results")).toContainText("Recommended: block");
+  await expect(page.locator("#answer")).toBeHidden();
+});
