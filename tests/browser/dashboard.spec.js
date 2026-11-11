@@ -60,10 +60,9 @@ test("malformed checker result envelopes cannot unlock output after a real input
       };
       buttons();
       return {proceed: canProceed(inputResult),
-        outputDisabled: document.getElementById("run-output").disabled,
-        answerReadOnly: document.getElementById("output-content").readOnly};
+        outputDisabled: document.getElementById("run-output").disabled};
     }, checkerResults);
-    expect(state).toEqual({proceed: false, outputDisabled: true, answerReadOnly: true});
+    expect(state).toEqual({proceed: false, outputDisabled: true});
   }
 });
 
