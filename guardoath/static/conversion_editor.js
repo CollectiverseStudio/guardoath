@@ -178,7 +178,39 @@
     apply.id = "conversion-apply"; apply.type = "submit";
     const cancel = el("button", "Cancel edit");
     cancel.id = "conversion-cancel"; cancel.type = "button"; cancel.hidden = true;
-    form.append(apply, cancel, message);
+    // Guided deterministic sample: only fill the existing customer form.
+    // The server-owned tenant definition changes only after Add and Save.
+    const sampleHelp = el("p",
+      "Cargo-load example: 1500 kg exceeds the declared 1000 kg limit; " +
+      "1000 kg is valid for this rule. Other enabled tenant checks still run.");
+    sampleHelp.id = "conversion-sample-help";
+    const sample = el("button", "Fill example: cargo load must not exceed kg limit");
+    sample.id = "conversion-sample"; sample.type = "button";
+    sample.addEventListener("click", () => {
+      const id = "cargo_mass_within_limit";
+      // Saved, removed-but-unsaved, other-family and host-protected ID
+      // collisions are not permission to overwrite any existing rule.
+      if (original.some(rule => rule.rule_id === id) ||
+          draft.some(rule => rule.rule_id === id) ||
+          (tenant.record_rules || []).some(rule => rule.rule_id === "business." + id) ||
+          (window.comparisonEditor &&
+           window.comparisonEditor.otherFamilyDraftHasId(id, "advanced_conversion_time"))) {
+        message.textContent = "Example rule ID already exists. Edit the existing rule or choose a different ID.";
+        return;
+      }
+      clear();
+      controls.id.value = id;
+      controls.kind.value = "unit_load_kg_cap";
+      drawFields({load: "/shipment/load", load_unit: "/shipment/load_unit",
+                  max_kg: "/shipment/max_kg"});
+      eventPointer.value = "";
+      controls.input.checked = controls.output.checked = true;
+      message.textContent = "Example filled, not added or saved. Choose Add pending conversion rule, " +
+        "then Save checks. Enable Field comparisons with Block on Input/Output. " +
+        "Sample JSON: {\"shipment\":{\"load\":1500,\"load_unit\":\"kg\",\"max_kg\":1000}}.";
+      controls.id.focus();
+    });
+    form.append(sampleHelp, sample, apply, cancel, message);
     host.append(filterBar, filterStatus, preview, list, form);
     searchInput.addEventListener("input", draw);
     stageFilter.addEventListener("change", draw);
