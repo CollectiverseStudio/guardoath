@@ -168,6 +168,23 @@
     const logicWarning = element("p"); logicWarning.id = "comparison-logic-warning";
     logicWarning.setAttribute("role", "status"); logicWarning.setAttribute("aria-live", "polite");
     logicWarning.hidden = true;
+    // Filtering is presentation-only; never narrow the authoritative draft,
+    // exported JSON, revisioned Save, Engine checks or structural warnings.
+    const filterBar = element("div");
+    const filterLabel = element("label", "Find ordinary comparison by ID or JSON pointer");
+    filterLabel.htmlFor = "comparison-filter";
+    const filterInput = element("input"); filterInput.id = "comparison-filter";
+    filterInput.type = "search"; filterInput.maxLength = 160;
+    filterInput.autocomplete = "off";
+    const stageLabel = element("label", "Show ordinary comparisons on stage");
+    stageLabel.htmlFor = "comparison-filter-stage";
+    const stageFilter = element("select"); stageFilter.id = "comparison-filter-stage";
+    for (const [value, name] of [["all", "All stages"], ["input", "Input"], ["output", "Output"]]) {
+      const option = element("option", name); option.value = value; stageFilter.append(option);
+    }
+    filterBar.append(filterLabel, filterInput, stageLabel, stageFilter);
+    const filterStatus = element("p"); filterStatus.id = "comparison-filter-status";
+    filterStatus.setAttribute("role", "status"); filterStatus.setAttribute("aria-live", "polite");
     const list = element("ul"); list.id = "comparison-drafts";
     const form = element("form"); form.id = "comparison-form";
     const controls = {};
@@ -198,7 +215,7 @@
     const apply = element("button", "Add to pending changes"); apply.id = "comparison-apply"; apply.type = "submit";
     const cancel = element("button", "Cancel edit"); cancel.type = "button"; cancel.hidden = true;
     const message = element("p"); message.id = "comparison-message"; message.setAttribute("role", "status");
-    form.append(apply, cancel, message); host.append(summary, limitWarning, logicWarning, list, form);
+    form.append(apply, cancel, message); host.append(summary, limitWarning, logicWarning, filterBar, filterStatus, list, form);
     // A customer with hundreds of ordinary comparisons needs a usable import path,
     // not 500 manual Add clicks or a hidden API. Import changes only the draft;
     // the existing revisioned Save checks and shared Engine remain authoritative.
@@ -305,6 +322,64 @@
       controls.input.checked = controls.output.checked = true;
       apply.textContent = "Add to pending changes"; cancel.hidden = true;
     }
+    function drawRows() {
+      list.replaceChildren();
+      const query = filterInput.value.trim().toLowerCase();
+      const stage = stageFilter.value;
+      const shown = draft.filter(item =>
+        (stage === "all" || item.stages.includes(stage)) &&
+        (!query || [item.rule_id, item.left, item.right].some(value => value.toLowerCase().includes(query))));
+      filterStatus.textContent = "Showing " + shown.length + " of " + draft.length +
+        " ordinary comparisons. Filtering does not change the draft, saved tenant or executed rules.";
+      if (!draft.length) list.append(element("li", "No number or date comparisons on this record."));
+      else if (!shown.length) list.append(element("li", "No matching ordinary comparisons. Clear the filter to see every rule."));
+      for (const item of shown) {
+        const row = element("li"); row.dataset.comparisonId = item.rule_id;
+        row.append(element("span", item.rule_id + ": " + item.left + " " + item.operator + " " + item.right + " (" + item.value_type + "; " + item.stages.join(", ") + ") "));
+        // The ordinary editor must expose the same saved per-stage Off state
+        // as the advanced-family editors. A pending definition is not yet the
+        // tenant's authoritative saved rule, so do not label it as such.
+        const persisted = original.find(rule => rule.rule_id === item.rule_id);
+        const savedDefinition = persisted &&
+          persisted.left === item.left && persisted.right === item.right &&
+          persisted.operator === item.operator && persisted.value_type === item.value_type &&
+          persisted.stages.length === item.stages.length &&
+          persisted.stages.every(stage => item.stages.includes(stage));
+        if (persisted && !savedDefinition) {
+          row.append(element("p", "Unsaved comparison changes: Save checks before testing the updated rule."));
+        } else if (savedDefinition) {
+          for (const stage of item.stages) {
+            // Stage-wide Off takes precedence over this rule's own action:
+            // a saved per-rule Block cannot run while its parent check is Off.
+            // Read the saved tenant record, never the mutable dashboard draft.
+            const stageChecks = tenant[stage + "_checks"] || {};
+            if (!stageChecks.cross_field || stageChecks.cross_field === "off") {
+              row.append(element("p", "Saved " + stage + " Field comparisons check is Off. This rule is not evaluated on " + stage + " regardless of its own rule action; testing examples still runs other enabled checks."));
+            } else if (tenant[stage + "_rule_actions"]?.["business." + item.rule_id] === "off") {
+              row.append(element("p", "Saved " + stage + " rule action is Off. This rule is not evaluated on " + stage + "; testing examples still runs all other enabled tenant rules."));
+            }
+          }
+        }
+        const edit = element("button", "Edit"); edit.type = "button"; edit.setAttribute("aria-label", "Edit comparison " + item.rule_id);
+        edit.addEventListener("click", () => {
+          editing = item.rule_id; controls.id.value = item.rule_id; controls.id.disabled = true;
+          controls.left.value = item.left; controls.right.value = item.right;
+          controls.operator.value = item.operator; controls.type.value = item.value_type;
+          for (const stage of ["input", "output"]) controls[stage].checked = item.stages.includes(stage);
+          apply.textContent = "Update pending comparison"; cancel.hidden = false; message.textContent = "";
+          controls.left.focus();
+        });
+        const remove = element("button", "Remove"); remove.type = "button"; remove.setAttribute("aria-label", "Remove comparison " + item.rule_id);
+        remove.addEventListener("click", () => {
+          draft = draft.filter(rule => rule.rule_id !== item.rule_id);
+          if (editing === item.rule_id) clear();
+          draw(); changed(); message.textContent = "Removal pending. Save checks to apply it.";
+        });
+        row.append(edit, remove); list.append(row);
+      }
+    }
+    filterInput.addEventListener("input", drawRows);
+    stageFilter.addEventListener("change", drawRows);
     function draw() {
       const pending = JSON.stringify(original) !== JSON.stringify(draft);
       summary.textContent = `${draft.length} comparison${draft.length === 1 ? "" : "s"} configured; ${draft.filter(rule => rule.stages.includes("input")).length} Input, ${draft.filter(rule => rule.stages.includes("output")).length} Output.${pending ? " Unsaved changes — select Save checks to persist." : " No pending changes."}`;
@@ -451,52 +526,7 @@
           ". The shared Engine accepts at most 1,000 keys in any one JSON object, including nested objects, and at most 32 nested JSON containers. A fully populated document with these fields cannot pass. Use nested objects with no more than 1,000 children each and keep nesting within 32 levels, or split the stages; the draft has not been modified." +
           " Resolve incompatible number/date fields or scalar/object paths by assigning distinct pointers or stages."
         : "";
-      list.replaceChildren();
-      if (!draft.length) list.append(element("li", "No number or date comparisons on this record."));
-      for (const item of draft) {
-        const row = element("li"); row.dataset.comparisonId = item.rule_id;
-        row.append(element("span", item.rule_id + ": " + item.left + " " + item.operator + " " + item.right + " (" + item.value_type + "; " + item.stages.join(", ") + ") "));
-        // The ordinary editor must expose the same saved per-stage Off state
-        // as the advanced-family editors. A pending definition is not yet the
-        // tenant's authoritative saved rule, so do not label it as such.
-        const persisted = original.find(rule => rule.rule_id === item.rule_id);
-        const savedDefinition = persisted &&
-          persisted.left === item.left && persisted.right === item.right &&
-          persisted.operator === item.operator && persisted.value_type === item.value_type &&
-          persisted.stages.length === item.stages.length &&
-          persisted.stages.every(stage => item.stages.includes(stage));
-        if (persisted && !savedDefinition) {
-          row.append(element("p", "Unsaved comparison changes: Save checks before testing the updated rule."));
-        } else if (savedDefinition) {
-          for (const stage of item.stages) {
-            // Stage-wide Off takes precedence over this rule's own action:
-            // a saved per-rule Block cannot run while its parent check is Off.
-            // Read the saved tenant record, never the mutable dashboard draft.
-            const stageChecks = tenant[stage + "_checks"] || {};
-            if (!stageChecks.cross_field || stageChecks.cross_field === "off") {
-              row.append(element("p", "Saved " + stage + " Field comparisons check is Off. This rule is not evaluated on " + stage + " regardless of its own rule action; testing examples still runs other enabled checks."));
-            } else if (tenant[stage + "_rule_actions"]?.["business." + item.rule_id] === "off") {
-              row.append(element("p", "Saved " + stage + " rule action is Off. This rule is not evaluated on " + stage + "; testing examples still runs all other enabled tenant rules."));
-            }
-          }
-        }
-        const edit = element("button", "Edit"); edit.type = "button"; edit.setAttribute("aria-label", "Edit comparison " + item.rule_id);
-        edit.addEventListener("click", () => {
-          editing = item.rule_id; controls.id.value = item.rule_id; controls.id.disabled = true;
-          controls.left.value = item.left; controls.right.value = item.right;
-          controls.operator.value = item.operator; controls.type.value = item.value_type;
-          for (const stage of ["input", "output"]) controls[stage].checked = item.stages.includes(stage);
-          apply.textContent = "Update pending comparison"; cancel.hidden = false; message.textContent = "";
-          controls.left.focus();
-        });
-        const remove = element("button", "Remove"); remove.type = "button"; remove.setAttribute("aria-label", "Remove comparison " + item.rule_id);
-        remove.addEventListener("click", () => {
-          draft = draft.filter(rule => rule.rule_id !== item.rule_id);
-          if (editing === item.rule_id) clear();
-          draw(); changed(); message.textContent = "Removal pending. Save checks to apply it.";
-        });
-        row.append(edit, remove); list.append(row);
-      }
+      drawRows();
     }
     cancel.addEventListener("click", () => { clear(); message.textContent = ""; });
     form.addEventListener("submit", event => {
