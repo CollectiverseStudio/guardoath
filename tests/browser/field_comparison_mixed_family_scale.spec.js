@@ -438,7 +438,15 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
     // setting as the state of the changed, unsaved rule.
     await ordinaryEditorRow.getByRole("button", {name: "Edit comparison mixed_ui_000"}).click();
     await page.locator("#comparison-left").fill("/r000/new_total");
+    // Stage filter must follow the pending definition without implying a
+    // saved tenant change. Output is removed only from this unsaved draft.
+    await page.locator("#comparison-stage-output").uncheck();
     await page.locator("#comparison-apply").click();
+    await page.locator("#comparison-filter").fill("mixed_ui_000");
+    await page.locator("#comparison-filter-stage").selectOption("output");
+    await expect(page.locator('#comparison-drafts li[data-comparison-id="mixed_ui_000"]')).toHaveCount(0);
+    await page.locator("#comparison-filter-stage").selectOption("input");
+    await expect(page.locator('#comparison-drafts li[data-comparison-id="mixed_ui_000"]')).toBeVisible();
     await expect(ordinaryEditorRow).toContainText("Unsaved comparison changes:");
     await expect(ordinaryEditorRow).not.toContainText("Saved output rule action is Off.");
     expect((await current(request, headers)).revision).toBe(ordinaryOff.revision);
