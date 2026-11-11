@@ -162,7 +162,7 @@ test("real signed FC-047 reference moves accepted to blocked after tampering, wi
 // These tests each own a reset/cleanup and a real demo tenant revision; they
 // preserve all stage transitions without imposing one 30-second deadline on
 // unrelated customer workflow phases. Browser/tenant API/Engine remain real.
-test("FC-047 invalid host reference: independently saved Output and parent Input Off are honored", async ({page, request}) => {
+test("FC-047 invalid host reference: customer saves individual Output Off without disabling Input", async ({page, request}) => {
   const headers = await connect(page);
   let resetRequired = false;
   try {
@@ -213,6 +213,59 @@ test("FC-047 invalid host reference: independently saved Output and parent Input
     expect(safeOutput.findings.some(f => f.rule_id === "business.real_browser_permit")).toBe(false);
     expect((await evaluate(request, headers, "input", 40)).effective_action).toBe("block");
 
+    // Keep Input active: saving one stage's rule Off is not a check-wide
+    // suppression, even when the underlying host signature is invalid.
+    const publicStatus = await page.locator("#trusted-reference-status").innerText();
+    for (const secret of [KEY, signed.host_signature, signed.source_id, signed.reference_values.permit_limit]) {
+      expect(publicStatus).not.toContain(secret);
+    }
+
+  } finally {
+    if (resetRequired) {
+      const cleanup = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+      expect(cleanup.status()).toBe(200);
+    }
+  }
+});
+
+// Separate customer journey and separate 30-second deadline: seed the
+// persisted Output Off state through the authenticated revisioned tenant API,
+// then exercise the *real dashboard Save* of the parent Input check. The prior
+// test independently exercises the customer Save of the individual Output rule.
+test("FC-047 invalid host reference: customer saves parent Input Off while Output rule stays Off", async ({page, request}) => {
+  const headers = await connect(page);
+  let resetRequired = false;
+  try {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(reset.status()).toBe(200);
+    resetRequired = true;
+    const signed = signedReference();
+    const tampered = {...signed, reference_values: {permit_limit: "500"}};
+    const prior = await summary(request, headers);
+    const seeded = await request.post("/v1/tenants/current/checks", {headers, data: {
+      revision: prior.revision,
+      changes: {comparisons: [], advanced_trusted_reference: [tampered],
+        input_check_cross_field: "block", output_check_cross_field: "flag",
+        output_rule_actions: {"business.real_browser_permit": "off"}},
+    }});
+    expect(seeded.status(), (await seeded.text()).slice(0, 150)).toBe(200);
+    const disabledRule = await summary(request, headers);
+    expect(disabledRule.revision).toBe(prior.revision + 1);
+    expect(disabledRule.output_rule_actions["business.real_browser_permit"]).toBe("off");
+    expect(disabledRule.input_checks.cross_field).toBe("block");
+    expect(disabledRule.advanced_trusted_reference_status[0].runtime_integrity).toBe("blocked");
+
+    await connect(page);
+    await expect(page.locator("#trusted-reference-status"))
+      .toContainText("Output: Off (individual rule Off)");
+    await expect(page.locator("#trusted-reference-status"))
+      .toContainText("Input: active (check block; rule inherits check)");
+    const activeInput = await evaluate(request, headers, "input", 40);
+    expect(activeInput.evaluation_status).toBe("incomplete");
+    expect(activeInput.effective_action).toBe("block");
+    expect(activeInput.findings.map(f => f.rule_id)).toContain("business.real_browser_permit");
+
+    // Pending unsaved edits must not be misrepresented as tenant policy.
     await page.locator("#tenant-check-input-cross_field").selectOption("");
     await expect(page.locator("#trusted-reference-status"))
       .toContainText("Input: active (check block; rule inherits check)");
@@ -221,6 +274,7 @@ test("FC-047 invalid host reference: independently saved Output and parent Input
     const disabledParent = await summary(request, headers);
     expect(disabledParent.revision).toBe(disabledRule.revision + 1);
     expect(disabledParent.input_checks.cross_field).toBeNull();
+    expect(disabledParent.output_rule_actions["business.real_browser_permit"]).toBe("off");
     expect(disabledParent.advanced_trusted_reference_status[0].runtime_integrity).toBe("blocked");
     await connect(page);
     await expect(page.locator("#trusted-reference-status"))
@@ -238,8 +292,6 @@ test("FC-047 invalid host reference: independently saved Output and parent Input
     for (const secret of [KEY, signed.host_signature, signed.source_id, signed.reference_values.permit_limit]) {
       expect(publicStatus).not.toContain(secret);
     }
-
-
   } finally {
     if (resetRequired) {
       const cleanup = await request.post("/v1/tenants/current/reset", {headers, data: {}});
