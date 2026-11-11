@@ -175,3 +175,75 @@ test("per-file checker provenance is required before an attachment result can be
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
   await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
 });
+
+
+test("real tenant redacts chat PII while independently scanning clean TSV; forged file recheck cannot authorize release", async ({page}) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo6");
+  await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo6");
+
+  // Await authoritative persistence, rather than racing the tenant reset.
+  const reset = page.waitForResponse(r => r.url().endsWith("/v1/tenants/current/reset")
+    && r.request().method() === "POST");
+  await page.getByRole("button", {name: "Reset to defaults", exact: true}).click();
+  expect((await reset).status()).toBe(200);
+  await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+  try {
+    await page.locator("#tenant-check-input-pii").selectOption("redact");
+    await page.locator("#tenant-attachment-mode-input").selectOption("auto");
+    await page.getByRole("button", {name: "Save checks", exact: true}).click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved.");
+    await page.locator("#input-content").fill("Confirm the order by writing to jane@example.com.");
+    await page.locator("#input-attachments").setInputFiles({
+      name: "safe.tsv", mimeType: "text/tab-separated-values",
+      buffer: Buffer.from("item\\tcount\\nSynthetic\\t42".replaceAll("\\t", "\t").replace("\\n", "\n")),
+    });
+    const first = page.waitForResponse(r => r.url().endsWith("/v1/checks/input/attachments")
+      && r.request().method() === "POST");
+    await page.locator("#run-input").click();
+    const result = await (await first).json();
+    expect(result.evaluation_status).toBe("complete");
+    expect(result.recommended_action).toBe("redact");
+    expect(result.effective_action).toBe("redact");
+    expect(result.redaction.status).toBe("ready");
+    expect(result.redaction.validation_results.length).toBeGreaterThan(0);
+    const message = result.checker_results.filter(c => c.attachment_index == null);
+    const file = result.checker_results.filter(c => c.attachment_index === 0);
+    expect(file.length).toBeGreaterThan(0);
+    expect(message.some(c => file.some(f => f.checker_id === c.checker_id))).toBe(true);
+    expect(result.redaction.validation_results.map(c => c.checker_id).sort())
+      .toEqual(message.map(c => c.checker_id).sort());
+    await expect(page.locator("#input-results .attachment-receipts"))
+      .toContainText("tsv_structure_recognized_only");
+    await expect(page.locator("#input-results .redacted-content")).toContainText("[REDACTED_EMAIL_ADDRESS]");
+    await expect(page.locator("#run-output")).toBeEnabled();
+    await expect(page.locator("#input-gate")).toContainText("Input checks passed");
+    await expect(page.locator("#input-results")).not.toContainText("jane@example.com");
+
+    // Use a real Engine response and change only the source of one alleged
+    // redaction recheck. A file-level check cannot certify transformed chat.
+    const url = "**/v1/checks/input/attachments";
+    const forged = async route => {
+      const response = await route.fetch();
+      expect(response.status()).toBe(200);
+      const payload = await response.json();
+      expect(payload.redaction.status).toBe("ready");
+      payload.redaction.validation_results[0].attachment_index = 0;
+      await route.fulfill({response, json: payload});
+    };
+    await page.route(url, forged);
+    await page.locator("#run-input").click();
+    await expect(page.locator("#result-status")).toHaveText("Check failed");
+    await expect(page.locator("#run-error")).toContainText("receipt was invalid");
+    await expect(page.locator("#run-output")).toBeDisabled();
+    await expect(page.locator("#answer")).toBeHidden();
+    await page.unroute(url, forged);
+  } finally {
+    const cleanup = page.waitForResponse(r => r.url().endsWith("/v1/tenants/current/reset")
+      && r.request().method() === "POST");
+    await page.getByRole("button", {name: "Reset to defaults", exact: true}).click();
+    expect((await cleanup).status()).toBe(200);
+    await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+  }
+});
