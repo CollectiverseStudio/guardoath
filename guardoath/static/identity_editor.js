@@ -60,6 +60,23 @@
     }
     host.append(references);
     const locked = false; // Protected reference rows are never in the editable draft.
+    // Display-only search of editable tenant definitions; protected operator-owned
+    // references are outside this draft and never searched or exposed.
+    const filterBar = el("div");
+    const searchLabel = el("label", "Find identity rule by ID, type or JSON pointer");
+    searchLabel.htmlFor = "identity-filter";
+    const searchInput = el("input"); searchInput.id = "identity-filter";
+    searchInput.type = "search"; searchInput.maxLength = 160; searchInput.autocomplete = "off";
+    const stageLabel = el("label", "Show identity rules on stage");
+    stageLabel.htmlFor = "identity-filter-stage";
+    const stageFilter = el("select"); stageFilter.id = "identity-filter-stage";
+    for (const [value, caption] of [["all", "All stages"], ["input", "Input"], ["output", "Output"]]) {
+      const option = el("option", caption); option.value = value; stageFilter.append(option);
+    }
+    stageFilter.value = "all";
+    filterBar.append(searchLabel, searchInput, stageLabel, stageFilter);
+    const filterStatus = el("p"); filterStatus.id = "identity-filter-status";
+    filterStatus.setAttribute("role", "status"); filterStatus.setAttribute("aria-live", "polite");
     const list = el("ul"); list.id = "identity-drafts";
     const form = el("form"); form.id = "identity-form";
     const message = el("p"); message.id = "identity-message";
@@ -98,7 +115,9 @@
     const cancel = el("button", "Cancel edit");
     cancel.id = "identity-cancel"; cancel.type = "button"; cancel.hidden = true;
     form.append(apply, cancel, message);
-    host.append(list, form);
+    host.append(filterBar, filterStatus, list, form);
+    searchInput.addEventListener("input", draw);
+    stageFilter.addEventListener("change", draw);
     let editing = null;
     function drawFields(values = {}) {
       paths.replaceChildren();
@@ -121,8 +140,19 @@
     }
     function draw() {
       list.replaceChildren();
-      if (!draft.length) list.append(el("li", "No editable identity rules on this tenant."));
-      for (const rule of draft) {
+      const query = searchInput.value.trim().toLowerCase();
+      const stage = stageFilter.value || "all";
+      const visible = draft.filter(rule =>
+        (stage === "all" || rule.stages.includes(stage)) &&
+        (!query || rule.rule_id.toLowerCase().includes(query) ||
+          rule.kind.toLowerCase().includes(query) ||
+          Object.values(rule.fields || {}).some(pointer =>
+            typeof pointer === "string" && pointer.toLowerCase().includes(query))));
+      filterStatus.textContent = "Showing " + visible.length + " of " + draft.length + " editable identity rules.";
+      if (!visible.length) list.append(el("li", draft.length ?
+        "No matching identity rules. Clear the search or stage filter." :
+        "No editable identity rules on this tenant."));
+      for (const rule of visible) {
         const item = el("li"); item.dataset.identityId = rule.rule_id;
         item.append(el("span", rule.rule_id + " · " + rule.kind + " · " + rule.stages.join(", ") + " "));
         const edit = el("button", "Edit");
