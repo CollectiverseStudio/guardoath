@@ -73,9 +73,11 @@
   function actions(stage, previous) {
     const result = {...previous};
     if (!enabled) return result;
+    // Keep stage-action reconciliation O(saved + draft) at 500-rule scale;
+    // never touch other comparison families or protected FX references.
+    const active = new Set(draft.filter(rule => rule.stages.includes(stage)).map(rule => rule.rule_id));
     for (const item of original) {
-      const kept = draft.find(rule => rule.rule_id === item.rule_id);
-      if (!kept || !kept.stages.includes(stage)) delete result["business." + item.rule_id];
+      if (!active.has(item.rule_id)) delete result["business." + item.rule_id];
     }
     return result;
   }
