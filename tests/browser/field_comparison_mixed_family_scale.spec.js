@@ -357,6 +357,34 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
       await stage.selectOption("all");
       await expect(rows).toHaveCount(125);
     }
+    // A 500-rule customer must see the consequences of a replacement import
+    // BEFORE the authoritative tenant save; filtered rows cannot hide a
+    // removed rule. Other advanced-family records remain untouched.
+    await page.locator("#comparison-bulk-panel summary").click();
+    await page.locator("#comparison-bulk-export").click();
+    const savedOrdinaryDraft = JSON.parse(await page.locator("#comparison-bulk-json").inputValue());
+    expect(savedOrdinaryDraft).toHaveLength(125);
+    const replacementDraft = [
+      ...savedOrdinaryDraft.slice(1),
+      {...savedOrdinaryDraft[0], rule_id: "mixed_ui_preview_new",
+        left: "/preview/a", right: "/preview/b"},
+    ];
+    await page.locator("#comparison-bulk-json").fill(JSON.stringify(replacementDraft));
+    await page.locator("#comparison-bulk-confirm").check();
+    await page.locator("#comparison-bulk-import").click();
+    await expect(page.locator("#comparison-draft-summary"))
+      .toContainText("Unsaved changes — 1 added, 0 updated, 1 removed.");
+    await expect(page.locator('#comparison-drafts li[data-comparison-id="mixed_ui_000"]'))
+      .toHaveCount(0);
+    await expect(page.locator('#comparison-drafts li[data-comparison-id="mixed_ui_preview_new"]'))
+      .toBeVisible();
+    expect((await current(request, headers)).revision).toBe(after.revision);
+    await page.locator("#comparison-bulk-json").fill(JSON.stringify(savedOrdinaryDraft));
+    await page.locator("#comparison-bulk-confirm").check();
+    await page.locator("#comparison-bulk-import").click();
+    await expect(page.locator("#comparison-draft-summary")).toContainText("No pending changes.");
+    await expect(page.locator('#comparison-drafts li[data-comparison-id="mixed_ui_000"]'))
+      .toBeVisible();
     expect((await current(request, headers)).revision).toBe(after.revision);
     await page.locator("#rule-search").fill("mixed_ui_499");
     const last = page.locator('tr.rule-row[data-rule="' + lastId + '"]');
@@ -499,6 +527,8 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
     await expect(page.locator('#comparison-drafts li[data-comparison-id="mixed_ui_000"]')).toBeVisible();
     await expect(ordinaryEditorRow).toContainText("Unsaved comparison changes:");
     await expect(ordinaryEditorRow).not.toContainText("Saved output rule action is Off.");
+    await expect(page.locator("#comparison-draft-summary"))
+      .toContainText("Unsaved changes — 0 added, 1 updated, 0 removed.");
     // Pending Output stage removal must delete only this original ordinary
     // override. Other ordinary/advanced actions survive the linear lookup.
     const pendingOutputActions = await page.evaluate(() => comparisonEditor.actions("output", {
