@@ -92,7 +92,7 @@ test("checks are first and optional comparison tooling is clearly explained", as
   const checks = page.locator("#tenant-checks");
   const optional = page.locator("#comparison-configuration");
   await expect(page.locator("#check-settings-heading")).toHaveText("Your checks and rules");
-  await expect(optional.locator("summary")).toContainText("Optional: configure field comparisons");
+  await expect(optional.locator(":scope > summary")).toContainText("Optional: configure field comparisons");
   expect(await page.evaluate(() => {
     const checks = document.getElementById("tenant-checks");
     const optional = document.getElementById("comparison-configuration");
@@ -103,9 +103,9 @@ test("checks are first and optional comparison tooling is clearly explained", as
       "Host-attested reference status", "Statistical drift"]) {
     await expect(optional).toContainText(text);
   }
-  await optional.locator("summary").click();
+  await optional.locator(":scope > summary").click();
   await expect(optional).not.toHaveAttribute("open", "");
-  await optional.locator("summary").click();
+  await optional.locator(":scope > summary").click();
   await expect(optional).toHaveAttribute("open", "");
   await expect(checks).toHaveCount(1);
 });
