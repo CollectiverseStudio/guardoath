@@ -1675,11 +1675,21 @@ test("unsupported attachment bytes fail closed despite a misleading CSV MIME cla
   await page.locator("#demo-user").selectOption("demo9");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo9");
+  // Reset is revisioned and reloads the tenant asynchronously. Wait for its
+  // authoritative saved/reloaded state before selecting a real local File.
+  // Otherwise a late re-render can invalidate the upload before Run Input.
+  const resetResponse = page.waitForResponse(r =>
+    r.url().endsWith("/v1/tenants/current/reset") && r.request().method() === "POST");
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  expect((await resetResponse).ok()).toBe(true);
+  await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+  await expect(page.locator("#input-attachments")).toBeEnabled();
   const payload = Buffer.from("%PDF-1.7\nsynthetic-test-fixture", "utf8");
   await page.locator("#input-attachments").setInputFiles({
     name: "looks-like.csv", mimeType: "text/csv", buffer: payload,
   });
+  expect(await page.locator("#input-attachments").evaluate(input =>
+    input.files.length && input.files[0].size)).toBe(payload.length);
   const response = page.waitForResponse(r => r.url().endsWith("/v1/checks/input/attachments") && r.request().method() === "POST");
   await page.locator("#run-input").click();
   const checked = await response;
