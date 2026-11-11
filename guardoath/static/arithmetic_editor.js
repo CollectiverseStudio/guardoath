@@ -125,6 +125,39 @@
     form.append(stageGroup);
     const apply = node("button", "Add pending arithmetic rule"); apply.id = "arithmetic-apply"; apply.type = "submit";
     const cancel = node("button", "Cancel edit"); cancel.type = "button"; cancel.hidden = true;
+    // Guided, deterministic structured-JSON example. The sample is form-only:
+    // the authoritative tenant must be updated by Add pending and Save checks.
+    const sampleHelp = node("p",
+      "Invoice example: two lines, 2 × 40 plus 1 × 30, require a subtotal of 110. " +
+      "A subtotal of 100 violates the rule; 110 is valid. All other enabled tenant " +
+      "checks still run when using its synthetic witness.");
+    sampleHelp.id = "arithmetic-sample-help";
+    const sample = node("button", "Fill example: invoice line amounts must equal subtotal");
+    sample.id = "arithmetic-sample"; sample.type = "button";
+    sample.addEventListener("click", () => {
+      const id = "invoice_lines_match_subtotal";
+      // No overwrites, including a saved rule removed from the current draft,
+      // a protected rule, or an ID held by a different family pending Save.
+      if (original.some(rule => rule.rule_id === id) ||
+          draft.some(rule => rule.rule_id === id) ||
+          (tenant.record_rules || []).some(rule => rule.rule_id === "business." + id) ||
+          (window.comparisonEditor &&
+           window.comparisonEditor.otherFamilyDraftHasId(id, "advanced_arithmetic"))) {
+        message.textContent = "Example rule ID already exists. Edit the existing rule or choose your own ID.";
+        return;
+      }
+      clear();
+      controls.id.value = id;
+      type.value = "invoice_line_subtotal";
+      pointerFields({lines: "/invoice/lines", subtotal: "/invoice/subtotal"});
+      controls.input.checked = controls.output.checked = true;
+      message.textContent = "Example filled, not added or saved. Select Add pending arithmetic rule, " +
+        "then Save checks. Enable Field comparisons on Input/Output and select Block " +
+        "to stop violations. Example JSON: {\"invoice\":{\"lines\":[{\"quantity\":2,\"unit_price\":40}," +
+        "{\"quantity\":1,\"unit_price\":30}],\"subtotal\":100}}.";
+      controls.id.focus();
+    });
+    form.append(sampleHelp, sample);
     form.append(apply, cancel, message); host.append(filterBar, filterStatus, preview, list, form);
     searchInput.addEventListener("input", draw);
     stageFilter.addEventListener("change", draw);
