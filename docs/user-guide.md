@@ -739,6 +739,19 @@ new customer setting, larger timeout or proof that the historical intermittent
 all findings and the required fail-closed second-pass redaction checks remain
 unchanged.
 
+**PII split-lookahead early-exit (November 11, 2026).** When a required
+lookahead has no match anywhere in a message, GuardOath does not scan that
+recognizer's core expression; it cannot find an eligible result. When every
+required lookahead exists, it stops iterating ordered core matches once the
+start is past the last eligible lookahead position. It still checks all earlier
+matches, including those whose text extends beyond the lookahead position.
+The original regex and prior start-offset algorithm are compared against
+the bounded implementation in `tests/test_privacy_patterns.py`, together
+with long synthetic clean texts and no-core-scan assertions. This reduces
+unnecessary local scanning but is **not** a new privacy category, customer
+toggle, longer checker deadline, proof of sustained 500-ms reliability or
+permission to bypass mandatory Input/Output redaction rechecks.
+
 **PII deadline attribution (version 7).** A local PII worker that reaches its
 own monotonic scan deadline reports the fixed error code `pii_scan_deadline`;
 the outer shared Engine `asyncio.wait_for` deadline remains
