@@ -90,7 +90,7 @@ def resolve_overlaps(candidates, check_deadline=lambda: None):
       nothing tells the two types apart (redaction then labels the span SENSITIVE).
     Partial overlaps are kept. Every dropped span lies inside a kept span, so redaction
     still covers exactly the same characters."""
-    own = sorted({(start, end) for start, end, _entity, _source, tier, _score in candidates if tier == OWN_TIER})
+    # Most short sensitive-field scans have only the own recognizers. Avoid the\n    # pattern overlap graph and its repeated containment walks in that case.\n    # Preserve first-occurrence ordering and deduplicate the same source/span\n    # exactly as the general best-map path does; never discard distinct own labels.\n    if not any(tier == PATTERN_TIER for _, _, _, _, tier, _ in candidates):\n        return list(dict.fromkeys((start, end, entity, source)\n                                  for start, end, entity, source, tier, _ in candidates\n                                  if tier == OWN_TIER))\n    own = sorted({(start, end) for start, end, _entity, _source, tier, _score in candidates if tier == OWN_TIER})
     best = {}
     for start, end, entity, source, tier, score in candidates:
         key = (start, end, entity, source, tier)
