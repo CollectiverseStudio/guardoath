@@ -236,6 +236,40 @@
     const apply = element("button", "Add to pending changes"); apply.id = "comparison-apply"; apply.type = "submit";
     const cancel = element("button", "Cancel edit"); cancel.type = "button"; cancel.hidden = true;
     const message = element("p"); message.id = "comparison-message"; message.setAttribute("role", "status");
+    // Give customers a safe, concrete first comparison without requiring them
+    // to invent JSON pointers. This fills the existing form only: no rule is
+    // staged, saved or enabled until the customer deliberately takes both steps.
+    const sampleHelp = element("p",
+      "Need an example? Compare an invoice refund against the amount paid. " +
+      "A refund of 75 with 50 paid is a violation; 25 with 50 paid is valid. " +
+      "These are structured JSON fields, not instructions to the AI.");
+    sampleHelp.id = "comparison-sample-help";
+    const sampleButton = element("button", "Fill example: refund cannot exceed payment");
+    sampleButton.id = "comparison-sample"; sampleButton.type = "button";
+    form.insertBefore(sampleHelp, form.firstChild);
+    form.insertBefore(sampleButton, sampleHelp.nextSibling);
+    sampleButton.addEventListener("click", () => {
+      const id = "refund_not_over_paid";
+      // Never silently replace a customer's saved rule, another pending
+      // family's rule or any protected host-provisioned record rule.
+      if (draft.some(rule => rule.rule_id === id) ||
+          otherPendingIds().has(id) ||
+          (tenant.record_rules || []).some(rule => rule.rule_id === "business." + id)) {
+        message.textContent = "Example rule ID already exists. Edit the existing rule or choose your own ID.";
+        return;
+      }
+      clear();
+      controls.id.value = id;
+      controls.left.value = "/invoice/refund";
+      controls.right.value = "/invoice/paid";
+      controls.operator.value = "le";
+      controls.type.value = "number";
+      controls.input.checked = controls.output.checked = true;
+      message.textContent = "Example filled, not added or saved. Select Add to pending changes, then Save checks. " +
+        "Enable the Field comparisons check on Input/Output and choose Block to stop violations. " +
+        "Try JSON: {\"invoice\":{\"refund\":75,\"paid\":50}}.";
+      controls.left.focus();
+    });
     form.append(apply, cancel, message); host.append(summary, limitWarning, logicWarning, filterBar, filterStatus, list, form);
     // A customer with hundreds of ordinary comparisons needs a usable import path,
     // not 500 manual Add clicks or a hidden API. Import changes only the draft;
