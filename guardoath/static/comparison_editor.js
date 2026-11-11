@@ -171,7 +171,7 @@
     // Filtering is presentation-only; never narrow the authoritative draft,
     // exported JSON, revisioned Save, Engine checks or structural warnings.
     const filterBar = element("div");
-    const filterLabel = element("label", "Find ordinary comparison by ID or JSON pointer");
+    const filterLabel = element("label", "Find ordinary comparison by ID, JSON pointer, operator or value type");
     filterLabel.htmlFor = "comparison-filter";
     const filterInput = element("input"); filterInput.id = "comparison-filter";
     filterInput.type = "search"; filterInput.maxLength = 160;
@@ -329,7 +329,7 @@
       const stage = stageFilter.value;
       const shown = draft.filter(item =>
         (stage === "all" || item.stages.includes(stage)) &&
-        (!query || [item.rule_id, item.left, item.right].some(value => value.toLowerCase().includes(query))));
+        (!query || [item.rule_id, item.left, item.right, item.operator, item.value_type].some(value => value.toLowerCase().includes(query))));
       filterStatus.textContent = "Showing " + shown.length + " of " + draft.length +
         " ordinary comparisons. Filtering does not change the draft, saved tenant or executed rules.";
       if (!draft.length) list.append(element("li", "No number or date comparisons on this record."));
