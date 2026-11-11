@@ -727,6 +727,18 @@ applies the tenant's fail-closed decision. See `tests/test_pii_executor_isolatio
 The reproducible test isolates queueing; actual recognizer CPU hotspots remain
 under investigation in Issue #30.
 
+**PII split-lookahead memory bound (November 2026).** Some offline privacy patterns use
+several lookaheads. For each lookahead GuardOath now retains only its last
+matching start offset, rather than allocating a list of every overlapping
+match in a long text. That offset is the only value the original recognizer
+needs for the same matching decision; overlapping-match and 32,000-character
+synthetic regressions protect equivalence in `tests/test_privacy_patterns.py`.
+This is a bounded-memory implementation improvement, not a disabled detector,
+new customer setting, larger timeout or proof that the historical intermittent
+500-ms PII/redaction tail has been eliminated. Input and Output tenant actions,
+all findings and the required fail-closed second-pass redaction checks remain
+unchanged.
+
 **PII deadline attribution (version 7).** A local PII worker that reaches its
 own monotonic scan deadline reports the fixed error code `pii_scan_deadline`;
 the outer shared Engine `asyncio.wait_for` deadline remains
