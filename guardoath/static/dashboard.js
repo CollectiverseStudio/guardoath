@@ -920,18 +920,22 @@ function clearConnection() {
   $("connection-status").textContent = "Disconnected. Key removed from this tab’s memory.";
 }
 $("disconnect").addEventListener("click", clearConnection);
-const demoUnavailable = "Demo users could not be loaded right now. Reload the page to try again.";
+const demoUnavailable = "Demo users could not be loaded. Select Retry loading demo users; no page refresh is required.";
 async function loadDemoUsers() {
+  $("demo-retry").hidden = true;
   let response;
   try { response = await send("/v1/demo-users", {cache: "no-store"}); }
-  catch (error) { $("connection-status").textContent = demoUnavailable; return; }
-  // 404 = this server has no demo users (for example a local server with only an API key); say nothing.
+  catch (error) { $("connection-status").textContent = demoUnavailable; $("demo-retry").hidden = false; return; }
+  // 404 = this server has no demo users (for example a local server with only an API key).
   if (response.status === 404) return;
   const users = response.ok ? ((await response.json().catch(() => ({}))).demo_users || []) : [];
-  if (!users.length) { $("connection-status").textContent = demoUnavailable; return; }
+  if (!users.length) { $("connection-status").textContent = demoUnavailable; $("demo-retry").hidden = false; return; }
+  $("demo-user").replaceChildren(); // retries must not duplicate tenant options
   for (const user of users) { const option = document.createElement("option"); option.value = user.tenant_id; option.textContent = user.display_name + " (" + user.tenant_id + ")"; $("demo-user").append(option); }
   $("demo-users").hidden = false;
+  if ($("connection-status").textContent === demoUnavailable) $("connection-status").textContent = "Choose a demo user and select Get demo API key.";
 }
+$("demo-retry").addEventListener("click", loadDemoUsers);
 $("demo-key").addEventListener("click", async () => {
   const tenant = $("demo-user").value; if (!tenant || busy) return;
   $("demo-key").disabled = true;
@@ -946,7 +950,7 @@ $("demo-key").addEventListener("click", async () => {
     sessionStorage.removeItem("guardoath-session"); if (signIn) signedIn(false);
     $("api-key").value = ""; $("demo-key-value").value = "";
     if (await connectWithKey(demoToken, tenant)) $("demo-key-value").value = demoToken;
-  } catch (error) { $("connection-status").textContent = error.message || "The demo key could not be issued."; }
+  } catch (error) { $("connection-status").textContent = (error.message || "The demo key could not be issued.") + " Select Get demo API key again to retry; no refresh is needed."; }
   finally { $("demo-key").disabled = false; }
 });
 loadDemoUsers();
