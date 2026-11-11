@@ -435,3 +435,65 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
     }
   }
 });
+
+
+test("FC tenant refuses malformed checker receipts before output", async ({page, request}) => {
+  const headers = await connect(page);
+  let resetRequired = false;
+  try {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(reset.status()).toBe(200);
+    resetRequired = true;
+    const before = await current(request, headers);
+    const {changes, good} = configured(4); // one of each real comparison family
+    const saved = await request.post("/v1/tenants/current/checks", {headers, data: {
+      revision: before.revision, changes,
+    }});
+    expect(saved.status(), (await saved.text()).slice(0, 120)).toBe(200);
+    await connect(page);
+    const persisted = await current(request, headers);
+    expect(persisted.revision).toBe(before.revision + 1);
+    for (const family of ["comparisons", "advanced_arithmetic", "advanced_identity",
+                          "advanced_conversion_time"]) {
+      expect(persisted[family]).toHaveLength(1);
+    }
+    // The customer actually runs all four families through the shared Engine,
+    // rather than using a mocked API as proof of a clean Input decision.
+    await page.locator("#input-format").selectOption("json");
+    await page.locator("#input-content").fill(JSON.stringify(good));
+    const inputResponse = page.waitForResponse(r =>
+      r.url().endsWith("/v1/checks/input") && r.request().method() === "POST");
+    await page.locator("#run-input").click();
+    const receipt = await (await inputResponse).json();
+    expect(receipt.evaluation_status).toBe("complete");
+    expect(receipt.effective_action).toBe("allow");
+    expect(receipt.checker_results.length).toBeGreaterThan(0);
+    await expect(page.locator("#run-output")).toBeEnabled();
+
+    // Corrupt only the browser's received envelope to exercise transport
+    // fail-closed behavior; tenant checks and the actual Engine stay enabled.
+    const first = receipt.checker_results[0];
+    for (const corrupted of [
+      {...receipt, checker_results: [{...first, status: "unverified"}]},
+      {...receipt, checker_results: [{...first, checker_id: ""}]},
+      {...receipt, checker_results: [null]},
+      {...receipt, evaluation_status: "unverified"},
+    ]) {
+      const permitted = await page.evaluate(received => {
+        inputResult = received;
+        buttons();
+        return canProceed(inputResult);
+      }, corrupted);
+      expect(permitted).toBe(false);
+      await expect(page.locator("#run-output")).toBeDisabled();
+    }
+    await page.evaluate(received => {inputResult = received; buttons();}, receipt);
+    await expect(page.locator("#run-output")).toBeEnabled();
+    expect((await current(request, headers)).revision).toBe(persisted.revision);
+  } finally {
+    if (resetRequired) {
+      const cleanup = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+      expect(cleanup.status()).toBe(200);
+    }
+  }
+});
