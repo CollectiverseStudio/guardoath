@@ -308,6 +308,12 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
     await page.locator("#comparison-filter").fill("/r004/");
     await expect(page.locator('#comparison-drafts li[data-comparison-id="mixed_ui_004"]')).toBeVisible();
     await expect(page.locator('#comparison-drafts li[data-comparison-id]')).toHaveCount(1);
+    // Type and operator filtering search the pending customer-visible portfolio,
+    // without changing any authoritative saved rule or revision.
+    await page.locator("#comparison-filter").fill("NUMBER");
+    await expect(page.locator("#comparison-filter-status")).toContainText("Showing 125 of 125");
+    await page.locator("#comparison-filter").fill("le");
+    await expect(page.locator("#comparison-filter-status")).toContainText("Showing 125 of 125");
     await page.locator("#comparison-filter").fill("no_such_rule");
     await expect(page.locator("#comparison-filter-status")).toContainText("Showing 0 of 125");
     await expect(page.locator("#comparison-drafts")).toContainText("No matching ordinary comparisons");
