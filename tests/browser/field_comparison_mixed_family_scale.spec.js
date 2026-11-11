@@ -667,8 +667,38 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
     await expect(page.locator('#conversion-drafts li[data-conversion-id="mixed_ui_499"]')).toHaveCount(0);
     await page.locator("#conversion-filter-stage").selectOption("input");
     await expect(page.locator('li[data-conversion-id="mixed_ui_499"]')).toBeVisible();
+    // Test all three actual advanced editors against 500 saved mixed-family
+    // rules. A stage removal clears only the rule owned by that editor;
+    // unrelated ordinary actions and protected reference IDs must survive.
+    await page.getByRole("button", {name: "Edit arithmetic mixed_ui_497"}).click();
+    await page.locator("#arithmetic-stage-output").uncheck();
+    await page.locator("#arithmetic-apply").click();
+    await page.getByRole("button", {name: "Edit identity mixed_ui_498"}).click();
+    await page.locator("#identity-stage-output").uncheck();
+    await page.locator("#identity-apply").click();
+    const actionInput = {
+      "business.mixed_ui_493": "block", "business.mixed_ui_497": "off",
+      "business.mixed_ui_494": "flag", "business.mixed_ui_498": "off",
+      "business.mixed_ui_495": "block", "business.mixed_ui_499": "off",
+      "business.mixed_ui_000": "off",
+      "business.host_signed_reference": "block", "non_business_rule": "redact",
+    };
+    const actualCleanup = await page.evaluate(actions => ({
+      arithmetic: window.arithmeticEditor.actions("output", actions),
+      identity: window.identityEditor.actions("output", actions),
+      conversion: window.conversionEditor.actions("output", actions),
+    }), actionInput);
+    for (const [family, removed] of [
+      ["arithmetic", "business.mixed_ui_497"],
+      ["identity", "business.mixed_ui_498"],
+      ["conversion", "business.mixed_ui_499"],
+    ]) {
+      const expected = {...actionInput};
+      delete expected[removed];
+      expect(actualCleanup[family], family).toEqual(expected);
+    }
     expect((await current(request, headers)).revision).toBe(ordinaryOff.revision);
-    await connect(page); // reconnect discards both unsaved drafts, not tenant settings
+    await connect(page); // reconnect discards all unsaved drafts, not tenant settings
     await expect(page.locator('li[data-comparison-id="mixed_ui_000"]'))
       .toContainText("Saved output rule action is Off.");
     expect((await current(request, headers)).revision).toBe(ordinaryOff.revision);
