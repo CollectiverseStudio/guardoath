@@ -707,6 +707,61 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             raise HTTPException(409, "The tenant record changed; reload it and try again") from None
         return JSONResponse(key_list(updated), headers={"Cache-Control": "no-store"})
 
+    @api.get("/v1/billing/price")
+    async def billing_public_price():
+        """Publish the actual Stripe recurring price before any checkout is attempted.
+
+        Fail closed when Stripe is not configured or does not return a verified
+        active recurring price. No tenant state or Stripe customer is created.
+        """
+        import base64
+        import json
+        import urllib.parse
+        import urllib.request
+        api_key = os.getenv("GUARDOATH_STRIPE_SECRET_KEY", "")
+        price_id = os.getenv("GUARDOATH_STRIPE_PRICE_ID", "")
+        if (not api_key.startswith(("sk_test_", "sk_live_")) or len(api_key) < 16
+                or not api_key.isascii() or not price_id.startswith("price_")
+                or not price_id[6:].replace("_", "").isalnum()):
+            raise HTTPException(503, "Subscription pricing is not configured")
+        auth = base64.b64encode((api_key + ":").encode("ascii")).decode("ascii")
+        request = urllib.request.Request(
+            "https://api.stripe.com/v1/prices/" + urllib.parse.quote(price_id, safe=""),
+            headers={"Authorization": "Basic " + auth})
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                return None
+        def fetch_price():
+            with urllib.request.build_opener(NoRedirect()).open(request, timeout=5) as response:
+                if getattr(response, "status", 200) != 200:
+                    raise ValueError("Stripe price lookup failed")
+                raw = response.read(16385)
+                if len(raw) > 16384:
+                    raise ValueError("Stripe price response too large")
+            return json.loads(raw)
+        try:
+            price = await run_in_threadpool(fetch_price)
+        except (OSError, ValueError, UnicodeError):
+            raise HTTPException(503, "Subscription pricing unavailable") from None
+        recurring = price.get("recurring") if isinstance(price, dict) else None
+        amount = price.get("unit_amount") if isinstance(price, dict) else None
+        currency = price.get("currency") if isinstance(price, dict) else None
+        interval = recurring.get("interval") if isinstance(recurring, dict) else None
+        if (price.get("id") != price_id or price.get("object") != "price"
+                or price.get("active") is not True
+                or not isinstance(amount, int) or isinstance(amount, bool) or amount < 0
+                or not isinstance(currency, str) or len(currency) != 3 or not currency.isalpha()
+                or interval not in ("month", "year")
+                or recurring.get("interval_count") != 1):
+            raise HTTPException(503, "No supported active subscription price")
+        # Stripe zero-decimal currencies need no fractional conversion.
+        zero_decimal = {"bif", "clp", "djf", "gnf", "jpy", "kmf", "krw", "mga", "pyg", "rwf", "ugx", "vnd", "vuv", "xaf", "xof", "xpf"}
+        return JSONResponse({
+            "unit_amount": amount, "currency": currency.upper(),
+            "currency_exponent": 0 if currency.lower() in zero_decimal else 2,
+            "interval": interval,
+        }, headers={"Cache-Control": "no-store"})
+
     @api.post("/v1/billing/checkout")
     async def billing_checkout(
         session: Annotated[str | None, Header(alias=SESSION_HEADER)] = None,
