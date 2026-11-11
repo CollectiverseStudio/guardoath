@@ -1949,7 +1949,14 @@ test("output file picker retains a passed input and checks actual output bytes s
   await page.locator("#demo-user").selectOption("demo7");
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo7");
+  // The reset endpoint saves, then asynchronously reloads the authoritative
+  // tenant. Do not race its completion with the Output rule edit and Input run:
+  // an in-flight reset can clear the draft/connection before the check fires.
+  const resetResponse = page.waitForResponse(r =>
+    r.url().endsWith("/v1/tenants/current/reset") && r.request().method() === "POST");
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  expect((await resetResponse).ok()).toBe(true);
+  await expect(page.locator("#tenant-message")).toContainText("Reset to the demo defaults.");
   await page.locator("#tenant-check-output-csv_formula").selectOption("block");
 
   const ordinary = page.waitForResponse(r => r.url().endsWith("/v1/checks/input") && r.request().method() === "POST");
