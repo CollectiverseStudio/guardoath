@@ -314,6 +314,33 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
     await page.locator("#comparison-filter").fill("");
     await page.locator("#comparison-filter-stage").selectOption("all");
     await expect(page.locator('#comparison-drafts li[data-comparison-id]')).toHaveCount(125);
+    // At a real 500-rule scale, all THREE advanced editors must also offer
+    // customer-visible draft-only ID/pointer/stage filtering. Neither a filter
+    // nor a no-match search can shrink the tenant's authoritative portfolio.
+    for (const [family, id, pointer] of [
+      ["arithmetic", "mixed_ui_001", "/r001/discount"],
+      ["identity", "mixed_ui_002", "/r002/order_id"],
+      ["conversion", "mixed_ui_003", "/r003/load"],
+    ]) {
+      const rows = page.locator('#' + family + '-drafts li[data-' + family + '-id]');
+      const search = page.locator('#' + family + '-filter');
+      const stage = page.locator('#' + family + '-filter-stage');
+      const status = page.locator('#' + family + '-filter-status');
+      await expect(status).toContainText("Showing 125 of 125");
+      await search.fill(id);
+      await expect(rows).toHaveCount(1);
+      await expect(page.locator('li[data-' + family + '-id="' + id + '"]')).toBeVisible();
+      await stage.selectOption("output");
+      await expect(rows).toHaveCount(1);
+      await search.fill(pointer);
+      await expect(rows).toHaveCount(1);
+      await search.fill("not_a_tenant_pointer");
+      await expect(status).toContainText("Showing 0 of 125");
+      await expect(page.locator('#' + family + '-drafts')).toContainText("No matching " + family + " rules");
+      await search.fill("");
+      await stage.selectOption("all");
+      await expect(rows).toHaveCount(125);
+    }
     expect((await current(request, headers)).revision).toBe(after.revision);
     await page.locator("#rule-search").fill("mixed_ui_499");
     const last = page.locator('tr.rule-row[data-rule="' + lastId + '"]');
@@ -450,7 +477,19 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
     await expect(ordinaryEditorRow).toContainText("Unsaved comparison changes:");
     await expect(ordinaryEditorRow).not.toContainText("Saved output rule action is Off.");
     expect((await current(request, headers)).revision).toBe(ordinaryOff.revision);
-    await connect(page); // reconnect discards the unsaved draft, not the tenant setting
+    // A pending advanced conversion stage edit changes the searchable draft,
+    // not the persisted Output-Off action or the Engine's 500-rule policy.
+    await page.locator("#conversion-filter").fill("mixed_ui_499");
+    await page.locator("#conversion-filter-stage").selectOption("output");
+    await expect(page.locator('li[data-conversion-id="mixed_ui_499"]')).toBeVisible();
+    await page.getByRole("button", {name: "Edit conversion mixed_ui_499"}).click();
+    await page.locator("#conversion-stage-output").uncheck();
+    await page.locator("#conversion-apply").click();
+    await expect(page.locator('#conversion-drafts li[data-conversion-id="mixed_ui_499"]')).toHaveCount(0);
+    await page.locator("#conversion-filter-stage").selectOption("input");
+    await expect(page.locator('li[data-conversion-id="mixed_ui_499"]')).toBeVisible();
+    expect((await current(request, headers)).revision).toBe(ordinaryOff.revision);
+    await connect(page); // reconnect discards both unsaved drafts, not tenant settings
     await expect(page.locator('li[data-comparison-id="mixed_ui_000"]'))
       .toContainText("Saved output rule action is Off.");
     expect((await current(request, headers)).revision).toBe(ordinaryOff.revision);
