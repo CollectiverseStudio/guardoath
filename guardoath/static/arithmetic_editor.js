@@ -37,6 +37,28 @@
     return a.length === b.length && a.every((rule, index) =>
       JSON.stringify(canonical(rule)) === JSON.stringify(canonical(b[index])));
   }
+  // Summary is calculated over all editable tenant definitions, not filtered rows.
+  // Rule payloads and JSON pointers must never be echoed in this status text.
+  function pendingImpact() {
+    const saved = new Map(original.map(rule => [rule.rule_id, rule]));
+    const pendingIds = new Set(draft.map(rule => rule.rule_id));
+    let added = 0, updated = 0, removed = 0;
+    for (const rule of draft) {
+      const before = saved.get(rule.rule_id);
+      if (!before) added++;
+      else if (!samePortfolio([before], [rule])) updated++;
+    }
+    for (const rule of original) if (!pendingIds.has(rule.rule_id)) removed++;
+    return {added, updated, removed};
+  }
+  function previewText() {
+    if (samePortfolio(original, draft))
+      return "Saved arithmetic rules: " + original.length + ". No pending changes.";
+    const {added, updated, removed} = pendingImpact();
+    return "Unsaved changes — " + added + " added, " + updated + " updated, " +
+      removed + " removed." + (added + updated + removed === 0 ? " Rule order changed." : "") +
+      " Save checks to apply changes to this tenant.";
+  }
   function delta() {
     return available && !samePortfolio(original, draft) ? clone(draft) : null;
   }
@@ -76,6 +98,8 @@
     filterBar.append(searchLabel, searchInput, stageLabel, stageFilter);
     const filterStatus = node("p"); filterStatus.id = "arithmetic-filter-status";
     filterStatus.setAttribute("role", "status"); filterStatus.setAttribute("aria-live", "polite");
+    const preview = node("p"); preview.id = "arithmetic-draft-summary";
+    preview.setAttribute("role", "status"); preview.setAttribute("aria-live", "polite");
     const list = node("ul"); list.id = "arithmetic-drafts";
     const form = node("form"); form.id = "arithmetic-form";
     const message = node("p"); message.id = "arithmetic-message"; message.setAttribute("role", "status");
@@ -101,7 +125,7 @@
     form.append(stageGroup);
     const apply = node("button", "Add pending arithmetic rule"); apply.id = "arithmetic-apply"; apply.type = "submit";
     const cancel = node("button", "Cancel edit"); cancel.type = "button"; cancel.hidden = true;
-    form.append(apply, cancel, message); host.append(filterBar, filterStatus, list, form);
+    form.append(apply, cancel, message); host.append(filterBar, filterStatus, preview, list, form);
     searchInput.addEventListener("input", draw);
     stageFilter.addEventListener("change", draw);
     let editing = null;
@@ -122,6 +146,7 @@
     }
     function draw() {
       list.replaceChildren();
+      preview.textContent = previewText();
       const query = searchInput.value.trim().toLowerCase();
       const stage = stageFilter.value || "all";
       const visible = draft.filter(rule =>
