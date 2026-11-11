@@ -6,7 +6,20 @@ let key = "", application = null, revision = 0, busy = false, inputResult = null
 // it has been checked again (redaction ready). A check that did not finish gets the record's failure action, so it
 // stops only when that is Block. Both the recommended and the effective action are read, so observe mode shows what
 // enforce mode would do. Simulated checks (local launcher only) are never a pass.
-const goesThrough = (action, r) => ["allow", "flag"].includes(action) || (action === "redact" && r.redaction?.status === "ready");
+// The shared Engine only marks a redaction ready after a real second pass.
+// Do not release cleaned text if the receipt lost, truncated or simulated that
+// recheck, even when its top-level action still claims Redact/ready.
+const redactionRecheckPassed = r => {
+  const rechecks = r?.redaction?.validation_results;
+  return r?.redaction?.status === "ready"
+    && typeof r.redaction.content === "string"
+    && Array.isArray(rechecks) && rechecks.length > 0
+    && rechecks.every(c => c && typeof c === "object" && !Array.isArray(c)
+      && typeof c.checker_id === "string" && c.checker_id.trim().length > 0
+      && c.status === "passed" && c.simulated === false);
+};
+const goesThrough = (action, r) => ["allow", "flag"].includes(action)
+  || (action === "redact" && redactionRecheckPassed(r));
 // The Input gate consumes the actual CheckResponse/CheckerResult contract.
 // Reject malformed or simulated envelopes before the AI output stage, while
 // preserving the tenant's configured failure action for a *valid* incomplete
@@ -46,7 +59,7 @@ const receiptMatchesRequest = (r, stage, appId, policy) => receiptRecord(r)
     && ["not_requested", "not_needed", "preview", "ready", "withheld"].includes(r.redaction.status)
     && typeof r.redaction.explanation === "string"
     && Array.isArray(r.redaction.validation_results)
-    && (r.redaction.status !== "ready" || typeof r.redaction.content === "string")));
+    && (r.redaction.status !== "ready" || redactionRecheckPassed(r))));
 function buttons() {
   $("run").disabled = $("run-input").disabled = busy || !application?.policies.length;
   $("run-output").disabled = busy || !application || !canProceed(inputResult);
