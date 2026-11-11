@@ -40,6 +40,29 @@ async function run(page) {
   await page.locator("#run").click();
   await expect(page.locator("#result-status")).not.toHaveText("Checking…");
 }
+test("checks are first and optional comparison tooling is clearly explained", async ({ page }) => {
+  await page.goto("/dashboard");
+  const checks = page.locator("#tenant-checks");
+  const optional = page.locator("#comparison-configuration");
+  await expect(page.locator("#check-settings-heading")).toHaveText("Your checks and rules");
+  await expect(optional.locator("summary")).toContainText("Optional: configure field comparisons");
+  expect(await page.evaluate(() => {
+    const checks = document.getElementById("tenant-checks");
+    const optional = document.getElementById("comparison-configuration");
+    return Boolean(checks.compareDocumentPosition(optional) & Node.DOCUMENT_POSITION_FOLLOWING);
+  })).toBe(true);
+  for (const text of ["Field comparison rules", "Arithmetic comparisons",
+      "Identity and collection comparisons", "Conversion and time comparisons",
+      "Host-attested reference status", "Statistical drift"]) {
+    await expect(optional).toContainText(text);
+  }
+  await optional.locator("summary").click();
+  await expect(optional).not.toHaveAttribute("open", "");
+  await optional.locator("summary").click();
+  await expect(optional).toHaveAttribute("open", "");
+  await expect(checks).toHaveCount(1);
+});
+
 test("clean content shows the answer after real local checks", async ({ page }) => {
   await connect(page); await run(page);
   await expect(page.locator("#result-status")).toHaveText("No findings");
