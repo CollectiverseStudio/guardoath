@@ -32,6 +32,28 @@
     return a.length === b.length && a.every((rule, index) =>
       JSON.stringify(canonical(rule)) === JSON.stringify(canonical(b[index])));
   }
+  // Count every editable tenant rule, including rules hidden by a search filter.
+  // Protected host-owned reference values never enter this draft or preview.
+  function pendingImpact() {
+    const saved = new Map(original.map(rule => [rule.rule_id, rule]));
+    const pendingIds = new Set(draft.map(rule => rule.rule_id));
+    let added = 0, updated = 0, removed = 0;
+    for (const rule of draft) {
+      const before = saved.get(rule.rule_id);
+      if (!before) added++;
+      else if (!samePortfolio([before], [rule])) updated++;
+    }
+    for (const rule of original) if (!pendingIds.has(rule.rule_id)) removed++;
+    return {added, updated, removed};
+  }
+  function previewText() {
+    if (samePortfolio(original, draft))
+      return "Saved conversion/time rules: " + original.length + ". No pending changes. Protected references unchanged.";
+    const {added, updated, removed} = pendingImpact();
+    return "Unsaved changes — " + added + " added, " + updated + " updated, " +
+      removed + " removed." + (added + updated + removed === 0 ? " Rule order changed." : "") +
+      " Save checks to apply editable rules; protected references remain unchanged.";
+  }
   function delta() {
     if (!enabled || samePortfolio(original, draft)) return null;
     // Scoped replacement leaves server-owned FX rules untouched.
@@ -96,6 +118,8 @@
     filterBar.append(searchLabel, searchInput, stageLabel, stageFilter);
     const filterStatus = el("p"); filterStatus.id = "conversion-filter-status";
     filterStatus.setAttribute("role", "status"); filterStatus.setAttribute("aria-live", "polite");
+    const preview = el("p"); preview.id = "conversion-draft-summary";
+    preview.setAttribute("role", "status"); preview.setAttribute("aria-live", "polite");
     const list = el("ul"); list.id = "conversion-drafts";
     const form = el("form"); form.id = "conversion-form";
     const message = el("p"); message.id = "conversion-message";
@@ -142,7 +166,7 @@
     const cancel = el("button", "Cancel edit");
     cancel.id = "conversion-cancel"; cancel.type = "button"; cancel.hidden = true;
     form.append(apply, cancel, message);
-    host.append(filterBar, filterStatus, list, form);
+    host.append(filterBar, filterStatus, preview, list, form);
     searchInput.addEventListener("input", draw);
     stageFilter.addEventListener("change", draw);
     let editing = null;
@@ -169,6 +193,7 @@
     }
     function draw() {
       list.replaceChildren();
+      preview.textContent = previewText();
       const query = searchInput.value.trim().toLowerCase();
       const stage = stageFilter.value || "all";
       const visible = draft.filter(rule =>
