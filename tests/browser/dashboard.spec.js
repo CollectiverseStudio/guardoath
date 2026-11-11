@@ -49,21 +49,52 @@ test("clean content shows the answer after real local checks", async ({ page }) 
 test("malformed checker result envelopes cannot unlock output after a real input run", async ({ page }) => {
   await connect(page);
   await run(page);
+  // Start with an actual backend CheckResponse. Mutate only the transport
+  // envelope in the real customer dashboard; backend safety is tested separately.
+  const valid = await page.evaluate(() => JSON.parse(JSON.stringify(inputResult)));
+  expect(valid.evaluation_status).toBe("complete");
+  expect(valid.checker_results.length).toBeGreaterThan(0);
   expect(await page.evaluate(() => canProceed(inputResult))).toBe(true);
-  // Exercise the actual dashboard gate with malformed transport envelopes,
-  // not a substitute backend that silently declares a check successful.
-  for (const checkerResults of [undefined, null, {}, [], [null], ["invalid"]]) {
-    const state = await page.evaluate(checkerResults => {
-      inputResult = {
-        recommended_action: "allow", effective_action: "allow",
-        ...(checkerResults === undefined ? {} : {checker_results: checkerResults}),
-      };
+
+  const first = valid.checker_results[0];
+  const malformed = [
+    {...valid, checker_results: undefined},
+    {...valid, checker_results: null},
+    {...valid, checker_results: {}},
+    {...valid, checker_results: []},
+    {...valid, checker_results: [null]},
+    {...valid, checker_results: ["invalid"]},
+    {...valid, checker_results: [{}]},
+    {...valid, checker_results: [[first]]},
+    {...valid, checker_results: [{...first, checker_id: ""}]},
+    {...valid, checker_results: [{...first, status: "unverified"}]},
+    {...valid, checker_results: [{...first, simulated: "false"}]},
+    {...valid, evaluation_status: "unverified"},
+    {...valid, evaluation_status: undefined},
+    {...valid, simulated: "false"},
+  ];
+  for (const response of malformed) {
+    const state = await page.evaluate(response => {
+      inputResult = response;
       buttons();
       return {proceed: canProceed(inputResult),
         outputDisabled: document.getElementById("run-output").disabled};
-    }, checkerResults);
+    }, response);
     expect(state).toEqual({proceed: false, outputDisabled: true});
   }
+
+  // An actual incomplete response is still governed by the tenant's configured
+  // non-privacy failure action. Do not turn a deliberate Flag into Block here.
+  const incompleteFlag = {...valid, evaluation_status: "incomplete",
+    recommended_action: "flag", effective_action: "flag",
+    checker_results: [{...first, status: "error"}]};
+  expect(await page.evaluate(result => canProceed(result), incompleteFlag)).toBe(true);
+  const incompleteBlock = {...incompleteFlag,
+    recommended_action: "block", effective_action: "block"};
+  expect(await page.evaluate(result => canProceed(result), incompleteBlock)).toBe(false);
+
+  await page.evaluate(result => { inputResult = result; buttons(); }, valid);
+  await expect(page.locator("#run-output")).toBeEnabled();
 });
 
 test("output email finding holds the answer", async ({ page }) => {
