@@ -19,6 +19,34 @@ const canProceed = r => Boolean(r) && r.simulated === false
     && typeof c.checker_id === "string" && c.checker_id.trim().length > 0
     && checkerStatuses.has(c.status) && c.simulated === false)
   && goesThrough(r.recommended_action, r) && goesThrough(r.effective_action, r);
+// A syntactically successful HTTP response is not necessarily the receipt for
+// this customer's requested stage, application and policy. Verify the binding
+// and the fields used by render() before any result can reach the release UI.
+// This check complements (never replaces) the tenant-controlled shared Engine.
+const receiptRecord = value => value !== null && typeof value === "object" && !Array.isArray(value);
+const receiptFinding = value => receiptRecord(value)
+  && typeof value.rule_id === "string" && typeof value.explanation === "string";
+const receiptMatchesRequest = (r, stage, appId, policy) => receiptRecord(r)
+  && r.stage === stage && r.application_id === appId && r.policy_version === policy
+  && ["complete", "incomplete"].includes(r.evaluation_status)
+  && ["allow", "flag", "redact", "block"].includes(r.recommended_action)
+  && ["allow", "flag", "redact", "block"].includes(r.effective_action)
+  && typeof r.simulated === "boolean"
+  && Number.isFinite(r.total_latency_ms) && r.total_latency_ms >= 0
+  && Array.isArray(r.findings) && r.findings.every(receiptFinding)
+  && Array.isArray(r.checker_results)
+  && r.checker_results.every(c => receiptRecord(c)
+    && typeof c.checker_id === "string" && c.checker_id.trim().length > 0
+    && checkerStatuses.has(c.status) && typeof c.simulated === "boolean"
+    && Array.isArray(c.findings) && c.findings.every(receiptFinding))
+  && (r.groups == null || (Array.isArray(r.groups) && r.groups.every(g => receiptRecord(g)
+    && typeof g.group_id === "string" && typeof g.name === "string"
+    && typeof g.limitations === "string" && Array.isArray(g.checker_ids))))
+  && (r.redaction == null || (receiptRecord(r.redaction)
+    && ["not_requested", "not_needed", "preview", "ready", "withheld"].includes(r.redaction.status)
+    && typeof r.redaction.explanation === "string"
+    && Array.isArray(r.redaction.validation_results)
+    && (r.redaction.status !== "ready" || typeof r.redaction.content === "string")));
 function buttons() {
   $("run").disabled = $("run-input").disabled = busy || !application?.policies.length;
   $("run-output").disabled = busy || !application || !canProceed(inputResult);
@@ -1987,6 +2015,8 @@ async function execute(target) {
     if (target !== "output") {
       const checked = await assess("input");
       if (attempt !== revision) return;
+      if (!receiptMatchesRequest(checked, "input", app, policy))
+        throw new Error("Input validation receipt was invalid or belonged to another check. No message was released.");
       inputResult = checked; render("input", checked);
       $("input-gate").textContent = gateText(checked);
     }
@@ -1994,6 +2024,8 @@ async function execute(target) {
     if (target !== "input" && canProceed(inputResult)) {
       const checked = await assess("output");
       if (attempt !== revision) return;
+      if (!receiptMatchesRequest(checked, "output", app, policy))
+        throw new Error("Output validation receipt was invalid or belonged to another check. No answer was released.");
       results.push(checked); render("output", checked);
     }
     const noChecks = results.some(r => !r.checker_results.some(c => ["passed", "flagged"].includes(c.status)));
