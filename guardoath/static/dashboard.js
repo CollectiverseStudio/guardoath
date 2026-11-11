@@ -10,13 +10,30 @@ let key = "", application = null, revision = 0, busy = false, inputResult = null
 // Do not release cleaned text if the receipt lost, truncated or simulated that
 // recheck, even when its top-level action still claims Redact/ready.
 const redactionRecheckPassed = r => {
+  const original = r?.checker_results;
   const rechecks = r?.redaction?.validation_results;
-  return r?.redaction?.status === "ready"
-    && typeof r.redaction.content === "string"
-    && Array.isArray(rechecks) && rechecks.length > 0
-    && rechecks.every(c => c && typeof c === "object" && !Array.isArray(c)
-      && typeof c.checker_id === "string" && c.checker_id.trim().length > 0
-      && c.status === "passed" && c.simulated === false);
+  // The Engine re-runs the same selected checks on the cleaned content.
+  // A receipt with only one passing recheck, a substituted checker, or
+  // duplicate results cannot certify the other original checks.
+  if (r?.redaction?.status !== "ready" || typeof r.redaction.content !== "string"
+      || !Array.isArray(original) || original.length === 0
+      || !Array.isArray(rechecks) || rechecks.length !== original.length) return false;
+  const originalIds = new Set();
+  for (const c of original) {
+    if (!c || typeof c !== "object" || Array.isArray(c)
+        || typeof c.checker_id !== "string" || !c.checker_id.trim()
+        || originalIds.has(c.checker_id)) return false;
+    originalIds.add(c.checker_id);
+  }
+  const recheckedIds = new Set();
+  for (const c of rechecks) {
+    if (!c || typeof c !== "object" || Array.isArray(c)
+        || typeof c.checker_id !== "string" || !originalIds.has(c.checker_id)
+        || recheckedIds.has(c.checker_id)
+        || c.status !== "passed" || c.simulated !== false) return false;
+    recheckedIds.add(c.checker_id);
+  }
+  return recheckedIds.size === originalIds.size;
 };
 const goesThrough = (action, r) => ["allow", "flag"].includes(action)
   || (action === "redact" && redactionRecheckPassed(r));
