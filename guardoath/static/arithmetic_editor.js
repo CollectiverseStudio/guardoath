@@ -41,6 +41,23 @@
     scope.dataset.fieldExampleScope = "arithmetic"; host.append(scope);
     host.append(node("p", "Define exact arithmetic and conservation rules using JSON pointers. No model call or outside reference. Save checks to persist a draft on this tenant; switch Field comparisons on for each selected stage and choose the rule action in the unified table. Nested JSON objects and arrays are supported; use canonical zero-based array segments such as /invoices/0/total. The bounded JSON parser still limits array size and nesting."));
     if (!available) { host.append(node("p", "Arithmetic definitions are unavailable. Reconnect before editing.")); return; }
+    // Display-only search of editable tenant definitions; protected operator-owned
+    // references are outside this draft and never searched or exposed.
+    const filterBar = node("div");
+    const searchLabel = node("label", "Find arithmetic rule by ID, type or JSON pointer");
+    searchLabel.htmlFor = "arithmetic-filter";
+    const searchInput = node("input"); searchInput.id = "arithmetic-filter";
+    searchInput.type = "search"; searchInput.maxLength = 160; searchInput.autocomplete = "off";
+    const stageLabel = node("label", "Show arithmetic rules on stage");
+    stageLabel.htmlFor = "arithmetic-filter-stage";
+    const stageFilter = node("select"); stageFilter.id = "arithmetic-filter-stage";
+    for (const [value, caption] of [["all", "All stages"], ["input", "Input"], ["output", "Output"]]) {
+      const option = node("option", caption); option.value = value; stageFilter.append(option);
+    }
+    stageFilter.value = "all";
+    filterBar.append(searchLabel, searchInput, stageLabel, stageFilter);
+    const filterStatus = node("p"); filterStatus.id = "arithmetic-filter-status";
+    filterStatus.setAttribute("role", "status"); filterStatus.setAttribute("aria-live", "polite");
     const list = node("ul"); list.id = "arithmetic-drafts";
     const form = node("form"); form.id = "arithmetic-form";
     const message = node("p"); message.id = "arithmetic-message"; message.setAttribute("role", "status");
@@ -66,7 +83,9 @@
     form.append(stageGroup);
     const apply = node("button", "Add pending arithmetic rule"); apply.id = "arithmetic-apply"; apply.type = "submit";
     const cancel = node("button", "Cancel edit"); cancel.type = "button"; cancel.hidden = true;
-    form.append(apply, cancel, message); host.append(list, form);
+    form.append(apply, cancel, message); host.append(filterBar, filterStatus, list, form);
+    searchInput.addEventListener("input", draw);
+    stageFilter.addEventListener("change", draw);
     let editing = null;
     function pointerFields(existing = {}) {
       fields.replaceChildren();
@@ -85,8 +104,19 @@
     }
     function draw() {
       list.replaceChildren();
-      if (!draft.length) list.append(node("li", "No advanced arithmetic rules saved or drafted."));
-      for (const rule of draft) {
+      const query = searchInput.value.trim().toLowerCase();
+      const stage = stageFilter.value || "all";
+      const visible = draft.filter(rule =>
+        (stage === "all" || rule.stages.includes(stage)) &&
+        (!query || rule.rule_id.toLowerCase().includes(query) ||
+          rule.kind.toLowerCase().includes(query) ||
+          Object.values(rule.fields || {}).some(pointer =>
+            typeof pointer === "string" && pointer.toLowerCase().includes(query))));
+      filterStatus.textContent = "Showing " + visible.length + " of " + draft.length + " editable arithmetic rules.";
+      if (!visible.length) list.append(node("li", draft.length ?
+        "No matching arithmetic rules. Clear the search or stage filter." :
+        "No advanced arithmetic rules saved or drafted."));
+      for (const rule of visible) {
         const item = node("li"); item.dataset.arithmeticId = rule.rule_id;
         item.append(node("span", rule.rule_id + " · " + rule.kind + " · " + rule.stages.join(", ") + " "));
         const edit = node("button", "Edit"); edit.type = "button"; edit.setAttribute("aria-label", "Edit arithmetic " + rule.rule_id);
