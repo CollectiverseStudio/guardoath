@@ -20,11 +20,22 @@
   function canonical(value) {
     if (Array.isArray(value)) return value.map(canonical);
     if (value !== null && typeof value === "object") {
-      return Object.fromEntries(Object.keys(value).sort().map(key => [
-        key, key === "stages" && Array.isArray(value[key])
-          ? [...value[key]].sort()
-          : canonical(value[key])
-      ]));
+      // The API serializes nullable, non-FX conversion fields as null while
+      // the customer form omits those same unset defaults. Both represent the
+      // identical tenant policy; do not manufacture a pending change. Keep any
+      // real non-null reference/return-event values significant.
+      const nullable = new Set([
+        "return_event_pointer", "source_currency", "destination_currency",
+        "trusted_rate_numerator", "trusted_rate_denominator",
+        "rate_reference", "rate_asof"
+      ]);
+      return Object.fromEntries(Object.keys(value)
+        .filter(key => !(nullable.has(key) && value[key] === null))
+        .sort().map(key => [
+          key, key === "stages" && Array.isArray(value[key])
+            ? [...value[key]].sort()
+            : canonical(value[key])
+        ]));
     }
     return value;
   }
