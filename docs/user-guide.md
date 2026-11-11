@@ -3119,3 +3119,22 @@ In the authenticated dashboard, **Optional: configure field comparisons and data
 In **Checks on this record**, first choose the shared **Field comparisons** Input and Output actions. Under **Optional: configure field comparisons and data quality**, the Arithmetic, Identity/Collection and Conversion/Time editors now each show a read-only **Saved ... rules** summary and a live **Unsaved changes** preview. This preview counts added, updated and removed **editable rules across the whole tenant draft**, even if a rule-search or stage filter hides some rows. For example, editing the Input-only field pointer of one saved arithmetic rule shows **0 added, 1 updated, 0 removed**; removing a saved identity rule shows **0 added, 0 updated, 1 removed**. A deliberate change to rule ordering with no definition edits is reported separately as **Rule order changed**. Equivalent ordering of JSON object keys or Input/Output stage lists is not a policy change, so the preview remains **No pending changes**.
 
 These previews are **not** separate settings, extra charges or execution engines. They contain counts, never customer JSON pointer values or trusted-reference secrets. Identity/Collection and Conversion/Time previews explicitly exclude operator-owned reference rules; protected scopes and FX rates are read-only and remain untouched. Counts describe only the *local draft*: nothing runs or changes on the tenant until **Save checks** succeeds against the authoritative tenant revision. After a successful save or a reconnect, the summary returns to saved state. An actual Input/Output check uses all enabled rules in the tenant policy, not just the ones visible in a filtered editor. A reference that has not been independently provisioned cannot be created or trusted using any of these editable forms.
+
+
+### Guided refund comparison example (structured JSON)
+
+Under **Your checks and rules**, enable the **Field comparisons** check for Input and/or Output with **Block** if invalid values must stop the message or answer. Open **Optional: configure field comparisons and data quality** and use **Fill example: refund cannot exceed payment** in **Field comparison rules**. This fills the *existing* draft form with ID `refund_not_over_paid`, Left `/invoice/refund`, operator `≤`, Right `/invoice/paid`, number type and both stages. It **does not add or save a rule**. Review the pointers/stages, choose **Add to pending changes**, examine the pending count, and finally choose the tenant-wide **Save checks**. If the ID already exists, no saved or draft rule is overwritten.
+
+Example structured Input/Output JSON that should trigger that rule when the corresponding stage and rule are enabled with Block:
+
+```json
+{"invoice":{"refund":75,"paid":50}}
+```
+
+Example that satisfies this *particular* rule:
+
+```json
+{"invoice":{"refund":25,"paid":50}}
+```
+
+This example compares values in **submitted data only**; it does not independently verify payments, approve a refund, or prove that other GuardOath checks will pass. The customer's authoritative tenant check/rule actions and the existing shared Engine determine the effective result, including other findings and malformed JSON. A demo user is a shared sandbox, not a private customer tenant.
