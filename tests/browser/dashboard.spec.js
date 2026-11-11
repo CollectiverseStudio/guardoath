@@ -40,6 +40,39 @@ async function run(page) {
   await page.locator("#run").click();
   await expect(page.locator("#result-status")).not.toHaveText("Checking…");
 }
+test("demo user discovery recovers without refreshing the dashboard", async ({ page }) => {
+  let attempts = 0;
+  await page.route("**/v1/demo-users", route => {
+    if (++attempts === 1) return route.fulfill({status: 503, body: "{}"});
+    return route.continue();
+  });
+  await page.goto("/dashboard");
+  const retry = page.getByRole("button", {name: "Retry loading demo users"});
+  await expect(retry).toBeVisible();
+  await retry.click();
+  await expect(page.locator("#demo-users")).toBeVisible();
+  await expect(page.locator("#demo-user option").first()).toBeAttached();
+  await expect(retry).toBeHidden();
+  expect(attempts).toBe(2);
+});
+
+test("demo key request can be retried after a transient first failure", async ({ page }) => {
+  let issuance = 0;
+  await page.route("**/v1/demo-users/*/key", route => {
+    if (++issuance === 1) return route.fulfill({status: 503, body: "{}"});
+    return route.continue();
+  });
+  await page.goto("/dashboard");
+  await expect(page.locator("#demo-users")).toBeVisible();
+  await page.locator("#demo-user").selectOption("demo1");
+  await page.getByRole("button", {name: "Get demo API key"}).click();
+  await expect(page.locator("#connection-status")).toContainText("no refresh is needed");
+  await expect(page.getByRole("button", {name: "Get demo API key"})).toBeEnabled();
+  await page.getByRole("button", {name: "Get demo API key"}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo1");
+  expect(issuance).toBe(2);
+});
+
 test("checks are first and optional comparison tooling is clearly explained", async ({ page }) => {
   await page.goto("/dashboard");
   const checks = page.locator("#tenant-checks");
