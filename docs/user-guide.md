@@ -1577,6 +1577,8 @@ See [the data-quality guide](data-quality-coverage.md) for ledger, timestamps, g
 | `graph-v1` | Flag `A → B → A`, self-loops, duplicate edges or unknown endpoints. | `graph`: max_nodes, max_edges | Declared directed structure only; no relationship truth, legality or execution. |
 | `integrity-v1` | Flag a changed byte, newline or case against approved bytes' SHA-256. | `integrity`: sha256, encoding, max_bytes | Trusted server reference required; matching bytes do not prove safe content or authentic provenance. |
 
+The customer playground displays a **bounded local data-contract** limitation for each of these four focused profiles in its profile-status text. This is a statement of limited coverage, not an indication that a check passed: none of these rules authenticates a reference source, approves actions, proves accounting correctness, or performs semantic safety review. The limitation remains visible once per profile selection as a customer changes the input, without falsely adding new verification coverage.
+
 The first three expect their documented JSON envelopes. Integrity hashes the
 exact submitted text's UTF-8 bytes or canonical Base64-decoded bytes. For Base64,
 GuardOath decodes once and requires re-encoding to exactly match the supplied
