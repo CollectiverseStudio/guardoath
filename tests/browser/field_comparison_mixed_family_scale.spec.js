@@ -68,6 +68,65 @@ async function check(request, headers, stage, document) {
   return response.json();
 }
 
+test("advanced comparison no-op edits preserve the authenticated tenant revision across all three families", async ({page, request}) => {
+  const headers = await connect(page);
+  let resetRequired = false;
+  try {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(reset.status()).toBe(200);
+    resetRequired = true;
+    const before = await current(request, headers);
+    const {changes} = configured(4);
+    // Deliberately reverse stage and field-object serialization from the UI form.
+    // Only policy semantics matter; the order of rule portfolio entries still matters.
+    for (const family of ["advanced_arithmetic", "advanced_identity", "advanced_conversion_time"]) {
+      for (const rule of changes[family]) {
+        rule.stages = ["output", "input"];
+        rule.fields = Object.fromEntries(Object.entries(rule.fields).reverse());
+      }
+    }
+    const update = await request.post("/v1/tenants/current/checks", {
+      headers, data: {revision: before.revision, changes}
+    });
+    expect(update.status(), (await update.text()).slice(0, 200)).toBe(200);
+    await connect(page);
+    const saved = await current(request, headers);
+    expect(saved.advanced_arithmetic).toHaveLength(1);
+    expect(saved.advanced_identity).toHaveLength(1);
+    expect(saved.advanced_conversion_time).toHaveLength(1);
+
+    for (const [family, id] of [
+      ["arithmetic", "mixed_ui_001"],
+      ["identity", "mixed_ui_002"],
+      ["conversion", "mixed_ui_003"],
+    ]) {
+      await page.getByRole("button", {name: "Edit " + family + " " + id}).click();
+      await page.locator("#" + family + "-apply").click();
+      // Editing fields without semantic changes must not queue an accidental
+      // update that bumps revision or changes any stage-level behavior.
+      await expect(page.locator("#tenant-message")).toHaveText("");
+    }
+    await page.locator("#tenant-save").click();
+    await expect(page.locator("#tenant-message")).toHaveText("No changes to save.");
+    const final = await current(request, headers);
+    expect(final.revision).toBe(saved.revision);
+    for (const family of ["advanced_arithmetic", "advanced_identity", "advanced_conversion_time"])
+      expect(final[family]).toEqual(saved[family]);
+
+    // Real content edits must still be detected and cannot silently disappear.
+    await page.getByRole("button", {name: "Edit arithmetic mixed_ui_001"}).click();
+    await page.locator("#arithmetic-field-discount").fill("/r001/revised_discount");
+    await page.locator("#arithmetic-apply").click();
+    await expect(page.locator("#tenant-message")).toContainText("Unsaved changes.");
+    expect((await current(request, headers)).revision).toBe(saved.revision);
+  } finally {
+    if (resetRequired) {
+      const clean = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+      expect(clean.status()).toBe(200);
+    }
+  }
+});
+
 test("authenticated mixed 51-rule FC portfolio renders, saves UI override and runs both stages", async ({page, request}) => {
   const headers = await connect(page);
   let shouldReset = false;
