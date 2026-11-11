@@ -79,8 +79,8 @@ const canProceed = r => Boolean(r) && r.simulated === false
   && r.checker_results.every(c => c && typeof c === "object" && !Array.isArray(c)
     && typeof c.checker_id === "string" && c.checker_id.trim().length > 0
     && checkerStatuses.has(c.status) && c.simulated === false)
-  // The shared Engine returns one result per selected checker. Repeating one
-  // passing ID cannot stand in for a missing checker or authorize a release.
+  // A checker runs once for the chat message and separately for each real file.
+  // Repeated IDs without distinct verified file scopes cannot authorize release.
   && checkerEvidenceScoped(r)
   && goesThrough(r.recommended_action, r) && goesThrough(r.effective_action, r);
 // A syntactically successful HTTP response is not necessarily the receipt for
