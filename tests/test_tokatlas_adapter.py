@@ -99,3 +99,36 @@ def test_key_and_timeout_validate_before_use():
         TokatlasChatAdapter(model_limits=(('gpt-5', 128),), api_key="bad\nkey-unsafe")
     with pytest.raises(ValueError):
         TokatlasChatAdapter(model_limits=(('gpt-5', 128),), api_key="test-secret-without-network", timeout_seconds=0)
+
+
+@pytest.mark.parametrize("wrapped", [False, True])
+def test_offline_async_transport_preserves_parser_and_generation_budget(wrapped):
+    calls = []
+    async def transport(url, headers, body, timeout):
+        calls.append((url, json.loads(body), timeout))
+        return json.dumps(sample_reply(wrapped=wrapped)).encode()
+    adapter = TokatlasChatAdapter(model_limits=(("gpt-5", 128),),
+        api_key="test-secret-without-network", transport=transport)
+    reply = asyncio.run(adapter.generate(message="Hello", model="gpt-5"))
+    assert reply.text == "safe reply"
+    assert (reply.input_tokens, reply.output_tokens) == (7, 3)
+    assert len(calls) == 1
+    url, payload, timeout = calls[0]
+    assert url == ENDPOINT
+    assert payload["max_completion_tokens"] == 128
+    assert payload["stream"] is False and payload["store"] is False
+    assert 0 < timeout <= 120
+
+
+@pytest.mark.parametrize("usage", [{}, {"prompt_tokens": True, "completion_tokens": 1},
+                                    {"prompt_tokens": 1, "completion_tokens": -1}])
+def test_offline_async_transport_malformed_usage_fails_closed_without_echo(usage):
+    async def transport(*_args):
+        reply = sample_reply("PRIVATE provider response")
+        reply["usage"] = usage
+        return json.dumps(reply).encode()
+    adapter = TokatlasChatAdapter(model_limits=(("gpt-5", 128),),
+        api_key="test-secret-without-network", transport=transport)
+    with pytest.raises(TokatlasProviderError) as error:
+        asyncio.run(adapter.generate(message="PRIVATE prompt", model="gpt-5"))
+    assert "PRIVATE" not in str(error.value)
