@@ -477,17 +477,31 @@ test("FC tenant refuses malformed checker receipts before output", async ({page,
       {...receipt, checker_results: [{...first, status: "unverified"}]},
       {...receipt, checker_results: [{...first, checker_id: ""}]},
       {...receipt, checker_results: [null]},
+      {...receipt, checker_results: [first, {...first}]}, // duplicated success hides a missing checker
       {...receipt, evaluation_status: "unverified"},
     ]) {
-      const permitted = await page.evaluate(received => {
+      const decision = await page.evaluate(received => {
         inputResult = received;
         buttons();
-        return canProceed(inputResult);
+        return {
+          permitted: canProceed(inputResult),
+          receiptValid: receiptMatchesRequest(received, received.stage,
+            received.application_id, received.policy_version),
+        };
       }, corrupted);
-      expect(permitted).toBe(false);
+      expect(decision).toEqual({permitted: false, receiptValid: false});
       await expect(page.locator("#run-output")).toBeDisabled();
     }
-    await page.evaluate(received => {inputResult = received; buttons();}, receipt);
+    const validAgain = await page.evaluate(received => {
+      inputResult = received;
+      buttons();
+      return {
+        permitted: canProceed(inputResult),
+        receiptValid: receiptMatchesRequest(received, received.stage,
+          received.application_id, received.policy_version),
+      };
+    }, receipt);
+    expect(validAgain).toEqual({permitted: true, receiptValid: true});
     await expect(page.locator("#run-output")).toBeEnabled();
     expect((await current(request, headers)).revision).toBe(persisted.revision);
   } finally {
