@@ -61,6 +61,9 @@ class CheckerResult(Contract):
     latency_ms: float = 0
     error_code: str | None = None
     simulated: bool = False
+    # None means the ordinary chat message; 0..2 identifies a real uploaded file.
+    # Repeated checker IDs across separate files are distinct, legitimate scans.
+    attachment_index: int | None = Field(default=None, ge=0, le=2)
     # Private intermediate value: never serialized as a checker finding/result.
     transformed_content: str | None = Field(default=None, exclude=True)
 
