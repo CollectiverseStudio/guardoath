@@ -297,6 +297,24 @@ test("authenticated 500-rule four-family dashboard renders, persists and evaluat
     }
     await expect(page.locator('tr.rule-row[data-rule^="business.mixed_ui_"]')).toHaveCount(size);
     await expect(page.locator("#comparison-draft-summary")).toContainText("125 comparisons configured");
+    // Customer can locate one ordinary rule inside a saved 500-rule,
+    // four-family tenant without removing 124 other ordinary definitions.
+    await expect(page.locator("#comparison-filter-status")).toContainText("Showing 125 of 125");
+    await page.locator("#comparison-filter").fill("mixed_ui_000");
+    await expect(page.locator('#comparison-drafts li[data-comparison-id]')).toHaveCount(1);
+    await expect(page.locator('#comparison-drafts li[data-comparison-id="mixed_ui_000"]')).toBeVisible();
+    await page.locator("#comparison-filter-stage").selectOption("input");
+    await expect(page.locator("#comparison-filter-status")).toContainText("Showing 1 of 125");
+    await page.locator("#comparison-filter").fill("/r004/");
+    await expect(page.locator('#comparison-drafts li[data-comparison-id="mixed_ui_004"]')).toBeVisible();
+    await expect(page.locator('#comparison-drafts li[data-comparison-id]')).toHaveCount(1);
+    await page.locator("#comparison-filter").fill("no_such_rule");
+    await expect(page.locator("#comparison-filter-status")).toContainText("Showing 0 of 125");
+    await expect(page.locator("#comparison-drafts")).toContainText("No matching ordinary comparisons");
+    await page.locator("#comparison-filter").fill("");
+    await page.locator("#comparison-filter-stage").selectOption("all");
+    await expect(page.locator('#comparison-drafts li[data-comparison-id]')).toHaveCount(125);
+    expect((await current(request, headers)).revision).toBe(after.revision);
     await page.locator("#rule-search").fill("mixed_ui_499");
     const last = page.locator('tr.rule-row[data-rule="' + lastId + '"]');
     await expect(last).toBeVisible();
