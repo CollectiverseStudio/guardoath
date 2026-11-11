@@ -13,8 +13,26 @@
     return n;
   };
   let original = [], draft = [], enabled = false, protectedRules = [];
+  // Canonicalize field-object key order and Input/Output stage order only.
+  // The order of RULES and all non-stage arrays remains meaningful.
+  // This prevents no-op customer edits from incrementing the tenant revision.
+  function canonical(value) {
+    if (Array.isArray(value)) return value.map(canonical);
+    if (value !== null && typeof value === "object") {
+      return Object.fromEntries(Object.keys(value).sort().map(key => [
+        key, key === "stages" && Array.isArray(value[key])
+          ? [...value[key]].sort()
+          : canonical(value[key])
+      ]));
+    }
+    return value;
+  }
+  function samePortfolio(a, b) {
+    return a.length === b.length && a.every((rule, index) =>
+      JSON.stringify(canonical(rule)) === JSON.stringify(canonical(b[index])));
+  }
   function delta() {
-    if (!enabled || JSON.stringify(original) === JSON.stringify(draft)) return null;
+    if (!enabled || samePortfolio(original, draft)) return null;
     // Scoped replacement leaves server-owned reference rules untouched.
     return protectedRules.length ? {editable: clone(draft)} : clone(draft);
   }
