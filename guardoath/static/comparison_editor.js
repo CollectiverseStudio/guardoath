@@ -8,8 +8,21 @@
     if (text !== undefined) node.textContent = text;
     return node;
   };
+  // Object key order and Input/Output stage order are not policy changes;
+  // rule array order is preserved to expose a deliberately reordered portfolio.
+  function sameDefinition(a, b) {
+    return Boolean(a && b) &&
+      a.rule_id === b.rule_id && a.left === b.left && a.right === b.right &&
+      a.operator === b.operator && a.value_type === b.value_type &&
+      a.stages.length === b.stages.length &&
+      a.stages.every(stage => b.stages.includes(stage));
+  }
+  function hasPendingChanges() {
+    return original.length !== draft.length ||
+      original.some((rule, i) => !sameDefinition(rule, draft[i]));
+  }
   function delta() {
-    return available && JSON.stringify(original) !== JSON.stringify(draft) ? copy(draft) : null;
+    return available && hasPendingChanges() ? copy(draft) : null;
   }
   // Inspect only pending public rule IDs. Protected reference values never
   // enter another editor's draft or this shared tenant-wide name check.
@@ -348,11 +361,7 @@
         // as the advanced-family editors. A pending definition is not yet the
         // tenant's authoritative saved rule, so do not label it as such.
         const persisted = savedById.get(item.rule_id);
-        const savedDefinition = persisted &&
-          persisted.left === item.left && persisted.right === item.right &&
-          persisted.operator === item.operator && persisted.value_type === item.value_type &&
-          persisted.stages.length === item.stages.length &&
-          persisted.stages.every(stage => item.stages.includes(stage));
+        const savedDefinition = sameDefinition(persisted, item);
         if (persisted && !savedDefinition) {
           row.append(element("p", "Unsaved comparison changes: Save checks before testing the updated rule."));
         } else if (savedDefinition) {
@@ -389,7 +398,7 @@
     filterInput.addEventListener("input", drawRows);
     stageFilter.addEventListener("change", drawRows);
     function draw() {
-      const pending = JSON.stringify(original) !== JSON.stringify(draft);
+      const pending = hasPendingChanges();
       // Bulk replacement must reveal the number of affected saved rules BEFORE
       // a customer presses the tenant-wide, revisioned Save checks button.
       // Compare complete definitions, not visible/filtered rows; never echo
@@ -401,10 +410,7 @@
         for (const rule of draft) {
           const saved = savedById.get(rule.rule_id);
           if (!saved) { added++; continue; }
-          if (saved.left !== rule.left || saved.right !== rule.right ||
-              saved.operator !== rule.operator || saved.value_type !== rule.value_type ||
-              saved.stages.length !== rule.stages.length ||
-              saved.stages.some(stage => !rule.stages.includes(stage))) updated++;
+          if (!sameDefinition(saved, rule)) updated++;
         }
       }
       const pendingDetails = pending
