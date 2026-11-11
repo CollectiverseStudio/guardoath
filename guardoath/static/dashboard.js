@@ -42,6 +42,37 @@ const goesThrough = (action, r) => ["allow", "flag"].includes(action)
 // preserving the tenant's configured failure action for a *valid* incomplete
 // result (e.g. a non-privacy check explicitly configured to Flag).
 const checkerStatuses = new Set(["passed", "flagged", "error", "skipped", "unsupported"]);
+// Chat-message checks run once; each attached file is independently scanned by
+// the same Engine and can legitimately produce the same checker_id. Accept that
+// repetition only when server results carry a distinct, bounded file index and
+// matching inspection receipts. Unscoped duplicates remain invalid.
+const checkerEvidenceScoped = (r, expectedFiles = null) => {
+  if (!r || !Array.isArray(r.checker_results)) return false;
+  const files = r.attachments;
+  if (files !== undefined && (!Array.isArray(files) || !files.length || files.length > 3)) return false;
+  const count = files?.length || 0;
+  if (expectedFiles !== null && count !== expectedFiles) return false;
+  for (let i = 0; i < count; i++) {
+    const file = files[i];
+    if (!file || typeof file !== "object" || Array.isArray(file)
+      || file.index !== i || typeof file.kind !== "string"
+      || typeof file.reason !== "string" || typeof file.evaluation_status !== "string"
+      || !Number.isInteger(file.byte_count) || file.byte_count < 0) return false;
+  }
+  const seen = new Set(), representedFiles = new Set();
+  for (const check of r.checker_results) {
+    if (!check || typeof check !== "object" || Array.isArray(check)
+      || typeof check.checker_id !== "string" || !check.checker_id.trim()) return false;
+    const fileIndex = check.attachment_index;
+    const scoped = fileIndex !== undefined && fileIndex !== null;
+    if (scoped && (!Number.isInteger(fileIndex) || fileIndex < 0 || fileIndex >= count)) return false;
+    const identity = (scoped ? "file:" + fileIndex : "message") + ":" + check.checker_id;
+    if (seen.has(identity)) return false;
+    seen.add(identity);
+    if (scoped) representedFiles.add(fileIndex);
+  }
+  return representedFiles.size === count;
+};
 const canProceed = r => Boolean(r) && r.simulated === false
   && ["complete", "incomplete"].includes(r.evaluation_status)
   && Array.isArray(r.checker_results) && r.checker_results.length > 0
@@ -50,7 +81,7 @@ const canProceed = r => Boolean(r) && r.simulated === false
     && checkerStatuses.has(c.status) && c.simulated === false)
   // The shared Engine returns one result per selected checker. Repeating one
   // passing ID cannot stand in for a missing checker or authorize a release.
-  && new Set(r.checker_results.map(c => c.checker_id)).size === r.checker_results.length
+  && checkerEvidenceScoped(r)
   && goesThrough(r.recommended_action, r) && goesThrough(r.effective_action, r);
 // A syntactically successful HTTP response is not necessarily the receipt for
 // this customer's requested stage, application and policy. Verify the binding
@@ -59,7 +90,7 @@ const canProceed = r => Boolean(r) && r.simulated === false
 const receiptRecord = value => value !== null && typeof value === "object" && !Array.isArray(value);
 const receiptFinding = value => receiptRecord(value)
   && typeof value.rule_id === "string" && typeof value.explanation === "string";
-const receiptMatchesRequest = (r, stage, appId, policy) => receiptRecord(r)
+const receiptMatchesRequest = (r, stage, appId, policy, expectedFiles = 0) => receiptRecord(r)
   && r.stage === stage && r.application_id === appId && r.policy_version === policy
   && ["complete", "incomplete"].includes(r.evaluation_status)
   && ["allow", "flag", "redact", "block"].includes(r.recommended_action)
@@ -72,7 +103,7 @@ const receiptMatchesRequest = (r, stage, appId, policy) => receiptRecord(r)
     && typeof c.checker_id === "string" && c.checker_id.trim().length > 0
     && checkerStatuses.has(c.status) && typeof c.simulated === "boolean"
     && Array.isArray(c.findings) && c.findings.every(receiptFinding))
-  && new Set(r.checker_results.map(c => c.checker_id)).size === r.checker_results.length
+  && checkerEvidenceScoped(r, expectedFiles)
   && (r.groups == null || (Array.isArray(r.groups) && r.groups.every(g => receiptRecord(g)
     && typeof g.group_id === "string" && typeof g.name === "string"
     && typeof g.limitations === "string" && Array.isArray(g.checker_ids))))
@@ -1961,7 +1992,8 @@ function render(stage, result) {
   }
   function checkerRow(check) { const row = document.createElement("div"); row.className = "checker";
     const heading = document.createElement("div"), name = document.createElement("span"), status = document.createElement("span");
-    name.textContent = check.checker_id; status.className = "pill" + (check.simulated ? " warn" : check.status === "passed" ? " good" : check.status === "flagged" ? " bad" : " warn");
+    name.textContent = check.checker_id + (Number.isInteger(check.attachment_index)
+      ? " · file " + (check.attachment_index + 1) : ""); status.className = "pill" + (check.simulated ? " warn" : check.status === "passed" ? " good" : check.status === "flagged" ? " bad" : " warn");
     status.textContent = (check.simulated ? "SIMULATED · " : "") + check.status; heading.append(name, status); row.append(heading);
     const needs = check.status === "skipped" ? formatNeeds[check.checker_id] : null;
     if (needs) { const error = document.createElement("p"); error.className = "format-skip"; error.textContent = "Not run: this check needs " + (needs === "json" ? "JSON" : "text") + " content, and this message is " + (needs === "json" ? "text" : "JSON") + ". The result is incomplete, so the record\u2019s failure action applies. Turn the check off, or send " + (needs === "json" ? "JSON" : "text") + "."; row.append(error); }
@@ -2039,8 +2071,10 @@ async function execute(target) {
   const attempt = revision, policy = $("policy").value, app = application.application_id, token = key;
   const proposed = $("output-content").value; busy = true; buttons(); $("result-status").textContent = "Checking…";
   try {
+    const actualFileCounts = {input: 0, output: 0};
     const assess = async stage => {
       const attachments_b64 = await selectedAttachmentBytes(stage);
+      actualFileCounts[stage] = attachments_b64?.length || 0;
       const request = {application_id: app, policy_version: policy,
         content: $(stage + "-content").value, content_format: $(stage + "-format").value};
       if (attachments_b64) request.attachments_b64 = attachments_b64;
@@ -2049,7 +2083,7 @@ async function execute(target) {
     if (target !== "output") {
       const checked = await assess("input");
       if (attempt !== revision) return;
-      if (!receiptMatchesRequest(checked, "input", app, policy))
+      if (!receiptMatchesRequest(checked, "input", app, policy, actualFileCounts.input))
         throw new Error("Input validation receipt was invalid or belonged to another check. No message was released.");
       inputResult = checked; render("input", checked);
       $("input-gate").textContent = gateText(checked);
@@ -2058,7 +2092,7 @@ async function execute(target) {
     if (target !== "input" && canProceed(inputResult)) {
       const checked = await assess("output");
       if (attempt !== revision) return;
-      if (!receiptMatchesRequest(checked, "output", app, policy))
+      if (!receiptMatchesRequest(checked, "output", app, policy, actualFileCounts.output))
         throw new Error("Output validation receipt was invalid or belonged to another check. No answer was released.");
       results.push(checked); render("output", checked);
     }
