@@ -155,6 +155,84 @@ test("authenticated customer can fill, save and evaluate the invoice arithmetic 
     expect((await current()).revision).toBe(integrated.revision);
     expect((await current()).advanced_identity).toEqual(integrated.advanced_identity);
     expect((await current()).advanced_conversion_time).toEqual(integrated.advanced_conversion_time);
+
+    // FC-032 and FC-036: two more customer-operable arithmetic examples,
+    // saved in one tenant revision and enforced by the existing Engine.
+    const beforeInvoiceStock = await current();
+    await page.locator("#arithmetic-sample-invoice-total").click();
+    await expect(page.locator("#arithmetic-id")).toHaveValue("invoice_total_matches");
+    await expect(page.locator("#arithmetic-kind")).toHaveValue("invoice_total");
+    for (const role of ["subtotal", "discount", "tax", "shipping", "total"]) {
+      await expect(page.locator("#arithmetic-field-" + role)).toHaveValue("/billing/" + role);
+    }
+    await expect(page.locator("#arithmetic-stage-input")).toBeChecked();
+    await expect(page.locator("#arithmetic-stage-output")).toBeChecked();
+    await expect(page.locator("#arithmetic-message")).toContainText("not added or saved");
+    expect((await current()).revision).toBe(beforeInvoiceStock.revision);
+    await page.locator("#arithmetic-apply").click();
+    await expect(page.locator("#arithmetic-draft-summary")).toContainText("1 added");
+
+    await page.locator("#arithmetic-sample-inventory").click();
+    await expect(page.locator("#arithmetic-id")).toHaveValue("inventory_balances");
+    await expect(page.locator("#arithmetic-kind")).toHaveValue("inventory_conservation");
+    for (const role of ["opening", "received", "shipped", "lost", "closing"]) {
+      await expect(page.locator("#arithmetic-field-" + role)).toHaveValue("/inventory/" + role);
+    }
+    await expect(page.locator("#arithmetic-stage-input")).toBeChecked();
+    await expect(page.locator("#arithmetic-stage-output")).toBeChecked();
+    await expect(page.locator("#arithmetic-message")).toContainText("not added or saved");
+    expect((await current()).advanced_arithmetic).toEqual(beforeInvoiceStock.advanced_arithmetic);
+    expect((await current()).revision).toBe(beforeInvoiceStock.revision);
+    await page.locator("#arithmetic-apply").click();
+    await expect(page.locator("#arithmetic-draft-summary")).toContainText("2 added");
+    const beforeSave = await current();
+    expect(beforeSave.advanced_arithmetic).toEqual(beforeInvoiceStock.advanced_arithmetic);
+    await page.locator("#tenant-save").click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved");
+    const afterSave = await current();
+    expect(afterSave.revision).toBe(beforeInvoiceStock.revision + 1);
+    expect(afterSave.advanced_arithmetic).toContainEqual({
+      rule_id: "invoice_total_matches", kind: "invoice_total", stages: ["input", "output"],
+      fields: {subtotal: "/billing/subtotal", discount: "/billing/discount",
+               tax: "/billing/tax", shipping: "/billing/shipping", total: "/billing/total"}
+    });
+    expect(afterSave.advanced_arithmetic).toContainEqual({
+      rule_id: "inventory_balances", kind: "inventory_conservation", stages: ["input", "output"],
+      fields: {opening: "/inventory/opening", received: "/inventory/received",
+               shipped: "/inventory/shipped", lost: "/inventory/lost", closing: "/inventory/closing"}
+    });
+    expect(afterSave.advanced_identity_reference_status).toEqual(integrated.advanced_identity_reference_status);
+    expect(afterSave.advanced_conversion_reference_status).toEqual(integrated.advanced_conversion_reference_status);
+
+    const accountingWitnesses = [
+      ["invoice_total_matches",
+       {billing: {subtotal: 100, discount: 10, tax: 8, shipping: 2, total: 99}},
+       {billing: {subtotal: 100, discount: 10, tax: 8, shipping: 2, total: 100}}],
+      ["inventory_balances",
+       {inventory: {opening: 50, received: 20, shipped: 15, lost: 5, closing: 51}},
+       {inventory: {opening: 50, received: 20, shipped: 15, lost: 5, closing: 50}}]
+    ];
+    for (const stage of ["input", "output"]) {
+      for (const [id, invalid, valid] of accountingWitnesses) {
+        for (const [payload, violation] of [[invalid, true], [valid, false]]) {
+          const response = await page.request.post("/v1/checks/" + stage, {
+            headers, data: {application_id: "demo8", content_format: "json",
+                           content: JSON.stringify(payload)}
+          });
+          expect(response.status()).toBe(200);
+          const result = await response.json();
+          expect(result.evaluation_status).toBe("complete");
+          expect(result.findings.some(f => f.rule_id === "business." + id)).toBe(violation);
+          if (violation) expect(result.effective_action).toBe("block");
+        }
+      }
+    }
+    await page.locator("#arithmetic-sample-invoice-total").click();
+    await expect(page.locator("#arithmetic-message")).toContainText("already exists");
+    await page.locator("#arithmetic-sample-inventory").click();
+    await expect(page.locator("#arithmetic-message")).toContainText("already exists");
+    expect((await current()).revision).toBe(afterSave.revision);
+    expect((await current()).advanced_arithmetic).toEqual(afterSave.advanced_arithmetic);
   } finally {
     await reset();
   }
