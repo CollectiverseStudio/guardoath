@@ -2,6 +2,7 @@ const {test, expect} = require("@playwright/test");
 
 test("owner creates, saves, reloads, edits and executes a PSI batch rule in the dashboard", async ({page}) => {
   await page.goto("/dashboard");
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo9");
   await page.getByRole("button", {name:"Get demo API key", exact:true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo9");
@@ -57,6 +58,7 @@ test("owner creates, saves, reloads, edits and executes a PSI batch rule in the 
 
 test("dashboard PSI editor rejects malformed drafts before tenant mutation", async ({page}) => {
   await page.goto("/dashboard");
+  await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   await page.locator("#demo-user").selectOption("demo10");
   await page.getByRole("button", {name:"Get demo API key", exact:true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
