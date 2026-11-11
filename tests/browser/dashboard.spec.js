@@ -46,6 +46,27 @@ test("clean content shows the answer after real local checks", async ({ page }) 
   await expect(page.locator("#answer")).toBeVisible();
   await expect(page.locator("#answer")).toContainText("unused item");
 });
+test("malformed checker result envelopes cannot unlock output after a real input run", async ({ page }) => {
+  await connect(page);
+  await run(page);
+  expect(await page.evaluate(() => canProceed(inputResult))).toBe(true);
+  // Exercise the actual dashboard gate with malformed transport envelopes,
+  // not a substitute backend that silently declares a check successful.
+  for (const checkerResults of [undefined, null, {}, [], [null], ["invalid"]]) {
+    const state = await page.evaluate(checkerResults => {
+      inputResult = {
+        recommended_action: "allow", effective_action: "allow",
+        ...(checkerResults === undefined ? {} : {checker_results: checkerResults}),
+      };
+      buttons();
+      return {proceed: canProceed(inputResult),
+        outputDisabled: document.getElementById("run-output").disabled,
+        answerReadOnly: document.getElementById("output-content").readOnly};
+    }, checkerResults);
+    expect(state).toEqual({proceed: false, outputDisabled: true, answerReadOnly: true});
+  }
+});
+
 test("output email finding holds the answer", async ({ page }) => {
   await connect(page); await pickSample(page,"output","email"); await run(page);
   await expect(page.locator("#output-results")).toContainText("Potential email address");
