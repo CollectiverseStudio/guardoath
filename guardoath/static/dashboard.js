@@ -15,19 +15,32 @@ const redactionRecheckPassed = r => {
   // The Engine re-runs the same selected checks on the cleaned content.
   // A receipt with only one passing recheck, a substituted checker, or
   // duplicate results cannot certify the other original checks.
-  if (r?.redaction?.status !== "ready" || typeof r.redaction.content !== "string"
+  // The Engine rechecks the transformed CHAT message, not uploaded bytes.
+  // Uploaded files are independently validated by the same tenant Engine and
+  // have their own indexed receipts; a safe file may reuse a chat checker ID.
+  // A failed/incomplete file scan or an ambiguous file scope never authorizes
+  // a redacted release, regardless of an otherwise successful chat recheck.
+  if (r?.redaction?.status !== "ready" || r.evaluation_status !== "complete"
+      || typeof r.redaction.content !== "string"
       || !Array.isArray(original) || original.length === 0
-      || !Array.isArray(rechecks) || rechecks.length !== original.length) return false;
+      || !Array.isArray(rechecks) || !checkerEvidenceScoped(r)
+      || r.attachments?.some(file => file.evaluation_status === "incomplete")) return false;
   const originalIds = new Set();
   for (const c of original) {
     if (!c || typeof c !== "object" || Array.isArray(c)
-        || typeof c.checker_id !== "string" || !c.checker_id.trim()
-        || originalIds.has(c.checker_id)) return false;
+        || typeof c.checker_id !== "string" || !c.checker_id.trim()) return false;
+    if (c.attachment_index !== undefined && c.attachment_index !== null) {
+      if (c.status === "error" || c.status === "unsupported") return false;
+      continue;
+    }
+    if (originalIds.has(c.checker_id)) return false;
     originalIds.add(c.checker_id);
   }
+  if (originalIds.size === 0 || rechecks.length !== originalIds.size) return false;
   const recheckedIds = new Set();
   for (const c of rechecks) {
     if (!c || typeof c !== "object" || Array.isArray(c)
+        || c.attachment_index !== undefined && c.attachment_index !== null
         || typeof c.checker_id !== "string" || !originalIds.has(c.checker_id)
         || recheckedIds.has(c.checker_id)
         || c.status !== "passed" || c.simulated !== false) return false;
