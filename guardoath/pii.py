@@ -206,6 +206,28 @@ def _last_lookahead_start(pattern, text, *, timeout=None):
     return rightmost
 
 
+def _bounded_split_lookahead_matches(core, lookaheads, text, check_deadline):
+    """Yield only core matches eligible under every original forward lookahead.
+
+    A missing mandatory lookahead makes a match impossible: do not scan core.
+    Once core starts exceed the rightmost eligible start, later starts cannot
+    qualify either. Do not slice the input: a valid core match can extend past
+    the lookahead's final start. Retain regex ordering and the caller's deadline.
+    """
+    last_eligible = None
+    for lookahead in lookaheads:
+        last = _last_lookahead_start(lookahead, text, timeout=check_deadline())
+        if last < 0:
+            return
+        last_eligible = last if last_eligible is None else min(last_eligible, last)
+    if last_eligible is None:
+        return
+    for match in core.finditer(text, timeout=check_deadline(), concurrent=True):
+        if match.start() > last_eligible:
+            break
+        yield match
+
+
 def fewest_phone_digits(recognizer):
     """Fewest digits any number of the recognizer's regions can have, from phone metadata;
     0 for other recognizers. Texts with fewer digits cannot contain a match."""
@@ -411,9 +433,8 @@ def build_pii_checker():
                         remaining = check_deadline()
                         if split:
                             core, lookaheads = split
-                            last = [_last_lookahead_start(lookahead, text, timeout=check_deadline())
-                                    for lookahead in lookaheads]
-                            matches = (m for m in core.finditer(text, timeout=remaining, concurrent=True) if m.start() <= min(last))
+                            matches = _bounded_split_lookahead_matches(
+                                core, lookaheads, text, check_deadline)
                         else:
                             matches = pattern.finditer(text, timeout=remaining, concurrent=True)
                         for match in matches:
