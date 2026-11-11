@@ -196,7 +196,16 @@ def test_weak_patterns_count_only_with_context_at_the_default_score(checkers):
     assert "pii.us_passport" in rule_ids(check(checkers, "My passport number is 912803456."))
     # With a low minimum the weak matches count without context. Four pattern types match the
     # same nine digits; the highest score (U.S. ITIN, 0.3) is reported once for them.
-    assert rule_ids(check(checkers, "Order 912803456 shipped.", privacy_min_score=0.05)) == {"pii.us_itin"}
+    weak = check(checkers, "Order 912803456 shipped.", privacy_min_score=0.05)
+    # A missing weak finding is not necessarily a recognizer false negative:
+    # the 500-ms PII worker may have timed out or failed to admit the scan.
+    # Keep the exact positive result and deadline; report only safe checker
+    # metadata (never the submitted document or matched identifier).
+    diagnostic = (f"evaluation_status={weak.evaluation_status}; "
+                  f"recommended_action={weak.recommended_action}; "
+                  f"checker_results={[(c.checker_id, c.status, c.error_code, c.latency_ms) for c in weak.checker_results]}")
+    assert weak.evaluation_status == "complete", diagnostic
+    assert rule_ids(weak) == {"pii.us_itin"}, diagnostic
     assert not check(checkers, "My passport number is 912803456.", privacy_min_score=1.0).findings
     assert rule_ids(check(checkers, "IBAN DE89 3704 0044 0532 0130 00", privacy_min_score=1.0)) == {"pii.iban_code"}
 
