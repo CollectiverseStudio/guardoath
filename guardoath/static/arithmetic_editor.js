@@ -19,8 +19,26 @@
     return n;
   };
   let original = [], draft = [], available = false;
+  // Canonicalize field-object key order and Input/Output stage order only.
+  // The order of RULES and all non-stage arrays remains meaningful.
+  // This prevents no-op customer edits from incrementing the tenant revision.
+  function canonical(value) {
+    if (Array.isArray(value)) return value.map(canonical);
+    if (value !== null && typeof value === "object") {
+      return Object.fromEntries(Object.keys(value).sort().map(key => [
+        key, key === "stages" && Array.isArray(value[key])
+          ? [...value[key]].sort()
+          : canonical(value[key])
+      ]));
+    }
+    return value;
+  }
+  function samePortfolio(a, b) {
+    return a.length === b.length && a.every((rule, index) =>
+      JSON.stringify(canonical(rule)) === JSON.stringify(canonical(b[index])));
+  }
   function delta() {
-    return available && JSON.stringify(original) !== JSON.stringify(draft) ? clone(draft) : null;
+    return available && !samePortfolio(original, draft) ? clone(draft) : null;
   }
   function actions(stage, values) {
     const result = {...values};
