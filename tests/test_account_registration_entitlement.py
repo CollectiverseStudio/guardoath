@@ -416,4 +416,4 @@ def test_public_subscription_price_never_calls_provider_without_server_configura
     client, store = make_client()
     reply = client.get("/v1/billing/price")
     assert reply.status_code == 503
-    assert store.all() == []
+    assert store.tenant_ids() == ()
