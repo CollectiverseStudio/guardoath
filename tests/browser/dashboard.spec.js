@@ -135,6 +135,29 @@ test("a wrong-tenant Output receipt cannot release an answer", async ({page}) =>
   await expect(page.locator("#run-output")).toBeEnabled();
 });
 
+test("duplicate checker success in a real Output receipt cannot release the customer answer", async ({page}) => {
+  await connect(page);
+  await page.route("**/v1/checks/output", async route => {
+    const response = await route.fetch();
+    expect(response.status()).toBe(200);
+    const checked = await response.json();
+    expect(checked.stage).toBe("output");
+    expect(checked.checker_results.length).toBeGreaterThan(0);
+    // Retain the real Engine response and add a duplicate success. Even
+    // matching tenant/policy/stage and an otherwise clean action cannot let
+    // repeated evidence stand in for a unique completed checker receipt.
+    const first = checked.checker_results[0];
+    await route.fulfill({response, json: {
+      ...checked, checker_results: [...checked.checker_results, {...first}],
+    }});
+  });
+  await run(page);
+  await expect(page.locator("#input-gate")).toContainText("Input checks passed");
+  await expect(page.locator("#result-status")).toHaveText("Check failed");
+  await expect(page.locator("#run-error")).toContainText("Output validation receipt was invalid");
+  await expect(page.locator("#answer")).toBeHidden();
+});
+
 test("real checker receipts reject corrupted policy, timing and findings before rendering", async ({page}) => {
   await connect(page);
   await run(page);
