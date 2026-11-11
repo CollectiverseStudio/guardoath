@@ -576,7 +576,17 @@ def test_the_page_follows_the_decision_and_saves_changed_settings_before_a_check
     # repeat the checker ID only when each is scoped to a real file receipt.
     # The same strict provenance guard protects both the Input gate and the
     # pre-render Output binding; no unscoped duplicate can substitute a pass.
-    assert gate.count("checkerEvidenceScoped(r") == 2
+    # Redacted chat with files needs THREE independent provenance checks:
+    # one for message-only transformed rechecks, one for Input authorization,
+    # and one before presenting any stage response. Keep all three.
+    redaction_gate = gate[:gate.index("const goesThrough =")]
+    assert "!checkerEvidenceScoped(r)" in redaction_gate
+    assert 'r.evaluation_status !== "complete"' in redaction_gate
+    assert "c.attachment_index !== undefined && c.attachment_index !== null" in redaction_gate
+    assert "rechecks.length !== originalIds.size" in redaction_gate
+    assert "r.attachments?.some(file => file.evaluation_status === \"incomplete\")" in redaction_gate
+    assert "&& checkerEvidenceScoped(r)\n  && goesThrough" in gate
+    assert "&& checkerEvidenceScoped(r, expectedFiles)" in gate
     for proof in ("const checkerEvidenceScoped =", "file.index !== i",
                   "seen.has(identity)", "representedFiles.size === count",
                   "count !== expectedFiles"):
