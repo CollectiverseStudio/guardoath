@@ -138,14 +138,14 @@ async def inspect_attachments(record: TenantRecord, stage: Stage, contents: tupl
             # Unsupported, malformed and budget-exceeded formats fail closed, not falsely 'passed'.
             result = CheckerResult(checker_id="attachment_probe", checker_version="1",
                                    status="unsupported" if probe.status == "unsupported" else "error",
-                                   error_code=probe.reason)
+                                   error_code=probe.reason, attachment_index=index)
             actions.append(Action.BLOCK)
             incomplete = True
             receipt["evaluation_status"] = "incomplete"
         elif mode == "off":
             # Explicit tenant Off is authoritative: classification is not inspection.
             result = CheckerResult(checker_id="csv_formula", checker_version="1", status="skipped",
-                                   error_code="attachment_policy_off")
+                                   error_code="attachment_policy_off", attachment_index=index)
             receipt["evaluation_status"] = "not_inspected_policy_off"
         else:
             request = CheckRequest(application_id=record.tenant_id, policy_version=TENANT_POLICY_VERSION,
@@ -153,7 +153,8 @@ async def inspect_attachments(record: TenantRecord, stage: Stage, contents: tupl
             evaluated = await engine.check(request, stage)
             # Format, prompt and credential checks all use the existing Engine
             # and authoritative per-stage tenant rule actions. Retain all results.
-            results.extend(evaluated.checker_results)
+            results.extend(check.model_copy(update={"attachment_index": index})
+                           for check in evaluated.checker_results)
             findings.extend(evaluated.findings)
             actions.append(evaluated.recommended_action)
             # A PII Redact finding on a CSV/TSV requires a transformed FILE, which
