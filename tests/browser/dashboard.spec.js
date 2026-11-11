@@ -1261,7 +1261,7 @@ test("every check and profile explains what it does and why", async ({ page }) =
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
   await expect(page.locator("#tenant-checks .check-help")).toHaveCount(19);
-  await expect(page.locator("#tenant-checks .action-legend dt")).toHaveText(["Off", "Block", "Flag", "Allow", "Redact"]);
+  await expect(page.locator(".action-legend").first().locator("dt")).toHaveText(["Off", "Block", "Flag", "Allow", "Redact"]);
   const help = page.locator("#tenant-help-schema");
   await help.locator("summary").click();
   await expect(help).toContainText("What it checks:");
