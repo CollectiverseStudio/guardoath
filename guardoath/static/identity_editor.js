@@ -61,9 +61,11 @@
   function actions(stage, previous) {
     const result = {...previous};
     if (!enabled) return result;
+    // One pass over the editable draft; protected host-owned IDs never enter
+    // this cleanup set, and unrelated per-rule actions remain unchanged.
+    const active = new Set(draft.filter(rule => rule.stages.includes(stage)).map(rule => rule.rule_id));
     for (const item of original) {
-      const kept = draft.find(rule => rule.rule_id === item.rule_id);
-      if (!kept || !kept.stages.includes(stage)) delete result["business." + item.rule_id];
+      if (!active.has(item.rule_id)) delete result["business." + item.rule_id];
     }
     return result;
   }
