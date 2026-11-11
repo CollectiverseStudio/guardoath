@@ -86,6 +86,7 @@ def test_explicit_saved_attachment_off_remains_off_after_reload():
         assert result["effective_action"] == "allow"
         assert result["attachments"][0]["evaluation_status"] == "not_inspected_policy_off"
         assert result["checker_results"][-1]["status"] == "skipped"
+        assert result["checker_results"][-1]["attachment_index"] == 0
 
 
 def test_partial_legacy_setting_preserves_explicit_off_and_autos_other_stage():
@@ -117,6 +118,7 @@ def test_incomplete_attachment_blocks_even_with_observe_flag_failure_and_explici
             assert result["recommended_action"] == result["effective_action"] == "block"
             assert result["attachments"][0]["reason"] == expected
             assert result["attachments"][0]["evaluation_status"] == "incomplete"
+            assert result["checker_results"][-1]["attachment_index"] == 0
 
 
 
@@ -129,6 +131,14 @@ def test_two_csv_files_preserve_all_findings_and_clean_file_passes():
     assert len(data["attachments"]) == 3
     assert [r["evaluation_status"] for r in data["attachments"]] == ["complete"] * 3
     assert [f["rule_id"] for f in data["findings"]].count("csv_formula.potential_formula") == 2
+    # The original text and each uploaded CSV are distinct real Engine scans.
+    # Preserve every result without allowing same-ID duplicates to masquerade
+    # as one missing validation check in the customer dashboard.
+    csv = [c for c in data["checker_results"] if c["checker_id"] == "csv_formula"]
+    assert sorted(c["attachment_index"] for c in csv if c["attachment_index"] is not None) == [0, 1, 2]
+    assert sum(c["attachment_index"] is None for c in csv) == 1
+    assert all(c["attachment_index"] is None for c in data["checker_results"]
+               if c["checker_id"] == "text_security")
     assert data["effective_action"] == "flag"
     assert service.store.get("demo1").used(usage_month()) == 1
 
