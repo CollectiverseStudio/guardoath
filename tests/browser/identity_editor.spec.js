@@ -210,3 +210,123 @@ test("FC-048 empty requested-scopes use real tenant and authenticated Input/Outp
     }
   }
 });
+
+
+test("identity bulk stages 125 public serial rules atomically and runs saved Input Output tenant Engine", async ({page, request}) => {
+  await page.goto("/dashboard");
+  await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
+  await page.locator("#demo-user").selectOption("demo6");
+  await page.getByRole("button", {name:"Get demo API key", exact:true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo6");
+  let headers = {Authorization:"Bearer " + await page.locator("#demo-key-value").inputValue()};
+  const read = async () => {
+    const response = await request.get("/v1/applications/current", {headers});
+    expect(response.status()).toBe(200);
+    return (await response.json()).tenant;
+  };
+  let resetRequired = false;
+  try {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data:{}});
+    expect(reset.status()).toBe(200);
+    resetRequired = true;
+    await page.reload();
+    await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
+    await page.locator("#demo-user").selectOption("demo6");
+    await page.getByRole("button", {name:"Get demo API key", exact:true}).click();
+    await expect(page.locator("#connection-status")).toContainText("Connected to demo6");
+    headers = {Authorization:"Bearer " + await page.locator("#demo-key-value").inputValue()};
+    const initial = await read();
+    expect(initial.advanced_identity).toEqual([]);
+    const rules = Array.from({length:125}, (_, i) => {
+      const index = String(i).padStart(3,"0");
+      return {rule_id:"bulk_identity_" + index, kind:"serial_unique",
+        fields:{serials:"/i" + index + "/serials"}, stages:["input","output"]};
+    });
+    await page.locator("#identity-bulk-panel").evaluate(el => { el.open = true; });
+    const json = page.locator("#identity-bulk-json");
+    await json.fill(JSON.stringify(rules));
+    await page.locator("#identity-bulk-import").click();
+    await expect(page.locator("#identity-bulk-status")).toContainText("Confirm replacement");
+    await expect(page.locator("#identity-draft-summary")).toContainText("No pending changes");
+    await page.locator("#identity-bulk-confirm").check();
+    await page.locator("#identity-bulk-import").click();
+    await expect(page.locator("#identity-draft-summary")).toContainText("125 added, 0 updated, 0 removed");
+    await expect(page.locator("#identity-filter-status")).toContainText("Showing 125 of 125");
+    expect((await read()).revision).toBe(initial.revision);
+    expect((await read()).advanced_identity).toEqual([]);
+
+    // Any invalid member rejects the entire replacement. No cross-family or
+    // private reference rule can be smuggled into this public draft.
+    for (const invalid of [
+      [...rules, structuredClone(rules[0])],
+      [...rules, {rule_id:"forged_quarantine", kind:"quarantine_exclusion",
+        fields:{serials:"/secret"}, stages:["input"]}],
+      (() => { const broken = structuredClone(rules); broken[7].trusted_values = ["PRIVATE"];
+        return broken; })(),
+      (() => { const broken = structuredClone(rules); broken[7].fields.serials =
+        "/i007//serials"; return broken; })(),
+      (() => { const broken = structuredClone(rules); broken[7].stages =
+        ["input","input"]; return broken; })()
+    ]) {
+      await json.fill(JSON.stringify(invalid));
+      await page.locator("#identity-bulk-confirm").check();
+      await page.locator("#identity-bulk-import").click();
+      await expect(page.locator("#identity-bulk-status")).toContainText("Identity rule ");
+      await expect(page.locator("#identity-draft-summary"))
+        .toContainText("125 added, 0 updated, 0 removed");
+      expect((await read()).revision).toBe(initial.revision);
+    }
+    await json.fill("{broken");
+    await page.locator("#identity-bulk-confirm").check();
+    await page.locator("#identity-bulk-import").click();
+    await expect(page.locator("#identity-bulk-status")).toContainText("Invalid JSON");
+    await json.fill(JSON.stringify(rules));
+    await page.locator("#identity-bulk-confirm").check();
+    await page.locator("#identity-bulk-import").click();
+    await page.locator("#identity-bulk-export").click();
+    const expected = rules.map(rule => ({
+      ...rule, trusted_values:[]
+    }));
+    expect(JSON.parse(await json.inputValue())).toEqual(expected);
+
+    await page.locator("#tenant-check-input-cross_field").selectOption("block");
+    await page.locator("#tenant-check-output-cross_field").selectOption("block");
+    await page.locator("#tenant-save").click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved");
+    const saved = await read();
+    expect(saved.revision).toBe(initial.revision + 1);
+    expect(saved.advanced_identity).toEqual(expected);
+    await expect(page.locator("#identity-draft-summary"))
+      .toContainText("Saved identity rules: 125. No pending changes.");
+    await expect(page.locator('tr.rule-row[data-rule^="business.bulk_identity_"]'))
+      .toHaveCount(125);
+
+    const good = {};
+    for (let i=0;i<125;i++) good["i"+String(i).padStart(3,"0")] =
+      {serials:["SN"+i+"A","SN"+i+"B"]};
+    const bad = structuredClone(good);
+    bad.i124.serials = ["REPEATED","REPEATED"];
+    for (const stage of ["input","output"]) {
+      const violating = await request.post("/v1/checks/"+stage, {headers, data:{
+        application_id:"demo6",content_format:"json",content:JSON.stringify(bad)
+      }});
+      expect(violating.status()).toBe(200);
+      const found = await violating.json();
+      expect(found.evaluation_status).toBe("complete");
+      expect(found.findings.map(f=>f.rule_id)).toContain("business.bulk_identity_124");
+      expect(found.effective_action).toBe("block");
+      const benign = await request.post("/v1/checks/"+stage, {headers, data:{
+        application_id:"demo6",content_format:"json",content:JSON.stringify(good)
+      }});
+      expect(benign.status()).toBe(200);
+      const clean = await benign.json();
+      expect(clean.evaluation_status).toBe("complete");
+      expect(clean.findings.map(f=>f.rule_id)).not.toContain("business.bulk_identity_124");
+    }
+  } finally {
+    if (resetRequired) {
+      const response = await request.post("/v1/tenants/current/reset", {headers, data:{}});
+      expect(response.status()).toBe(200);
+    }
+  }
+});
