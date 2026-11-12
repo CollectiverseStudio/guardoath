@@ -111,7 +111,20 @@ test("registered but unpaid customer sees inactive plan and cannot click Create 
   await expect(page.locator("#key-create")).toBeDisabled();
   await expect(page.locator("#key-message")).toContainText("active subscription");
   await expect(page.locator("#billing-subscribe")).toBeVisible();
+  await expect(page.locator("#billing-verify")).toBeVisible();
   await expect(page.locator("#billing-manage")).toBeHidden();
+  let verifyCalls = 0;
+  await page.route("**/v1/billing/reconcile", async route => {
+    verifyCalls++;
+    expect(route.request().method()).toBe("POST");
+    expect(route.request().headers()["x-guardoath-session"]).toBe("synthetic-ui-session-only");
+    await route.fulfill({status: 503, contentType: "application/json",
+      body: JSON.stringify({detail: "Subscription could not be verified"})});
+  });
+  await page.locator("#billing-verify").click();
+  await expect(page.locator("#account-status")).toContainText("Subscription could not be verified");
+  await expect(page.locator("#key-create")).toBeDisabled();
+  expect(verifyCalls).toBe(1);
   let checkoutCalls = 0;
   let priceCalls = 0;
   await page.route("**/v1/billing/price", async route => {
