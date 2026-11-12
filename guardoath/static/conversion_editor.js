@@ -332,6 +332,23 @@
       const reserved = new Set((tenant.record_rules || [])
         .filter(rule => rule && typeof rule.rule_id === "string")
         .map(rule => rule.rule_id));
+      // Snapshot protected identifiers and other families' unsaved public drafts
+      // once. An O(500 x other-editor delta) scan blocks customer bulk imports;
+      // saved IDs remain independently reserved by the authoritative tenant.
+      const protectedIds = new Set(protectedRules.flatMap(item =>
+        [item.rule_id, item.rule_id.startsWith("business.")
+          ? item.rule_id.slice("business.".length) : "business." + item.rule_id]));
+      const pendingOtherIds = new Set();
+      for (const name of ["comparisonEditor", "arithmeticEditor",
+        "identityEditor"]) {
+        const editor = window[name];
+        const pending = editor && typeof editor.delta === "function" ? editor.delta() : null;
+        const rules = Array.isArray(pending) ? pending :
+          pending && Array.isArray(pending.editable) ? pending.editable : [];
+        for (const item of rules) {
+          if (item && typeof item.rule_id === "string") pendingOtherIds.add(item.rule_id);
+        }
+      }
       const pathSegments = value => value.slice(1).split("/").map(part =>
         part.replaceAll("~1", "/").replaceAll("~0", "~"));
       return raw.map((rule, index) => {
@@ -345,9 +362,8 @@
         if (typeof id !== "string" || !/^[a-z][a-z0-9_]{0,79}$/.test(id))
           return fail("invalid rule_id (lowercase, up to 80 characters).");
         if (ids.has(id) || (!savedIds.has(id) && reserved.has("business." + id)) ||
-            protectedRules.some(item => item.rule_id === id || item.rule_id === "business." + id) ||
-            (window.comparisonEditor &&
-              window.comparisonEditor.otherFamilyDraftHasId(id, "advanced_conversion_time")))
+            (protectedIds.has(id) || protectedIds.has("business." + id)) ||
+            pendingOtherIds.has(id))
           return fail("duplicate or reserved rule_id, including protected references or other family drafts.");
         if (typeof rule.kind !== "string" ||
             !Object.prototype.hasOwnProperty.call(TYPES, rule.kind))
