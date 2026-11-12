@@ -117,6 +117,9 @@ class TenantRecord(Contract):
     usage: dict[Month, Annotated[int, Field(ge=0, strict=True)]] = Field(default_factory=dict, max_length=120)
     billing_mode: BillingMode = BillingMode.INTERNAL
     payer_id: str | None = Field(default=None, min_length=1, max_length=100)
+    # Bound only by server-side subscription reconciliation, never user-editable.
+    # Existing tenants have None until independently verified with Stripe.
+    stripe_subscription_id: str | None = Field(default=None, pattern=r"^sub_[A-Za-z0-9_]+$", max_length=100)
     # None is legacy-record migration state, NOT evidence of a paid subscription.
     # Newly registered accounts explicitly start inactive. Only the trusted
     # billing reconciler/admin can write entitlement; it is not EDITABLE_FIELDS.
