@@ -94,7 +94,8 @@ class MemoryTenantStore:
 
     def apply_verified_subscription(self, tenant_id: str, *, customer_id: str,
                                     subscription_id: str, provider_subscription: dict,
-                                    expected_revision: int) -> TenantRecord:
+                                    expected_revision: int,
+                                    plan_monthly_allowance: int | None = None) -> TenantRecord:
         """Atomically apply an independently fetched Stripe subscription snapshot.
 
         The caller must obtain provider_subscription through the server-side Stripe
@@ -113,9 +114,24 @@ class MemoryTenantStore:
                 raise ValueError("Tenant has no matching Stripe billing account")
             decision = reconcile_subscription(StripeBinding(tenant_id, customer_id, subscription_id),
                                               provider_subscription)
+            if current.stripe_subscription_id not in (None, subscription_id):
+                raise ValueError("Subscription binding cannot be replaced")
+            if (plan_monthly_allowance is not None and
+                    (type(plan_monthly_allowance) is not int or
+                     not 1 <= plan_monthly_allowance <= 1_000_000_000)):
+                raise ValueError("Invalid server-configured plan allowance")
+            # Cancellation/past-due removes paid quota in the same atomic record
+            # write as status; a stale allowance cannot survive revocation.
+            allowance = (plan_monthly_allowance if decision.active and
+                         plan_monthly_allowance is not None else
+                         current.monthly_allowance if decision.active else 0)
             updated = TenantRecord.model_validate({**current.model_dump(),
-                "subscription_status": decision.status, "revision": current.revision + 1,
-                "updated_at": _now()})
+                "subscription_status": decision.status,
+                "stripe_subscription_id": subscription_id,
+                "monthly_allowance": allowance,
+                "overage": "block" if not decision.active or
+                           plan_monthly_allowance is not None else current.overage,
+                "revision": current.revision + 1, "updated_at": _now()})
             self._records[tenant_id] = updated
             return updated
 
