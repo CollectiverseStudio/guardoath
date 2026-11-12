@@ -61,3 +61,9 @@ The source is a six-chapter educational syllabus, **not** a tested GuardOath con
 5. Gate production on exact-source full Tests, CodeQL, authenticated browser workflows, strict scenario evidence and 15 post-deployment checks. Publish failures promptly with failing job/test and release impact.
 
 **Explicitly not yet complete:** No claim that all syllabus topics are implemented, no evidence that model training defenses can be performed by a runtime proxy, and no permission to execute red-team attacks against third-party services.
+
+## Executable offline baseline (2026-11-11)
+
+Run `python -m tools.redteam_coverage` to inventory actual lexical rule IDs, catalog consistency and unverified advanced capabilities. Run `python -m tools.redteam_scenarios --output .guardoath-reports/redteam.json` to evaluate the existing source-authored positive and benign examples against the local `prompt_attack.inspect` detector, producing a confusion matrix and scenario-ID-only failures. The runner never sends content to a provider, does not write tenant records, and does not log prompt payloads. It exits nonzero on unexpected results. Regression: `pytest -q tests/test_redteam_coverage.py tests/test_redteam_scenarios.py`.
+
+**Limits:** These fixtures are authored alongside the lexical rules; a perfect baseline does not demonstrate independent adversarial robustness. It is not a semantic detector, cross-turn model test, tenant-stage policy check or dashboard acceptance test. Next add reviewed independent variants and real tenant-stage/API/browser coverage before calling red-team testing product-complete.
