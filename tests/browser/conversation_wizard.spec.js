@@ -41,9 +41,16 @@ test("prepared-example shortcut expands all steps yet preserves the Input gate",
   }
   await expect(page.locator("#run")).toBeDisabled();
   await expect(page.locator("#run-output")).toBeDisabled();
-  await expect(page.locator("#output-content")).toHaveJSProperty("readOnly", true);
+  // Prepared-example mode intentionally permits an answer to be staged before Input,
+  // but never permits Output-only checks before a verified Input receipt.
+  await expect(page.locator("#output-content")).toHaveJSProperty("readOnly", false);
+  await page.locator("#output-content").fill("Prepared draft that must not pass the Input gate.");
+  await expect(page.locator("#run-output")).toBeDisabled();
   await page.locator('[data-wizard-step="1"]').click();
   await expect(page.locator("#batch-run")).not.toHaveAttribute("open", "");
+  await expect(page.locator("#output-content")).toHaveJSProperty("readOnly", true);
+  await expect(page.locator("#output-content")).toBeEmpty();
+  await expect(page.locator("#run-output")).toBeDisabled();
   await expect(page.locator("#wizard-status")).toHaveText("Step 2 of 4");
   await expect(page.locator("#wizard-output")).toBeHidden();
   await expect(page.locator("#wizard-input-check")).toBeVisible();
