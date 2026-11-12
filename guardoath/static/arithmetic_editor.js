@@ -295,6 +295,20 @@
       const reserved = new Set((tenant.record_rules || [])
         .filter(rule => rule && typeof rule.rule_id === "string")
         .map(rule => rule.rule_id));
+      // Snapshot other families' *editable pending drafts* once before validating
+      // hundreds of rules. Repeated delta() calls were quadratic at 500-rule scale.
+      // Protected host references remain server-authoritative in record_rules;
+      // neither their private values nor customer claims enter this import.
+      const pendingOtherIds = new Set();
+      for (const name of ["comparisonEditor", "identityEditor", "conversionEditor"]) {
+        const editor = window[name];
+        const pending = editor && typeof editor.delta === "function" ? editor.delta() : null;
+        const rules = Array.isArray(pending) ? pending :
+          pending && Array.isArray(pending.editable) ? pending.editable : [];
+        for (const item of rules) {
+          if (item && typeof item.rule_id === "string") pendingOtherIds.add(item.rule_id);
+        }
+      }
       return raw.map((rule, index) => {
         const fail = reason => { throw Error("Arithmetic rule " + (index + 1) + ": " + reason); };
         if (!rule || typeof rule !== "object" || Array.isArray(rule))
@@ -305,8 +319,7 @@
         if (typeof id !== "string" || !/^[a-z][a-z0-9_]{0,79}$/.test(id))
           return fail("invalid rule_id (lowercase, up to 80 characters).");
         if (ids.has(id) || (!savedIds.has(id) && reserved.has("business." + id)) ||
-            (window.comparisonEditor &&
-             window.comparisonEditor.otherFamilyDraftHasId(id, "advanced_arithmetic")))
+            pendingOtherIds.has(id))
           return fail("duplicate or reserved rule_id, including other family drafts.");
         if (typeof rule.kind !== "string" || !Object.prototype.hasOwnProperty.call(kinds, rule.kind))
           return fail("unknown arithmetic rule kind.");
