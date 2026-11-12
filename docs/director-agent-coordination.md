@@ -637,3 +637,8 @@ FIRST re-read this file's governing Atlas-only #28/#31 override, then AGENTS.md,
 - Fresh coordination, AGENTS, latest main f2ea77a and combined CI status (empty) reviewed before edits. Existing prompt_attack has 36 source-authored adversarial and benign examples and own test contracts.
 - Committed tools/redteam_scenarios.py a961cbd: deterministic 72-case source fixture runner, TP/TN/FP/FN, recall and false-positive rate, nonzero exit on failure, ID-only failure reporting, no provider calls/tenant mutation. tests/test_redteam_scenarios.py ae7a372 adds uniqueness, coverage, confusion-matrix, no-prompt-leak regression. Documentation c703b7b explains command, limitations and next independent adversarial corpus.
 - Source/test fetched and reviewed; no local pytest execution or exact-head CI confirmed. This is an offline lexical baseline, not semantic/model/tenant/dashboard protection or production release. No AWS or Stripe activity.
+
+## 2026-11-11 Atlas — independent adversarial challenge evidence
+- Fresh coordination/AGENTS/main and CI status reviewed. Added independent 15-case challenge manifest tests/fixtures/redteam_independent.json [d8d94db], separate from rule-authored examples, with benign counterparts in six families.
+- tools/redteam_scenarios.py [8791525] adds --independent family TP/TN/FP/FN and ID-only misses; tests/test_redteam_scenarios.py [314bdbf] verifies evidence privacy and coverage; integration matrix [461417f] explains measured misses and limitations. No provider calls or tenant writes.
+- Exact new-head pytest/CI and tenant/API/dashboard acceptance unverified. No AWS deployment or production claim.
