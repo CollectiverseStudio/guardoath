@@ -210,7 +210,37 @@
         "Sample JSON: {\"shipment\":{\"load\":1500,\"load_unit\":\"kg\",\"max_kg\":1000}}.";
       controls.id.focus();
     });
-    form.append(sampleHelp, sample, apply, cancel, message);
+    const coldHelp = el("p",
+      "Cold-chain example: excursion from 10:00 to 10:45 exceeds a declared " +
+      "30-minute allowance; an end time of 10:20 satisfies the rule. " +
+      "Only supplied timestamps are checked, not sensor authenticity.");
+    coldHelp.id = "conversion-cold-chain-help";
+    const coldSample = el("button", "Fill example: cold-chain excursion time limit");
+    coldSample.id = "conversion-sample-cold-chain"; coldSample.type = "button";
+    coldSample.addEventListener("click", () => {
+      const id = "cold_chain_duration_within_limit";
+      if (original.some(rule => rule.rule_id === id) ||
+          draft.some(rule => rule.rule_id === id) ||
+          (tenant.record_rules || []).some(rule => rule.rule_id === "business." + id) ||
+          (window.comparisonEditor &&
+           window.comparisonEditor.otherFamilyDraftHasId(id, "advanced_conversion_time"))) {
+        message.textContent = "Example rule ID already exists. Edit the existing rule or choose a different ID.";
+        return;
+      }
+      clear();
+      controls.id.value = id;
+      controls.kind.value = "cold_chain_excursion";
+      drawFields({excursion_start: "/shipment/excursion/start",
+                  excursion_end: "/shipment/excursion/end",
+                  allowed_minutes: "/shipment/excursion/allowed_minutes"});
+      controls.input.checked = controls.output.checked = true;
+      message.textContent = "Example filled, not added or saved. Choose Add pending conversion rule, " +
+        "then Save checks. Enable Field comparisons and select Block for Input/Output. " +
+        'Example JSON: {"shipment":{"excursion":{"start":"2026-01-01T10:00:00Z",' +
+        '"end":"2026-01-01T10:45:00Z","allowed_minutes":30}}}.';
+      controls.id.focus();
+    });
+    form.append(sampleHelp, sample, coldHelp, coldSample, apply, cancel, message);
     host.append(filterBar, filterStatus, preview, list, form);
     searchInput.addEventListener("input", draw);
     stageFilter.addEventListener("change", draw);
