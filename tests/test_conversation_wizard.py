@@ -29,3 +29,12 @@ def test_sigma_optional_editor_is_guarded_on_dashboard():
     assert 'typeof window.sigmaTenant.render === "function"' in js
     assert 'typeof window.sigmaTenant.delta === "function"' in js
     assert 'id = "sigma-editor-unavailable"' in js
+
+
+def test_findings_show_human_check_and_rule_names_with_stable_ids():
+    js = (ROOT / "dashboard.js").read_text(encoding="utf-8")
+    assert '(checkNames[check.checker_id] || check.checker_id)' in js
+    assert 'const knownRule = ruleIndex[finding.rule_id]' in js
+    assert 'ruleName.textContent = knownRule.title + " · "' in js
+    assert 'ruleId.textContent = finding.rule_id' in js
+    assert 'reviewFindingRule(finding.rule_id, check.checker_id, stage)' in js
