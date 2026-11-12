@@ -166,7 +166,8 @@ class DynamoDBTenantStore:
 
     def apply_verified_subscription(self, tenant_id: str, *, customer_id: str,
                                     subscription_id: str, provider_subscription: dict,
-                                    expected_revision: int) -> TenantRecord:
+                                    expected_revision: int,
+                                    plan_monthly_allowance: int | None = None) -> TenantRecord:
         """Persist a verified Stripe entitlement with revision-conditional write."""
         from guardoath.billing import BillingMode
         from guardoath.subscription_reconciliation import StripeBinding, reconcile_subscription
@@ -179,9 +180,22 @@ class DynamoDBTenantStore:
             raise ValueError("Tenant has no matching Stripe billing account")
         decision = reconcile_subscription(StripeBinding(tenant_id, customer_id, subscription_id),
                                           provider_subscription)
+        if current.stripe_subscription_id not in (None, subscription_id):
+            raise ValueError("Subscription binding cannot be replaced")
+        if (plan_monthly_allowance is not None and
+                (type(plan_monthly_allowance) is not int or
+                 not 1 <= plan_monthly_allowance <= 1_000_000_000)):
+            raise ValueError("Invalid server-configured plan allowance")
+        allowance = (plan_monthly_allowance if decision.active and
+                     plan_monthly_allowance is not None else
+                     current.monthly_allowance if decision.active else 0)
         updated = TenantRecord.model_validate({**current.model_dump(),
-            "subscription_status": decision.status, "revision": current.revision + 1,
-            "updated_at": _now()})
+            "subscription_status": decision.status,
+            "stripe_subscription_id": subscription_id,
+            "monthly_allowance": allowance,
+            "overage": "block" if not decision.active or
+                       plan_monthly_allowance is not None else current.overage,
+            "revision": current.revision + 1, "updated_at": _now()})
         return self._replace(tenant_id, current, updated)
 
     def count_check(self, tenant_id: str, month: str | None = None) -> tuple[int, bool]:
