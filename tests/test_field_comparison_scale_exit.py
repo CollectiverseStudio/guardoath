@@ -100,6 +100,7 @@ def test_field_comparison_evidence_requires_real_customer_browser_gate():
         "guardoath/static/identity_editor.js",
         "guardoath/static/conversion_editor.js",
         "tests/browser/*editor.spec.js",
+        "tests/browser/arithmetic_500.spec.js",
         "tests/browser/protected_reference_editors.spec.js",
         "tests/browser/field_comparison_mixed_family_scale.spec.js",
         "tests/browser/field_comparisons_500.spec.js",
