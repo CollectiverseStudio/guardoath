@@ -252,9 +252,8 @@ def submitted_turn_boundaries(payload: object):
                    + middle_b + " " + right[:_TURN_BOUNDARY_CHARS])
 
 
-# Remove only format controls commonly inserted inside keywords to evade lexical rules.
-# This is a detection-only view; the customer's original content is not rewritten.
-_EVASION_FORMAT_CONTROLS = dict.fromkeys(map(ord, "\\u200b\\u200c\\u200d\\ufeff"), None)
+# Detection-only normalization of invisible format controls used inside keywords.
+_EVASION_FORMAT_CONTROLS = dict.fromkeys((0x200B, 0x200C, 0x200D, 0xFEFF), None)
 
 
 def inspect(content: str) -> tuple[str, ...]:
@@ -263,7 +262,8 @@ def inspect(content: str) -> tuple[str, ...]:
         raise TypeError("content must be text")
     if len(content) > MAX_CHARS:
         raise ValueError("content exceeds maximum character budget")
-    scan_text = content.translate(_EVASION_FORMAT_CONTROLS) if any(ch in content for ch in "\\u200b\\u200c\\u200d\\ufeff") else content\n    return tuple(rule_id for rule_id, pattern in _COMPILED if pattern.search(scan_text))
+    scan_text = content.translate(_EVASION_FORMAT_CONTROLS)
+    return tuple(rule_id for rule_id, pattern in _COMPILED if pattern.search(scan_text))
 
 
 async def prompt_attack_check(request, policy, stage):
