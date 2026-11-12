@@ -75,6 +75,39 @@ def test_missing_secret_fails_before_network():
     assert calls == []
 
 
+
+@pytest.mark.parametrize("invalid_key", [
+    "sk_test_" + "a" * 20 + "\u00e9",
+    "sk_test_" + "a" * 20 + " ",
+    "sk_test_" + "a" * 20 + "\\n",
+    "pk_test_" + "a" * 32,
+])
+def test_malformed_stripe_subscription_secret_never_reaches_transport(invalid_key):
+    calls = []
+    with pytest.raises(SubscriptionReconciliationError, match="credential"):
+        fetch_subscription(BINDING, invalid_key, opener=fake(subscription(), calls=calls))
+    assert calls == []
+
+
+@pytest.mark.parametrize("timeout", [
+    True, False, float("nan"), float("inf"), -float("inf"),
+    "5", None, 0, -1, 10.01,
+])
+def test_invalid_subscription_timeout_never_reaches_transport(timeout):
+    calls = []
+    with pytest.raises(SubscriptionReconciliationError, match="timeout"):
+        fetch_subscription(BINDING, KEY, timeout=timeout,
+                           opener=fake(subscription(), calls=calls))
+    assert calls == []
+
+
+def test_bounded_integer_timeout_is_valid():
+    calls = []
+    assert fetch_subscription(BINDING, KEY, timeout=1,
+                              opener=fake(subscription(), calls=calls)).active
+    assert calls[0][2] == 1
+
+
 def test_default_http_client_disables_redirects(monkeypatch):
     """The authorization header must not travel to a redirect destination."""
     import urllib.request
