@@ -47,7 +47,7 @@ test("customer can configure and enforce serial uniqueness on both stages", asyn
     expect(saved.revision).toBeGreaterThan(before.revision);
     expect(saved.advanced_identity).toContainEqual({
       rule_id: "shipment_serials_unique", kind: "serial_unique",
-      fields: {serials: "/shipment/serials"}, stages: ["input", "output"]
+      fields: {serials: "/shipment/serials"}, stages: ["input", "output"], trusted_values: []
     });
     expect(saved.advanced_identity_reference_status).toEqual(references);
 
