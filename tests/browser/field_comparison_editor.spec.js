@@ -267,7 +267,9 @@ test("ordinary bulk guided number/date definitions require stage and Save before
         // A benign payload may still trigger an unrelated enabled tenant check.
       }
     }
-    // Filling the example again cannot mutate saved definitions or stage silently.
+    // Save checks re-renders the tenant editor and closes optional bulk details.
+    // Reopen it as the customer must, then verify fill-only stays nonmutating.
+    await page.locator("#comparison-bulk-panel summary").click();
     await page.locator("#comparison-bulk-example").click();
     await expect(page.locator("#comparison-bulk-confirm")).not.toBeChecked();
     expect((await current()).comparisons).toEqual(saved.comparisons);
