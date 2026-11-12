@@ -254,3 +254,201 @@ test("conversion bulk stages 125 public rules atomically, saves revision and run
     }
   }
 });
+
+
+test("conversion bulk sample fills JSON only, then explicitly stages and saves two kinds for both Engine stages", async ({page, request}) => {
+  await page.goto("/dashboard");
+  await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
+  await page.locator("#demo-user").selectOption("demo4");
+  await page.getByRole("button", {name:"Get demo API key",exact:true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
+  let headers = {Authorization:"Bearer " + await page.locator("#demo-key-value").inputValue()};
+  const current = async () => {
+    const response = await request.get("/v1/applications/current",{headers});
+    expect(response.status()).toBe(200);
+    return (await response.json()).tenant;
+  };
+  let resetRequired = false;
+  try {
+    const reset = await request.post("/v1/tenants/current/reset",{headers,data:{}});
+    expect(reset.status()).toBe(200); resetRequired = true;
+    await page.reload();
+    await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
+    await page.locator("#demo-user").selectOption("demo4");
+    await page.getByRole("button",{name:"Get demo API key",exact:true}).click();
+    await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
+    headers = {Authorization:"Bearer " + await page.locator("#demo-key-value").inputValue()};
+    const before = await current();
+    expect(before.advanced_conversion_time).toEqual([]);
+
+    await page.locator("#conversion-bulk-panel").evaluate(el => { el.open = true; });
+    await page.locator("#conversion-bulk-sample").click();
+    const example = JSON.parse(await page.locator("#conversion-bulk-json").inputValue());
+    expect(example).toEqual([
+      {rule_id:"example_cargo_kg_cap",kind:"unit_load_kg_cap",
+        fields:{load:"/shipment/load",load_unit:"/shipment/load_unit",
+          max_kg:"/shipment/max_kg"},stages:["input","output"]},
+      {rule_id:"example_cold_chain_duration",kind:"cold_chain_excursion",
+        fields:{excursion_start:"/shipment/excursion/start",
+          excursion_end:"/shipment/excursion/end",
+          allowed_minutes:"/shipment/excursion/allowed_minutes"},
+        stages:["input","output"]}
+    ]);
+    await expect(page.locator("#conversion-bulk-status")).toContainText("No draft or tenant change");
+    await expect(page.locator("#conversion-bulk-confirm")).not.toBeChecked();
+    await expect(page.locator("#conversion-draft-summary")).toContainText("No pending changes");
+    expect((await current()).revision).toBe(before.revision);
+    await page.locator("#conversion-bulk-import").click();
+    await expect(page.locator("#conversion-bulk-status")).toContainText("Confirm replacement");
+    expect((await current()).advanced_conversion_time).toEqual([]);
+    await page.locator("#conversion-bulk-confirm").check();
+    await page.locator("#conversion-bulk-import").click();
+    await expect(page.locator("#conversion-draft-summary")).toContainText("2 added, 0 updated, 0 removed");
+    expect((await current()).revision).toBe(before.revision);
+    await page.locator("#tenant-check-input-cross_field").selectOption("block");
+    await page.locator("#tenant-check-output-cross_field").selectOption("flag");
+    await page.locator("#tenant-save").click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved");
+    const saved = await current();
+    expect(saved.revision).toBe(before.revision+1);
+    expect(saved.advanced_conversion_time).toHaveLength(2);
+    for (const [i,definition] of example.entries())
+      expect(saved.advanced_conversion_time[i]).toMatchObject(definition);
+
+    const good = {shipment:{load:1000,load_unit:"kg",max_kg:1000,
+      excursion:{start:"2026-01-01T10:00:00Z",end:"2026-01-01T10:20:00Z",allowed_minutes:30}}};
+    const bad = structuredClone(good);
+    bad.shipment.load = 1500;
+    bad.shipment.excursion.end = "2026-01-01T10:45:00Z";
+    for (const stage of ["input","output"]) {
+      for (const [payload, expected] of [
+        [bad, ["business.example_cargo_kg_cap","business.example_cold_chain_duration"]],
+        [good, []]
+      ]) {
+        const response = await request.post("/v1/checks/"+stage,{headers,data:{
+          application_id:"demo4",content_format:"json",content:JSON.stringify(payload)
+        }});
+        expect(response.status()).toBe(200);
+        const result = await response.json();
+        expect(result.evaluation_status).toBe("complete");
+        const found = result.findings.filter(f=>f.rule_id.startsWith("business.example_"))
+          .map(f=>f.rule_id).sort();
+        expect(found).toEqual(expected.slice().sort());
+        if (expected.length) {
+          expect(result.effective_action).toBe(stage==="input"?"block":"flag");
+        } else if (result.effective_action!=="allow") {
+          expect(result.findings.some(f=>!f.rule_id.startsWith("business.example_")),
+            "Any global action for benign conversion data requires another finding.").toBe(true);
+        }
+      }
+    }
+  } finally {
+    if (resetRequired) {
+      const reset = await request.post("/v1/tenants/current/reset",{headers,data:{}});
+      expect(reset.status()).toBe(200);
+    }
+  }
+});
+
+test("conversion customer bulk stages exactly 500 public rules and rejects 501 atomically", async ({page, request}) => {
+  await page.goto("/dashboard");
+  await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
+  await page.locator("#demo-user").selectOption("demo4");
+  await page.getByRole("button",{name:"Get demo API key",exact:true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
+  let headers = {Authorization:"Bearer " + await page.locator("#demo-key-value").inputValue()};
+  const current = async () => {
+    const response = await request.get("/v1/applications/current",{headers});
+    expect(response.status()).toBe(200);
+    return (await response.json()).tenant;
+  };
+  let resetRequired = false;
+  try {
+    const reset = await request.post("/v1/tenants/current/reset",{headers,data:{}});
+    expect(reset.status()).toBe(200); resetRequired = true;
+    await page.reload();
+    await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
+    await page.locator("#demo-user").selectOption("demo4");
+    await page.getByRole("button",{name:"Get demo API key",exact:true}).click();
+    await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
+    headers = {Authorization:"Bearer " + await page.locator("#demo-key-value").inputValue()};
+    const before = await current();
+    expect(before.advanced_conversion_time).toEqual([]);
+    const rules = Array.from({length:500}, (_,i) => {
+      const n=String(i).padStart(3,"0");
+      return {rule_id:"max_conversion_"+n,kind:"unit_load_kg_cap",
+        fields:{load:"/c"+n+"/load",load_unit:"/c"+n+"/load_unit",
+          max_kg:"/c"+n+"/max_kg"},stages:["input","output"]};
+    });
+    await page.locator("#conversion-bulk-panel").evaluate(el => { el.open = true; });
+    const json = page.locator("#conversion-bulk-json");
+    await json.fill(JSON.stringify(rules));
+    await page.locator("#conversion-bulk-confirm").check();
+    await page.locator("#conversion-bulk-import").click();
+    await expect(page.locator("#conversion-draft-summary")).toContainText("500 added, 0 updated, 0 removed");
+    await expect(page.locator("#conversion-filter-status")).toContainText("Showing 500 of 500");
+    expect((await current()).revision).toBe(before.revision);
+    expect((await current()).advanced_conversion_time).toEqual([]);
+    await json.fill(JSON.stringify([...rules,{
+      rule_id:"max_conversion_500",kind:"unit_load_kg_cap",
+      fields:{load:"/overflow/load",load_unit:"/overflow/load_unit",
+        max_kg:"/overflow/max_kg"},stages:["input","output"]
+    }]));
+    await page.locator("#conversion-bulk-confirm").check();
+    await page.locator("#conversion-bulk-import").click();
+    await expect(page.locator("#conversion-bulk-status")).toContainText("At most 500 conversion rules");
+    await expect(page.locator("#conversion-draft-summary")).toContainText("500 added, 0 updated, 0 removed");
+    expect((await current()).revision).toBe(before.revision);
+    await page.locator("#conversion-bulk-export").click();
+    expect(JSON.parse(await json.inputValue())).toEqual(rules);
+
+    await page.locator("#tenant-check-input-cross_field").selectOption("block");
+    await page.locator("#tenant-check-output-cross_field").selectOption("flag");
+    await page.locator("#tenant-save").click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved");
+    const saved = await current();
+    expect(saved.revision).toBe(before.revision+1);
+    expect(saved.advanced_conversion_time).toHaveLength(500);
+    for (const i of [0,499]) expect(saved.advanced_conversion_time[i]).toMatchObject(rules[i]);
+    await expect(page.locator("#conversion-draft-summary"))
+      .toContainText("Saved conversion/time rules: 500. No pending changes.");
+    await expect(page.locator('tr.rule-row[data-rule^="business.max_conversion_"]'))
+      .toHaveCount(500);
+
+    const good = {};
+    for (let i=0;i<500;i++) {
+      const n=String(i).padStart(3,"0");
+      good["c"+n] = {load:1,load_unit:"kg",max_kg:2};
+    }
+    const bad = structuredClone(good);
+    bad.c000.load=3; bad.c499.load=3;
+    expect(JSON.stringify(bad).length).toBeLessThan(32000);
+    for (const stage of ["input","output"]) {
+      for (const [payload,expected] of [
+        [bad,["business.max_conversion_000","business.max_conversion_499"]],
+        [good,[]]
+      ]) {
+        const response = await request.post("/v1/checks/"+stage,{headers,data:{
+          application_id:"demo4",content_format:"json",content:JSON.stringify(payload)
+        }});
+        expect(response.status()).toBe(200);
+        const result=await response.json();
+        expect(result.evaluation_status).toBe("complete");
+        expect(result.findings.filter(f=>f.rule_id.startsWith("business.max_conversion_"))
+          .map(f=>f.rule_id).sort()).toEqual(expected.slice().sort());
+        if (expected.length) {
+          expect(result.effective_action).toBe(stage==="input"?"block":"flag");
+        } else if (result.effective_action!=="allow") {
+          expect(result.findings.some(f=>!f.rule_id.startsWith("business.max_conversion_")),
+            "An independent finding must explain any global action.").toBe(true);
+        }
+      }
+    }
+    expect((await current()).revision).toBe(saved.revision);
+  } finally {
+    if (resetRequired) {
+      const reset = await request.post("/v1/tenants/current/reset",{headers,data:{}});
+      expect(reset.status()).toBe(200);
+    }
+  }
+});
