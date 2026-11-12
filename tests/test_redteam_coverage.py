@@ -8,6 +8,7 @@ def test_redteam_audit_reconciles_real_rule_catalog_and_documents_gaps():
     assert not result["malformed_rule_ids"]
     assert result["lexical_rules"] >= 36
     assert set(result["families"]) == set(REQUIRED_FAMILIES)
+    assert all(family["present"] for family in result["families"].values())
     assert result["semantic_effectiveness_verified"] is False
     assert result["external_provider_required"] is False
     assert len(result["unverified_advanced_capabilities"]) == len(ADVANCED_GAPS)
