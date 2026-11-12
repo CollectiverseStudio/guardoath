@@ -59,3 +59,10 @@
 .conversation-wizard { margin: 1rem 0; padding: 1rem; border: 1px solid var(--border, #d7dfec); border-radius: 10px; }
 .conversation-wizard [data-wizard-step][aria-current="step"] { font-weight: 700; outline: 2px solid #3256ce; outline-offset: 2px; }
 .flow-step[hidden] { display: none !important; }
+
+/* Stage focus hides only table columns, never form values or tenant policy. */
+.tenant-stage-tabs button[aria-pressed="true"] { font-weight: 700; outline: 2px solid #3256ce; outline-offset: 2px; }
+#tenant-panel[data-stage-focus="input"] #check-table tr > :nth-child(3),
+#tenant-panel[data-stage-focus="output"] #check-table tr > :nth-child(2) { display: none; }
+#tenant-panel[data-stage-focus="input"] #check-table .effect-output,
+#tenant-panel[data-stage-focus="output"] #check-table .effect-input { display: none; }
