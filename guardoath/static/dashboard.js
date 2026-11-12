@@ -499,7 +499,19 @@ function renderTenant() {
   }
   const wrap = document.createElement("div"); wrap.className = "rule-table-wrap"; wrap.append(table);
   box.append(filters, count, wrap);
-  window.sigmaTenant.render(box, tenant, key, requestHeaders, send, showUnsaved);
+  // A stale/cached or unavailable optional event-script asset must not break
+  // customer authentication, Input/Output checks, or tenant configuration.
+  // Preserve saved Sigma actions exactly: never fabricate or clear them.
+  if (window.sigmaTenant && typeof window.sigmaTenant.render === "function" &&
+      typeof window.sigmaTenant.delta === "function") {
+    window.sigmaTenant.render(box, tenant, key, requestHeaders, send, showUnsaved);
+  } else {
+    const notice = document.createElement("p");
+    notice.id = "sigma-editor-unavailable";
+    notice.setAttribute("role", "status");
+    notice.textContent = "Security Event Evidence controls are unavailable. Reload the page to restore this optional editor; its saved settings are unchanged. Other checks remain available.";
+    box.append(notice);
+  }
   window.comparisonEditor.render($("comparison-editor"), tenant, own, showUnsaved);
   window.arithmeticEditor.render($("arithmetic-editor"), tenant, own, showUnsaved);
   window.identityEditor.render($("identity-editor"), tenant, own, showUnsaved);
@@ -840,7 +852,10 @@ function pendingChanges() {
         stage, changes[stage + "_rule_actions"] || ruleEdits[stage]);
     }
   }
-  const sigmaChanges = window.sigmaTenant.delta();
+  // Optional Sigma editor failure cannot turn missing UI into a policy update.
+  // Existing persisted Sigma actions remain authoritative on the tenant.
+  const sigmaChanges = window.sigmaTenant && typeof window.sigmaTenant.delta === "function"
+    ? window.sigmaTenant.delta() : null;
   if (sigmaChanges !== null) changes.sigma_rule_actions = sigmaChanges;
   return changes;
 }
