@@ -15,9 +15,9 @@ from guardoath.subscription_reconciliation import (
 )
 
 
-def fetch_subscription(binding: StripeBinding, api_key: str, *,
-                       opener=None, timeout: float = 5.0) -> EntitlementDecision:
-    """Retrieve Stripe's authoritative current state; fail closed on all errors."""
+def fetch_subscription_snapshot(binding: StripeBinding, api_key: str, *,
+                                opener=None, timeout: float = 5.0) -> dict:
+    """Return a directly fetched Stripe snapshot, never client-reported state."""
     if (not isinstance(api_key, str)
             or not api_key.startswith(("sk_test_", "sk_live_"))
             or len(api_key) < 16 or not api_key.isascii()
@@ -57,7 +57,15 @@ def fetch_subscription(binding: StripeBinding, api_key: str, *,
         subscription = json.loads(payload)
     except (OSError, ValueError, UnicodeError, urllib.error.HTTPError) as exc:
         raise SubscriptionReconciliationError("Unable to verify Stripe subscription") from exc
-    return reconcile_subscription(binding, subscription)
+    # Validate the authoritative binding before a caller may persist the snapshot.
+    reconcile_subscription(binding, subscription)
+    return subscription
+
+
+def fetch_subscription(binding: StripeBinding, api_key: str, *,
+                       opener=None, timeout: float = 5.0) -> EntitlementDecision:
+    return reconcile_subscription(binding, fetch_subscription_snapshot(
+        binding, api_key, opener=opener, timeout=timeout))
 
 
 def discover_subscription(*, tenant_id: str, customer_id: str, price_id: str,
@@ -148,18 +156,39 @@ def discover_subscription(*, tenant_id: str, customer_id: str, price_id: str,
     return matching[0]
 
 
+
+def verified_subscription_snapshot(*, tenant_id: str, customer_id: str,
+                                   price_id: str, api_key: str, opener=None,
+                                   timeout: float = 5.0) -> tuple[StripeBinding, dict]:
+    """Return only a directly fetched provider snapshot with current trusted price."""
+    binding, list_snapshot = discover_subscription(
+        tenant_id=tenant_id, customer_id=customer_id, price_id=price_id,
+        api_key=api_key, opener=opener, timeout=timeout)
+    direct = fetch_subscription_snapshot(binding, api_key, opener=opener, timeout=timeout)
+    if (reconcile_subscription(binding, direct).status !=
+            reconcile_subscription(binding, list_snapshot).status):
+        raise SubscriptionReconciliationError("Subscription changed during verification")
+    # A subscription can switch to a different product/price between the list
+    # and GET. An authenticated customer must never receive the wrong plan.
+    items = direct.get("items")
+    entries = items.get("data") if isinstance(items, dict) else None
+    if (not isinstance(entries, list)
+            or items.get("has_more") is not False
+            or len(entries) != 1
+            or not isinstance(entries[0], dict)):
+        raise SubscriptionReconciliationError("Invalid current subscription items")
+    price = entries[0].get("price")
+    actual_price = price.get("id") if isinstance(price, dict) else price
+    if actual_price != price_id:
+        raise SubscriptionReconciliationError("Subscription price changed")
+    return binding, direct
+
+
 def verify_discovered_subscription(*, tenant_id: str, customer_id: str,
                                    price_id: str, api_key: str, opener=None,
                                    timeout: float = 5.0) -> EntitlementDecision:
-    """Verify server-owned price/customer discovery with a second direct GET.
-
-    This is read-only and does NOT grant tenant entitlement or set usage quota.
-    A stale list item, swapped status or changed binding fails closed.
-    """
-    binding, listing_snapshot = discover_subscription(
+    """Two independent Stripe reads, correct customer, price and status."""
+    binding, snapshot = verified_subscription_snapshot(
         tenant_id=tenant_id, customer_id=customer_id, price_id=price_id,
         api_key=api_key, opener=opener, timeout=timeout)
-    decision = fetch_subscription(binding, api_key, opener=opener, timeout=timeout)
-    if decision.status != reconcile_subscription(binding, listing_snapshot).status:
-        raise SubscriptionReconciliationError("Subscription changed during verification")
-    return decision
+    return reconcile_subscription(binding, snapshot)
