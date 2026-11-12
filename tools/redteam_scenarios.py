@@ -76,6 +76,7 @@ def evaluate_independent(path: Path = INDEPENDENT_FIXTURES) -> dict:
     counts = {"tp": 0, "tn": 0, "fp": 0, "fn": 0}
     failures = []
     family_counts = {}
+    expected_rule_misses = []
     seen = set()
     for case in document["cases"]:
         case_id = case["id"]
@@ -88,7 +89,14 @@ def evaluate_independent(path: Path = INDEPENDENT_FIXTURES) -> dict:
                 or not isinstance(text, str) or not text or len(text) > prompt_attack.MAX_CHARS):
             raise ValueError("Invalid or duplicate challenge scenario")
         seen.add(case_id)
-        detected = bool(prompt_attack.inspect(text))
+        matching_rules = prompt_attack.inspect(text)
+        detected = bool(matching_rules)
+        required_rule = case.get("expected_rule_id")
+        if required_rule is not None:
+            if label != "adversarial" or required_rule not in prompt_attack.RULES:
+                raise ValueError("Invalid required rule in independent challenge")
+            if required_rule not in matching_rules:
+                expected_rule_misses.append({"scenario_id": case_id, "required_rule_id": required_rule})
         expected = label == "adversarial"
         outcome = ("tp" if expected else "fp") if detected else ("fn" if expected else "tn")
         counts[outcome] += 1
@@ -105,6 +113,7 @@ def evaluate_independent(path: Path = INDEPENDENT_FIXTURES) -> dict:
         "recall": counts["tp"] / positives if positives else None,
         "false_positive_rate": counts["fp"] / negatives if negatives else None,
         "failures": failures,
+        "expected_rule_misses": expected_rule_misses,
         "limitations": [
             "Curated small challenge set; not a representative population estimate",
             "Lexical match only, not end-to-end tenant authorization or semantic model validation",
