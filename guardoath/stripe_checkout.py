@@ -60,10 +60,31 @@ def create_checkout_session(*, customer_id: str, price_id: str, tenant_id: str,
         result = json.loads(raw)
     except (OSError, UnicodeError, ValueError) as exc:
         raise StripeCheckoutError("Checkout provider unavailable") from exc
-    if not isinstance(result, dict) or result.get("object") != "checkout.session" or result.get("customer") != customer_id or result.get("mode") != "subscription":
+    # A provider redirect is not permission to activate subscription. Bind the
+    # returned session to exactly the server-selected tenant and configured
+    # Stripe mode before disclosing a checkout destination to the customer.
+    # The provider always supplies these fields for a created Checkout Session.
+    if (not isinstance(result, dict)
+            or result.get("object") != "checkout.session"
+            or not isinstance(result.get("id"), str)
+            or not result["id"].startswith("cs_")
+            or result.get("customer") != customer_id
+            or result.get("client_reference_id") != tenant_id
+            or result.get("mode") != "subscription"
+            or result.get("status") != "open"
+            or result.get("livemode") is not api_key.startswith("sk_live_")):
         raise StripeCheckoutError("Invalid checkout provider response")
     url = result.get("url")
-    parsed = urllib.parse.urlsplit(url) if isinstance(url, str) else None
-    if parsed is None or parsed.scheme != "https" or parsed.hostname != "checkout.stripe.com" or parsed.username or parsed.password or parsed.port not in (None, 443):
+    if not isinstance(url, str) or not 1 <= len(url) <= 4096:
+        raise StripeCheckoutError("Unexpected checkout destination")
+    try:
+        parsed = urllib.parse.urlsplit(url)
+        safe_destination = (parsed.scheme == "https" and
+            parsed.hostname == "checkout.stripe.com" and
+            parsed.username is None and parsed.password is None and
+            parsed.port in (None, 443) and not parsed.fragment)
+    except ValueError:
+        safe_destination = False
+    if not safe_destination:
         raise StripeCheckoutError("Unexpected checkout destination")
     return url
