@@ -227,6 +227,10 @@
     const bulkJson = el("textarea"); bulkJson.id = "identity-bulk-json";
     bulkJson.rows = 7; bulkJson.maxLength = 512000;
     bulkJson.setAttribute("spellcheck", "false");
+    // A fill-only sample makes both public identity kinds discoverable without
+    // editing a customer draft, tenant record, or protected reference set.
+    const sampleJson = el("button", "Fill example JSON: order match and serial uniqueness");
+    sampleJson.id = "identity-bulk-sample"; sampleJson.type = "button";
     const exportDraft = el("button", "Load editable identity draft into JSON box");
     exportDraft.id = "identity-bulk-export"; exportDraft.type = "button";
     const acknowledgeLabel = el("label");
@@ -238,8 +242,22 @@
     importDraft.id = "identity-bulk-import"; importDraft.type = "button";
     const bulkStatus = el("p"); bulkStatus.id = "identity-bulk-status";
     bulkStatus.setAttribute("role", "status"); bulkStatus.setAttribute("aria-live", "polite");
-    bulk.append(bulkLabel, bulkJson, exportDraft, acknowledgeLabel, importDraft, bulkStatus);
+    bulk.append(bulkLabel, bulkJson, sampleJson, exportDraft, acknowledgeLabel, importDraft, bulkStatus);
     host.insertBefore(bulk, form);
+    sampleJson.addEventListener("click", () => {
+      bulkJson.value = JSON.stringify([
+        {rule_id:"example_order_id_match", kind:"order_id_match",
+          fields:{order_id:"/order/id", shipment_order_id:"/shipment/order_id"},
+          stages:["input","output"]},
+        {rule_id:"example_serial_unique", kind:"serial_unique",
+          fields:{serials:"/shipment/serials"}, stages:["input","output"]}
+      ], null, 2);
+      acknowledge.checked = false;
+      bulkStatus.textContent = "Two public identity examples loaded into the JSON box only. " +
+        "No draft or tenant change. Review, confirm full editable draft replacement, " +
+        "stage, choose Input/Output actions, then Save checks. Protected references unchanged.";
+      bulkJson.focus();
+    });
     exportDraft.addEventListener("click", () => {
       bulkJson.value = JSON.stringify(draft, null, 2);
       acknowledge.checked = false;
