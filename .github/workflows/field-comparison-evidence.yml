@@ -170,6 +170,7 @@ jobs:
           tests/browser/field_comparison
           tests/browser/field_comparisons_500
           tests/browser/fc_comparison
+          tests/browser/fc_bulk
           tests/browser/arithmetic
           tests/browser/identity
           tests/browser/conversion
