@@ -503,8 +503,11 @@ customer may set one PII entity rule (for example `pii.email_address`) to **Off*
 on Input while retaining that same rule on Output. Core email, card and SSN
 recognizers now skip work only for their explicitly disabled stage-specific
 rule; every still-enabled recognizer and selected copied privacy pattern runs
-normally. Other enabled PII findings remain visible. The shared Engine and
-tenant's saved per-rule actions decide the result. A scan error or missed
+normally. Other enabled PII findings remain visible: for example, turning off
+`pii.email_address` on Input may still produce a separately enabled
+`pii.url` finding on the email domain. Off is per rule, not an assertion
+that the content is clean. The shared Engine and tenant's saved per-rule
+actions decide the result. A scan error or missed
 deadline still fails closed, including mandatory transformed-content rechecks;
 this work does **not** increase the 500-ms checker deadline or establish that
 intermittent privacy latency has been resolved.
