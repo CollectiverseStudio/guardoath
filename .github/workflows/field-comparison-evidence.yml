@@ -20,6 +20,8 @@ on:
       # are mandatory FC regression sources even if only a browser spec changes.
       - "tests/browser/*guided_example.spec.js"
       - "tests/browser/*editor.spec.js"
+      # Single-family 500-rule arithmetic bulk import must not evade Chrome acceptance.
+      - "tests/browser/arithmetic_500.spec.js"
       - "tests/browser/protected_reference_editors.spec.js"
       - "tests/test_*field_comparison*.py"
       - "guardoath/engine.py"
