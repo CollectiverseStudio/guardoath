@@ -649,7 +649,7 @@ def test_pages_name_scripts_and_stylesheets_by_content_version_and_they_are_cach
     from pathlib import Path
     static = Path(__file__).resolve().parents[1] / "guardoath" / "static"
     client = TestClient(create_app(credentials={"test-key": "demo"}))
-    for page, names in (("/dashboard", {"dashboard.css", "sigma.css", "arithmetic_editor.js", "identity_editor.js", "conversion_editor.js", "comparison_editor.js", "statistical_drift_editor.js", "dashboard.js", "sigma_tenant.js", "agent_activity.js", "conversation_wizard.js"}), ("/sigma", {"dashboard.css", "sigma.css", "sigma.js"}), ("/guide", {"dashboard.css", "guide.css"})):
+    for page, names in (("/dashboard", {"dashboard.css", "sigma.css", "arithmetic_editor.js", "identity_editor.js", "conversion_editor.js", "comparison_editor.js", "statistical_drift_editor.js", "dashboard.js", "sigma_tenant.js", "agent_activity.js", "conversation_wizard.js", "tenant_stage_tabs.js"}), ("/sigma", {"dashboard.css", "sigma.css", "sigma.js"}), ("/guide", {"dashboard.css", "guide.css"})):
         text = client.get(page).text
         linked = dict(re.findall(r'(?:src|href)="/assets/([a-z0-9_-]+\.(?:js|css))\?v=([0-9a-f]{12})"', text))
         assert set(linked) == names, page
