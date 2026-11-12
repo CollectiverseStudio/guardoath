@@ -181,7 +181,29 @@
       {opening: "/inventory/opening", received: "/inventory/received",
        shipped: "/inventory/shipped", lost: "/inventory/lost", closing: "/inventory/closing"},
       {inventory: {opening: 50, received: 20, shipped: 15, lost: 5, closing: 51}}));
-    form.append(sampleHelp, sample, totalHelp, totalSample, inventoryHelp, inventorySample);
+    const shipmentHelp = node("p",
+      "Shipment quantity example: three units in the first line plus two in the " +
+      "second must equal five shipped units. Total 4 violates; 5 satisfies. " +
+      "Only submitted line quantities are compared; no warehouse inventory lookup.");
+    shipmentHelp.id = "arithmetic-shipment-help";
+    const shipmentSample = node("button", "Fill example: shipment line quantities must equal total");
+    shipmentSample.id = "arithmetic-sample-shipment"; shipmentSample.type = "button";
+    shipmentSample.addEventListener("click", () => fillExample("shipment_quantity_balances",
+      "shipment_quantity_sum", {lines: "/shipment/lines", total: "/shipment/total"},
+      {shipment: {lines: [{quantity: 3}, {quantity: 2}], total: 4}}));
+    const intensityHelp = node("p",
+      "Carbon intensity example: 250 kg CO2e across 100 output units is 2.5 kg per unit, " +
+      "above the submitted 2 kg-per-unit cap. Emissions 200 satisfies the cap. " +
+      "Units must be standardized upstream; no external emissions data is attested.");
+    intensityHelp.id = "arithmetic-intensity-help";
+    const intensitySample = node("button", "Fill example: carbon intensity must not exceed cap");
+    intensitySample.id = "arithmetic-sample-intensity"; intensitySample.type = "button";
+    intensitySample.addEventListener("click", () => fillExample("carbon_intensity_within_limit",
+      "carbon_intensity", {emissions: "/operations/emissions",
+      output: "/operations/output", max_intensity: "/operations/max_intensity"},
+      {operations: {emissions: 250, output: 100, max_intensity: 2}}));
+    form.append(sampleHelp, sample, totalHelp, totalSample, inventoryHelp, inventorySample,
+      shipmentHelp, shipmentSample, intensityHelp, intensitySample);
     form.append(apply, cancel, message); host.append(filterBar, filterStatus, preview, list, form);
     searchInput.addEventListener("input", draw);
     stageFilter.addEventListener("change", draw);
