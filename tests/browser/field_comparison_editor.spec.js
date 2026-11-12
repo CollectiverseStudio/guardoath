@@ -278,3 +278,102 @@ test("ordinary bulk guided number/date definitions require stage and Save before
     expect(reset.status()).toBe(200);
   }
 });
+
+
+test("single-family 500 ordinary comparison rules stage atomically, save, filter and enforce both stages", async ({page, request}) => {
+  // Actual authenticated dashboard/API/Engine journey: this is NOT an API-only
+  // or mocked component-scale claim. No extra rule-count or timeout allowance.
+  async function connect() {
+    await page.goto("/dashboard");
+    await page.locator("#comparison-configuration").evaluate(node => { node.open = true; });
+    await page.locator("#demo-user").selectOption("demo2");
+    await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+    await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
+  }
+  await connect();
+  const headers = {Authorization: "Bearer " + await page.locator("#demo-key-value").inputValue()};
+  async function current() {
+    const response = await request.get("/v1/applications/current", {headers});
+    expect(response.status()).toBe(200);
+    return (await response.json()).tenant;
+  }
+  const rules = Array.from({length: 500}, (_, i) => {
+    const number = String(i).padStart(3, "0");
+    return {rule_id: "ordinary_bulk_" + number, left: "/f" + number + "/left",
+      right: "/f" + number + "/right", operator: "le", value_type: "number",
+      stages: ["input", "output"]};
+  });
+  const valid = Object.fromEntries(rules.map((rule, i) => {
+    const number = String(i).padStart(3, "0");
+    return ["f" + number, {left: 1, right: 2}];
+  }));
+  const violating = structuredClone(valid);
+  violating.f000.left = 4;
+  violating.f499.left = 4;
+  const targets = ["business.ordinary_bulk_000", "business.ordinary_bulk_499"];
+  try {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(reset.status()).toBe(200);
+    await connect();
+    const baseline = await current();
+    await page.locator("#comparison-bulk-panel summary").click();
+    const jsonBox = page.locator("#comparison-bulk-json");
+
+    // A bad final rule must never partially replace 499 valid entries,
+    // modify the authoritative tenant, or silently enable a check.
+    const invalid = rules.map(rule => ({...rule}));
+    invalid[499].left = "relative/not/a/json/pointer";
+    await jsonBox.fill(JSON.stringify(invalid));
+    await page.locator("#comparison-bulk-confirm").check();
+    await page.locator("#comparison-bulk-import").click();
+    await expect(page.locator("#comparison-bulk-status")).toContainText("Comparison 500:");
+    await expect(page.locator("#comparison-draft-summary")).toContainText("No pending changes");
+    expect((await current()).revision).toBe(baseline.revision);
+    expect((await current()).comparisons).toEqual(baseline.comparisons);
+
+    await jsonBox.fill(JSON.stringify(rules));
+    await page.locator("#comparison-bulk-confirm").check();
+    await page.locator("#comparison-bulk-import").click();
+    await expect(page.locator("#comparison-bulk-status")).toContainText("500 comparison definitions staged");
+    await expect(page.locator("#comparison-draft-summary")).toContainText("Unsaved changes");
+    expect((await current()).revision).toBe(baseline.revision);
+    expect((await current()).comparisons).toEqual(baseline.comparisons);
+    await expect(page.locator("#comparison-drafts li[data-comparison-id]")).toHaveCount(500);
+    await page.locator("#comparison-filter").fill("ordinary_bulk_499");
+    await expect(page.locator("#comparison-filter-status")).toContainText("Showing 1 of 500");
+    await expect(page.locator('#comparison-drafts li[data-comparison-id="ordinary_bulk_499"]')).toHaveCount(1);
+
+    await page.locator("#tenant-check-input-cross_field").selectOption("block");
+    await page.locator("#tenant-check-output-cross_field").selectOption("block");
+    await page.getByRole("button", {name: "Save checks", exact: true}).click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved.");
+    let saved = await current();
+    expect(saved.revision).toBeGreaterThan(baseline.revision);
+    expect(saved.comparisons).toEqual(rules);
+    await connect();
+    await page.locator("#comparison-filter").fill("ordinary_bulk_499");
+    await expect(page.locator("#comparison-filter-status")).toContainText("Showing 1 of 500");
+    for (const stage of ["input", "output"]) {
+      for (const [document, expected] of [[violating, true], [valid, false]]) {
+        const response = await request.post("/v1/checks/" + stage, {
+          headers, data: {application_id: "demo2", content_format: "json",
+            content: JSON.stringify(document)}
+        });
+        expect(response.status()).toBe(200);
+        const result = await response.json();
+        expect(result.evaluation_status).toBe("complete");
+        const findings = result.findings.map(f => f.rule_id);
+        for (const id of targets) {
+          expect(findings.includes(id), stage + ": " + id).toBe(expected);
+        }
+        if (expected) expect(result.effective_action).toBe("block");
+        // Unrelated enabled tenant checks can still flag/block benign input.
+      }
+    }
+    saved = await current();
+    expect(saved.comparisons).toEqual(rules);
+  } finally {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(reset.status()).toBe(200);
+  }
+});
