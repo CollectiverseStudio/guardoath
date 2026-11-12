@@ -473,6 +473,11 @@ def build_pii_checker():
             for start, end, entity, source in resolve_overlaps(candidates, check_deadline):
                 entities.setdefault(entity, set()).add(source)
                 spans.append((start, end, entity))
+            # The own-only overlap fast path does not call check_deadline().
+            # A final recognizer/validator can consume the remaining budget
+            # without yielding another regex match. Never return a clean or
+            # flagged verdict from work that completed beyond the deadline.
+            check_deadline()
             if not redact or not spans:
                 if not spans and cache_key is not None and len(clean_texts) < 256:
                     clean_texts.add(cache_key)
@@ -493,7 +498,11 @@ def build_pii_checker():
                     merged[-1] = (old_start, end, old_entity if old_entity == entity else "SENSITIVE")
                 else:
                     merged.append((start, end, entity))
-            return _assemble_redacted_text(text, merged), True
+            redacted = _assemble_redacted_text(text, merged)
+            # A large redaction assembly also consumes the fixed worker budget.
+            # It must not turn a late, partial result into releasable content.
+            check_deadline()
+            return redacted, True
 
         def transform(value, hint=""):
             nonlocal sensitive_key
@@ -517,6 +526,10 @@ def build_pii_checker():
             transformed, _ = process_text(request.content)
         else:
             transformed = json.dumps(transform(parse_json(request.content)), ensure_ascii=False, separators=(",", ":"))
+        # Account for final JSON encoding and the last scalar/key scan as well,
+        # including paths with no findings. The outer Engine wait_for remains an
+        # independent safety deadline; this worker check preserves attribution.
+        check_deadline()
         # Renaming JSON keys can cause collisions or change schema meaning.
         # Do not release content containing a sensitive key.
         return entities, transformed if redact and entities and not sensitive_key else None
