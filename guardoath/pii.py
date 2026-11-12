@@ -504,8 +504,20 @@ def build_pii_checker():
             check_deadline()
             return redacted, True
 
+        # JSON can contain thousands of non-string scalar values (booleans,
+        # nulls or floats) that never call process_text(). A deeply nested or
+        # very wide array must not occupy a bounded PII worker past its 500-ms
+        # deadline just because no recognizer runs inside those scalars.
+        # Amortize the clock read across 64 visited nodes; this does not skip
+        # any detector or alter findings, tenant policy or redaction rechecks.
+        json_nodes_since_deadline_check = 0
+
         def transform(value, hint=""):
-            nonlocal sensitive_key
+            nonlocal sensitive_key, json_nodes_since_deadline_check
+            json_nodes_since_deadline_check += 1
+            if json_nodes_since_deadline_check >= 64:
+                check_deadline()
+                json_nodes_since_deadline_check = 0
             if isinstance(value, str):
                 return process_text(value, hint)[0]
             if isinstance(value, dict):
