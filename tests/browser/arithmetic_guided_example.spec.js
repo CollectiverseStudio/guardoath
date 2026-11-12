@@ -315,3 +315,116 @@ test("authenticated customer can fill, save and evaluate the invoice arithmetic 
     await reset();
   }
 });
+
+
+test("tax, discount and manufacturing guided forms persist three independent tenant arithmetic checks and block on both stages", async ({page}) => {
+  await page.goto("/dashboard");
+  await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
+  await page.locator("#demo-user").selectOption("demo8");
+  await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
+  const headers = {Authorization: "Bearer " + await page.locator("#demo-key-value").inputValue()};
+  const current = async () => {
+    const response = await page.request.get("/v1/applications/current", {headers});
+    expect(response.status()).toBe(200);
+    return (await response.json()).tenant;
+  };
+  const reset = async () => {
+    const response = await page.request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(response.status()).toBe(200);
+  };
+  await reset();
+  try {
+    await page.reload();
+    await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
+    await page.locator("#demo-user").selectOption("demo8");
+    await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+    await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
+    const before = await current();
+    expect(before.advanced_arithmetic).toEqual([]);
+
+    const samples = [
+      ["#arithmetic-sample-tax", "tax_within_tolerance", "tax_tolerance",
+       {tax: "/tax/charged", base: "/tax/base", rate: "/tax/rate",
+        tolerance: "/tax/tolerance"}],
+      ["#arithmetic-sample-discount", "discount_within_fraction",
+       "discount_fraction_cap",
+       {discount: "/discount/amount", eligible_subtotal: "/discount/eligible_subtotal",
+        max_fraction: "/discount/max_fraction"}],
+      ["#arithmetic-sample-manufacturing", "measurement_within_tolerance",
+       "manufacturing_tolerance",
+       {measured: "/quality/measured", nominal: "/quality/nominal",
+        tolerance: "/quality/tolerance"}],
+    ];
+    for (const [button, id, kind, fields] of samples) {
+      await page.locator(button).click();
+      await expect(page.locator("#arithmetic-id")).toHaveValue(id);
+      await expect(page.locator("#arithmetic-kind")).toHaveValue(kind);
+      for (const [field, pointer] of Object.entries(fields)) {
+        await expect(page.locator("#arithmetic-field-" + field)).toHaveValue(pointer);
+      }
+      await expect(page.locator("#arithmetic-stage-input")).toBeChecked();
+      await expect(page.locator("#arithmetic-stage-output")).toBeChecked();
+      await expect(page.locator("#arithmetic-message")).toContainText("not added or saved");
+      expect((await current()).revision).toBe(before.revision);
+      await page.locator("#arithmetic-apply").click();
+      await expect(page.locator("#arithmetic-message")).toContainText("pending");
+    }
+    await expect(page.locator("#arithmetic-draft-summary")).toContainText("3 added");
+    const pending = await current();
+    expect(pending.advanced_arithmetic).toEqual([]);
+    expect(pending.revision).toBe(before.revision);
+    await page.locator("#tenant-check-input-cross_field").selectOption("block");
+    await page.locator("#tenant-check-output-cross_field").selectOption("block");
+    await page.locator("#tenant-save").click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved");
+    const saved = await current();
+    expect(saved.revision).toBe(before.revision + 1);
+    for (const [, id, kind, fields] of samples) {
+      expect(saved.advanced_arithmetic).toContainEqual({
+        rule_id: id, kind, fields, stages: ["input", "output"]
+      });
+    }
+    expect(saved.advanced_identity_reference_status).toEqual(
+      before.advanced_identity_reference_status);
+    expect(saved.advanced_conversion_reference_status).toEqual(
+      before.advanced_conversion_reference_status);
+
+    const witnesses = [
+      ["tax_within_tolerance",
+       {tax: {charged: 7, base: 100, rate: 0.08, tolerance: 0.5}},
+       {tax: {charged: 7.5, base: 100, rate: 0.08, tolerance: 0.5}}],
+      ["discount_within_fraction",
+       {discount: {amount: 25, eligible_subtotal: 100, max_fraction: 0.2}},
+       {discount: {amount: 20, eligible_subtotal: 100, max_fraction: 0.2}}],
+      ["measurement_within_tolerance",
+       {quality: {measured: 10.4, nominal: 10, tolerance: 0.2}},
+       {quality: {measured: 10.1, nominal: 10, tolerance: 0.2}}],
+    ];
+    for (const stage of ["input", "output"]) {
+      for (const [id, violating, benign] of witnesses) {
+        for (const [payload, expectedFinding] of [[violating, true], [benign, false]]) {
+          const response = await page.request.post("/v1/checks/" + stage, {
+            headers, data: {application_id: "demo8", content_format: "json",
+                            content: JSON.stringify(payload)}
+          });
+          expect(response.status()).toBe(200);
+          const result = await response.json();
+          expect(result.evaluation_status).toBe("complete");
+          expect(result.findings.some(f => f.rule_id === "business." + id))
+            .toBe(expectedFinding);
+          if (expectedFinding) expect(result.effective_action).toBe("block");
+        }
+      }
+    }
+    for (const [button] of samples) {
+      await page.locator(button).click();
+      await expect(page.locator("#arithmetic-message")).toContainText("already exists");
+    }
+    const after = await current();
+    expect(after.revision).toBe(saved.revision);
+    expect(after.advanced_arithmetic).toEqual(saved.advanced_arithmetic);
+  } finally {
+    await reset();
+  }
+});
