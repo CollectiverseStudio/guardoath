@@ -20,8 +20,12 @@ class Response:
         return self.data[:size]
 
 
-def payload(url="https://billing.stripe.com/p/session/test"):
-    return json.dumps({"object": "billing_portal.session", "url": url}).encode()
+def payload(url="https://billing.stripe.com/p/session/test", **changes):
+    return json.dumps({
+        "id": "bps_test_valid", "object": "billing_portal.session",
+        "customer": "cus_owned", "livemode": False, "url": url,
+        **changes,
+    }).encode()
 
 
 def test_portal_uses_server_customer_and_fixed_return():
@@ -55,8 +59,42 @@ def test_invalid_inputs_never_call_provider(changes):
     "https://evil.example", "http://billing.stripe.com/",
     "https://billing.stripe.com.evil.example/", "https://billing.stripe.com:444/",
     "https://user@billing.stripe.com/", "https://billing.stripe.com:invalid/",
+    "https://billing.stripe.com/p/session/test#private",
 ])
 def test_provider_portal_url_must_be_trusted(url):
     with pytest.raises(StripePortalError):
         create_portal_session(customer_id="cus_owned", api_key=KEY,
                               opener=lambda request, timeout: Response(payload(url)))
+
+
+@pytest.mark.parametrize("changes", [
+    {"id": "not_a_portal_session"},
+    {"customer": "cus_other"},
+    {"customer": None},
+    {"livemode": True},
+    {"livemode": None},
+    {"object": "checkout.session"},
+    {"url": "https://billing.stripe.com/p/session/test#fragment"},
+])
+def test_provider_portal_session_must_bind_to_server_customer_and_environment(changes):
+    with pytest.raises(StripePortalError):
+        create_portal_session(customer_id="cus_owned", api_key=KEY,
+            opener=lambda request, timeout: Response(payload(**changes)))
+
+
+def test_live_stripe_secret_requires_live_portal_session():
+    live_key = "sk_live_" + "a" * 32
+    with pytest.raises(StripePortalError):
+        create_portal_session(customer_id="cus_owned", api_key=live_key,
+            opener=lambda request, timeout: Response(payload(livemode=False)))
+    url = create_portal_session(customer_id="cus_owned", api_key=live_key,
+        opener=lambda request, timeout: Response(payload(
+            id="bps_live_valid", livemode=True)))
+    assert url == "https://billing.stripe.com/p/session/test"
+
+
+def test_oversized_portal_url_is_rejected_even_with_valid_session_metadata():
+    with pytest.raises(StripePortalError):
+        create_portal_session(customer_id="cus_owned", api_key=KEY,
+            opener=lambda request, timeout: Response(payload(
+                url="https://billing.stripe.com/" + "x" * 4096)))
