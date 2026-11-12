@@ -132,3 +132,125 @@ test("conversion editor keeps private FX hidden while allowing public rule draft
   await expect(page.locator("#conversion-editor")).not.toContainText("trusted_rate_numerator");
   await expect(page.locator("#conversion-editor")).not.toContainText("rate_asof");
 });
+
+
+test("conversion bulk stages 125 public rules atomically, saves revision and runs shared Engine on Input and Output", async ({page, request}) => {
+  await page.goto("/dashboard");
+  await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
+  await page.locator("#demo-user").selectOption("demo4");
+  await page.getByRole("button", {name:"Get demo API key", exact:true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
+  let headers = {Authorization:"Bearer " + await page.locator("#demo-key-value").inputValue()};
+  const read = async () => {
+    const response = await request.get("/v1/applications/current", {headers});
+    expect(response.status()).toBe(200);
+    return (await response.json()).tenant;
+  };
+  let resetRequired = false;
+  try {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data:{}});
+    expect(reset.status()).toBe(200);
+    resetRequired = true;
+    await page.reload();
+    await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
+    await page.locator("#demo-user").selectOption("demo4");
+    await page.getByRole("button", {name:"Get demo API key", exact:true}).click();
+    await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
+    headers = {Authorization:"Bearer " + await page.locator("#demo-key-value").inputValue()};
+    const initial = await read();
+    expect(initial.advanced_conversion_time).toEqual([]);
+
+    const rules = Array.from({length:125}, (_, i) => {
+      const index = String(i).padStart(3,"0");
+      return {rule_id:"bulk_conversion_" + index, kind:"unit_load_kg_cap",
+        fields:{load:"/c" + index + "/load", load_unit:"/c" + index + "/load_unit",
+          max_kg:"/c" + index + "/max_kg"}, stages:["input","output"]};
+    });
+    await page.locator("#conversion-bulk-panel").evaluate(el => { el.open = true; });
+    const json = page.locator("#conversion-bulk-json");
+    await json.fill(JSON.stringify(rules));
+    await page.locator("#conversion-bulk-import").click();
+    await expect(page.locator("#conversion-bulk-status")).toContainText("Confirm replacement");
+    await expect(page.locator("#conversion-draft-summary")).toContainText("No pending changes");
+    await page.locator("#conversion-bulk-confirm").check();
+    await page.locator("#conversion-bulk-import").click();
+    await expect(page.locator("#conversion-draft-summary")).toContainText("125 added, 0 updated, 0 removed");
+    await expect(page.locator("#conversion-filter-status")).toContainText("Showing 125 of 125");
+    expect((await read()).revision).toBe(initial.revision);
+    expect((await read()).advanced_conversion_time).toEqual([]);
+
+    // One malformed pointer or forged FX rate is an atomic rejection.
+    for (const invalid of [
+      (() => { const broken = structuredClone(rules); broken[7].fields.max_kg =
+        broken[7].fields.load; return broken; })(),
+      [...rules, {rule_id:"forged_fx", kind:"currency_conversion_cap",
+        fields:{trusted_rate_numerator:"/secret"}, stages:["input"]}],
+      [...rules, {rule_id:"invalid_lifecycle", kind:"lifecycle_chronology",
+        fields:{order_at:"/order_at", shipment_at:"/shipment_at",
+          delivery_at:"/delivery_at", return_at:"/returns/latest/returned_at"},
+        return_event_pointer:"/order_at", stages:["input","output"]}]
+    ]) {
+      await json.fill(JSON.stringify(invalid));
+      await page.locator("#conversion-bulk-confirm").check();
+      await page.locator("#conversion-bulk-import").click();
+      await expect(page.locator("#conversion-bulk-status")).toContainText("Conversion rule ");
+      await expect(page.locator("#conversion-draft-summary")).toContainText("125 added, 0 updated, 0 removed");
+      expect((await read()).revision).toBe(initial.revision);
+    }
+    // Valid optional return-event pointer is usable without granting trust to
+    // customer-controlled FX rates, and never writes prior to Save checks.
+    const lifecycle = {rule_id:"lifecycle_sample", kind:"lifecycle_chronology",
+      fields:{order_at:"/order_at", shipment_at:"/shipment_at",
+        delivery_at:"/delivery_at", return_at:"/returns/latest/returned_at"},
+      return_event_pointer:"/returns/latest", stages:["input","output"]};
+    await json.fill(JSON.stringify([lifecycle]));
+    await page.locator("#conversion-bulk-confirm").check();
+    await page.locator("#conversion-bulk-import").click();
+    await expect(page.locator("#conversion-draft-summary")).toContainText("1 added");
+    expect((await read()).revision).toBe(initial.revision);
+    await json.fill(JSON.stringify(rules));
+    await page.locator("#conversion-bulk-confirm").check();
+    await page.locator("#conversion-bulk-import").click();
+    await page.locator("#conversion-bulk-export").click();
+    expect(JSON.parse(await json.inputValue())).toEqual(rules);
+    await page.locator("#tenant-check-input-cross_field").selectOption("block");
+    await page.locator("#tenant-check-output-cross_field").selectOption("block");
+    await page.locator("#tenant-save").click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved");
+    const saved = await read();
+    expect(saved.revision).toBe(initial.revision + 1);
+    expect(saved.advanced_conversion_time).toHaveLength(125);
+    await expect(page.locator("#conversion-draft-summary"))
+      .toContainText("Saved conversion/time rules: 125. No pending changes.");
+    await expect(page.locator('tr.rule-row[data-rule^="business.bulk_conversion_"]'))
+      .toHaveCount(125);
+
+    const good = {};
+    for (let i=0;i<125;i++) good["c"+String(i).padStart(3,"0")] =
+      {load:10, load_unit:"kg", max_kg:20};
+    const bad = structuredClone(good);
+    bad.c124.load = 50;
+    for (const stage of ["input","output"]) {
+      const violating = await request.post("/v1/checks/"+stage, {headers, data:{
+        application_id:"demo4", content_format:"json", content:JSON.stringify(bad)
+      }});
+      expect(violating.status()).toBe(200);
+      const result = await violating.json();
+      expect(result.evaluation_status).toBe("complete");
+      expect(result.findings.map(f=>f.rule_id)).toContain("business.bulk_conversion_124");
+      expect(result.effective_action).toBe("block");
+      const benign = await request.post("/v1/checks/"+stage, {headers, data:{
+        application_id:"demo4", content_format:"json", content:JSON.stringify(good)
+      }});
+      expect(benign.status()).toBe(200);
+      const clean = await benign.json();
+      expect(clean.evaluation_status).toBe("complete");
+      expect(clean.findings.map(f=>f.rule_id)).not.toContain("business.bulk_conversion_124");
+    }
+  } finally {
+    if (resetRequired) {
+      const response = await request.post("/v1/tenants/current/reset", {headers, data:{}});
+      expect(response.status()).toBe(200);
+    }
+  }
+});
