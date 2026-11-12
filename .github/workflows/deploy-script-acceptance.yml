@@ -36,13 +36,13 @@ jobs:
             'Trusted Reference Acceptance',
             'PII Reliability Gate',
             'Push on main',
-            'issue/30',
+            'issues/30',
             'get-caller-identity',
             'RevisionId',
             'lambda-before-',
             'function-updated',
             'verify_live_dashboard',
-            'If ($Uploaded',
+            'if ($Uploaded',
             'if (-not $Deploy)'
           )) {
             if (-not $script.Contains($required)) {
