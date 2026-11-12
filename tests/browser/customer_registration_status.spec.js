@@ -809,3 +809,84 @@ test("a public demo can disconnect without exposing signed-in customer key entry
   await expect(disconnect).toBeDisabled();
   await expect(ownerEntry).toBeHidden();
 });
+
+
+test("verified paid subscription changes owner dashboard only after server status refresh", async ({page, request}) => {
+  const issued = await request.post("/v1/demo-users/demo2/key", {data: {}});
+  expect(issued.status()).toBe(200);
+  const key = (await issued.json()).api_key;
+  const source = await request.get("/v1/applications/current", {
+    headers: {"X-GuardOath-Key": key}
+  });
+  expect(source.status()).toBe(200);
+  const application = await source.json();
+  let active = false;
+  application.application_id = "usr-browser-reconcile";
+  application.tenant = {
+    ...application.tenant, tenant_id: "usr-browser-reconcile",
+    display_name: "Subscription verifier", demo: false,
+    subscription_status: "inactive", subscription_active: false,
+    monthly_allowance: 0, used: 0
+  };
+  const token = "owner-verified-session-stub";
+  await page.addInitScript(t => sessionStorage.setItem("guardoath-session", t), token);
+  await page.route("**/v1/sign-in", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      authorize_url: "https://example.invalid/oauth2/authorize",
+      logout_url: "https://example.invalid/logout", client_id: "synthetic",
+      redirect_uri: "http://localhost/dashboard", scope: "openid email",
+      registration_enabled: true,
+    })
+  }));
+  let statusReads = 0;
+  await page.route("**/v1/account/status", route => {
+    expect(route.request().headers()["x-guardoath-session"]).toBe(token);
+    statusReads++;
+    return route.fulfill({status: 200, contentType: "application/json",
+      body: JSON.stringify({
+        registered: true, registration_enabled: true,
+        tenant_id: "usr-browser-reconcile",
+        subscription_status: active ? "active" : "inactive",
+        can_validate: active,
+      })});
+  });
+  await page.route("**/v1/applications/current", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      ...application,
+      tenant: {
+        ...application.tenant,
+        subscription_status: active ? "active" : "inactive",
+        subscription_active: active, monthly_allowance: active ? 125 : 0,
+      }
+    })
+  }));
+  await page.route("**/v1/tenants/current/keys", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({keys: [], max_keys: 2})
+  }));
+  await mockOwnerDriftForSession(page, application, token);
+  let reconcileCalls = 0;
+  await page.route("**/v1/billing/reconcile", route => {
+    reconcileCalls++;
+    expect(route.request().method()).toBe("POST");
+    expect(route.request().headers()["x-guardoath-session"]).toBe(token);
+    active = true;
+    return route.fulfill({status: 200, contentType: "application/json",
+      body: JSON.stringify({
+        subscription_status: "active", can_validate: true,
+        monthly_allowance: 125, revision: 3
+      })});
+  });
+  await page.goto("/dashboard");
+  await expect(page.locator("#billing-verify")).toBeVisible();
+  await expect(page.locator("#key-create")).toBeDisabled();
+  await page.locator("#billing-verify").click();
+  await expect(page.locator("#account-status")).toContainText("Subscription: active");
+  await expect(page.locator("#billing-verify")).toBeHidden();
+  await expect(page.locator("#billing-manage")).toBeVisible();
+  expect(reconcileCalls).toBe(1);
+  expect(statusReads).toBeGreaterThanOrEqual(2);
+  expect(await page.evaluate(() => sessionStorage.getItem("guardoath-session"))).toBe(token);
+});
