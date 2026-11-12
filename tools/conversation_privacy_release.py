@@ -14,6 +14,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED = {"pii", "secrets", "text_security", "encoded_pii"}
+def safe_failure_label(checker_id, status, error_code):
+    """Emit only fixed checker names and allowlisted machine codes to CI logs."""
+    from guardoath.evaluate import SAFE_CHECKER_ERROR_CODES
+    checker = checker_id if checker_id in REQUIRED else "other_checker"
+    if status == "error":
+        cause = error_code if error_code in SAFE_CHECKER_ERROR_CODES else "other_error"
+    else:
+        cause = status if status in {"skipped", "unsupported"} else "other_status"
+    return checker + ":" + cause
+
+
 FIXTURES = (
     ("benign", "Explain returns.", None),
     ("email", "Email jane@example.com", "pii"),
@@ -61,7 +72,7 @@ async def run_conversation_matrix(rounds: int = 20):
                     mismatches += 1
                 for checker_id, receipt in receipts.items():
                     if receipt.status not in {"passed", "flagged"}:
-                        key = checker_id + ":" + (receipt.error_code or receipt.status)
+                        key = safe_failure_label(checker_id, receipt.status, receipt.error_code)
                         failures[key] = failures.get(key, 0) + 1
             cases.append({"case_id": stage.value + "." + name,
                           "samples": rounds, "mismatches": mismatches,
