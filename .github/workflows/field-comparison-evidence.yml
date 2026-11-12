@@ -155,11 +155,16 @@ jobs:
         run: python -m pip install -e '.[test,pii]'
       - name: Install pinned Playwright tests
         run: npm ci
+      - name: Record exact browser acceptance source SHA
+        run: |
+          mkdir -p artifacts/field-comparisons
+          printf '%s\n' "$GITHUB_SHA" > artifacts/field-comparisons/browser-source-commit.txt
       - name: Authenticated four-family, 500-rule, guided and protected-reference browser acceptance
         env:
           PLAYWRIGHT_CHANNEL: chrome
+          PLAYWRIGHT_JUNIT_OUTPUT_FILE: artifacts/field-comparisons/browser-junit.xml
         run: >-
-          npx playwright test
+          npx playwright test --reporter=line,junit
           tests/browser/field_comparison
           tests/browser/field_comparisons_500
           tests/browser/fc_comparison
@@ -168,3 +173,17 @@ jobs:
           tests/browser/conversion
           tests/browser/trusted_reference
           tests/browser/protected_reference_editors
+      - name: Require real browser execution report
+        if: always()
+        shell: bash
+        run: test -s artifacts/field-comparisons/browser-junit.xml
+      - name: Retain synthetic browser results and exact SHA even on test failure
+        if: always()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: field-comparisons-browser-${{ github.sha }}
+          path: |
+            artifacts/field-comparisons/browser-source-commit.txt
+            artifacts/field-comparisons/browser-junit.xml
+          if-no-files-found: error
+          retention-days: 14
