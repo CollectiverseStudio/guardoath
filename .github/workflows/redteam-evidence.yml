@@ -1,0 +1,58 @@
+name: Red-team regression evidence
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'guardoath/prompt_attack.py'
+      - 'guardoath/rule_catalog.py'
+      - 'guardoath/tenant_record.py'
+      - 'tools/redteam_*.py'
+      - 'tests/test_redteam_*.py'
+      - 'tests/test_prompt_attack.py'
+      - 'tests/fixtures/redteam_independent.json'
+      - '.github/workflows/redteam-evidence.yml'
+  pull_request:
+    paths:
+      - 'guardoath/prompt_attack.py'
+      - 'guardoath/rule_catalog.py'
+      - 'guardoath/tenant_record.py'
+      - 'tools/redteam_*.py'
+      - 'tests/test_redteam_*.py'
+      - 'tests/test_prompt_attack.py'
+      - 'tests/fixtures/redteam_independent.json'
+      - '.github/workflows/redteam-evidence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: guardoath-redteam-${{ github.ref }}-${{ github.event_name == 'push' && 'latest-main-push' || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+jobs:
+  redteam:
+    name: Offline red-team and tenant policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Install test dependencies
+        run: python -m pip install -e '.[test,pii]'
+      - name: Prompt, independent, mutation and tenant tests
+        run: python -m pytest -q tests/test_prompt_attack.py tests/test_redteam_coverage.py tests/test_redteam_scenarios.py tests/test_redteam_mutations.py tests/test_redteam_tenant_policy.py
+      - name: Collect offline evidence (nonzero on source-authored regression)
+        run: |
+          mkdir -p .guardoath-reports
+          python -m tools.redteam_coverage --output .guardoath-reports/coverage.json
+          python -m tools.redteam_scenarios --output .guardoath-reports/source-baseline.json
+          python -m tools.redteam_scenarios --independent --output .guardoath-reports/independent.json
+          python -m tools.redteam_mutations --output .guardoath-reports/mutations.json
+      - name: Upload prompt-safe evidence
+        if: always()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: redteam-evidence-${{ github.sha }}
+          path: .guardoath-reports/*.json
+          if-no-files-found: ignore
+          retention-days: 14
