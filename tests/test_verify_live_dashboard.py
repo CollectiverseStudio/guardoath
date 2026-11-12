@@ -93,6 +93,20 @@ def test_dashboard_missing_new_editor_never_passes(tmp_path):
     assert "missing_dashboard_assets:conversion_editor.js" in result["issues"][0]
 
 
+def test_missing_tenant_stage_tabs_never_certifies_production_dashboard(tmp_path):
+    """A release missing the Input/Output stage navigation is not accepted."""
+    responses, tags = setup(tmp_path)
+    assert "tenant_stage_tabs.js" in REQUIRED
+    original = ("/assets/tenant_stage_tabs.js?v=" + tags["tenant_stage_tabs.js"]).encode()
+    responses[BASE + "/dashboard"] = responses[BASE + "/dashboard"].replace(
+        original, b"/assets/missing_tenant_tabs.js?v=" + tags["tenant_stage_tabs.js"].encode()
+    )
+    result = verify(BASE, tmp_path, opener(responses))
+    assert result["dashboard_ui_matches_local_source"] is False
+    assert any("tenant_stage_tabs.js" in item for item in result["issues"])
+    assert result["mutated_records"] == 0
+
+
 def test_missing_wizard_asset_never_certifies_production_dashboard(tmp_path):
     """A newly shipped wizard is mandatory in exact-source asset attestation."""
     responses, tags = setup(tmp_path)
