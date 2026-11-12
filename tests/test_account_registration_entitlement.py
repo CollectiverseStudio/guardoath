@@ -231,6 +231,55 @@ def test_checkout_provider_failure_never_activates_subscription(monkeypatch):
     assert client.post("/v1/tenants/current/keys", headers=headers, json={}).status_code == 402
 
 
+
+def test_real_checkout_adapter_rejects_cross_tenant_provider_session_without_entitlement(monkeypatch):
+    """Exercise the real Checkout adapter through the signed-in HTTP route.
+
+    The returned hosted URL cannot authorize a different tenant, even when
+    the provider customer ID matches. No outside Stripe calls or payments.
+    """
+    import json
+    from guardoath import stripe_customer, stripe_checkout
+    monkeypatch.setattr(stripe_customer, "create_customer", lambda **_kw: "cus_verified")
+    monkeypatch.setenv("GUARDOATH_STRIPE_SECRET_KEY", "sk_test_" + "a" * 32)
+    monkeypatch.setenv("GUARDOATH_STRIPE_PRICE_ID", "price_verified")
+
+    class FakeResponse:
+        status = 200
+        def __enter__(self):
+            return self
+        def __exit__(self, *_args):
+            return False
+        def read(self, size):
+            return json.dumps({
+                "id": "cs_test_other_tenant", "object": "checkout.session",
+                "customer": "cus_verified",
+                "client_reference_id": "usr-other-tenant",
+                "mode": "subscription", "status": "open", "livemode": False,
+                "url": "https://checkout.stripe.com/c/pay/cs_test_other_tenant",
+            }).encode()[:size]
+
+    class FakeOpener:
+        def open(self, request, timeout):
+            assert request.full_url == "https://api.stripe.com/v1/checkout/sessions"
+            assert timeout == 5
+            return FakeResponse()
+
+    monkeypatch.setattr(stripe_checkout.urllib.request, "build_opener",
+                        lambda *_handlers: FakeOpener())
+    client, store = make_client()
+    owner = {SESSION_HEADER: "verified-test-token"}
+    assert client.post("/v1/register", headers=owner).status_code == 201
+    failed = client.post("/v1/billing/checkout", headers=owner, json={})
+    assert failed.status_code == 503, failed.text
+    assert "checkout_url" not in failed.text
+    tenant = store.get("usr-test-account")
+    assert tenant.payer_id == "cus_verified"
+    assert tenant.subscription_status == "inactive"
+    assert tenant.key_hashes == () and tenant.usage == {}
+    assert client.get("/v1/account/status", headers=owner).json()["can_validate"] is False
+    assert client.post("/v1/tenants/current/keys", headers=owner, json={}).status_code == 402
+
 def test_missing_stripe_price_does_not_create_or_bind_customer(monkeypatch):
     """Incomplete billing configuration must fail before any Stripe write."""
     from guardoath import stripe_customer
