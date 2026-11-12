@@ -79,10 +79,24 @@ def test_conversation_profile_runs_combined_checks_on_both_stages():
                 }
                 for receipt in result['checker_results']
             }
-            assert result['evaluation_status'] == 'complete', {
-                'stage': stage, 'fixture': flagged or 'benign',
-                'checker_receipts': safe_receipts,
-            }
+            if result['evaluation_status'] != 'complete':
+                # Keep the full safe machine code on ONE short line; pytest
+                # truncates long assertion dictionaries on large CI runs.
+                # Never print the request, findings or exception messages.
+                from math import isfinite
+                diagnostics = []
+                for name, receipt in sorted(safe_receipts.items()):
+                    ms = receipt['latency_ms']
+                    ms = (round(ms, 1) if isinstance(ms, (int, float))
+                          and isfinite(ms) and ms >= 0 else 'unknown')
+                    diagnostics.append(
+                        f"{name}:{receipt['status']}:{receipt['error_code']}@{ms}ms"
+                    )
+                pytest.fail(
+                    f"conversation privacy incomplete phase=primary stage={stage} "
+                    f"fixture={flagged or 'benign'} receipts={','.join(diagnostics)}",
+                    pytrace=False,
+                )
             checks = {c['checker_id']: c for c in result['checker_results']}
             assert set(checks) == {'pii', 'secrets', 'text_security', 'encoded_pii'}
             assert all(not c['simulated'] for c in checks.values())

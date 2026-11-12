@@ -21,8 +21,46 @@ def safe_failure_label(checker_id, status, error_code):
     if status == "error":
         cause = error_code if error_code in SAFE_CHECKER_ERROR_CODES else "other_error"
     else:
-        cause = status if status in {"skipped", "unsupported"} else "other_status"
+        cause = status if status in {"skipped", "unsupported", "flagged"} else "other_status"
     return checker + ":" + cause
+
+
+def case_matches_shipped_profile(response, stage, flagged):
+    """Accept only the exact real-checker vector for a shipped chat fixture.
+
+    An unexpected second finding is not a clean sample even if the strongest
+    resulting action matches the fixture expectation. Tenant actions and the
+    Engine's detection results remain untouched.
+    """
+    receipts = {item.checker_id: item for item in response.checker_results}
+    expected_action = ("allow" if flagged is None
+                       else ("flag" if stage.value == "input" else "block"))
+    return (
+        response.evaluation_status == "complete"
+        and len(response.checker_results) == len(REQUIRED)
+        and set(receipts) == REQUIRED
+        and all(
+            not receipt.simulated
+            and receipt.status == ("flagged" if checker_id == flagged else "passed")
+            for checker_id, receipt in receipts.items()
+        )
+        and response.recommended_action.value == expected_action
+    )
+
+
+def safe_primary_failure_receipts(results, flagged):
+    """Emit allowlisted primary-phase failure and milliseconds, never content."""
+    from math import isfinite
+    failures = []
+    for item in results:
+        expected = "flagged" if item.checker_id == flagged else "passed"
+        if item.status == expected:
+            continue
+        ms = item.latency_ms
+        elapsed = (round(float(ms), 1) if isinstance(ms, (int, float))
+                   and isfinite(ms) and ms >= 0 else 0.0)
+        failures.append(f"{safe_failure_label(item.checker_id, item.status, item.error_code)}@{elapsed}ms")
+    return tuple(sorted(failures))
 
 
 FIXTURES = (
@@ -55,25 +93,13 @@ async def run_conversation_matrix(rounds: int = 20):
                 response = await engine.check(CheckRequest(
                     application_id="demo", policy_version="conversation-v1",
                     content=content, content_format="text"), stage)
-                receipts = {item.checker_id: item for item in response.checker_results}
-                expected_action = ("allow" if flagged is None
-                                   else ("flag" if stage == Stage.INPUT else "block"))
-                if (response.evaluation_status != "complete"
-                        or set(receipts) != REQUIRED
-                        or any(item.simulated for item in receipts.values())
-                        or any(item.status not in {"passed", "flagged"}
-                               for item in receipts.values())
-                        or (flagged is not None and
-                            receipts.get(flagged) is not None and
-                            receipts[flagged].status != "flagged")
-                        or (flagged is None and
-                            any(item.status != "passed" for item in receipts.values()))
-                        or response.recommended_action.value != expected_action):
+                if not case_matches_shipped_profile(response, stage, flagged):
                     mismatches += 1
-                for checker_id, receipt in receipts.items():
-                    if receipt.status not in {"passed", "flagged"}:
-                        key = safe_failure_label(checker_id, receipt.status, receipt.error_code)
-                        failures[key] = failures.get(key, 0) + 1
+                for label in safe_primary_failure_receipts(response.checker_results, flagged):
+                    # Each case ID already encodes the fixed stage and fixture.
+                    # A private exception or customer message cannot enter logs.
+                    key = "primary/" + label
+                    failures[key] = failures.get(key, 0) + 1
             cases.append({"case_id": stage.value + "." + name,
                           "samples": rounds, "mismatches": mismatches,
                           "checker_failures": failures})
