@@ -19,6 +19,8 @@ on:
       # Guided arithmetic, identity and conversion tenant customer journeys
       # are mandatory FC regression sources even if only a browser spec changes.
       - "tests/browser/*guided_example.spec.js"
+      - "tests/browser/*editor.spec.js"
+      - "tests/browser/protected_reference_editors.spec.js"
       - "tests/test_*field_comparison*.py"
       - "guardoath/engine.py"
       - "guardoath/tenant_record.py"
@@ -133,3 +135,36 @@ jobs:
             echo "::error::Field Comparison acceptance failed on exact source SHA $GITHUB_SHA (portfolio=$PORTFOLIO_RESULT, scale=$SCALE_RESULT, tenant_api=$TENANT_RESULT, trusted_reference=$REFERENCE_RESULT). Review synthetic reports/JUnit; do not release."
             exit 1
           fi
+
+  customer-browser-acceptance:
+    # The strict deterministic portfolio is not customer-operable acceptance:
+    # use the same real, authenticated demo tenant, Save checks, and shared
+    # Engine that production customers exercise, including 500-rule UI cases.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 'lts/*'
+          cache: npm
+      - name: Install the shipped validation engine and local test dependencies
+        run: python -m pip install -e '.[test,pii]'
+      - name: Install pinned Playwright tests
+        run: npm ci
+      - name: Authenticated four-family, 500-rule, guided and protected-reference browser acceptance
+        env:
+          PLAYWRIGHT_CHANNEL: chrome
+        run: >-
+          npx playwright test
+          tests/browser/field_comparison
+          tests/browser/field_comparisons_500
+          tests/browser/fc_comparison
+          tests/browser/arithmetic
+          tests/browser/identity
+          tests/browser/conversion
+          tests/browser/trusted_reference
+          tests/browser/protected_reference_editors
