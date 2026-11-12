@@ -18,9 +18,16 @@ from guardoath.subscription_reconciliation import (
 def fetch_subscription(binding: StripeBinding, api_key: str, *,
                        opener=None, timeout: float = 5.0) -> EntitlementDecision:
     """Retrieve Stripe's authoritative current state; fail closed on all errors."""
-    if not isinstance(api_key, str) or not api_key.startswith(("sk_test_", "sk_live_")) or len(api_key) < 16:
+    if (not isinstance(api_key, str)
+            or not api_key.startswith(("sk_test_", "sk_live_"))
+            or len(api_key) < 16 or not api_key.isascii()
+            or any(character.isspace() for character in api_key)):
         raise SubscriptionReconciliationError("Stripe API credential is not configured")
-    if not isinstance(timeout, (int, float)) or not 0 < timeout <= 10:
+    # A bool is an int in Python, but True is not a deliberate 1s timeout.
+    # NaN and infinity are also invalid, without accepting non-numeric values.
+    import math
+    if (isinstance(timeout, bool) or not isinstance(timeout, (int, float))
+            or not math.isfinite(timeout) or not 0 < timeout <= 10):
         raise SubscriptionReconciliationError("Invalid Stripe request timeout")
     # Stripe IDs are server-owned, but still validate before embedding in URL.
     subscription_id = binding.subscription_id
