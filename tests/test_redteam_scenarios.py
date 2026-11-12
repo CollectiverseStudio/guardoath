@@ -46,3 +46,16 @@ def test_independent_challenges_measure_real_misses_without_claiming_success():
     from tools.redteam_scenarios import INDEPENDENT_FIXTURES
     fixture = json.loads(INDEPENDENT_FIXTURES.read_text(encoding="utf-8"))
     assert all(item["text"] not in serialized for item in fixture["cases"])
+
+def test_independent_expected_rules_are_not_satisfied_by_unrelated_matches():
+    from tools.redteam_scenarios import evaluate_independent, INDEPENDENT_FIXTURES
+    from guardoath import prompt_attack
+    report = evaluate_independent()
+    manifest = json.loads(INDEPENDENT_FIXTURES.read_text(encoding="utf-8"))
+    required = [case for case in manifest["cases"] if "expected_rule_id" in case]
+    assert len(required) >= 4
+    assert report["expected_rule_misses"] == []
+    for case in required:
+        assert case["expected_rule_id"] in prompt_attack.inspect(case["text"])
+    assert all(set(miss) == {"scenario_id", "required_rule_id"}
+               for miss in report["expected_rule_misses"])
