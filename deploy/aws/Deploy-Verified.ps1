@@ -103,7 +103,7 @@ try {
         "--url", "https://guardoath.com", "--expected-sha", $Sha))
     Write-Host "Source parity verified. Production is NOT accepted until all 15 live safety checks have passed."
 } catch {
-    Write-Error "Deployment or parity verification failed: $_"
+    Write-Warning "Deployment or parity verification failed: $_"
     if ($Uploaded -and (Test-Path $BackupFile)) {
         Write-Warning "Attempting to restore the previously downloaded Lambda code (tenant table and configuration unchanged)."
         $Now = (Invoke-Aws @("lambda", "get-function-configuration", "--function-name", $FunctionName)) | ConvertFrom-Json
