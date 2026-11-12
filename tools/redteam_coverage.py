@@ -17,10 +17,10 @@ from guardoath.rule_catalog import rules_for
 # are evidence of lexical rule coverage, NOT semantic adversarial robustness.
 REQUIRED_FAMILIES = {
     "role_and_instruction_override": ("dan_persona", "developer_mode", "new_instructions_marker"),
-    "prompt_extraction": ("system_prompt",),
-    "indirect_injection": ("document",),
-    "exfiltration": ("exfil",),
-    "evasion": ("decode",),
+    "prompt_extraction": ("repeat_prompt_verbatim", "show_hidden_rules", "output_reveals_prompt"),
+    "indirect_injection": ("ai_reader_injection", "when_summarizing_instruction", "hidden_text_instruction"),
+    "exfiltration": ("markdown_image_exfil",),
+    "evasion": ("decode_and_follow", "language_switch_bypass"),
 }
 ADVANCED_GAPS = (
     "cross-turn semantic intent across nonadjacent messages",
