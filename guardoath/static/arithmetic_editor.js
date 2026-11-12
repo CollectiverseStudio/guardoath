@@ -252,6 +252,8 @@
     const bulkJson = node("textarea"); bulkJson.id = "arithmetic-bulk-json";
     bulkJson.rows = 7; bulkJson.maxLength = 512000;
     bulkJson.setAttribute("spellcheck", "false");
+    const fillBulkExample = node("button", "Fill example JSON: invoice total and inventory balance");
+    fillBulkExample.type = "button"; fillBulkExample.id = "arithmetic-bulk-example";
     const exportDraft = node("button", "Load arithmetic draft into JSON box");
     exportDraft.type = "button"; exportDraft.id = "arithmetic-bulk-export";
     const acknowledgeLabel = node("label");
@@ -263,8 +265,24 @@
     importDraft.type = "button"; importDraft.id = "arithmetic-bulk-import";
     const bulkStatus = node("p"); bulkStatus.id = "arithmetic-bulk-status";
     bulkStatus.setAttribute("role", "status"); bulkStatus.setAttribute("aria-live", "polite");
-    bulk.append(bulkLabel, bulkJson, exportDraft, acknowledgeLabel, importDraft, bulkStatus);
+    bulk.append(bulkLabel, bulkJson, fillBulkExample, exportDraft, acknowledgeLabel, importDraft, bulkStatus);
     host.insertBefore(bulk, form);
+    // Example is text only. Never mutate an unsaved draft, tenant revision or actions
+    // until the customer explicitly confirms the whole-draft Stage and Save.
+    fillBulkExample.addEventListener("click", () => {
+      bulkJson.value = JSON.stringify([
+        {rule_id: "invoice_total_matches", kind: "invoice_total", fields: {
+          subtotal: "/billing/subtotal", discount: "/billing/discount",
+          tax: "/billing/tax", shipping: "/billing/shipping", total: "/billing/total"
+        }, stages: ["input", "output"]},
+        {rule_id: "inventory_balances", kind: "inventory_conservation", fields: {
+          opening: "/inventory/opening", received: "/inventory/received",
+          shipped: "/inventory/shipped", lost: "/inventory/lost", closing: "/inventory/closing"
+        }, stages: ["input", "output"]}
+      ], null, 2);
+      acknowledge.checked = false;
+      bulkStatus.textContent = "Two arithmetic examples filled in the JSON box only; not staged or saved. Review, confirm whole-draft replacement, then Stage arithmetic JSON replacement.";
+    });
     exportDraft.addEventListener("click", () => {
       bulkJson.value = JSON.stringify(draft, null, 2);
       acknowledge.checked = false;
