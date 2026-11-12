@@ -240,7 +240,41 @@
         '"end":"2026-01-01T10:45:00Z","allowed_minutes":30}}}.';
       controls.id.focus();
     });
-    form.append(sampleHelp, sample, coldHelp, coldSample, apply, cancel, message);
+
+    const lifecycleHelp = el("p",
+      "Fulfillment lifecycle example: order 09:00, shipment 12:00 and delivery 11:00 " +
+      "violate chronology. Order 09:00, shipment 10:00 and delivery 11:00 pass. " +
+      "A return record is optional until recorded; a present incomplete return fails.");
+    lifecycleHelp.id = "conversion-lifecycle-help";
+    const lifecycleSample = el("button", "Fill example: order, shipment, delivery and return chronology");
+    lifecycleSample.id = "conversion-sample-lifecycle"; lifecycleSample.type = "button";
+    lifecycleSample.addEventListener("click", () => {
+      const id = "fulfillment_lifecycle_ordered";
+      if (original.some(rule => rule.rule_id === id) ||
+          draft.some(rule => rule.rule_id === id) ||
+          (tenant.record_rules || []).some(rule => rule.rule_id === "business." + id) ||
+          (window.comparisonEditor &&
+           window.comparisonEditor.otherFamilyDraftHasId(id, "advanced_conversion_time"))) {
+        message.textContent = "Example rule ID already exists. Edit the existing rule or choose a different ID.";
+        return;
+      }
+      clear();
+      controls.id.value = id;
+      controls.kind.value = "lifecycle_chronology";
+      drawFields({order_at: "/fulfillment/order_at",
+                  shipment_at: "/fulfillment/shipment_at",
+                  delivery_at: "/fulfillment/delivery_at",
+                  return_at: "/fulfillment/return/at"});
+      eventPointer.value = "/fulfillment/return";
+      controls.input.checked = controls.output.checked = true;
+      message.textContent = "Example filled, not added or saved. Choose Add pending conversion rule, " +
+        "then Save checks. Enable Field comparisons with Block on Input/Output. " +
+        'Example JSON: {"fulfillment":{"order_at":"2026-01-01T09:00:00Z",' +
+        '"shipment_at":"2026-01-01T12:00:00Z","delivery_at":"2026-01-01T11:00:00Z"}}. ' +
+        "Return is optional until an event is recorded; a partial event must fail.";
+      controls.id.focus();
+    });
+    form.append(sampleHelp, sample, coldHelp, coldSample, lifecycleHelp, lifecycleSample, apply, cancel, message);
     host.append(filterBar, filterStatus, preview, list, form);
     searchInput.addEventListener("input", draw);
     stageFilter.addEventListener("change", draw);
