@@ -1063,6 +1063,7 @@ function expireCustomerSession() {
   $("register-account").hidden = true;
   $("sign-out").hidden = true;
   $("billing-subscribe").hidden = true;
+  $("billing-verify").hidden = true;
   $("billing-manage").hidden = true;
   $("account-status").textContent = "Your sign-in has expired or been revoked. Sign in again.";
 }
@@ -1103,6 +1104,7 @@ async function showAccountState(token) {
   $("sign-out").hidden = false;
   $("register-account").hidden = status.registered || !status.registration_enabled;
   $("billing-subscribe").hidden = !status.registered || status.subscription_status === "active";
+  $("billing-verify").hidden = !status.registered || status.subscription_status === "active";
   $("billing-manage").hidden = !status.registered || status.subscription_status !== "active";
   if (!status.registered) {
     $("account-status").textContent = "Sign-in verified. Registration is required before configuring a tenant. Registering does not activate a paid subscription.";
@@ -2224,3 +2226,37 @@ $("billing-continue").addEventListener("click", () =>
   openBillingSession("/v1/billing/checkout", "checkout_url", "billing-continue"));
 $("billing-manage").addEventListener("click", () =>
   openBillingSession("/v1/billing/portal", "portal_url", "billing-manage"));
+$("billing-verify").addEventListener("click", async () => {
+  const token = sessionStorage.getItem("guardoath-session");
+  if (!token) { expireCustomerSession(); return; }
+  const button = $("billing-verify");
+  if (button.disabled) return;
+  button.disabled = true;
+  $("account-status").textContent = "Checking the current subscription directly with Stripe…";
+  try {
+    const response = await send("/v1/billing/reconcile", {
+      method: "POST", cache: "no-store",
+      headers: await requestHeaders(SESSION + token, "{}"), body: "{}"
+    });
+    if (sessionStorage.getItem("guardoath-session") !== token) return;
+    if (response.status === 401) { expireCustomerSession(); return; }
+    if (!response.ok) {
+      $("account-status").textContent = response.status === 409
+        ? "A Stripe billing account is not yet associated with this tenant. Choose Subscribe."
+        : "Subscription could not be verified. No paid access was granted; retry after confirming payment.";
+      return;
+    }
+    const result = await response.json();
+    if (result?.subscription_status !== "active" || result?.can_validate !== true) {
+      await showAccountState(token);
+      $("account-status").textContent = "The provider has not confirmed an active subscription. Paid access is disabled.";
+      return;
+    }
+    // A fresh, server-reconciled account status decides the UI. The browser's
+    // successful response is never itself an entitlement authority.
+    await showAccountState(token);
+  } catch (_) {
+    if (sessionStorage.getItem("guardoath-session") === token)
+      $("account-status").textContent = "Subscription verification unavailable. Paid access remains unchanged.";
+  } finally { button.disabled = false; }
+});
