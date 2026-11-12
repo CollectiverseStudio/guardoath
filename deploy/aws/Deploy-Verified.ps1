@@ -30,7 +30,7 @@ function Assert-Run([object[]]$Runs, [string]$Name, [string]$Sha) {
     if (-not $matches.Count) { throw "No exact-SHA GitHub Actions run for $Name at $Sha. Dispatch the workflow and recheck." }
     $latest = $matches | Sort-Object created_at -Descending | Select-Object -First 1
     if ($latest.status -ne "completed" -or $latest.conclusion -ne "success") {
-        throw "$Name not green for $Sha: status=$($latest.status) conclusion=$($latest.conclusion) run=$($latest.html_url)"
+        throw "$Name not green for $($Sha): status=$($latest.status) conclusion=$($latest.conclusion) run=$($latest.html_url)"
     }
     Write-Host "$Name passed at $Sha ($($latest.html_url))"
 }
