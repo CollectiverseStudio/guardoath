@@ -2033,7 +2033,7 @@ function render(stage, result) {
   }
   function checkerRow(check) { const row = document.createElement("div"); row.className = "checker";
     const heading = document.createElement("div"), name = document.createElement("span"), status = document.createElement("span");
-    name.textContent = check.checker_id + (Number.isInteger(check.attachment_index)
+    name.textContent = (checkNames[check.checker_id] || check.checker_id) + " (" + check.checker_id + ")" + (Number.isInteger(check.attachment_index)
       ? " · file " + (check.attachment_index + 1) : ""); status.className = "pill" + (check.simulated ? " warn" : check.status === "passed" ? " good" : check.status === "flagged" ? " bad" : " warn");
     status.textContent = (check.simulated ? "SIMULATED · " : "") + check.status; heading.append(name, status); row.append(heading);
     const needs = check.status === "skipped" ? formatNeeds[check.checker_id] : null;
@@ -2046,6 +2046,8 @@ function render(stage, result) {
       // text only; never put submitted content, private JSON paths or values
       // into the DOM or into a diagnostic URL.
       const ruleId = document.createElement("code"); ruleId.className = "finding-rule-id";
+      const knownRule = ruleIndex[finding.rule_id];
+      if (knownRule?.title) { const ruleName = document.createElement("strong"); ruleName.className = "finding-rule-name"; ruleName.textContent = knownRule.title + " · "; detail.append(ruleName); }
       ruleId.textContent = finding.rule_id; detail.append(ruleId);
       const description = document.createElement("p"); description.textContent = finding.explanation; detail.append(description);
       if (application?.tenant && ownChecksSelected()) {
