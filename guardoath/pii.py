@@ -376,6 +376,12 @@ def build_pii_checker():
             # an impossible-match skip. All other patterns still run normally.
             digit_count = sum(character.isdigit() for character in text)
             for recognizer, pattern, required_digits in patterns:
+                # A tenant's stage-specific Off rule already suppresses this
+                # recognizer's finding. Do not spend the bounded 500-ms scan
+                # validating candidates that can never become findings. Keep
+                # every enabled core detector and copied-pattern pass intact.
+                if recognizer.supported_entities[0] in off:
+                    continue
                 if digit_count < required_digits:
                     continue
                 remaining = check_deadline()
