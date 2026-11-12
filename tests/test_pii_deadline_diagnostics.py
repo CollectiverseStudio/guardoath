@@ -218,3 +218,57 @@ def test_worker_deadline_after_final_detector_redaction_or_json_fails_closed(
     assert result.recommended_action == result.effective_action == Action.BLOCK
     assert result.redaction.content is None
     assert private not in result.model_dump_json()
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_wide_json_scalar_array_aborts_before_traversal_after_worker_deadline(
+    monkeypatch, stage,
+):
+    """No recognizer fires for boolean/null/float JSON leaves, but the PII
+    worker must still stop traversing when its own clock budget is exhausted.
+
+    The clock expires after item 80; the 64-node cadence must abort long before
+    all 4096 values are copied. This simulates scheduling/CPU delay without
+    sleeping, increasing the 500-ms limit, or mocking away the real Engine.
+    """
+    pytest.importorskip("tldextract")
+    pytest.importorskip("phonenumbers")
+    from guardoath.checkers import default_checkers
+    from guardoath.engine import Engine
+
+    traversed = {"items": 0}
+
+    class CountedScalars(list):
+        def __iter__(self):
+            for value in super().__iter__():
+                traversed["items"] += 1
+                yield value
+
+    # Synthetic parse result exercises real JSON traversal while making early
+    # cancellation observable. All values are non-string, non-PII scalars.
+    monkeypatch.setattr(
+        pii, "parse_json",
+        lambda _content: CountedScalars([True, False, None, 1.25] * 1024),
+    )
+    start = pii.monotonic()
+    monkeypatch.setattr(
+        pii, "monotonic",
+        lambda: start + (0.501 if traversed["items"] >= 80 else 0.0),
+    )
+    policy = Policy(
+        application_id="synthetic", version="v1", timeout_ms=500,
+        mode="enforce", failure_action="block",
+        rules=(Rule(checker_id="pii", on_finding=Action.REDACT),),
+    )
+    engine = Engine([policy], default_checkers(enable_pii=True))
+    result = asyncio.run(engine.check(CheckRequest(
+        application_id="synthetic", policy_version="v1",
+        content="[true,false,null,1.25]", content_format="json",
+    ), stage))
+
+    assert 80 <= traversed["items"] < 256, traversed["items"]
+    checker = next(item for item in result.checker_results if item.checker_id == "pii")
+    assert (checker.status, checker.error_code) == ("error", "pii_scan_deadline")
+    assert result.evaluation_status == "incomplete"
+    assert result.recommended_action == result.effective_action == Action.BLOCK
+    assert result.redaction.content is None
+    assert result.redaction.status == "withheld"
