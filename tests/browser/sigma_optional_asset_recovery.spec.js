@@ -20,7 +20,8 @@ test("demo API key and tenant checks survive an unavailable optional Sigma scrip
     return (await response.json()).tenant;
   };
   const before = await current();
-  expect(await page.evaluate(() => typeof window.sigmaTenant)).toBe("undefined");
+  try {
+    expect(await page.evaluate(() => typeof window.sigmaTenant)).toBe("undefined");
   // Saving an ordinary check must not synthesize an empty Sigma policy or
   // discard previously stored Sigma event actions.
   const chosen = before.input_checks.schema === "block" ? "flag" : "block";
@@ -31,8 +32,9 @@ test("demo API key and tenant checks survive an unavailable optional Sigma scrip
   expect(after.input_checks.schema).toBe(chosen);
   expect(after.sigma_rule_actions).toEqual(before.sigma_rule_actions);
 
-  // Restore the shared demo tenant even if this browser check is interrupted.
-  // This test is intentionally free of paid account or production credentials.
-  const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
-  expect(reset.status()).toBe(200);
+  } finally {
+    // Restore the shared demo tenant even when an assertion fails.
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(reset.status()).toBe(200);
+  }
 });
