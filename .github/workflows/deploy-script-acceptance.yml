@@ -1,0 +1,52 @@
+name: Deploy Script Acceptance
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "deploy/aws/Deploy-Verified.ps1"
+      - ".github/workflows/deploy-script-acceptance.yml"
+permissions:
+  contents: read
+jobs:
+  powershell-parse-and-guardrails:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse the real deployment script without AWS access
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path 'deploy/aws/Deploy-Verified.ps1').Path,
+            [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            throw "Deployment script PowerShell parsing failed"
+          }
+          Write-Host "GuardOath deployment script PowerShell syntax valid"
+      - name: Verify release gates and rollback remain present
+        shell: pwsh
+        run: |
+          $script = Get-Content 'deploy/aws/Deploy-Verified.ps1' -Raw
+          foreach ($required in @(
+            'Field Comparisons Evidence',
+            'Trusted Reference Acceptance',
+            'PII Reliability Gate',
+            'Push on main',
+            'issue/30',
+            'get-caller-identity',
+            'RevisionId',
+            'lambda-before-',
+            'function-updated',
+            'verify_live_dashboard',
+            'If ($Uploaded',
+            'if (-not $Deploy)'
+          )) {
+            if (-not $script.Contains($required)) {
+              throw "Missing required deployment gate or rollback contract: $required"
+            }
+          }
+          Write-Host "GuardOath safety gate and rollback contract present"
