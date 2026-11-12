@@ -181,3 +181,98 @@ test("guided refund example stays a draft until authenticated Save and blocks in
   }
 });
 
+
+
+test("ordinary bulk guided number/date definitions require stage and Save before real both-stage enforcement", async ({page, request}) => {
+  async function connect() {
+    await page.goto("/dashboard");
+    await page.locator("#comparison-configuration").evaluate(node => { node.open = true; });
+    await page.locator("#demo-user").selectOption("demo2");
+    await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+    await expect(page.locator("#connection-status")).toContainText("Connected to demo2");
+  }
+  await connect();
+  const headers = {Authorization: "Bearer " + await page.locator("#demo-key-value").inputValue()};
+  async function current() {
+    const response = await request.get("/v1/applications/current", {headers});
+    expect(response.status()).toBe(200);
+    return (await response.json()).tenant;
+  }
+  try {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(reset.status()).toBe(200);
+    await connect();
+    const baseline = await current();
+    await page.locator("#comparison-bulk-panel summary").click();
+    await page.locator("#comparison-bulk-example").click();
+    const jsonBox = page.locator("#comparison-bulk-json");
+    const examples = JSON.parse(await jsonBox.inputValue());
+    expect(examples).toEqual([
+      {rule_id: "refund_not_over_paid", left: "/invoice/refund", right: "/invoice/paid",
+       operator: "le", value_type: "number", stages: ["input", "output"]},
+      {rule_id: "delivery_not_before_order", left: "/shipment/delivery_date",
+       right: "/shipment/order_date", operator: "ge", value_type: "date",
+       stages: ["input", "output"]}
+    ]);
+    await expect(page.locator("#comparison-bulk-confirm")).not.toBeChecked();
+    await expect(page.locator("#comparison-bulk-status")).toContainText("not staged or saved");
+    expect((await current()).comparisons).toEqual(baseline.comparisons);
+    expect((await current()).revision).toBe(baseline.revision);
+
+    await page.locator("#comparison-bulk-import").click();
+    await expect(page.locator("#comparison-bulk-status")).toContainText("Confirm replacement");
+    await expect(page.locator("#comparison-draft-summary")).toContainText("No pending changes");
+    await page.locator("#comparison-bulk-confirm").check();
+    await page.locator("#comparison-bulk-import").click();
+    await expect(page.locator("#comparison-bulk-status")).toContainText("2 comparison definitions staged");
+    await expect(page.locator("#comparison-draft-summary")).toContainText("2 added");
+    expect((await current()).comparisons).toEqual(baseline.comparisons);
+
+    // Bad JSON must never replace a correctly staged draft or persist changes.
+    await jsonBox.fill("{");
+    await page.locator("#comparison-bulk-confirm").check();
+    await page.locator("#comparison-bulk-import").click();
+    await expect(page.locator("#comparison-bulk-status")).toContainText("Invalid JSON");
+    await expect(page.locator("#comparison-draft-summary")).toContainText("2 added");
+    expect((await current()).revision).toBe(baseline.revision);
+
+    await page.locator("#tenant-check-input-cross_field").selectOption("block");
+    await page.locator("#tenant-check-output-cross_field").selectOption("block");
+    await page.getByRole("button", {name: "Save checks", exact: true}).click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved.");
+    const saved = await current();
+    expect(saved.revision).toBeGreaterThan(baseline.revision);
+    for (const expected of examples) {
+      expect(saved.comparisons.find(rule => rule.rule_id === expected.rule_id)).toEqual(expected);
+    }
+    const targets = ["business.refund_not_over_paid", "business.delivery_not_before_order"];
+    for (const stage of ["input", "output"]) {
+      for (const violating of [true, false]) {
+        const content = JSON.stringify({
+          invoice: {refund: violating ? 75 : 25, paid: 50},
+          shipment: {delivery_date: violating ? "2026-11-01" : "2026-11-03",
+                     order_date: "2026-11-02"}
+        });
+        const response = await request.post("/v1/checks/" + stage, {headers, data: {
+          application_id: "demo2", content_format: "json", content
+        }});
+        expect(response.status()).toBe(200);
+        const outcome = await response.json();
+        expect(outcome.evaluation_status).toBe("complete");
+        const findings = outcome.findings.map(f => f.rule_id);
+        for (const rule of targets) {
+          expect(findings.includes(rule), stage + " " + rule).toBe(violating);
+        }
+        if (violating) expect(outcome.effective_action).toBe("block");
+        // A benign payload may still trigger an unrelated enabled tenant check.
+      }
+    }
+    // Filling the example again cannot mutate saved definitions or stage silently.
+    await page.locator("#comparison-bulk-example").click();
+    await expect(page.locator("#comparison-bulk-confirm")).not.toBeChecked();
+    expect((await current()).comparisons).toEqual(saved.comparisons);
+  } finally {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(reset.status()).toBe(200);
+  }
+});
