@@ -3,6 +3,7 @@
 All inputs here are synthetic measurement metadata. No external providers/AWS.
 """
 import json
+from pathlib import Path
 import sys
 
 import pytest
@@ -85,3 +86,41 @@ def test_single_component_worker_cli_succeeds_only_with_real_measurement(tmp_pat
     assert json.loads(output.read_text())["component"] == "checker"
     monkeypatch.setattr(scale, "measure", lambda component, size, samples: measured(size, component, schema_ok=False))
     assert scale.main() == 1
+
+
+def test_field_comparison_evidence_requires_real_customer_browser_gate():
+    """Strict portfolio green must not substitute for authenticated UI acceptance."""
+    workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" /
+                "field-comparison-evidence.yml").read_text(encoding="utf-8")
+    assert "workflow_dispatch:" in workflow
+    assert 'branches: [main]' in workflow
+    assert '      - "guardoath/static/comparison_editor.js"' in workflow
+    for path in (
+        "guardoath/static/arithmetic_editor.js",
+        "guardoath/static/identity_editor.js",
+        "guardoath/static/conversion_editor.js",
+        "tests/browser/*editor.spec.js",
+        "tests/browser/protected_reference_editors.spec.js",
+        "tests/browser/field_comparison_mixed_family_scale.spec.js",
+        "tests/browser/field_comparisons_500.spec.js",
+    ):
+        assert '      - "' + path + '"' in workflow, path
+    assert "strict-portfolio-and-scale:" in workflow
+    browser = workflow.split("  customer-browser-acceptance:", 1)
+    assert len(browser) == 2
+    job = browser[1]
+    assert "runs-on: ubuntu-latest" in job
+    assert 'PLAYWRIGHT_CHANNEL: chrome' in job
+    assert "run: npm ci" in job
+    assert "npx playwright test" in job
+    for family in (
+        "tests/browser/field_comparison",
+        "tests/browser/field_comparisons_500",
+        "tests/browser/fc_comparison",
+        "tests/browser/arithmetic",
+        "tests/browser/identity",
+        "tests/browser/conversion",
+        "tests/browser/trusted_reference",
+        "tests/browser/protected_reference_editors",
+    ):
+        assert family in job, family
