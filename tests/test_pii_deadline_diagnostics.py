@@ -143,14 +143,14 @@ def test_inconsistent_failure_metadata_is_rejected():
 
 
 @pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
-@pytest.mark.parametrize("last_operation", ["overlap_resolution", "redaction_assembly"])
-def test_worker_deadline_after_final_detector_or_redaction_fails_closed(
+@pytest.mark.parametrize("last_operation", ["overlap_resolution", "redaction_assembly", "json_serialization"])
+def test_worker_deadline_after_final_detector_redaction_or_json_fails_closed(
     monkeypatch, stage, last_operation,
 ):
-    """Late terminal detector/assembly work cannot become a clean or releasable verdict.
+    """Late terminal detection, redaction, or JSON work cannot be released.
 
-    Simulate a deadline crossing *after* the final recognizer/overlap resolution
-    or after the redacted output has been assembled, with the worker still
+    Simulate a deadline crossing *after* the final recognizer/overlap resolution,
+    redacted output assembly, or JSON serialization, with the worker still
     executing. No sleeps or environment-specific timing tolerances are used.
     The Engine must receive a primary pii_scan_deadline, not merely a later
     redaction-recheck failure or a false successful scan.
@@ -183,7 +183,7 @@ def test_worker_deadline_after_final_detector_or_redaction_fails_closed(
             return spans
 
         monkeypatch.setattr(pii, "resolve_overlaps", finish_after_overlaps)
-    else:
+    elif last_operation == "redaction_assembly":
         original = pii._assemble_redacted_text
 
         def finish_after_redaction(text, spans):
@@ -192,11 +192,23 @@ def test_worker_deadline_after_final_detector_or_redaction_fails_closed(
             return result
 
         monkeypatch.setattr(pii, "_assemble_redacted_text", finish_after_redaction)
+    else:
+        # Replace only pii.json, never the process-wide JSON module.
+        original_json = pii.json
+
+        def finish_after_json(*args, **kwargs):
+            result = original_json.dumps(*args, **kwargs)
+            expired["value"] = True
+            return result
+
+        monkeypatch.setattr(pii, "json", SimpleNamespace(dumps=finish_after_json))
 
     private = "PRIVATE.jane@example.com"
+    content = json.dumps({"email": private}) if last_operation == "json_serialization" else private
     result = asyncio.run(engine.check(CheckRequest(
         application_id="synthetic", policy_version="v1",
-        content=private, content_format="text",
+        content=content,
+        content_format="json" if last_operation == "json_serialization" else "text",
     ), stage))
 
     assert expired["value"] is True
