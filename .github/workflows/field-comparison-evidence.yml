@@ -32,6 +32,11 @@ on:
       - "guardoath/hosted.py"
       - "guardoath/static/dashboard.js"
       - "guardoath/static/dashboard.html"
+      # Stage-focused tenant settings also control FC Input/Output authority.
+      - "guardoath/static/tenant_stage_tabs.js"
+      - "guardoath/static/dashboard.css"
+      - "tests/browser/tenant_stage_tabs.spec.js"
+      - "tests/test_tenant_stage_tabs.py"
       - "guardoath/static/comparison_editor.js"
       - "guardoath/static/arithmetic_editor.js"
       - "guardoath/static/identity_editor.js"
@@ -176,6 +181,7 @@ jobs:
           tests/browser/conversion
           tests/browser/trusted_reference
           tests/browser/protected_reference_editors
+          tests/browser/tenant_stage_tabs
       - name: Require real browser execution report
         if: always()
         shell: bash
