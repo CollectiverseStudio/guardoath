@@ -241,6 +241,105 @@
       taxHelp, taxSample, discountHelp, discountSample,
       manufacturingHelp, manufacturingSample);
     form.append(apply, cancel, message); host.append(filterBar, filterStatus, preview, list, form);
+    // The same revisioned tenant Save checks path supports hundreds of rules.
+    // Bulk import updates ONLY this unsaved arithmetic draft, never the server
+    // or another comparison family; invalid input cannot partially replace it.
+    const bulk = node("details"); bulk.id = "arithmetic-bulk-panel";
+    bulk.append(node("summary", "Bulk JSON import / export arithmetic rules"));
+    bulk.append(node("p", "Paste a JSON array of arithmetic rule definitions (rule_id, kind, fields, stages). Import replaces the ENTIRE unsaved arithmetic draft, including rules hidden by filters; it does not save, change actions, or access protected reference values. Review the change summary and select Save checks."));
+    const bulkLabel = node("label", "Arithmetic definitions as JSON array");
+    bulkLabel.htmlFor = "arithmetic-bulk-json";
+    const bulkJson = node("textarea"); bulkJson.id = "arithmetic-bulk-json";
+    bulkJson.rows = 7; bulkJson.maxLength = 512000;
+    bulkJson.setAttribute("spellcheck", "false");
+    const exportDraft = node("button", "Load arithmetic draft into JSON box");
+    exportDraft.type = "button"; exportDraft.id = "arithmetic-bulk-export";
+    const acknowledgeLabel = node("label");
+    const acknowledge = node("input"); acknowledge.type = "checkbox";
+    acknowledge.id = "arithmetic-bulk-confirm";
+    acknowledgeLabel.append(acknowledge, document.createTextNode(
+      " I understand this replaces all unsaved arithmetic rules, not only filtered rules; Save checks is still required."));
+    const importDraft = node("button", "Stage arithmetic JSON replacement");
+    importDraft.type = "button"; importDraft.id = "arithmetic-bulk-import";
+    const bulkStatus = node("p"); bulkStatus.id = "arithmetic-bulk-status";
+    bulkStatus.setAttribute("role", "status"); bulkStatus.setAttribute("aria-live", "polite");
+    bulk.append(bulkLabel, bulkJson, exportDraft, acknowledgeLabel, importDraft, bulkStatus);
+    host.insertBefore(bulk, form);
+    exportDraft.addEventListener("click", () => {
+      bulkJson.value = JSON.stringify(draft, null, 2);
+      acknowledge.checked = false;
+      bulkStatus.textContent = draft.length + " arithmetic rules loaded into JSON box; not saved.";
+    });
+    function importRules(raw) {
+      if (!Array.isArray(raw)) throw Error("Use a JSON array of arithmetic rule objects.");
+      const ids = new Set();
+      const savedIds = new Set(original.map(rule => rule.rule_id));
+      const reserved = new Set((tenant.record_rules || [])
+        .filter(rule => rule && typeof rule.rule_id === "string")
+        .map(rule => rule.rule_id));
+      return raw.map((rule, index) => {
+        const fail = reason => { throw Error("Arithmetic rule " + (index + 1) + ": " + reason); };
+        if (!rule || typeof rule !== "object" || Array.isArray(rule))
+          return fail("expected an object.");
+        if (Object.keys(rule).some(key => !["rule_id", "kind", "fields", "stages"].includes(key)))
+          return fail("unknown rule field.");
+        const id = rule.rule_id;
+        if (typeof id !== "string" || !/^[a-z][a-z0-9_]{0,79}$/.test(id))
+          return fail("invalid rule_id (lowercase, up to 80 characters).");
+        if (ids.has(id) || (!savedIds.has(id) && reserved.has("business." + id)) ||
+            (window.comparisonEditor &&
+             window.comparisonEditor.otherFamilyDraftHasId(id, "advanced_arithmetic")))
+          return fail("duplicate or reserved rule_id, including other family drafts.");
+        if (typeof rule.kind !== "string" || !Object.prototype.hasOwnProperty.call(kinds, rule.kind))
+          return fail("unknown arithmetic rule kind.");
+        if (!rule.fields || typeof rule.fields !== "object" || Array.isArray(rule.fields) ||
+            Object.keys(rule.fields).length !== kinds[rule.kind].length ||
+            kinds[rule.kind].some(key => !Object.prototype.hasOwnProperty.call(rule.fields, key)))
+          return fail("fields must match the selected arithmetic kind exactly.");
+        const fields = {}, decoded = [];
+        for (const key of kinds[rule.kind]) {
+          const value = rule.fields[key];
+          if (typeof value !== "string" || value.length > 200 || !value.startsWith("/") ||
+              /~(?![01])/.test(value))
+            return fail("fields require absolute JSON pointers of at most 200 characters.");
+          const path = value.slice(1).split("/").map(part =>
+            part.replaceAll("~1", "/").replaceAll("~0", "~"));
+          if (path.some(part => !part) || decoded.some(other =>
+              other.every((part, i) => part === path[i]) ||
+              path.every((part, i) => part === other[i])))
+            return fail("field pointers must be nonempty, distinct and nonoverlapping.");
+          decoded.push(path); fields[key] = value;
+        }
+        const stages = rule.stages === undefined ? ["input", "output"] : rule.stages;
+        if (!Array.isArray(stages) || !stages.length || stages.length > 2 ||
+            new Set(stages).size !== stages.length ||
+            stages.some(stage => stage !== "input" && stage !== "output"))
+          return fail("stages must contain Input, Output, or both, without duplicates.");
+        ids.add(id);
+        return {rule_id: id, kind: rule.kind, fields, stages};
+      });
+    }
+    importDraft.addEventListener("click", () => {
+      if (!acknowledge.checked) {
+        bulkStatus.textContent = "Confirm replacement of the entire arithmetic draft first.";
+        acknowledge.focus(); return;
+      }
+      try {
+        if (bulkJson.value.length > 512000)
+          throw Error("JSON exceeds the 512,000-character editor limit.");
+        const imported = importRules(JSON.parse(bulkJson.value));
+        draft = imported;
+        clear(); draw(); changed();
+        acknowledge.checked = false;
+        bulkStatus.textContent = imported.length +
+          " arithmetic rules staged; review Input/Output and pending changes, then select Save checks. No server change yet.";
+      } catch (error) {
+        // Do not echo attacker-provided JSON or customer field paths in errors.
+        bulkStatus.textContent = error instanceof SyntaxError
+          ? "Invalid JSON; provide an array of arithmetic rule objects."
+          : error.message;
+      }
+    });
     searchInput.addEventListener("input", draw);
     stageFilter.addEventListener("change", draw);
     let editing = null;
