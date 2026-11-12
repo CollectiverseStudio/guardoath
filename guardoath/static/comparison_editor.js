@@ -297,6 +297,12 @@
     bulkStatus.setAttribute("role", "status"); bulkStatus.setAttribute("aria-live", "polite");
     bulk.append(bulkLabel, bulkJson, fillExample, exportDraft, acknowledgeLabel, importDraft, bulkStatus);
     host.insertBefore(bulk, form);
+    // Whole-draft replacement consent applies to the exact reviewed JSON,
+    // not later edits in a 500-rule import. Do not affect saved tenant state.
+    bulkJson.addEventListener("input", () => {
+      acknowledge.checked = false;
+      bulkStatus.textContent = "JSON changed. Review and confirm the entire draft replacement again before staging; the tenant is unchanged.";
+    });
     exportDraft.addEventListener("click", () => {
       bulkJson.value = JSON.stringify(draft, null, 2);
       acknowledge.checked = false;

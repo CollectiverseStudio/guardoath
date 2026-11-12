@@ -151,22 +151,32 @@ test("customer can import 500 JSON comparison definitions, save and execute them
     await expect(summary).toContainText(before.comparisons.length + " comparisons configured");
     await confirmation.check();
     await jsonBox.fill(JSON.stringify([rules[0], rules[0]]));
+    await expect(confirmation).not.toBeChecked();
+    await confirmation.check();
     await importButton.click();
     await expect(page.locator("#comparison-bulk-status")).toContainText("duplicate");
     await expect(summary).toContainText(before.comparisons.length + " comparisons configured");
     await jsonBox.fill(JSON.stringify([{...rules[0], stages: ["input", "other"]}]));
+    await expect(confirmation).not.toBeChecked();
+    await confirmation.check();
     await importButton.click();
     await expect(page.locator("#comparison-bulk-status")).toContainText("stages must include");
     await expect(summary).toContainText(before.comparisons.length + " comparisons configured");
-    // UI and authoritative API agree: repeating a valid stage cannot produce
-    // a misleading staged portfolio or bypass the tenant stage contract.
+    // Re-consent for each edited 500-rule draft. Invalid entries must still
+    // reach the actual importer for an atomic rejection, not just a UI lock.
     for (const repeated of [["input", "input"], ["output", "output"]]) {
       await jsonBox.fill(JSON.stringify([{...rules[0], stages: repeated}]));
+      await expect(confirmation).not.toBeChecked();
+      await confirmation.check();
       await importButton.click();
       await expect(page.locator("#comparison-bulk-status")).toContainText("without duplicates");
       await expect(summary).toContainText(before.comparisons.length + " comparisons configured");
     }
     await jsonBox.fill(JSON.stringify(rules));
+    await expect(confirmation).not.toBeChecked();
+    await importButton.click();
+    await expect(page.locator("#comparison-bulk-status")).toContainText("Confirm replacement");
+    await confirmation.check();
     await importButton.click();
     await expect(page.locator("#comparison-bulk-status")).toContainText(
       "500 comparison definitions staged");
