@@ -16,6 +16,9 @@ on:
       # Also gate customer workflows named field_comparison_* and
       # advanced_field_comparison_* (real tenant/browser coverage).
       - "tests/browser/*field_comparison*.spec.js"
+      # Guided arithmetic, identity and conversion tenant customer journeys
+      # are mandatory FC regression sources even if only a browser spec changes.
+      - "tests/browser/*guided_example.spec.js"
       - "tests/test_*field_comparison*.py"
       - "guardoath/engine.py"
       - "guardoath/tenant_record.py"
