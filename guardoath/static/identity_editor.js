@@ -217,6 +217,112 @@
     });
     form.append(sampleHelp, sample, serialHelp, serialSample, apply, cancel, message);
     host.append(filterBar, filterStatus, preview, list, form);
+    // Bulk authoring edits ONLY public identity rules. Trusted quarantine/scope
+    // references are host-owned and never included in the JSON draft.
+    const bulk = el("details"); bulk.id = "identity-bulk-panel";
+    bulk.append(el("summary", "Bulk JSON import / export public identity rules"));
+    bulk.append(el("p", "Import at most 500 public order-ID and serial-uniqueness definitions as a JSON array (rule_id, kind, fields, stages). An empty trusted_values array is allowed for compatibility; nonempty values and protected reference kinds are refused. Import replaces ALL unsaved editable identity rows, including filtered ones. Save checks is required to persist."));
+    const bulkLabel = el("label", "Editable public identity definitions as JSON array");
+    bulkLabel.htmlFor = "identity-bulk-json";
+    const bulkJson = el("textarea"); bulkJson.id = "identity-bulk-json";
+    bulkJson.rows = 7; bulkJson.maxLength = 512000;
+    bulkJson.setAttribute("spellcheck", "false");
+    const exportDraft = el("button", "Load editable identity draft into JSON box");
+    exportDraft.id = "identity-bulk-export"; exportDraft.type = "button";
+    const acknowledgeLabel = el("label");
+    const acknowledge = el("input"); acknowledge.type = "checkbox";
+    acknowledge.id = "identity-bulk-confirm";
+    acknowledgeLabel.append(acknowledge, document.createTextNode(
+      " I understand this replaces the entire unsaved editable identity draft, not only filtered rules. Protected reference-backed rules are unchanged. Save checks is still required."));
+    const importDraft = el("button", "Stage identity JSON replacement");
+    importDraft.id = "identity-bulk-import"; importDraft.type = "button";
+    const bulkStatus = el("p"); bulkStatus.id = "identity-bulk-status";
+    bulkStatus.setAttribute("role", "status"); bulkStatus.setAttribute("aria-live", "polite");
+    bulk.append(bulkLabel, bulkJson, exportDraft, acknowledgeLabel, importDraft, bulkStatus);
+    host.insertBefore(bulk, form);
+    exportDraft.addEventListener("click", () => {
+      bulkJson.value = JSON.stringify(draft, null, 2);
+      acknowledge.checked = false;
+      bulkStatus.textContent = draft.length + " editable identity rules exported; protected references excluded. Not saved.";
+    });
+    function importRules(raw) {
+      if (!Array.isArray(raw)) throw Error("Use a JSON array of public identity rules.");
+      if (raw.length > 500) throw Error("At most 500 identity rules may be staged.");
+      const ids = new Set();
+      const savedIds = new Set(original.map(rule => rule.rule_id));
+      const reserved = new Set((tenant.record_rules || [])
+        .filter(rule => rule && typeof rule.rule_id === "string")
+        .map(rule => rule.rule_id));
+      const decodedPath = value => value.slice(1).split("/").map(part =>
+        part.replaceAll("~1", "/").replaceAll("~0", "~"));
+      return raw.map((rule, index) => {
+        const fail = reason => { throw Error("Identity rule " + (index + 1) + ": " + reason); };
+        if (!rule || typeof rule !== "object" || Array.isArray(rule))
+          return fail("expected an object.");
+        if (Object.keys(rule).some(key => ![
+          "rule_id", "kind", "fields", "stages", "trusted_values"
+        ].includes(key))) return fail("unknown or protected rule field.");
+        const id = rule.rule_id;
+        if (typeof id !== "string" || !/^[a-z][a-z0-9_]{0,79}$/.test(id))
+          return fail("invalid rule_id (lowercase, up to 80 characters).");
+        if (ids.has(id) || (!savedIds.has(id) && reserved.has("business." + id)) ||
+            protectedRules.some(item => item.rule_id === id || item.rule_id === "business." + id) ||
+            (window.comparisonEditor &&
+              window.comparisonEditor.otherFamilyDraftHasId(id, "advanced_identity")))
+          return fail("duplicate or reserved rule_id, including protected references or other family drafts.");
+        if (!Object.prototype.hasOwnProperty.call(TYPES, rule.kind))
+          return fail("unknown or protected identity rule kind.");
+        if (Object.prototype.hasOwnProperty.call(rule, "trusted_values") &&
+            (!Array.isArray(rule.trusted_values) || rule.trusted_values.length))
+          return fail("trusted_values must be an empty array; private reference data cannot be imported.");
+        if (!rule.fields || typeof rule.fields !== "object" || Array.isArray(rule.fields) ||
+            Object.keys(rule.fields).length !== TYPES[rule.kind].length ||
+            TYPES[rule.kind].some(key => !Object.prototype.hasOwnProperty.call(rule.fields, key)))
+          return fail("fields must exactly match the public identity rule kind.");
+        const fields = {}, seen = [];
+        for (const key of TYPES[rule.kind]) {
+          const pointer = rule.fields[key];
+          if (typeof pointer !== "string" || pointer.length > 200 ||
+              !pointer.startsWith("/") || /~(?![01])/.test(pointer))
+            return fail("fields require valid absolute JSON pointers of at most 200 characters.");
+          const segments = decodedPath(pointer);
+          if (segments.some(part => !part) ||
+              seen.some(previous => previous.every((part, i) => part === segments[i]) ||
+                segments.every((part, i) => part === previous[i])))
+            return fail("field pointers must have nonempty segments and be distinct and nonoverlapping.");
+          seen.push(segments);
+          fields[key] = pointer;
+        }
+        const stages = rule.stages;
+        if (!Array.isArray(stages) || !stages.length || stages.length > 2 ||
+            new Set(stages).size !== stages.length ||
+            stages.some(stage => stage !== "input" && stage !== "output"))
+          return fail("stages must contain Input, Output or both without duplicates.");
+        ids.add(id);
+        return {rule_id:id, kind:rule.kind, fields, trusted_values:[], stages};
+      });
+    }
+    importDraft.addEventListener("click", () => {
+      if (!acknowledge.checked) {
+        bulkStatus.textContent = "Confirm replacement of the entire editable identity draft first.";
+        acknowledge.focus(); return;
+      }
+      try {
+        if (bulkJson.value.length > 512000)
+          throw Error("JSON exceeds the 512,000-character editor limit.");
+        const imported = importRules(JSON.parse(bulkJson.value));
+        draft = imported;
+        clear(); draw(); changed();
+        acknowledge.checked = false;
+        bulkStatus.textContent = imported.length +
+          " public identity rules staged. Protected reference-backed rules unchanged. Review Input/Output and select Save checks; no server change yet.";
+      } catch (error) {
+        // No customer JSON, pointers or private values in the failure message.
+        bulkStatus.textContent = error instanceof SyntaxError
+          ? "Invalid JSON; provide an array of public identity rule objects."
+          : error.message;
+      }
+    });
     searchInput.addEventListener("input", draw);
     stageFilter.addEventListener("change", draw);
     let editing = null;
