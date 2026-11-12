@@ -266,6 +266,22 @@ def test_unavailable_health_never_claims_backend_sha(tmp_path):
     assert any(issue.startswith("backend_health_unavailable:") for issue in report["issues"])
 
 
+
+
+def test_expected_full_html_matches_the_actual_local_dashboard_response():
+    """Keep exact-source attestation aligned with FastAPI's shipped versioned_page."""
+    from fastapi.testclient import TestClient
+    from guardoath.app import create_app
+    from tools.verify_live_dashboard import ASSETS, _expected_dashboard_html
+
+    client = TestClient(create_app(credentials={"test-key": "demo"}))
+    response = client.get("/dashboard")
+    assert response.status_code == 200
+    assert response.text == _expected_dashboard_html(ASSETS)
+    assert 'id="tenant-tab-input"' in response.text
+    assert 'id="tenant-tab-output"' in response.text
+    assert 'id="tenant-tab-both"' in response.text
+
 def test_verifier_inventory_covers_every_real_dashboard_script_and_style():
     """New UI modules must be included before a release can be certified."""
     import re
