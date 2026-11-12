@@ -19,8 +19,20 @@ class StripeBinding:
     subscription_id: str
 
     def __post_init__(self):
-        if not self.tenant_id or not self.customer_id.startswith("cus_") or not self.subscription_id.startswith("sub_"):
+        # Even server-owned billing bindings may have come from legacy state.
+        # Reject malformed identifiers here, before they reach URL builders,
+        # tenant record writes, or subscription entitlement decisions.
+        if (not isinstance(self.tenant_id, str)
+                or not 1 <= len(self.tenant_id) <= 40
+                or any(not (c.isascii() and (c.isalnum() or c in "-_"))
+                       for c in self.tenant_id)):
             raise SubscriptionReconciliationError("Invalid server-owned billing binding")
+        for value, prefix in ((self.customer_id, "cus_"), (self.subscription_id, "sub_")):
+            if (not isinstance(value, str) or not value.startswith(prefix)
+                    or not 1 <= len(value[len(prefix):]) <= 100 - len(prefix)
+                    or not all(c.isascii() and (c.isalnum() or c == "_")
+                               for c in value[len(prefix):])):
+                raise SubscriptionReconciliationError("Invalid server-owned billing binding")
 
 
 @dataclass(frozen=True)
