@@ -68,3 +68,55 @@ def test_stale_revision_cannot_overwrite_newer_subscription_status():
             subscription_id="sub_acme", provider_subscription=provider(),
             expected_revision=original.revision)
     assert store.get("acme").subscription_status == "canceled"
+
+
+def test_verified_subscription_binds_id_and_paid_quota_atomically():
+    store = MemoryTenantStore((record(),))
+    initial = store.get("acme")
+    paid = store.apply_verified_subscription(
+        "acme", customer_id="cus_acme", subscription_id="sub_acme",
+        provider_subscription=provider(), expected_revision=initial.revision,
+        plan_monthly_allowance=125)
+    assert paid.subscription_status == "active"
+    assert paid.stripe_subscription_id == "sub_acme"
+    assert paid.monthly_allowance == 125
+    assert paid.overage == "block"
+    assert paid.revision == initial.revision + 1
+    assert store.get("acme").stripe_subscription_id == "sub_acme"
+
+    suspended = store.apply_verified_subscription(
+        "acme", customer_id="cus_acme", subscription_id="sub_acme",
+        provider_subscription=provider("past_due"), expected_revision=paid.revision,
+        plan_monthly_allowance=125)
+    assert suspended.subscription_status == "past_due"
+    assert suspended.stripe_subscription_id == "sub_acme"
+    assert suspended.monthly_allowance == 0
+    assert suspended.overage == "block"
+    assert suspended.revision == paid.revision + 1
+
+
+@pytest.mark.parametrize("quota", [0, -1, True, 1.5, "125", 1_000_000_001])
+def test_invalid_server_plan_allowance_cannot_change_tenant(quota):
+    store = MemoryTenantStore((record(),))
+    current = store.get("acme")
+    with pytest.raises(ValueError):
+        store.apply_verified_subscription(
+            "acme", customer_id="cus_acme", subscription_id="sub_acme",
+            provider_subscription=provider(), expected_revision=current.revision,
+            plan_monthly_allowance=quota)
+    assert store.get("acme") == current
+
+
+def test_existing_subscription_binding_refuses_silent_replacement():
+    store = MemoryTenantStore((record(),))
+    initial = store.get("acme")
+    first = store.apply_verified_subscription(
+        "acme", customer_id="cus_acme", subscription_id="sub_acme",
+        provider_subscription=provider(), expected_revision=initial.revision,
+        plan_monthly_allowance=125)
+    with pytest.raises(ValueError, match="cannot be replaced"):
+        store.apply_verified_subscription(
+            "acme", customer_id="cus_acme", subscription_id="sub_other",
+            provider_subscription=provider(subscription="sub_other"),
+            expected_revision=first.revision, plan_monthly_allowance=125)
+    assert store.get("acme") == first
