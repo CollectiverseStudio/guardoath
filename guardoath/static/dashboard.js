@@ -1959,6 +1959,7 @@ function reviewFindingRule(ruleId, checkerId, stage) {
   if (!["input", "output"].includes(stage)) return false;
   const tenant = application?.tenant;
   if (!tenant || !ownChecksSelected()) return false;
+  $("tenant-panel")?.dispatchEvent(new CustomEvent("guardoath:focus-stage", {detail: {stage}}));
   const search = $("rule-search");
   const defined = ruleIndex[ruleId];
   if (defined && search && $("check-table")) {
