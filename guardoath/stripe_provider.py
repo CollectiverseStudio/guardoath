@@ -146,3 +146,20 @@ def discover_subscription(*, tenant_id: str, customer_id: str, price_id: str,
     if len(matching) != 1:
         raise SubscriptionReconciliationError("No unique matching Stripe subscription")
     return matching[0]
+
+
+def verify_discovered_subscription(*, tenant_id: str, customer_id: str,
+                                   price_id: str, api_key: str, opener=None,
+                                   timeout: float = 5.0) -> EntitlementDecision:
+    """Verify server-owned price/customer discovery with a second direct GET.
+
+    This is read-only and does NOT grant tenant entitlement or set usage quota.
+    A stale list item, swapped status or changed binding fails closed.
+    """
+    binding, listing_snapshot = discover_subscription(
+        tenant_id=tenant_id, customer_id=customer_id, price_id=price_id,
+        api_key=api_key, opener=opener, timeout=timeout)
+    decision = fetch_subscription(binding, api_key, opener=opener, timeout=timeout)
+    if decision.status != reconcile_subscription(binding, listing_snapshot).status:
+        raise SubscriptionReconciliationError("Subscription changed during verification")
+    return decision
