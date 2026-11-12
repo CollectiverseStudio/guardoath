@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from tools.conversation_privacy_release import FIXTURES, REQUIRED, run_conversation_matrix
+from tools.conversation_privacy_release import FIXTURES, REQUIRED, run_conversation_matrix, safe_failure_label
 
 
 def test_conversation_matrix_preserves_all_prior_windows_cases_and_checkers():
@@ -35,3 +35,19 @@ def test_real_shipped_conversation_profile_both_stages_once():
     serialized = json.dumps(result)
     assert "jane@example.com" not in serialized
     assert "synthetic-example!42" not in serialized
+
+
+@pytest.mark.parametrize("checker,status,code,expected", [
+    ("pii", "error", "checker_timeout", "pii:checker_timeout"),
+    ("secrets", "error", "pii_capacity_exceeded", "secrets:pii_capacity_exceeded"),
+    ("pii", "error", "SECRET_SOURCE_PAYLOAD", "pii:other_error"),
+    ("PRIVATE_CHECKER_ID", "error", "SECRET_SOURCE_PAYLOAD", "other_checker:other_error"),
+    ("text_security", "unsupported", "SECRET_SOURCE_PAYLOAD", "text_security:unsupported"),
+    ("encoded_pii", "skipped", None, "encoded_pii:skipped"),
+    ("pii", "error", None, "pii:other_error"),
+])
+def test_privacy_failure_receipts_never_copy_raw_checker_metadata(checker, status, code, expected):
+    label = safe_failure_label(checker, status, code)
+    assert label == expected
+    assert "SECRET_SOURCE_PAYLOAD" not in label
+    assert "PRIVATE_CHECKER_ID" not in label
