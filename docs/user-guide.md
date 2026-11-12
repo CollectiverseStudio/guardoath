@@ -498,6 +498,17 @@ both stages. In Advanced, `pii-extended-v1` focuses on this group;
 also runs the [privacy pattern checks](#privacy-pattern-checks) unless the profile turns
 them off.
 
+**Saved per-stage privacy rule Off:** In the existing tenant Checks dashboard, a
+customer may set one PII entity rule (for example `pii.email_address`) to **Off**
+on Input while retaining that same rule on Output. Core email, card and SSN
+recognizers now skip work only for their explicitly disabled stage-specific
+rule; every still-enabled recognizer and selected copied privacy pattern runs
+normally. Other enabled PII findings remain visible. The shared Engine and
+tenant's saved per-rule actions decide the result. A scan error or missed
+deadline still fails closed, including mandatory transformed-content rechecks;
+this work does **not** increase the 500-ms checker deadline or establish that
+intermittent privacy latency has been resolved.
+
 | Check / finding | Example or use case | What is checked / expected result |
 | --- | --- | --- |
 | `pii.email_address` | `Contact jane@example.com.` in a support answer | Copied pattern and bundled domain-suffix check; finding, no mailbox verification. The domain inside the address is not reported again as `pii.url` |
