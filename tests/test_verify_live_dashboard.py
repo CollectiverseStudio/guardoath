@@ -42,6 +42,11 @@ def setup(tmp_path: Path):
         tag = hashlib.sha256(body).hexdigest()[:12]
         tags[name] = tag
         responses[BASE + "/assets/" + name + "?v=" + tag] = body
+    template = "<!doctype html><title>GuardOath</title>" + "".join(
+        '<script src="/assets/' + name + '"></script>'
+        for name in sorted(REQUIRED)
+    )
+    (tmp_path / "dashboard.html").write_text(template, encoding="utf-8")
     html = "<!doctype html><title>GuardOath</title>" + "".join(
         '<script src="/assets/' + name + "?v=" + tags[name] + '"></script>'
         for name in sorted(REQUIRED)
@@ -72,6 +77,34 @@ def test_all_versioned_production_assets_match_exact_local_source(tmp_path):
         "production_tenant_api_verified": False,
         "mutated_records": 0,
     }
+
+
+
+
+def test_changed_dashboard_markup_blocks_release_even_with_matching_js_css_and_backend(tmp_path):
+    """A stale form/control is a release mismatch even when every asset hash matches."""
+    responses, _ = setup(tmp_path)
+    responses[BASE + "/healthz"] = ('{"status":"ok","source_sha":"' + SHA + '"}').encode()
+    responses[BASE + "/dashboard"] = responses[BASE + "/dashboard"].replace(
+        b"<title>GuardOath</title>", b"<title>GuardOath stale form</title>"
+    )
+    report = verify_release(BASE, SHA, tmp_path, opener(responses))
+    assert "dashboard_html_content_mismatch" in report["issues"]
+    assert report["verified_asset_count"] == len(REQUIRED)
+    assert report["backend_deployment_sha_verified"] is True
+    assert report["dashboard_ui_matches_local_source"] is False
+    assert report["release_source_parity_verified"] is False
+    assert report["mutated_records"] == 0
+
+
+def test_missing_local_dashboard_template_cannot_certify_browser_source(tmp_path):
+    responses, _ = setup(tmp_path)
+    (tmp_path / "dashboard.html").unlink()
+    report = verify(BASE, tmp_path, opener(responses))
+    assert "source_dashboard_html_unavailable:FileNotFoundError" in report["issues"]
+    assert report["dashboard_ui_matches_local_source"] is False
+    assert report["verified_asset_count"] == len(REQUIRED)
+    assert report["mutated_records"] == 0
 
 
 def test_stale_cloudfront_asset_never_certifies_new_source(tmp_path):
