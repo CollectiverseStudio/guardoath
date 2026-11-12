@@ -30,6 +30,19 @@
     next.addEventListener("click", () => show(current + 1));
     // A completed click may still result in a blocked input. Let the operator
     // see the findings; do not auto-advance past a security decision.
+    const results = document.getElementById("input-results");
+    const note = document.createElement("p");
+    note.className = "hint";
+    note.id = "wizard-finding-context";
+    note.setAttribute("role", "status");
+    if (results && results.parentElement) results.parentElement.insertBefore(note, results);
+    const explain = () => {
+      const select = document.getElementById("input-example-check");
+      const chosen = select && select.value ? select.selectedOptions[0].textContent : "No example category selected";
+      note.textContent = "Selected example: " + chosen + ". This chooses sample content, not a single check to execute. All enabled Input checks run. Findings below identify the actual check and rule; unrelated integrity or safety findings are separate.";
+    };
+    document.getElementById("input-samples")?.addEventListener("change", explain);
+    explain();
     show(0);
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
