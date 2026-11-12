@@ -194,3 +194,73 @@ def test_own_only_overlap_fast_path_preserves_distinct_labels_and_deduplicates()
         (0, 18, "CREDIT_CARD"), (0, 18, "EMAIL_ADDRESS"),
         (0, 18, "EMAIL_ADDRESS"), (3, 10, "BANK_ACCOUNT")
     ]
+
+
+def test_pattern_containment_index_exactly_matches_independent_reference():
+    # Independent original list-scan contract for arbitrary overlaps, scores,
+    # exact-span ties and GuardOath's protected own detections.
+    def reference(candidates):
+        own_spans = sorted({(s, e) for s, e, _name, _src, tier, _score in candidates
+                            if tier == OWN_TIER})
+        best = {}
+        for s, e, name, src, tier, score in candidates:
+            key = (s, e, name, src, tier)
+            best[key] = max(score, best.get(key, score))
+        chosen = [(s, e, name, src) for s, e, name, src, tier in best
+                  if tier == OWN_TIER]
+        patterns = []
+        for (s, e, name, src, tier), score in best.items():
+            if tier != PATTERN_TIER:
+                continue
+            if any(a <= s and b >= e for a, b in own_spans):
+                continue
+            patterns.append((s, e, name, src, score))
+        maximum = {}
+        for s, e, _name, _src, score in patterns:
+            maximum[(s, e)] = max(score, maximum.get((s, e), score))
+        containers = []
+        for s, e, name, src, score in sorted(patterns, key=lambda p: (p[0], -p[1])):
+            if score < maximum[(s, e)]:
+                continue
+            containers = [old for old in containers if old[1] >= s]
+            if any(old_end >= e and (old_start, old_end) != (s, e)
+                   and old_score >= score
+                   for old_start, old_end, old_score in containers):
+                continue
+            chosen.append((s, e, name, src))
+            containers.append((s, e, score))
+        return chosen
+
+    rng = random.Random(24011)
+    names = ["URL", "DATE_TIME", "US_BANK_NUMBER", "ZA_ID_NUMBER"]
+    for _ in range(350):
+        candidates = []
+        for _ in range(rng.randint(1, 48)):
+            start = rng.randrange(0, 70)
+            end = start + rng.randint(1, 80)
+            if rng.random() < .25:
+                candidates.append(own(start, end,
+                                      rng.choice(["EMAIL_ADDRESS", "BANK_ACCOUNT"])))
+            else:
+                candidates.append(pattern(start, end, rng.choice(names),
+                                          rng.choice([.05, .4, .45, .5, 1.0])))
+            if rng.random() < .08:
+                candidates.append(candidates[-1])
+        assert resolve_overlaps(candidates) == reference(candidates)
+
+
+def test_thousands_of_partially_overlapping_patterns_preserve_all_findings():
+    # Each interval overlaps its neighbors without containing any earlier
+    # interval. The former repeated live-container walk took quadratic work.
+    candidates = [pattern(i, i + 4000, "URL", .5) for i in range(4000)]
+    actual = resolve_overlaps(candidates)
+    assert len(actual) == len(candidates)
+    assert actual[0] == (0, 4000, "URL", PATTERN)
+    assert actual[-1] == (3999, 7999, "URL", PATTERN)
+    # Same-position equal-score types are independent findings, while a
+    # strictly contained lower-scored pattern is not.
+    tied = [pattern(0, 8000, "URL", .7),
+            pattern(0, 8000, "DATE_TIME", .7),
+            pattern(10, 7900, "US_BANK_NUMBER", .4)]
+    assert resolve_overlaps(tied) == [
+        (0, 8000, "URL", PATTERN), (0, 8000, "DATE_TIME", PATTERN)]
