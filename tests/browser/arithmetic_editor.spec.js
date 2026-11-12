@@ -113,3 +113,108 @@ test("FC arithmetic dashboard validates pointers, types and stages before saving
   await expect(page.locator("#arithmetic-message")).toContainText("Choose Input, Output or both");
   await expect(page.locator('#arithmetic-drafts [data-arithmetic-id="bad_rule"]')).toHaveCount(0);
 });
+
+test("bulk JSON replaces 125 arithmetic rules atomically through customer Save and shared Input/Output Engine", async ({page, request}) => {
+  await page.goto("/dashboard");
+  await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
+  await page.locator("#demo-user").selectOption("demo8");
+  await page.getByRole("button", {name:"Get demo API key", exact:true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
+  const headers = {Authorization: "Bearer " + await page.locator("#demo-key-value").inputValue()};
+  const read = async () => {
+    const response = await request.get("/v1/applications/current", {headers});
+    expect(response.status()).toBe(200);
+    return (await response.json()).tenant;
+  };
+  let resetRequired = false;
+  try {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data:{}});
+    expect(reset.status()).toBe(200);
+    resetRequired = true;
+    await page.reload();
+    await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
+    await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
+    const initial = await read();
+    expect(initial.advanced_arithmetic).toEqual([]);
+
+    const rules = Array.from({length:125}, (_, i) => {
+      const id = "bulk_arithmetic_" + String(i).padStart(3, "0");
+      const root = "/ar" + String(i).padStart(3, "0");
+      return {rule_id:id, kind:"discount_fraction_cap", fields:{
+        discount:root + "/discount",
+        eligible_subtotal:root + "/eligible_subtotal",
+        max_fraction:root + "/max_fraction"
+      }, stages:["input","output"]};
+    });
+    const bulk = page.locator("#arithmetic-bulk-panel");
+    await bulk.evaluate(el => { el.open = true; });
+    const jsonBox = page.locator("#arithmetic-bulk-json");
+    await jsonBox.fill(JSON.stringify(rules));
+    await page.locator("#arithmetic-bulk-import").click();
+    await expect(page.locator("#arithmetic-bulk-status")).toContainText("Confirm replacement");
+    await page.locator("#arithmetic-bulk-confirm").check();
+    await page.locator("#arithmetic-bulk-import").click();
+    await expect(page.locator("#arithmetic-draft-summary"))
+      .toContainText("125 added, 0 updated, 0 removed");
+    await expect(page.locator("#arithmetic-filter-status")).toContainText("Showing 125 of 125");
+    expect((await read()).revision).toBe(initial.revision);
+    expect((await read()).advanced_arithmetic).toEqual([]);
+
+    // One malformed pointer is rejected atomically: no partial draft changes,
+    // no tenant mutation, no revision increment and no customer value echo.
+    const invalid = structuredClone(rules);
+    invalid[7].fields.eligible_subtotal = invalid[7].fields.discount;
+    await jsonBox.fill(JSON.stringify(invalid));
+    await page.locator("#arithmetic-bulk-confirm").check();
+    await page.locator("#arithmetic-bulk-import").click();
+    await expect(page.locator("#arithmetic-bulk-status")).toContainText("distinct and nonoverlapping");
+    await expect(page.locator("#arithmetic-draft-summary"))
+      .toContainText("125 added, 0 updated, 0 removed");
+    expect((await read()).revision).toBe(initial.revision);
+    await page.locator("#arithmetic-bulk-export").click();
+    expect(JSON.parse(await jsonBox.inputValue())).toEqual(rules);
+
+    await page.locator("#tenant-check-input-cross_field").selectOption("block");
+    await page.locator("#tenant-check-output-cross_field").selectOption("block");
+    await page.locator("#tenant-save").click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved");
+    const saved = await read();
+    expect(saved.revision).toBe(initial.revision + 1);
+    expect(saved.advanced_arithmetic).toHaveLength(125);
+    await expect(page.locator("#arithmetic-draft-summary"))
+      .toContainText("Saved arithmetic rules: 125. No pending changes.");
+    await expect(page.locator('tr.rule-row[data-rule^="business.bulk_arithmetic_"]'))
+      .toHaveCount(125);
+
+    const good = {};
+    for (let i = 0; i < 125; i++) {
+      good["ar" + String(i).padStart(3, "0")] =
+        {discount:10, eligible_subtotal:100, max_fraction:0.2};
+    }
+    const bad = structuredClone(good);
+    bad.ar124.discount = 30;
+    for (const stage of ["input", "output"]) {
+      const violating = await request.post("/v1/checks/" + stage, {headers, data:{
+        application_id:"demo8", content_format:"json", content:JSON.stringify(bad)
+      }});
+      expect(violating.status()).toBe(200);
+      const result = await violating.json();
+      expect(result.evaluation_status).toBe("complete");
+      expect(result.findings.map(f => f.rule_id)).toContain("business.bulk_arithmetic_124");
+      expect(result.effective_action).toBe("block");
+
+      const benign = await request.post("/v1/checks/" + stage, {headers, data:{
+        application_id:"demo8", content_format:"json", content:JSON.stringify(good)
+      }});
+      expect(benign.status()).toBe(200);
+      const benignResult = await benign.json();
+      expect(benignResult.evaluation_status).toBe("complete");
+      expect(benignResult.findings.map(f => f.rule_id)).not.toContain("business.bulk_arithmetic_124");
+    }
+  } finally {
+    if (resetRequired) {
+      const reset = await request.post("/v1/tenants/current/reset", {headers, data:{}});
+      expect(reset.status()).toBe(200);
+    }
+  }
+});
