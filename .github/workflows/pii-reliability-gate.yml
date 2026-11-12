@@ -12,12 +12,22 @@ on:
       - "guardoath/privacy_patterns/pattern_recognizer.py"
       - "tests/privacy_patterns/test_url_recognizer.py"
       - "guardoath/engine.py"
+      - "guardoath/checkers.py"
+      - "guardoath/secrets_check.py"
+      - "guardoath/encoded_pii.py"
+      - "guardoath/text_security.py"
+      - "guardoath/privacy_catalog.py"
+      - "guardoath/sensitive_fields.py"
+      - "guardoath/privacy_patterns/**"
+      - "policies/playground.json"
+      - "tests/test_dashboard.py"
       - "tools/pii_reliability_probe.py"
       - "tools/pii_release_matrix.py"
       - "tools/conversation_privacy_release.py"
       - "tools/conversation_privacy_contention.py"
       - "tests/test_conversation_privacy_contention.py"
       - "tests/test_conversation_privacy_release.py"
+      - "tests/test_privacy_workflow_trigger_contract.py"
       - "tools/pii_latency_probe.py"
       - "tests/test_pii_latency_probe.py"
       - "tests/test_pii_regex_concurrency.py"
@@ -50,7 +60,7 @@ jobs:
       - name: Install existing local recognizers and tests
         run: python -m pip install -e '.[test,pii]'
       - name: Verify regex concurrency never changes detector matches
-        run: python -m pytest -q tests/test_privacy_digit_prefilter.py tests/test_pii.py tests/test_pii_regex_concurrency.py tests/test_pii_reliability_probe.py tests/test_pii_release_matrix.py tests/test_conversation_privacy_release.py tests/test_conversation_privacy_contention.py tests/test_pii_latency_probe.py tests/privacy_patterns/test_url_recognizer.py
+        run: python -m pytest -q tests/test_privacy_digit_prefilter.py tests/test_pii.py tests/test_pii_regex_concurrency.py tests/test_pii_reliability_probe.py tests/test_pii_release_matrix.py tests/test_conversation_privacy_release.py tests/test_conversation_privacy_contention.py tests/test_privacy_workflow_trigger_contract.py tests/test_pii_latency_probe.py tests/privacy_patterns/test_url_recognizer.py
       - name: Repeated real PII detection and mandatory redaction recheck (20 rounds)
         run: python -m tools.pii_reliability_probe --rounds 20
       - name: Repeated previously failed phone/Korean RRN/DOB/redaction cases (20 rounds)
