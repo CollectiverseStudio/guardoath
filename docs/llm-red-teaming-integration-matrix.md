@@ -77,3 +77,7 @@ The small challenge corpus is not a statistical effectiveness estimate, and lexi
 ## Tenant-policy regression (2026-11-11)
 
 `pytest -q tests/test_redteam_tenant_policy.py` exercises the real shared Engine and `TenantRecord.to_policy()` for the independently authored direct-instruction-replacement challenge. It asserts Input Block versus Output Flag, saved per-rule Input Off without suppressing Output Block, benign allow, JSON message inspection and privacy-safe findings. These tests do not call a model or network service. They establish integration-level contracts only; authenticated browser behavior and independent semantic robustness remain unverified.
+
+## Bounded deterministic mutation evaluation (2026-11-11)
+
+Run `python -m tools.redteam_mutations --output .guardoath-reports/redteam-mutations.json` to apply four documented transformations (case swap, double spaces, newline separators, and a zero-width separator) to the independent 15-case corpus. The evaluator reports 60 cases with TP/TN/FP/FN and misses by transformation, capped at 500 cases per invocation, without provider calls or including prompt text in reports. Tests: `pytest -q tests/test_redteam_mutations.py`. This measures lexical robustness only; mutations can change meaning, and results must not be presented as semantic effectiveness. CI and full release acceptance remain necessary.
