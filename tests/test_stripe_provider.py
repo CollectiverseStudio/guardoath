@@ -79,7 +79,7 @@ def test_missing_secret_fails_before_network():
 @pytest.mark.parametrize("invalid_key", [
     "sk_test_" + "a" * 20 + "\u00e9",
     "sk_test_" + "a" * 20 + " ",
-    "sk_test_" + "a" * 20 + "\\n",
+    "sk_test_" + "a" * 20 + "\n",
     "pk_test_" + "a" * 32,
 ])
 def test_malformed_stripe_subscription_secret_never_reaches_transport(invalid_key):
