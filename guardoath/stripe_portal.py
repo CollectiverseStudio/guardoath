@@ -43,14 +43,25 @@ def create_portal_session(*, customer_id: str, api_key: str,
         data = json.loads(raw)
     except (OSError, UnicodeError, ValueError) as exc:
         raise StripePortalError("Stripe portal unavailable") from exc
-    if not isinstance(data, dict) or data.get("object") != "billing_portal.session":
+    # Portal URL alone proves neither customer ownership nor a subscription.
+    # Bind every returned provider session to the existing server-owned billing
+    # customer and the credential environment, never to a browser claim.
+    if (not isinstance(data, dict) or data.get("object") != "billing_portal.session"
+            or not isinstance(data.get("id"), str)
+            or not data["id"].startswith("bps_")
+            or data.get("customer") != customer_id
+            or data.get("livemode") is not api_key.startswith("sk_live_")):
         raise StripePortalError("Invalid Stripe portal response")
     url = data.get("url")
+    if not isinstance(url, str) or not 1 <= len(url) <= 4096:
+        raise StripePortalError("Unexpected billing portal destination")
     try:
-        parsed = urllib.parse.urlsplit(url) if isinstance(url, str) else None
-        valid = (parsed is not None and parsed.scheme == "https" and
+        parsed = urllib.parse.urlsplit(url)
+        valid = (parsed.scheme == "https" and
                  parsed.hostname == "billing.stripe.com" and
-                 parsed.port in (None, 443) and not parsed.username and not parsed.password)
+                 parsed.port in (None, 443) and
+                 parsed.username is None and parsed.password is None and
+                 not parsed.fragment)
     except ValueError:
         valid = False
     if not valid:
