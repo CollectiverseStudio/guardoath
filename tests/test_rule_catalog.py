@@ -58,9 +58,11 @@ def test_rule_counts():
     # 2026-11-04: the document checks' findings (21, including field comparisons' malformed JSON) and encoded
     # personal data (97) became rules: 279 -> 397. 2026-11-05: human safety (61): 397 -> 458; prompt attack (36) and
     # harmful content (30), replacing the removed outside-provider checks, and CSV formula (1): 458 -> 525.
-    # One additional prompt-attack rule raises the catalog to 526. A record's own comparisons
+    # The prompt_attack.direct_instruction_replacement rule raises the catalog to 526. A record's own comparisons
     # and sections are not counted here.
     assert len(RULES) == 526
+    # The new detector must actually be catalogued, not merely balanced by another rule disappearing.
+    assert RULES["prompt_attack.direct_instruction_replacement"].control_id == "prompt_attack"
     assert {control: len(rules_for(control)) for control in CHECK_IDS if rules_for(control)} == {
         "lexical_guards": 161, "pii": 97, "secrets": 17, "text_security": 4, "encoded_pii": 97, "schema": 2,
         "matched_outcomes": 1, "evidence": 8, "tool_calls": 2, "ledger": 2, "timestamps": 1, "graph": 3, "integrity": 1,
