@@ -203,6 +203,39 @@ test("FC-048 empty requested-scopes use real tenant and authenticated Input/Outp
       }
     }
     expect((await summary()).revision).toBe(live.revision);
+
+    // Bulk authoring must use an editable-only tenant merge while private
+    // scope references already exist. Neither export nor save may disclose
+    // or replace a host-provisioned reference set.
+    await page.locator("#identity-bulk-panel").evaluate(el => { el.open = true; });
+    await page.locator("#identity-bulk-export").click();
+    expect(JSON.parse(await page.locator("#identity-bulk-json").inputValue())).toEqual([]);
+    const publicRule = {rule_id:"public_serials_with_scope", kind:"serial_unique",
+      fields:{serials:"/serials"}, trusted_values:[], stages:["input","output"]};
+    await page.locator("#identity-bulk-json").fill(JSON.stringify([publicRule]));
+    await page.locator("#identity-bulk-confirm").check();
+    await page.locator("#identity-bulk-import").click();
+    await expect(page.locator("#identity-draft-summary")).toContainText("1 added, 0 updated, 0 removed");
+    expect((await summary()).revision).toBe(live.revision);
+    await page.locator("#tenant-save").click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved");
+    const merged = await summary();
+    expect(merged.revision).toBe(live.revision + 1);
+    expect(merged.advanced_identity).toEqual([publicRule]);
+    expect(merged.advanced_identity_reference_status).toEqual(live.advanced_identity_reference_status);
+    expect(JSON.stringify(merged)).not.toContain("private:authorized");
+    await expect(page.locator("#identity-reference-status")).toContainText("browser_scope_zero");
+    const duplicateSerial = await request.post("/v1/checks/input", {headers, data:{
+      application_id:"demo6", content_format:"json",
+      content:JSON.stringify({scopes:[],serials:["REPEAT","REPEAT"]})
+    }});
+    expect(duplicateSerial.status()).toBe(200);
+    const detected = await duplicateSerial.json();
+    expect(detected.evaluation_status).toBe("complete");
+    expect(detected.findings.map(f=>f.rule_id)).toContain("business.public_serials_with_scope");
+    expect(detected.findings.map(f=>f.rule_id)).not.toContain("business.browser_scope_zero");
+    expect(detected.effective_action).toBe("block");
+    expect(JSON.stringify(detected)).not.toContain("private:authorized");
   } finally {
     if (resetRequired) {
       const clean = await request.post("/v1/tenants/current/reset", {headers, data: {}});
