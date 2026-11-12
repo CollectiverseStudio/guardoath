@@ -335,7 +335,16 @@ test("conversion bulk sample fills JSON only, then explicitly stages and saves t
           .map(f=>f.rule_id).sort();
         expect(found).toEqual(expected.slice().sort());
         if (expected.length) {
-          expect(result.effective_action).toBe(stage==="input"?"block":"flag");
+          // An independently enabled tenant check can BLOCK the full document
+          // even while these exact conversion findings are configured to FLAG.
+          // Never accept an unexplained override of the saved stage action.
+          const configuredAction = stage==="input"?"block":"flag";
+          if (result.effective_action!==configuredAction) {
+            expect(stage).toBe("output");
+            expect(result.effective_action).toBe("block");
+            expect(result.findings.some(f=>!f.rule_id.startsWith("business.example_")),
+              "A separate finding must explain stronger global Block.").toBe(true);
+          }
         } else if (result.effective_action!=="allow") {
           expect(result.findings.some(f=>!f.rule_id.startsWith("business.example_")),
             "Any global action for benign conversion data requires another finding.").toBe(true);
