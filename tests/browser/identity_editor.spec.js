@@ -433,8 +433,17 @@ test("identity bulk sample populates only JSON until customer stages and saves b
         const found = result.findings.filter(f => f.rule_id.startsWith("business.example_"))
           .map(f => f.rule_id).sort();
         expect(found).toEqual(expected.slice().sort());
-        expect(result.effective_action).toBe(expected.length ?
-          (stage === "input" ? "block" : "flag") : "allow");
+        // Effective action is tenant-wide: unrelated enabled checks on demo6
+        // may legitimately flag/block a benign *identity* document. Verify
+        // these exact two identity rules cleanly and forbid unexplained action.
+        if (expected.length) {
+          expect(result.effective_action).toBe(stage === "input" ? "block" : "flag");
+        } else if (result.effective_action !== "allow") {
+          const otherFindings = result.findings.filter(f =>
+            !f.rule_id.startsWith("business.example_"));
+          expect(otherFindings.length, "A non-identity policy finding must explain any global action.")
+            .toBeGreaterThan(0);
+        }
       }
     }
   } finally {
@@ -533,8 +542,14 @@ test("identity public bulk customer authors exactly 500 serial rules with both-s
         expect(result.evaluation_status).toBe("complete");
         expect(result.findings.filter(f => f.rule_id.startsWith("business.bulk_max_serial_"))
           .map(f => f.rule_id).sort()).toEqual(expected.slice().sort());
-        expect(result.effective_action).toBe(expected.length ?
-          (stage === "input" ? "flag" : "block") : "allow");
+        if (expected.length) {
+          expect(result.effective_action).toBe(stage === "input" ? "flag" : "block");
+        } else if (result.effective_action !== "allow") {
+          const otherFindings = result.findings.filter(f =>
+            !f.rule_id.startsWith("business.bulk_max_serial_"));
+          expect(otherFindings.length, "Another check must explain any global action.")
+            .toBeGreaterThan(0);
+        }
       }
     }
     expect((await current()).revision).toBe(saved.revision);
