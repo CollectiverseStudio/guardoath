@@ -202,8 +202,44 @@
       "carbon_intensity", {emissions: "/operations/emissions",
       output: "/operations/output", max_intensity: "/operations/max_intensity"},
       {operations: {emissions: 250, output: 100, max_intensity: 2}}));
+    const taxHelp = node("p",
+      "Tax tolerance example: expected tax is 100 × 0.08 = 8, with an allowed " +
+      "difference of 0.50. Reported 7 violates; 7.5 satisfies. Rate must be " +
+      "a fraction from 0 to 1; the rule checks submitted values, not a tax authority.");
+    taxHelp.id = "arithmetic-tax-help";
+    const taxSample = node("button", "Fill example: tax must match rate within tolerance");
+    taxSample.id = "arithmetic-sample-tax"; taxSample.type = "button";
+    taxSample.addEventListener("click", () => fillExample("tax_within_tolerance",
+      "tax_tolerance", {tax: "/tax/charged", base: "/tax/base",
+        rate: "/tax/rate", tolerance: "/tax/tolerance"},
+      {tax: {charged: 7, base: 100, rate: 0.08, tolerance: 0.5}}));
+    const discountHelp = node("p",
+      "Discount fraction example: a 25 discount exceeds a maximum 20% of a " +
+      "100 eligible subtotal. A discount of 20 satisfies. Eligible subtotal " +
+      "must be positive; maximum fraction must be between 0 and 1.");
+    discountHelp.id = "arithmetic-discount-help";
+    const discountSample = node("button", "Fill example: discount must stay within eligible fraction");
+    discountSample.id = "arithmetic-sample-discount"; discountSample.type = "button";
+    discountSample.addEventListener("click", () => fillExample("discount_within_fraction",
+      "discount_fraction_cap", {discount: "/discount/amount",
+        eligible_subtotal: "/discount/eligible_subtotal",
+        max_fraction: "/discount/max_fraction"},
+      {discount: {amount: 25, eligible_subtotal: 100, max_fraction: 0.2}}));
+    const manufacturingHelp = node("p",
+      "Manufacturing tolerance example: measured 10.4 differs from nominal 10 by " +
+      "0.4 and exceeds tolerance 0.2. Measured 10.1 satisfies. Units must " +
+      "already be consistent; no external calibration source is consulted.");
+    manufacturingHelp.id = "arithmetic-manufacturing-help";
+    const manufacturingSample = node("button", "Fill example: measurement must stay within tolerance");
+    manufacturingSample.id = "arithmetic-sample-manufacturing"; manufacturingSample.type = "button";
+    manufacturingSample.addEventListener("click", () => fillExample("measurement_within_tolerance",
+      "manufacturing_tolerance", {measured: "/quality/measured",
+        nominal: "/quality/nominal", tolerance: "/quality/tolerance"},
+      {quality: {measured: 10.4, nominal: 10, tolerance: 0.2}}));
     form.append(sampleHelp, sample, totalHelp, totalSample, inventoryHelp, inventorySample,
-      shipmentHelp, shipmentSample, intensityHelp, intensitySample);
+      shipmentHelp, shipmentSample, intensityHelp, intensitySample,
+      taxHelp, taxSample, discountHelp, discountSample,
+      manufacturingHelp, manufacturingSample);
     form.append(apply, cancel, message); host.append(filterBar, filterStatus, preview, list, form);
     searchInput.addEventListener("input", draw);
     stageFilter.addEventListener("change", draw);
