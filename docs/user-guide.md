@@ -3151,6 +3151,29 @@ Example that satisfies this *particular* rule:
 
 This example compares values in **submitted data only**; it does not independently verify payments, approve a refund, or prove that other GuardOath checks will pass. The customer's authoritative tenant check/rule actions and the existing shared Engine determine the effective result, including other findings and malformed JSON. A demo user is a shared sandbox, not a private customer tenant.
 
+### Guided ordinary bulk example: numeric refund and calendar-date delivery
+
+In the authenticated **Field comparison rules → Bulk JSON import / export** panel, select **Fill example JSON: refund and delivery dates**. This fills the *JSON textbox only*: it does not stage a rule, change any pending draft, enable Field comparisons, modify the saved tenant, or reserve rule IDs. You can inspect, copy or edit both definitions before choosing **I understand this replaces the entire ordinary comparison draft**, **Stage JSON replacement**, and finally tenant-wide revisioned **Save checks**. Stage replaces only the ordinary comparison draft; it never replaces advanced arithmetic, identity, conversion/time or host-owned trusted references. If the selected example IDs already exist, staging requires explicit replacement confirmation; cross-family/reserved collisions are rejected. Malformed JSON rejects the entire import without changing the pending draft.
+
+The two example rules run on both Input and Output when the corresponding tenant **Field comparisons** check and rule actions are enabled:
+
+- `refund_not_over_paid`: number `/invoice/refund ≤ /invoice/paid`. Submitted refund 75 versus paid 50 violates the rule.
+- `delivery_not_before_order`: calendar-date `/shipment/delivery_date ≥ /shipment/order_date`, ISO `YYYY-MM-DD`. Submitted delivery 2026-11-01 versus order 2026-11-02 violates the rule.
+
+A payload that violates **both** submitted-value comparisons:
+
+```json
+{"invoice":{"refund":75,"paid":50},"shipment":{"delivery_date":"2026-11-01","order_date":"2026-11-02"}}
+```
+
+A payload that satisfies **both** specific rules:
+
+```json
+{"invoice":{"refund":25,"paid":50},"shipment":{"delivery_date":"2026-11-03","order_date":"2026-11-02"}}
+```
+
+These are deterministic checks of fields **submitted to GuardOath**, not a trusted payment ledger, shipping carrier feed or external source of chronological truth. A matching rule reports its exact finding on Input/Output; effective Block/Flag/Allow still depends on the saved stage actions and *all* other enabled tenant checks. Inspect the authenticated rule table, run actual Input/Output tests and verify revision after saving. Imported rules remain subject to strict JSON admission, pointer and rule-ID validation, and the tenant record's overall size budget. No outside AI or payment provider is called by this example.
+
 ### Privacy overlap processing and bounded local checks
 
 The built-in privacy recognizers retain distinct detections when two checks describe the same characters (for example, an email detector and an explicitly labeled sensitive field). Exact duplicate detections from the same detector are reported only once. This behavior does not depend on whether an additional regional privacy pattern matches. In an own-detector-only scan, GuardOath avoids the more expensive regional-pattern overlap analysis; this is an internal performance optimization, **not** a new rule or a change to a tenant's Input/Output settings.
