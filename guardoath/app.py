@@ -859,6 +859,69 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         return JSONResponse({"portal_url": url}, headers={
             "Cache-Control": "no-store", "Referrer-Policy": "no-referrer"})
 
+    @api.post("/v1/billing/reconcile")
+    async def billing_reconcile(
+        session: Annotated[str | None, Header(alias=SESSION_HEADER)] = None,
+    ):
+        """Server-fetched Stripe status, not a browser assertion of payment.
+
+        Explicitly configured plan allowance is required before enabling checks.
+        A verified customer's own subscription is persisted with record CAS.
+        """
+        from guardoath.billing import BillingMode
+        from guardoath.stripe_provider import verified_subscription_snapshot
+        from guardoath.subscription_reconciliation import SubscriptionReconciliationError
+        if sessions is None or tenants is None:
+            raise HTTPException(404, "Customer billing is not available")
+        if not session:
+            raise HTTPException(401, "Sign in to verify the subscription")
+        try:
+            tenant_id = await run_in_threadpool(sessions.tenant_for, session)
+        except SignInBusy:
+            raise HTTPException(503, "Sign-in verification is busy") from None
+        if tenant_id is None:
+            raise HTTPException(401, "Invalid or expired sign-in")
+        current = tenants.store.get(tenant_id)
+        if current is None or current.demo or current.status != "active":
+            raise HTTPException(403, "Register an account before verifying payment")
+        if current.billing_mode != BillingMode.STRIPE or not current.payer_id:
+            raise HTTPException(409, "No Stripe customer is bound to this account")
+        api_key = os.getenv("GUARDOATH_STRIPE_SECRET_KEY", "")
+        price_id = os.getenv("GUARDOATH_STRIPE_PRICE_ID", "")
+        raw_allowance = os.getenv("GUARDOATH_PAID_MONTHLY_ALLOWANCE", "")
+        if (not raw_allowance.isascii() or not raw_allowance.isdecimal()
+                or len(raw_allowance) > 9):
+            raise HTTPException(503, "Paid plan allowance is not configured")
+        allowance = int(raw_allowance)
+        if not 1 <= allowance <= 1_000_000_000:
+            raise HTTPException(503, "Paid plan allowance is not configured")
+        try:
+            binding, verified = await run_in_threadpool(
+                verified_subscription_snapshot,
+                tenant_id=current.tenant_id,
+                customer_id=current.payer_id,
+                price_id=price_id, api_key=api_key)
+            # Prevent silent switches to an unrelated old/new subscription.
+            if current.stripe_subscription_id not in (None, binding.subscription_id):
+                raise SubscriptionReconciliationError("Subscription binding changed")
+            updated = await run_in_threadpool(
+                tenants.store.apply_verified_subscription, current.tenant_id,
+                customer_id=current.payer_id,
+                subscription_id=binding.subscription_id,
+                provider_subscription=verified,
+                expected_revision=current.revision,
+                plan_monthly_allowance=allowance)
+        except TenantConflict:
+            raise HTTPException(409, "Billing account changed; reload and verify again") from None
+        except (SubscriptionReconciliationError, ValueError):
+            raise HTTPException(503, "Subscription could not be verified") from None
+        return JSONResponse({
+            "subscription_status": updated.subscription_status,
+            "can_validate": updated.subscription_status == "active",
+            "monthly_allowance": updated.monthly_allowance,
+            "revision": updated.revision,
+        }, headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"})
+
     @api.get("/v1/account/status")
     async def account_status(
         session: Annotated[str | None, Header(alias=SESSION_HEADER)] = None,
