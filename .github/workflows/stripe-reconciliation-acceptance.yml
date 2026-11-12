@@ -1,0 +1,62 @@
+name: Stripe Reconciliation Acceptance
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "guardoath/stripe_provider.py"
+      - "guardoath/subscription_reconciliation.py"
+      - "guardoath/stripe_checkout.py"
+      - "guardoath/stripe_portal.py"
+      - "guardoath/stripe_customer.py"
+      - "guardoath/tenant_record.py"
+      - "guardoath/tenant_store.py"
+      - "guardoath/dynamodb_store.py"
+      - "guardoath/app.py"
+      - "guardoath/static/dashboard.js"
+      - "guardoath/static/dashboard.html"
+      - "tests/test_stripe_*.py"
+      - "tests/test_verified_subscription_store.py"
+      - "tests/test_account_registration_entitlement.py"
+      - "tests/browser/customer_registration_status.spec.js"
+      - ".github/workflows/stripe-reconciliation-acceptance.yml"
+permissions:
+  contents: read
+jobs:
+  owner-billing-api-and-stores:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e '.[test,pii,aws]'
+      - name: Real tenant, Stripe adapters and DynamoDB regression
+        run: >-
+          python -m pytest -q
+          tests/test_stripe_checkout.py
+          tests/test_stripe_portal.py
+          tests/test_stripe_provider.py
+          tests/test_stripe_subscription_discovery.py
+          tests/test_verified_subscription_store.py
+          tests/test_account_registration_entitlement.py
+          tests/test_dynamodb_store.py
+  authenticated-billing-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 'lts/*'
+          cache: npm
+      - run: python -m pip install -e '.[test,pii]'
+      - run: npm ci
+      - name: Real browser account and billing acceptance
+        run: npx playwright test tests/browser/customer_registration_status.spec.js
+        env:
+          PLAYWRIGHT_CHANNEL: chrome
