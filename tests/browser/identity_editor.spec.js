@@ -487,6 +487,22 @@ test("identity public bulk customer authors exactly 500 serial rules with both-s
     await page.locator("#identity-bulk-panel").evaluate(el => { el.open = true; });
     const json = page.locator("#identity-bulk-json");
     await json.fill(JSON.stringify(rules));
+    // The 500th rule must not silently shadow a pending ordinary comparison.
+    // Collision rejection is atomic and cannot mutate the server revision.
+    const collidingId = rules[499].rule_id;
+    await page.locator("#comparison-id").fill(collidingId);
+    await page.locator("#comparison-left").fill("/pending/a");
+    await page.locator("#comparison-right").fill("/pending/b");
+    await page.locator("#comparison-apply").click();
+    await expect(page.locator("#comparison-draft-summary")).toContainText("1 added");
+    await page.locator("#identity-bulk-confirm").check();
+    await page.locator("#identity-bulk-import").click();
+    await expect(page.locator("#identity-bulk-status")).toContainText("duplicate or reserved rule_id");
+    await expect(page.locator("#identity-draft-summary")).toContainText("No pending changes");
+    expect((await current()).revision).toBe(before.revision);
+    await page.getByRole("button", {name: "Remove comparison " + collidingId}).click();
+    await expect(page.locator("#comparison-draft-summary")).toContainText("No pending changes");
+
     await page.locator("#identity-bulk-confirm").check();
     await page.locator("#identity-bulk-import").click();
     await expect(page.locator("#identity-draft-summary")).toContainText("500 added, 0 updated, 0 removed");
