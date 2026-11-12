@@ -276,6 +276,132 @@
     });
     form.append(sampleHelp, sample, coldHelp, coldSample, lifecycleHelp, lifecycleSample, apply, cancel, message);
     host.append(filterBar, filterStatus, preview, list, form);
+    // Bulk staging is only an editable, unsaved public conversion draft:
+    // existing operator-signed FX reference values never enter this control.
+    const bulk = el("details"); bulk.id = "conversion-bulk-panel";
+    bulk.append(el("summary", "Bulk JSON import / export conversion and time rules"));
+    bulk.append(el("p", "Paste up to 500 public conversion/time definitions (rule_id, kind, fields, stages; optional return_event_pointer for lifecycle chronology). Staging replaces ALL unsaved editable conversion rules, even filtered rows. It cannot edit protected FX references, enable checks or persist the tenant until Save checks."));
+    const bulkLabel = el("label", "Editable conversion/time rule definitions as JSON array");
+    bulkLabel.htmlFor = "conversion-bulk-json";
+    const bulkJson = el("textarea"); bulkJson.id = "conversion-bulk-json";
+    bulkJson.rows = 7; bulkJson.maxLength = 512000;
+    bulkJson.setAttribute("spellcheck", "false");
+    const exportDraft = el("button", "Load editable conversion draft into JSON box");
+    exportDraft.type = "button"; exportDraft.id = "conversion-bulk-export";
+    const acknowledgeLabel = el("label");
+    const acknowledge = el("input"); acknowledge.type = "checkbox";
+    acknowledge.id = "conversion-bulk-confirm";
+    acknowledgeLabel.append(acknowledge, document.createTextNode(
+      " I understand this replaces the entire editable conversion draft, not protected FX references or just filtered rules. Save checks is still required."));
+    const importDraft = el("button", "Stage conversion JSON replacement");
+    importDraft.type = "button"; importDraft.id = "conversion-bulk-import";
+    const bulkStatus = el("p"); bulkStatus.id = "conversion-bulk-status";
+    bulkStatus.setAttribute("role", "status"); bulkStatus.setAttribute("aria-live", "polite");
+    bulk.append(bulkLabel, bulkJson, exportDraft, acknowledgeLabel, importDraft, bulkStatus);
+    host.insertBefore(bulk, form);
+    exportDraft.addEventListener("click", () => {
+      bulkJson.value = JSON.stringify(draft, null, 2);
+      acknowledge.checked = false;
+      bulkStatus.textContent = draft.length + " editable conversion rules loaded into JSON box; protected FX references excluded. Not saved.";
+    });
+    function importRules(raw) {
+      if (!Array.isArray(raw)) throw Error("Use a JSON array of conversion rule objects.");
+      if (raw.length > 500) throw Error("At most 500 conversion rules may be staged.");
+      const ids = new Set();
+      const savedIds = new Set(original.map(rule => rule.rule_id));
+      const reserved = new Set((tenant.record_rules || [])
+        .filter(rule => rule && typeof rule.rule_id === "string")
+        .map(rule => rule.rule_id));
+      const pathSegments = value => value.slice(1).split("/").map(part =>
+        part.replaceAll("~1", "/").replaceAll("~0", "~"));
+      return raw.map((rule, index) => {
+        const fail = reason => { throw Error("Conversion rule " + (index + 1) + ": " + reason); };
+        if (!rule || typeof rule !== "object" || Array.isArray(rule))
+          return fail("expected an object.");
+        if (Object.keys(rule).some(key => ![
+          "rule_id", "kind", "fields", "stages", "return_event_pointer"
+        ].includes(key))) return fail("unknown or protected rule field.");
+        const id = rule.rule_id;
+        if (typeof id !== "string" || !/^[a-z][a-z0-9_]{0,79}$/.test(id))
+          return fail("invalid rule_id (lowercase, up to 80 characters).");
+        if (ids.has(id) || (!savedIds.has(id) && reserved.has("business." + id)) ||
+            protectedRules.some(item => item.rule_id === id || item.rule_id === "business." + id) ||
+            (window.comparisonEditor &&
+              window.comparisonEditor.otherFamilyDraftHasId(id, "advanced_conversion_time")))
+          return fail("duplicate or reserved rule_id, including protected references or other family drafts.");
+        if (typeof rule.kind !== "string" ||
+            !Object.prototype.hasOwnProperty.call(TYPES, rule.kind))
+          return fail("unknown or protected conversion rule kind.");
+        if (!rule.fields || typeof rule.fields !== "object" || Array.isArray(rule.fields) ||
+            Object.keys(rule.fields).length !== TYPES[rule.kind].length ||
+            TYPES[rule.kind].some(key => !Object.prototype.hasOwnProperty.call(rule.fields, key)))
+          return fail("fields must exactly match the public conversion rule kind.");
+        const fields = {}, decoded = [];
+        for (const key of TYPES[rule.kind]) {
+          const pointer = rule.fields[key];
+          if (typeof pointer !== "string" || pointer.length > 200 ||
+              !pointer.startsWith("/") || /~(?![01])/.test(pointer))
+            return fail("fields require valid absolute JSON pointers of at most 200 characters.");
+          const segments = pathSegments(pointer);
+          if (segments.some(part => !part) ||
+              decoded.some(previous => previous.every((part, i) => part === segments[i]) ||
+                segments.every((part, i) => part === previous[i])))
+            return fail("field pointers must have nonempty segments and be distinct and nonoverlapping.");
+          decoded.push(segments); fields[key] = pointer;
+        }
+        const stages = rule.stages === undefined ? ["input", "output"] : rule.stages;
+        if (!Array.isArray(stages) || !stages.length || stages.length > 2 ||
+            new Set(stages).size !== stages.length ||
+            stages.some(stage => stage !== "input" && stage !== "output"))
+          return fail("stages must contain Input, Output or both without duplicates.");
+        let returnEvent = null;
+        if (Object.prototype.hasOwnProperty.call(rule, "return_event_pointer") &&
+            rule.return_event_pointer !== null) {
+          if (rule.kind !== "lifecycle_chronology")
+            return fail("return_event_pointer belongs only to lifecycle chronology.");
+          const pointer = rule.return_event_pointer;
+          if (typeof pointer !== "string" || pointer.length > 200 ||
+              !pointer.startsWith("/") || /~(?![01])/.test(pointer))
+            return fail("return_event_pointer must be a valid absolute JSON pointer.");
+          const event = pathSegments(pointer);
+          const returnTime = pathSegments(fields.return_at);
+          if (event.some(part => !part) || event.length >= returnTime.length ||
+              !event.every((part, i) => part === returnTime[i]))
+            return fail("return event must be a parent of the return timestamp.");
+          if (["order_at", "shipment_at", "delivery_at"].some(key => {
+            const mandatory = pathSegments(fields[key]);
+            return event.length <= mandatory.length &&
+              event.every((part, i) => part === mandatory[i]);
+          })) return fail("return event cannot contain mandatory timestamps.");
+          returnEvent = pointer;
+        }
+        ids.add(id);
+        const item = {rule_id: id, kind: rule.kind, fields, stages};
+        if (returnEvent !== null) item.return_event_pointer = returnEvent;
+        return item;
+      });
+    }
+    importDraft.addEventListener("click", () => {
+      if (!acknowledge.checked) {
+        bulkStatus.textContent = "Confirm replacement of the entire editable conversion draft first.";
+        acknowledge.focus(); return;
+      }
+      try {
+        if (bulkJson.value.length > 512000)
+          throw Error("JSON exceeds the 512,000-character editor limit.");
+        const imported = importRules(JSON.parse(bulkJson.value));
+        draft = imported;
+        clear(); draw(); changed();
+        acknowledge.checked = false;
+        bulkStatus.textContent = imported.length +
+          " conversion rules staged. Protected FX references unchanged. Review Input/Output and select Save checks; no server change yet.";
+      } catch (error) {
+        // Never echo imported customer pointers, content or protected values.
+        bulkStatus.textContent = error instanceof SyntaxError
+          ? "Invalid JSON; provide an array of public conversion rule objects."
+          : error.message;
+      }
+    });
     searchInput.addEventListener("input", draw);
     stageFilter.addEventListener("change", draw);
     let editing = null;
