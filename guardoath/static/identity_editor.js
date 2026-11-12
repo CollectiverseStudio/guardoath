@@ -188,7 +188,34 @@
         "Sample JSON: {\"order\":{\"id\":\"A100\"},\"shipment\":{\"order_id\":\"B200\"}}.";
       controls.id.focus();
     });
-    form.append(sampleHelp, sample, apply, cancel, message);
+    const serialHelp = el("p",
+      "Serial uniqueness example: two identical serial IDs in a shipment violate " +
+      "the rule; distinct values satisfy it. This checks only the submitted array, " +
+      "not an external manufacturer registry.");
+    serialHelp.id = "identity-serial-help";
+    const serialSample = el("button", "Fill example: shipment serial numbers must be unique");
+    serialSample.id = "identity-sample-serial"; serialSample.type = "button";
+    serialSample.addEventListener("click", () => {
+      const id = "shipment_serials_unique";
+      if (original.some(rule => rule.rule_id === id) ||
+          draft.some(rule => rule.rule_id === id) ||
+          (tenant.record_rules || []).some(rule => rule.rule_id === "business." + id) ||
+          (window.comparisonEditor &&
+           window.comparisonEditor.otherFamilyDraftHasId(id, "advanced_identity"))) {
+        message.textContent = "Example rule ID already exists. Edit the existing rule or choose a different ID.";
+        return;
+      }
+      clear();
+      controls.id.value = id;
+      controls.kind.value = "serial_unique";
+      drawFields({serials: "/shipment/serials"});
+      controls.input.checked = controls.output.checked = true;
+      message.textContent = "Example filled, not added or saved. Choose Add pending identity rule, " +
+        "then Save checks. Enable Field comparisons with Block on both stages. " +
+        'Sample JSON: {"shipment":{"serials":["SN100","SN100"]}}.';
+      controls.id.focus();
+    });
+    form.append(sampleHelp, sample, serialHelp, serialSample, apply, cancel, message);
     host.append(filterBar, filterStatus, preview, list, form);
     searchInput.addEventListener("input", draw);
     stageFilter.addEventListener("change", draw);
