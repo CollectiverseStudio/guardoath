@@ -5,9 +5,9 @@
   const init = () => {
     const panel = document.getElementById("tenant-panel");
     const buttons = {
-      input: document.getElementById("tenant-stage-input"),
-      output: document.getElementById("tenant-stage-output"),
-      both: document.getElementById("tenant-stage-both")
+      input: document.getElementById("tenant-tab-input"),
+      output: document.getElementById("tenant-tab-output"),
+      both: document.getElementById("tenant-tab-both")
     };
     if (!panel || Object.values(buttons).some(button => !button)) return;
     const description = document.getElementById("tenant-stage-description");
