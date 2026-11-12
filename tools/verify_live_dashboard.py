@@ -111,6 +111,16 @@ def git_head(root: Path = ROOT) -> str:
     return sha
 
 
+def _reject_duplicate_health_keys(pairs):
+    """Reject ambiguous health attestations rather than trust duplicate JSON keys."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Duplicate production health key")
+        result[key] = value
+    return result
+
+
 def verify_release(base_url: str, expected_sha: str, static_root: Path = ASSETS,
                    open_url=urlopen) -> dict:
     """Require matching static assets AND matching Lambda source SHA."""
@@ -120,7 +130,10 @@ def verify_release(base_url: str, expected_sha: str, static_root: Path = ASSETS,
     report["expected_source_sha"] = expected_sha
     report["live_source_sha"] = None
     try:
-        info = json.loads(_fetch(base_url.rstrip("/") + "/healthz", 10_000, open_url))
+        info = json.loads(_fetch(base_url.rstrip("/") + "/healthz", 10_000, open_url),
+                          object_pairs_hook=_reject_duplicate_health_keys)
+        if not isinstance(info, dict):
+            raise ValueError("Expected an object from production health")
         received = info.get("source_sha")
         if isinstance(received, str) and re.fullmatch(r"[0-9a-f]{40}", received):
             report["live_source_sha"] = received
