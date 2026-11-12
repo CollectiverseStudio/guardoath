@@ -282,6 +282,10 @@
     const bulkJson = element("textarea"); bulkJson.id = "comparison-bulk-json";
     bulkJson.rows = 7; bulkJson.maxLength = 512000;
     bulkJson.setAttribute("spellcheck", "false");
+    // Prepare a two-type example in the textbox only. No draft, tenant revision,
+    // rule action or existing saved comparison changes until explicit Stage/Save.
+    const fillExample = element("button", "Fill example JSON: refund and delivery dates");
+    fillExample.type = "button"; fillExample.id = "comparison-bulk-example";
     const exportDraft = element("button", "Load current draft into JSON box");
     exportDraft.type = "button"; exportDraft.id = "comparison-bulk-export";
     const acknowledgeLabel = element("label");
@@ -291,12 +295,28 @@
     importDraft.type = "button"; importDraft.id = "comparison-bulk-import";
     const bulkStatus = element("p"); bulkStatus.id = "comparison-bulk-status";
     bulkStatus.setAttribute("role", "status"); bulkStatus.setAttribute("aria-live", "polite");
-    bulk.append(bulkLabel, bulkJson, exportDraft, acknowledgeLabel, importDraft, bulkStatus);
+    bulk.append(bulkLabel, bulkJson, fillExample, exportDraft, acknowledgeLabel, importDraft, bulkStatus);
     host.insertBefore(bulk, form);
     exportDraft.addEventListener("click", () => {
       bulkJson.value = JSON.stringify(draft, null, 2);
       acknowledge.checked = false;
       bulkStatus.textContent = draft.length + " current draft comparisons loaded into the JSON box; not saved.";
+    });
+    fillExample.addEventListener("click", () => {
+      bulkJson.value = JSON.stringify([
+        {rule_id: "refund_not_over_paid", left: "/invoice/refund",
+         right: "/invoice/paid", operator: "le", value_type: "number",
+         stages: ["input", "output"]},
+        {rule_id: "delivery_not_before_order", left: "/shipment/delivery_date",
+         right: "/shipment/order_date", operator: "ge", value_type: "date",
+         stages: ["input", "output"]}
+      ], null, 2);
+      acknowledge.checked = false;
+      bulkStatus.textContent = "Two example number/date definitions filled, not staged or saved. " +
+        "Example violating JSON: invoice refund 75 versus paid 50 and delivery_date " +
+        "2026-11-01 before order_date 2026-11-02. Review, confirm replacement, " +
+        "choose Stage JSON replacement, then Save checks. Other tenant checks still apply.";
+      bulkJson.focus();
     });
     // A draft in another FC family has not entered tenant.record_rules yet.
     // Reject its ID before replacing hundreds of ordinary rules; the shared
