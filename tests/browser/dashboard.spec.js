@@ -1591,8 +1591,8 @@ test("one table grouped by check lists and searches rules correctly", async ({ p
   await expect(page.locator("#check-table thead th")).toHaveText(["Check or rule", "Input (user\u2019s message)", "Output (AI\u2019s answer)", "In effect"]);
   await expect(page.locator("#check-table tbody.check-group")).toHaveCount(19);
   expect(await sorted(page.locator("#check-table .check-title"))).toBe(true);
-  await expect(page.locator("#check-table .rule-row")).toHaveCount(530);
-  await expect(page.locator("#rule-count")).toHaveText("530 rules in 19 checks. Open a check\u2019s rules, or find a rule by name.");
+  await expect(page.locator("#check-table .rule-row")).toHaveCount(531);
+  await expect(page.locator("#rule-count")).toHaveText("531 rules in 19 checks. Open a check\u2019s rules, or find a rule by name.");
   await page.locator("#tenant-rules-pii").click();
   expect(await sorted(page.locator("#tenant-group-pii .rule-title"))).toBe(true);
   await page.locator("#tenant-rules-pii").click();
@@ -1602,7 +1602,7 @@ test("one table grouped by check lists and searches rules correctly", async ({ p
   await expect(page.locator('.rule-row[data-rule="pii.email_address"]')).toBeVisible();
   const shown = await page.locator("#check-table .rule-row:visible").evaluateAll(rows => rows.map(r => r.textContent.toLowerCase()));
   expect(shown.length).toBeGreaterThan(0);
-  expect(shown.length).toBeLessThan(530);
+  expect(shown.length).toBeLessThan(531);
   expect(shown.every(text => text.includes("email"))).toBe(true);
   await expect(page.locator("#tenant-group-timestamps")).toBeHidden();
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
@@ -1662,7 +1662,7 @@ test("rule setting filters honor independent input and output actions", async ({
   // Human safety (61), prompt attack (36), harmful content (30) and CSV formula (1) rules (2026-11-05) are off for demo
   // users too: 187 + 61 + 36 + 30 + 1.
   await page.locator("#rule-filter-setting").selectOption("off");
-  await expect(page.locator("#check-table .rule-row:visible")).toHaveCount(315);
+  await expect(page.locator("#check-table .rule-row:visible")).toHaveCount(316);
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
   await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
 });
@@ -1691,10 +1691,10 @@ test("redaction clears incompatible own actions and category filter scopes resul
   await page.locator("#rule-filter-check").selectOption("secrets");
   await expect(page.locator("#check-table .rule-row:visible")).toHaveCount(17);
   await expect(page.locator("#check-table tbody.check-group:visible")).toHaveCount(1);
-  await expect(page.locator("#rule-count")).toHaveText("Showing 17 of 530 rules.");
+  await expect(page.locator("#rule-count")).toHaveText("Showing 17 of 531 rules.");
   await page.getByRole("button", { name: "Clear filters", exact: true }).click();
   await expect(page.locator("#check-table tbody.check-group:visible")).toHaveCount(19);
-  await expect(page.locator("#rule-count")).toHaveText("530 rules in 19 checks. Open a check\u2019s rules, or find a rule by name.");
+  await expect(page.locator("#rule-count")).toHaveText("531 rules in 19 checks. Open a check\u2019s rules, or find a rule by name.");
   // Nothing above was saved; put the record back to be sure.
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
   await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
@@ -1912,7 +1912,7 @@ test("prompt attack and harmful content run in GuardOath: a Flag on input lets t
   await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
   await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
   await expect(page.locator("#tenant-name-prompt_attack")).toHaveText("Prompt attacks (wording)");
-  await expect(page.locator("#tenant-rules-prompt_attack")).toHaveText("Show rules (36)");
+  await expect(page.locator("#tenant-rules-prompt_attack")).toHaveText("Show rules (37)");
   await expect(page.locator("#tenant-rules-harmful_content")).toHaveText("Show rules (30)");
   await page.locator("#tenant-check-input-prompt_attack").selectOption("flag");
   await page.locator("#tenant-check-output-harmful_content").selectOption("block");
