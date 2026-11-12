@@ -63,7 +63,21 @@ def test_conversation_profile_runs_combined_checks_on_both_stages():
                                          'content': content})
             result = response.json()
             assert response.status_code == 200
-            assert result['evaluation_status'] == 'complete'
+            # A 500-ms shipped-check timeout must not masquerade as success.
+            # Include ONLY checker IDs/status/error codes and timings in the
+            # failure message, never customer content or raw checker findings.
+            safe_receipts = {
+                receipt['checker_id']: {
+                    'status': receipt['status'],
+                    'error_code': receipt.get('error_code'),
+                    'latency_ms': receipt.get('latency_ms'),
+                }
+                for receipt in result['checker_results']
+            }
+            assert result['evaluation_status'] == 'complete', {
+                'stage': stage, 'fixture': flagged or 'benign',
+                'checker_receipts': safe_receipts,
+            }
             checks = {c['checker_id']: c for c in result['checker_results']}
             assert set(checks) == {'pii', 'secrets', 'text_security', 'encoded_pii'}
             assert all(not c['simulated'] for c in checks.values())
