@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import re
 
-CHECKER_VERSION = "3"
+CHECKER_VERSION = "4"
 MAX_CHARS = 32_000
 
 # rule id -> (title, severity, pattern, example it reports, look-alike it does not report)
@@ -252,13 +252,18 @@ def submitted_turn_boundaries(payload: object):
                    + middle_b + " " + right[:_TURN_BOUNDARY_CHARS])
 
 
+# Remove only format controls commonly inserted inside keywords to evade lexical rules.
+# This is a detection-only view; the customer's original content is not rewritten.
+_EVASION_FORMAT_CONTROLS = dict.fromkeys(map(ord, "\\u200b\\u200c\\u200d\\ufeff"), None)
+
+
 def inspect(content: str) -> tuple[str, ...]:
     """The rule ids that match the text, in RULES order."""
     if not isinstance(content, str):
         raise TypeError("content must be text")
     if len(content) > MAX_CHARS:
         raise ValueError("content exceeds maximum character budget")
-    return tuple(rule_id for rule_id, pattern in _COMPILED if pattern.search(content))
+    scan_text = content.translate(_EVASION_FORMAT_CONTROLS) if any(ch in content for ch in "\\u200b\\u200c\\u200d\\ufeff") else content\n    return tuple(rule_id for rule_id, pattern in _COMPILED if pattern.search(scan_text))
 
 
 async def prompt_attack_check(request, policy, stage):
