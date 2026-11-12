@@ -124,3 +124,25 @@ def test_field_comparison_evidence_requires_real_customer_browser_gate():
         "tests/browser/protected_reference_editors",
     ):
         assert family in job, family
+
+
+def test_field_comparison_browser_evidence_is_durable_and_fail_closed():
+    """An all-green headline is not proof of which Chrome cases actually ran."""
+    workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" /
+                "field-comparison-evidence.yml").read_text(encoding="utf-8")
+    browser = workflow.split("  customer-browser-acceptance:", 1)
+    assert len(browser) == 2
+    job = browser[1]
+    # Real Playwright writes a machine-readable case-level report, not an
+    # invented count derived from pytest or a successful npm installation.
+    assert "PLAYWRIGHT_JUNIT_OUTPUT_FILE: artifacts/field-comparisons/browser-junit.xml" in job
+    assert "npx playwright test --reporter=line,junit" in job
+    assert 'printf \'%s\\n\' "$GITHUB_SHA" > artifacts/field-comparisons/browser-source-commit.txt' in job
+    assert "run: test -s artifacts/field-comparisons/browser-junit.xml" in job
+    assert "name: field-comparisons-browser-${{ github.sha }}" in job
+    assert "artifacts/field-comparisons/browser-junit.xml" in job
+    assert "retention-days: 14" in job
+    # Both final verification and upload execute even when a browser case
+    # fails: preserve the exact test names, source SHA and errors for triage.
+    assert job.count("if: always()") >= 2
+    assert "if-no-files-found: error" in job
