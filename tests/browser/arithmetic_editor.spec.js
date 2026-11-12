@@ -221,3 +221,108 @@ test("bulk JSON replaces 125 arithmetic rules atomically through customer Save a
     }
   }
 });
+
+
+test("guided invoice and inventory arithmetic bulk JSON is fill-only until tenant Stage and Save, then enforces both stages", async ({page, request}) => {
+  async function connect() {
+    await page.goto("/dashboard");
+    await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
+    await page.locator("#demo-user").selectOption("demo8");
+    await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+    await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
+  }
+  await connect();
+  let headers = {Authorization: "Bearer " + await page.locator("#demo-key-value").inputValue()};
+  async function current() {
+    const response = await request.get("/v1/applications/current", {headers});
+    expect(response.status()).toBe(200);
+    return (await response.json()).tenant;
+  }
+  let resetRequired = false;
+  try {
+    const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+    expect(reset.status()).toBe(200);
+    resetRequired = true;
+    await connect();
+    headers = {Authorization: "Bearer " + await page.locator("#demo-key-value").inputValue()};
+    const baseline = await current();
+    expect(baseline.advanced_arithmetic).toEqual([]);
+
+    await page.locator("#arithmetic-bulk-panel").evaluate(el => { el.open = true; });
+    await page.locator("#arithmetic-bulk-example").click();
+    const jsonBox = page.locator("#arithmetic-bulk-json");
+    const examples = JSON.parse(await jsonBox.inputValue());
+    expect(examples).toEqual([
+      {rule_id: "invoice_total_matches", kind: "invoice_total", fields: {
+        subtotal: "/billing/subtotal", discount: "/billing/discount",
+        tax: "/billing/tax", shipping: "/billing/shipping", total: "/billing/total"
+      }, stages: ["input", "output"]},
+      {rule_id: "inventory_balances", kind: "inventory_conservation", fields: {
+        opening: "/inventory/opening", received: "/inventory/received",
+        shipped: "/inventory/shipped", lost: "/inventory/lost", closing: "/inventory/closing"
+      }, stages: ["input", "output"]}
+    ]);
+    await expect(page.locator("#arithmetic-bulk-confirm")).not.toBeChecked();
+    await expect(page.locator("#arithmetic-bulk-status")).toContainText("not staged or saved");
+    expect((await current()).advanced_arithmetic).toEqual([]);
+    expect((await current()).revision).toBe(baseline.revision);
+
+    // Filling text alone never adds a rule, and staging requires deliberate approval.
+    await page.locator("#arithmetic-bulk-import").click();
+    await expect(page.locator("#arithmetic-bulk-status")).toContainText("Confirm replacement");
+    await expect(page.locator("#arithmetic-draft-summary")).toContainText("No pending changes");
+    await page.locator("#arithmetic-bulk-confirm").check();
+    await page.locator("#arithmetic-bulk-import").click();
+    await expect(page.locator("#arithmetic-bulk-status")).toContainText("2 arithmetic rules staged");
+    await expect(page.locator("#arithmetic-draft-summary")).toContainText("2 added");
+    expect((await current()).advanced_arithmetic).toEqual([]);
+
+    // Invalid replacement cannot partially erase the staged rules.
+    await jsonBox.fill("{");
+    await page.locator("#arithmetic-bulk-confirm").check();
+    await page.locator("#arithmetic-bulk-import").click();
+    await expect(page.locator("#arithmetic-bulk-status")).toContainText("Invalid JSON");
+    await expect(page.locator("#arithmetic-draft-summary")).toContainText("2 added");
+    expect((await current()).revision).toBe(baseline.revision);
+
+    await page.locator("#tenant-check-input-cross_field").selectOption("block");
+    await page.locator("#tenant-check-output-cross_field").selectOption("block");
+    await page.getByRole("button", {name: "Save checks", exact: true}).click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved.");
+    const saved = await current();
+    expect(saved.revision).toBeGreaterThan(baseline.revision);
+    expect(saved.advanced_arithmetic).toEqual(examples);
+    await expect(page.locator("#arithmetic-draft-summary")).toContainText("No pending changes");
+
+    const bad = {billing: {subtotal: 100, discount: 10, tax: 8, shipping: 2, total: 99},
+                 inventory: {opening: 50, received: 20, shipped: 15, lost: 5, closing: 51}};
+    const good = {billing: {...bad.billing, total: 100},
+                  inventory: {...bad.inventory, closing: 50}};
+    for (const stage of ["input", "output"]) {
+      for (const [payload, violating] of [[bad, true], [good, false]]) {
+        const response = await request.post("/v1/checks/" + stage, {headers, data: {
+          application_id: "demo8", content_format: "json", content: JSON.stringify(payload)
+        }});
+        expect(response.status()).toBe(200);
+        const outcome = await response.json();
+        expect(outcome.evaluation_status).toBe("complete");
+        const findings = outcome.findings.map(f => f.rule_id);
+        for (const id of ["business.invoice_total_matches", "business.inventory_balances"]) {
+          expect(findings.includes(id), stage + " " + id).toBe(violating);
+        }
+        if (violating) expect(outcome.effective_action).toBe("block");
+        // Benign exact-rule absence does not excuse unrelated tenant findings.
+      }
+    }
+    // Save re-renders the optional editor; reopen before filling again.
+    await page.locator("#arithmetic-bulk-panel").evaluate(el => { el.open = true; });
+    await page.locator("#arithmetic-bulk-example").click();
+    await expect(page.locator("#arithmetic-bulk-confirm")).not.toBeChecked();
+    expect((await current()).advanced_arithmetic).toEqual(saved.advanced_arithmetic);
+  } finally {
+    if (resetRequired) {
+      const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
+      expect(reset.status()).toBe(200);
+    }
+  }
+});
