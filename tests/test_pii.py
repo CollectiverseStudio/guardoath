@@ -92,8 +92,13 @@ def test_stage_off_core_privacy_rule_does_not_hide_output_finding(rule_id, conte
     suppressed = asyncio.run(isolated.check(request, Stage.INPUT))
     detected = asyncio.run(isolated.check(request, Stage.OUTPUT))
     assert suppressed.evaluation_status == "complete"
-    assert all(result.status == "passed" for result in suppressed.checker_results)
-    assert suppressed.findings == ()
+    # Disabling email does not disable the independently enabled URL detector:
+    # the domain inside an address can correctly produce pii.url on Input.
+    expected_input = {"pii.url"} if rule_id == "pii.email_address" else set()
+    assert {finding.rule_id for finding in suppressed.findings} == expected_input
+    assert [result.status for result in suppressed.checker_results] == [
+        "flagged" if expected_input else "passed"
+    ]
     assert detected.evaluation_status == "complete"
     assert all(result.status == "flagged" for result in detected.checker_results)
     assert {finding.rule_id for finding in detected.findings} == {rule_id}
@@ -112,7 +117,9 @@ def test_disabled_core_email_scan_preserves_other_enabled_privacy_findings():
     input_result = asyncio.run(isolated.check(request, Stage.INPUT))
     output_result = asyncio.run(isolated.check(request, Stage.OUTPUT))
     assert input_result.evaluation_status == output_result.evaluation_status == "complete"
-    assert {finding.rule_id for finding in input_result.findings} == {"pii.credit_card"}
+    # The still-enabled URL detector independently reports the email domain.
+    # Never suppress that extra finding just to make the test green.
+    assert {finding.rule_id for finding in input_result.findings} == {"pii.credit_card", "pii.url"}
     assert {finding.rule_id for finding in output_result.findings} == {
         "pii.credit_card", "pii.email_address",
     }
