@@ -81,3 +81,7 @@ The small challenge corpus is not a statistical effectiveness estimate, and lexi
 ## Bounded deterministic mutation evaluation (2026-11-11)
 
 Run `python -m tools.redteam_mutations --output .guardoath-reports/redteam-mutations.json` to apply four documented transformations (case swap, double spaces, newline separators, and a zero-width separator) to the independent 15-case corpus. The evaluator reports 60 cases with TP/TN/FP/FN and misses by transformation, capped at 500 cases per invocation, without provider calls or including prompt text in reports. Tests: `pytest -q tests/test_redteam_mutations.py`. This measures lexical robustness only; mutations can change meaning, and results must not be presented as semantic effectiveness. CI and full release acceptance remain necessary.
+
+## Invisible-character evasion hardening (2026-11-11)
+
+`prompt_attack.inspect` now builds a **detection-only** normalized view that removes four invisible Unicode format controls (U+200B, U+200C, U+200D, U+FEFF) before applying existing prompt-attack rules. The original customer payload remains untouched. Regression tests cover an obfuscated direct-instruction override, benign look-alikes and no finding-content leakage. This is narrowly scoped lexical hardening; it is not a multilingual or semantic classifier. Do not interpret a passing unit test as a complete attack-coverage guarantee.
