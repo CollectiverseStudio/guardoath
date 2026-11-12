@@ -8,9 +8,9 @@ from guardoath.rule_catalog import RULES
 from tools.rule_mutation_audit import MAX_VARIANTS, WRAPPERS, audit, mutation
 
 
-def test_catalog_includes_every_static_rule_and_up_to_134400_cases():
-    assert len(RULES) == 525
-    assert len(RULES) * 2 * 2 * MAX_VARIANTS == 268800
+def test_catalog_includes_every_static_rule_and_up_to_269312_cases():
+    assert len(RULES) == 526
+    assert len(RULES) * 2 * 2 * MAX_VARIANTS == 269312
     assert len(WRAPPERS) == 8
 
 
