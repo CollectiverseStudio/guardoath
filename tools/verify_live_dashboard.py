@@ -3,8 +3,8 @@
 From the repository root:
     python -m tools.verify_live_dashboard --url https://guardoath.com
 
-Checks the deployed dashboard's versioned JS/CSS links and full response bytes
-against the local checkout. No AWS credentials, tenant API key, writes, or
+Checks the complete deployed dashboard HTML and its versioned JS/CSS response
+bytes against the exact local checkout. No AWS credentials, tenant API key, writes, or
 customer data are required. Backend Lambda code parity is NOT established.
 """
 from __future__ import annotations
@@ -22,6 +22,9 @@ from urllib.request import Request, urlopen
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "guardoath" / "static"
 LINK = re.compile(r"""(?:src|href)=["']/assets/([a-z0-9_-]+\.(?:js|css))\?v=([0-9a-f]{12})["']""")
+# Match the same static asset rewriting contract as create_app.versioned_page.
+# Verifying only JavaScript/CSS bytes misses stale or modified dashboard HTML.
+SOURCE_LINK = re.compile(r'(?P<attr>(?:src|href)=")/assets/(?P<name>[a-z0-9][a-z0-9_-]{0,63}\\.(?:js|css))"')
 REQUIRED = frozenset({
     "dashboard.css", "sigma.css", "dashboard.js", "sigma_tenant.js",
     "comparison_editor.js", "arithmetic_editor.js",
@@ -49,6 +52,21 @@ def _fetch(url: str, limit: int, open_url=urlopen) -> bytes:
         return payload
 
 
+
+def _expected_dashboard_html(static_root: Path) -> str:
+    """Render local HTML with the exact content-addressed asset links served by app.py."""
+    template = (static_root / "dashboard.html").read_text(encoding="utf-8")
+
+    def replace(match: re.Match[str]) -> str:
+        path = static_root / match["name"]
+        if not path.is_file():
+            return match.group(0)
+        version = hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+        return f'{match["attr"]}/assets/{match["name"]}?v={version}"'
+
+    return SOURCE_LINK.sub(replace, template)
+
+
 def verify(base_url: str, static_root: Path = ASSETS, open_url=urlopen) -> dict:
     base = base_url.rstrip("/")
     parsed = urlsplit(base)
@@ -66,6 +84,13 @@ def verify(base_url: str, static_root: Path = ASSETS, open_url=urlopen) -> dict:
     # Non-versioned local links risk a stale CloudFront response.
     if re.search(r"""(?:src|href)=["']/assets/[a-z0-9_-]+\.(?:js|css)["']""", html):
         failures.append("unversioned_asset_link")
+    # The dashboard markup contains the customer-facing controls, stage labels,
+    # forms and accessibility state. Matching only linked assets cannot attest it.
+    try:
+        if html != _expected_dashboard_html(static_root):
+            failures.append("dashboard_html_content_mismatch")
+    except (OSError, UnicodeError, ValueError) as exc:
+        failures.append("source_dashboard_html_unavailable:" + type(exc).__name__)
     checked = []
     for name, served_tag in sorted(linked.items()):
         path = static_root / name
