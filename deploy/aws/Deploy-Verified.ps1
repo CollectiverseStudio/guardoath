@@ -18,7 +18,7 @@ Set-Location $Root
 function Invoke-Checked([string]$Program, [string[]]$Arguments) {
     $lines = @(& $Program @Arguments 2>&1)
     if ($LASTEXITCODE -ne 0) {
-        throw "$Program failed with exit $LASTEXITCODE: $($lines -join ' ')"
+        throw "$Program failed with exit $($LASTEXITCODE): $($lines -join ' ')"
     }
     return ($lines -join "`n").Trim()
 }
@@ -83,6 +83,7 @@ $BackupDir = Join-Path $Root ".guardoath-reports"
 New-Item -ItemType Directory -Path $BackupDir -Force | Out-Null
 $BackupFile = Join-Path $BackupDir ("lambda-before-" + $Sha.Substring(0,12) + ".zip")
 if (Test-Path $BackupFile) { throw "Backup filename already exists; avoid overwriting the previous rollback copy." }
+$Uploaded = $false
 try {
     Invoke-WebRequest -Uri $Function.Code.Location -OutFile $BackupFile -UseBasicParsing
     if ((Get-Item $BackupFile).Length -lt 1000) { throw "Lambda rollback package is unexpectedly small" }
@@ -92,6 +93,7 @@ try {
     if (-not (Test-Path $Zip)) { throw "Release archive missing" }
     $CurrentHead = Invoke-Checked "git" @("rev-parse", "HEAD")
     if ($CurrentHead -ne $Sha) { throw "Git HEAD changed during build" }
+    $Uploaded = $true # AWS may apply the update even if the client loses its response.
     [void](Invoke-Aws @("lambda", "update-function-code", "--function-name", $FunctionName,
         "--revision-id", $Function.Configuration.RevisionId, "--zip-file", "fileb://$Zip"))
     [void](Invoke-Aws @("lambda", "wait", "function-updated", "--function-name", $FunctionName))
@@ -102,7 +104,7 @@ try {
     Write-Host "Source parity verified. Production is NOT accepted until all 15 live safety checks have passed."
 } catch {
     Write-Error "Deployment or parity verification failed: $_"
-    if (Test-Path $BackupFile) {
+    if ($Uploaded -and (Test-Path $BackupFile)) {
         Write-Warning "Attempting to restore the previously downloaded Lambda code (tenant table and configuration unchanged)."
         $Now = (Invoke-Aws @("lambda", "get-function-configuration", "--function-name", $FunctionName)) | ConvertFrom-Json
         [void](Invoke-Aws @("lambda", "update-function-code", "--function-name", $FunctionName,
