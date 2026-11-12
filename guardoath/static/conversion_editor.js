@@ -286,6 +286,26 @@
     const bulkJson = el("textarea"); bulkJson.id = "conversion-bulk-json";
     bulkJson.rows = 7; bulkJson.maxLength = 512000;
     bulkJson.setAttribute("spellcheck", "false");
+    // A single fill-only example lets customers preview two complementary
+    // deterministic conversion/time checks before any draft or tenant mutation.
+    const sampleJson = el("button", "Fill example JSON: cargo and cold-chain checks");
+    sampleJson.id = "conversion-bulk-sample"; sampleJson.type = "button";
+    sampleJson.addEventListener("click", () => {
+      bulkJson.value = JSON.stringify([
+        {rule_id:"example_cargo_kg_cap", kind:"unit_load_kg_cap",
+          fields:{load:"/shipment/load",load_unit:"/shipment/load_unit",
+            max_kg:"/shipment/max_kg"}, stages:["input","output"]},
+        {rule_id:"example_cold_chain_duration", kind:"cold_chain_excursion",
+          fields:{excursion_start:"/shipment/excursion/start",
+            excursion_end:"/shipment/excursion/end",
+            allowed_minutes:"/shipment/excursion/allowed_minutes"},
+          stages:["input","output"]}
+      ], null, 2);
+      acknowledge.checked = false;
+      bulkStatus.textContent = "Two cargo/time examples loaded into the JSON box only. " +
+        "No draft or tenant change. Confirm, stage, then Save checks to activate.";
+      bulkJson.focus();
+    });
     const exportDraft = el("button", "Load editable conversion draft into JSON box");
     exportDraft.type = "button"; exportDraft.id = "conversion-bulk-export";
     const acknowledgeLabel = el("label");
@@ -297,7 +317,7 @@
     importDraft.type = "button"; importDraft.id = "conversion-bulk-import";
     const bulkStatus = el("p"); bulkStatus.id = "conversion-bulk-status";
     bulkStatus.setAttribute("role", "status"); bulkStatus.setAttribute("aria-live", "polite");
-    bulk.append(bulkLabel, bulkJson, exportDraft, acknowledgeLabel, importDraft, bulkStatus);
+    bulk.append(bulkLabel, bulkJson, sampleJson, exportDraft, acknowledgeLabel, importDraft, bulkStatus);
     host.insertBefore(bulk, form);
     exportDraft.addEventListener("click", () => {
       bulkJson.value = JSON.stringify(draft, null, 2);
