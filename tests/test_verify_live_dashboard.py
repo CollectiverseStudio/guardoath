@@ -195,6 +195,27 @@ def test_health_missing_wrong_or_invalid_sha_never_claims_deployed_source(tmp_pa
     assert any(issue.startswith("backend_") for issue in report["issues"])
 
 
+
+@pytest.mark.parametrize("health", [
+    b"null",
+    b"[]",
+    b'"healthy"',
+    b'42',
+    b'{"status":"degraded","status":"ok","source_sha":"' + SHA.encode() + b'"}',
+    b'{"status":"ok","source_sha":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","source_sha":"' + SHA.encode() + b'"}',
+])
+def test_ambiguous_or_non_object_health_cannot_attest_release(tmp_path, health):
+    """Duplicate keys and scalar health payloads must fail closed, not crash."""
+    responses, _ = setup(tmp_path)
+    responses[BASE + "/healthz"] = health
+    report = verify_release(BASE, SHA, tmp_path, opener(responses))
+    assert report["dashboard_ui_matches_local_source"] is True
+    assert report["backend_deployment_sha_verified"] is False
+    assert report["release_source_parity_verified"] is False
+    assert any(issue.startswith("backend_health_unavailable:ValueError") for issue in report["issues"])
+    assert report["mutated_records"] == 0
+
+
 def test_stale_asset_rejects_release_even_when_backend_sha_matches(tmp_path):
     responses, tags = setup(tmp_path)
     responses[BASE + "/healthz"] = ('{"status":"ok","source_sha":"' + SHA + '"}').encode()
