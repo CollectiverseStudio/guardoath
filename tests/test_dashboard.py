@@ -66,10 +66,15 @@ def test_conversation_profile_runs_combined_checks_on_both_stages():
             # A 500-ms shipped-check timeout must not masquerade as success.
             # Include ONLY checker IDs/status/error codes and timings in the
             # failure message, never customer content or raw checker findings.
+            from guardoath.evaluate import SAFE_CHECKER_ERROR_CODES
+            known_checkers = {'pii', 'secrets', 'text_security', 'encoded_pii'}
             safe_receipts = {
-                receipt['checker_id']: {
-                    'status': receipt['status'],
-                    'error_code': receipt.get('error_code'),
+                (receipt['checker_id'] if receipt['checker_id'] in known_checkers else 'other_checker'): {
+                    'status': receipt['status'] if receipt['status'] in {
+                        'passed', 'flagged', 'error', 'skipped', 'unsupported'
+                    } else 'other_status',
+                    'error_code': receipt.get('error_code') if
+                        receipt.get('error_code') in SAFE_CHECKER_ERROR_CODES else 'other_error',
                     'latency_ms': receipt.get('latency_ms'),
                 }
                 for receipt in result['checker_results']
