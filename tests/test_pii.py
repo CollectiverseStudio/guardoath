@@ -73,6 +73,52 @@ def test_valid_ssn_scan_preserves_digit_prefilter_state(engine):
 
 
 
+
+@pytest.mark.parametrize("rule_id, content", [
+    ("pii.email_address", "Contact jane@example.com"),
+    ("pii.credit_card", "Card 4111 1111 1111 1111"),
+    ("pii.us_ssn", "Employee SSN: 219-09-9999"),
+])
+def test_stage_off_core_privacy_rule_does_not_hide_output_finding(rule_id, content):
+    # A saved tenant stage-specific Off is authoritative for that recognizer,
+    # but never suppresses the same actual sensitive value on enabled Output.
+    # Both stages still execute the same real PII checker, not a simulator.
+    policy = load_policies("policies/pii-only.json")[0].model_copy(update={
+        "input_rule_actions": {rule_id: "off"}, "output_rule_actions": {},
+    })
+    isolated = Engine([policy], default_checkers(enable_pii=True))
+    request = CheckRequest(application_id="demo", policy_version="pii-v1",
+                           content=content, content_format="text")
+    suppressed = asyncio.run(isolated.check(request, Stage.INPUT))
+    detected = asyncio.run(isolated.check(request, Stage.OUTPUT))
+    assert suppressed.evaluation_status == "complete"
+    assert all(result.status == "passed" for result in suppressed.checker_results)
+    assert suppressed.findings == ()
+    assert detected.evaluation_status == "complete"
+    assert all(result.status == "flagged" for result in detected.checker_results)
+    assert {finding.rule_id for finding in detected.findings} == {rule_id}
+    assert content not in suppressed.model_dump_json() + detected.model_dump_json()
+
+
+def test_disabled_core_email_scan_preserves_other_enabled_privacy_findings():
+    policy = load_policies("policies/pii-only.json")[0].model_copy(update={
+        "input_rule_actions": {"pii.email_address": "off"},
+        "output_rule_actions": {},
+    })
+    isolated = Engine([policy], default_checkers(enable_pii=True))
+    content = "Contact jane@example.com. Card 4111 1111 1111 1111"
+    request = CheckRequest(application_id="demo", policy_version="pii-v1",
+                           content=content, content_format="text")
+    input_result = asyncio.run(isolated.check(request, Stage.INPUT))
+    output_result = asyncio.run(isolated.check(request, Stage.OUTPUT))
+    assert input_result.evaluation_status == output_result.evaluation_status == "complete"
+    assert {finding.rule_id for finding in input_result.findings} == {"pii.credit_card"}
+    assert {finding.rule_id for finding in output_result.findings} == {
+        "pii.credit_card", "pii.email_address",
+    }
+    assert content not in input_result.model_dump_json() + output_result.model_dump_json()
+
+
 @pytest.mark.parametrize("content", [
     r'{"email":"jane\u0040example.com"}',
     r'{"jane\u0040example.com":"key"}',
