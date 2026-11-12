@@ -665,6 +665,16 @@ The rule is applied before findings are built, on plain text, on every JSON stri
 on decoded `base64:`/`hex:` payloads (`pii.encoded_*`). It never removes characters from what is
 redacted: a dropped match lies inside a value that is still reported and masked.
 
+For dense synthetic inputs with thousands of partially overlapping findings, the local
+pattern-containment reconciliation now uses a bounded end-score index rather than
+repeatedly searching every preceding overlapping candidate. Equal-score identical
+spans remain separate findings, different-score contained spans retain the same
+precedence, and all redacted characters remain covered. Independent randomized
+exact-result parity and a 4,000-span regression live in
+`tests/test_privacy_overlaps.py`. This reduces avoidable CPU work without raising
+the 500-ms PII deadline or weakening mandatory redaction rechecks; historical
+intermittent timeout risk is not declared resolved.
+
 This follows the copied analyzer's duplicate rule (`EntityRecognizer.remove_duplicates` in
 release 2.2.366: a result contained in another result with an equal or higher score is dropped).
 Two differences: upstream applies that rule only between results of the same type, and GuardOath
