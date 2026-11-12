@@ -233,6 +233,84 @@ test("authenticated customer can fill, save and evaluate the invoice arithmetic 
     await expect(page.locator("#arithmetic-message")).toContainText("already exists");
     expect((await current()).revision).toBe(afterSave.revision);
     expect((await current()).advanced_arithmetic).toEqual(afterSave.advanced_arithmetic);
+
+    // FC-037 shipment quantities and FC-046 carbon intensity are genuine
+    // guided, tenant-owned saved rules, not frontend-only demonstration logic.
+    const beforeShipmentIntensity = await current();
+    await page.locator("#arithmetic-sample-shipment").click();
+    await expect(page.locator("#arithmetic-id")).toHaveValue("shipment_quantity_balances");
+    await expect(page.locator("#arithmetic-kind")).toHaveValue("shipment_quantity_sum");
+    await expect(page.locator("#arithmetic-field-lines")).toHaveValue("/shipment/lines");
+    await expect(page.locator("#arithmetic-field-total")).toHaveValue("/shipment/total");
+    await expect(page.locator("#arithmetic-message")).toContainText("not added or saved");
+    await expect(page.locator("#arithmetic-stage-input")).toBeChecked();
+    await expect(page.locator("#arithmetic-stage-output")).toBeChecked();
+    expect((await current()).revision).toBe(beforeShipmentIntensity.revision);
+    await page.locator("#arithmetic-apply").click();
+    await expect(page.locator("#arithmetic-draft-summary")).toContainText("1 added");
+    await page.locator("#arithmetic-sample-intensity").click();
+    await expect(page.locator("#arithmetic-id")).toHaveValue("carbon_intensity_within_limit");
+    await expect(page.locator("#arithmetic-kind")).toHaveValue("carbon_intensity");
+    for (const field of ["emissions", "output", "max_intensity"]) {
+      await expect(page.locator("#arithmetic-field-" + field)).toHaveValue("/operations/" + field);
+    }
+    await expect(page.locator("#arithmetic-stage-input")).toBeChecked();
+    await expect(page.locator("#arithmetic-stage-output")).toBeChecked();
+    await expect(page.locator("#arithmetic-message")).toContainText("not added or saved");
+    await page.locator("#arithmetic-apply").click();
+    await expect(page.locator("#arithmetic-draft-summary")).toContainText("2 added");
+    const beforeShipmentSave = await current();
+    expect(beforeShipmentSave.revision).toBe(beforeShipmentIntensity.revision);
+    expect(beforeShipmentSave.advanced_arithmetic).toEqual(beforeShipmentIntensity.advanced_arithmetic);
+    await page.locator("#tenant-save").click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved");
+    const shipmentSaved = await current();
+    expect(shipmentSaved.revision).toBe(beforeShipmentIntensity.revision + 1);
+    expect(shipmentSaved.advanced_arithmetic).toContainEqual({
+      rule_id: "shipment_quantity_balances", kind: "shipment_quantity_sum",
+      stages: ["input", "output"],
+      fields: {lines: "/shipment/lines", total: "/shipment/total"}
+    });
+    expect(shipmentSaved.advanced_arithmetic).toContainEqual({
+      rule_id: "carbon_intensity_within_limit", kind: "carbon_intensity",
+      stages: ["input", "output"],
+      fields: {emissions: "/operations/emissions", output: "/operations/output",
+               max_intensity: "/operations/max_intensity"}
+    });
+    expect(shipmentSaved.advanced_identity_reference_status)
+      .toEqual(beforeShipmentIntensity.advanced_identity_reference_status);
+    expect(shipmentSaved.advanced_conversion_reference_status)
+      .toEqual(beforeShipmentIntensity.advanced_conversion_reference_status);
+
+    const environmentalAndQuantityWitnesses = [
+      ["shipment_quantity_balances",
+       {shipment: {lines: [{quantity: 3}, {quantity: 2}], total: 4}},
+       {shipment: {lines: [{quantity: 3}, {quantity: 2}], total: 5}}],
+      ["carbon_intensity_within_limit",
+       {operations: {emissions: 250, output: 100, max_intensity: 2}},
+       {operations: {emissions: 200, output: 100, max_intensity: 2}}]
+    ];
+    for (const stage of ["input", "output"]) {
+      for (const [id, invalid, valid] of environmentalAndQuantityWitnesses) {
+        for (const [payload, violates] of [[invalid, true], [valid, false]]) {
+          const response = await page.request.post("/v1/checks/" + stage, {
+            headers, data: {application_id: "demo8", content_format: "json",
+                           content: JSON.stringify(payload)}
+          });
+          expect(response.status()).toBe(200);
+          const evaluation = await response.json();
+          expect(evaluation.evaluation_status).toBe("complete");
+          expect(evaluation.findings.some(f => f.rule_id === "business." + id)).toBe(violates);
+          if (violates) expect(evaluation.effective_action).toBe("block");
+        }
+      }
+    }
+    await page.locator("#arithmetic-sample-shipment").click();
+    await expect(page.locator("#arithmetic-message")).toContainText("already exists");
+    await page.locator("#arithmetic-sample-intensity").click();
+    await expect(page.locator("#arithmetic-message")).toContainText("already exists");
+    expect((await current()).revision).toBe(shipmentSaved.revision);
+    expect((await current()).advanced_arithmetic).toEqual(shipmentSaved.advanced_arithmetic);
   } finally {
     await reset();
   }
