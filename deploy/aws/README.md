@@ -251,3 +251,29 @@ about 1,400 requests in 40 minutes. The hourly alarms were replaced with these 2
 
 `aws cloudformation delete-stack --region us-east-1 --profile collectiverse-prod --stack-name guardoath-site`.
 The table `guardoath-tenants` is kept (deletion protection and Retain); delete it separately if wanted.
+
+
+## Exact-SHA guarded PowerShell deployment
+
+Use `deploy/aws/Deploy-Verified.ps1` from a clean **Windows PowerShell** checkout. It is read-only by default; it checks that local HEAD is the current GitHub `main`, then verifies exact-SHA successful **Tests**, **Push on main / CodeQL**, **Field Comparisons Evidence**, **Trusted Reference Acceptance**, and **PII Reliability Gate** workflow runs. It also refuses a release while Issue #30's intermittent shipped 500-ms PII/redaction reliability blocker remains open or is closed as `not_planned`. This is a safety gate, not an additional human approval gate.
+
+From the existing repository:
+
+```powershell
+Set-Location "C:\Users\grego\Documents\Personal\collectiverse\guardoath"
+git fetch origin main
+git pull --ff-only origin main
+powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy\aws\Deploy-Verified.ps1
+```
+
+The script requires the normal AWS CLI profile `collectiverse-prod`. **A preflight failure is actionable and performs no AWS write.** The specialized workflows support manual GitHub Actions `workflow_dispatch`; to obtain *exact-current-SHA* results use their GitHub Actions **Run workflow** controls with branch `main` (or, if authenticated with GitHub CLI, `gh workflow run field-comparison-evidence.yml --ref main`, `gh workflow run field-reference-acceptance.yml --ref main`, and `gh workflow run pii-reliability-gate.yml --ref main`). Re-run preflight only after the workflows have completed successfully and the underlying Issue #30 failure is actually resolved with evidence. Older green jobs cannot authorize a new SHA.
+
+Only after those safety gates are satisfied, execute:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy\aws\Deploy-Verified.ps1 -Deploy
+```
+
+The deployment mode checks AWS account and CloudFormation outputs, downloads an original Lambda code ZIP into the ignored `.guardoath-reports` directory **before** changing code, uses revision-protected `update-function-code`, invalidates `/assets/*`, and runs `python -m tools.verify_live_dashboard --expected-sha <exact HEAD>`. A failed upload/parity check triggers an attempt to restore the previously downloaded Lambda code and re-invalidate assets. It does not update CloudFormation, the tenant database, paid entitlements, Stripe credentials, IAM permissions or site concurrency. It does not claim rollback or production success if those operations fail.
+
+**The complete 15 post-deployment live safety checks are still required**, including authenticated tenant Input/Output, attachment policy provenance and fail-closed inspection, trusted reference integrity, redaction/recheck reliability, customer sign-in and subscription behavior. Passing only live byte/SHA parity is not sufficient. Do not use `-Deploy` while those pre-deployment safety prerequisites remain unresolved. The script does not have AWS credentials in GitHub; the host executing it must have authorized access.
