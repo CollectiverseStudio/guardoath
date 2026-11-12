@@ -421,6 +421,12 @@ test("tax, discount and manufacturing guided forms persist three independent ten
       await page.locator(button).click();
       await expect(page.locator("#arithmetic-message")).toContainText("already exists");
     }
+    // Removing a saved rule is not an authorization to silently reuse the
+    // saved identity before the tenant's revisioned Save commits its deletion.
+    await page.getByRole("button", {name: "Remove arithmetic discount_within_fraction"}).click();
+    await expect(page.locator("#arithmetic-draft-summary")).toContainText("1 removed");
+    await page.locator("#arithmetic-sample-discount").click();
+    await expect(page.locator("#arithmetic-message")).toContainText("already exists");
     const after = await current();
     expect(after.revision).toBe(saved.revision);
     expect(after.advanced_arithmetic).toEqual(saved.advanced_arithmetic);
