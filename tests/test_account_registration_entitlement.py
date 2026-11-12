@@ -515,3 +515,104 @@ def test_public_subscription_price_never_calls_provider_without_server_configura
     reply = client.get("/v1/billing/price")
     assert reply.status_code == 503
     assert store.tenant_ids() == ()
+
+
+def test_owner_reconciles_verified_subscription_and_paid_quota_without_browser_claims(monkeypatch):
+    """End-to-end signed-in API + authoritative memory tenant write, offline Stripe."""
+    from guardoath import stripe_provider
+    from guardoath.subscription_reconciliation import StripeBinding
+    monkeypatch.setenv("GUARDOATH_STRIPE_SECRET_KEY", "sk_test_" + "a" * 32)
+    monkeypatch.setenv("GUARDOATH_STRIPE_PRICE_ID", "price_starter")
+    monkeypatch.setenv("GUARDOATH_PAID_MONTHLY_ALLOWANCE", "125")
+    calls = []
+    def verified(**kwargs):
+        calls.append(kwargs)
+        return StripeBinding(kwargs["tenant_id"], kwargs["customer_id"], "sub_verified"), {
+            "object": "subscription", "id": "sub_verified",
+            "customer": kwargs["customer_id"], "status": "active",
+        }
+    monkeypatch.setattr(stripe_provider, "verified_subscription_snapshot", verified)
+    client, store = make_client()
+    owner = {SESSION_HEADER: "verified-test-token"}
+    assert client.post("/v1/register", headers=owner).status_code == 201
+    current = store.get("usr-test-account")
+    assert current.monthly_allowance == 0
+    assert client.post("/v1/billing/reconcile", headers=owner, json={}).status_code == 409
+    store.bind_stripe_customer(current.tenant_id, "cus_owned", current.revision)
+    assert client.post("/v1/billing/reconcile", json={}).status_code == 401
+    assert client.post("/v1/billing/reconcile",
+                       headers={SESSION_HEADER: "invalid"}, json={}).status_code == 401
+    response = client.post("/v1/billing/reconcile", headers=owner, json={
+        "tenant_id": "usr-other", "subscription_status": "active",
+        "monthly_allowance": 1000000,
+    })
+    assert response.status_code == 200, response.text
+    assert response.json()["subscription_status"] == "active"
+    assert response.json()["monthly_allowance"] == 125
+    assert response.json()["can_validate"] is True
+    assert calls and calls[0]["tenant_id"] == "usr-test-account"
+    assert calls[0]["customer_id"] == "cus_owned"
+    assert calls[0]["price_id"] == "price_starter"
+    tenant = store.get("usr-test-account")
+    assert tenant.stripe_subscription_id == "sub_verified"
+    assert tenant.monthly_allowance == 125
+    assert tenant.overage == "block"
+    assert tenant.key_hashes == ()
+    assert client.get("/v1/account/status", headers=owner).json()["can_validate"] is True
+    created_key = client.post("/v1/tenants/current/keys", headers=owner, json={})
+    assert created_key.status_code == 200, created_key.text
+
+
+def test_failed_subscription_reconciliation_cannot_mint_entitlement(monkeypatch):
+    from guardoath import stripe_provider
+    from guardoath.subscription_reconciliation import SubscriptionReconciliationError
+    monkeypatch.setenv("GUARDOATH_STRIPE_SECRET_KEY", "sk_test_" + "a" * 32)
+    monkeypatch.setenv("GUARDOATH_STRIPE_PRICE_ID", "price_starter")
+    def unavailable(**kwargs):
+        raise SubscriptionReconciliationError("Untrusted provider state")
+    monkeypatch.setattr(stripe_provider, "verified_subscription_snapshot", unavailable)
+    client, store = make_client()
+    owner = {SESSION_HEADER: "verified-test-token"}
+    assert client.post("/v1/register", headers=owner).status_code == 201
+    initial = store.get("usr-test-account")
+    bound = store.bind_stripe_customer(initial.tenant_id, "cus_owned", initial.revision)
+    for allowance in ("", "0", "-1", "true", "1000000001"):
+        monkeypatch.setenv("GUARDOATH_PAID_MONTHLY_ALLOWANCE", allowance)
+        refused = client.post("/v1/billing/reconcile", headers=owner, json={})
+        assert refused.status_code == 503
+        assert store.get(bound.tenant_id) == bound
+    monkeypatch.setenv("GUARDOATH_PAID_MONTHLY_ALLOWANCE", "125")
+    response = client.post("/v1/billing/reconcile", headers=owner, json={})
+    assert response.status_code == 503
+    assert "subscription_status" not in response.text
+    assert store.get(bound.tenant_id) == bound
+    assert client.post("/v1/tenants/current/keys", headers=owner, json={}).status_code == 402
+
+
+def test_reconciled_past_due_revokes_paid_quota_and_validation(monkeypatch):
+    from guardoath import stripe_provider
+    from guardoath.subscription_reconciliation import StripeBinding
+    monkeypatch.setenv("GUARDOATH_STRIPE_SECRET_KEY", "sk_test_" + "a" * 32)
+    monkeypatch.setenv("GUARDOATH_STRIPE_PRICE_ID", "price_starter")
+    monkeypatch.setenv("GUARDOATH_PAID_MONTHLY_ALLOWANCE", "125")
+    state = ["active"]
+    def verified(**kwargs):
+        return StripeBinding(kwargs["tenant_id"], kwargs["customer_id"], "sub_verified"), {
+            "object": "subscription", "id": "sub_verified",
+            "customer": kwargs["customer_id"], "status": state[0],
+        }
+    monkeypatch.setattr(stripe_provider, "verified_subscription_snapshot", verified)
+    client, store = make_client()
+    owner = {SESSION_HEADER: "verified-test-token"}
+    client.post("/v1/register", headers=owner)
+    initial = store.get("usr-test-account")
+    store.bind_stripe_customer(initial.tenant_id, "cus_owned", initial.revision)
+    assert client.post("/v1/billing/reconcile", headers=owner, json={}).status_code == 200
+    state[0] = "past_due"
+    revoked = client.post("/v1/billing/reconcile", headers=owner, json={})
+    assert revoked.status_code == 200
+    assert revoked.json()["subscription_status"] == "past_due"
+    assert revoked.json()["can_validate"] is False
+    assert revoked.json()["monthly_allowance"] == 0
+    assert store.get("usr-test-account").stripe_subscription_id == "sub_verified"
+    assert client.post("/v1/tenants/current/keys", headers=owner, json={}).status_code == 402
