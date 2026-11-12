@@ -24,7 +24,7 @@ ASSETS = ROOT / "guardoath" / "static"
 LINK = re.compile(r"""(?:src|href)=["']/assets/([a-z0-9_-]+\.(?:js|css))\?v=([0-9a-f]{12})["']""")
 # Match the same static asset rewriting contract as create_app.versioned_page.
 # Verifying only JavaScript/CSS bytes misses stale or modified dashboard HTML.
-SOURCE_LINK = re.compile(r'(?P<attr>(?:src|href)=")/assets/(?P<name>[a-z0-9][a-z0-9_-]{0,63}\\.(?:js|css))"')
+SOURCE_LINK = re.compile(r'(?P<attr>(?:src|href)=")/assets/(?P<name>[a-z0-9][a-z0-9_-]{0,63}\.(?:js|css))"')
 REQUIRED = frozenset({
     "dashboard.css", "sigma.css", "dashboard.js", "sigma_tenant.js",
     "comparison_editor.js", "arithmetic_editor.js",
