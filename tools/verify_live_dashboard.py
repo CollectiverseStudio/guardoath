@@ -26,6 +26,7 @@ REQUIRED = frozenset({
     "dashboard.css", "sigma.css", "dashboard.js", "sigma_tenant.js",
     "comparison_editor.js", "arithmetic_editor.js",
     "identity_editor.js", "conversion_editor.js", "statistical_drift_editor.js", "agent_activity.js",
+    "conversation_wizard.js",
 })
 MAX_HTML_BYTES = 256_000
 MAX_ASSET_BYTES = 2_000_000
