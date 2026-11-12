@@ -79,6 +79,12 @@ test("bulk and individual ordinary drafts reject unsaved advanced IDs, then dist
     // rule through the normal customer Save, with both-stage Engine outcomes.
     const valid = {...duplicate, rule_id: "pending_limit"};
     await box.fill(JSON.stringify([valid]));
+    // The prior duplicate-ID attempt was confirmed for different JSON.
+    // Fresh consent is required before staging the corrected rule.
+    await expect(confirm).not.toBeChecked();
+    await importButton.click();
+    await expect(page.locator("#comparison-bulk-status")).toContainText("Confirm replacement");
+    await confirm.check();
     await importButton.click();
     await expect(page.locator("#comparison-bulk-status")).toContainText(
       "1 comparison definitions staged");
