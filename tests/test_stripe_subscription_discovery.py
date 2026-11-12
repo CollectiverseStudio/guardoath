@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from guardoath.stripe_provider import discover_subscription
+from guardoath.stripe_provider import discover_subscription, verify_discovered_subscription
 from guardoath.subscription_reconciliation import SubscriptionReconciliationError
 
 KEY = "sk_test_" + "a" * 32
@@ -94,3 +94,43 @@ def test_live_credentials_cannot_use_test_mode_subscription():
     binding, _ = discover_subscription(**args,
         opener=transport(listing(subscription(livemode=True)), []))
     assert binding.subscription_id == "sub_valid"
+
+
+def test_independent_direct_subscription_get_is_required_before_verified_status():
+    calls = []
+    list_payload = listing(subscription())
+    get_payload = json.dumps(subscription()).encode()
+    def open(request, timeout):
+        calls.append(request.full_url)
+        payload = list_payload if "/subscriptions?" in request.full_url else get_payload
+        return Response(payload)
+    result = verify_discovered_subscription(**KW, opener=open)
+    assert result.tenant_id == "usr-acme" and result.active is True
+    assert len(calls) == 2
+    assert calls[0].startswith("https://api.stripe.com/v1/subscriptions?")
+    assert calls[1] == "https://api.stripe.com/v1/subscriptions/sub_valid"
+
+
+@pytest.mark.parametrize("direct", [
+    subscription(status="past_due"),
+    subscription(customer="cus_other"),
+    subscription(id="sub_swapped"),
+    {"object": "other"},
+])
+def test_stale_or_swapped_direct_subscription_cannot_be_verified(direct):
+    calls = []
+    def open(request, timeout):
+        calls.append(request.full_url)
+        payload = listing(subscription()) if "?" in request.full_url else json.dumps(direct).encode()
+        return Response(payload)
+    with pytest.raises(SubscriptionReconciliationError):
+        verify_discovered_subscription(**KW, opener=open)
+    assert len(calls) == 2
+
+
+def test_ambiguous_customer_subscription_never_reaches_direct_get():
+    calls = []
+    with pytest.raises(SubscriptionReconciliationError):
+        verify_discovered_subscription(**KW, opener=transport(
+            listing(subscription(), subscription(id="sub_other")), calls))
+    assert len(calls) == 1
