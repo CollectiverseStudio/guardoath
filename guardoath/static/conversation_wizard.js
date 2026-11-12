@@ -12,8 +12,22 @@
     const status = document.getElementById("wizard-status");
     const previous = document.getElementById("wizard-back");
     const next = document.getElementById("wizard-next");
+    const start = document.getElementById("wizard-start");
+    const allSteps = document.getElementById("wizard-show-all");
     const prepared = document.getElementById("batch-run");
-    let current = 0;
+    // Default to the established full workflow until a customer opts into guided focus.
+    let current = null;
+    const showAll = (message = "All four steps visible. Start the guided test to focus.") => {
+      current = null;
+      sections.forEach(section => { section.hidden = false; });
+      tabs.forEach(tab => {
+        tab.setAttribute("aria-current", "false");
+        tab.setAttribute("aria-pressed", "false");
+      });
+      previous.disabled = true;
+      next.disabled = true;
+      status.textContent = message;
+    };
     const show = index => {
       if (!Number.isInteger(index) || index < 0 || index >= sections.length) return;
       current = index;
@@ -31,17 +45,19 @@
     };
     tabs.forEach((tab, i) => tab.addEventListener("click", () => show(i)));
     previous.addEventListener("click", () => show(current - 1));
-    next.addEventListener("click", () => show(current + 1));
+    next.addEventListener("click", () => { if (current !== null) show(current + 1); });
+    start?.addEventListener("click", () => show(0));
+    allSteps?.addEventListener("click", () => {
+      if (prepared?.open) prepared.open = false;
+      showAll();
+    });
     prepared?.addEventListener("toggle", () => {
-      if (!prepared.open) { show(current); return; }
-      sections.forEach(section => { section.hidden = false; });
-      tabs.forEach(tab => {
-        tab.setAttribute("aria-current", "false");
-        tab.setAttribute("aria-pressed", "false");
-      });
-      previous.disabled = true;
-      next.disabled = true;
-      status.textContent = "Prepared example: all four steps visible";
+      if (!prepared.open) {
+        if (current === null) showAll();
+        else show(current);
+        return;
+      }
+      showAll("Prepared example: all four steps visible");
     });
     // A completed click may still result in a blocked input. Let the operator
     // see the findings; do not auto-advance past a security decision.
@@ -59,7 +75,7 @@
     };
     document.getElementById("input-samples")?.addEventListener("change", explain);
     explain();
-    show(0);
+    showAll();
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();

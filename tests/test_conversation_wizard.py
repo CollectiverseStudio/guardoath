@@ -15,6 +15,9 @@ def test_conversation_wizard_has_four_separate_steps_and_existing_action_control
                     "input-gate", "result-summary", "run-error"):
         assert 'id="' + element + '"' in html
     assert 'src="/assets/conversation_wizard.js"' in html
+    assert 'id="wizard-start"' in html
+    assert 'id="wizard-show-all"' in html
+    assert "showAll();" in js and "start?.addEventListener" in js
     assert "aria-current" in js
     assert "section.hidden = i !== current" in js
     assert "fetch(" not in js and "localStorage" not in js

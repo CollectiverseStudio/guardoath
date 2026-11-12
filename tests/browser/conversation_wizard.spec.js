@@ -4,6 +4,8 @@ const {test, expect} = require("@playwright/test");
 test("guided steps retain Input data without unlocking unchecked Output", async ({page}) => {
   await page.goto("/dashboard");
   const steps = ["wizard-input", "wizard-input-check", "wizard-output", "wizard-output-check"];
+  await expect(page.locator("#wizard-status")).toContainText("All four steps visible");
+  await page.locator("#wizard-start").click();
   await expect(page.locator("#wizard-status")).toHaveText("Step 1 of 4");
   for (let i = 0; i < steps.length; i++) {
     if (i === 0) await expect(page.locator("#" + steps[i])).toBeVisible();
@@ -29,6 +31,8 @@ test("guided steps retain Input data without unlocking unchecked Output", async 
 
 test("prepared-example shortcut expands all steps yet preserves the Input gate", async ({page}) => {
   await page.goto("/dashboard");
+  await page.locator("#wizard-start").click();
+  await expect(page.locator("#wizard-input-check")).toBeHidden();
   await page.locator("#batch-run > summary").click();
   await expect(page.locator("#batch-run")).toHaveAttribute("open", "");
   await expect(page.locator("#wizard-status")).toContainText("all four steps visible");
