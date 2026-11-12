@@ -158,6 +158,55 @@ def test_billing_portal_requires_owner_and_existing_stripe_customer():
     assert store.get("usr-test-account").subscription_status == "inactive"
 
 
+
+def test_owner_billing_portal_refuses_cross_customer_provider_response_without_entitlement(monkeypatch):
+    """The real owner HTTP route must never relay another tenant's portal."""
+    import json
+    from guardoath import stripe_portal
+    from guardoath.billing import BillingMode
+    from guardoath.tenant_record import TenantRecord
+    monkeypatch.setenv("GUARDOATH_STRIPE_SECRET_KEY", "sk_test_" + "a" * 32)
+
+    class FakeResponse:
+        status = 200
+        def __enter__(self):
+            return self
+        def __exit__(self, *_args):
+            return False
+        def read(self, size):
+            return json.dumps({
+                "id": "bps_test_wrong_customer",
+                "object": "billing_portal.session",
+                "customer": "cus_other", "livemode": False,
+                "url": "https://billing.stripe.com/p/session/other",
+            }).encode()[:size]
+
+    class FakeOpener:
+        def open(self, request, timeout):
+            assert timeout == 5
+            assert request.full_url == "https://api.stripe.com/v1/billing_portal/sessions"
+            return FakeResponse()
+
+    monkeypatch.setattr(stripe_portal.urllib.request, "build_opener",
+                        lambda *_handlers: FakeOpener())
+    client, store = make_client()
+    store.create(TenantRecord(
+        tenant_id="usr-test-account", display_name="Unpaid Stripe account",
+        demo=False, status="active", monthly_allowance=0, key_hashes=(),
+        input_check_text_security="block", output_check_text_security="block",
+        subscription_status="inactive", billing_mode=BillingMode.STRIPE,
+        payer_id="cus_owned",
+    ))
+    headers = {SESSION_HEADER: "verified-test-token"}
+    response = client.post("/v1/billing/portal", headers=headers, json={})
+    assert response.status_code == 503, response.text
+    assert "portal_url" not in response.text
+    assert store.get("usr-test-account").payer_id == "cus_owned"
+    assert store.get("usr-test-account").subscription_status == "inactive"
+    assert store.get("usr-test-account").key_hashes == ()
+    assert client.post("/v1/tenants/current/keys", headers=headers, json={}).status_code == 402
+
+
 def test_disabled_registered_identity_cannot_register_again_or_appear_unregistered():
     # Existing disabled tenants are not new customers; a misleading
     # 'not registered' status would otherwise cause an impossible retry loop.
