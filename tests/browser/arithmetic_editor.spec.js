@@ -120,7 +120,7 @@ test("bulk JSON replaces 125 arithmetic rules atomically through customer Save a
   await page.locator("#demo-user").selectOption("demo8");
   await page.getByRole("button", {name:"Get demo API key", exact:true}).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
-  const headers = {Authorization: "Bearer " + await page.locator("#demo-key-value").inputValue()};
+  let headers = {Authorization: "Bearer " + await page.locator("#demo-key-value").inputValue()};
   const read = async () => {
     const response = await request.get("/v1/applications/current", {headers});
     expect(response.status()).toBe(200);
@@ -132,8 +132,11 @@ test("bulk JSON replaces 125 arithmetic rules atomically through customer Save a
     expect(reset.status()).toBe(200);
     resetRequired = true;
     await page.reload();
-    await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
     await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
+    await page.locator("#demo-user").selectOption("demo8");
+    await page.getByRole("button", {name:"Get demo API key", exact:true}).click();
+    await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
+    headers = {Authorization: "Bearer " + await page.locator("#demo-key-value").inputValue()};
     const initial = await read();
     expect(initial.advanced_arithmetic).toEqual([]);
 
