@@ -119,19 +119,49 @@ def resolve_overlaps(candidates, check_deadline=lambda: None):
     top = {}
     for start, end, _entity, _source, score in patterns:
         top[(start, end)] = max(score, top.get((start, end), score))
-    # Sorted by start, longer first: every span that can contain the current one comes first.
-    containers = []
-    for start, end, entity, source, score in sorted(patterns, key=lambda item: (item[0], -item[1])):
+    # Sorted by start, longer first: a previously kept pattern can suppress
+    # this one only when its end reaches this end and its score is >= ours.
+    # The former list-of-live-containers scan was quadratic for thousands of
+    # partially overlapping spans. A prefix-maximum Fenwick index over
+    # reverse-sorted ends answers that same containment question in O(log n).
+    # Identical spans must NOT suppress one another on equal scores: process
+    # all candidates at the same (start, end) before publishing that group.
+    ends = sorted({end for _, end, _, _, _ in patterns}, reverse=True)
+    ranks = {end: index + 1 for index, end in enumerate(ends)}
+    maxima = [float("-inf")] * (len(ends) + 1)
+
+    def maximum_containing_score(rank):
+        maximum = float("-inf")
+        while rank:
+            maximum = max(maximum, maxima[rank])
+            rank -= rank & -rank
+        return maximum
+
+    def remember_containing_score(rank, score):
+        while rank < len(maxima):
+            maxima[rank] = max(maxima[rank], score)
+            rank += rank & -rank
+
+    ordered = sorted(patterns, key=lambda item: (item[0], -item[1]))
+    index = 0
+    while index < len(ordered):
         check_deadline()
-        if score < top[(start, end)]:
-            continue
-        # As in the copied analyzer, only spans that still reach this start can contain it.
-        containers = [item for item in containers if item[1] >= start]
-        if any(other_end >= end and (other_start, other_end) != (start, end) and other_score >= score
-               for other_start, other_end, other_score in containers):
-            continue
-        kept.append((start, end, entity, source))
-        containers.append((start, end, score))
+        start, end = ordered[index][:2]
+        next_index = index + 1
+        while next_index < len(ordered) and ordered[next_index][:2] == (start, end):
+            next_index += 1
+        rank = ranks[end]
+        enclosing_score = maximum_containing_score(rank)
+        accepted = False
+        for _, _, entity, source, score in ordered[index:next_index]:
+            check_deadline()
+            if score < top[(start, end)] or enclosing_score >= score:
+                continue
+            kept.append((start, end, entity, source))
+            accepted = True
+        if accepted:
+            remember_containing_score(rank, top[(start, end)])
+        index = next_index
     return kept
 
 
