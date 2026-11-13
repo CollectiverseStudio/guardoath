@@ -37,7 +37,6 @@ UNSAFE_BIDI_CONTROLS = frozenset("\u061c\u200e\u200f\u202a\u202b\u202c\u202d\u20
 # treat it as an invisible prefix, not harmless leading whitespace.
 INVISIBLE_FORMULA_PREFIX = frozenset("\u00ad\u034f\u180e\u200b\u200c\u200d\u2060\ufeff")
 FORMULA_PREFIX = frozenset("=+-@")
-LEADING_CSV_WHITESPACE = frozenset(" \t\r\n\u00a0\ufeff")
 
 
 def has_hidden_csv_formula_prefix(cell: str) -> bool:
@@ -50,7 +49,9 @@ def has_hidden_csv_formula_prefix(cell: str) -> bool:
     for character in cell:
         if character in INVISIBLE_FORMULA_PREFIX:
             saw_invisible = True
-        elif character in LEADING_CSV_WHITESPACE:
+        elif character.isspace():
+            # Include Unicode White_Space (e.g. narrow no-break/ideographic)
+            # between an invisible prefix and a potential formula trigger.
             continue
         else:
             return saw_invisible and character in FORMULA_PREFIX
