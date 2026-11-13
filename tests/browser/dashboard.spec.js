@@ -2026,7 +2026,7 @@ test("CSV text rejects concealed formulas with clear incomplete status", async (
       ["\u200b=2+3", "unsafe_csv_invisible_formula_prefix"],
       ["\u202e=2+3", "unsafe_csv_control_characters"],
     ]) {
-      const input = "name,value\\nSynthetic," + cell;
+      const input = "name,value\nSynthetic," + cell;
       await page.locator("#input-format").selectOption("text");
       await page.locator("#input-content").fill(input);
       const response = page.waitForResponse(r => r.url().endsWith("/v1/checks/input") && r.request().method() === "POST");
