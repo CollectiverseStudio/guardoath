@@ -878,13 +878,17 @@ function updateStageHiddenDraftWarning(changes = pendingChanges()) {
   if (!warning) return;
   const selected = $("tenant-panel").dataset.stageFocus;
   const hiddenStage = selected === "input" ? "output" : selected === "output" ? "input" : null;
+  const checkOrRuleDraft = hiddenStage && Object.keys(changes).some(name =>
+    name.startsWith(hiddenStage + "_check_") || name === hiddenStage + "_rule_actions");
+  const attachmentDraft = hiddenStage && Object.hasOwn(changes, hiddenStage + "_attachment_csv_mode");
   const hasHiddenChanges = !!(application?.tenant && ownChecksSelected() && hiddenStage &&
-    Object.keys(changes).some(name =>
-      name.startsWith(hiddenStage + "_check_") || name === hiddenStage + "_rule_actions"));
+    (checkOrRuleDraft || attachmentDraft));
   warning.hidden = !hasHiddenChanges;
+  const draftKinds = [checkOrRuleDraft ? "check/rule actions" : "",
+    attachmentDraft ? "CSV/TSV attachment inspection" : ""].filter(Boolean).join(" and ");
   warning.textContent = hasHiddenChanges
-    ? "Unsaved " + (hiddenStage === "input" ? "Input" : "Output") +
-      " policy edits are pending while that settings column is hidden. Select Both stages to review them. Save checks (or Run) applies pending changes to both stages."
+    ? "Unsaved " + (hiddenStage === "input" ? "Input" : "Output") + " " + draftKinds +
+      " edits are pending while that stage's settings are hidden. Select Both stages to review them. Save checks (or Run) applies pending changes to both stages."
     : "";
 }
 $("tenant-panel").addEventListener("guardoath:stage-view-changed",
