@@ -25,6 +25,7 @@ def test_reliability_gate_cannot_omit_shipped_privacy_paths():
         "tests/test_dashboard.py",
         "tests/test_pii_deadline_diagnostics.py",
         "tests/test_pii_context_window.py",
+        "tests/test_pii_redaction_assembly.py",
         "tools/conversation_privacy_release.py",
         "tools/conversation_privacy_contention.py",
         "tests/test_conversation_privacy_release.py",
@@ -54,6 +55,9 @@ def test_reliability_gate_runs_all_required_real_engine_checks():
         "Verify regex concurrency never changes detector matches", 1
     )[1].split("Repeated real PII detection", 1)[0]
     assert "tests/test_pii_context_window.py" in workflow.split(
+        "Verify regex concurrency never changes detector matches", 1
+    )[1].split("Repeated real PII detection", 1)[0]
+    assert "tests/test_pii_redaction_assembly.py" in workflow.split(
         "Verify regex concurrency never changes detector matches", 1
     )[1].split("Repeated real PII detection", 1)[0]
     assert "windows-latest" in workflow and "ubuntu-latest" in workflow
