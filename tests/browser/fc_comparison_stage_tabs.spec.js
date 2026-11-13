@@ -93,6 +93,40 @@ test("Input-only FC tab Save retains hidden Output action and executes both stag
       expect(clean.effective_action).toBe("allow");
       expect(clean.findings.map(f => f.rule_id)).not.toContain("business.fc_stage_tab_invoice_le");
     }
+
+    // A previously saved, explicit Output-Off setting must remain Off when
+    // Input is edited and saved with Output's column hidden. Hidden is NOT
+    // auto, and a successful Input evaluation cannot re-enable Output rules.
+    await page.locator("#tenant-tab-output").click();
+    await output.selectOption("off");
+    await page.locator("#tenant-tab-input").click();
+    await expect(output).toBeHidden();
+    expect((await current(request, headers)).revision).toBe(saved.revision);
+    await page.getByRole("button", {name: "Save checks", exact: true}).click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved.");
+    const outputOff = await current(request, headers);
+    expect(outputOff.revision).toBe(saved.revision + 1);
+    expect(outputOff.input_checks.cross_field).toBe("block");
+    expect(outputOff.output_checks.cross_field).toBe("off");
+    expect(outputOff.comparisons).toEqual(saved.comparisons);
+
+    await connect(page);
+    await page.locator("#tenant-tab-input").click();
+    await expect(input).toHaveValue("block");
+    await expect(output).toBeHidden();
+    await page.locator("#tenant-tab-output").click();
+    await expect(output).toHaveValue("off");
+    await page.locator("#tenant-tab-input").click();
+
+    const blockedInput = await check(request, headers, "input", invalid);
+    expect(blockedInput.evaluation_status).toBe("complete");
+    expect(blockedInput.effective_action).toBe("block");
+    expect(blockedInput.findings.map(f => f.rule_id)).toContain("business.fc_stage_tab_invoice_le");
+    const allowedOutput = await check(request, headers, "output", invalid);
+    expect(allowedOutput.evaluation_status).toBe("complete");
+    expect(allowedOutput.effective_action).toBe("allow");
+    expect(allowedOutput.findings.map(f => f.rule_id)).not.toContain("business.fc_stage_tab_invoice_le");
+    expect((await current(request, headers)).revision).toBe(outputOff.revision);
   } finally {
     if (resetRequired) {
       const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
