@@ -91,3 +91,46 @@ def test_legitimate_unicode_joiner_is_recognized_with_no_false_formula_finding()
     assert data["effective_action"] == "allow"
     assert not any(finding["rule_id"].startswith("csv_formula.") for finding in data["findings"])
     assert service.store.get(record.tenant_id).used(usage_month()) == 1
+
+
+PDF_CSV_POLYGLOT = b"column,value\n%PDF-1.7,synthetic\nrow,1"
+
+
+@pytest.mark.parametrize("stage", ["input", "output"])
+@pytest.mark.parametrize("mode,attachment_mode", [
+    ("enforce", "auto"),
+    ("observe", "auto"),
+    ("observe", "off"),
+])
+def test_pdf_header_in_csv_shaped_file_fails_closed_before_file_check(stage, mode, attachment_mode):
+    """Neither tenant Off nor observe may attest a PDF/CSV polyglot as inspected."""
+    client, service, record, token = _harness(mode=mode, attachment_mode=attachment_mode)
+    response = _check(client, record, token, stage, (PDF_CSV_POLYGLOT,))
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["evaluation_status"] == "incomplete"
+    assert data["recommended_action"] == data["effective_action"] == "block"
+    assert len(data["attachments"]) == 1
+    receipt = data["attachments"][0]
+    assert receipt["kind"] == "pdf"
+    assert receipt["status"] == "unsupported"
+    assert receipt["reason"] == "pdf_parser_unavailable"
+    assert receipt["evaluation_status"] == "incomplete"
+    assert not data["findings"]
+    assert any(result["checker_id"] == "attachment_probe" and
+               result["status"] == "unsupported" for result in data["checker_results"])
+    assert "%PDF-1.7" not in response.text
+    assert service.store.get(record.tenant_id).used(usage_month()) == 1
+
+
+def test_inline_pdf_string_in_real_csv_file_remains_recognized():
+    client, service, record, token = _harness()
+    payload = b"column,value\nrow,ordinary %PDF-1.7 reference"
+    response = _check(client, record, token, "input", (payload,))
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["attachments"][0]["kind"] == "csv"
+    assert data["attachments"][0]["status"] == "recognized"
+    assert data["attachments"][0]["evaluation_status"] == "complete"
+    assert data["effective_action"] == "allow"
+    assert service.store.get(record.tenant_id).used(usage_month()) == 1
