@@ -50,3 +50,85 @@ jobs:
             }
           }
           Write-Host "GuardOath safety gate and rollback contract present"
+      - name: Exercise real individual-job gate with synthetic GitHub responses
+        shell: pwsh
+        run: |
+          $tokens = $null; $errors = $null
+          $ast = [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path 'deploy/aws/Deploy-Verified.ps1').Path,
+            [ref]$tokens, [ref]$errors)
+          if ($errors.Count) { throw "Deployment script cannot be parsed" }
+          $method = $ast.Find({
+            param($node)
+            $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+              $node.Name -eq 'Assert-Run'
+          }, $true)
+          if (-not $method) { throw "Expected actual deployment Assert-Run implementation" }
+          Invoke-Expression $method.Extent.Text
+          $Repo = 'CollectiverseStudio/guardoath'
+          $Headers = @{ Accept = 'application/vnd.github+json' }
+          $RequiredJobs = @{ 'Field Comparisons Evidence' = @(
+            'strict-portfolio-and-scale', 'customer-browser-acceptance'
+          ) }
+          $sha = 'abc123'
+          $script:response = $null
+          function Invoke-RestMethod {
+            param($Uri, $Headers, $Method)
+            if ($Uri -notmatch '/actions/runs/42/jobs\\?per_page=100') {
+              throw "Unexpected job API endpoint: $Uri"
+            }
+            return $script:response
+          }
+          function New-Job([string]$name, [string]$conclusion = 'success') {
+            return [pscustomobject]@{
+              name = $name; status = 'completed'; conclusion = $conclusion
+              html_url = 'https://github.com/test/job/99'
+            }
+          }
+          function Expect-Blocked([scriptblock]$scenario, [string]$phrase) {
+            try { & $scenario }
+            catch {
+              if ($_.Exception.Message.Contains($phrase)) { return }
+              throw "Wrong release refusal: $($_.Exception.Message); expected $phrase"
+            }
+            throw "Unsafe release accepted; expected refusal containing '$phrase'"
+          }
+          $run = [pscustomobject]@{
+            name = 'Field Comparisons Evidence'; head_sha = $sha
+            status = 'completed'; conclusion = 'success'; id = 42
+            created_at = '2026-11-13T23:00:00Z'
+            html_url = 'https://github.com/test/runs/42'
+          }
+          $good = @(
+            (New-Job 'strict-portfolio-and-scale'),
+            (New-Job 'customer-browser-acceptance')
+          )
+          $script:response = [pscustomobject]@{ total_count = 2; jobs = $good }
+          Assert-Run @($run) 'Field Comparisons Evidence' $sha
+          $script:response = [pscustomobject]@{ total_count = 1; jobs = @($good[0]) }
+          Expect-Blocked { Assert-Run @($run) 'Field Comparisons Evidence' $sha } 'customer-browser-acceptance'
+          $script:response = [pscustomobject]@{ total_count = 3; jobs = $good }
+          Expect-Blocked { Assert-Run @($run) 'Field Comparisons Evidence' $sha } 'incomplete job evidence'
+          $script:response = [pscustomobject]@{
+            total_count = 2
+            jobs = @($good[0], (New-Job 'customer-browser-acceptance' 'failure'))
+          }
+          Expect-Blocked { Assert-Run @($run) 'Field Comparisons Evidence' $sha } 'non-successful individual job'
+          $script:response = [pscustomobject]@{
+            total_count = 3
+            jobs = @($good[0], $good[1], (New-Job 'optional-extra' 'skipped'))
+          }
+          Expect-Blocked { Assert-Run @($run) 'Field Comparisons Evidence' $sha } 'non-successful individual job'
+          $script:response = [pscustomobject]@{
+            total_count = 3; jobs = @($good[0], $good[0], $good[1])
+          }
+          Expect-Blocked { Assert-Run @($run) 'Field Comparisons Evidence' $sha } 'exactly one required job'
+          Expect-Blocked { Assert-Run @($run) 'Field Comparisons Evidence' 'wrong-sha' } 'No exact-SHA'
+          $badRun = [pscustomobject]@{
+            name = 'Field Comparisons Evidence'; head_sha = $sha
+            status = 'completed'; conclusion = 'failure'; id = 42
+            created_at = '2026-11-13T23:00:00Z'
+            html_url = 'https://github.com/test/runs/42'
+          }
+          Expect-Blocked { Assert-Run @($badRun) 'Field Comparisons Evidence' $sha } 'not green'
+          Write-Host 'Eight acceptance scenarios: one success, seven fail-closed'
