@@ -185,6 +185,39 @@ test("customer saves and executes ordinary, arithmetic and conversion rules toge
       }
     }
 
+    // Findings must link to the correct EXISTING customer editor, not just
+    // label the shared checker. Navigation clears display-only filters and
+    // loads the saved rule into the pending form WITHOUT updating the tenant,
+    // changing Input/Output actions or saving any definition.
+    for (const [id, editor, field] of [
+      ["ui_spend", "comparison", "comparisons"],
+      ["ui_subtotal", "arithmetic", "advanced_arithmetic"],
+      ["ui_load", "conversion", "advanced_conversion_time"]
+    ]) {
+      await page.locator("#" + editor + "-filter").fill("deliberately_no_matching_id");
+      await page.locator("#" + editor + "-filter-stage").selectOption("input");
+      const finding = page.locator("#output-results .finding").filter({
+        has: page.locator(".finding-rule-id", {hasText: "business." + id})
+      });
+      await finding.getByRole("button", {
+        name: "Edit saved definition for business." + id, exact: true
+      }).click();
+      await expect(page.locator("#comparison-configuration")).toHaveAttribute("open", "");
+      await expect(page.locator("#" + editor + "-filter")).toHaveValue("");
+      await expect(page.locator("#" + editor + "-filter-stage")).toHaveValue("all");
+      await expect(page.locator("#" + editor + "-id")).toHaveValue(id);
+      await expect(page.locator("#" + editor + "-id")).toBeDisabled();
+      await expect(page.locator("#tenant-message")).toContainText("No settings were saved");
+      await expect(page.locator("#" + editor + "-form")
+        .getByRole("button", {name: "Cancel edit", exact: true})).toBeVisible();
+      await page.locator("#" + editor + "-form")
+        .getByRole("button", {name: "Cancel edit", exact: true}).click();
+      const unchanged = await tenant(request, headers);
+      expect(unchanged.revision).toBe(perRule.revision);
+      expect(unchanged[field].some(rule => rule.rule_id === id)).toBe(true);
+      expect(unchanged.input_rule_actions["business.ui_spend"]).toBe("allow");
+    }
+
     for (const stage of ["input", "output"]) {
       const good = await evaluate(request, headers, stage, benign);
       expect(good.evaluation_status).toBe("complete");
