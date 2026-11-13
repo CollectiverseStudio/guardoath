@@ -2006,16 +2006,39 @@ test("CSV text rejects concealed formulas with clear incomplete status", async (
   await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
   await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
   try {
+    // Reset is a revisioned server write plus application reload. Wait for
+    // the saved record before editing; otherwise a reset/Run race can quietly
+    // drop the CSV check and produce a misleading clean browser receipt.
+    const resetResponse = page.waitForResponse(r => r.url().endsWith("/v1/tenants/current/reset") &&
+      r.request().method() === "POST");
     await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+    expect((await resetResponse).status()).toBe(200);
+    await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+    await expect(page.locator("#tenant-check-input-csv_formula")).toHaveValue("");
     await page.locator("#tenant-check-input-csv_formula").selectOption("block");
+    const saveResponse = page.waitForResponse(r => r.url().endsWith("/v1/tenants/current/checks") &&
+      r.request().method() === "POST");
+    await page.getByRole("button", { name: "Save checks", exact: true }).click();
+    expect((await saveResponse).status()).toBe(200);
+    await expect(page.locator("#tenant-message")).toHaveText("Saved. The new checks apply from the next check.");
+    await expect(page.locator("#tenant-check-input-csv_formula")).toHaveValue("block");
     for (const [cell, reason] of [
       ["\u200b=2+3", "unsafe_csv_invisible_formula_prefix"],
       ["\u202e=2+3", "unsafe_csv_control_characters"],
     ]) {
-      await page.locator("#input-content").fill("name,value\nSynthetic," + cell);
+      const input = "name,value\\nSynthetic," + cell;
+      await page.locator("#input-format").selectOption("text");
+      await page.locator("#input-content").fill(input);
       const response = page.waitForResponse(r => r.url().endsWith("/v1/checks/input") && r.request().method() === "POST");
       await page.locator("#run-input").click();
-      const checked = await (await response).json();
+      const checkedResponse = await response;
+      expect(checkedResponse.request().postDataJSON()).toMatchObject({
+        content: input, content_format: "text", policy_version: "tenant"
+      });
+      const checked = await checkedResponse.json();
+      expect(checked.checker_results).toEqual(expect.arrayContaining([
+        expect.objectContaining({checker_id: "csv_formula", status: "error", error_code: reason}),
+      ]));
       expect(checked.evaluation_status).toBe("incomplete");
       expect(checked.effective_action).toBe("block");
       expect(checked.checker_results).toEqual(expect.arrayContaining([
