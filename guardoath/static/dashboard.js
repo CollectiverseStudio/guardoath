@@ -2152,7 +2152,9 @@ function render(stage, result) {
       return false;
     }
     edit.click();
-    host.scrollIntoView({block: "center"});
+    // A 500-rule list can be tall: show the populated pending FORM, not the
+    // top of its family panel, which could leave the edit fields off-screen.
+    (host.querySelector("form") || host).scrollIntoView({block: "center"});
     $("tenant-message").textContent =
       "Opened the existing pending editor for " + family.ruleId +
       ". No settings were saved. Apply a pending change and choose Save checks to persist it.";
