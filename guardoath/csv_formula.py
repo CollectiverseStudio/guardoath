@@ -62,7 +62,7 @@ async def csv_formula_check(request, policy, stage):
                         return result("error", code="unsafe_csv_invisible_formula_prefix")
                     # Preserve protective apostrophes. Spreadsheet importers may
                     # trim leading whitespace, BOM or nonbreaking space.
-                    value = cell.lstrip(" \t\r\n\ufeff\u00a0")
+                    value = cell.lstrip()  # All Unicode White_Space, not only ASCII/NBSP
                     if value.startswith(FORMULA_PREFIXES):
                         dangerous = True
     except (csv.Error, UnicodeError):
