@@ -97,18 +97,20 @@ def test_legitimate_unicode_joiner_is_recognized_with_no_false_formula_finding()
 
 
 PDF_CSV_POLYGLOT = b"column,value\n%PDF-1.7,synthetic\nrow,1"
+PDF_CSV_CELL_POLYGLOT = b"column,value\\nrow,%PDF-1.7\\nrow,1"
 
 
+@pytest.mark.parametrize("payload", [PDF_CSV_POLYGLOT, PDF_CSV_CELL_POLYGLOT])
 @pytest.mark.parametrize("stage", ["input", "output"])
 @pytest.mark.parametrize("mode,attachment_mode", [
     ("enforce", "auto"),
     ("observe", "auto"),
     ("observe", "off"),
 ])
-def test_pdf_header_in_csv_shaped_file_fails_closed_before_file_check(stage, mode, attachment_mode):
+def test_pdf_header_in_csv_shaped_file_fails_closed_before_file_check(stage, mode, attachment_mode, payload):
     """Neither tenant Off nor observe may attest a PDF/CSV polyglot as inspected."""
     client, service, record, token = _harness(mode=mode, attachment_mode=attachment_mode)
-    response = _check(client, record, token, stage, (PDF_CSV_POLYGLOT,))
+    response = _check(client, record, token, stage, (payload,))
     assert response.status_code == 200, response.text
     data = response.json()
     assert data["evaluation_status"] == "incomplete"
