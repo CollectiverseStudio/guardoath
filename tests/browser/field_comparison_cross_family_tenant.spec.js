@@ -163,6 +163,27 @@ test("customer saves and executes ordinary, arithmetic and conversion rules toge
         .toHaveCount(1);
     }
     await expect(page.locator("#answer")).toBeHidden();
+    // The same cross_field checker emits all three rule families. Customers
+    // must see the saved tenant family beside the stable finding ID on BOTH
+    // stages, without exposing JSON pointers or reference values. This is
+    // real dashboard -> tenant Save -> Engine evidence, not a mocked response.
+    for (const stage of ["input", "output"]) {
+      for (const [id, family] of [
+        ["ui_spend", "Ordinary field comparison"],
+        ["ui_subtotal", "Arithmetic field comparison"],
+        ["ui_load", "Conversion/time field comparison"]
+      ]) {
+        const finding = page.locator("#" + stage + "-results .finding").filter({
+          has: page.locator(".finding-rule-id", {
+            hasText: new RegExp("^business\\." + id + "$")
+          })
+        });
+        await expect(finding).toHaveCount(1);
+        await expect(finding.locator(".finding-rule-name")).toHaveText(family + " · ");
+        await expect(finding.locator(".finding-rule-id")).toHaveText("business." + id);
+        expect(await finding.locator(".finding-rule-name").textContent()).not.toContain("/order/");
+      }
+    }
 
     for (const stage of ["input", "output"]) {
       const good = await evaluate(request, headers, stage, benign);
