@@ -35,6 +35,16 @@ def test_findings_show_human_check_and_rule_names_with_stable_ids():
     js = (ROOT / "dashboard.js").read_text(encoding="utf-8")
     assert '(checkNames[check.checker_id] || check.checker_id)' in js
     assert 'const knownRule = ruleIndex[finding.rule_id]' in js
-    assert 'ruleName.textContent = knownRule.title + " · "' in js
+    # Preserve catalog labels for ordinary checks while identifying the
+    # authoritative saved tenant's Field Comparison family when its shared
+    # cross_field checker emits a business.<id> finding. Untrusted input and
+    # protected reference contents must not become displayed rule labels.
+    assert 'const knownRule = ruleIndex[finding.rule_id]' in js
+    assert 'const savedComparisonFamilies = new Map()' in js
+    assert 'const savedTenant = application?.tenant' in js
+    assert 'check.checker_id === "cross_field"' in js
+    assert 'const readableRule = savedFamily || knownRule?.title' in js
+    assert 'ruleName.textContent = readableRule + " · "' in js
+    assert 'savedComparisonFamilies.set("business." + rule.rule_id, label)' in js
     assert 'ruleId.textContent = finding.rule_id' in js
     assert 'reviewFindingRule(finding.rule_id, check.checker_id, stage)' in js
