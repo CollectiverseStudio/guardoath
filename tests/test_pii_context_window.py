@@ -216,3 +216,71 @@ def test_split_lookahead_core_match_iteration_honors_worker_deadline():
             counted, (regex.compile("end"),), text, deadline))
     assert calls == 7
     assert counted.visited == 513
+
+
+def test_context_end_index_is_built_in_same_bounded_regex_pass():
+    """A long Unicode field preserves every original context boundary and cue."""
+    regex = pytest.importorskip("regex")
+    text = " ".join(["ordinary"] * 3000 + ["BIRTH", "date", "1990"]
+                    + ["後続"] * 3000)
+
+    class CountedPattern:
+        visits = 0
+        starts = 0
+
+        def __init__(self):
+            self.pattern = regex.compile(r"\w+")
+
+        def finditer(self, value, **kwargs):
+            self.starts += 1
+            for match in self.pattern.finditer(value, **kwargs):
+                self.visits += 1
+                yield match
+
+    pattern = CountedPattern()
+    checks = []
+    words, ends = _context_tokens_with_deadline(
+        pattern, text, lambda: checks.append(True) or 10.0, include_ends=True)
+    assert pattern.starts == 1
+    assert pattern.visits == len(words)
+    assert words == _words(text)
+    assert ends == [end for _, end, _ in words]
+    assert len(checks) >= 25
+    for start in (0, 1, len(text) // 2, len(text) - 1, len(text)):
+        for context in (("birth",), ("ordinary",), ("後続",), ("absent",)):
+            assert _context_cue_matches_at(words, ends, start, [], context) == (
+                _linear_original(_words(text), start, [], context)
+            )
+    # Existing hint-only callers must keep their original list result.
+    assert _context_tokens_with_deadline(regex.compile(r"\w+"), "BIRTH date",
+                                         lambda: 10.0) == _words("BIRTH date")
+
+
+def test_context_end_index_stops_before_unbounded_token_work():
+    """No partial token/index pair is available after the fixed PII deadline."""
+    regex = pytest.importorskip("regex")
+
+    class CountedPattern:
+        visits = 0
+
+        def finditer(self, text, **kwargs):
+            for match in regex.compile(r"\w+").finditer(text, **kwargs):
+                self.visits += 1
+                yield match
+
+    pattern = CountedPattern()
+    checks = 0
+
+    def deadline():
+        nonlocal checks
+        checks += 1
+        if checks == 4:
+            raise TimeoutError("synthetic context-index deadline")
+        return 10.0
+
+    with pytest.raises(TimeoutError, match="synthetic context-index deadline"):
+        _context_tokens_with_deadline(
+            pattern, "word " * 6000, deadline, include_ends=True)
+    assert checks == 4
+    assert pattern.visits == 513  # checkpoint at token index 512
+    assert pattern.visits < 6000
