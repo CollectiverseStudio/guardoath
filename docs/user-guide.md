@@ -776,6 +776,21 @@ unnecessary local scanning but is **not** a new privacy category, customer
 toggle, longer checker deadline, proof of sustained 500-ms reliability or
 permission to bypass mandatory Input/Output redaction rechecks.
 
+**PII long-text deadline checks (November 12, 2026).** For a message or
+JSON string value approaching the existing 32,000-character limit, the local
+PII scanner now checks its unchanged monotonic deadline during the
+Unicode-`isdigit()` detector prefilter and while indexing context words.
+A missed deadline stops the worker before it can return a partial clean
+verdict; the shared Engine reports incomplete and applies the authoritative
+tenant failure action, and a required failed redaction recheck remains
+withheld. Short-field matching, Unicode digit interpretation, word positions,
+findings, per-stage actions and the PII 500-ms budget are unchanged.
+`tests/test_pii_context_window.py` tests exact token/digit parity and
+deterministic early expiry; `tests/test_pii_deadline_diagnostics.py`
+tests actual Input/Output Engine fail-closed behavior. This is a bounded
+worst-case scan improvement, **not proof that the historical intermittent
+594-ms conversation/privacy tail or redaction-recheck issue has been fixed**.
+
 **PII deadline attribution (version 7).** A local PII worker that reaches its
 own monotonic scan deadline reports the fixed error code `pii_scan_deadline`;
 the outer shared Engine `asyncio.wait_for` deadline remains
