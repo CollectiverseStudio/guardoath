@@ -227,6 +227,22 @@ def test_own_only_overlap_fast_path_stops_at_request_deadline():
     assert checks == 3
     assert candidates.visited == 513  # abort during first scan, not after all 6000
 
+    # Also prove the deduplication pass cannot consume an expired budget
+    # after the preceding pattern-detection pass has completed.
+    candidates.visited = 0
+    checks = 0
+
+    def dedup_deadline():
+        nonlocal checks
+        checks += 1
+        if checks == 27:  # 24 scans, then third deduplication checkpoint
+            raise TimeoutError("synthetic own-only dedup deadline")
+
+    with pytest.raises(TimeoutError, match="synthetic own-only dedup deadline"):
+        resolve_overlaps(candidates, dedup_deadline)
+    assert checks == 27
+    assert candidates.visited == 6513  # 6000 scanned + 513 dedup candidates
+
 
 
 def test_pattern_containment_index_exactly_matches_independent_reference():
