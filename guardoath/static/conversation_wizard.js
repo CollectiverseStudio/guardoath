@@ -15,6 +15,19 @@
     const start = document.getElementById("wizard-start");
     const allSteps = document.getElementById("wizard-show-all");
     const prepared = document.getElementById("batch-run");
+    // Explain what each step does and when the customer may proceed.
+    // Navigation is presentation only; the backend Input receipt remains authoritative.
+    const guidance = document.createElement("p");
+    guidance.id = "wizard-step-guidance";
+    guidance.className = "hint";
+    guidance.setAttribute("role", "status");
+    nav.append(guidance);
+    const instructions = [
+      "Enter the customer's message and choose its format. An example fills the message but does not choose which checks run.",
+      "Run Input checks. A detected issue may still be Allowed; review the finding and effective decision before continuing.",
+      "After Input validation permits it, paste the proposed AI answer. GuardOath does not generate the answer.",
+      "Run Output checks and inspect whether the answer is allowed, redacted, or held before release."
+    ];
     // Default to the established full workflow until a customer opts into guided focus.
     let current = null;
     const showAll = (message = "All four steps visible. Start the guided test to focus.") => {
@@ -27,6 +40,7 @@
       previous.disabled = true;
       next.disabled = true;
       status.textContent = message;
+      guidance.textContent = "Guided mode is available: choose Start guided test to focus on one stage at a time. Input must be validated before an Output result can be released.";
     };
     const show = index => {
       if (!Number.isInteger(index) || index < 0 || index >= sections.length) return;
@@ -42,6 +56,7 @@
       previous.disabled = current === 0;
       next.disabled = current === sections.length - 1;
       status.textContent = "Step " + (current + 1) + " of " + sections.length;
+      guidance.textContent = instructions[current];
     };
     tabs.forEach((tab, i) => tab.addEventListener("click", () => show(i)));
     previous.addEventListener("click", () => show(current - 1));
