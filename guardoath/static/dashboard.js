@@ -871,8 +871,28 @@ $("tenant-save").addEventListener("click", () => {
   saveTenant("/v1/tenants/current/checks", {revision: tenant.revision, changes}, "Saved. The new checks apply from the next check.");
 });
 // A changed setting is not used until it is saved; running a check saves it first (see execute).
+// A stage tab hides a column, not its pending edits. Surface the hidden
+// changes without modifying either draft, its revision, or the shared Engine.
+function updateStageHiddenDraftWarning(changes = pendingChanges()) {
+  const warning = $("tenant-stage-hidden-draft");
+  if (!warning) return;
+  const selected = $("tenant-panel").dataset.stageFocus;
+  const hiddenStage = selected === "input" ? "output" : selected === "output" ? "input" : null;
+  const hasHiddenChanges = !!(application?.tenant && ownChecksSelected() && hiddenStage &&
+    Object.keys(changes).some(name =>
+      name.startsWith(hiddenStage + "_check_") || name === hiddenStage + "_rule_actions"));
+  warning.hidden = !hasHiddenChanges;
+  warning.textContent = hasHiddenChanges
+    ? "Unsaved " + (hiddenStage === "input" ? "Input" : "Output") +
+      " policy edits are pending while that settings column is hidden. Select Both stages to review them. Save checks (or Run) applies pending changes to both stages."
+    : "";
+}
+$("tenant-panel").addEventListener("guardoath:stage-view-changed",
+  () => updateStageHiddenDraftWarning());
+
 function showUnsaved(prefix = "") {
   const changes = pendingChanges(), tenant = application?.tenant;
+  updateStageHiddenDraftWarning(changes);
   const collision = fieldComparisonIdCollision(changes);
   $("tenant-message").textContent = prefix + (collision || (Object.keys(changes).length ? "Unsaved changes. Save checks, or run a check: running saves them first." : ""));
   // The line above the test lists the saved checks; say which panel changes are not saved yet.
