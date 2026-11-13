@@ -61,6 +61,38 @@ def test_many_synthetic_random_nonoverlapping_spans_parity():
         assert _assemble_redacted_text(text, spans) == _previous_reverse_splice(text, spans)
 
 
+
+def test_redaction_assembly_checks_deadline_before_all_private_spans_are_processed():
+    """Many valid findings cannot extend worker time to assemble an unsafe preview."""
+    class CountedSpans(list):
+        visited = 0
+
+        def __iter__(self):
+            for item in super().__iter__():
+                self.visited += 1
+                yield item
+
+    text = "x|" * 6000
+    spans = CountedSpans((2 * i, 2 * i + 1, "EMAIL_ADDRESS")
+                         for i in range(6000))
+    assert _assemble_redacted_text("x|x|", [(0, 1, "EMAIL_ADDRESS")]) == (
+        "[REDACTED_EMAIL_ADDRESS]|x|"
+    )
+    calls = 0
+
+    def deadline():
+        nonlocal calls
+        calls += 1
+        if calls == 3:
+            raise TimeoutError("synthetic redaction-assembly deadline")
+
+    with pytest.raises(TimeoutError, match="synthetic redaction-assembly deadline"):
+        _assemble_redacted_text(text, spans, deadline)
+    assert calls == 3
+    assert spans.visited == 513  # no partial preview or 6000-span assembly
+
+
+
 @pytest.mark.parametrize("stage", ["input", "output"])
 def test_existing_engine_rechecks_multiple_real_redactions_with_no_raw_values(stage):
     pytest.importorskip("tldextract")
