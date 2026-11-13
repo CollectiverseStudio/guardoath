@@ -82,3 +82,57 @@ def test_csv_export_authenticated_api_enforce_and_error_contract():
         })
         assert unauthorized.status_code in (401, 403)
         assert "csv_formula.potential_formula" not in unauthorized.text
+
+
+def test_authenticated_text_and_attachment_consistent_hidden_formula_rejection():
+    """Customers can submit CSV as text or actual bytes; neither route may call concealed formulas clean."""
+    import base64
+    from guardoath.app import demo_engine
+    from guardoath.hosted import TenantService
+    from guardoath.tenant_record import TenantRecord, demo_key, key_hash, usage_month
+    from guardoath.tenant_store import MemoryTenantStore
+
+    secret = "synthetic-direct-csv-integrity-secret-0123456789"
+    tenant_id = "csv-integrity"
+    token = demo_key(tenant_id, secret)
+    tenant = TenantRecord(
+        tenant_id=tenant_id, display_name="Synthetic CSV integrity", demo=True,
+        key_hashes=(key_hash(token),), monthly_allowance=20, overage="block",
+        input_check_csv_formula="block", output_check_csv_formula="block",
+    )
+    service = TenantService(MemoryTenantStore((tenant,)), default_checkers(), secret)
+    app = create_app(engine=demo_engine(), credentials={}, tenants=service)
+    headers = {"Authorization": "Bearer " + token}
+    samples = (
+        ("name,value\nSynthetic,\u200b=2+3", "unsafe_csv_invisible_formula_prefix"),
+        ("name\tvalue\nSynthetic\t\u202e=2+3", "unsafe_csv_control_characters"),
+    )
+    with TestClient(app) as client:
+        for stage in ("input", "output"):
+            for content, reason in samples:
+                direct = client.post("/v1/checks/" + stage, headers=headers, json={
+                    "application_id": tenant_id, "content": content, "content_format": "text",
+                })
+                assert direct.status_code == 200, direct.text
+                body = direct.json()
+                assert body["evaluation_status"] == "incomplete"
+                assert body["effective_action"] == "block"
+                assert any(check["checker_id"] == "csv_formula"
+                           and check["status"] == "error" and check["error_code"] == reason
+                           for check in body["checker_results"])
+                assert "Synthetic" not in direct.text and "=2+3" not in direct.text
+
+                attached = client.post("/v1/checks/" + stage + "/attachments",
+                    headers=headers, json={
+                        "application_id": tenant_id,
+                        "content": "Review the real synthetic file bytes.",
+                        "attachments_b64": [base64.b64encode(content.encode("utf-8")).decode("ascii")],
+                    })
+                assert attached.status_code == 200, attached.text
+                file_body = attached.json()
+                assert file_body["evaluation_status"] == "incomplete"
+                assert file_body["effective_action"] == "block"
+                assert file_body["attachments"][0]["reason"] == reason
+                assert file_body["attachments"][0]["evaluation_status"] == "incomplete"
+                assert "Synthetic" not in attached.text and "=2+3" not in attached.text
+    assert service.store.get(tenant_id).used(usage_month()) == 8
