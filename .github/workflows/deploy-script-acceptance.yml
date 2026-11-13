@@ -74,7 +74,7 @@ jobs:
           $script:response = $null
           function Invoke-RestMethod {
             param($Uri, $Headers, $Method)
-            if ($Uri -notmatch '/actions/runs/42/jobs\\?per_page=100') {
+            if (-not $Uri.Contains('/actions/runs/42/jobs?per_page=100')) {
               throw "Unexpected job API endpoint: $Uri"
             }
             return $script:response
