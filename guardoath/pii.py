@@ -206,6 +206,40 @@ def resolve_overlaps(candidates, check_deadline=lambda: None):
     return kept
 
 
+def _merge_redaction_spans(spans, check_deadline=lambda: None):
+    """Merge detected redaction spans with bounded worker-deadline checks.
+
+    A large detection portfolio can spend meaningful CPU time deduplicating,
+    sorting and grouping before a redacted response is assembled. Preserve the
+    existing overlap/label priority exactly, but abort between batches and at
+    every publication boundary rather than returning late partial redactions.
+    """
+    unique = set()
+    for index, span in enumerate(spans):
+        if index % 256 == 0:
+            check_deadline()
+        unique.add(span)
+    check_deadline()
+    ordered = sorted(unique, key=lambda s: (s[0], -s[1], s[2] in PATTERN_ENTITIES, s[2]))
+    check_deadline()
+    merged = []
+    for index, (start, end, entity) in enumerate(ordered):
+        if index % 256 == 0:
+            check_deadline()
+        if merged and start < merged[-1][1]:
+            old_start, old_end, old_entity = merged[-1]
+            if end <= old_end:
+                if ((start, end) == (old_start, old_end) and entity != old_entity
+                        and old_entity in PATTERN_ENTITIES):
+                    merged[-1] = (old_start, old_end, "SENSITIVE")
+                continue
+            merged[-1] = (old_start, end, old_entity if old_entity == entity else "SENSITIVE")
+        else:
+            merged.append((start, end, entity))
+    check_deadline()
+    return merged
+
+
 def _assemble_redacted_text(text, merged, check_deadline=lambda: None):
     """Build redacted content in one pass, preserving each private span.
 
@@ -607,18 +641,7 @@ def build_pii_checker():
             # a longer one keeps the longer span's label (an email address contains a domain);
             # on identical spans GuardOath's own labels win over pattern labels. Partial
             # overlaps of different types, and identical spans of two pattern types, become SENSITIVE.
-            merged = []
-            for start, end, entity in sorted(set(spans), key=lambda s: (s[0], -s[1], s[2] in PATTERN_ENTITIES, s[2])):
-                if merged and start < merged[-1][1]:
-                    old_start, old_end, old_entity = merged[-1]
-                    if end <= old_end:
-                        if ((start, end) == (old_start, old_end) and entity != old_entity
-                                and old_entity in PATTERN_ENTITIES):
-                            merged[-1] = (old_start, old_end, "SENSITIVE")
-                        continue
-                    merged[-1] = (old_start, end, old_entity if old_entity == entity else "SENSITIVE")
-                else:
-                    merged.append((start, end, entity))
+            merged = _merge_redaction_spans(spans, check_deadline)
             redacted = _assemble_redacted_text(text, merged, check_deadline)
             # A large redaction assembly also consumes the fixed worker budget.
             # It must not turn a late, partial result into releasable content.
