@@ -1999,6 +1999,38 @@ test("CSV formula rules use the same tenant settings, examples and dashboard res
 
 
 
+test("CSV text rejects concealed formulas with clear incomplete status", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
+  await page.locator("#demo-user").selectOption("demo8");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
+  try {
+    await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+    await page.locator("#tenant-check-input-csv_formula").selectOption("block");
+    for (const [cell, reason] of [
+      ["\u200b=2+3", "unsafe_csv_invisible_formula_prefix"],
+      ["\u202e=2+3", "unsafe_csv_control_characters"],
+    ]) {
+      await page.locator("#input-content").fill("name,value\nSynthetic," + cell);
+      const response = page.waitForResponse(r => r.url().endsWith("/v1/checks/input") && r.request().method() === "POST");
+      await page.locator("#run-input").click();
+      const checked = await (await response).json();
+      expect(checked.evaluation_status).toBe("incomplete");
+      expect(checked.effective_action).toBe("block");
+      expect(checked.checker_results).toEqual(expect.arrayContaining([
+        expect.objectContaining({checker_id: "csv_formula", status: "error", error_code: reason}),
+      ]));
+      await expect(page.locator("#input-results")).toContainText("Recommended: block");
+      await expect(page.locator("#run-output")).toBeDisabled();
+      await expect(page.locator("#answer")).toBeHidden();
+      await expect(page.locator("#input-results")).not.toContainText("Synthetic," + cell);
+    }
+  } finally {
+    await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+  }
+});
+
 test("selected browser CSV bytes use authenticated attachment API, ignore claimed PDF type and hold Block", async ({ page }) => {
   await page.goto("/dashboard");
   // These tests intentionally opt into the optional advanced configuration.
