@@ -183,6 +183,38 @@ def _assemble_redacted_text(text, merged):
     return "".join(fragments)
 
 
+
+def _count_digits_with_deadline(text, check_deadline):
+    """Preserve str.isdigit() prefilter semantics, checking the PII budget on
+    wide text before spending it all in a single uninterrupted digit count.
+    Short fields retain the original fast path; no pattern can be skipped.
+    """
+    if len(text) <= 4096:
+        return sum(character.isdigit() for character in text)
+    count = 0
+    for offset in range(0, len(text), 4096):
+        check_deadline()
+        count += sum(character.isdigit() for character in text[offset:offset + 4096])
+    check_deadline()
+    return count
+
+
+def _context_tokens_with_deadline(pattern, text, check_deadline):
+    """Build the unchanged context-word index with periodic deadline checks.
+
+    regex's timeout protects an individual search; a huge succession of valid
+    matches must also respect the request-wide 500-ms PII worker deadline.
+    """
+    tokens = []
+    for index, match in enumerate(pattern.finditer(
+            text, timeout=check_deadline(), concurrent=True)):
+        if index % 256 == 0:
+            check_deadline()
+        tokens.append((match.start(), match.end(), match.group().lower()))
+    check_deadline()
+    return tokens
+
+
 def _context_cue_matches_at(words, ends, start, hint_words, context):
     """Match the same five preceding words, current word and field hint as the
     original linear lookup, without walking the entire token list per finding.
@@ -404,7 +436,7 @@ def build_pii_checker():
                     candidates.append((start, end, entity, source, tier, score))
             # A proof that a pattern consumes N decimal digits permits only
             # an impossible-match skip. All other patterns still run normally.
-            digit_count = sum(character.isdigit() for character in text)
+            digit_count = _count_digits_with_deadline(text, check_deadline)
             for recognizer, pattern, required_digits in patterns:
                 # A tenant's stage-specific Off rule already suppresses this
                 # recognizer's finding. Do not spend the bounded 500-ms scan
@@ -441,12 +473,11 @@ def build_pii_checker():
                     # hints. Index and tokenize only once per inspected field.
                     nonlocal words, word_ends, hint_words
                     if words is None:
-                        words = [(m.start(), m.end(), m.group().lower())
-                                 for m in word_pattern.finditer(text, timeout=check_deadline(), concurrent=True)]
+                        words = _context_tokens_with_deadline(word_pattern, text, check_deadline)
                         word_ends = [end for _, end, _ in words]
                     if hint_words is None:
-                        hint_words = [m.group().lower()
-                                      for m in word_pattern.finditer(hint, timeout=check_deadline(), concurrent=True)]
+                        hint_words = [word for _, _, word in _context_tokens_with_deadline(
+                        word_pattern, hint, check_deadline)]
                     return _context_cue_matches_at(words, word_ends, start, hint_words, context)
 
                 def keep(score, start, context):
