@@ -5,6 +5,7 @@ Intended only for a dedicated delimited-export policy. Never use to classify arb
 import csv
 from io import StringIO
 
+from guardoath.attachment_probe import has_hidden_csv_formula_prefix, has_unsafe_csv_controls
 from guardoath.models import CheckerResult, Finding
 
 MAX_CSV_ROWS = 1000
@@ -25,6 +26,11 @@ async def csv_formula_check(request, policy, stage):
         return result("error", code="csv_text_required")
     if "\x00" in request.content:
         return result("error", code="csv_invalid_content")
+    # The file-byte ingress already rejects deceptive control characters. The
+    # same checker also runs on ordinary text checks, which bypass that probe:
+    # never let those direct Input/Output routes call a hidden formula clean.
+    if has_unsafe_csv_controls(request.content):
+        return result("error", code="unsafe_csv_control_characters")
     # Match the byte probe's conservative TSV recognition. The file ingress
     # already demands bounded, structurally valid rows before this checker.
     # Continue using comma parsing for ordinary CSV and chat examples.
@@ -50,6 +56,10 @@ async def csv_formula_check(request, policy, stage):
                 if total > MAX_CSV_CELLS:
                     return result("error", code="csv_inspection_budget_exceeded")
                 for cell in row:
+                    # Reuse the byte-ingress display-integrity policy on BOTH
+                    # plausible CSV/TSV dialects, including direct text checks.
+                    if has_hidden_csv_formula_prefix(cell):
+                        return result("error", code="unsafe_csv_invisible_formula_prefix")
                     # Preserve protective apostrophes. Spreadsheet importers may
                     # trim leading whitespace, BOM or nonbreaking space.
                     value = cell.lstrip(" \t\r\n\ufeff\u00a0")
