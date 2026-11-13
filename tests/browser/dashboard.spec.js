@@ -2564,6 +2564,31 @@ test("CSV-looking file with PDF header after a preamble blocks in real dashboard
     await expect(page.locator("#answer")).toBeHidden();
     await expect(page.locator("#run-output")).toBeDisabled();
     await expect(page.locator("#input-results")).not.toContainText("%PDF-1.7,synthetic");
+    // A PDF header can begin at the start of a second CSV cell, not only
+    // after a line separator. The file picker must not call that inspected.
+    const cellHeader = Buffer.from("column,value\nrow,%PDF-1.7\nrow,1", "utf8");
+    await page.locator("#input-attachments").setInputFiles({
+      name: "pdf-in-cell.csv", mimeType: "text/csv", buffer: cellHeader,
+    });
+    const cellResponse = page.waitForResponse(r =>
+      r.url().endsWith("/v1/checks/input/attachments") && r.request().method() === "POST");
+    await page.locator("#run-input").click();
+    const cellChecked = await cellResponse;
+    expect(cellChecked.status()).toBe(200);
+    expect(cellChecked.request().postDataJSON().attachments_b64)
+      .toEqual([cellHeader.toString("base64")]);
+    const cellResult = await cellChecked.json();
+    expect(cellResult.evaluation_status).toBe("incomplete");
+    expect(cellResult.recommended_action).toBe("block");
+    expect(cellResult.effective_action).toBe("block");
+    expect(cellResult.attachments[0].kind).toBe("pdf");
+    expect(cellResult.attachments[0].reason).toBe("pdf_parser_unavailable");
+    await expect(page.locator("#input-results .attachment-receipts"))
+      .toContainText("pdf_parser_unavailable");
+    await expect(page.locator("#run-output")).toBeDisabled();
+    await expect(page.locator("#answer")).toBeHidden();
+    await expect(page.locator("#input-results")).not.toContainText("row,%PDF-1.7");
+
     // A second UTF-8 BOM inside a CSV cell is invisible and must never make
     // a formula appear inspected when the tenant's CSV checker is Off.
     const concealed = Buffer.from("column,value\nSynthetic,\ufeff=2+3", "utf8");
