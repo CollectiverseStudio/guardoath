@@ -2259,6 +2259,25 @@ Example use case: a CSV cell containing an ASCII terminal escape before `=2+3`, 
 
 This is an exact **impossible-match optimization**, not a new detector, an Allow shortcut or a tenant setting. All remaining recognizers, JSON/labeled-field inspection, complete Input and Output rules, tenant actions, private fail-closed errors and mandatory redaction recheck are unchanged. No timeout is increased: the shipped PII checker deadline stays **500 ms**, with the existing capacity limit. A zero-finding scan that times out still produces an incomplete/Block decision rather than an Allow. The soundness tests are `tests/test_privacy_digit_prefilter.py`, and `tests/test_pii.py` now reports only checker status, sanitized error code and latency for incomplete benign cases. Verify the actual 500-ms end-to-end suite and privacy gate before accepting the performance result; the historical intermittent issue #30 remains open.
 
+### Deadline-bounded privacy lookahead enumeration (November 2026)
+
+**Use case:** Repeated strings can cause a privacy recognizer with multiple
+lookahead clauses to enumerate thousands of valid overlapping hint and core
+matches. Even when the regex engine limits its own search, Python processing of
+those successful matches counts against the same request's privacy deadline.
+GuardOath now checks that existing deadline every 256 overlapping lookahead or
+core matches and after enumeration. No recognizer is removed; valid matching
+starts, overlap precedence, findings and tenant Input/Output actions are
+unchanged. An exhausted scan is **incomplete and fail-closed**, including during
+required redaction recheck; GuardOath must not return partially scanned
+content. This is not a new dashboard toggle, an increased 500-ms budget or
+proof that the historical intermittent Issue #30 privacy tail is resolved.
+
+The deterministic parity and deadline regressions live in
+`tests/test_pii_context_window.py`, already executed by the mandatory Linux
+and Windows PII reliability gate. The gate's repeated real-Engine probes and
+all release checks remain required before deployment.
+
 ### Repeatable local PII reliability gate (offline, no provider)
 
 Use this operational release diagnostic when changing the local PII recognizers, redaction assembly or Engine revalidation. It runs the **existing** privacy evaluation cases through the same tenant-policy Engine for both Input and Output. The four selected synthetic cases are `date_of_birth1.input`, `date_of_birth1.output`, `redact.enforce.text.input` and `redact.enforce.text.output`. Redaction cases exercise the normal mandatory second PII pass; no API key, external model or additional cloud component is needed.
