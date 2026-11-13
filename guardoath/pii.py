@@ -94,10 +94,22 @@ def resolve_overlaps(candidates, check_deadline=lambda: None):
     # pattern overlap graph and its repeated containment walks in that case.
     # Preserve first-occurrence ordering and deduplicate the same source/span
     # exactly as the general best-map path does; never discard distinct own labels.
-    if not any(tier == PATTERN_TIER for _, _, _, _, tier, _ in candidates):
-        return list(dict.fromkeys((start, end, entity, source)
-                                  for start, end, entity, source, tier, _ in candidates
-                                  if tier == OWN_TIER))
+    has_patterns = False
+    for index, (_start, _end, _entity, _source, tier, _score) in enumerate(candidates):
+        if index % 256 == 0:
+            check_deadline()
+        if tier == PATTERN_TIER:
+            has_patterns = True
+            break
+    if not has_patterns:
+        own_only = {}
+        for index, (start, end, entity, source, tier, _score) in enumerate(candidates):
+            if index % 256 == 0:
+                check_deadline()
+            if tier == OWN_TIER:
+                own_only[(start, end, entity, source)] = None
+        check_deadline()
+        return list(own_only)
     own = sorted({(start, end) for start, end, _entity, _source, tier, _score in candidates if tier == OWN_TIER})
     best = {}
     for start, end, entity, source, tier, score in candidates:
@@ -165,20 +177,21 @@ def resolve_overlaps(candidates, check_deadline=lambda: None):
     return kept
 
 
-def _assemble_redacted_text(text, merged):
-    """Build redacted content in one pass from sorted, nonoverlapping spans.
+def _assemble_redacted_text(text, merged, check_deadline=lambda: None):
+    """Build redacted content in one pass, preserving each private span.
 
-    The caller has already resolved candidates, overlap precedence and labels.
-    Copying all unaffected fragments once preserves the exact previous
-    reverse-splice result without repeatedly copying the entire input for
-    every matched sensitive value.
+    Processing thousands of valid spans still consumes the same worker
+    deadline; an expired scan must never return a partial redaction preview.
     """
     fragments = []
     cursor = 0
-    for start, end, entity in merged:
+    for index, (start, end, entity) in enumerate(merged):
+        if index % 256 == 0:
+            check_deadline()
         fragments.append(text[cursor:start])
         fragments.append(f"[REDACTED_{entity}]")
         cursor = end
+    check_deadline()
     fragments.append(text[cursor:])
     return "".join(fragments)
 
@@ -567,7 +580,7 @@ def build_pii_checker():
                     merged[-1] = (old_start, end, old_entity if old_entity == entity else "SENSITIVE")
                 else:
                     merged.append((start, end, entity))
-            redacted = _assemble_redacted_text(text, merged)
+            redacted = _assemble_redacted_text(text, merged, check_deadline)
             # A large redaction assembly also consumes the fixed worker budget.
             # It must not turn a late, partial result into releasable content.
             check_deadline()
