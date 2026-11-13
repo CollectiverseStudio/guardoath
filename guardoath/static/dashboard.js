@@ -2211,8 +2211,10 @@ function render(stage, result) {
     const details = document.createElement("details"); details.className = "check-group"; details.dataset.group = group.group_id;
     details.open = ["findings", "incomplete", "simulated"].includes(group.status);
     const heading = document.createElement("summary"), name = document.createElement("span"), status = document.createElement("span");
-    name.textContent = group.name; status.className = "pill" + (group.status === "passed" ? " good" : group.status === "findings" ? " bad" : " warn");
-    status.textContent = groupLabels[group.status] || group.status; heading.append(name,status); details.append(heading);
+    const allowedFindings = group.status === "findings" && result.evaluation_status === "complete" && result.effective_action === "allow";
+    name.textContent = group.name; status.className = "pill" + (group.status === "passed" ? " good" : group.status === "findings" && !allowedFindings ? " bad" : " warn");
+    status.textContent = allowedFindings ? "Findings · Allowed" : groupLabels[group.status] || group.status;
+    heading.append(name,status); details.append(heading);
     const limitations = document.createElement("p"); limitations.className = "group-limitations"; limitations.textContent = group.limitations; details.append(limitations);
     for (const check of result.checker_results.filter(c => group.checker_ids.includes(c.checker_id))) details.append(checkerRow(check));
     box.append(details);
