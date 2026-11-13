@@ -74,3 +74,30 @@
 #tenant-panel[data-stage-focus="output"] #tenant-attachment-input-field { display: none; }
 #tenant-panel[data-stage-focus="input"] #tenant-attachment-modes .inline,
 #tenant-panel[data-stage-focus="output"] #tenant-attachment-modes .inline { grid-template-columns:minmax(0,1fr); }
+
+
+/* Policy setup: unmistakable customer wizard, separate from conversation testing. */
+.checks-setup-wizard {
+  margin: 1.1rem 0 1.3rem;
+  padding: clamp(16px, 2vw, 24px);
+  border: 1px solid #b6c9f4;
+  border-radius: 14px;
+  background: linear-gradient(120deg, #f3f7ff, #ffffff 85%);
+}
+.checks-setup-wizard h3 { margin: 0 0 8px; font-size: 1.16rem; }
+.checks-setup-wizard .inline { flex-wrap: wrap; align-items: center; gap: 12px; }
+#checks-wizard-progress { font-weight: 700; color: #233e85; }
+#checks-wizard-guidance { max-width: 75ch; margin: 12px 0; line-height: 1.55; }
+#checks-wizard-navigation { border-top: 1px solid #d8e2f6; padding-top: 12px; }
+.tenant-stage-tabs { margin-top: 12px; gap: 8px; flex-wrap: wrap; }
+.tenant-stage-tabs button { min-height: 42px; }
+.tenant-stage-tabs button[aria-pressed="true"] {
+  background: #284bc2; color: white; outline: 2px solid #284bc2;
+}
+#tenant-stage-hidden-draft:not([hidden]) {
+  border-left: 3px solid #a96c00; background: #fff8e9;
+  padding: 10px 12px; line-height: 1.5;
+}
+@media (max-width: 640px) {
+  .checks-setup-wizard .inline button { flex: 1 1 100%; }
+}
