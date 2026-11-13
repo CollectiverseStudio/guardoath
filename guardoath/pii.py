@@ -555,10 +555,9 @@ def build_pii_checker():
             for start, end, entity, source in resolve_overlaps(candidates, check_deadline):
                 entities.setdefault(entity, set()).add(source)
                 spans.append((start, end, entity))
-            # The own-only overlap fast path does not call check_deadline().
-            # A final recognizer/validator can consume the remaining budget
-            # without yielding another regex match. Never return a clean or
-            # flagged verdict from work that completed beyond the deadline.
+            # Keep the terminal deadline check even with bounded overlap
+            # enumeration: final recognizer/validator work may consume the
+            # remaining budget. Never release a verdict beyond the deadline.
             check_deadline()
             if not redact or not spans:
                 if not spans and cache_key is not None and len(clean_texts) < 256:
