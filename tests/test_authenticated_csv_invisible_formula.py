@@ -97,7 +97,7 @@ def test_legitimate_unicode_joiner_is_recognized_with_no_false_formula_finding()
 
 
 PDF_CSV_POLYGLOT = b"column,value\n%PDF-1.7,synthetic\nrow,1"
-PDF_CSV_CELL_POLYGLOT = b"column,value\\nrow,%PDF-1.7\\nrow,1"
+PDF_CSV_CELL_POLYGLOT = b"column,value\nrow,%PDF-1.7\nrow,1"
 
 
 @pytest.mark.parametrize("payload", [PDF_CSV_POLYGLOT, PDF_CSV_CELL_POLYGLOT])
