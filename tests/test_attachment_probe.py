@@ -188,6 +188,22 @@ def test_csv_shaped_pdf_preamble_is_unsupported_not_inspected(payload):
     assert "synthetic" not in str(result)
 
 
+@pytest.mark.parametrize("payload", [
+    b"column,value\\nrow,%PDF-1.7\\nrow,1",
+    b'column,value\\nrow," %PDF-1.7"\\nrow,1',
+    b"column\\tvalue\\nrow\\t%PDF-1.7\\nrow\\t1",
+    b"column,value\\nrow,\\xef\\xbb\\xbf%PDF-1.7\\nrow,1",
+])
+def test_pdf_header_at_csv_or_tsv_cell_start_is_not_certified(payload):
+    """A PDF reader may locate the header inside the first 1,024 bytes."""
+    report = classify_attachment(payload)
+    assert (report.kind, report.status, report.reason) == (
+        "pdf", "unsupported", "pdf_parser_unavailable")
+    assert not report.csv_text_supported
+    assert report.sha256 == hashlib.sha256(payload).hexdigest()
+    assert "%PDF-1.7" not in str(report)
+
+
 def test_inline_pdf_literal_in_csv_cell_is_not_a_pdf_header():
     payload = b"column,value\nrow,ordinary %PDF-1.7 reference"
     result = classify_attachment(payload)
