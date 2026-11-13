@@ -196,6 +196,39 @@ def test_own_only_overlap_fast_path_preserves_distinct_labels_and_deduplicates()
     ]
 
 
+
+def test_own_only_overlap_fast_path_stops_at_request_deadline():
+    """A dense own-only field must not monopolize the PII worker after expiry."""
+    class CountedCandidates(list):
+        visited = 0
+
+        def __iter__(self):
+            for item in super().__iter__():
+                self.visited += 1
+                yield item
+
+    candidates = CountedCandidates([own(i, i + 2) for i in range(6000)])
+    assert len(resolve_overlaps(candidates)) == 6000
+    assert resolve_overlaps([own(0, 10), own(0, 10), own(0, 10, "US_SSN")]) == [
+        (0, 10, "EMAIL_ADDRESS", PATTERN), (0, 10, "US_SSN", PATTERN),
+    ]
+
+    candidates.visited = 0
+    checks = 0
+
+    def deadline():
+        nonlocal checks
+        checks += 1
+        if checks == 3:
+            raise TimeoutError("synthetic own-only deadline")
+
+    with pytest.raises(TimeoutError, match="synthetic own-only deadline"):
+        resolve_overlaps(candidates, deadline)
+    assert checks == 3
+    assert candidates.visited == 513  # abort during first scan, not after all 6000
+
+
+
 def test_pattern_containment_index_exactly_matches_independent_reference():
     # Independent original list-scan contract for arbitrary overlaps, scores,
     # exact-span ties and GuardOath's protected own detections.
