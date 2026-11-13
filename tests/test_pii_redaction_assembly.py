@@ -113,6 +113,115 @@ def test_redaction_assembly_checks_deadline_after_final_join():
 
 
 
+
+def _previous_merge_redaction_spans(spans):
+    """Independent oracle for the old sort/dedup/overlap precedence."""
+    from guardoath.pii import PATTERN_ENTITIES
+
+    merged = []
+    for start, end, entity in sorted(set(spans),
+            key=lambda s: (s[0], -s[1], s[2] in PATTERN_ENTITIES, s[2])):
+        if merged and start < merged[-1][1]:
+            old_start, old_end, old_entity = merged[-1]
+            if end <= old_end:
+                if ((start, end) == (old_start, old_end) and entity != old_entity
+                        and old_entity in PATTERN_ENTITIES):
+                    merged[-1] = (old_start, old_end, "SENSITIVE")
+                continue
+            merged[-1] = (old_start, end, old_entity if old_entity == entity else "SENSITIVE")
+        else:
+            merged.append((start, end, entity))
+    return merged
+
+
+def test_merge_redaction_spans_preserves_overlap_priority_and_6000_span_parity():
+    from guardoath.pii import _merge_redaction_spans
+
+    spans = [
+        (0, 15, "EMAIL_ADDRESS"), (0, 15, "URL"),
+        (1, 11, "EMAIL_ADDRESS"), (5, 18, "PHONE_NUMBER"),
+        (22, 30, "US_SSN"), (30, 37, "CREDIT_CARD"),
+        (40, 50, "URL"), (40, 50, "EMAIL_ADDRESS"),
+    ]
+    large = [(i * 3, i * 3 + 2, "EMAIL_ADDRESS" if i % 2 else "US_SSN")
+             for i in range(6000)]
+    for values in (spans, spans + spans, large, list(reversed(large)) + large):
+        assert _merge_redaction_spans(values) == _previous_merge_redaction_spans(values)
+
+
+def test_merge_deadline_expires_during_large_dedup_without_partial_output():
+    import inspect
+    from guardoath.pii import _merge_redaction_spans
+
+    class CountedSpans(list):
+        visited = 0
+
+        def __iter__(self):
+            for span in super().__iter__():
+                self.visited += 1
+                yield span
+
+    spans = CountedSpans((i * 2, i * 2 + 1, "EMAIL_ADDRESS") for i in range(6000))
+    def deadline():
+        frame = inspect.currentframe().f_back
+        if frame.f_code.co_name == "_merge_redaction_spans" and (
+                len(frame.f_locals.get("unique", ())) == 512
+                and "ordered" not in frame.f_locals):
+            raise TimeoutError("synthetic PII redaction dedup deadline")
+
+    with pytest.raises(TimeoutError, match="synthetic PII redaction dedup deadline"):
+        _merge_redaction_spans(spans, deadline)
+    assert spans.visited == 513
+
+
+def test_merge_deadline_expires_after_sort_before_assembly():
+    import inspect
+    from guardoath.pii import _merge_redaction_spans
+
+    spans = [(i * 2, i * 2 + 1, "EMAIL_ADDRESS") for i in range(6000)]
+    def deadline():
+        frame = inspect.currentframe().f_back
+        if ("ordered" in frame.f_locals and "merged" not in frame.f_locals):
+            raise TimeoutError("synthetic PII redaction sorted deadline")
+
+    with pytest.raises(TimeoutError, match="synthetic PII redaction sorted deadline"):
+        _merge_redaction_spans(spans, deadline)
+
+
+def test_merge_deadline_expires_during_large_overlap_walk():
+    import inspect
+    from guardoath.pii import _merge_redaction_spans
+
+    spans = [(i * 2, i * 2 + 1, "EMAIL_ADDRESS") for i in range(6000)]
+    seen = []
+    def deadline():
+        frame = inspect.currentframe().f_back
+        if "merged" in frame.f_locals:
+            count = len(frame.f_locals["merged"])
+            if count in (0, 256, 512):
+                seen.append(count)
+            if count == 512:
+                raise TimeoutError("synthetic PII redaction grouping deadline")
+
+    with pytest.raises(TimeoutError, match="synthetic PII redaction grouping deadline"):
+        _merge_redaction_spans(spans, deadline)
+    assert {0, 256, 512}.issubset(seen)
+
+
+def test_merge_deadline_expires_at_final_publication_boundary():
+    import inspect
+    from guardoath.pii import _merge_redaction_spans
+
+    spans = [(0, 2, "EMAIL_ADDRESS"), (3, 5, "US_SSN")]
+    def deadline():
+        frame = inspect.currentframe().f_back
+        if "merged" in frame.f_locals and len(frame.f_locals["merged"]) == len(spans):
+            raise TimeoutError("synthetic PII redaction merge terminal deadline")
+
+    with pytest.raises(TimeoutError, match="synthetic PII redaction merge terminal deadline"):
+        _merge_redaction_spans(spans, deadline)
+
+
 @pytest.mark.parametrize("stage", ["input", "output"])
 def test_existing_engine_rechecks_multiple_real_redactions_with_no_raw_values(stage):
     pytest.importorskip("tldextract")
