@@ -101,6 +101,10 @@ test("Input-only FC tab Save retains hidden Output action and executes both stag
     await output.selectOption("off");
     await page.locator("#tenant-tab-input").click();
     await expect(output).toBeHidden();
+    await expect(page.locator("#tenant-stage-description")).toContainText(
+      "Edits in either stage remain unsaved until Save checks");
+    await expect(page.locator("#tenant-tab-input")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#tenant-tab-output")).toHaveAttribute("aria-pressed", "false");
     expect((await current(request, headers)).revision).toBe(saved.revision);
     await page.getByRole("button", {name: "Save checks", exact: true}).click();
     await expect(page.locator("#tenant-message")).toContainText("Saved.");
