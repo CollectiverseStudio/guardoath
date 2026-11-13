@@ -110,17 +110,34 @@ def resolve_overlaps(candidates, check_deadline=lambda: None):
                 own_only[(start, end, entity, source)] = None
         check_deadline()
         return list(own_only)
-    own = sorted({(start, end) for start, end, _entity, _source, tier, _score in candidates if tier == OWN_TIER})
+    # The mixed-own/pattern path builds several indexes before evaluating any
+    # containment. Those preprocessing passes also share the worker deadline:
+    # unchecked dict/set comprehensions could otherwise monopolize a timed-out
+    # worker even when regex itself had already returned.
+    def checked(items):
+        for index, item in enumerate(items):
+            if index % 256 == 0:
+                check_deadline()
+            yield item
+
+    own = sorted({(start, end) for start, end, _entity, _source, tier, _score
+                  in checked(candidates) if tier == OWN_TIER})
+    check_deadline()
     best = {}
-    for start, end, entity, source, tier, score in candidates:
+    for start, end, entity, source, tier, score in checked(candidates):
         key = (start, end, entity, source, tier)
         best[key] = max(score, best.get(key, score))
-    kept = [(start, end, entity, source) for (start, end, entity, source, tier) in best if tier == OWN_TIER]
+    check_deadline()
+    kept = [(start, end, entity, source) for (start, end, entity, source, tier)
+            in checked(best) if tier == OWN_TIER]
+    check_deadline()
     patterns = []
     own_index, own_end = 0, -1
-    for (start, end, entity, source, tier), score in sorted(
-            ((key, score) for key, score in best.items() if key[4] == PATTERN_TIER),
-            key=lambda item: (item[0][0], -item[0][1])):
+    eligible_patterns = sorted(
+        ((key, score) for key, score in checked(best.items()) if key[4] == PATTERN_TIER),
+        key=lambda item: (item[0][0], -item[0][1]))
+    check_deadline()
+    for (start, end, entity, source, tier), score in eligible_patterns:
         check_deadline()
         while own_index < len(own) and own[own_index][0] <= start:
             own_end = max(own_end, own[own_index][1])
@@ -129,8 +146,9 @@ def resolve_overlaps(candidates, check_deadline=lambda: None):
             continue
         patterns.append((start, end, entity, source, score))
     top = {}
-    for start, end, _entity, _source, score in patterns:
+    for start, end, _entity, _source, score in checked(patterns):
         top[(start, end)] = max(score, top.get((start, end), score))
+    check_deadline()
     # Sorted by start, longer first: a previously kept pattern can suppress
     # this one only when its end reaches this end and its score is >= ours.
     # The former list-of-live-containers scan was quadratic for thousands of
@@ -138,9 +156,12 @@ def resolve_overlaps(candidates, check_deadline=lambda: None):
     # reverse-sorted ends answers that same containment question in O(log n).
     # Identical spans must NOT suppress one another on equal scores: process
     # all candidates at the same (start, end) before publishing that group.
-    ends = sorted({end for _, end, _, _, _ in patterns}, reverse=True)
-    ranks = {end: index + 1 for index, end in enumerate(ends)}
+    ends = sorted({end for _, end, _, _, _ in checked(patterns)}, reverse=True)
+    check_deadline()
+    ranks = {end: index + 1 for index, end in enumerate(checked(ends))}
+    check_deadline()
     maxima = [float("-inf")] * (len(ends) + 1)
+    check_deadline()
 
     def maximum_containing_score(rank):
         maximum = float("-inf")
@@ -155,12 +176,15 @@ def resolve_overlaps(candidates, check_deadline=lambda: None):
             rank += rank & -rank
 
     ordered = sorted(patterns, key=lambda item: (item[0], -item[1]))
+    check_deadline()
     index = 0
     while index < len(ordered):
         check_deadline()
         start, end = ordered[index][:2]
         next_index = index + 1
         while next_index < len(ordered) and ordered[next_index][:2] == (start, end):
+            if (next_index - index) % 256 == 0:
+                check_deadline()
             next_index += 1
         rank = ranks[end]
         enclosing_score = maximum_containing_score(rank)
@@ -174,6 +198,7 @@ def resolve_overlaps(candidates, check_deadline=lambda: None):
         if accepted:
             remember_containing_score(rank, top[(start, end)])
         index = next_index
+    check_deadline()
     return kept
 
 
