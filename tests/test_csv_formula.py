@@ -67,3 +67,53 @@ def test_invalid_format_and_bounds_fail_closed(value, fmt, error):
     assert result.evaluation_status == "incomplete"
     assert result.effective_action == "block"
     assert result.checker_results[0].error_code == error
+
+
+@pytest.mark.parametrize("cell,error", [
+    ("\x1b[31m=2+3", "unsafe_csv_control_characters"),
+    ("\u202e=2+3", "unsafe_csv_control_characters"),
+    ("\u009b[31m=2+3", "unsafe_csv_control_characters"),
+    ("\u200b=2+3", "unsafe_csv_invisible_formula_prefix"),
+    ("  \u200d  @SUM(2,3)", "unsafe_csv_invisible_formula_prefix"),
+    ("\u2060-2+3", "unsafe_csv_invisible_formula_prefix"),
+])
+@pytest.mark.parametrize("delimiter", [",", "\t"])
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_direct_text_scanner_rejects_hidden_formula_and_controls(cell, error, delimiter, stage):
+    """The regular text API bypasses attachment probing but must use the same safety policy."""
+    from guardoath.attachment_probe import classify_attachment
+
+    content = "name" + delimiter + "value\nSynthetic" + delimiter + cell
+    assert classify_attachment(content.encode("utf-8")).reason == error
+    response = check(content, stage=stage)
+    assert response.evaluation_status == "incomplete"
+    assert response.recommended_action == "block"
+    assert response.effective_action == "block"
+    assert response.checker_results[0].status == "error"
+    assert response.checker_results[0].error_code == error
+    assert not response.findings
+    assert cell not in response.model_dump_json()
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_alternate_delimiter_hidden_formula_cannot_pass_direct_text_check(stage):
+    from guardoath.attachment_probe import classify_attachment
+
+    content = "name,value\nSynthetic,plain\t\u200b=2+3"
+    assert classify_attachment(content.encode("utf-8")).reason == "unsafe_csv_invisible_formula_prefix"
+    result = check(content, stage=stage)
+    assert result.evaluation_status == "incomplete"
+    assert result.effective_action == "block"
+    assert result.checker_results[0].error_code == "unsafe_csv_invisible_formula_prefix"
+
+
+@pytest.mark.parametrize("cell", [
+    "\u200bordinary", "middle\u200b=2+3", "'\u200b=2+3",
+    "👩\u200d🔬", "\u200cفارسی", "ordinary value",
+])
+def test_legitimate_unicode_and_apostrophe_escape_still_pass_direct_csv_check(cell):
+    content = "name,value\nSynthetic," + cell
+    response = check(content)
+    assert response.evaluation_status == "complete"
+    assert response.effective_action == "allow"
+    assert not response.findings
