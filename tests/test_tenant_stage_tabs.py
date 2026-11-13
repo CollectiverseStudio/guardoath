@@ -34,3 +34,24 @@ def test_stage_tabs_preserve_both_columns_and_original_settings():
     assert 'new CustomEvent("guardoath:focus-stage", {detail: {stage}})' in dashboard
     assert 'for (const stage of ["input", "output"])' in dashboard
     assert 'id="tenant-save"' in html
+
+
+def test_customer_policy_setup_wizard_is_customer_operable_and_does_not_save_automatically():
+    html = (ROOT / "dashboard.html").read_text(encoding="utf-8")
+    js = (ROOT / "tenant_stage_tabs.js").read_text(encoding="utf-8")
+    css = (ROOT / "dashboard.css").read_text(encoding="utf-8")
+    for identifier in (
+        "checks-setup-wizard", "checks-wizard-start", "checks-wizard-exit",
+        "checks-wizard-progress", "checks-wizard-guidance",
+        "checks-wizard-navigation", "checks-wizard-back", "checks-wizard-next",
+    ):
+        assert f'id="{identifier}"' in html
+    for stage in ('"input"', '"output"', '"both"'):
+        assert "stage: " + stage in js
+    assert "Next: Review and save" in js
+    assert 'select(step.stage)' in js
+    assert 'select("both")' in js
+    assert "saveTenant(" not in js
+    assert "fetch(" not in js
+    assert ".checks-setup-wizard" in css
+    assert '#checks-setup-wizard [hidden]' in css
