@@ -104,3 +104,13 @@
 
 /* Native hidden states must win over flex/grid display styles. */
 #checks-setup-wizard [hidden] { display: none !important; }
+
+
+/* Advanced JSON validation is discoverable from the review step, without
+   duplicating tenant controls or suggesting that draft settings are saved. */
+.checks-wizard-comparison-tools {
+  margin-top: 14px; padding: 12px 0 0;
+  border-top: 1px solid #d8e2f6;
+}
+#checks-wizard-comparison-summary { line-height: 1.55; font-weight: 600; }
+#checks-wizard-open-comparisons { min-height: 42px; margin: 4px 0; }
