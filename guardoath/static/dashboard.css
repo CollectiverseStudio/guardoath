@@ -101,3 +101,6 @@
 @media (max-width: 640px) {
   .checks-setup-wizard .inline button { flex: 1 1 100%; }
 }
+
+/* Native hidden states must win over flex/grid display styles. */
+#checks-setup-wizard [hidden] { display: none !important; }
