@@ -105,7 +105,10 @@ test("Input-only FC tab Save retains hidden Output action and executes both stag
     // Input is edited and saved with Output's column hidden. Hidden is NOT
     // auto, and a successful Input evaluation cannot re-enable Output rules.
     await page.locator("#tenant-tab-output").click();
-    await output.selectOption("off");
+    // Customer-facing Off is option value "" for check-wide actions;
+    // "off" is reserved for individual rule actions and CSV/TSV modes.
+    await expect(output.locator('option[value=""]')).toHaveText("Off");
+    await output.selectOption({label: "Off"});
     await page.locator("#tenant-tab-input").click();
     await expect(output).toBeHidden();
     await expect(page.locator("#tenant-stage-description")).toContainText(
@@ -118,7 +121,7 @@ test("Input-only FC tab Save retains hidden Output action and executes both stag
     const outputOff = await current(request, headers);
     expect(outputOff.revision).toBe(saved.revision + 1);
     expect(outputOff.input_checks.cross_field).toBe("block");
-    expect(outputOff.output_checks.cross_field).toBe("off");
+    expect(outputOff.output_checks.cross_field).toBeNull();
     expect(outputOff.comparisons).toEqual(saved.comparisons);
 
     // Demo-key reconnection may rotate credentials; all API assertions must
@@ -128,7 +131,7 @@ test("Input-only FC tab Save retains hidden Output action and executes both stag
     await expect(input).toHaveValue("block");
     await expect(output).toBeHidden();
     await page.locator("#tenant-tab-output").click();
-    await expect(output).toHaveValue("off");
+    await expect(output).toHaveValue("");
     await page.locator("#tenant-tab-input").click();
 
     const blockedInput = await check(request, headers, "input", invalid);
