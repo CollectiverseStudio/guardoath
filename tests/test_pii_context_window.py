@@ -107,7 +107,7 @@ def test_bounded_digit_prefilter_expires_before_finishing_wide_field():
 
 def test_bounded_context_index_preserves_original_token_positions_and_words():
     regex = pytest.importorskip("regex")
-    pattern = regex.compile(r"\\w+")
+    pattern = regex.compile(r"\w+")
     text = "First BIRTH alpha_2 " + ("token " * 3000) + "last"
     ticks = []
     actual = _context_tokens_with_deadline(pattern, text, lambda: ticks.append(True) or 10.0)
@@ -129,5 +129,5 @@ def test_bounded_context_index_stops_at_deadline_without_partial_tokens():
             raise TimeoutError("synthetic token budget")
         return 10.0
     with pytest.raises(TimeoutError, match="synthetic token budget"):
-        _context_tokens_with_deadline(regex.compile(r"\\w+"), "word " * 5000, deadline)
+        _context_tokens_with_deadline(regex.compile(r"\w+"), "word " * 5000, deadline)
     assert calls == 4
