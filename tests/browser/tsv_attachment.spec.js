@@ -297,3 +297,47 @@ test("in-flight tenant reset disables Input checks until the authoritative reloa
   expect(result.evaluation_status).toBe("complete");
   expect(result.effective_action).toBe("allow");
 });
+
+
+test("Unicode whitespace hidden formula remains blocked in the authenticated Input file picker", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo8");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo8");
+
+  const resetTenant = async () => {
+    const reset = page.waitForResponse(r => r.url().endsWith("/v1/tenants/current/reset")
+      && r.request().method() === "POST");
+    await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+    expect((await reset).status()).toBe(200);
+    await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+  };
+  await resetTenant();
+  try {
+    // A saved Off setting cannot turn a deceptive attachment into a successful
+    // inspection. This exercises the real authenticated customer file picker.
+    await page.locator("#tenant-attachment-mode-input").selectOption("off");
+    await page.getByRole("button", { name: "Save checks", exact: true }).click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved.");
+
+    const file = Buffer.from("name\tvalue\nSynthetic\t\u200b\u202f=2+3", "utf8");
+    await page.locator("#input-attachments").setInputFiles({
+      name: "untrusted.tsv", mimeType: "text/tab-separated-values", buffer: file,
+    });
+    const response = page.waitForResponse(r => r.url().endsWith("/v1/checks/input/attachments")
+      && r.request().method() === "POST");
+    await page.locator("#run-input").click();
+    const data = await (await response).json();
+    expect(data.evaluation_status).toBe("incomplete");
+    expect(data.recommended_action).toBe("block");
+    expect(data.effective_action).toBe("block");
+    expect(data.attachments[0].reason).toBe("unsafe_csv_invisible_formula_prefix");
+    expect(data.attachments[0].evaluation_status).toBe("incomplete");
+    await expect(page.locator("#input-results .attachment-receipts"))
+      .toContainText("unsafe_csv_invisible_formula_prefix");
+    await expect(page.locator("#input-results")).not.toContainText("Synthetic\t");
+    await expect(page.locator("#answer")).toBeHidden();
+  } finally {
+    await resetTenant();
+  }
+});
