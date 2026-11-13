@@ -25,14 +25,59 @@ function Invoke-Checked([string]$Program, [string[]]$Arguments) {
 function Invoke-Aws([string[]]$Arguments) {
     return Invoke-Checked "aws" ($Arguments + @("--region", $Region, "--profile", $Profile, "--output", "json"))
 }
+# Exact job membership is part of the release contract. A top-level "success"
+# is not enough: a matrix job may have been removed, skipped or left unexamined.
+$RequiredJobs = @{
+    "Tests" = @(
+        "test (3.11)", "test (3.12)", "test (3.13)", "test (3.14)", "test (3.15)",
+        "local-pii (3.12)", "local-pii (3.13)", "local-pii (3.14)",
+        "windows-launcher (3.12)", "windows-launcher (3.13)",
+        "dashboard", "optional-aws-adapter", "release-wheel"
+    )
+    "Push on main" = @(
+        "Analyze (python)", "Analyze (actions)", "Analyze (javascript-typescript)"
+    )
+    "Field Comparisons Evidence" = @(
+        "strict-portfolio-and-scale", "customer-browser-acceptance"
+    )
+    "Trusted Reference Acceptance" = @("signed-reference")
+    "PII Reliability Gate" = @(
+        "real-pii-tail (ubuntu-latest, py3.12)",
+        "real-pii-tail (ubuntu-latest, py3.13)",
+        "real-pii-tail (windows-latest, py3.12)"
+    )
+}
 function Assert-Run([object[]]$Runs, [string]$Name, [string]$Sha) {
     $matches = @($Runs | Where-Object { $_.name -eq $Name -and $_.head_sha -eq $Sha })
-    if (-not $matches.Count) { throw "No exact-SHA GitHub Actions run for $Name at $Sha. Dispatch the workflow and recheck." }
+    if (-not $matches.Count) {
+        throw "No exact-SHA GitHub Actions run for $Name at $Sha. Dispatch the workflow and recheck."
+    }
     $latest = $matches | Sort-Object created_at -Descending | Select-Object -First 1
     if ($latest.status -ne "completed" -or $latest.conclusion -ne "success") {
         throw "$Name not green for $($Sha): status=$($latest.status) conclusion=$($latest.conclusion) run=$($latest.html_url)"
     }
-    Write-Host "$Name passed at $Sha ($($latest.html_url))"
+    if (-not $latest.id) { throw "$Name has no GitHub Actions run ID; cannot inspect individual jobs." }
+    $jobsUrl = "https://api.github.com/repos/$Repo/actions/runs/$($latest.id)/jobs?per_page=100"
+    $jobResponse = Invoke-RestMethod -Uri $jobsUrl -Headers $Headers -Method Get
+    $jobs = @($jobResponse.jobs)
+    if (-not $jobs.Count -or $jobResponse.total_count -ne $jobs.Count) {
+        throw "$Name run $($latest.html_url) returned only $($jobs.Count) of $($jobResponse.total_count) jobs; fail closed on incomplete job evidence."
+    }
+    $expected = @($RequiredJobs[$Name])
+    if (-not $expected.Count) { throw "No individual-job release contract is defined for $Name." }
+    foreach ($jobName in $expected) {
+        if (@($jobs | Where-Object { $_.name -eq $jobName }).Count -ne 1) {
+            throw "$Name run $($latest.html_url) does not contain exactly one required job '$jobName'. Do not release."
+        }
+    }
+    $failed = @($jobs | Where-Object { $_.status -ne "completed" -or $_.conclusion -ne "success" })
+    if ($failed.Count) {
+        $details = @($failed | ForEach-Object {
+            "$($_.name): status=$($_.status), conclusion=$($_.conclusion), job=$($_.html_url)"
+        }) -join "; "
+        throw "$Name has $($failed.Count) non-successful individual job(s): $details"
+    }
+    Write-Host "$Name passed at $Sha: $($jobs.Count)/$($jobs.Count) individual jobs SUCCESS ($($latest.html_url))"
 }
 
 $Sha = Invoke-Checked "git" @("rev-parse", "--verify", "HEAD")
