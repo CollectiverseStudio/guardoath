@@ -69,19 +69,30 @@ def has_unsafe_csv_controls(value: str) -> bool:
 
 
 def has_pdf_header_preamble(data: bytes) -> bool:
-    """Conservatively reject PDF/CSV polyglots with an early line-start PDF header.
+    """Conservatively reject PDF/CSV polyglots with an early PDF header at a\n    line start or CSV/TSV cell start.
 
     PDF readers can tolerate a preamble before %PDF-, so byte-zero sniffing can
     mistake a two-column CSV-looking polyglot for an inspected spreadsheet.
     Inspect at most the first 1,024 bytes; the result is unsupported, NEVER
     evidence that GuardOath parsed or scanned a PDF.
     """
+    def starts_header(fragment: bytes) -> bool:
+        # A CSV delimiter or quote can conceal a real PDF header within a
+        # syntactically valid CSV cell. PDF readers search the early byte range,
+        # not necessarily a line boundary. Never certify such a polyglot as CSV.
+        visible = fragment.lstrip(b' \\t"')
+        if visible.startswith(b"\\xef\\xbb\\xbf"):
+            visible = visible[3:].lstrip(b' \\t"')
+        return visible.startswith(b"%PDF-")
+
     for line in data[:1024].splitlines():
-        visible = line.lstrip(b" \t")
-        if visible.startswith(b"\xef\xbb\xbf"):
-            visible = visible[3:].lstrip(b" \t")
-        if visible.startswith(b"%PDF-"):
+        if starts_header(line):
             return True
+        # Evaluate CSV- and TSV-cell starts, including quotes and whitespace.
+        # This is deliberately conservative, and is not a complete PDF parser.
+        for fragment in line.replace(b"\\t", b",").split(b",")[1:]:
+            if starts_header(fragment):
+                return True
     return False
 
 
