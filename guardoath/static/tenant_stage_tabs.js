@@ -19,7 +19,7 @@
       description.textContent = stage === "both"
         ? "Showing Input and Output settings together."
         : "Showing " + (stage === "input" ? "Input (user message)" : "Output (AI answer)") +
-          " settings. The other stage remains saved and unchanged. Save checks applies both stages.";
+          " settings. The other stage is only hidden, not disabled. Edits in either stage remain unsaved until Save checks applies both stages.";
     };
     Object.entries(buttons).forEach(([stage, button]) =>
       button.addEventListener("click", () => select(stage)));
