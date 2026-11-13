@@ -3,6 +3,8 @@
 Tests are synthetic and inspect only candidate counts; no private values or logs.
 A deadline failure must raise, not return a partial set of PII findings.
 """
+import inspect
+
 import pytest
 
 from guardoath.pii import OWN_TIER, PATTERN_TIER, resolve_overlaps
@@ -84,3 +86,27 @@ def test_large_identical_span_group_honors_deadline_before_returning_findings():
     with pytest.raises(TimeoutError, match="synthetic equal-span PII deadline"):
         resolve_overlaps(candidates, deadline)
     assert ticks == 6160
+
+
+def test_dense_own_prefix_walk_checks_deadline_inside_single_pattern():
+    """A distant pattern cannot traverse 6,000 earlier own spans unchecked.
+
+    Inspect the checkpoint's own_index rather than relying on an incidental
+    number of earlier index-building callbacks. No personal values are used.
+    """
+    candidates = [pattern(20000, 20004)] + [own(i * 3) for i in range(6000)]
+    seen = []
+
+    def deadline():
+        caller = inspect.currentframe().f_back
+        if caller.f_code.co_name != "resolve_overlaps":
+            return
+        prefix_index = caller.f_locals.get("own_index")
+        if prefix_index in (0, 256, 512):
+            seen.append(prefix_index)
+        if prefix_index == 512:
+            raise TimeoutError("synthetic own-prefix PII worker deadline")
+
+    with pytest.raises(TimeoutError, match="synthetic own-prefix PII worker deadline"):
+        resolve_overlaps(candidates, deadline)
+    assert {0, 256, 512}.issubset(seen)
