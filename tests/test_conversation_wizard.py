@@ -43,8 +43,17 @@ def test_findings_show_human_check_and_rule_names_with_stable_ids():
     assert 'const savedComparisonFamilies = new Map()' in js
     assert 'const savedTenant = application?.tenant' in js
     assert 'check.checker_id === "cross_field"' in js
-    assert 'const readableRule = savedFamily || knownRule?.title' in js
+
     assert 'ruleName.textContent = readableRule + " · "' in js
-    assert 'savedComparisonFamilies.set("business." + rule.rule_id, label)' in js
+    assert 'savedComparisonFamilies.set("business." + rule.rule_id, {label, field, ruleId: rule.rule_id})' in js
+    assert 'const readableRule = savedFamily?.label || knownRule?.title' in js
+    assert 'reviewSavedComparisonDefinition(savedFamily)' in js
+    assert 'current[family.field].some(rule => rule?.rule_id === family.ruleId)' in js
+    assert 'definition.setAttribute("aria-label"' in js
+    assert 'definition.addEventListener("click"' in js
+    assert 'section.open = true' in js
+    assert 'edit.click()' in js
+    assert 'No settings were saved.' in js
+    assert 'protectedReference ? "Review protected reference" : "Edit comparison definition"' in js
     assert 'ruleId.textContent = finding.rule_id' in js
     assert 'reviewFindingRule(finding.rule_id, check.checker_id, stage)' in js
