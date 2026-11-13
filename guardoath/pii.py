@@ -262,17 +262,20 @@ def split_lookaheads(expression, flags, regex):
         return None
 
 
-def _last_lookahead_start(pattern, text, *, timeout=None):
-    """Return the last overlapping lookahead start using constant extra space.
+def _last_lookahead_start(pattern, text, *, timeout=None, check_deadline=lambda: None):
+    """Return the rightmost overlapping lookahead start with bounded worker time.
 
-    A split lookahead needs only the rightmost matching start to decide which
-    core matches remain eligible. Collecting every match in a list may allocate
-    memory proportional to a large repeated text under the shipped PII budget.
-    Iteration preserves the same regex ordering, flags, timeout, and result.
+    regex limits the matching engine, but processing each successful match in
+    Python also consumes the shared privacy deadline. Probe that deadline
+    periodically while retaining constant additional space and every match.
     """
     rightmost = -1
-    for match in pattern.finditer(text, overlapped=True, timeout=timeout, concurrent=True):
+    for index, match in enumerate(pattern.finditer(
+            text, overlapped=True, timeout=timeout, concurrent=True)):
+        if index % 256 == 0:
+            check_deadline()
         rightmost = match.start()
+    check_deadline()
     return rightmost
 
 
@@ -286,16 +289,21 @@ def _bounded_split_lookahead_matches(core, lookaheads, text, check_deadline):
     """
     last_eligible = None
     for lookahead in lookaheads:
-        last = _last_lookahead_start(lookahead, text, timeout=check_deadline())
+        last = _last_lookahead_start(
+            lookahead, text, timeout=check_deadline(), check_deadline=check_deadline)
         if last < 0:
             return
         last_eligible = last if last_eligible is None else min(last_eligible, last)
     if last_eligible is None:
         return
-    for match in core.finditer(text, timeout=check_deadline(), concurrent=True):
+    for index, match in enumerate(core.finditer(
+            text, timeout=check_deadline(), concurrent=True)):
+        if index % 256 == 0:
+            check_deadline()
         if match.start() > last_eligible:
             break
         yield match
+    check_deadline()
 
 
 def fewest_phone_digits(recognizer):
