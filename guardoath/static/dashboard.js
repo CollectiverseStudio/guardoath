@@ -2084,9 +2084,79 @@ function render(stage, result) {
       if (!Array.isArray(savedTenant[field])) continue;
       for (const rule of savedTenant[field]) {
         if (rule && typeof rule.rule_id === "string")
-          savedComparisonFamilies.set("business." + rule.rule_id, label);
+          savedComparisonFamilies.set("business." + rule.rule_id, {label, field, ruleId: rule.rule_id});
       }
     }
+  }
+  // A finding can use the same cross_field checker as five other families.
+  // Resolve its editor ONLY through this loaded, server-provided tenant record.
+  // This navigates existing customer forms; clicking never stages or saves a rule.
+  function reviewSavedComparisonDefinition(family) {
+    const current = application?.tenant;
+    if (!current || !ownChecksSelected() || !Array.isArray(current[family.field]) ||
+        !current[family.field].some(rule => rule?.rule_id === family.ruleId)) {
+      $("tenant-message").textContent =
+        "The saved comparison definition has changed or this tenant is disconnected. Reconnect and run the check again before editing.";
+      return false;
+    }
+    const section = $("comparison-configuration");
+    if (!section) return false;
+    section.open = true;
+    const protectedSections = {
+      advanced_identity_reference_status: "identity-reference-status",
+      advanced_conversion_reference_status: "conversion-reference-status",
+      advanced_trusted_reference_status: "trusted-reference-status"
+    };
+    if (protectedSections[family.field]) {
+      const target = $(protectedSections[family.field]);
+      if (!target || target.hidden) return false;
+      target.scrollIntoView({block: "center"});
+      target.setAttribute("tabindex", "-1");
+      target.focus({preventScroll: true});
+      $("tenant-message").textContent =
+        "Review the read-only protected reference inventory for " + family.ruleId +
+        ". Only the host operator can replace reference values or signatures; no settings were changed.";
+      return true;
+    }
+    const editable = {
+      comparisons: ["comparison-editor", "comparisonId", "comparison-filter", "comparison-filter-stage", "Edit comparison "],
+      advanced_arithmetic: ["arithmetic-editor", "arithmeticId", "arithmetic-filter", "arithmetic-filter-stage", "Edit arithmetic "],
+      advanced_identity: ["identity-editor", "identityId", "identity-filter", "identity-filter-stage", "Edit identity "],
+      advanced_conversion_time: ["conversion-editor", "conversionId", "conversion-filter", "conversion-filter-stage", "Edit conversion "],
+      advanced_statistical_drift: ["statistical-drift-editor", "driftId", null, null, "Edit PSI "]
+    };
+    const config = editable[family.field];
+    if (!config) return false;
+    const [hostId, dataKey, searchId, stageId, actionName] = config;
+    const host = $(hostId);
+    if (!host) return false;
+    // Restore display filters only; do not discard any draft, change per-rule
+    // Input/Output settings or impersonate the saved tenant revision.
+    const search = searchId ? $(searchId) : null;
+    if (search && search.value) {
+      search.value = "";
+      search.dispatchEvent(new Event("input", {bubbles: true}));
+    }
+    const stageFilter = stageId ? $(stageId) : null;
+    if (stageFilter && stageFilter.value !== "all") {
+      stageFilter.value = "all";
+      stageFilter.dispatchEvent(new Event("change", {bubbles: true}));
+    }
+    const entry = [...host.querySelectorAll("li")].find(node => node.dataset[dataKey] === family.ruleId);
+    const edit = entry && [...entry.querySelectorAll("button")].find(
+      button => button.getAttribute("aria-label") === actionName + family.ruleId);
+    if (!edit || edit.disabled) {
+      $("tenant-message").textContent =
+        "This saved " + family.label.toLowerCase() +
+        " is not editable in the currently loaded customer editor. Reconnect to refresh its protected or owner-only configuration.";
+      return false;
+    }
+    edit.click();
+    host.scrollIntoView({block: "center"});
+    $("tenant-message").textContent =
+      "Opened the existing pending editor for " + family.ruleId +
+      ". No settings were saved. Apply a pending change and choose Save checks to persist it.";
+    return true;
   }
   function checkerRow(check) { const row = document.createElement("div"); row.className = "checker";
     const heading = document.createElement("div"), name = document.createElement("span"), status = document.createElement("span");
@@ -2105,9 +2175,19 @@ function render(stage, result) {
       const ruleId = document.createElement("code"); ruleId.className = "finding-rule-id";
       const knownRule = ruleIndex[finding.rule_id];
       const savedFamily = check.checker_id === "cross_field" ? savedComparisonFamilies.get(finding.rule_id) : null;
-      const readableRule = savedFamily || knownRule?.title;
+      const readableRule = savedFamily?.label || knownRule?.title;
       if (readableRule) { const ruleName = document.createElement("strong"); ruleName.className = "finding-rule-name"; ruleName.textContent = readableRule + " · "; detail.append(ruleName); }
       ruleId.textContent = finding.rule_id; detail.append(ruleId);
+      if (savedFamily && application?.tenant && ownChecksSelected()) {
+        const definition = document.createElement("button");
+        definition.type = "button"; definition.className = "secondary";
+        const protectedReference = savedFamily.field.endsWith("_reference_status");
+        definition.textContent = protectedReference ? "Review protected reference" : "Edit comparison definition";
+        definition.setAttribute("aria-label", (protectedReference ? "Review protected reference for " :
+          "Edit saved definition for ") + finding.rule_id);
+        definition.addEventListener("click", () => reviewSavedComparisonDefinition(savedFamily));
+        detail.append(definition);
+      }
       const description = document.createElement("p"); description.textContent = finding.explanation; detail.append(description);
       if (application?.tenant && ownChecksSelected()) {
         const button = document.createElement("button"); button.type = "button"; button.className = "secondary";
