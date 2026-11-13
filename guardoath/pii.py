@@ -140,6 +140,10 @@ def resolve_overlaps(candidates, check_deadline=lambda: None):
     for (start, end, entity, source, tier), score in eligible_patterns:
         check_deadline()
         while own_index < len(own) and own[own_index][0] <= start:
+            # A pattern after thousands of own detections must not traverse
+            # their prefix after the shared PII deadline has expired.
+            if own_index % 256 == 0:
+                check_deadline()
             own_end = max(own_end, own[own_index][1])
             own_index += 1
         if own_end >= end:
@@ -218,7 +222,11 @@ def _assemble_redacted_text(text, merged, check_deadline=lambda: None):
         cursor = end
     check_deadline()
     fragments.append(text[cursor:])
-    return "".join(fragments)
+    redacted = "".join(fragments)
+    # Joining many fragments also consumes the worker budget. Never release
+    # transformed content after its deadline, even if all spans were visited.
+    check_deadline()
+    return redacted
 
 
 
