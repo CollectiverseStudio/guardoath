@@ -3481,3 +3481,16 @@ The **Content integrity (SHA-256)** check is a byte-for-byte comparison against 
 When the Input evaluation is complete and the effective decision is **Allow**, the dashboard shows **Mismatch detected · Allowed** with an explanation. The `flagged` checker status describes detection, **not** a Block policy action. Other check findings can independently impose Block. If ordinary conversations are not intended to match a frozen approved artifact, set Content integrity to **Off** for that stage on the tenant record, then select **Save checks**; do not change the SHA-256 digest merely to hide expected failures.
 
 The conversation wizard is already available through **Start guided test**. Its four guided stages are **Input data → Input test → Proposed AI answer → Output test**. Use **Show all steps** for an expanded view. Step-level help makes clear that examples change message content, not which tenant checks run. Input validation is authoritative, and navigating the wizard cannot bypass the Input decision or release an unchecked Output. The customer still needs to connect a permitted tenant (or demo key), and the wizard does not generate an AI answer.
+
+
+### Guided tenant policy setup (Input and Output)
+
+After connecting an authorized tenant or demo account, open **Checks on this record → Start setup wizard**. This is a customer configuration wizard, distinct from the four-step conversation-testing wizard. It presents:
+
+1. **Input protection** — the user's message before the selected AI model sees it. Configure stage-specific check actions and optional rule overrides.
+2. **Output protection** — the proposed AI answer before the customer sees it. Review the independent Output actions; hiding Input does not disable it.
+3. **Review and save** — both stages visible together, including unsaved-stage warnings. Choose **Save checks** to persist both stages using the tenant revision. Moving forward/backward or exiting the wizard never saves, replaces, or deactivates checks.
+
+**Input checks**, **Output checks**, and **Both stages** tabs remain available for direct navigation without the wizard. Advanced Field Comparisons still live in the optional expansion panel; the wizard reuses that single tenant configuration and shared validation engine rather than storing separate wizard policy. A connection to another tenant resets stage focus to Both to avoid carrying over a visual filter. If a stage contains unsaved changes while hidden, the dashboard warns; a customer may return to Both to inspect before saving. The wizard itself does not enroll an unpaid account or create an API key.
+
+**Deployment boundary:** these controls must be built into the hosted Lambda/static asset package and verified at exact Git SHA. A commit to `main` does not change `guardoath.com`; the approved production release also requires full CI, a safe rollback and 15 live checks.
