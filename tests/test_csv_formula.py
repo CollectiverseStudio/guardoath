@@ -83,7 +83,12 @@ def test_direct_text_scanner_rejects_hidden_formula_and_controls(cell, error, de
     """The regular text API bypasses attachment probing but must use the same safety policy."""
     from guardoath.attachment_probe import classify_attachment
 
-    content = "name" + delimiter + "value\nSynthetic" + delimiter + cell
+    # Quoted CSV cells containing commas remain a structurally valid export. The
+    # byte probe must reach the hidden-prefix check rather than rejecting an
+    # accidental extra column in the synthetic test fixture.
+    serialized_cell = ('"' + cell.replace('"', '""') + '"'
+                       if delimiter == "," and "," in cell else cell)
+    content = "name" + delimiter + "value\nSynthetic" + delimiter + serialized_cell
     assert classify_attachment(content.encode("utf-8")).reason == error
     response = check(content, stage=stage)
     assert response.evaluation_status == "incomplete"
