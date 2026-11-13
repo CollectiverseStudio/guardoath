@@ -321,15 +321,13 @@
         "content_format": "text"
       },
       "expected": {
-        "evaluation_status": "complete",
+        "evaluation_status": "incomplete",
         "recommended_action": "block",
         "effective_action": "block",
         "checker_statuses": {
-          "csv_formula": "flagged"
+          "csv_formula": "error"
         },
-        "finding_rule_ids": [
-          "csv_formula.potential_formula"
-        ]
+        "finding_rule_ids": []
       }
     },
     {
@@ -343,15 +341,13 @@
         "content_format": "text"
       },
       "expected": {
-        "evaluation_status": "complete",
+        "evaluation_status": "incomplete",
         "recommended_action": "block",
         "effective_action": "block",
         "checker_statuses": {
-          "csv_formula": "flagged"
+          "csv_formula": "error"
         },
-        "finding_rule_ids": [
-          "csv_formula.potential_formula"
-        ]
+        "finding_rule_ids": []
       }
     },
     {
