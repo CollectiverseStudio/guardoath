@@ -20,6 +20,7 @@
         ? "Showing Input and Output settings together."
         : "Showing " + (stage === "input" ? "Input (user message)" : "Output (AI answer)") +
           " settings. The other stage is only hidden, not disabled. Edits in either stage remain unsaved until Save checks applies both stages.";
+      panel.dispatchEvent(new CustomEvent("guardoath:stage-view-changed", {detail: {stage}}));
     };
     Object.entries(buttons).forEach(([stage, button]) =>
       button.addEventListener("click", () => select(stage)));
