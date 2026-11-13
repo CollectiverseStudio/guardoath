@@ -194,5 +194,8 @@ jobs:
           path: |
             artifacts/field-comparisons/browser-source-commit.txt
             artifacts/field-comparisons/browser-junit.xml
+            # Preserve the exact rendered failure state, rather than only a
+            # timeout headline. Never upload tenant tokens or request payloads.
+            test-results/**/error-context.md
           if-no-files-found: error
           retention-days: 14
