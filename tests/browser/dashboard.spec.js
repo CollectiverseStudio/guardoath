@@ -2024,6 +2024,7 @@ test("CSV text rejects concealed formulas with clear incomplete status", async (
     await expect(page.locator("#tenant-check-input-csv_formula")).toHaveValue("block");
     for (const [cell, reason] of [
       ["\u200b=2+3", "unsafe_csv_invisible_formula_prefix"],
+      ["\ufeff=2+3", "unsafe_csv_invisible_formula_prefix"],
       ["\u202e=2+3", "unsafe_csv_control_characters"],
     ]) {
       const input = "name,value\nSynthetic," + cell;
@@ -2563,6 +2564,30 @@ test("CSV-looking file with PDF header after a preamble blocks in real dashboard
     await expect(page.locator("#answer")).toBeHidden();
     await expect(page.locator("#run-output")).toBeDisabled();
     await expect(page.locator("#input-results")).not.toContainText("%PDF-1.7,synthetic");
+    // A second UTF-8 BOM inside a CSV cell is invisible and must never make
+    // a formula appear inspected when the tenant's CSV checker is Off.
+    const concealed = Buffer.from("column,value\\nSynthetic,\\ufeff=2+3", "utf8");
+    await page.locator("#input-attachments").setInputFiles({
+      name: "in-cell-bom.csv", mimeType: "text/csv", buffer: concealed,
+    });
+    const bomResponse = page.waitForResponse(r =>
+      r.url().endsWith("/v1/checks/input/attachments") && r.request().method() === "POST");
+    await page.locator("#run-input").click();
+    const bomChecked = await bomResponse;
+    expect(bomChecked.status()).toBe(200);
+    expect(bomChecked.request().postDataJSON().attachments_b64)
+      .toEqual([concealed.toString("base64")]);
+    const bomResult = await bomChecked.json();
+    expect(bomResult.evaluation_status).toBe("incomplete");
+    expect(bomResult.recommended_action).toBe("block");
+    expect(bomResult.effective_action).toBe("block");
+    expect(bomResult.attachments[0].status).toBe("invalid");
+    expect(bomResult.attachments[0].reason).toBe("unsafe_csv_invisible_formula_prefix");
+    await expect(page.locator("#input-results .attachment-receipts"))
+      .toContainText("unsafe_csv_invisible_formula_prefix");
+    await expect(page.locator("#run-output")).toBeDisabled();
+    await expect(page.locator("#answer")).toBeHidden();
+    await expect(page.locator("#input-results")).not.toContainText("Synthetic,");
   } finally {
     await reset();
   }
