@@ -189,10 +189,10 @@ def test_csv_shaped_pdf_preamble_is_unsupported_not_inspected(payload):
 
 
 @pytest.mark.parametrize("payload", [
-    b"column,value\\nrow,%PDF-1.7\\nrow,1",
-    b'column,value\\nrow," %PDF-1.7"\\nrow,1',
-    b"column\\tvalue\\nrow\\t%PDF-1.7\\nrow\\t1",
-    b"column,value\\nrow,\\xef\\xbb\\xbf%PDF-1.7\\nrow,1",
+    b"column,value\nrow,%PDF-1.7\nrow,1",
+    b'column,value\nrow," %PDF-1.7"\nrow,1',
+    b"column\tvalue\nrow\t%PDF-1.7\nrow\t1",
+    b"column,value\nrow,\xef\xbb\xbf%PDF-1.7\nrow,1",
 ])
 def test_pdf_header_at_csv_or_tsv_cell_start_is_not_certified(payload):
     """A PDF reader may locate the header inside the first 1,024 bytes."""
