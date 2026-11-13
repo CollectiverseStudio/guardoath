@@ -5,8 +5,10 @@ test("guided steps retain Input data without unlocking unchecked Output", async 
   await page.goto("/dashboard");
   const steps = ["wizard-input", "wizard-input-check", "wizard-output", "wizard-output-check"];
   await expect(page.locator("#wizard-status")).toContainText("All four steps visible");
+  await expect(page.locator("#wizard-step-guidance")).toContainText("Start guided test");
   await page.locator("#wizard-start").click();
   await expect(page.locator("#wizard-status")).toHaveText("Step 1 of 4");
+  await expect(page.locator("#wizard-step-guidance")).toContainText("An example fills the message");
   for (let i = 0; i < steps.length; i++) {
     if (i === 0) await expect(page.locator("#" + steps[i])).toBeVisible();
     else await expect(page.locator("#" + steps[i])).toBeHidden();
@@ -14,6 +16,7 @@ test("guided steps retain Input data without unlocking unchecked Output", async 
   await page.locator("#input-content").fill("What is the return policy?");
   await page.locator("#wizard-next").click();
   await expect(page.locator("#wizard-input-check")).toBeVisible();
+  await expect(page.locator("#wizard-step-guidance")).toContainText("detected issue may still be Allowed");
   await expect(page.locator("#wizard-input")).toBeHidden();
   await expect(page.locator("#run-input")).toBeDisabled();
   await page.locator('[data-wizard-step="2"]').click();
