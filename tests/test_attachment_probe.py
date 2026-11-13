@@ -114,6 +114,7 @@ def test_ordinary_unicode_and_legal_csv_tabs_and_multiline_are_recognized(payloa
     "\u200d",  # ZERO WIDTH JOINER
     "\u034f",  # COMBINING GRAPHEME JOINER
     "\u180e",  # MONGOLIAN VOWEL SEPARATOR
+    "\ufeff",  # In-cell BOM is an invisible formula prefix (unlike file-start BOM)
 ])
 @pytest.mark.parametrize("trigger", ["=", "+", "-", "@"])
 def test_invisible_leading_csv_formula_prefix_is_never_attested_clean(invisible, trigger):
@@ -132,6 +133,7 @@ def test_invisible_leading_csv_formula_prefix_is_never_attested_clean(invisible,
     "\u200btext",           # invisible followed by benign ordinary text
     "text\u200b=2+3",      # invisible is not a leading prefix
     "👩\u200d🔬",           # Unicode emoji joiner inside a cell
+    "\ufeffordinary",       # in-cell BOM before benign text is not a formula
     "\u200cفارسی",         # script joiner with no formula marker
     "'\u200b=2+3",          # explicit leading apostrophe is not a formula trigger
     "normal value",
@@ -191,3 +193,20 @@ def test_inline_pdf_literal_in_csv_cell_is_not_a_pdf_header():
     result = classify_attachment(payload)
     assert (result.kind, result.status) == ("csv", "recognized")
     assert result.csv_text_supported
+
+
+
+def test_file_start_bom_is_distinct_from_a_concealed_in_cell_bom():
+    """Only the initial UTF-8 signature is stripped by utf-8-sig."""
+    header_bom = b"\xef\xbb\xbf"
+    in_cell_bom = b"\xef\xbb\xbf"
+    safe = classify_attachment(header_bom + b"label,value\nSynthetic,ordinary")
+    assert safe.kind == "csv" and safe.status == "recognized"
+
+    hidden = header_bom + b"label,value\nSynthetic," + in_cell_bom + b"=2+3"
+    result = classify_attachment(hidden)
+    assert (result.kind, result.status, result.reason) == (
+        "unknown", "invalid", "unsafe_csv_invisible_formula_prefix")
+    assert result.sha256 == hashlib.sha256(hidden).hexdigest()
+    assert not result.csv_text_supported
+    assert "Synthetic" not in str(result) and "=2+3" not in str(result)
