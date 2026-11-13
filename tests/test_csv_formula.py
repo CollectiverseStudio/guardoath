@@ -19,6 +19,7 @@ def check(content, *, mode="enforce", stage=Stage.OUTPUT, fmt="text"):
 
 @pytest.mark.parametrize("cell", [
     "=1+1", "+SUM(A1:A2)", "-cmd", "@SUM(A1:A2)",
+    "\u202f=2+3", "\u3000@SUM(4)", "\u2009-1",
     " =1+1", "\u00a0=2+3", "\t=HYPERLINK(\"https://example.invalid\")",
     "\r\n=2+2",
 ])
@@ -74,6 +75,8 @@ def test_invalid_format_and_bounds_fail_closed(value, fmt, error):
     ("\u202e=2+3", "unsafe_csv_control_characters"),
     ("\u009b[31m=2+3", "unsafe_csv_control_characters"),
     ("\u200b=2+3", "unsafe_csv_invisible_formula_prefix"),
+    ("\u200b\u202f=2+3", "unsafe_csv_invisible_formula_prefix"),
+    ("\u00ad\u3000@SUM(4)", "unsafe_csv_invisible_formula_prefix"),
     ("\ufeff=2+3", "unsafe_csv_invisible_formula_prefix"),
     ("  \u200d  @SUM(2,3)", "unsafe_csv_invisible_formula_prefix"),
     ("\u2060-2+3", "unsafe_csv_invisible_formula_prefix"),
