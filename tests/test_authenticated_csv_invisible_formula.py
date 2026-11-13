@@ -17,6 +17,7 @@ from guardoath.tenant_store import MemoryTenantStore
 
 SECRET = "synthetic-invisible-formula-ingress-0123456789"
 HIDDEN_FORMULA = "label,value\nSynthetic,\u200b=2+3".encode("utf-8")
+BOM_FORMULA = "label,value\nSynthetic,\ufeff=2+3".encode("utf-8")
 VISIBLE_FORMULA = b"label,value\nSynthetic,=4+5"
 BENIGN_JOINER = "label,value\nSynthetic,👩\u200d🔬".encode("utf-8")
 
@@ -49,9 +50,10 @@ def _check(client, record, token, stage, files):
 
 @pytest.mark.parametrize("stage", ["input", "output"])
 @pytest.mark.parametrize("mode", ["enforce", "observe"])
-def test_hidden_formula_blocks_both_stages_and_preserves_independent_findings(stage, mode):
+@pytest.mark.parametrize("concealed", [HIDDEN_FORMULA, BOM_FORMULA])
+def test_hidden_formula_blocks_both_stages_and_preserves_independent_findings(stage, mode, concealed):
     client, service, record, token = _harness(mode=mode)
-    response = _check(client, record, token, stage, (HIDDEN_FORMULA, VISIBLE_FORMULA))
+    response = _check(client, record, token, stage, (concealed, VISIBLE_FORMULA))
     assert response.status_code == 200, response.text
     data = response.json()
     assert data["recommended_action"] == data["effective_action"] == "block"
@@ -69,9 +71,10 @@ def test_hidden_formula_blocks_both_stages_and_preserves_independent_findings(st
 
 
 @pytest.mark.parametrize("stage", ["input", "output"])
-def test_attachment_off_cannot_attest_hidden_formula_as_clean(stage):
+@pytest.mark.parametrize("concealed", [HIDDEN_FORMULA, BOM_FORMULA])
+def test_attachment_off_cannot_attest_hidden_formula_as_clean(stage, concealed):
     client, service, record, token = _harness(mode="observe", attachment_mode="off")
-    response = _check(client, record, token, stage, (HIDDEN_FORMULA,))
+    response = _check(client, record, token, stage, (concealed,))
     assert response.status_code == 200, response.text
     data = response.json()
     assert data["recommended_action"] == data["effective_action"] == "block"
