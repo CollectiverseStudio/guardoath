@@ -12,3 +12,6 @@ test-results/
 playwright-report/
 .dashboard-venv/
 .guardoath-reports/
+
+# Abandoned local Lambda build snapshots; never package or commit these artifacts.
+/deploy/aws/build-blocked-*/
