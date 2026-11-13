@@ -45,6 +45,8 @@ def test_customer_policy_setup_wizard_is_customer_operable_and_does_not_save_aut
         "checks-wizard-progress", "checks-wizard-guidance",
         "checks-wizard-navigation", "checks-wizard-back", "checks-wizard-next",
         "checks-wizard-save",
+        "checks-wizard-comparison-tools", "checks-wizard-comparison-summary",
+        "checks-wizard-open-comparisons",
     ):
         assert f'id="{identifier}"' in html
     for stage in ('"input"', '"output"', '"both"'):
@@ -57,5 +59,12 @@ def test_customer_policy_setup_wizard_is_customer_operable_and_does_not_save_aut
     assert 'select("both")' in js
     assert "saveTenant(" not in js
     assert "fetch(" not in js
+    assert 'comparisonDetails.open = true' in js
+    assert 'comparisonAction("input")' in js
+    assert 'comparisonAction("output")' in js
+    assert '"tenant-check-input-cross_field"' in js
+    assert '"tenant-check-output-cross_field"' in js
+    assert 'comparisonTools.hidden = !active || wizardStep !== 2' in js
+    assert "Changing definitions or actions requires Save checks" in js
     assert ".checks-setup-wizard" in css
     assert '#checks-setup-wizard [hidden]' in css
