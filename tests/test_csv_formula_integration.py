@@ -105,6 +105,7 @@ def test_authenticated_text_and_attachment_consistent_hidden_formula_rejection()
     headers = {"Authorization": "Bearer " + token}
     samples = (
         ("name,value\nSynthetic,\u200b=2+3", "unsafe_csv_invisible_formula_prefix"),
+        ("name,value\nSynthetic,\ufeff=2+3", "unsafe_csv_invisible_formula_prefix"),
         ("name\tvalue\nSynthetic\t\u202e=2+3", "unsafe_csv_control_characters"),
     )
     with TestClient(app) as client:
@@ -135,4 +136,4 @@ def test_authenticated_text_and_attachment_consistent_hidden_formula_rejection()
                 assert file_body["attachments"][0]["reason"] == reason
                 assert file_body["attachments"][0]["evaluation_status"] == "incomplete"
                 assert "Synthetic" not in attached.text and "=2+3" not in attached.text
-    assert service.store.get(tenant_id).used(usage_month()) == 8
+    assert service.store.get(tenant_id).used(usage_month()) == 12
