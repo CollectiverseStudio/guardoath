@@ -138,3 +138,81 @@ test("connecting another tenant resets stage visibility without changing either 
     expect((await response.json()).tenant.revision).toBe(tenant.revision);
   }
 });
+
+
+test("CSV/TSV attachment modes follow tabs and both policies survive a hidden-stage save", async ({ page, request }) => {
+  await page.goto("/dashboard");
+  let token = "";
+  const connect = async () => {
+    await page.locator("#demo-user").selectOption("demo3");
+    await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+    await expect(page.locator("#connection-status")).toContainText("Connected to demo3");
+    token = await page.locator("#demo-key-value").inputValue();
+  };
+  await connect();
+  const current = async () => {
+    const response = await request.get("/v1/applications/current",
+      {headers: {Authorization: "Bearer " + token}});
+    expect(response.status(), (await response.text()).slice(0, 120)).toBe(200);
+    return (await response.json()).tenant;
+  };
+  const before = await current();
+  const originalInput = before.attachment_csv_mode?.input ?? "auto";
+  const originalOutput = before.attachment_csv_mode?.output ?? "auto";
+  const changed = value => value === "off" ? "auto" : "off";
+  const nextInput = changed(originalInput);
+  const nextOutput = changed(originalOutput);
+  const input = page.locator("#tenant-attachment-mode-input");
+  const output = page.locator("#tenant-attachment-mode-output");
+  const warning = page.locator("#tenant-stage-hidden-draft");
+  try {
+    await output.selectOption(nextOutput);
+    await page.locator("#tenant-tab-input").click();
+    await expect(input).toBeVisible();
+    await expect(output).toBeHidden();
+    await expect(warning).toContainText("Unsaved Output");
+    await expect(warning).toContainText("CSV/TSV attachment inspection");
+    await expect(warning).toContainText("Select Both stages");
+    expect((await current()).revision).toBe(before.revision);
+
+    await page.locator("#tenant-tab-both").click();
+    await expect(output).toBeVisible();
+    await expect(warning).toBeHidden();
+    await input.selectOption(nextInput);
+    await page.locator("#tenant-tab-output").click();
+    await expect(output).toBeVisible();
+    await expect(input).toBeHidden();
+    await expect(warning).toContainText("Unsaved Input");
+    await expect(warning).toContainText("CSV/TSV attachment inspection");
+    expect((await current()).revision).toBe(before.revision);
+
+    // Hidden Input still participates in the one revisioned tenant Save.
+    await page.locator("#tenant-save").click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved.");
+    const stored = await current();
+    expect(stored.attachment_csv_mode?.input).toBe(nextInput);
+    expect(stored.attachment_csv_mode?.output).toBe(nextOutput);
+    expect(stored.revision).not.toBe(before.revision);
+
+    await page.reload();
+    await connect();
+    await expect(page.locator("#tenant-panel")).toHaveAttribute("data-stage-focus", "both");
+    await expect(page.locator("#tenant-attachment-mode-input")).toHaveValue(nextInput);
+    await expect(page.locator("#tenant-attachment-mode-output")).toHaveValue(nextOutput);
+    await expect(warning).toBeHidden();
+  } finally {
+    // The demo record is shared. Restore its saved state after any successful write.
+    const actual = await current();
+    if ((actual.attachment_csv_mode?.input ?? "auto") !== originalInput ||
+        (actual.attachment_csv_mode?.output ?? "auto") !== originalOutput) {
+      await page.locator("#tenant-tab-both").click();
+      await page.locator("#tenant-attachment-mode-input").selectOption(originalInput);
+      await page.locator("#tenant-attachment-mode-output").selectOption(originalOutput);
+      await page.locator("#tenant-save").click();
+      await expect(page.locator("#tenant-message")).toContainText("Saved.");
+      const restored = await current();
+      expect(restored.attachment_csv_mode?.input ?? "auto").toBe(originalInput);
+      expect(restored.attachment_csv_mode?.output ?? "auto").toBe(originalOutput);
+    }
+  }
+});
