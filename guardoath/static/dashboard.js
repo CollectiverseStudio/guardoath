@@ -2163,8 +2163,9 @@ function render(stage, result) {
   function checkerRow(check) { const row = document.createElement("div"); row.className = "checker";
     const heading = document.createElement("div"), name = document.createElement("span"), status = document.createElement("span");
     name.textContent = (checkNames[check.checker_id] || check.checker_id) + " (" + check.checker_id + ")" + (Number.isInteger(check.attachment_index)
-      ? " · file " + (check.attachment_index + 1) : ""); status.className = "pill" + (check.simulated ? " warn" : check.status === "passed" ? " good" : check.status === "flagged" ? " bad" : " warn");
-    status.textContent = (check.simulated ? "SIMULATED · " : "") + check.status; heading.append(name, status); row.append(heading);
+      ? " · file " + (check.attachment_index + 1) : ""); const allowedIntegrityMismatch = check.checker_id === "integrity" && check.status === "flagged" && !check.simulated && result.evaluation_status === "complete" && result.effective_action === "allow";
+    status.className = "pill" + (check.simulated || allowedIntegrityMismatch ? " warn" : check.status === "passed" ? " good" : check.status === "flagged" ? " bad" : " warn");
+    status.textContent = allowedIntegrityMismatch ? "Mismatch detected · Allowed" : (check.simulated ? "SIMULATED · " : "") + check.status; heading.append(name, status); row.append(heading);
     const needs = check.status === "skipped" ? formatNeeds[check.checker_id] : null;
     if (needs) { const error = document.createElement("p"); error.className = "format-skip"; error.textContent = "Not run: this check needs " + (needs === "json" ? "JSON" : "text") + " content, and this message is " + (needs === "json" ? "text" : "JSON") + ". The result is incomplete, so the record\u2019s failure action applies. Turn the check off, or send " + (needs === "json" ? "JSON" : "text") + "."; row.append(error); }
     else if (check.error_code) { const error = document.createElement("p"); error.textContent = "Check unavailable: " + check.error_code; row.append(error); }
@@ -2191,6 +2192,11 @@ function render(stage, result) {
         detail.append(definition);
       }
       const description = document.createElement("p"); description.textContent = finding.explanation; detail.append(description);
+      if (allowedIntegrityMismatch && finding.rule_id === "structure.integrity_digest_mismatch") {
+        const context = document.createElement("p"); context.className = "hint"; context.classList.add("integrity-mismatch-context");
+        context.textContent = "Detection only — effective decision: Allow. This SHA-256 check compares the entire message byte-for-byte with a saved approved reference, not whether the JSON is valid or safe. Changing a character, field, newline or space causes a mismatch. Use it for fixed approved content; turn off Content integrity for ordinary changing chat messages.";
+        detail.append(context);
+      }
       if (application?.tenant && ownChecksSelected()) {
         const button = document.createElement("button"); button.type = "button"; button.className = "secondary";
         button.textContent = "Review " + stage + " rule settings"; button.setAttribute("aria-label", "Review " + stage + " rule settings for " + finding.rule_id);
