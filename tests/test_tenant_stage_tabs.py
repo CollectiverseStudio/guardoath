@@ -44,11 +44,15 @@ def test_customer_policy_setup_wizard_is_customer_operable_and_does_not_save_aut
         "checks-setup-wizard", "checks-wizard-start", "checks-wizard-exit",
         "checks-wizard-progress", "checks-wizard-guidance",
         "checks-wizard-navigation", "checks-wizard-back", "checks-wizard-next",
+        "checks-wizard-save",
     ):
         assert f'id="{identifier}"' in html
     for stage in ('"input"', '"output"', '"both"'):
         assert "stage: " + stage in js
     assert "Next: Review and save" in js
+    assert 'tenantSave.click()' in js
+    assert 'guardoath:stage-view-changed' in js
+    assert 'wizardSave.hidden = !active || wizardStep !== 2' in js
     assert 'select(step.stage)' in js
     assert 'select("both")' in js
     assert "saveTenant(" not in js
