@@ -1,6 +1,50 @@
 const { test, expect } = require("@playwright/test");
 
 // Exercise the real dashboard with a real demo tenant, not synthetic state.
+
+test("hidden-stage draft warning tracks Input and Output without saving either stage", async ({ page, request }) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo3");
+  await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo3");
+  const key = await page.locator("#demo-key-value").inputValue();
+  const current = async () => {
+    const response = await request.get("/v1/applications/current",
+      {headers: {Authorization: "Bearer " + key}});
+    expect(response.status(), (await response.text()).slice(0, 120)).toBe(200);
+    return (await response.json()).tenant.revision;
+  };
+  const revision = await current();
+  const input = page.locator("#tenant-check-input-cross_field");
+  const output = page.locator("#tenant-check-output-cross_field");
+  const initialInput = await input.inputValue();
+  const initialOutput = await output.inputValue();
+  const warning = page.locator("#tenant-stage-hidden-draft");
+  await expect(warning).toBeHidden();
+
+  await input.selectOption(initialInput === "block" ? "flag" : "block");
+  await page.locator("#tenant-tab-output").click();
+  await expect(input).toBeHidden();
+  await expect(warning).toBeVisible();
+  await expect(warning).toContainText("Unsaved Input");
+  await expect(warning).toContainText("Select Both stages");
+  await expect(output).toHaveValue(initialOutput);
+  await page.locator("#tenant-tab-both").click();
+  await expect(warning).toBeHidden();
+  await input.selectOption(initialInput);
+
+  await output.selectOption(initialOutput === "block" ? "flag" : "block");
+  await page.locator("#tenant-tab-input").click();
+  await expect(output).toBeHidden();
+  await expect(warning).toBeVisible();
+  await expect(warning).toContainText("Unsaved Output");
+  await page.locator("#tenant-tab-both").click();
+  await output.selectOption(initialOutput);
+  await page.locator("#tenant-tab-input").click();
+  await expect(warning).toBeHidden();
+  expect(await current()).toBe(revision);
+});
+
 test("Input and Output tabs preserve both saved actions across reconnect", async ({ page }) => {
   await page.goto("/dashboard");
   await page.locator("#demo-user").selectOption("demo3");
