@@ -44,8 +44,8 @@
 </details>
 <div id="tenant-attachment-modes" class="panel" aria-label="Automatic CSV and TSV attachment inspection">
 <h3>CSV / TSV attachments: automatic inspection</h3><p class="hint">These saved settings apply only when actual file bytes arrive. Auto runs CSV and TSV formula inspection with the configured per-stage check and rule actions; Off marks a recognized CSV or TSV file as not inspected, not passed. Unsupported files are always held. An ordinary text-only request is unchanged.</p>
-<div class="inline"><label for="tenant-attachment-mode-input">Input CSV/TSV files</label><select id="tenant-attachment-mode-input"><option value="auto">Auto — inspect received CSV/TSV</option><option value="off">Off — not inspected</option></select>
-<label for="tenant-attachment-mode-output">Output CSV/TSV files</label><select id="tenant-attachment-mode-output"><option value="auto">Auto — inspect received CSV/TSV</option><option value="off">Off — not inspected</option></select></div>
+<div class="inline"><div id="tenant-attachment-input-field"><label for="tenant-attachment-mode-input">Input CSV/TSV files</label><select id="tenant-attachment-mode-input"><option value="auto">Auto — inspect received CSV/TSV</option><option value="off">Off — not inspected</option></select></div>
+<div id="tenant-attachment-output-field"><label for="tenant-attachment-mode-output">Output CSV/TSV files</label><select id="tenant-attachment-mode-output"><option value="auto">Auto — inspect received CSV/TSV</option><option value="off">Off — not inspected</option></select></div></div>
 </div>
 <div class="inline"><button id="tenant-save" class="primary">Save checks</button><button id="tenant-reset" class="secondary" hidden>Reset to defaults</button></div>
 <p id="tenant-message" role="status"></p>
