@@ -2061,6 +2061,33 @@ function render(stage, result) {
     if (result.redaction.content !== null) { const content = document.createElement("pre"); content.className = "redacted-content"; content.textContent = result.redaction.content; section.append(content); }
     box.append(section);
   }
+  // Show the tenant's saved Field Comparisons family next to each stable
+  // business.<id> finding. The shared Engine deliberately emits a common
+  // cross_field checker ID for ordinary and advanced rules; that ID alone
+  // cannot tell customers which editor and action produced the finding.
+  // Only server-supplied saved tenant metadata may establish the family.
+  // Never derive this label from submitted JSON, rule pointers, or reference
+  // values; protected reference summaries expose only their public rule IDs.
+  const savedComparisonFamilies = new Map();
+  const savedTenant = application?.tenant;
+  if (savedTenant) {
+    for (const [field, label] of [
+      ["comparisons", "Ordinary field comparison"],
+      ["advanced_arithmetic", "Arithmetic field comparison"],
+      ["advanced_identity", "Identity field comparison"],
+      ["advanced_conversion_time", "Conversion/time field comparison"],
+      ["advanced_statistical_drift", "Statistical drift field comparison"],
+      ["advanced_identity_reference_status", "Protected identity reference comparison"],
+      ["advanced_conversion_reference_status", "Protected currency reference comparison"],
+      ["advanced_trusted_reference_status", "Host-signed reference comparison"]
+    ]) {
+      if (!Array.isArray(savedTenant[field])) continue;
+      for (const rule of savedTenant[field]) {
+        if (rule && typeof rule.rule_id === "string")
+          savedComparisonFamilies.set("business." + rule.rule_id, label);
+      }
+    }
+  }
   function checkerRow(check) { const row = document.createElement("div"); row.className = "checker";
     const heading = document.createElement("div"), name = document.createElement("span"), status = document.createElement("span");
     name.textContent = (checkNames[check.checker_id] || check.checker_id) + " (" + check.checker_id + ")" + (Number.isInteger(check.attachment_index)
@@ -2077,7 +2104,9 @@ function render(stage, result) {
       // into the DOM or into a diagnostic URL.
       const ruleId = document.createElement("code"); ruleId.className = "finding-rule-id";
       const knownRule = ruleIndex[finding.rule_id];
-      if (knownRule?.title) { const ruleName = document.createElement("strong"); ruleName.className = "finding-rule-name"; ruleName.textContent = knownRule.title + " · "; detail.append(ruleName); }
+      const savedFamily = check.checker_id === "cross_field" ? savedComparisonFamilies.get(finding.rule_id) : null;
+      const readableRule = savedFamily || knownRule?.title;
+      if (readableRule) { const ruleName = document.createElement("strong"); ruleName.className = "finding-rule-name"; ruleName.textContent = readableRule + " · "; detail.append(ruleName); }
       ruleId.textContent = finding.rule_id; detail.append(ruleId);
       const description = document.createElement("p"); description.textContent = finding.explanation; detail.append(description);
       if (application?.tenant && ownChecksSelected()) {
