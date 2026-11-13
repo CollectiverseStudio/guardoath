@@ -25,7 +25,10 @@ async function check(request, headers, stage, content) {
 }
 
 test("Input-only FC tab Save retains hidden Output action and executes both stages", async ({page, request}) => {
-  const headers = await connect(page);
+  // A stuck browser action must identify its exact locator rather than masking
+  // the failure as a whole-test timeout after 30 seconds. This is stricter.
+  page.setDefaultTimeout(6000);
+  let headers = await connect(page);
   let resetRequired = false;
   try {
     const reset = await request.post("/v1/tenants/current/reset", {headers, data: {}});
@@ -44,7 +47,9 @@ test("Input-only FC tab Save retains hidden Output action and executes both stag
     const initialized = await current(request, headers);
     expect(initialized.revision).toBe(before.revision + 1);
 
-    await connect(page);
+    // Demo-key reconnection may rotate credentials; all API assertions must
+    // use the credential actually displayed by this live dashboard session.
+    headers = await connect(page);
     const input = page.locator("#tenant-check-input-cross_field");
     const output = page.locator("#tenant-check-output-cross_field");
     await expect(input).toHaveValue("flag");
@@ -74,7 +79,9 @@ test("Input-only FC tab Save retains hidden Output action and executes both stag
     expect(saved.output_checks.cross_field).toBe("flag");
     expect(saved.comparisons.map(rule => rule.rule_id)).toEqual(["fc_stage_tab_invoice_le"]);
 
-    await connect(page);
+    // Demo-key reconnection may rotate credentials; all API assertions must
+    // use the credential actually displayed by this live dashboard session.
+    headers = await connect(page);
     await page.locator("#tenant-tab-both").click();
     await expect(input).toHaveValue("block");
     await expect(output).toHaveValue("flag");
@@ -114,7 +121,9 @@ test("Input-only FC tab Save retains hidden Output action and executes both stag
     expect(outputOff.output_checks.cross_field).toBe("off");
     expect(outputOff.comparisons).toEqual(saved.comparisons);
 
-    await connect(page);
+    // Demo-key reconnection may rotate credentials; all API assertions must
+    // use the credential actually displayed by this live dashboard session.
+    headers = await connect(page);
     await page.locator("#tenant-tab-input").click();
     await expect(input).toHaveValue("block");
     await expect(output).toBeHidden();
