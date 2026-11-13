@@ -2566,7 +2566,7 @@ test("CSV-looking file with PDF header after a preamble blocks in real dashboard
     await expect(page.locator("#input-results")).not.toContainText("%PDF-1.7,synthetic");
     // A second UTF-8 BOM inside a CSV cell is invisible and must never make
     // a formula appear inspected when the tenant's CSV checker is Off.
-    const concealed = Buffer.from("column,value\\nSynthetic,\\ufeff=2+3", "utf8");
+    const concealed = Buffer.from("column,value\nSynthetic,\ufeff=2+3", "utf8");
     await page.locator("#input-attachments").setInputFiles({
       name: "in-cell-bom.csv", mimeType: "text/csv", buffer: concealed,
     });
