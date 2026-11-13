@@ -36,6 +36,7 @@ on:
       - "guardoath/static/tenant_stage_tabs.js"
       - "guardoath/static/dashboard.css"
       - "tests/browser/tenant_stage_tabs.spec.js"
+      - "tests/browser/checks_setup_wizard.spec.js"
       - "tests/test_tenant_stage_tabs.py"
       - "guardoath/static/comparison_editor.js"
       - "guardoath/static/arithmetic_editor.js"
@@ -182,6 +183,7 @@ jobs:
           tests/browser/trusted_reference
           tests/browser/protected_reference_editors
           tests/browser/tenant_stage_tabs
+          tests/browser/checks_setup_wizard
       - name: Require real browser execution report
         if: always()
         shell: bash
