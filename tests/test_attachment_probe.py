@@ -167,3 +167,30 @@ def test_c1_integrity_check_keeps_legitimate_international_csv(value):
     report = classify_attachment(payload)
     assert report.kind == "csv" and report.status == "recognized"
     assert report.reason == "csv_structure_recognized_only"
+
+
+@pytest.mark.parametrize("payload", [
+    b"column,value\\n%PDF-1.7,synthetic\\nrow,1".replace(b"\\n", b"\n"),
+    b"column,value\\n  %PDF-1.7,synthetic\\nrow,1".replace(b"\\n", b"\n"),
+    b"\\xef\\xbb\\xbfcolumn,value\\r\\n\\t%PDF-1.7,synthetic\\r\\nrow,1".replace(
+        b"\\xef", b"\xef").replace(b"\\xbb", b"\xbb").replace(b"\\xbf", b"\xbf"
+    ).replace(b"\\r", b"\r").replace(b"\\n", b"\n").replace(b"\\t", b"\t"),
+    b"column,value\\r%PDF-1.7,synthetic\\rrow,1".replace(b"\\r", b"\r"),
+])
+def test_csv_shaped_pdf_preamble_is_unsupported_not_inspected(payload):
+    """A PDF header within its early preamble defeats byte-zero magic checks."""
+    result = classify_attachment(payload)
+    assert (result.kind, result.status, result.reason) == (
+        "pdf", "unsupported", "pdf_parser_unavailable")
+    assert not result.csv_text_supported
+    assert result.byte_count == len(payload)
+    assert result.sha256 == hashlib.sha256(payload).hexdigest()
+    assert "synthetic" not in str(result)
+
+
+def test_inline_pdf_literal_in_csv_cell_is_not_a_pdf_header():
+    payload = b"column,value\\nrow,ordinary %PDF-1.7 reference".replace(b"\\n", b"\n")
+    result = classify_attachment(payload)
+    assert (result.kind, result.status) == ("csv", "recognized")
+    assert result.csv_text_supported
+
