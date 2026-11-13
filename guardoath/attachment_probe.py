@@ -80,9 +80,9 @@ def has_pdf_header_preamble(data: bytes) -> bool:
         # A CSV delimiter or quote can conceal a real PDF header within a
         # syntactically valid CSV cell. PDF readers search the early byte range,
         # not necessarily a line boundary. Never certify such a polyglot as CSV.
-        visible = fragment.lstrip(b' \\t"')
-        if visible.startswith(b"\\xef\\xbb\\xbf"):
-            visible = visible[3:].lstrip(b' \\t"')
+        visible = fragment.lstrip(b' \t"')
+        if visible.startswith(b"\xef\xbb\xbf"):
+            visible = visible[3:].lstrip(b' \t"')
         return visible.startswith(b"%PDF-")
 
     for line in data[:1024].splitlines():
@@ -90,7 +90,7 @@ def has_pdf_header_preamble(data: bytes) -> bool:
             return True
         # Evaluate CSV- and TSV-cell starts, including quotes and whitespace.
         # This is deliberately conservative, and is not a complete PDF parser.
-        for fragment in line.replace(b"\\t", b",").split(b",")[1:]:
+        for fragment in line.replace(b"\t", b",").split(b",")[1:]:
             if starts_header(fragment):
                 return True
     return False
