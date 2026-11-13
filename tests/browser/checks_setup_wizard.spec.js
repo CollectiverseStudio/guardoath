@@ -83,3 +83,49 @@ test("switching demo tenants exits active setup and restores both columns", asyn
   await expect(page.locator("#tenant-check-input-lexical_guards")).toBeVisible();
   await expect(page.locator("#tenant-check-output-lexical_guards")).toBeVisible();
 });
+
+
+test("wizard tracks manual stage tabs and review Save uses the existing revisioned tenant action", async ({page, request}) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo3");
+  await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo3");
+  const token = await page.locator("#demo-key-value").inputValue();
+  const current = async () => {
+    const response = await request.get("/v1/applications/current",
+      {headers: {Authorization: "Bearer " + token}});
+    expect(response.status()).toBe(200);
+    return (await response.json()).tenant.revision;
+  };
+  const initialRevision = await current();
+  const input = page.locator("#tenant-check-input-lexical_guards");
+  const initialInput = await input.inputValue();
+  const nextInput = initialInput === "block" ? "flag" : "block";
+  try {
+    await page.locator("#checks-wizard-start").click();
+    await input.selectOption(nextInput);
+    await page.locator("#tenant-tab-output").click();
+    await expect(page.locator("#checks-wizard-progress")).toContainText("Step 2 of 3 · Output protection");
+    await expect(page.locator("#checks-wizard-save")).toBeHidden();
+    await expect(page.locator("#tenant-stage-hidden-draft")).toContainText("Unsaved Input");
+    await page.locator("#tenant-tab-input").click();
+    await expect(page.locator("#checks-wizard-progress")).toContainText("Step 1 of 3 · Input protection");
+    await expect(input).toHaveValue(nextInput);
+    await page.locator("#tenant-tab-both").click();
+    await expect(page.locator("#checks-wizard-progress")).toContainText("Step 3 of 3 · Review and save");
+    await expect(page.locator("#checks-wizard-save")).toBeVisible();
+    expect(await current()).toBe(initialRevision);
+    await page.locator("#checks-wizard-save").click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved.");
+    expect(await current()).not.toBe(initialRevision);
+    await page.reload();
+    await page.locator("#demo-user").selectOption("demo3");
+    await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+    await expect(page.locator("#tenant-check-input-lexical_guards")).toHaveValue(nextInput);
+  } finally {
+    await page.locator("#tenant-tab-both").click();
+    await page.locator("#tenant-check-input-lexical_guards").selectOption(initialInput);
+    await page.locator("#tenant-save").click();
+    await expect(page.locator("#tenant-message")).toContainText("Saved.");
+  }
+});
