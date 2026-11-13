@@ -7,8 +7,9 @@ import re
 
 import pytest
 
-from guardoath.pii import (_context_cue_matches_at, _count_digits_with_deadline,
-                         _context_tokens_with_deadline)
+from guardoath.pii import (_bounded_split_lookahead_matches, _context_cue_matches_at,
+                         _count_digits_with_deadline, _context_tokens_with_deadline,
+                         _last_lookahead_start)
 from guardoath.privacy_catalog import CONTEXT_WORDS_BEFORE
 
 
@@ -131,3 +132,87 @@ def test_bounded_context_index_stops_at_deadline_without_partial_tokens():
     with pytest.raises(TimeoutError, match="synthetic token budget"):
         _context_tokens_with_deadline(regex.compile(r"\w+"), "word " * 5000, deadline)
     assert calls == 4
+
+
+def test_split_lookahead_deadline_preserves_rightmost_overlap_result():
+    """All overlapping hints are kept when the worker has time."""
+    regex = pytest.importorskip("regex")
+    text = "ababa aaaaa aba"
+    for expression in (r"a", r"aba", r"z"):
+        matches = list(regex.compile(expression).finditer(text, overlapped=True))
+        ticks = []
+        actual = _last_lookahead_start(regex.compile(expression), text,
+                                       timeout=10.0,
+                                       check_deadline=lambda: ticks.append(True) or 10.0)
+        assert actual == (matches[-1].start() if matches else -1)
+        assert ticks  # including when there is no matching lookahead
+
+
+def test_split_lookahead_overlap_iteration_expires_before_all_matches():
+    """A large number of valid overlapping matches cannot hide Python-loop work."""
+    regex = pytest.importorskip("regex")
+
+    class CountedPattern:
+        def __init__(self):
+            self.visited = 0
+            self.pattern = regex.compile("a")
+
+        def finditer(self, text, **kwargs):
+            for match in self.pattern.finditer(text, **kwargs):
+                self.visited += 1
+                yield match
+
+    counted = CountedPattern()
+    calls = 0
+
+    def deadline():
+        nonlocal calls
+        calls += 1
+        if calls == 3:
+            raise TimeoutError("synthetic overlap deadline")
+        return 10.0
+
+    with pytest.raises(TimeoutError, match="synthetic overlap deadline"):
+        _last_lookahead_start(counted, "a" * 32000, timeout=10.0,
+                              check_deadline=deadline)
+    assert calls == 3
+    assert counted.visited == 513  # stopped at the 512th match boundary
+
+
+def test_split_lookahead_core_match_iteration_honors_worker_deadline():
+    """Bound Python processing of core matches even when hint search is cheap."""
+    regex = pytest.importorskip("regex")
+
+    class CountedCore:
+        def __init__(self):
+            self.visited = 0
+            self.pattern = regex.compile("a")
+
+        def finditer(self, text, **kwargs):
+            for match in self.pattern.finditer(text, **kwargs):
+                self.visited += 1
+                yield match
+
+    # The only hint is at the end, so every core match is potentially valid.
+    # Preserve the full matching result under a generous budget.
+    text = ("a" * 32000) + "end"
+    full = list(_bounded_split_lookahead_matches(
+        regex.compile("a"), (regex.compile("end"),), text, lambda: 10.0))
+    assert len(full) == 32000
+    assert [full[0].start(), full[-1].start()] == [0, 31999]
+
+    counted = CountedCore()
+    calls = 0
+
+    def deadline():
+        nonlocal calls
+        calls += 1
+        if calls == 7:
+            raise TimeoutError("synthetic core deadline")
+        return 10.0
+
+    with pytest.raises(TimeoutError, match="synthetic core deadline"):
+        list(_bounded_split_lookahead_matches(
+            counted, (regex.compile("end"),), text, deadline))
+    assert calls == 7
+    assert counted.visited == 513
