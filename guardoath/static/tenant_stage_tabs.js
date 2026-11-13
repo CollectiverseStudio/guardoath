@@ -36,6 +36,27 @@
     const next = document.getElementById("checks-wizard-next");
     const wizardSave = document.getElementById("checks-wizard-save");
     const tenantSave = document.getElementById("tenant-save");
+    const comparisonTools = document.getElementById("checks-wizard-comparison-tools");
+    const comparisonSummary = document.getElementById("checks-wizard-comparison-summary");
+    const openComparisons = document.getElementById("checks-wizard-open-comparisons");
+    const comparisonDetails = document.getElementById("comparison-configuration");
+    // Read the currently selected tenant-form draft, not a hardcoded default.
+    // The revision-controlled Save checks remains the only persistence action.
+    const comparisonAction = stage => {
+      const value = document.getElementById("tenant-check-" + stage + "-cross_field")?.value;
+      return {block: "Block", flag: "Flag", allow: "Allow", off: "Off", "": "Off"}[value] || "Unavailable";
+    };
+    const updateComparisonSummary = () => {
+      if (!comparisonSummary) return;
+      const input = comparisonAction("input");
+      const output = comparisonAction("output");
+      comparisonSummary.textContent = "Draft Field comparisons check — Input: " + input +
+        " · Output: " + output + ". " +
+        ((input === "Off" || output === "Off")
+          ? "Rules do not execute in a stage whose check is Off. "
+          : "") +
+        "Changing definitions or actions requires Save checks before the tenant uses them.";
+    };
     const steps = [
       {stage: "input", name: "Input protection", note: "Step 1: Choose checks for the user's message BEFORE sending it to AI. Block holds the message; Flag and Allow report findings without blocking."},
       {stage: "output", name: "Output protection", note: "Step 2: Choose checks for the AI answer BEFORE returning it to the user. Settings for both stages remain pending until saved."},
@@ -49,6 +70,8 @@
       exit.hidden = !active;
       navigation.hidden = !active;
       wizardSave.hidden = !active || wizardStep !== 2;
+      if (comparisonTools) comparisonTools.hidden = !active || wizardStep !== 2;
+      if (active && wizardStep === 2) updateComparisonSummary();
       if (!active) {
         progress.textContent = "Guided setup available";
         guide.textContent = "For a simple chat application, start with Input protection and then review Output protection.";
@@ -78,6 +101,22 @@
       if (selected !== -1 && selected !== wizardStep) {
         wizardStep = selected;
         renderWizard();
+      }
+    });
+    // Field Comparison definitions live in the existing optional editor.
+    // Opening it neither stages nor saves rules, and all protected host
+    // references remain read-only in that same tenant UI.
+    openComparisons?.addEventListener("click", () => {
+      if (wizardStep !== 2 || !comparisonDetails) return;
+      comparisonDetails.open = true;
+      const heading = comparisonDetails.querySelector("summary");
+      heading?.focus?.();
+      comparisonDetails.scrollIntoView?.({block: "start", behavior: "auto"});
+    });
+    // Show what will execute at each stage from the current unsaved draft.
+    panel.addEventListener("change", event => {
+      if (wizardStep === 2 && ["tenant-check-input-cross_field", "tenant-check-output-cross_field"].includes(event.target?.id)) {
+        updateComparisonSummary();
       }
     });
     // Save uses the exact existing revision-checked tenant action. There is
