@@ -226,3 +226,31 @@ def test_file_start_bom_is_distinct_from_a_concealed_in_cell_bom():
     assert result.sha256 == hashlib.sha256(hidden).hexdigest()
     assert not result.csv_text_supported
     assert "Synthetic" not in str(result) and "=2+3" not in str(result)
+
+
+@pytest.mark.parametrize("cell", [
+    "\u200b\u202f=2+3",      # zero-width space + narrow no-break space
+    "\u00ad\u3000@SUM(2)",  # soft hyphen + ideographic space
+    "\u2060\u2007+2",       # word joiner + figure space
+])
+@pytest.mark.parametrize("delimiter", [",", "\t"])
+def test_unicode_whitespace_between_invisible_prefix_and_formula_is_not_clean(cell, delimiter):
+    payload = ("name" + delimiter + "value\nSynthetic" + delimiter + cell).encode("utf-8")
+    result = classify_attachment(payload)
+    assert (result.kind, result.status, result.reason) == (
+        "unknown", "invalid", "unsafe_csv_invisible_formula_prefix")
+    assert not result.csv_text_supported
+    assert result.sha256 == hashlib.sha256(payload).hexdigest()
+    assert cell not in str(result)
+
+
+@pytest.mark.parametrize("cell", [
+    "\u200b\u202fordinary",
+    "\u00ad\u3000ordinary",
+    "'\u200b\u202f=2+3",
+    "\u202fordinary",
+])
+def test_unicode_whitespace_with_benign_data_does_not_create_false_formula(cell):
+    payload = ("name,value\nSynthetic," + cell).encode("utf-8")
+    result = classify_attachment(payload)
+    assert (result.kind, result.status) == ("csv", "recognized")
