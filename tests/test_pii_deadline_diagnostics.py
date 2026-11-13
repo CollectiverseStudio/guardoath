@@ -272,3 +272,44 @@ def test_wide_json_scalar_array_aborts_before_traversal_after_worker_deadline(
     assert result.recommended_action == result.effective_action == Action.BLOCK
     assert result.redaction.content is None
     assert result.redaction.status == "withheld"
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_wide_text_digit_prefilter_aborts_worker_before_detectors(monkeypatch, stage):
+    """Real Engine must fail closed while counting digits on maximum-size text.
+
+    A deterministic synthetic clock expires inside the bounded digit prefilter,
+    before any recognizer can emit a finding. This does not assert a flaky wall
+    clock threshold or increase the shipped privacy timeout.
+    """
+    pytest.importorskip("tldextract")
+    pytest.importorskip("phonenumbers")
+    from guardoath.checkers import default_checkers
+    from guardoath.engine import Engine
+
+    policy = Policy(
+        application_id="synthetic", version="v1", timeout_ms=500,
+        mode="enforce", failure_action="block",
+        rules=(Rule(checker_id="pii", on_finding=Action.REDACT),),
+    )
+    engine = Engine([policy], default_checkers(enable_pii=True))
+    start = pii.monotonic()
+    calls = {"n": 0}
+
+    def expiring_clock():
+        calls["n"] += 1
+        return start + (0.501 if calls["n"] >= 5 else 0.0)
+
+    monkeypatch.setattr(pii, "monotonic", expiring_clock)
+    result = asyncio.run(engine.check(CheckRequest(
+        application_id="synthetic", policy_version="v1",
+        content="3" * 32000, content_format="text",
+    ), stage))
+    assert calls["n"] >= 5
+    primary = next(check for check in result.checker_results if check.checker_id == "pii")
+    assert (primary.status, primary.error_code) == ("error", "pii_scan_deadline")
+    assert result.evaluation_status == "incomplete"
+    assert result.recommended_action == result.effective_action == Action.BLOCK
+    assert result.redaction.status == "withheld"
+    assert result.redaction.content is None
+    assert "3" * 32 not in result.model_dump_json()
