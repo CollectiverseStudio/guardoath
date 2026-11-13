@@ -65,6 +65,23 @@ def has_unsafe_csv_controls(value: str) -> bool:
     )
 
 
+def has_pdf_header_preamble(data: bytes) -> bool:
+    """Conservatively reject PDF/CSV polyglots with an early line-start PDF header.
+
+    PDF readers can tolerate a preamble before %PDF-, so byte-zero sniffing can
+    mistake a two-column CSV-looking polyglot for an inspected spreadsheet.
+    Inspect at most the first 1,024 bytes; the result is unsupported, NEVER
+    evidence that GuardOath parsed or scanned a PDF.
+    """
+    for line in data[:1024].splitlines():
+        visible = line.lstrip(b" \t")
+        if visible.startswith(b"\xef\xbb\xbf"):
+            visible = visible[3:].lstrip(b" \t")
+        if visible.startswith(b"%PDF-"):
+            return True
+    return False
+
+
 @dataclass(frozen=True)
 class FileProbe:
     kind: str
@@ -98,7 +115,7 @@ def classify_attachment(data: bytes) -> FileProbe:
         return result("unknown", "invalid", "empty_attachment")
     if size > MAX_ATTACHMENT_BYTES:
         return result("unknown", "invalid", "attachment_budget_exceeded")
-    if data.startswith(b"%PDF-"):
+    if has_pdf_header_preamble(data):
         return result("pdf", "unsupported", "pdf_parser_unavailable")
     if data.startswith((b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08")):
         return result("zip_container", "unsupported", "zip_parser_unavailable")
