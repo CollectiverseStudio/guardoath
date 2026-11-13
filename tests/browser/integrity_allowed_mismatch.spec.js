@@ -22,6 +22,7 @@ test("allowed SHA-256 mismatch is explained without a red blocked label", async 
   const check = page.locator("#input-results .checker").filter({hasText: "Content integrity (SHA-256)"});
   await expect(check.locator(".pill")).toHaveText("Mismatch detected · Allowed");
   await expect(check.locator(".pill")).not.toHaveClass(/bad/);
+  await expect(page.locator('#input-results .check-group[data-group="structure"] > summary .pill')).toHaveText("Findings · Allowed");
   await expect(check).toContainText("structure.integrity_digest_mismatch");
   await expect(check.locator(".integrity-mismatch-context")).toContainText("Detection only — effective decision: Allow");
   await expect(page.locator("#input-results")).toContainText("Effective: allow");
