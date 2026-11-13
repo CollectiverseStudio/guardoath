@@ -25,6 +25,11 @@
 <div class="inline"><button id="checks-wizard-start" type="button" class="primary">Start setup wizard</button><button id="checks-wizard-exit" type="button" class="secondary" hidden>Exit guided setup</button><span id="checks-wizard-progress" role="status" aria-live="polite">Guided setup available</span></div>
 <p id="checks-wizard-guidance" role="status" aria-live="polite" class="hint">For a simple chat application, start with Input protection and then review Output protection.</p>
 <div class="inline" id="checks-wizard-navigation" hidden><button id="checks-wizard-back" type="button" class="secondary" disabled>Previous step</button><button id="checks-wizard-next" type="button" class="primary">Next: Output protection</button><button id="checks-wizard-save" type="button" class="primary" hidden>Save Input and Output checks</button></div>
+<div id="checks-wizard-comparison-tools" class="checks-wizard-comparison-tools" hidden>
+<p id="checks-wizard-comparison-summary" class="hint" role="status" aria-live="polite">Field comparison actions reflect the draft settings above.</p>
+<button id="checks-wizard-open-comparisons" type="button" class="secondary">Configure JSON field comparison rules</button>
+<p class="hint">Optional for structured JSON inputs and outputs. This opens the existing ordinary, arithmetic, identity, conversion and protected-reference editors; it does not change or save tenant policy.</p>
+</div>
 </section>
 <h3 id="check-settings-heading">Your checks and rules</h3>
 <p class="hint">Start here. Choose what GuardOath checks on Input (the message sent to AI) and Output (the AI's response), then select <strong>Save checks</strong>. Use <strong>Show rules</strong> inside a check for specific detections. The configuration tools below are optional and do not create another independent validation engine.</p>
