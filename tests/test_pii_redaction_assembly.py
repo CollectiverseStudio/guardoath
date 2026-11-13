@@ -92,6 +92,26 @@ def test_redaction_assembly_checks_deadline_before_all_private_spans_are_process
     assert spans.visited == 513  # no partial preview or 6000-span assembly
 
 
+def test_redaction_assembly_checks_deadline_after_final_join():
+    """A completed join must not release redacted content past the 500-ms budget.
+
+    This deterministic synthetic deadline expires only at the post-join check;
+    the caller must receive an exception, not an unverified partial preview.
+    """
+    calls = 0
+
+    def deadline():
+        nonlocal calls
+        calls += 1
+        if calls == 3:
+            raise TimeoutError("synthetic post-join redaction deadline")
+
+    with pytest.raises(TimeoutError, match="synthetic post-join redaction deadline"):
+        _assemble_redacted_text("abc|public", [(0, 3, "EMAIL_ADDRESS")], deadline)
+    assert calls == 3
+
+
+
 
 @pytest.mark.parametrize("stage", ["input", "output"])
 def test_existing_engine_rechecks_multiple_real_redactions_with_no_raw_values(stage):
