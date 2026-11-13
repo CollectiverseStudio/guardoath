@@ -25,7 +25,55 @@
     Object.entries(buttons).forEach(([stage, button]) =>
       button.addEventListener("click", () => select(stage)));
     panel.addEventListener("guardoath:focus-stage", event => select(event.detail?.stage));
+    // Guided setup changes only presentation. The existing tenant fields,
+    // Save checks revision, and validation engine remain authoritative.
+    const start = document.getElementById("checks-wizard-start");
+    const exit = document.getElementById("checks-wizard-exit");
+    const progress = document.getElementById("checks-wizard-progress");
+    const guide = document.getElementById("checks-wizard-guidance");
+    const navigation = document.getElementById("checks-wizard-navigation");
+    const back = document.getElementById("checks-wizard-back");
+    const next = document.getElementById("checks-wizard-next");
+    const steps = [
+      {stage: "input", name: "Input protection", note: "Step 1: Choose checks for the user's message BEFORE sending it to AI. Block holds the message; Flag and Allow report findings without blocking."},
+      {stage: "output", name: "Output protection", note: "Step 2: Choose checks for the AI answer BEFORE returning it to the user. Settings for both stages remain pending until saved."},
+      {stage: "both", name: "Review and save", note: "Step 3: Review both stages. Select Save checks below to persist with the tenant revision; navigating the wizard never saves or disables checks."}
+    ];
+    let wizardStep = -1;
+    const renderWizard = () => {
+      if (!start || !exit || !progress || !guide || !navigation || !back || !next) return;
+      const active = wizardStep >= 0;
+      start.hidden = active;
+      exit.hidden = !active;
+      navigation.hidden = !active;
+      if (!active) {
+        progress.textContent = "Guided setup available";
+        guide.textContent = "For a simple chat application, start with Input protection and then review Output protection.";
+        return;
+      }
+      const step = steps[wizardStep];
+      select(step.stage);
+      progress.textContent = "Step " + (wizardStep + 1) + " of 3 · " + step.name;
+      guide.textContent = step.note;
+      back.disabled = wizardStep === 0;
+      next.hidden = wizardStep === 2;
+      next.textContent = wizardStep === 0 ? "Next: Output protection" : "Next: Review and save";
+    };
+    start?.addEventListener("click", () => { wizardStep = 0; renderWizard(); });
+    back?.addEventListener("click", () => {
+      if (wizardStep > 0) { wizardStep -= 1; renderWizard(); }
+    });
+    next?.addEventListener("click", () => {
+      if (wizardStep >= 0 && wizardStep < steps.length - 1) { wizardStep += 1; renderWizard(); }
+    });
+    exit?.addEventListener("click", () => {
+      wizardStep = -1; select("both"); renderWizard();
+    });
+    panel.addEventListener("guardoath:tenant-connected", () => {
+      wizardStep = -1; select("both"); renderWizard();
+    });
     select("both");
+    renderWizard();
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
