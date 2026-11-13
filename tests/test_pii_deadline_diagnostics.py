@@ -186,8 +186,8 @@ def test_worker_deadline_after_final_detector_redaction_or_json_fails_closed(
     elif last_operation == "redaction_assembly":
         original = pii._assemble_redacted_text
 
-        def finish_after_redaction(text, spans):
-            result = original(text, spans)
+        def finish_after_redaction(text, spans, check_deadline=lambda: None):
+            result = original(text, spans, check_deadline)
             expired["value"] = True
             return result
 
