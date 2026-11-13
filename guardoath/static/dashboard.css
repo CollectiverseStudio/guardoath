@@ -67,3 +67,10 @@
 #tenant-panel[data-stage-focus="output"] #check-table tr > :nth-child(2) { display: none; }
 #tenant-panel[data-stage-focus="input"] #check-table .effect-output,
 #tenant-panel[data-stage-focus="output"] #check-table .effect-input { display: none; }
+
+/* Stage filtering also applies to attachment inspection controls, not policy.
+   Hidden selects stay in the form so Save checks preserves both stages. */
+#tenant-panel[data-stage-focus="input"] #tenant-attachment-output-field,
+#tenant-panel[data-stage-focus="output"] #tenant-attachment-input-field { display: none; }
+#tenant-panel[data-stage-focus="input"] #tenant-attachment-modes .inline,
+#tenant-panel[data-stage-focus="output"] #tenant-attachment-modes .inline { grid-template-columns:minmax(0,1fr); }
