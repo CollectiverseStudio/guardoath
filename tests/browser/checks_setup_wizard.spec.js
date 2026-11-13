@@ -63,3 +63,23 @@ test("the guided setup appears separately from conversation-testing steps", asyn
   await page.locator("#checks-wizard-back").click();
   await expect(page.locator("#checks-wizard-progress")).toContainText("Step 1 of 3");
 });
+
+
+test("switching demo tenants exits active setup and restores both columns", async ({page}) => {
+  await page.goto("/dashboard");
+  const connect = async tenant => {
+    await page.locator("#demo-user").selectOption(tenant);
+    await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+    await expect(page.locator("#connection-status")).toContainText("Connected to " + tenant);
+  };
+  await connect("demo3");
+  await page.locator("#checks-wizard-start").click();
+  await page.locator("#checks-wizard-next").click();
+  await expect(page.locator("#checks-wizard-progress")).toContainText("Step 2 of 3");
+  await connect("demo4");
+  await expect(page.locator("#checks-wizard-progress")).toHaveText("Guided setup available");
+  await expect(page.locator("#checks-wizard-start")).toBeVisible();
+  await expect(page.locator("#tenant-panel")).toHaveAttribute("data-stage-focus", "both");
+  await expect(page.locator("#tenant-check-input-lexical_guards")).toBeVisible();
+  await expect(page.locator("#tenant-check-output-lexical_guards")).toBeVisible();
+});
