@@ -2521,3 +2521,49 @@ test("arithmetic editor rejects malformed, conflicting and incomplete drafts wit
   await expect(page.locator("#arithmetic-drafts li")).toHaveCount(1);
   await page.getByRole("button", {name: "Reset to defaults", exact: true}).click();
 });
+
+
+test("CSV-looking file with PDF header after a preamble blocks in real dashboard", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
+  await page.locator("#demo-user").selectOption("demo9");
+  await page.getByRole("button", { name: "Get demo API key", exact: true }).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo9");
+  const reset = async () => {
+    const response = page.waitForResponse(r =>
+      r.url().endsWith("/v1/tenants/current/reset") && r.request().method() === "POST");
+    await page.getByRole("button", { name: "Reset to defaults", exact: true }).click();
+    expect((await response).status()).toBe(200);
+    await expect(page.locator("#tenant-message")).toHaveText("Reset to the demo defaults.");
+  };
+  try {
+    await reset();
+    await expect(page.locator("#input-attachments")).toBeEnabled();
+    // Every line has two CSV fields, so a byte-zero-only file probe would
+    // incorrectly report this PDF/CSV ambiguity as a recognized CSV export.
+    const raw = Buffer.from("column,value\n%PDF-1.7,synthetic\nrow,1", "utf8");
+    await page.locator("#input-attachments").setInputFiles({
+      name: "looks-like.csv", mimeType: "text/csv", buffer: raw,
+    });
+    const response = page.waitForResponse(r =>
+      r.url().endsWith("/v1/checks/input/attachments") && r.request().method() === "POST");
+    await page.locator("#run-input").click();
+    const checked = await response;
+    expect(checked.status()).toBe(200);
+    expect(checked.request().postDataJSON().attachments_b64).toEqual([raw.toString("base64")]);
+    const result = await checked.json();
+    expect(result.evaluation_status).toBe("incomplete");
+    expect(result.recommended_action).toBe("block");
+    expect(result.effective_action).toBe("block");
+    expect(result.attachments[0].kind).toBe("pdf");
+    expect(result.attachments[0].status).toBe("unsupported");
+    expect(result.attachments[0].reason).toBe("pdf_parser_unavailable");
+    await expect(page.locator("#input-results .attachment-receipts")).toContainText("pdf_parser_unavailable");
+    await expect(page.locator("#input-results")).toContainText("Recommended: block");
+    await expect(page.locator("#answer")).toBeHidden();
+    await expect(page.locator("#run-output")).toBeDisabled();
+    await expect(page.locator("#input-results")).not.toContainText("%PDF-1.7,synthetic");
+  } finally {
+    await reset();
+  }
+});
