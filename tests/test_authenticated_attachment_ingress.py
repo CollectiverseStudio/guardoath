@@ -272,3 +272,39 @@ def test_unsupported_attachment_is_fail_closed_even_for_observe_mode():
     assert body["effective_action"] == "block"
     assert body["attachments"][0]["status"] == "unsupported"
     assert service.store.get("demo1").used(usage_month()) == 1
+
+
+@pytest.mark.parametrize("stage", ["input", "output"])
+@pytest.mark.parametrize("cell", ["\u200b\u202f=2+3", "\u00ad\u3000@SUM(4)"])
+def test_unicode_whitespace_hidden_formula_is_fail_closed_even_when_attachment_off(stage, cell):
+    """Actual bytes override observe/Flag/Off on an incomplete inspection."""
+    one = tenant("demo1", mode="observe", failure_action="flag",
+                 input_attachment_csv_mode="off", output_attachment_csv_mode="off")
+    client, _ = harness(one)
+    raw = ("name\tvalue\nSynthetic\t" + cell).encode("utf-8")
+    response = send(client, one[1], stage=stage, files=(raw,))
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["evaluation_status"] == "incomplete"
+    assert result["recommended_action"] == result["effective_action"] == "block"
+    assert result["attachments"][0]["reason"] == "unsafe_csv_invisible_formula_prefix"
+    assert result["attachments"][0]["evaluation_status"] == "incomplete"
+    assert result["checker_results"][-1]["attachment_index"] == 0
+    assert cell not in response.text
+
+
+@pytest.mark.parametrize("stage", ["input", "output"])
+@pytest.mark.parametrize("cell", ["\u202f=2+3", "\u3000@SUM(4)"])
+def test_unicode_whitespace_formula_has_real_file_finding(stage, cell):
+    """No invisible prefix: flag a formula, rather than certify clean output."""
+    one = tenant("demo1", input_check_csv_formula="block", output_check_csv_formula="block")
+    client, _ = harness(one)
+    raw = ("name,value\nSynthetic," + cell).encode("utf-8")
+    response = send(client, one[1], stage=stage, files=(raw,))
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["evaluation_status"] == "complete"
+    assert result["effective_action"] == "block"
+    assert result["attachments"][0]["reason"] == "csv_structure_recognized_only"
+    assert "csv_formula.potential_formula" in {f["rule_id"] for f in result["findings"]}
+    assert cell not in response.text
