@@ -757,6 +757,86 @@
         },
         "finding_rule_ids": []
       }
+    },
+    {
+      "case_id": "csv.hidden_formula.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "name,value\nSynthetic,​=2+3",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.hidden_formula.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "name,value\nSynthetic,​=2+3",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.bidi_control.input",
+      "group": "csv_export",
+      "stage": "input",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "name\tvalue\nSynthetic\t‮=2+3",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "error"
+        },
+        "finding_rule_ids": []
+      }
+    },
+    {
+      "case_id": "csv.bidi_control.output",
+      "group": "csv_export",
+      "stage": "output",
+      "request": {
+        "application_id": "demo",
+        "policy_version": "csv-export-v1",
+        "content": "name\tvalue\nSynthetic\t‮=2+3",
+        "content_format": "text"
+      },
+      "expected": {
+        "evaluation_status": "incomplete",
+        "recommended_action": "block",
+        "effective_action": "block",
+        "checker_statuses": {
+          "csv_formula": "error"
+        },
+        "finding_rule_ids": []
+      }
     }
   ]
 }
