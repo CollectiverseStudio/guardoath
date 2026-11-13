@@ -178,6 +178,59 @@ def test_redirect_to_other_origin_is_never_treated_as_deployed_asset(tmp_path):
         verify(BASE, tmp_path, opener(responses, redirect="https://other.example.com/login"))
 
 
+@pytest.mark.parametrize("redirect", [
+    BASE + "/login",
+    BASE + "/dashboard?from=stale",
+    BASE + "/dashboard#fragment",
+])
+def test_same_origin_dashboard_redirect_never_attests_live_source(tmp_path, redirect):
+    """A fallback page is not the requested dashboard, even with identical bytes."""
+    responses, _ = setup(tmp_path)
+    with pytest.raises(ValueError, match="changed the requested endpoint"):
+        verify(BASE, tmp_path, opener(responses, redirect=redirect))
+
+
+def test_same_origin_health_redirect_never_attests_backend_sha(tmp_path):
+    """Matching health JSON at a different endpoint cannot certify Lambda source."""
+    responses, _ = setup(tmp_path)
+    responses[BASE + "/healthz"] = (
+        '{"status":"ok","source_sha":"' + SHA + '"}'
+    ).encode()
+    original_open = opener(responses)
+
+    def redirect_health(request, timeout):
+        response = original_open(request, timeout)
+        if request.full_url == BASE + "/healthz":
+            response.url = BASE + "/healthz?cached=1"
+        return response
+
+    result = verify_release(BASE, SHA, tmp_path, redirect_health)
+    assert result["dashboard_ui_matches_local_source"] is True
+    assert result["backend_deployment_sha_verified"] is False
+    assert result["release_source_parity_verified"] is False
+    assert "backend_health_unavailable:ValueError" in result["issues"]
+    assert result["mutated_records"] == 0
+
+
+def test_versioned_asset_redirect_cannot_attest_content_from_other_path(tmp_path):
+    """Even identical asset bytes from a fallback URL cannot prove an exact tag."""
+    responses, tags = setup(tmp_path)
+    original_open = opener(responses)
+    requested = BASE + "/assets/dashboard.js?v=" + tags["dashboard.js"]
+
+    def redirect_asset(request, timeout):
+        response = original_open(request, timeout)
+        if request.full_url == requested:
+            response.url = BASE + "/assets/dashboard.js?v=stale"
+        return response
+
+    result = verify(BASE, tmp_path, redirect_asset)
+    assert result["dashboard_ui_matches_local_source"] is False
+    assert "asset_unavailable:dashboard.js:ValueError" in result["issues"]
+    assert result["mutated_records"] == 0
+
+
+
 @pytest.mark.parametrize("origin", [
     "http://guardoath.com",
     "https://guardoath.com/some/path",
