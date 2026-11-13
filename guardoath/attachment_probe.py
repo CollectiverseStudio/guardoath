@@ -32,7 +32,10 @@ UNSAFE_BIDI_CONTROLS = frozenset("\u061c\u200e\u200f\u202a\u202b\u202c\u202d\u20
 # names, Persian joiners and emoji sequences elsewhere in a cell are valid.
 # This is defensive ambiguity rejection, not an assertion about every
 # spreadsheet application's interpretation of these code points.
-INVISIBLE_FORMULA_PREFIX = frozenset("\u00ad\u034f\u180e\u200b\u200c\u200d\u2060")
+# A UTF-8 BOM is stripped only once at the START OF THE FILE. An additional
+# U+FEFF at the start of an individual cell may conceal a spreadsheet formula;
+# treat it as an invisible prefix, not harmless leading whitespace.
+INVISIBLE_FORMULA_PREFIX = frozenset("\u00ad\u034f\u180e\u200b\u200c\u200d\u2060\ufeff")
 FORMULA_PREFIX = frozenset("=+-@")
 LEADING_CSV_WHITESPACE = frozenset(" \t\r\n\u00a0\ufeff")
 
