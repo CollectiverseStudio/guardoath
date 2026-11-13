@@ -129,3 +129,51 @@ test("wizard tracks manual stage tabs and review Save uses the existing revision
     await expect(page.locator("#tenant-message")).toContainText("Saved.");
   }
 });
+
+
+test("review reveals current Field Comparisons stage actions and navigates to all existing editors without saving", async ({page, request}) => {
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo4");
+  await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
+  const token = await page.locator("#demo-key-value").inputValue();
+  const revision = async () => {
+    const response = await request.get("/v1/applications/current",
+      {headers: {Authorization: "Bearer " + token}});
+    expect(response.status(), (await response.text()).slice(0, 120)).toBe(200);
+    return (await response.json()).tenant.revision;
+  };
+  const originalRevision = await revision();
+  const input = page.locator("#tenant-check-input-cross_field");
+  const output = page.locator("#tenant-check-output-cross_field");
+  const originalInput = await input.inputValue();
+  const originalOutput = await output.inputValue();
+  const actionName = action => ({block: "Block", flag: "Flag", allow: "Allow", "": "Off"}[action]);
+  try {
+    await expect(page.locator("#checks-wizard-comparison-tools")).toBeHidden();
+    await page.locator("#checks-wizard-start").click();
+    await page.locator("#checks-wizard-next").click();
+    await page.locator("#checks-wizard-next").click();
+    const summary = page.locator("#checks-wizard-comparison-summary");
+    await expect(summary).toContainText("Draft Field comparisons check");
+    await expect(summary).toContainText("Input: " + actionName(originalInput));
+    await expect(summary).toContainText("Output: " + actionName(originalOutput));
+    await input.selectOption("");
+    await expect(summary).toContainText("Input: Off");
+    await expect(summary).toContainText("Rules do not execute");
+    expect(await revision()).toBe(originalRevision);
+    await page.locator("#checks-wizard-open-comparisons").click();
+    await expect(page.locator("#comparison-configuration")).toHaveJSProperty("open", true);
+    for (const editor of ["comparison", "arithmetic", "identity", "conversion"]) {
+      await expect(page.locator("#" + editor + "-editor")).toBeVisible();
+    }
+    await expect(page.locator("#trusted-reference-status")).toHaveAttribute(
+      "aria-label", "Host-attested Field Comparison reference status");
+    // Navigation and changing a draft value do not publish new check policy.
+    expect(await revision()).toBe(originalRevision);
+  } finally {
+    await page.locator("#tenant-tab-both").click();
+    await input.selectOption(originalInput);
+    await output.selectOption(originalOutput);
+  }
+});
