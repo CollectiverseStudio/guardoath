@@ -69,8 +69,13 @@
     exit?.addEventListener("click", () => {
       wizardStep = -1; select("both"); renderWizard();
     });
-    panel.addEventListener("guardoath:tenant-connected", () => {
-      wizardStep = -1; select("both"); renderWizard();
+    // The dashboard emits focus-stage=both on every successful tenant connection.
+    // Reset the wizard too, so it never labels a different tenant's view as Step 2.
+    panel.addEventListener("guardoath:focus-stage", event => {
+      if (event.detail?.stage === "both" && wizardStep >= 0) {
+        wizardStep = -1;
+        renderWizard();
+      }
     });
     select("both");
     renderWizard();
