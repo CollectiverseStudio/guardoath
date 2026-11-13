@@ -1,6 +1,8 @@
 """Authenticated real-byte CSV attachment ingress against the shared tenant API/Engine."""
 import base64
 
+import pytest
+
 from fastapi.testclient import TestClient
 
 from guardoath.app import create_app, demo_engine
