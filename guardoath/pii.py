@@ -245,20 +245,27 @@ def _count_digits_with_deadline(text, check_deadline):
     return count
 
 
-def _context_tokens_with_deadline(pattern, text, check_deadline):
-    """Build the unchanged context-word index with periodic deadline checks.
+def _context_tokens_with_deadline(pattern, text, check_deadline, *, include_ends=False):
+    """Build the request-local context index with periodic deadline checks.
 
-    regex's timeout protects an individual search; a huge succession of valid
-    matches must also respect the request-wide 500-ms PII worker deadline.
+    When context lookup needs sorted end offsets, build them in the same
+    deadline-bounded regex pass. The previous second Python traversal over
+    every token had no intermediate deadline checks and could consume the
+    remaining 500-ms worker budget on an unusually wide field. The default
+    return value stays the original token list for other callers.
     """
     tokens = []
+    ends = [] if include_ends else None
     for index, match in enumerate(pattern.finditer(
             text, timeout=check_deadline(), concurrent=True)):
         if index % 256 == 0:
             check_deadline()
-        tokens.append((match.start(), match.end(), match.group().lower()))
+        end = match.end()
+        tokens.append((match.start(), end, match.group().lower()))
+        if ends is not None:
+            ends.append(end)
     check_deadline()
-    return tokens
+    return (tokens, ends) if ends is not None else tokens
 
 
 def _context_cue_matches_at(words, ends, start, hint_words, context):
@@ -527,8 +534,8 @@ def build_pii_checker():
                     # hints. Index and tokenize only once per inspected field.
                     nonlocal words, word_ends, hint_words
                     if words is None:
-                        words = _context_tokens_with_deadline(word_pattern, text, check_deadline)
-                        word_ends = [end for _, end, _ in words]
+                        words, word_ends = _context_tokens_with_deadline(
+                            word_pattern, text, check_deadline, include_ends=True)
                     if hint_words is None:
                         hint_words = [word for _, _, word in _context_tokens_with_deadline(
                             word_pattern, hint, check_deadline)]
