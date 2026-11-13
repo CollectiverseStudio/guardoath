@@ -477,7 +477,7 @@ def build_pii_checker():
                         word_ends = [end for _, end, _ in words]
                     if hint_words is None:
                         hint_words = [word for _, _, word in _context_tokens_with_deadline(
-                        word_pattern, hint, check_deadline)]
+                            word_pattern, hint, check_deadline)]
                     return _context_cue_matches_at(words, word_ends, start, hint_words, context)
 
                 def keep(score, start, context):
