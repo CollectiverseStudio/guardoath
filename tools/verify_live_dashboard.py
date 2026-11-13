@@ -46,6 +46,12 @@ def _fetch(url: str, limit: int, open_url=urlopen) -> bytes:
         resolved = urlsplit(response.geturl())
         if resolved.scheme != "https" or resolved.netloc != parts.netloc:
             raise ValueError("Production redirect changed the origin")
+        # The exact /dashboard, /healthz and version-tagged asset URLs are
+        # release evidence. A same-origin redirect to a fallback/login page,
+        # different asset, or stale query must not attest the requested URL.
+        if (resolved.path != parts.path or resolved.query != parts.query
+                or resolved.fragment):
+            raise ValueError("Production redirect changed the requested endpoint")
         payload = response.read(limit + 1)
         if len(payload) > limit:
             raise ValueError("Production response exceeds bounded verification size")
