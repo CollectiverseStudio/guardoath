@@ -39,7 +39,7 @@
     const steps = [
       {stage: "input", name: "Input protection", note: "Step 1: Choose checks for the user's message BEFORE sending it to AI. Block holds the message; Flag and Allow report findings without blocking."},
       {stage: "output", name: "Output protection", note: "Step 2: Choose checks for the AI answer BEFORE returning it to the user. Settings for both stages remain pending until saved."},
-      {stage: "both", name: "Review and save", note: "Step 3: Review both stages. Select Save checks below to persist with the tenant revision; navigating the wizard never saves or disables checks."}
+      {stage: "both", name: "Review and save", note: "Step 3: Review both stages. Select Save Input and Output checks here to persist with the tenant revision. Navigation never saves or disables checks."}
     ];
     let wizardStep = -1;
     const renderWizard = () => {
