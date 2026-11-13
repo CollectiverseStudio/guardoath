@@ -13,6 +13,10 @@ def test_stage_tabs_preserve_both_columns_and_original_settings():
         assert 'id="tenant-tab-' + stage + '"' in html
     assert 'src="/assets/tenant_stage_tabs.js"' in html
     assert 'id="tenant-checks"' in html
+    assert 'id="tenant-stage-hidden-draft"' in html
+    assert 'guardoath:stage-view-changed' in js
+    assert 'function updateStageHiddenDraftWarning(' in dashboard
+    assert 'name.startsWith(hiddenStage + "_check_")' in dashboard
     assert 'panel.dataset.stageFocus = stage' in js
     assert 'guardoath:focus-stage' in js
     assert 'section.hidden' not in js
