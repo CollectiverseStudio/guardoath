@@ -273,6 +273,60 @@ test("Input wizard warns about Output-only comparison definitions, not synthetic
 });
 
 
+test("Input wizard compares effective saved Output rules, not visible-only stage membership or JSON representation", async ({page, request}) => {
+  // No mock API: reproduce through a signed-in demo tenant's ordinary editor,
+  // its real bulk import and the revisioned application's saved portfolio.
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo4");
+  await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
+  const token = await page.locator("#demo-key-value").inputValue();
+  const current = async () => {
+    const response = await request.get("/v1/applications/current",
+      {headers: {Authorization: "Bearer " + token}});
+    expect(response.status()).toBe(200);
+    return (await response.json()).tenant;
+  };
+  const saved = await current();
+  expect(saved.comparisons.some(rule => rule.stages.includes("output"))).toBe(true);
+  await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
+  await page.locator("#checks-wizard-start").click();
+  await expect(page.locator("#tenant-panel")).toHaveAttribute("data-stage-focus", "input");
+  await page.locator("#comparison-bulk-panel summary").click();
+  await page.locator("#comparison-bulk-export").click();
+  const input = page.locator("#comparison-bulk-json");
+  const rules = JSON.parse(await input.inputValue());
+  const outputRule = rules.find(rule => rule.stages.includes("output"));
+  expect(outputRule).toBeTruthy();
+  // Preserve the entire Output rule definition. Adding ONLY Input membership
+  // to an Output-only rule does not alter Output, nor does reversing a dual-
+  // stage rule's ["input","output"] order. A new Input-only rule guarantees
+  // a real pending portfolio even for the dual-stage permutation case.
+  outputRule.stages = outputRule.stages.includes("input")
+    ? [...outputRule.stages].reverse() : ["input", "output"];
+  rules.push({rule_id: "wizard_membership_scope_regression", left: "/synthetic/a",
+    right: "/synthetic/b", operator: "le", value_type: "number", stages: ["input"]});
+  const stageWarning = page.locator("#tenant-stage-hidden-draft");
+  await input.fill(JSON.stringify(rules));
+  await page.locator("#comparison-bulk-confirm").check();
+  await page.locator("#comparison-bulk-import").click();
+  await expect(page.locator("#comparison-bulk-status")).toContainText("staged");
+  await expect(stageWarning).toBeHidden();
+  expect((await current()).revision).toBe(saved.revision);
+
+  // Actual Output definition changes must still warn while Output is hidden.
+  outputRule.operator = outputRule.operator === "eq" ? "ne" : "eq";
+  await input.fill(JSON.stringify(rules));
+  await page.locator("#comparison-bulk-confirm").check();
+  await page.locator("#comparison-bulk-import").click();
+  await expect(page.locator("#comparison-bulk-status")).toContainText("staged");
+  await expect(stageWarning).toContainText("Unsaved Output changes (field comparison definitions)");
+  const after = await current();
+  expect(after.revision).toBe(saved.revision);
+  expect(after.comparisons).toEqual(saved.comparisons);
+});
+
+
 test("wizard uses owner-only PSI draft to avoid false hidden Output warning without exposing references", async ({page, request}) => {
   await page.goto("/dashboard");
   await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
