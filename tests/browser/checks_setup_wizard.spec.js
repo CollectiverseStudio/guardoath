@@ -321,6 +321,12 @@ test("Input wizard compares effective saved Output rules, not visible-only stage
   await page.locator("#comparison-bulk-import").click();
   await expect(page.locator("#comparison-bulk-status")).toContainText("staged");
   await expect(stageWarning).toContainText("Unsaved Output changes (field comparison definitions)");
+  // Switching focus must expose the independent saved-Input comparison, not
+  // conceal the unsaved Input-only rule behind a now-visible Output definition.
+  await page.locator("#tenant-tab-output").click();
+  await expect(stageWarning).toContainText("Unsaved Input changes (field comparison definitions)");
+  await page.locator("#tenant-tab-input").click();
+  await expect(stageWarning).toContainText("Unsaved Output changes (field comparison definitions)");
   const after = await current();
   expect(after.revision).toBe(saved.revision);
   expect(after.comparisons).toEqual(saved.comparisons);
