@@ -879,39 +879,51 @@ $("tenant-save").addEventListener("click", () => {
 // Every family stays within the authoritative tenant record; protected references
 // are read-only and never become editable through this warning.
 function hasHiddenComparisonDraft(tenant, changes, stage) {
+  // A stage is affected by the ORDER and DEFINITIONS of rules that actually
+  // execute on it. Adding Input membership to a saved Output-only rule does
+  // not change Output policy; nor does reordering the Input/Output stage array.
+  // Keep every non-stage field significant, but ignore JSON object-key order.
+  const canonical = value => Array.isArray(value) ? value.map(canonical) :
+    value && typeof value === "object"
+      ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])]))
+      : value;
+  const definition = rule => {
+    const {stages, ...fields} = rule;
+    return JSON.stringify(canonical(fields));
+  };
+  const invalid = rules => {
+    const seen = new Set();
+    return rules.some(rule => {
+      if (!rule || typeof rule !== "object" || Array.isArray(rule) ||
+          typeof rule.rule_id !== "string" || seen.has(rule.rule_id) ||
+          !Array.isArray(rule.stages) || rule.stages.length < 1 ||
+          rule.stages.length > 2 || new Set(rule.stages).size !== rule.stages.length ||
+          !rule.stages.every(item => item === "input" || item === "output"))
+        return true;
+      seen.add(rule.rule_id);
+      return false;
+    });
+  };
   for (const field of ["comparisons", "advanced_arithmetic", "advanced_identity",
                        "advanced_conversion_time"]) {
     if (!Object.hasOwn(changes, field)) continue;
     const change = changes[field];
     const next = Array.isArray(change) ? change : change?.editable;
     const previous = tenant[field];
-    // An unloaded/malformed portfolio cannot prove a hidden stage unaffected.
-    if (!Array.isArray(next) || !Array.isArray(previous)) return true;
-    const prevById = new Map(previous.map(rule => [rule.rule_id, rule]));
-    // Only the ordering *within the hidden stage* is relevant. Adding or
-    // reordering Input-only definitions cannot change Output policy, even
-    // when the saved portfolio already contains Output rules (and vice versa).
-    // A malformed stage scope cannot establish that the hidden stage is safe.
-    if ([...previous, ...next].some(rule => !Array.isArray(rule?.stages))) return true;
-    const orderedStageIds = rules => rules.filter(rule => rule.stages.includes(stage))
-      .map(rule => rule.rule_id).join("\u0000");
-    if (orderedStageIds(previous) !== orderedStageIds(next)) return true;
-    for (const rule of next) {
-      const saved = prevById.get(rule.rule_id);
-      prevById.delete(rule.rule_id);
-      if (JSON.stringify(saved) !== JSON.stringify(rule) &&
-          (!Array.isArray(rule?.stages) || rule.stages.includes(stage) ||
-           (saved && (!Array.isArray(saved.stages) || saved.stages.includes(stage)))))
-        return true;
-    }
-    for (const removed of prevById.values()) {
-      if (!Array.isArray(removed?.stages) || removed.stages.includes(stage)) return true;
+    // Missing or malformed authoritative input cannot certify a hidden stage
+    // as unchanged, including duplicate IDs and ambiguous stage membership.
+    if (!Array.isArray(next) || !Array.isArray(previous) ||
+        invalid(next) || invalid(previous)) return true;
+    const active = rules => rules.filter(rule => rule.stages.includes(stage));
+    const before = active(previous), after = active(next);
+    if (before.length !== after.length) return true;
+    for (let i = 0; i < before.length; i++) {
+      if (before[i].rule_id !== after[i].rule_id ||
+          definition(before[i]) !== definition(after[i])) return true;
     }
   }
-  // PSI histograms are deliberately omitted from application.tenant. Ask
-  // its authenticated editor only for the changed-stage boolean, never for
-  // private reference values, then preserve the conservative fail-warning
-  // behavior if the optional editor is unavailable.
+  // Private PSI reference histograms remain exclusively within the owner
+  // editor. Only its boolean stage-diff result may reach this warning.
   if (Object.hasOwn(changes, "advanced_statistical_drift")) {
     const editor = window.statisticalDriftEditor;
     return !editor || typeof editor.affectsStage !== "function" || editor.affectsStage(stage);
