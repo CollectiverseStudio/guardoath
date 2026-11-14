@@ -1,6 +1,7 @@
 # GuardOath production deployment. Run from a clean repository checkout on Windows.
 # Default is read-only preflight. -Deploy requires exact-source GitHub gates.
 # Issue #30 stays visible as a warning; the 15 live acceptance checks still apply.
+# Release stabilization: preserve this exact candidate while its CI/deployment completes.
 [CmdletBinding()]
 param(
     [switch]$Deploy,

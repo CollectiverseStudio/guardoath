@@ -2,6 +2,10 @@
 
 Updated 2026-11-09. Greg explicitly authorized replacing the empty coordination file and resuming implementation.
 
+## Release stabilization reservation — Atlas deployment, 2026-11-13
+
+Greg ordered deployment of all committed improvements. During this release window, hold unrelated commits to main (including documentation-only receipts): they cancel the exact-SHA Tests matrix and prevent deployment. Other development cycles must inspect/read only until deployment and live verification are reported. Only an actual failed release job or release defect justifies another source commit; preserve simultaneous work. Do not close #30 to manufacture acceptance. Record CI observations in issue comments rather than new source commits. The release candidate is the commit introducing this reservation and its deployment script comment; all22 release jobs must succeed at that exact SHA. No Director or separate approval gate.
+
 ## Governing decisions
 - Greg's 2026-11-13 deployment directive: deploy all committed improvements; an open Issue #30 alone must not veto rollout after exact-SHA CI acceptance. Report the unresolved latency risk without closing or declaring it fixed. Keep the 500-ms deadline, privacy fail-closed enforcement, rollback, source parity and 15 live checks.
 - Atlas coordinates engineering and owns Field Comparisons issues #28 and #31, including tenant/API/dashboard/tests.
