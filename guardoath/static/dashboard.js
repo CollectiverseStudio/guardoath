@@ -873,19 +873,58 @@ $("tenant-save").addEventListener("click", () => {
 // A changed setting is not used until it is saved; running a check saves it first (see execute).
 // A stage tab hides a column, not its pending edits. Surface the hidden
 // changes without modifying either draft, its revision, or the shared Engine.
+// Field Comparison editors store shared definitions, not an Input/Output-keyed
+// field. Look at BOTH the saved and pending stage membership: edits, removals,
+// and reordering can affect a hidden stage even when its rule action is unchanged.
+// Every family stays within the authoritative tenant record; protected references
+// are read-only and never become editable through this warning.
+function hasHiddenComparisonDraft(tenant, changes, stage) {
+  for (const field of ["comparisons", "advanced_arithmetic", "advanced_identity",
+                       "advanced_conversion_time", "advanced_statistical_drift"]) {
+    if (!Object.hasOwn(changes, field)) continue;
+    const change = changes[field];
+    const next = Array.isArray(change) ? change : change?.editable;
+    const previous = tenant[field];
+    // An unloaded/malformed portfolio cannot prove a hidden stage unaffected.
+    if (!Array.isArray(next) || !Array.isArray(previous)) return true;
+    const prevById = new Map(previous.map(rule => [rule.rule_id, rule]));
+    // Comparison ordering is semantically significant, including at 500 rules.
+    if (previous.map(rule => rule.rule_id).join("\u0000") !==
+        next.map(rule => rule.rule_id).join("\u0000") &&
+        [...previous, ...next].some(rule => !Array.isArray(rule?.stages) || rule.stages.includes(stage)))
+      return true;
+    for (const rule of next) {
+      const saved = prevById.get(rule.rule_id);
+      prevById.delete(rule.rule_id);
+      if (JSON.stringify(saved) !== JSON.stringify(rule) &&
+          (!Array.isArray(rule?.stages) || rule.stages.includes(stage) ||
+           (saved && (!Array.isArray(saved.stages) || saved.stages.includes(stage)))))
+        return true;
+    }
+    for (const removed of prevById.values()) {
+      if (!Array.isArray(removed?.stages) || removed.stages.includes(stage)) return true;
+    }
+  }
+  return false;
+}
 function updateStageHiddenDraftWarning(changes = pendingChanges()) {
   const warning = $("tenant-stage-hidden-draft");
   if (!warning) return;
   const selected = $("tenant-panel").dataset.stageFocus;
   const hiddenStage = selected === "input" ? "output" : selected === "output" ? "input" : null;
-  const checkOrRuleDraft = hiddenStage && Object.keys(changes).some(name =>
-    name.startsWith(hiddenStage + "_check_") || name === hiddenStage + "_rule_actions");
+  const tenant = application?.tenant;
+  const checkOrRuleDraft = hiddenStage && tenant && Object.entries(changes).some(([name, value]) =>
+    name.startsWith(hiddenStage + "_check_") ||
+    (name === hiddenStage + "_rule_actions" &&
+     sortedEntries(value) !== sortedEntries(tenant[hiddenStage + "_rule_actions"])));
+  const comparisonDraft = hiddenStage && tenant && hasHiddenComparisonDraft(tenant, changes, hiddenStage);
   const attachmentDraft = hiddenStage && Object.hasOwn(changes, hiddenStage + "_attachment_csv_mode");
-  const hasHiddenChanges = !!(application?.tenant && ownChecksSelected() && hiddenStage &&
-    (checkOrRuleDraft || attachmentDraft));
+  const hasHiddenChanges = !!(tenant && ownChecksSelected() && hiddenStage &&
+    (checkOrRuleDraft || comparisonDraft || attachmentDraft));
   warning.hidden = !hasHiddenChanges;
   const draftKinds = [checkOrRuleDraft ? "check/rule actions" : "",
-    attachmentDraft ? "CSV/TSV attachment inspection" : ""].filter(Boolean).join(" and ");
+    comparisonDraft ? "field comparison definitions" : "",
+    attachmentDraft ? "CSV/TSV attachment inspection" : ""].filter(Boolean).join(", ");
   warning.textContent = hasHiddenChanges
     ? "Unsaved " + (hiddenStage === "input" ? "Input" : "Output") + " " + draftKinds +
       " edits are pending while that stage's settings are hidden. Select Both stages to review them. Save checks (or Run) applies pending changes to both stages."
