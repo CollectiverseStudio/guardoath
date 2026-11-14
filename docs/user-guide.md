@@ -3496,3 +3496,18 @@ After connecting an authorized tenant or demo account, open **Checks on this rec
 **Structured JSON Field Comparisons in the wizard:** In Step 3, review **Draft Field comparisons check — Input: ... · Output: ...** to see the currently selected check actions before saving. When either stage reads **Off**, its comparison definitions do not run in that stage, even if definitions exist. Choose **Configure JSON field comparison rules** to expand and focus the **existing** optional configuration panel: ordinary field-to-field rules, arithmetic, identity/collections, conversion/time, and read-only host-attested reference status. This navigation never changes policy, auto-enables a check, stages a definition, saves a revision, or turns an untrusted reference into an authoritative one. To persist a deliberate action or definition edit, return to the tenant's **Save checks** (or the wizard's Step 3 Save); verify the server confirmation and revision. All rule families use the shared Field comparisons checker and tenant-owned Input/Output settings.
 
 **Deployment boundary:** these controls must be built into the hosted Lambda/static asset package and verified at exact Git SHA. A commit to `main` does not change `guardoath.com`; the approved production release also requires full CI, a safe rollback and 15 live checks.
+
+### Repeated email/card values in a single request
+
+When the same email address or payment-card text occurs in multiple fields or
+multiple places in one Input or Output, GuardOath still inspects and reports
+**every occurrence**. A bounded request-local optimization reuses only the
+core validator's answer for a repeated identical candidate (up to 256 short
+candidates); it never reuses findings, source spans, stage actions, tenant
+decisions, or redacted content. A Redact operation still checks its transformed
+output again with a **new** scan and fresh validation cache. Incomplete/error
+paths remain fail-closed. This is an internal performance improvement, not a
+new customer check or a guarantee that every operating-system scheduling tail
+is under the existing 500-ms deadline. Configure the existing **Personal data**
+check and Input/Output actions in the tenant wizard; no new configuration is
+required.
