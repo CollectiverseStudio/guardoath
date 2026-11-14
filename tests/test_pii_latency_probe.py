@@ -30,7 +30,7 @@ def test_summary_reports_only_fixed_case_stage_counts_and_numeric_timings():
                               [_response(first=90, recheck=70), _response(first=110, recheck=80)])
     assert summary == {
         "case": "dob-redaction", "stage": "input", "requests": 2,
-        "failed_contracts": 0,
+        "failed_contracts": 0, "failure_causes": {},
         "first_pass": {"observed": 2, "median_ms": 100, "max_ms": 110},
         "redaction_recheck": {"observed": 2, "median_ms": 75, "max_ms": 80},
     }
@@ -170,3 +170,59 @@ def test_redaction_preview_requires_text_not_an_unverifiable_container(invalid_p
     sample.redaction.content = invalid_preview
     report = probe.summarize("dob-redaction", "input", [sample])
     assert report["failed_contracts"] == 1
+
+
+def test_first_pass_deadline_error_is_attributed_without_private_content():
+    sample = _response(status="incomplete", first=594.031)
+    sample.checker_results = (_check(status="error", latency_ms=594.031,
+                                    error_code="pii_scan_deadline"),)
+    report = probe.summarize("dob-detection", "input", [sample])
+    assert report["failed_contracts"] == 1
+    assert report["failure_causes"] == {
+        "evaluation/incomplete": 1,
+        "first_pass/latency_invalid_or_late": 1,
+        "first_pass/pii_scan_deadline": 1,
+    }
+    assert report["first_pass"]["observed"] == 0
+
+
+def test_redaction_recheck_deadline_is_attributed_independently():
+    sample = _response(recheck=611.02, redaction="withheld")
+    sample.redaction.validation_results = (
+        _check(status="error", latency_ms=611.02,
+               error_code="checker_timeout"),)
+    report = probe.summarize("dob-redaction", "output", [sample])
+    assert report["failed_contracts"] == 1
+    assert report["failure_causes"] == {
+        "redaction_recheck/checker_timeout": 1,
+        "redaction_recheck/latency_invalid_or_late": 1,
+    }
+
+
+def test_extra_passing_checker_is_not_counted_as_valid_pii_coverage():
+    sample = _response()
+    sample.checker_results += (_check(status="passed", latency_ms=10),)
+    report = probe.summarize("dob-detection", "input", [sample])
+    assert report["failed_contracts"] == 1
+    assert report["failure_causes"] == {"first_pass/wrong_checker_count": 1}
+
+
+def test_untrusted_error_code_and_private_text_never_enter_latency_report():
+    private = "PRIVATE-REQUEST-VALUE-DO-NOT-REPORT"
+    sample = _response(status="incomplete")
+    sample.checker_results = (_check(status="error", latency_ms=50,
+                                    error_code=private),)
+    report = probe.summarize("dob-detection", "input", [sample])
+    assert report["failed_contracts"] == 1
+    assert report["failure_causes"]["first_pass/other_error"] == 1
+    assert private not in json.dumps(report)
+
+
+def test_failure_causes_count_once_per_response_and_not_per_duplicate_code():
+    sample = _response(status="incomplete")
+    sample.checker_results = (_check(status="error", latency_ms=501,
+                                    error_code="checker_timeout"),)
+    result = probe.summarize("dob-detection", "input", [sample, sample])
+    assert result["failed_contracts"] == 2
+    assert result["failure_causes"]["first_pass/checker_timeout"] == 2
+    assert result["failure_causes"]["first_pass/latency_invalid_or_late"] == 2
