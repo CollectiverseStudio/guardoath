@@ -194,6 +194,9 @@ test("Input wizard warns about Output-only comparison definitions, not synthetic
     return (await response.json()).tenant;
   };
   const original = await current();
+  // This regression specifically requires an existing saved Output portfolio:
+  // appending/reordering Input-only drafts must not mark that Output dirty.
+  expect(original.comparisons.some(rule => rule.stages.includes("output"))).toBe(true);
   await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
   await page.locator("#checks-wizard-start").click();
   await expect(page.locator("#tenant-panel")).toHaveAttribute("data-stage-focus", "input");
@@ -207,6 +210,28 @@ test("Input wizard warns about Output-only comparison definitions, not synthetic
   await page.locator("#comparison-stage-output").uncheck();
   await page.locator("#comparison-apply").click();
   await expect(page.locator('#comparison-drafts [data-comparison-id="' + id + '"]')).toHaveCount(1);
+  await expect(warning).toBeHidden();
+  expect((await current()).revision).toBe(original.revision);
+
+  // Reordering newly added Input-only rules does not reorder the saved
+  // Output membership, even when the shared portfolio has Output rules.
+  const secondId = "wizard_stage_warning_input_two";
+  await page.locator("#comparison-id").fill(secondId);
+  await page.locator("#comparison-left").fill("/example/third");
+  await page.locator("#comparison-right").fill("/example/fourth");
+  await page.locator("#comparison-stage-output").uncheck();
+  await page.locator("#comparison-apply").click();
+  await expect(warning).toBeHidden();
+  await page.locator("#comparison-bulk-panel summary").click();
+  await page.locator("#comparison-bulk-export").click();
+  const bulkDraft = page.locator("#comparison-bulk-json");
+  const reordered = JSON.parse(await bulkDraft.inputValue());
+  expect(reordered.slice(-2).map(rule => rule.rule_id)).toEqual([id, secondId]);
+  reordered.splice(-2, 2, reordered[reordered.length - 1], reordered[reordered.length - 2]);
+  await bulkDraft.fill(JSON.stringify(reordered));
+  await page.locator("#comparison-bulk-confirm").check();
+  await page.locator("#comparison-bulk-import").click();
+  await expect(page.locator("#comparison-bulk-status")).toContainText("staged");
   await expect(warning).toBeHidden();
   expect((await current()).revision).toBe(original.revision);
 
