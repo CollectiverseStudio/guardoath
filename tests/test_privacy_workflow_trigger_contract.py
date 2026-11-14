@@ -26,6 +26,7 @@ def test_reliability_gate_cannot_omit_shipped_privacy_paths():
         "tests/test_pii_deadline_diagnostics.py",
         "tests/test_pii_context_window.py",
         "tests/test_pii_redaction_assembly.py",
+        "tests/test_pii_core_validation_cache.py",
         "tools/conversation_privacy_release.py",
         "tools/conversation_privacy_contention.py",
         "tests/test_conversation_privacy_release.py",
