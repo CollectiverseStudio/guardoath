@@ -3511,3 +3511,12 @@ new customer check or a guarantee that every operating-system scheduling tail
 is under the existing 500-ms deadline. Configure the existing **Personal data**
 check and Input/Output actions in the tenant wizard; no new configuration is
 required.
+
+
+### Private-safe PII 500-ms release diagnostics
+
+The required cross-platform **PII Reliability Gate** executes `python -m tools.pii_latency_probe --rounds 10 --concurrency 4` using fixed synthetic birth-date cases on Input and Output. The checker and required redaction recheck retain the shipped **500-ms deadline each**; neither the budget nor any customer action is changed by diagnostics. The machine report contains only fixed case IDs, stage, sample counts, summary milliseconds and **allowlisted failure-cause counters**. It never emits message text, redacted previews, credentials or arbitrary exception/error strings.
+
+For an unsuccessful sample, `failure_causes` separates a first-pass deadline (`first_pass/pii_scan_deadline` or `first_pass/checker_timeout`) from an unsuccessful second pass (`redaction_recheck/checker_timeout`), invalid/over-500-ms timing, incomplete evaluation or missing required checker coverage. Unrecognized internal error codes appear only as `other_error`. The same failed sample may contribute more than one cause, so counter totals need not equal `failed_contracts`. Any failed contract still exits nonzero and blocks the release.
+
+A finite run with no failures is useful evidence but does **not** prove the historical intermittent latency issue permanently resolved. Never increase the deadline, suppress rechecks, disable a test or claim production readiness based solely on a retry. Inspect the exact source SHA and each required GitHub Actions job, confirm the underlying #30 fix, and run the live production safety checks before accepting a deployment.
