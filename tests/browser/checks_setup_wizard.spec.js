@@ -241,3 +241,37 @@ test("Input wizard warns about Output-only comparison definitions, not synthetic
   expect(after.comparisons).toEqual(original.comparisons);
   expect(after.advanced_arithmetic).toEqual(original.advanced_arithmetic);
 });
+
+
+test("wizard uses owner-only PSI draft to avoid false hidden Output warning without exposing references", async ({page, request}) => {
+  await page.goto("/dashboard");
+  await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
+  await page.locator("#demo-user").selectOption("demo10");
+  await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo10");
+  await expect(page.locator("#drift-editor-status")).toContainText("Owner-only reference configuration loaded");
+  const token = await page.locator("#demo-key-value").inputValue();
+  const read = async () => {
+    const response = await request.get("/v1/tenants/current/statistical-drift",
+      {headers: {Authorization: "Bearer " + token}});
+    expect(response.status()).toBe(200);
+    return response.json();
+  };
+  const original = await read();
+  await page.locator("#checks-wizard-start").click();
+  await expect(page.locator("#tenant-panel")).toHaveAttribute("data-stage-focus", "input");
+  const warning = page.locator("#tenant-stage-hidden-draft");
+  await page.locator("#drift-synthetic-preset").click();
+  await page.locator("#drift-stage-output").uncheck();
+  await page.locator("#drift-apply").click();
+  await expect(page.locator('#drift-drafts [data-drift-id="ui_psi_demo"]')).toHaveCount(1);
+  await expect(warning).toBeHidden(); // Nothing in the hidden Output PSI portfolio changed.
+
+  await page.getByRole("button", {name: "Edit PSI ui_psi_demo", exact: true}).click();
+  await page.locator("#drift-stage-input").uncheck();
+  await page.locator("#drift-stage-output").check();
+  await page.locator("#drift-apply").click();
+  await expect(warning).toContainText("Unsaved Output changes (field comparison definitions)");
+  await expect(page.locator("#drift-editor-status")).toContainText("Owner-only reference configuration loaded");
+  expect(await read()).toEqual(original); // Real reference and tenant revision remain unchanged.
+});
