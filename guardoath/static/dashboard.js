@@ -926,8 +926,8 @@ function updateStageHiddenDraftWarning(changes = pendingChanges()) {
     comparisonDraft ? "field comparison definitions" : "",
     attachmentDraft ? "CSV/TSV attachment inspection" : ""].filter(Boolean).join(", ");
   warning.textContent = hasHiddenChanges
-    ? "Unsaved " + (hiddenStage === "input" ? "Input" : "Output") + " " + draftKinds +
-      " edits are pending while that stage's settings are hidden. Select Both stages to review them. Save checks (or Run) applies pending changes to both stages."
+    ? "Unsaved " + (hiddenStage === "input" ? "Input" : "Output") + " changes (" + draftKinds +
+      ") are pending while that stage's settings are hidden. Select Both stages to review them. Save checks (or Run) applies pending changes to both stages."
     : "";
 }
 $("tenant-panel").addEventListener("guardoath:stage-view-changed",
