@@ -177,3 +177,67 @@ test("review reveals current Field Comparisons stage actions and navigates to al
     await output.selectOption(originalOutput);
   }
 });
+
+
+test("Input wizard warns about Output-only comparison definitions, not synthetic unchanged rule actions", async ({page, request}) => {
+  // Real demo tenant, real pending editor and authoritative API receipt. Never
+  // Save: neither the wizard nor a warning may mutate another stage's policy.
+  await page.goto("/dashboard");
+  await page.locator("#demo-user").selectOption("demo4");
+  await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
+  await expect(page.locator("#connection-status")).toContainText("Connected to demo4");
+  const token = await page.locator("#demo-key-value").inputValue();
+  const current = async () => {
+    const response = await request.get("/v1/applications/current",
+      {headers: {Authorization: "Bearer " + token}});
+    expect(response.status()).toBe(200);
+    return (await response.json()).tenant;
+  };
+  const original = await current();
+  await page.locator("#comparison-configuration").evaluate(el => { el.open = true; });
+  await page.locator("#checks-wizard-start").click();
+  await expect(page.locator("#tenant-panel")).toHaveAttribute("data-stage-focus", "input");
+  const warning = page.locator("#tenant-stage-hidden-draft");
+  const id = "wizard_stage_warning_rule";
+  await page.locator("#comparison-id").fill(id);
+  await page.locator("#comparison-left").fill("/example/left");
+  await page.locator("#comparison-right").fill("/example/right");
+  // A pending Input-only definition has no Output changes; editors may
+  // generate unchanged Output rule-actions objects as an implementation detail.
+  await page.locator("#comparison-stage-output").uncheck();
+  await page.locator("#comparison-apply").click();
+  await expect(page.locator('#comparison-drafts [data-comparison-id="' + id + '"]')).toHaveCount(1);
+  await expect(warning).toBeHidden();
+  expect((await current()).revision).toBe(original.revision);
+
+  // Change the *unsaved* rule to Output-only while Output settings are hidden.
+  await page.getByRole("button", {name: "Edit comparison " + id, exact: true}).click();
+  await page.locator("#comparison-stage-input").uncheck();
+  await page.locator("#comparison-stage-output").check();
+  await page.locator("#comparison-apply").click();
+  await expect(warning).toBeVisible();
+  await expect(warning).toContainText("Unsaved Output field comparison definitions");
+  await page.locator("#tenant-tab-output").click();
+  await expect(warning).toBeHidden(); // No Input change in the final draft.
+  await page.locator("#tenant-tab-input").click();
+  await expect(warning).toContainText("Unsaved Output field comparison definitions");
+
+  // The advanced arithmetic family uses the same tenant-owned stage warning,
+  // including its bulk editor; this does not save or create a second engine.
+  await page.getByRole("button", {name: "Remove comparison " + id, exact: true}).click();
+  await expect(warning).toBeHidden();
+  await page.locator("#arithmetic-bulk-panel summary").click();
+  await page.locator("#arithmetic-bulk-example").click();
+  const bulk = page.locator("#arithmetic-bulk-json");
+  const sample = JSON.parse(await bulk.inputValue());
+  expect(sample.length).toBeGreaterThan(0);
+  await bulk.fill(JSON.stringify(sample.map(rule => ({...rule, stages: ["output"]}))));
+  await page.locator("#arithmetic-bulk-confirm").check();
+  await page.locator("#arithmetic-bulk-import").click();
+  await expect(page.locator("#arithmetic-bulk-status")).toContainText("staged");
+  await expect(warning).toContainText("Unsaved Output field comparison definitions");
+  const after = await current();
+  expect(after.revision).toBe(original.revision);
+  expect(after.comparisons).toEqual(original.comparisons);
+  expect(after.advanced_arithmetic).toEqual(original.advanced_arithmetic);
+});
