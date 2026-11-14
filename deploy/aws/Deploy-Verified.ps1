@@ -77,7 +77,7 @@ function Assert-Run([object[]]$Runs, [string]$Name, [string]$Sha) {
         }) -join "; "
         throw "$Name has $($failed.Count) non-successful individual job(s): $details"
     }
-    Write-Host "$Name passed at $Sha: $($jobs.Count)/$($jobs.Count) individual jobs SUCCESS ($($latest.html_url))"
+    Write-Host "$Name passed at ${Sha}: $($jobs.Count)/$($jobs.Count) individual jobs SUCCESS ($($latest.html_url))"
 }
 
 $Sha = Invoke-Checked "git" @("rev-parse", "--verify", "HEAD")
