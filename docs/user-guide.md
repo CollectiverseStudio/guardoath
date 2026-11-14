@@ -3524,3 +3524,8 @@ A finite run with no failures is useful evidence but does **not** prove the hist
 
 
 PII latency summaries retain finite nonnegative measurements even when they exceed 500 ms, so failed tail samples remain visible in median/max diagnostics. Missing, negative, boolean or nonfinite values are excluded from timing aggregates and still fail acceptance. A measured over-deadline result always fails the unchanged 500-ms gate; inclusion in the timing summary does not accept it.
+
+
+### Checker completion deadlines
+
+GuardOath checks monotonic elapsed time when a checker completes, in addition to asyncio cancellation. A checker that does not yield, or a delayed event loop, cannot authorize a verdict after the tenant's configured deadline merely because the timeout callback has not run. Late completion uses the existing `checker_timeout` result. An enabled privacy scan fails closed in both Input and Output, including observe mode or failure_action Flag. A late mandatory redaction recheck withholds the transformed text and Blocks; a timely first-pass finding remains visible. Existing dashboard incomplete-check errors and tenant timeout controls apply; no new configuration is needed. This enforces the deadline without guaranteeing the operating system will schedule every scan within 500 ms.

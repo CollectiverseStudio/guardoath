@@ -169,6 +169,12 @@ class Engine:
                     result = result.model_copy(update={
                         "status": "error", "findings": (), "error_code": "simulator_not_enforceable",
                     })
+                # wait_for schedules cancellation on the event loop. An adapter
+                # that does not yield, or an event-loop scheduling delay, can
+                # finish after its deadline before that callback runs. Never
+                # accept that late verdict (including a redaction recheck).
+                if perf_counter() - tick > policy.timeout_ms / 1000:
+                    raise TimeoutError
             except TimeoutError:
                 result = CheckerResult(checker_id=checker_id, checker_version=version,
                                        status="error", error_code="checker_timeout", simulated=simulated)

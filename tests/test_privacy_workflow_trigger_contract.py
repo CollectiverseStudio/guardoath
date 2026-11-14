@@ -24,6 +24,7 @@ def test_reliability_gate_cannot_omit_shipped_privacy_paths():
         "policies/playground.json",
         "tests/test_dashboard.py",
         "tests/test_pii_deadline_diagnostics.py",
+        "tests/test_checker_completion_deadline.py",
         "tests/test_pii_context_window.py",
         "tests/test_pii_redaction_assembly.py",
         "tests/test_pii_core_validation_cache.py",
@@ -63,3 +64,10 @@ def test_reliability_gate_runs_all_required_real_engine_checks():
     )[1].split("Repeated real PII detection", 1)[0]
     assert "windows-latest" in workflow and "ubuntu-latest" in workflow
     assert "fail-fast: false" in workflow
+
+
+def test_completion_deadline_regression_is_executed_by_privacy_gate():
+    workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows"
+                / "pii-reliability-gate.yml").read_text(encoding="utf-8")
+    checks = workflow.split("Verify regex concurrency never changes detector matches", 1)[1]
+    assert "tests/test_checker_completion_deadline.py" in checks.split("Repeated real PII detection", 1)[0]
