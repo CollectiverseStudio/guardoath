@@ -216,11 +216,11 @@ test("Input wizard warns about Output-only comparison definitions, not synthetic
   await page.locator("#comparison-stage-output").check();
   await page.locator("#comparison-apply").click();
   await expect(warning).toBeVisible();
-  await expect(warning).toContainText("Unsaved Output field comparison definitions");
+  await expect(warning).toContainText("Unsaved Output changes (field comparison definitions)");
   await page.locator("#tenant-tab-output").click();
   await expect(warning).toBeHidden(); // No Input change in the final draft.
   await page.locator("#tenant-tab-input").click();
-  await expect(warning).toContainText("Unsaved Output field comparison definitions");
+  await expect(warning).toContainText("Unsaved Output changes (field comparison definitions)");
 
   // The advanced arithmetic family uses the same tenant-owned stage warning,
   // including its bulk editor; this does not save or create a second engine.
@@ -235,7 +235,7 @@ test("Input wizard warns about Output-only comparison definitions, not synthetic
   await page.locator("#arithmetic-bulk-confirm").check();
   await page.locator("#arithmetic-bulk-import").click();
   await expect(page.locator("#arithmetic-bulk-status")).toContainText("staged");
-  await expect(warning).toContainText("Unsaved Output field comparison definitions");
+  await expect(warning).toContainText("Unsaved Output changes (field comparison definitions)");
   const after = await current();
   expect(after.revision).toBe(original.revision);
   expect(after.comparisons).toEqual(original.comparisons);
