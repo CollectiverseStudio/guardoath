@@ -880,7 +880,7 @@ $("tenant-save").addEventListener("click", () => {
 // are read-only and never become editable through this warning.
 function hasHiddenComparisonDraft(tenant, changes, stage) {
   for (const field of ["comparisons", "advanced_arithmetic", "advanced_identity",
-                       "advanced_conversion_time", "advanced_statistical_drift"]) {
+                       "advanced_conversion_time"]) {
     if (!Object.hasOwn(changes, field)) continue;
     const change = changes[field];
     const next = Array.isArray(change) ? change : change?.editable;
@@ -904,6 +904,14 @@ function hasHiddenComparisonDraft(tenant, changes, stage) {
     for (const removed of prevById.values()) {
       if (!Array.isArray(removed?.stages) || removed.stages.includes(stage)) return true;
     }
+  }
+  // PSI histograms are deliberately omitted from application.tenant. Ask
+  // its authenticated editor only for the changed-stage boolean, never for
+  // private reference values, then preserve the conservative fail-warning
+  // behavior if the optional editor is unavailable.
+  if (Object.hasOwn(changes, "advanced_statistical_drift")) {
+    const editor = window.statisticalDriftEditor;
+    return !editor || typeof editor.affectsStage !== "function" || editor.affectsStage(stage);
   }
   return false;
 }
