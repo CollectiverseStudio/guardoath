@@ -3502,8 +3502,9 @@ After connecting an authorized tenant or demo account, open **Checks on this rec
 When the same email address or payment-card text occurs in multiple fields or
 multiple places in one Input or Output, GuardOath still inspects and reports
 **every occurrence**. A bounded request-local optimization reuses only the
-core validator's answer for a repeated identical candidate (up to 256 short
-candidates); it never reuses findings, source spans, stage actions, tenant
+same recognizer's verdict for a repeated identical candidate (up to 256
+short candidates). Different recognizers reporting the same entity never share
+verdicts; findings, source spans, stage actions, tenant
 decisions, or redacted content. A Redact operation still checks its transformed
 output again with a **new** scan and fresh validation cache. Incomplete/error
 paths remain fail-closed. This is an internal performance improvement, not a

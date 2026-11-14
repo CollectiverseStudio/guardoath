@@ -276,7 +276,10 @@ def _validate_core_candidate(recognizer, candidate, validation_cache):
     """
     if len(candidate) > 256:
         return recognizer.validate_result(candidate)
-    key = (recognizer.supported_entities[0], candidate)
+    # Multiple validators can advertise the same entity while checking it
+    # differently. Keep a cached verdict bound to the actual recognizer; its
+    # identity is local to the scan and never appears in findings or reports.
+    key = (id(recognizer), recognizer.supported_entities[0], candidate)
     if key in validation_cache:
         return validation_cache[key]
     result = recognizer.validate_result(candidate)

@@ -51,6 +51,28 @@ def test_entity_namespace_prevents_cross_recognizer_verdict_reuse():
     assert len(shared_scan) == 2
 
 
+def test_same_entity_different_recognizers_keep_independent_verdicts():
+    class RejectingRecognizer(CountingRecognizer):
+        def validate_result(self, candidate):
+            self.calls += 1
+            return False
+
+    class AcceptingRecognizer(CountingRecognizer):
+        def validate_result(self, candidate):
+            self.calls += 1
+            return True
+
+    reject = RejectingRecognizer("EMAIL_ADDRESS")
+    accept = AcceptingRecognizer("EMAIL_ADDRESS")
+    cache = {}
+    candidate = "synthetic@example.test"
+    for _ in range(3):
+        assert _validate_core_candidate(reject, candidate, cache) is False
+        assert _validate_core_candidate(accept, candidate, cache) is True
+    assert reject.calls == accept.calls == 1
+    assert len(cache) == 2
+
+
 def test_cache_is_bounded_and_long_values_never_persist():
     validator = CountingRecognizer()
     cache = {}
