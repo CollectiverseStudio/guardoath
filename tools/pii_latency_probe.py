@@ -28,6 +28,14 @@ def summarize(case_id, stage, results):
     """Aggregate *only* known-safe metrics; do not serialize CheckResponse."""
     latencies, recheck_latencies = [], []
     errors = 0
+    failure_causes = {}
+    # Fixed, non-sensitive machine labels only. Never render unexpected
+    # exception/error text or any checker message as a CI failure cause.
+    safe_codes = frozenset({
+        "checker_timeout", "checker_failure", "checker_unavailable",
+        "pii_scan_deadline", "pii_capacity_exceeded", "pii_field_limit",
+        "invalid_json_for_pii",
+    })
     for result in results:
         checkers = tuple(result.checker_results)
         rechecks = tuple(result.redaction.validation_results)
@@ -41,11 +49,27 @@ def summarize(case_id, stage, results):
         latencies.extend(float(c.latency_ms) for c in checkers if valid_timing(c))
         recheck_latencies.extend(float(c.latency_ms) for c in rechecks if valid_timing(c))
         pii = tuple(c for c in checkers if c.checker_id == "pii")
-        is_bad = (result.evaluation_status != "complete" or len(pii) != 1
+        # These two shipped profiles run precisely one local PII checker.
+        # An unplanned checker must not silently count as verified coverage.
+        is_bad = (result.evaluation_status != "complete" or len(checkers) != 1
+                  or len(pii) != 1
                   or any(c.status == "error" or not valid_timing(c)
                          for c in checkers + rechecks))
         is_bad |= not any(f.rule_id == "pii.date_of_birth" for f in result.findings)
         is_bad |= any(c.status != "flagged" for c in pii)
+        causes = set()
+        if result.evaluation_status != "complete":
+            causes.add("evaluation/incomplete")
+        if len(checkers) != 1 or len(pii) != 1:
+            causes.add("first_pass/wrong_checker_count")
+        for phase, checks in (("first_pass", checkers),
+                              ("redaction_recheck", rechecks)):
+            for check in checks:
+                if not valid_timing(check):
+                    causes.add(phase + "/latency_invalid_or_late")
+                if check.status == "error":
+                    code = getattr(check, "error_code", None)
+                    causes.add(phase + "/" + (code if code in safe_codes else "other_error"))
         if case_id == "dob-redaction":
             # A successful recheck alone does not prove the preview removed
             # the fixed synthetic DOB. An unchanged sensitive value must
@@ -56,13 +80,19 @@ def summarize(case_id, stage, results):
                        or any(c.status != "passed" for c in rechecks)
                        or not isinstance(preview, str)
                        or _SYNTHETIC_REDACTION_DOB in preview)
+        if is_bad and not causes:
+            causes.add("evaluation/contract_mismatch")
+        if is_bad:
+            for cause in causes:
+                failure_causes[cause] = failure_causes.get(cause, 0) + 1
         errors += bool(is_bad)
     def durations(values):
         ordered = sorted(values)
         return {"observed": len(ordered), "median_ms": round(median(ordered), 3) if ordered else None,
                 "max_ms": round(ordered[-1], 3) if ordered else None}
     return {"case": case_id, "stage": stage, "requests": len(results),
-            "failed_contracts": errors, "first_pass": durations(latencies),
+            "failed_contracts": errors, "failure_causes": dict(sorted(failure_causes.items())),
+            "first_pass": durations(latencies),
             "redaction_recheck": durations(recheck_latencies)}
 
 
