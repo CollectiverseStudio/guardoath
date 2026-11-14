@@ -234,6 +234,11 @@ test("Input wizard warns about Output-only comparison definitions, not synthetic
   await expect(page.locator("#comparison-bulk-status")).toContainText("staged");
   await expect(warning).toBeHidden();
   expect((await current()).revision).toBe(original.revision);
+  // The order regression has finished. Remove the second Input-only draft
+  // before switching to Output so that a real hidden Input edit does not
+  // incorrectly make the independent Output-stage assertion expect silence.
+  await page.getByRole("button", {name: "Remove comparison " + secondId, exact: true}).click();
+  await expect(warning).toBeHidden();
 
   // Change the *unsaved* rule to Output-only while Output settings are hidden.
   await page.getByRole("button", {name: "Edit comparison " + id, exact: true}).click();
