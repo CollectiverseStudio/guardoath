@@ -132,3 +132,33 @@ jobs:
           }
           Expect-Blocked { Assert-Run @($badRun) 'Field Comparisons Evidence' $sha } 'not green'
           Write-Host 'Eight acceptance scenarios: one success, seven fail-closed'
+
+      - name: Open reliability issue reports risk without an administrative release veto
+        shell: pwsh
+        run: |
+          $tokens = $null; $errors = $null
+          $ast = [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path 'deploy/aws/Deploy-Verified.ps1').Path,
+            [ref]$tokens, [ref]$errors)
+          if ($errors.Count) { throw "Deployment script cannot be parsed" }
+          $notice = $ast.Find({
+            param($node)
+            $node -is [System.Management.Automation.Language.IfStatementAst] -and
+              $node.Extent.Text.StartsWith('if ($OpenRisk.state')
+          }, $true)
+          if (-not $notice) { throw "Missing actual issue-status notice" }
+          foreach ($case in @(
+            @{ state = 'open'; state_reason = $null; warn = $true },
+            @{ state = 'closed'; state_reason = 'not_planned'; warn = $true },
+            @{ state = 'closed'; state_reason = 'completed'; warn = $false }
+          )) {
+            $OpenRisk = [pscustomobject]$case
+            $warnings = @(Invoke-Expression $notice.Extent.Text 3>&1)
+            if (($warnings.Count -gt 0) -ne $case.warn) {
+              throw "Wrong reliability notice for state $($case.state)"
+            }
+            if ($case.warn -and -not ($warnings[0].ToString().Contains('not proven resolved'))) {
+              throw "Release notice must not claim the latency incident resolved"
+            }
+          }
+          Write-Host 'Three real issue-status scenarios passed; CI job gates remain separately enforced'

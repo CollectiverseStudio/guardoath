@@ -1,6 +1,6 @@
 # GuardOath production deployment. Run from a clean repository checkout on Windows.
-# Default is read-only preflight. -Deploy requires exact-source GitHub gates and
-# closed reliability blocker #30; it does not override the 15 live acceptance checks.
+# Default is read-only preflight. -Deploy requires exact-source GitHub gates.
+# Issue #30 stays visible as a warning; the 15 live acceptance checks still apply.
 [CmdletBinding()]
 param(
     [switch]$Deploy,
@@ -97,7 +97,9 @@ foreach ($required in @("Tests", "Push on main", "Field Comparisons Evidence", "
 }
 $OpenRisk = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/issues/30" -Headers $Headers -Method Get
 if ($OpenRisk.state -ne "closed" -or $OpenRisk.state_reason -eq "not_planned") {
-    throw "Issue #30 remains an unresolved 500-ms PII/redaction release blocker. Fix and verify it before production deployment."
+    # Greg explicitly authorized deployment without waiting for issue closure.
+    # Exact-SHA PII jobs and runtime fail-closed deadlines remain mandatory.
+    Write-Warning "Issue #30 remains tracked: intermittent 500-ms privacy latency is not proven resolved. Exact-SHA PII reliability jobs passed; late or incomplete privacy checks still Block. Issue status alone does not stop this authorized deployment."
 }
 
 # The account identity and deployed stack must be readable before any write.

@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
     paths:
+      # Deployment guard changes need a complete exact-SHA release receipt.
+      - "deploy/aws/Deploy-Verified.ps1"
       - "guardoath/pii.py"
       - "guardoath/privacy_digit_prefilter.py"
       - "tests/test_privacy_digit_prefilter.py"
