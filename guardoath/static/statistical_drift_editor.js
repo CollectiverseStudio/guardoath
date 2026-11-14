@@ -11,6 +11,14 @@
   function delta() {
     return available && JSON.stringify(original) !== JSON.stringify(draft) ? clone(draft) : null;
   }
+  // The PSI reference is owner-only and deliberately absent from the public
+  // application summary. Answer whether a pending draft changes a given stage
+  // using the original owner-scoped record, without exposing any histogram.
+  function affectsStage(stage) {
+    if (!available || !["input", "output"].includes(stage)) return false;
+    const selected = rules => rules.filter(rule => rule.stages.includes(stage));
+    return JSON.stringify(selected(original)) !== JSON.stringify(selected(draft));
+  }
   function actions(stage, current) {
     const result = {...current};
     for (const item of original) {
@@ -197,5 +205,5 @@
     });
     draw();
   }
-  window.statisticalDriftEditor = {render, delta, actions};
+  window.statisticalDriftEditor = {render, delta, actions, affectsStage};
 })();
