@@ -264,6 +264,27 @@ def _assemble_redacted_text(text, merged, check_deadline=lambda: None):
 
 
 
+def _validate_core_candidate(recognizer, candidate, validation_cache):
+    """Reuse only pure core recognizer verdicts inside ONE PII scan.
+
+    Identical email/card substrings occur in multiple JSON fields and in large
+    reports. Their provider-free validate_result() does not depend on the
+    occurrence's JSON key, context, stage, or tenant. Keep *every* original
+    regex match, span, finding and redact/recheck; memoize only this one
+    expensive candidate-validation call, capped to 256 short strings. No
+    customer value or verdict is stored across scan invocations.
+    """
+    if len(candidate) > 256:
+        return recognizer.validate_result(candidate)
+    key = (recognizer.supported_entities[0], candidate)
+    if key in validation_cache:
+        return validation_cache[key]
+    result = recognizer.validate_result(candidate)
+    if len(validation_cache) < 256:
+        validation_cache[key] = result
+    return result
+
+
 def _count_digits_with_deadline(text, check_deadline):
     """Preserve str.isdigit() prefilter semantics, checking the PII budget on
     wide text before spending it all in a single uninterrupted digit count.
@@ -499,6 +520,10 @@ def build_pii_checker():
         # ordinary JSON leaves need not run every recognizer again; never
         # reuse positives, transformed values, or labeled-field budget work.
         clean_texts = set()
+        # Candidate validation is independent of the surrounding text, unlike
+        # detection spans, source labels, or context. This bounded dictionary
+        # belongs to the current scan only, including a fresh redaction recheck.
+        core_validation_cache = {}
         sensitive_key = False
         disabled = set(policy.disabled_privacy_entities)
         # Types whose rule the tenant turned off (rule_actions) are not looked for: never reported or redacted.
@@ -555,7 +580,7 @@ def build_pii_checker():
                         nearby = hint + " " + text[max(0, match.start()-40):match.start()] + " " + text[match.end():match.end()+40]
                         if not standard and not context_pattern.search(nearby, timeout=.01):
                             continue
-                    elif recognizer.validate_result(candidate) is not True:
+                    elif _validate_core_candidate(recognizer, candidate, core_validation_cache) is not True:
                         continue
                     found(entity, PATTERN, OWN_TIER, match.start(), match.end())
             if active:
