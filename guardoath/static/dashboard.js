@@ -888,11 +888,14 @@ function hasHiddenComparisonDraft(tenant, changes, stage) {
     // An unloaded/malformed portfolio cannot prove a hidden stage unaffected.
     if (!Array.isArray(next) || !Array.isArray(previous)) return true;
     const prevById = new Map(previous.map(rule => [rule.rule_id, rule]));
-    // Comparison ordering is semantically significant, including at 500 rules.
-    if (previous.map(rule => rule.rule_id).join("\u0000") !==
-        next.map(rule => rule.rule_id).join("\u0000") &&
-        [...previous, ...next].some(rule => !Array.isArray(rule?.stages) || rule.stages.includes(stage)))
-      return true;
+    // Only the ordering *within the hidden stage* is relevant. Adding or
+    // reordering Input-only definitions cannot change Output policy, even
+    // when the saved portfolio already contains Output rules (and vice versa).
+    // A malformed stage scope cannot establish that the hidden stage is safe.
+    if ([...previous, ...next].some(rule => !Array.isArray(rule?.stages))) return true;
+    const orderedStageIds = rules => rules.filter(rule => rule.stages.includes(stage))
+      .map(rule => rule.rule_id).join("\u0000");
+    if (orderedStageIds(previous) !== orderedStageIds(next)) return true;
     for (const rule of next) {
       const saved = prevById.get(rule.rule_id);
       prevById.delete(rule.rule_id);
