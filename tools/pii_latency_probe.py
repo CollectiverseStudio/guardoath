@@ -41,13 +41,16 @@ def summarize(case_id, stage, results):
         rechecks = tuple(result.redaction.validation_results)
         # A missing, nonfinite, negative or unmeasured latency must never make
         # the release gate look green simply because there is no number > 500.
-        def valid_timing(check):
+        def measurable_timing(check):
             value = check.latency_ms
             return (isinstance(value, (int, float)) and not isinstance(value, bool)
-                    and isfinite(value) and 0 <= value <= 500)
+                    and isfinite(value) and 0 <= value)
 
-        latencies.extend(float(c.latency_ms) for c in checkers if valid_timing(c))
-        recheck_latencies.extend(float(c.latency_ms) for c in rechecks if valid_timing(c))
+        def valid_timing(check):
+            return measurable_timing(check) and check.latency_ms <= 500
+
+        latencies.extend(float(c.latency_ms) for c in checkers if measurable_timing(c))
+        recheck_latencies.extend(float(c.latency_ms) for c in rechecks if measurable_timing(c))
         pii = tuple(c for c in checkers if c.checker_id == "pii")
         # These two shipped profiles run precisely one local PII checker.
         # An unplanned checker must not silently count as verified coverage.

@@ -92,7 +92,7 @@ def test_missing_checker_or_missing_detection_never_counts_as_clean():
 
 
 @pytest.mark.parametrize("invalid_latency", [
-    None, -1, float("nan"), float("inf"), float("-inf"), True, 500.01,
+    None, -1, float("nan"), float("inf"), float("-inf"), True,
 ])
 def test_missing_or_nonfinite_first_pass_timings_cannot_pass(invalid_latency):
     sample = _response()
@@ -103,7 +103,7 @@ def test_missing_or_nonfinite_first_pass_timings_cannot_pass(invalid_latency):
 
 
 @pytest.mark.parametrize("invalid_latency", [
-    None, -1, float("nan"), float("inf"), float("-inf"), True, 500.01,
+    None, -1, float("nan"), float("inf"), float("-inf"), True,
 ])
 def test_missing_or_nonfinite_redaction_recheck_timings_cannot_pass(invalid_latency):
     sample = _response()
@@ -183,7 +183,7 @@ def test_first_pass_deadline_error_is_attributed_without_private_content():
         "first_pass/latency_invalid_or_late": 1,
         "first_pass/pii_scan_deadline": 1,
     }
-    assert report["first_pass"]["observed"] == 0
+    assert report["first_pass"] == {"observed": 1, "median_ms": 594.031, "max_ms": 594.031}
 
 
 def test_redaction_recheck_deadline_is_attributed_independently():
@@ -226,3 +226,22 @@ def test_failure_causes_count_once_per_response_and_not_per_duplicate_code():
     assert result["failed_contracts"] == 2
     assert result["failure_causes"]["first_pass/checker_timeout"] == 2
     assert result["failure_causes"]["first_pass/latency_invalid_or_late"] == 2
+
+
+@pytest.mark.parametrize("phase", ["first_pass", "redaction_recheck"])
+@pytest.mark.parametrize("latency", [500.01, 594.031, 611.02])
+def test_late_measurements_remain_visible_but_never_pass(phase, latency):
+    sample = _response(**({"first": latency} if phase == "first_pass" else {"recheck": latency}))
+    report = probe.summarize("dob-redaction", "input", [sample])
+    assert report["failed_contracts"] == 1
+    assert report["failure_causes"][phase + "/latency_invalid_or_late"] == 1
+    assert report[phase] == {"observed": 1, "median_ms": latency, "max_ms": latency}
+
+
+def test_mixed_timings_include_late_tail_without_hiding_failed_contracts():
+    report = probe.summarize("dob-redaction", "output", [
+        _response(first=100, recheck=80), _response(first=594, recheck=611),
+    ])
+    assert report["failed_contracts"] == 1
+    assert report["first_pass"] == {"observed": 2, "median_ms": 347, "max_ms": 594}
+    assert report["redaction_recheck"] == {"observed": 2, "median_ms": 345.5, "max_ms": 611}
