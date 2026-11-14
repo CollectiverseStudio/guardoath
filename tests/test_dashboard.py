@@ -211,9 +211,37 @@ def test_proposed_answer_is_locked_until_the_input_test_passes():
 def test_tenant_panel_has_no_profile_choice_and_the_profile_box_starts_hidden():
     # Profiles were removed for tenants (2026-11-02). The profile choice is for the local developer key only.
     page = TestClient(create_app(credentials={"test-key": "demo"})).get("/dashboard").text
-    panel = page[page.index('id="tenant-panel"'):]
-    panel = panel[:panel.index("</section>")]
-    assert 'id="tenant-checks"' in panel
+    # The customer setup wizard is a nested <section> within tenant-panel.
+    # Parse the actual HTML hierarchy instead of truncating at its first
+    # </section>; still require tenant-checks inside the *hidden* owner panel.
+    from html.parser import HTMLParser
+
+    class TenantPanel(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.depth = 0
+            self.has_checks = False
+            self.hidden = False
+
+        def handle_starttag(self, tag, attrs):
+            attributes = dict(attrs)
+            if tag == "section":
+                if self.depth:
+                    self.depth += 1
+                elif attributes.get("id") == "tenant-panel":
+                    self.depth = 1
+                    self.hidden = "hidden" in attributes
+            if self.depth and attributes.get("id") == "tenant-checks":
+                self.has_checks = True
+
+        def handle_endtag(self, tag):
+            if tag == "section" and self.depth:
+                self.depth -= 1
+
+    panel = TenantPanel()
+    panel.feed(page)
+    assert panel.hidden
+    assert panel.has_checks
     for marker in ['tenant-default', 'tenant-profile-note', "Default profile"]:
         assert marker not in page, marker
     assert '<details id="advanced" open hidden>' in page
