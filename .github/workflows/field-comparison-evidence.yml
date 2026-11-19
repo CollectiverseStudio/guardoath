@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
     paths:
+      # Admin API or security changes must run this exact-SHA release gate.
+      - "guardoath/admin_*.py"
+      - "tests/test_admin_*.py"
       # Deployment guard changes need a complete exact-SHA release receipt.
       - "deploy/aws/Deploy-Verified.ps1"
       - "guardoath/business.py"
