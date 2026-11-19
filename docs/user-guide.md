@@ -3548,3 +3548,21 @@ Stripe invoices are explicitly unavailable without trusted billing source
 data. This change does not enable production admin access, publish catalog
 rules, or alter existing tenant settings, the 500-ms PII budget or release
 deployment controls.
+
+
+### Administrator Stripe subscription read verification
+
+The administrator Verify Stripe action fetches the subscription using only a
+server-owned customer and subscription binding. A direct provider subscription
+status of active does not independently establish customer access. The view
+also checks the server-configured Stripe price, exactly one complete priced
+subscription item, the matching live/test environment, and the saved tenant
+subscription status, access state, and Stripe billing mode. An inconsistent
+snapshot fails closed or reports the effective entitlement as false. The
+response omits Stripe identifiers, customer contacts, card details and keys.
+
+When Stripe administration is configured, both GUARDOATH_STRIPE_PRICE_ID and
+GUARDOATH_STRIPE_SECRET_KEY must be valid server-side values. Neither is
+accepted from the browser. Verification does not mutate Stripe or tenant
+entitlements, and does not prove invoice settlement or production payment
+acceptance; those financial operations require separate audited workflows.

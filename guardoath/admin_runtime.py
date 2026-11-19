@@ -82,12 +82,17 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
     billing_reporter = None
     if os.getenv("GUARDOATH_STRIPE_SECRET_KEY", ""):
         secret = os.environ["GUARDOATH_STRIPE_SECRET_KEY"]
+        price = os.getenv("GUARDOATH_STRIPE_PRICE_ID", "")
+        if (not re.fullmatch(r"price_[A-Za-z0-9_]{1,96}", price) or
+                not re.fullmatch(r"sk_(?:live|test)_[A-Za-z0-9_]{11,}", secret)):
+            raise AdminConfigurationError("Admin Stripe verification requires server-side secret and valid configured price")
         def verified_stripe(tenant_id, customer_id, subscription_id):
             from guardoath.stripe_provider import fetch_subscription_snapshot
             from guardoath.subscription_reconciliation import StripeBinding
             binding = StripeBinding(tenant_id, customer_id, subscription_id)
             return fetch_subscription_snapshot(binding, secret)
-        billing_reporter = AdminSubscriptionReporter(verified_stripe)
+        billing_reporter = AdminSubscriptionReporter(
+            verified_stripe, expected_price_id=price, expected_livemode=secret.startswith("sk_live_"))
     record_validator = rule_exists = None
     if mutator is not None:
         from guardoath.tenant_record import TenantRecord
