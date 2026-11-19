@@ -28,7 +28,13 @@ def test_data_quality_api_expectations(clients,name,case):
     response=clients[name].post('/v1/checks/'+case['stage'],headers={'Authorization':'Bearer test-key'},json=case['request'])
     assert response.status_code==200
     data=response.json();expected=case['expected']
-    for key in ['evaluation_status','recommended_action','effective_action']:assert data[key]==expected[key]
+    # Keep strict expectations; report only bounded checker codes and timings
+    # on intermittent CI failures, never private submitted content.
+    diagnostic = [(r.get('checker_id'), r.get('status'), r.get('error_code'),
+                   r.get('latency_ms')) for r in data['checker_results']]
+    for key in ['evaluation_status','recommended_action','effective_action']:
+        assert data[key]==expected[key], (
+            f"{name}:{case['case_id']} {key}; checker_status_code_latency={diagnostic}")
     assert {r['checker_id']:r['status'] for r in data['checker_results']}==expected['checker_statuses']
     assert sorted(f['rule_id'] for f in data['findings'])==sorted(expected['finding_rule_ids'])
     assert data['cost_usd']==0 and data['simulated'] is False

@@ -155,9 +155,12 @@ class Engine:
             simulated = bool(getattr(checker, "simulated", False))
             version = getattr(checker, "checker_version", "unknown")
             try:
-                result = await asyncio.wait_for(
-                    checker(content_request, policy, stage), timeout=policy.timeout_ms / 1000,
-                )
+                # Run the checker within its existing task. wait_for() creates
+                # another task and an avoidable event-loop scheduling hop on
+                # every call. The timeout context keeps the same deadline;
+                # monotonic post-completion enforcement still rejects late work.
+                async with asyncio.timeout(policy.timeout_ms / 1000):
+                    result = await checker(content_request, policy, stage)
                 if result.checker_id != checker_id:
                     raise ValueError("Adapter returned wrong identity")
                 if (result.status == "flagged") != bool(result.findings):
@@ -169,10 +172,9 @@ class Engine:
                     result = result.model_copy(update={
                         "status": "error", "findings": (), "error_code": "simulator_not_enforceable",
                     })
-                # wait_for schedules cancellation on the event loop. An adapter
-                # that does not yield, or an event-loop scheduling delay, can
-                # finish after its deadline before that callback runs. Never
-                # accept that late verdict (including a redaction recheck).
+                # Cancellation is scheduled on the event loop. A non-yielding
+                # adapter or delayed loop may finish after the timer expires.
+                # Always reject late verdicts, including redaction rechecks.
                 if perf_counter() - tick > policy.timeout_ms / 1000:
                     raise TimeoutError
             except TimeoutError:
