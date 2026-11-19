@@ -3529,3 +3529,22 @@ PII latency summaries retain finite nonnegative measurements even when they exce
 ### Checker completion deadlines
 
 GuardOath checks monotonic elapsed time when a checker completes, in addition to asyncio cancellation. A checker that does not yield, or a delayed event loop, cannot authorize a verdict after the tenant's configured deadline merely because the timeout callback has not run. Late completion uses the existing `checker_timeout` result. An enabled privacy scan fails closed in both Input and Output, including observe mode or failure_action Flag. A late mandatory redaction recheck withholds the transformed text and Blocks; a timely first-pass finding remains visible. Existing dashboard incomplete-check errors and tenant timeout controls apply; no new configuration is needed. This enforces the deadline without guaranteeing the operating system will schedule every scan within 500 ms.
+
+
+### Administrator tenant usage (owner read-only)
+
+The owner-only console exposes a Usage action for each tenant, backed by the
+existing authoritative tenant record at
+GET /v1/admin/tenants/{tenant_id}/usage. Its response gives the UTC month,
+stored validation-request counter when available, monthly allowance, remaining
+requests before allowance, effective overage policy, up to 12 recent recorded
+months, tenant revision, record timestamp and UTC read time. Missing counters
+are reported as unavailable, not zero. A remaining allowance does not mean
+blocking is enabled when overage policy is allow_and_record.
+
+This operation requires independently verified administrator identity and MFA;
+normal customers and application API keys cannot read it. USD AWS costs and
+Stripe invoices are explicitly unavailable without trusted billing source
+data. This change does not enable production admin access, publish catalog
+rules, or alter existing tenant settings, the 500-ms PII budget or release
+deployment controls.

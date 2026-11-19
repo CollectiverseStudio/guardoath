@@ -1,0 +1,93 @@
+"""Admin usage is authoritative and never returns fake zeroes or credentials."""
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+import pytest
+from guardoath.admin_console import VerifiedAdmin, create_admin_router
+from guardoath.admin_usage import UsageUnavailable, tenant_usage_report
+
+
+@dataclass
+class Tenant:
+    tenant_id: str = "usr-usage"
+    display_name: str = "A tenant"
+    status: str = "active"
+    demo: bool = False
+    revision: int = 7
+    monthly_allowance: int = 1000
+    overage: str = "block"
+    usage: dict = field(default_factory=lambda: {"2026-11": 41, "2026-10": 123})
+    updated_at: str = "2026-11-19T17:00:00Z"
+    subscription_status: str = "active"
+
+
+NOW = lambda: datetime(2026, 11, 19, tzinfo=timezone.utc)
+
+
+def test_authoritative_usage_and_bounded_history_with_missing_is_unknown():
+    report = tenant_usage_report(Tenant(), clock=NOW)
+    assert report["requests_recorded"] == 41
+    assert report["remaining_before_allowance"] == 959
+    assert report["blocking_cap_enabled"] is True
+    assert report["recent_recorded_months"] == [
+        {"month_utc": "2026-11", "requests": 41}, {"month_utc": "2026-10", "requests": 123}]
+    assert report["aws_cost_usd"] is None and report["stripe_invoice_usd"] is None
+    missing = tenant_usage_report(Tenant(usage={}), clock=NOW)
+    assert missing["requests_recorded"] is None
+    assert missing["remaining_before_allowance"] is None
+    assert not missing["recent_recorded_months"]
+
+
+def test_overage_policy_cannot_be_misreported_as_hard_cap():
+    result = tenant_usage_report(Tenant(overage="allow_and_record", usage={"2026-11": 1500}), clock=NOW)
+    assert result["remaining_before_allowance"] == 0
+    assert result["blocking_cap_enabled"] is False
+
+
+@pytest.mark.parametrize("changes", [
+    {"usage": {"2026-11": -1}}, {"usage": {"2026-13": 1}},
+    {"usage": {"2026-11": True}}, {"usage": {"2026-11": "43"}},
+    {"monthly_allowance": -1}, {"revision": True}, {"overage": "open"},
+    {"tenant_id": "../../etc/passwd"},
+])
+def test_malformed_record_fails_closed(changes):
+    with pytest.raises(UsageUnavailable):
+        tenant_usage_report(Tenant(**changes), clock=NOW)
+
+
+class Store:
+    def __init__(self, record): self.record = record
+    def get(self, tid): return self.record if tid == "usr-usage" else None
+    def tenant_ids(self): return ("usr-usage",)
+
+
+def test_owner_only_usage_route_masks_provider_data_and_missing_tenants():
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        tenant_store=Store(Tenant(usage={datetime.now(timezone.utc).strftime("%Y-%m"): 41})),
+        verify_cognito_admin=lambda tok: VerifiedAdmin("trusted-subject", frozenset({"owner"}), True)
+        if tok == "owner-token" else None,
+    ))
+    client = TestClient(app)
+    path = "/v1/admin/tenants/usr-usage/usage"
+    for headers in [{}, {"X-GuardOath-Key":"owner-token"}, {"Authorization":"Bearer customer-token"}]:
+        assert client.get(path, headers=headers).status_code == 401
+    response = client.get(path, headers={"X-GuardOath-Admin-Session":"owner-token"})
+    assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.json()["usage"]["requests_recorded"] == 41
+    assert "payer_id" not in response.text and "key_hash" not in response.text
+    assert client.get("/v1/admin/tenants/usr-other/usage", headers={"X-GuardOath-Admin-Session":"owner-token"}).status_code == 404
+
+
+def test_corrupt_usage_never_returns_partial_data():
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        tenant_store=Store(Tenant(usage={"bogus":12})),
+        verify_cognito_admin=lambda tok: VerifiedAdmin("trusted-subject",frozenset({"owner"}),True)
+        if tok == "owner-token" else None,
+    ))
+    response = TestClient(app).get("/v1/admin/tenants/usr-usage/usage", headers={"X-GuardOath-Admin-Session":"owner-token"})
+    assert response.status_code == 503
+    assert "bogus" not in response.text

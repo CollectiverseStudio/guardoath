@@ -18,6 +18,7 @@ from guardoath.admin_billing import AdminSubscriptionReporter, BillingUnavailabl
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from guardoath.admin_catalog import CatalogProvider, read_catalog
 from guardoath.admin_directory import DynamoAdminDirectory, InvalidCursor
+from guardoath.admin_usage import tenant_usage_report
 
 
 @dataclass(frozen=True)
@@ -228,6 +229,23 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         if record is None:
             raise HTTPException(status_code=404, detail="Tenant not found")
         return admin_json({"tenant": _safe_record(record), "source": "tenant store"})
+
+    @router.get("/v1/admin/tenants/{tenant_id}/usage")
+    def usage_detail(tenant_id: str, principal: VerifiedAdmin = Depends(require_admin)):
+        if not TENANT_ID.fullmatch(tenant_id):
+            raise HTTPException(status_code=404, detail="Tenant not found")
+        if tenant_store is None:
+            raise HTTPException(status_code=503, detail="Usage reporting unavailable")
+        try:
+            record = tenant_store.get(tenant_id)
+            if record is None:
+                raise HTTPException(status_code=404, detail="Tenant not found")
+            report = tenant_usage_report(record)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="Usage reporting unavailable") from exc
+        return admin_json({"status": "ok", "usage": report})
 
     @router.get("/v1/admin/subscriptions/{tenant_id}")
     def read_verified_subscription(tenant_id: str, principal: VerifiedAdmin = Depends(require_admin)):

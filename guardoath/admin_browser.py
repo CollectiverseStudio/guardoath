@@ -175,6 +175,7 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <div id="app" hidden><section class="panel"><nav><button type="button" id="refresh">Refresh</button><button type="button" id="logout">Sign out</button></nav><p id="status" role="status"></p></section>
 <section class="panel"><h2>Overview</h2><div class="grid" id="metrics"></div></section>
 <section class="panel"><h2>Tenants</h2><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
+<section class="panel"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
 <section class="panel"><h2>Categories and checks</h2><p id="catalog-summary"></p><div id="categories"></div></section></div>
 </main><script src="/admin/client.js" defer></script></body></html>"""
 
@@ -204,7 +205,7 @@ _JS = r'''"use strict";
     el("metrics").replaceChildren();
     el("tenant-rows").replaceChildren();
     el("categories").replaceChildren();
-    for (const id of ["status", "tenant-status", "catalog-summary"]) say(id, "");
+    for (const id of ["status", "tenant-status", "catalog-summary", "usage-details"]) say(id, "");
     el("search").value = "";
     nextCursor = null;
     features = {tenant_status_changes:false};
@@ -275,6 +276,11 @@ _JS = r'''"use strict";
       const row = document.createElement("tr");
       for (const field of ["tenant_id", "display_name", "status", "subscription_status", "monthly_allowance", "usage_month_count"]) row.append(textNode("td", tenant[field]));
       const actions = document.createElement("td");
+      const usage = document.createElement("button");
+      usage.type = "button";
+      usage.textContent = "Usage";
+      usage.addEventListener("click", () => inspectUsage(tenant));
+      actions.append(usage);
       if (features.billing_verify && tenant.demo === false) {
         const verify = document.createElement("button");
         verify.type = "button";
@@ -304,6 +310,25 @@ _JS = r'''"use strict";
     nextCursor = data.next_cursor || null;
     el("next").disabled = !nextCursor;
     say("tenant-status", (data.tenants || []).length + " tenants on this page; source: " + (data.source || "unknown"));
+  }
+  async function inspectUsage(tenant) {
+    if (!token) return;
+    const epoch = authEpoch;
+    try {
+      const result = await request("/v1/admin/tenants/" + encodeURIComponent(tenant.tenant_id) + "/usage");
+      if (!token || epoch !== authEpoch) return;
+      const usage = result.usage || {};
+      const count = usage.requests_recorded;
+      const remaining = usage.remaining_before_allowance;
+      say("usage-details", tenant.tenant_id + " · UTC " + (usage.period_utc || "unknown") +
+        " · Recorded: " + (count === null || count === undefined ? "Unavailable" : count) +
+        " · Allowance: " + (usage.monthly_allowance ?? "Unavailable") +
+        " · Remaining before allowance: " + (remaining === null || remaining === undefined ? "Unavailable" : remaining) +
+        " · Overage policy: " + (usage.overage_policy || "Unavailable") +
+        " · AWS costs: Unavailable · Stripe invoices: Unavailable · Source: " + (usage.source || "unknown"));
+    } catch (err) {
+      if (token && epoch === authEpoch) say("usage-details", err.message);
+    }
   }
   async function verifyBilling(tenant) {
     if (!token || !features.billing_verify) return;
