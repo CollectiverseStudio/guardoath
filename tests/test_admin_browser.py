@@ -1,0 +1,134 @@
+"""Prove browser PKCE bootstrap does not disclose a token without provider-verified owner+MFA."""
+import json
+from urllib.parse import parse_qs
+
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from guardoath.admin_browser import (BrowserAuthConfig, BoundExchange,
+                                     ExchangeUnavailable, create_browser_router)
+from guardoath.admin_console import VerifiedAdmin
+
+
+CFG = BrowserAuthConfig("acme.auth.us-east-1.amazoncognito.com", "testclient123",
+                        "https://guardoath.com/admin/login")
+
+
+def owner(token):
+    if token == "a" * 40:
+        return VerifiedAdmin("subject", frozenset({"owner"}), True)
+    return None
+
+
+def app(sender=None, checker=owner):
+    application = FastAPI()
+    exchange = BoundExchange(CFG, sender=sender or (lambda url, body: {"access_token": "a" * 40}))
+    application.include_router(create_browser_router(CFG, exchange, checker))
+    return TestClient(application)
+
+
+def payload(**kwargs):
+    return {"code": "code1", "code_verifier": "x" * 43, **kwargs}
+
+
+def test_login_shell_is_public_but_contains_no_sensitive_information():
+    client = app()
+    page = client.get("/admin/login")
+    assert page.status_code == 200
+    assert "GuardOath Administration" in page.text
+    assert "client.js" in page.text
+    assert "access_token" not in page.text
+    assert "default-src 'none'" in page.headers["Content-Security-Policy"]
+    assert "frame-ancestors 'none'" in page.headers["Content-Security-Policy"]
+    assert page.headers["Cache-Control"] == "no-store"
+    script = client.get("/admin/client.js")
+    assert script.status_code == 200
+    assert "sessionStorage.setItem(\"go_admin_pkce\"" in script.text
+    assert 'sessionStorage.setItem("access_token"' not in script.text
+    assert "location.assign(uri.href)" in script.text
+    assert "textContent =" in script.text  # no untrusted HTML insertion
+    assert "innerHTML" not in script.text
+    assert 'headers["X-GuardOath-Admin-Session"] = token' in script.text
+    assert 'headers.Authorization = "Bearer " + token' not in script.text
+
+
+def test_public_config_contains_only_oauth_metadata():
+    result = app().get("/v1/admin/auth/config")
+    assert result.status_code == 200
+    assert result.json() == {"domain": CFG.domain, "client_id": CFG.client_id,
+                             "redirect_uri": CFG.redirect_uri}
+    assert result.headers["Cache-Control"] == "no-store"
+
+
+def test_exchange_uses_only_fixed_server_url_and_redirect():
+    called = []
+    def sender(url, body):
+        called.append((url, parse_qs(body.decode())))
+        return {"access_token": "a" * 40}
+    result = app(sender).post("/v1/admin/auth/exchange", json=payload())
+    assert result.status_code == 200
+    assert result.json() == {"access_token": "a" * 40, "token_type": "Bearer"}
+    assert result.headers["Cache-Control"] == "no-store"
+    assert result.headers["Pragma"] == "no-cache"
+    assert called == [("https://" + CFG.domain + "/oauth2/token", {
+        "grant_type": ["authorization_code"], "client_id": [CFG.client_id],
+        "redirect_uri": [CFG.redirect_uri], "code": ["code1"], "code_verifier": ["x" * 43]})]
+
+
+@pytest.mark.parametrize("body", [
+    {"code": "has spaces", "code_verifier": "x" * 43},
+    {"code": "valid", "code_verifier": "x" * 42},
+    {"code": "valid", "code_verifier": "ü" * 43},
+    {"code": "valid", "code_verifier": "x" * 43, "redirect_uri": "https://evil.invalid"},
+])
+def test_invalid_or_untrusted_exchange_requests_never_call_provider(body):
+    calls = []
+    client = app(sender=lambda url, form: calls.append(1))
+    result = client.post("/v1/admin/auth/exchange", json=body)
+    assert result.status_code in {401, 422}
+    assert calls == []
+
+
+@pytest.mark.parametrize("verified", [None, VerifiedAdmin("subject", frozenset({"user"}), True),
+                                    VerifiedAdmin("subject", frozenset({"owner"}), False)])
+def test_no_token_disclosed_to_non_owner_or_missing_mfa(verified):
+    result = app(checker=lambda _: verified).post("/v1/admin/auth/exchange", json=payload())
+    assert result.status_code == 403
+    assert "access_token" not in result.text
+
+
+def test_provider_failures_refuse_without_leaking_token():
+    def failure(url, body):
+        raise ExchangeUnavailable("do not display this")
+    result = app(sender=failure).post("/v1/admin/auth/exchange", json=payload())
+    assert result.status_code == 503
+    assert "do not display" not in result.text
+    assert "access_token" not in result.text
+
+
+def test_verifier_failure_is_503_and_does_not_leak_token():
+    def failure(token):
+        raise RuntimeError("private provider details")
+    result = app(checker=failure).post("/v1/admin/auth/exchange", json=payload())
+    assert result.status_code == 503
+    assert "private provider details" not in result.text
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"domain": "evil.com"},
+    {"domain": "acme.auth.eu-west-1.amazoncognito.com.attacker.invalid"},
+    {"client_id": "client id"},
+    {"redirect_uri": "https://evil.invalid/admin/login"},
+    {"redirect_uri": "http://guardoath.com/admin/login"},
+])
+def test_config_refuses_untrusted_provider_and_redirect(kwargs):
+    with pytest.raises(ValueError):
+        BrowserAuthConfig(**{**CFG.__dict__, **kwargs})
+
+
+def test_rate_limit_rejects_after_thirty_per_minute():
+    exchanger = BoundExchange(CFG, sender=lambda url, body: {"access_token": "a" * 40}, clock=lambda: 100.0)
+    for _ in range(30):
+        assert exchanger.exchange("code", "x" * 43) == "a" * 40
+    with pytest.raises(ExchangeUnavailable):
+        exchanger.exchange("code", "x" * 43)

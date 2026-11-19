@@ -178,6 +178,12 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     budget_apps = set(bindings.values()) if tenant_registry is None else set(tenant_registry.application_ids())
     budgets = RequestBudgets(resource_limits, budget_apps)
     api = FastAPI(title="GuardOath", version="0.25.0")
+    # Opt-in, owner-only administration. No extra provider calls or access
+    # exist unless this deployment is deliberately configured for admins.
+    if os.getenv("GUARDOATH_ADMIN_ENABLED", "0") == "1":
+        from guardoath.admin_runtime import configure_admin_from_environment
+        configure_admin_from_environment(api, tenants=tenants, customer_sessions=sessions)
+
     api.add_middleware(JsonIngressLimits)
     api.add_middleware(RequestCapacity, budgets=budgets)
     bearer = HTTPBearer(auto_error=False)
