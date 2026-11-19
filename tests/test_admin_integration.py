@@ -4,6 +4,17 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 import pytest
 
+def all_routes(routes):
+    for route in routes:
+        if getattr(route, "path", None) is not None:
+            yield route
+        nested = getattr(route, "routes", None)
+        if nested is None:
+            nested = getattr(getattr(route, "router", None), "routes", ())
+        if nested:
+            yield from all_routes(nested)
+
+
 from guardoath.admin_integration import AdminConfigurationError, mount_admin_console
 
 SUB = "12345678-1234-1234-1234-123456789012"
@@ -70,7 +81,7 @@ def test_missing_integrations_refuse_mount(missing):
     params[missing]=None
     app=FastAPI()
     with pytest.raises(AdminConfigurationError): mount_admin_console(app,**params)
-    assert not any(route.path=="/admin" for route in app.routes)
+    assert not any(route.path=="/admin" for route in all_routes(app.routes))
 
 def test_memory_store_cannot_substitute_for_bounded_dynamodb():
     class MemoryStore:
@@ -89,7 +100,7 @@ def test_no_admin_write_routes_are_registered():
     app=FastAPI()
     mount_admin_console(app,sessions=Sessions(),tenants=Tenants(Store()),cognito=Cognito(),cursor_signing_key=KEY)
     assert all("POST" not in route.methods and "PUT" not in route.methods and "DELETE" not in route.methods
-               for route in app.routes if route.path.startswith("/v1/admin") or route.path=="/admin")
+               for route in all_routes(app.routes) if route.path.startswith("/v1/admin") or route.path=="/admin")
 
 
 def test_browser_mount_refuses_client_mismatch_before_registering_routes():
@@ -100,7 +111,7 @@ def test_browser_mount_refuses_client_mismatch_before_registering_routes():
     with pytest.raises(AdminConfigurationError, match="match token verifier"):
         mount_admin_console(app,sessions=Sessions(),tenants=Tenants(Store()),cognito=Cognito(),
                             cursor_signing_key=KEY,browser_config=config,browser_exchange=exchange)
-    assert not any(route.path == "/admin" for route in app.routes)
+    assert not any(route.path == "/admin" for route in all_routes(app.routes))
 
 
 def test_browser_mounted_with_matching_config_and_both_routes_authorized():

@@ -6,6 +6,17 @@ import pytest
 from guardoath.admin_actions import AdminTenantActions, AdminActionConflict, AdminActionUnavailable
 from guardoath.admin_console import VerifiedAdmin, create_admin_router
 
+def all_routes(routes):
+    for route in routes:
+        if getattr(route, "path", None) is not None:
+            yield route
+        nested = getattr(route, "routes", None)
+        if nested is None:
+            nested = getattr(getattr(route, "router", None), "routes", ())
+        if nested:
+            yield from all_routes(nested)
+
+
 SUB = "12345678-1234-1234-1234-123456789012"
 
 
@@ -84,7 +95,7 @@ def test_action_route_rejects_unauthenticated_or_cross_origin_and_enforces_audit
 
 def test_write_route_not_mounted_without_audit_capability():
     app=FastAPI();app.include_router(create_admin_router())
-    assert not any("/status" in route.path for route in app.routes)
+    assert not any("/status" in route.path for route in all_routes(app.routes))
 
 
 def test_rule_change_preserves_stage_check_and_uses_atomic_audit():

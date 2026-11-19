@@ -20,6 +20,24 @@ class AdminConfigurationError(ValueError):
     """Refuse to mount admin endpoints with incomplete production safeguards."""
 
 
+def _all_route_paths(routes):
+    """Handle FastAPI/Starlette versions that expose included router wrappers.
+
+    Routing may be represented as APIRoute objects or nested _IncludedRouter
+    objects. Inspect both so duplicate registration cannot be hidden by an
+    implementation-specific route wrapper.
+    """
+    for route in routes:
+        path = getattr(route, "path", None)
+        if isinstance(path, str):
+            yield path
+        children = getattr(route, "routes", None)
+        if children is None:
+            children = getattr(getattr(route, "router", None), "routes", ())
+        if children:
+            yield from _all_route_paths(children)
+
+
 def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
                         cursor_signing_key: bytes,
                         browser_config: BrowserAuthConfig | None = None,
@@ -45,7 +63,7 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
         raise AdminConfigurationError("An existing DynamoDB tenant store is required")
     if not isinstance(cursor_signing_key, bytes) or len(cursor_signing_key) < 32:
         raise AdminConfigurationError("A separate server-side 32-byte cursor secret is required")
-    if any(getattr(route, "path", "") == "/admin" for route in app.routes):
+    if getattr(app.state, "guardoath_admin_mounted", False) or "/admin" in set(_all_route_paths(app.routes)):
         raise AdminConfigurationError("The admin console has already been mounted")
 
     # The browser uses the SAME signed-token identity authority as /v1/admin.
@@ -58,8 +76,7 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
                 getattr(sessions, "domain", None) != browser_config.domain or
                 browser_exchange.config != browser_config):
             raise AdminConfigurationError("Admin browser app client must match token verifier")
-        if any(getattr(route, "path", "") in {"/admin/login", "/admin/client.js", "/v1/admin/auth/exchange"}
-               for route in app.routes):
+        if set(_all_route_paths(app.routes)).intersection({"/admin/login", "/admin/client.js", "/v1/admin/auth/exchange"}):
             raise AdminConfigurationError("Admin browser login has already been mounted")
 
     directory = DynamoAdminDirectory(store._client, store.table_name, cursor_signing_key)
@@ -77,3 +94,5 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
     ))
     if browser_config is not None and browser_exchange is not None:
         app.include_router(create_browser_router(browser_config, browser_exchange, verifier))
+
+    app.state.guardoath_admin_mounted = True
