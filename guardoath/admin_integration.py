@@ -63,8 +63,15 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
         raise AdminConfigurationError("An existing DynamoDB tenant store is required")
     if not isinstance(cursor_signing_key, bytes) or len(cursor_signing_key) < 32:
         raise AdminConfigurationError("A separate server-side 32-byte cursor secret is required")
-    if getattr(app.state, "guardoath_admin_mounted", False) or "/admin" in set(_all_route_paths(app.routes)):
-        raise AdminConfigurationError("The admin console has already been mounted")
+    # FastAPI resolves routes in declaration order. A pre-existing route at
+    # any reserved admin path can shadow our authenticated endpoint, so check
+    # the entire namespace before mounting (including nested router paths).
+    existing_paths = set(_all_route_paths(app.routes))
+    if (getattr(app.state, "guardoath_admin_mounted", False) or
+            any(path == "/admin" or path.startswith("/admin/") or
+                path == "/v1/admin" or path.startswith("/v1/admin/")
+                for path in existing_paths)):
+        raise AdminConfigurationError("An administration route is already registered")
 
     # The browser uses the SAME signed-token identity authority as /v1/admin.
     # Explicit opt-in: a missing callback or app-client match cannot downgrade

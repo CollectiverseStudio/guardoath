@@ -143,3 +143,18 @@ def test_browser_mounted_with_matching_config_and_both_routes_authorized():
     assert client.get("/v1/admin/tenants",headers={"X-GuardOath-Admin-Session":answer.json()["access_token"],
         "Authorization":"AWS4-HMAC-SHA256 Credential=cloudfront/test, SignedHeaders=host, Signature=abc"}).status_code == 200
     assert client.get("/v1/admin/tenants").status_code == 401
+
+
+@pytest.mark.parametrize("reserved_path", [
+    "/admin/login", "/admin/unexpected", "/v1/admin/tenants",
+    "/v1/admin/tenants/{tenant_id}", "/v1/admin/auth/config", "/v1/admin",
+])
+def test_existing_admin_namespace_cannot_shadow_guarded_routes(reserved_path):
+    app = FastAPI()
+    app.add_api_route(reserved_path, lambda: {"unprotected": True}, methods=["GET"])
+    before = tuple(all_routes(app.routes))
+    with pytest.raises(AdminConfigurationError, match="administration route"):
+        mount_admin_console(app, sessions=Sessions(), tenants=Tenants(Store()),
+                            cognito=Cognito(), cursor_signing_key=KEY)
+    assert tuple(all_routes(app.routes)) == before
+    assert not getattr(app.state, "guardoath_admin_mounted", False)
