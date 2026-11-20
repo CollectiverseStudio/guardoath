@@ -161,3 +161,10 @@ def test_owner_mutation_ui_requires_consistent_atomic_audit_receipt():
     assert 'say("status","Tenant rule saved · " + receipt)' in script
     assert 'say("status", "Tenant access updated · " + receipt)' in script
     assert "innerHTML" not in script
+
+
+def test_admin_browser_disables_cap_action_when_allowance_is_unknown():
+    script = app().get("/admin/client.js").text
+    assert "Number.isSafeInteger(tenant.monthly_allowance) && tenant.monthly_allowance >= 0" in script
+    assert "if (!Number.isSafeInteger(tenant.monthly_allowance) || tenant.monthly_allowance < 0) return;" in script
+    assert "innerHTML" not in script

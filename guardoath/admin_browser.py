@@ -323,7 +323,8 @@ _JS = r'''"use strict";
         verify.addEventListener("click", () => verifyBilling(tenant));
         actions.append(verify);
       }
-      if (features.monthly_cost_caps && tenant.demo === false && Number.isInteger(tenant.revision)) {
+      if (features.monthly_cost_caps && tenant.demo === false && Number.isInteger(tenant.revision) &&
+          Number.isSafeInteger(tenant.monthly_allowance) && tenant.monthly_allowance >= 0) {
         const cap = document.createElement("button");
         cap.type = "button";
         cap.textContent = "Cap usage";
@@ -391,6 +392,7 @@ _JS = r'''"use strict";
   }
   async function capUsage(tenant) {
     if (!token || !features.monthly_cost_caps) return;
+    if (!Number.isSafeInteger(tenant.monthly_allowance) || tenant.monthly_allowance < 0) return;
     const input = prompt("New monthly request cap for " + tenant.tenant_id +
       ". This may ONLY reduce the existing allowance, and will BLOCK overages.");
     if (input === null || !/^\d+$/.test(input)) return;

@@ -213,7 +213,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                 principal: VerifiedAdmin = Depends(require_admin)):
         if admin_directory is not None:
             try:
-                result = admin_directory.page(limit=limit, search=search, cursor=cursor)
+                result = admin_directory.page(owner_sub=principal.subject, limit=limit, search=search, cursor=cursor)
             except InvalidCursor as exc:
                 raise HTTPException(status_code=422, detail="Invalid pagination cursor") from exc
             except ValueError as exc:

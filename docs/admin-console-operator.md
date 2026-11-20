@@ -50,3 +50,7 @@ Following a confirmed tenant suspend/reactivate, rule-action change, or downward
 
 ## Owner-scoped directory pagination
 Cognito user-list pagination cursors are now version 2 and bind the signing pool, requested email filter, page limit, expiration **and the independently verified administrator subject**. A cursor issued under one authorized owner cannot be replayed by another owner; mismatches fail locally before another Cognito read. The server derives the owner subject from its trusted Cognito/MFA verification, not browser query parameters. Old cursors fail closed. No customer data or credentials are embedded in a cursor beyond the opaque provider continuation token.
+
+
+## Owner-scoped tenant pagination and unknown allowances
+Tenant-directory HMAC-signed continuation tokens use version 2, binding the independently verified Cognito owner (via keyed pseudonym), table, exact page limit, search and 15-minute expiry. Other-owner replay, changed limit/filter, expired/empty/forged/legacy cursor tokens fail before any further DynamoDB scan. Only the server selects the current owner from the verified session, never a browser query. Invalid or missing legacy monthly allowance is shown as **Unavailable** rather than manufactured zero, and the browser suppresses cap changes when the stored allowance is unknown. No authoritative tenant data is altered by these read-only projections.

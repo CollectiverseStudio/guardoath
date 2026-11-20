@@ -9,12 +9,15 @@ import base64
 import hashlib
 import hmac
 import json
+import re
 import time
 from datetime import datetime, timezone
 from typing import Callable
 
 MAX_PAGE = 50
 CURSOR_TTL_SECONDS = 900
+# Caller identity is independently verified, never taken from query parameters.
+OWNER_SUB = re.compile(r"^[0-9a-fA-F-]{20,80}$")
 
 
 class InvalidCursor(ValueError):
@@ -50,7 +53,12 @@ class DynamoAdminDirectory:
         tag = _b64(hmac.new(self.key, encoded.encode(), hashlib.sha256).digest())
         return encoded + "." + tag
 
-    def _verify(self, cursor: str, search: str) -> dict:
+    def _owner_label(self, owner_sub: str) -> str:
+        # Avoid publishing the raw Cognito subject in a base64-encoded cursor.
+        digest = hmac.new(self.key, b"guardoath-directory-owner:" + owner_sub.encode("ascii"), hashlib.sha256).digest()
+        return _b64(digest)
+
+    def _verify(self, cursor: str, search: str, limit: int, owner_sub: str) -> dict:
         if not isinstance(cursor, str) or len(cursor) > 4096 or cursor.count(".") != 1:
             raise InvalidCursor("Invalid pagination cursor")
         data, supplied = cursor.split(".")
@@ -61,8 +69,10 @@ class DynamoAdminDirectory:
             payload = json.loads(_decode(data))
         except (ValueError, UnicodeDecodeError) as exc:
             raise InvalidCursor("Invalid pagination cursor") from exc
-        if (not isinstance(payload, dict) or payload.get("v") != 1 or
+        if (not isinstance(payload, dict) or payload.get("v") != 2 or
                 payload.get("table") != self.table or payload.get("search") != search or
+                payload.get("owner") != self._owner_label(owner_sub) or
+                type(payload.get("limit")) is not int or payload["limit"] != limit or
                 type(payload.get("exp")) is not int or payload["exp"] <= self.clock() or
                 not isinstance(payload.get("key"), dict)):
             raise InvalidCursor("Invalid pagination cursor")
@@ -72,7 +82,9 @@ class DynamoAdminDirectory:
             raise InvalidCursor("Invalid pagination cursor")
         return key
 
-    def page(self, *, limit: int, search: str = "", cursor: str | None = None) -> dict:
+    def page(self, *, owner_sub: str, limit: int, search: str = "", cursor: str | None = None) -> dict:
+        if not isinstance(owner_sub, str) or not OWNER_SUB.fullmatch(owner_sub):
+            raise ValueError("Verified owner subject required for tenant directory")
         if type(limit) is not int or not 1 <= limit <= MAX_PAGE:
             raise ValueError("Invalid page limit")
         if not isinstance(search, str) or len(search) > 40 or \
@@ -82,8 +94,8 @@ class DynamoAdminDirectory:
                    "ProjectionExpression": "tenant_id,#record,#revision,#usage",
                    "ExpressionAttributeNames": {"#record": "record", "#revision": "revision", "#usage": "usage"},
                    "ConsistentRead": True}
-        if cursor:
-            request["ExclusiveStartKey"] = self._verify(cursor, search)
+        if cursor is not None:
+            request["ExclusiveStartKey"] = self._verify(cursor, search, limit, owner_sub)
         result = self.client.scan(**request)
         if not isinstance(result, dict) or not isinstance(result.get("Items"), list) or len(result["Items"]) > limit:
             raise ValueError("Invalid DynamoDB scan response")
@@ -110,7 +122,9 @@ class DynamoAdminDirectory:
                 "status": str(doc.get("status", "unknown")),
                 "demo": doc.get("demo") is True,
                 "subscription_status": str(doc.get("subscription_status", "unknown")),
-                "monthly_allowance": int(doc.get("monthly_allowance", 0)),
+                "monthly_allowance": (doc.get("monthly_allowance") if
+                                      type(doc.get("monthly_allowance")) is int and doc["monthly_allowance"] >= 0
+                                      else None),
                 # Metadata only; an absent or malformed legacy key list is unknown,
                 # not an invented zero and never a leak of stored key hashes.
                 "api_key_count": (len(doc["key_hashes"])
@@ -130,7 +144,8 @@ class DynamoAdminDirectory:
             # Never accept a noncanonical cursor key from an unexpected table.
             if set(last) != {"tenant_id"} or not isinstance(last["tenant_id"].get("S"), str):
                 raise ValueError("Invalid scan checkpoint")
-            next_cursor = self._sign({"v": 1, "table": self.table, "search": search,
+            next_cursor = self._sign({"v": 2, "table": self.table, "search": search,
+                                      "owner": self._owner_label(owner_sub), "limit": limit,
                                       "key": last, "exp": int(self.clock()) + CURSOR_TTL_SECONDS})
         return {"status": "ok", "source": "DynamoDB tenant table", "tenants": tenants,
                 "returned": len(tenants), "scanned": len(result["Items"]),
