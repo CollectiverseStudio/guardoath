@@ -2,9 +2,9 @@
 
 Updated 2026-11-09. Greg explicitly authorized replacing the empty coordination file and resuming implementation.
 
-## Release stabilization reservation — Atlas deployment, 2026-11-13
+## Release stabilization reservation lifted — Greg directive, 2026-11-19
 
-Greg ordered deployment of all committed improvements. During this release window, hold unrelated commits to main (including documentation-only receipts): they cancel the exact-SHA Tests matrix and prevent deployment. Other development cycles must inspect/read only until deployment and live verification are reported. Only an actual failed release job or release defect justifies another source commit; preserve simultaneous work. Do not close #30 to manufacture acceptance. Record CI observations in issue comments rather than new source commits. The release candidate is the commit introducing this reservation and its deployment script comment; all22 release jobs must succeed at that exact SHA. No Director or separate approval gate.
+Greg explicitly removed the November 13 release-stabilization reservation and authorized deployment of all eligible completed changes. The reservation no longer blocks main integration or unrelated substantive commits. Coordinate writers and avoid racing commits; a new source SHA must receive its own exact-SHA release checks before deployment. Keep all customer safeguards, fail-closed enforcement, the 500-ms PII deadline, rollback, source parity, cost controls, and the 15 live acceptance checks. Open issue #30 is a disclosed risk, not an automatic issue-state deployment veto; do not claim it resolved. No Director gate. This instruction supersedes earlier freeze references in issues, historical log entries, and archived coordination.
 
 ## Governing decisions
 - Greg's 2026-11-13 deployment directive: deploy all committed improvements; an open Issue #30 alone must not veto rollout after exact-SHA CI acceptance. Report the unresolved latency risk without closing or declaring it fixed. Keep the 500-ms deadline, privacy fail-closed enforcement, rollback, source parity and 15 live checks.
