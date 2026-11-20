@@ -272,7 +272,7 @@ _JS = r'''"use strict";
     const categories = Array.isArray(catalog.categories) ? catalog.categories : [];
     say("catalog-summary", "Published registry: " + (catalog.registry_version ?? "unknown") +
       " · " + categories.length + " categories · " + (catalog.total_checks ?? "unknown") +
-      " checks · " + (catalog.total_rules ?? "unknown") + " rules");
+      " checks · " + (catalog.total_rules ?? "unknown") + " rules" + readAuditLabel(catalog));
     el("categories").replaceChildren();
     for (const category of categories) {
       const container = document.createElement("details");
@@ -347,7 +347,7 @@ _JS = r'''"use strict";
       say("proposal-result", "Preview only — NOT saved or published. Candidate registry " +
         result.candidate_registry_version + " · proposed fields: " +
         result.changed_fields.join(", ") + ". Tenant settings and detector behavior unchanged. " +
-        (result.requires || "Review and tests required"));
+        (result.requires || "Review and tests required") + readAuditLabel(result));
     } catch(err) {
       if (token && epoch === authEpoch) say("proposal-result", err.message);
     }
@@ -478,7 +478,7 @@ _JS = r'''"use strict";
     }
     nextCursor = data.next_cursor || null;
     el("next").disabled = !nextCursor;
-    say("tenant-status", (data.tenants || []).length + " tenants on this page; source: " + (data.source || "unknown"));
+    say("tenant-status", (data.tenants || []).length + " tenants on this page; source: " + (data.source || "unknown") + readAuditLabel(data));
   }
   async function inspectUsage(tenant) {
     if (!token) return;
@@ -504,7 +504,7 @@ _JS = r'''"use strict";
         " · Recorded quota signal: " + level + " (" + percent + ")" +
         " · Saved-cap behavior: " + policy +
         " · Record updated: " + (usage.record_updated_at || "Unavailable") +
-        " · AWS costs: Unavailable · Stripe invoices: Unavailable · Source: " + (usage.source || "unknown"));
+        " · AWS costs: Unavailable · Stripe invoices: Unavailable · Source: " + (usage.source || "unknown") + readAuditLabel(result));
     } catch (err) {
       if (token && epoch === authEpoch) say("usage-details", err.message);
     }
@@ -560,7 +560,8 @@ _JS = r'''"use strict";
       if (!integrity) throw new Error("Audit integrity status unavailable");
       if (receipt.operation === "admin.read") {
         if (receipt.integrity_status !== "signed_verified" || change.field !== "protected_read" ||
-            !["cognito.exact_user","stripe.subscription","audit.receipt"].includes(change.resource) ||
+            !["cognito.exact_user","stripe.subscription","audit.receipt","cognito.user_directory",
+              "tenant.directory","tenant.detail","tenant.usage","catalog.registry","catalog.preview"].includes(change.resource) ||
             receipt.prior_revision !== undefined || receipt.new_revision !== undefined)
           throw new Error("Protected read receipt invalid");
         say("audit-result", "Stored receipt · " + integrity + " · protected read " +

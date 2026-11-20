@@ -99,7 +99,7 @@ class StatusChange(BaseModel):
 
 Verifier = Callable[[str], VerifiedAdmin | None]
 ADMIN_ROLES = frozenset({"owner"})  # Other roles require scoped authorization before enablement.
-TENANT_ID = re.compile(r"^[a-zA-Z0-9_-]{1,40}$")
+TENANT_ID = re.compile(r"^[a-z][a-z0-9-]{1,39}$")  # Match the authoritative TenantRecord.
 PAGE_LIMIT = 50
 # CloudFront replaces Authorization with its AWS origin signature. Hosted clients
 # use a dedicated session header; never treat API keys as administrator sessions.
@@ -324,6 +324,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                 cursor: str | None = Query(default=None, max_length=4096),
                 principal: VerifiedAdmin = Depends(require_admin)):
         if admin_directory is not None:
+            read_event = audit_sensitive_read(principal, "tenant.directory")
             try:
                 result = admin_directory.page(owner_sub=principal.subject, limit=limit, search=search, cursor=cursor)
             except InvalidCursor as exc:
@@ -332,7 +333,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                 raise HTTPException(status_code=422, detail="Invalid directory request") from exc
             except Exception as exc:
                 raise HTTPException(status_code=503, detail="Tenant directory unavailable") from exc
-            return admin_json(result)
+            return admin_json({**result, **({"read_audit_event_id": read_event} if read_event else {})})
         if cursor is not None:
             raise HTTPException(status_code=422, detail="Cursor pagination unavailable")
         if tenant_store is None:
@@ -340,6 +341,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                                "source": "tenant store"})
         if search and not re.fullmatch(r"[a-zA-Z0-9_-]+", search):
             raise HTTPException(status_code=422, detail="Invalid tenant filter")
+        read_event = audit_sensitive_read(principal, "tenant.directory")
         try:
             ids = sorted(tid for tid in tenant_store.tenant_ids() if not search or search.lower() in tid.lower())
             selected = [_safe_record(record) for tid in ids[offset:offset + limit]
@@ -347,7 +349,8 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Tenant directory unavailable") from exc
         return admin_json({"status": "ok", "source": "tenant store", "tenants": selected,
-                           "total": len(ids), "offset": offset, "limit": limit})
+                           "total": len(ids), "offset": offset, "limit": limit,
+                           **({"read_audit_event_id": read_event} if read_event else {})})
 
     @router.get("/v1/admin/tenants/{tenant_id}")
     def tenant_detail(tenant_id: str, principal: VerifiedAdmin = Depends(require_admin)):
@@ -355,13 +358,15 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             raise HTTPException(status_code=404, detail="Tenant not found")
         if tenant_store is None:
             raise HTTPException(status_code=503, detail="Tenant directory unavailable")
+        read_event = audit_sensitive_read(principal, "tenant.detail", tenant_id)
         try:
             record = tenant_store.get(tenant_id)
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Tenant directory unavailable") from exc
         if record is None:
             raise HTTPException(status_code=404, detail="Tenant not found")
-        return admin_json({"tenant": _safe_record(record), "source": "tenant store"})
+        return admin_json({"tenant": _safe_record(record), "source": "tenant store",
+                           **({"read_audit_event_id": read_event} if read_event else {})})
 
     @router.get("/v1/admin/tenants/{tenant_id}/usage")
     def usage_detail(tenant_id: str, principal: VerifiedAdmin = Depends(require_admin)):
@@ -369,6 +374,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             raise HTTPException(status_code=404, detail="Tenant not found")
         if tenant_store is None:
             raise HTTPException(status_code=503, detail="Usage reporting unavailable")
+        read_event = audit_sensitive_read(principal, "tenant.usage", tenant_id)
         try:
             record = tenant_store.get(tenant_id)
             if record is None:
@@ -378,7 +384,8 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             raise
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Usage reporting unavailable") from exc
-        return admin_json({"status": "ok", "usage": report})
+        return admin_json({"status": "ok", "usage": report,
+                           **({"read_audit_event_id": read_event} if read_event else {})})
 
     @router.get("/v1/admin/subscriptions/{tenant_id}")
     def read_verified_subscription(tenant_id: str, principal: VerifiedAdmin = Depends(require_admin)):
@@ -408,11 +415,13 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         if catalog_provider is None:
             return admin_json({"status": "unavailable", "source": "published GuardOath control registry",
                                "categories": [], "total_categories": None})
+        read_event = audit_sensitive_read(principal, "catalog.registry")
         try:
             result = read_catalog(catalog_provider, domain_id=category_id)
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Published catalog unavailable") from exc
-        return admin_json({"status": "ok", **result})
+        return admin_json({"status": "ok", **result,
+                           **({"read_audit_event_id": read_event} if read_event else {})})
 
     @router.post("/v1/admin/catalog/preview")
     def preview_catalog_rule(payload: CatalogRuleDescriptionPreview, request: Request,
@@ -422,6 +431,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         _require_admin_origin(request)
         if catalog_provider is None:
             raise HTTPException(status_code=503, detail="Published catalog unavailable")
+        read_event = audit_sensitive_read(principal, "catalog.preview")
         try:
             result = preview_rule_description(catalog_provider, **payload.model_dump())
         except CatalogPreviewConflict as exc:
@@ -430,7 +440,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             raise HTTPException(status_code=422, detail="Invalid catalog preview") from exc
         except CatalogPreviewUnavailable as exc:
             raise HTTPException(status_code=503, detail="Published catalog unavailable") from exc
-        return admin_json(result)
+        return admin_json({**result, **({"read_audit_event_id": read_event} if read_event else {})})
 
     if admin_mutator is not None:
         @router.post("/v1/admin/tenants/{tenant_id}/status")

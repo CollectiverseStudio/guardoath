@@ -13,7 +13,10 @@ RULE = re.compile(r"^[A-Za-z0-9_.:-]{3,100}$")
 UTC = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
 ACTIONS = frozenset({"off", "allow", "flag", "block", "same_as_check"})
 FIELDS = (*SIGNED_FIELDS, "integrity_mac")
-SENSITIVE_READS = frozenset({"cognito.exact_user", "cognito.user_directory", "stripe.subscription", "audit.receipt"})
+SENSITIVE_READS = frozenset({
+    "cognito.exact_user", "cognito.user_directory", "stripe.subscription", "audit.receipt",
+    "tenant.directory", "tenant.detail", "tenant.usage", "catalog.registry", "catalog.preview",
+})
 READ_REASON = "Owner requested sensitive account inspection"
 
 

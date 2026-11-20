@@ -31,6 +31,11 @@ def auditor(db):
     ("cognito.user_directory", "system"),
     ("stripe.subscription", "usr-good"),
     ("audit.receipt", "system"),
+    ("tenant.directory", "system"),
+    ("tenant.detail", "usr-good"),
+    ("tenant.usage", "usr-good"),
+    ("catalog.registry", "system"),
+    ("catalog.preview", "system"),
 ])
 def test_persisted_read_receipt_is_signed_and_has_no_private_identity(resource, tenant):
     db = DB()
@@ -150,3 +155,116 @@ def test_authenticated_sensitive_api_reads_audit_first_and_deny_on_audit_failure
     calls.clear()
     assert c.get("/v1/admin/audit/" + "a" * 64).status_code == 401
     assert calls == []
+
+
+
+def test_other_owner_read_paths_audit_before_data_and_refuse_audit_outage():
+    """Tenant inventory, detail, usage, and catalog share signed owner read auditing."""
+    from types import SimpleNamespace
+    calls = []
+    event = "d" * 64
+
+    class Writer:
+        def __init__(self, fail): self.fail = fail
+        def log(self, **kw):
+            calls.append(("audit", kw))
+            if self.fail:
+                raise AdminAuditUnavailable("sensitive internal storage failure")
+            return event
+
+    class Directory:
+        def page(self, **kw):
+            calls.append(("directory", kw))
+            return {"status": "ok", "source": "DynamoDB", "tenants": [], "next_cursor": None}
+
+    class Store:
+        def __init__(self):
+            self.record = SimpleNamespace(
+                tenant_id="usr-good", display_name="Safe tenant", status="active",
+                demo=False, subscription_status="inactive", monthly_allowance=100,
+                key_hashes=(), usage={}, revision=2, overage="block",
+                updated_at="2026-11-20T15:00:00Z")
+        def tenant_ids(self):
+            calls.append(("ids", None))
+            return ("usr-good",)
+        def get(self, tenant_id):
+            calls.append(("store", tenant_id))
+            return self.record if tenant_id == "usr-good" else None
+
+    def catalog_provider():
+        calls.append(("catalog", None))
+        return {"registry_version": "1", "domains": []}
+
+    def make_client(fail=False, *, directory=None):
+        app = FastAPI()
+        app.include_router(create_admin_router(
+            verify_cognito_admin=lambda _: VerifiedAdmin(SUB, frozenset({"owner"}), True),
+            tenant_store=Store(), admin_directory=directory,
+            catalog_provider=catalog_provider, read_auditor=Writer(fail)))
+        return TestClient(app)
+
+    headers = {"Authorization": "Bearer owner"}
+    paths = (
+        ("/v1/admin/tenants?limit=10", "tenant.directory", "directory"),
+        ("/v1/admin/tenants/usr-good", "tenant.detail", "store"),
+        ("/v1/admin/tenants/usr-good/usage", "tenant.usage", "store"),
+        ("/v1/admin/catalog", "catalog.registry", "catalog"),
+    )
+    for fail in (False, True):
+        client = make_client(fail, directory=Directory())
+        for path, resource, next_call in paths:
+            calls.clear()
+            r = client.get(path, headers=headers)
+            assert r.status_code == (503 if fail else 200)
+            assert [name for name, _ in calls] == (["audit"] if fail else ["audit", next_call])
+            assert calls[0][1]["resource"] == resource
+            assert calls[0][1]["tenant_id"] == ("usr-good" if resource in ("tenant.detail", "tenant.usage") else "system")
+            if resource == "tenant.directory":
+                assert "usr-good" not in str(calls[0])
+            if not fail:
+                assert r.json()["read_audit_event_id"] == event
+            else:
+                assert event not in r.text and "internal" not in r.text
+
+    for fail in (False, True):
+        client = make_client(fail)
+        calls.clear()
+        r = client.get("/v1/admin/tenants?search=usr", headers=headers)
+        assert r.status_code == (503 if fail else 200)
+        assert [name for name, _ in calls] == (["audit"] if fail else ["audit", "ids", "store"])
+        if not fail:
+            assert r.json()["read_audit_event_id"] == event
+    calls.clear()
+    client = make_client()
+    assert client.get("/v1/admin/catalog").status_code == 401
+    assert calls == []
+
+
+def test_catalog_preview_read_audit_before_provider_and_409_on_stale_identity():
+    calls = []
+    class Auditor:
+        def __init__(self, fail): self.fail = fail
+        def log(self, **kw):
+            calls.append(("audit", kw))
+            if self.fail: raise AdminAuditUnavailable("internal")
+            return "d" * 64
+    def provider():
+        calls.append(("catalog", None))
+        return {"registry_version": "1", "domains": []}
+    payload = {
+        "expected_registry_version": "1", "proposed_registry_version": "2",
+        "category_id": "privacy", "check_id": "pii", "rule_id": "pii.email",
+        "title": "Updated email detector", "use_case": "Detect sensitive emails safely"
+    }
+    for fail in (False, True):
+        app = FastAPI()
+        app.include_router(create_admin_router(
+            verify_cognito_admin=lambda _: VerifiedAdmin(SUB, frozenset({"owner"}), True),
+            catalog_provider=provider, read_auditor=Auditor(fail)))
+        calls.clear()
+        r = TestClient(app).post("/v1/admin/catalog/preview", json=payload,
+                                 headers={"Authorization":"Bearer owner", "Origin":"https://guardoath.com"})
+        assert r.status_code == (503 if fail else 409)
+        assert [name for name, _ in calls] == (["audit"] if fail else ["audit", "catalog"])
+        assert calls[0][1]["resource"] == "catalog.preview"
+        assert "internal" not in r.text

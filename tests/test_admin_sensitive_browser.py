@@ -23,6 +23,8 @@ def test_owner_browser_read_receipt_and_mutation_receipt_are_separately_validate
                      'receipt.integrity_status !== "signed_verified"',
                      'change.field !== "protected_read"',
                      '"cognito.exact_user","stripe.subscription","audit.receipt"',
+                     '"tenant.directory","tenant.detail","tenant.usage","catalog.registry","catalog.preview"',
+                     'readAuditLabel(catalog)', 'readAuditLabel(data)',
                      "receipt.new_revision !== receipt.prior_revision + 1"):
         assert fragment in script.text
     assert "innerHTML" not in script.text
