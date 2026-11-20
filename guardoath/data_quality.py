@@ -84,14 +84,20 @@ def instant(text):
     # STAMP already fixes the exact RFC3339 subset accepted by this checker:
     # ASCII year/calendar/time fields, at most six fractional digits, and an
     # explicit Z or numeric offset. Python validates calendar, hour/second and
-    # the offset magnitude. Check offset minutes ourselves: fromisoformat()
-    # normalizes invalid +00:60/+00:99 instead of rejecting them.
+    # valid calendar fields. Independently check clock and offset bounds:
+    # fromisoformat() can normalize out-of-range values on some runtimes.
     # Avoid repeating the general JSON-Schema format adapter for every one
     # of up to 500 samples on the 250-ms strict data-quality path.
     if not STAMP.fullmatch(text) or text.endswith('-00:00'):
         raise ValueError('Unsupported timestamp')
-    if text[-6] in '+-' and int(text[-2:]) >= 60:
-        raise ValueError('Unsupported timestamp offset minutes')
+    # datetime.fromisoformat() is intentionally not the strict RFC3339
+    # validator: some supported Python versions accept 24:00 and normalize
+    # overflow fields. Reject each clock and zone component explicitly before
+    # conversion, including the midnight rollover forbidden by RFC3339.
+    if int(text[11:13]) >= 24 or int(text[14:16]) >= 60 or int(text[17:19]) >= 60:
+        raise ValueError('Unsupported timestamp time fields')
+    if text[-6] in '+-' and (int(text[-5:-3]) >= 24 or int(text[-2:]) >= 60):
+        raise ValueError('Unsupported timestamp offset')
     return datetime.fromisoformat(text.upper().replace('Z', '+00:00')).astimezone(timezone.utc)
 
 

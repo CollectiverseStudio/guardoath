@@ -141,6 +141,9 @@ def test_configured_sample_budget_has_exact_boundary(stage, count, expected_stat
     "2026-11-04T09:00:00",
     "2026-11-04T09:00:00-00:00",
     "2026-11-04T09:00:00+25:00",
+    "2026-01-01T24:00:00Z",
+    "2026-11-04T00:60:00Z",
+    "2026-11-04T00:00:60Z",
     "2026-11-04T09:00:00.1234567Z",
 ])
 def test_invalid_offsets_or_precision_fail_closed(stage, invalid):
@@ -160,6 +163,9 @@ def test_invalid_offsets_or_precision_fail_closed(stage, invalid):
     "2026-11-04T09:00:00+02:99",
     "2026-11-04T09:00:00-23:60",
     "2026-11-04T09:00:00+24:00",
+    "2026-01-01T24:00:00Z",  # CI: invalid.timestamp-7 on Python 3.14/3.15
+    "2026-11-04T00:60:00Z",
+    "2026-11-04T00:00:60Z",
     "2026-11-04T09:00:00.1234567Z",
 ])
 def test_strict_timestamp_fast_path_rejects_offsets_and_overprecise_fraction(invalid):
@@ -191,6 +197,7 @@ def test_strict_timestamp_parser_does_not_weaken_schema_format_contract():
         "2026-11-04T09:00:00+23:59", "2026-11-04T09:00:00-00:00",
         "2026-11-04T09:00:00+00:60", "2026-11-04T09:00:00+24:00",
         "2026-02-30T09:00:00Z", "2026-11-04T09:00:60Z",
+        "2026-01-01T24:00:00Z", "2026-11-04T00:60:00Z",
     )
     for stamp in boundary:
         original_accepts = (stamp != "2026-11-04T09:00:00-00:00"
