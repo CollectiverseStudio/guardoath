@@ -108,3 +108,98 @@ def test_invalid_owner_subject_fails_before_cognito_read(invalid):
     with pytest.raises(ValueError):
         directory(provider).page(owner_sub=invalid)
     assert provider.calls == []
+
+def test_exact_account_inspection_uses_one_bounded_email_match_and_no_private_identity():
+    provider = Fake()
+    result = directory(provider).lookup(owner_sub=OWNER, email="someone@example.com")
+    assert result["status"] == "ok"
+    assert result["user"]["email_hint"] == "s***@example.com"
+    assert result["user"]["status"] == "CONFIRMED"
+    assert result["user"]["enabled"] is True
+    assert "someone@example.com" not in str(result)
+    assert "test-subject" not in str(result)
+    assert "private-token" not in str(result)
+    assert provider.calls == [{"UserPoolId":"us-east-1_Example",
+                               "Filter":'email = "someone@example.com"',"Limit":2}]
+
+
+def test_exact_user_missing_is_not_fabricated_zero_count():
+    class Missing(Fake):
+        def list_users(self, **kw):
+            self.calls.append(kw)
+            return {"Users":[]}
+    provider = Missing()
+    result = directory(provider).lookup(owner_sub=OWNER, email="nobody@example.com")
+    assert result["status"] == "not_found" and result["user"] is None
+    assert "total" not in result and len(provider.calls) == 1
+
+
+@pytest.mark.parametrize("email", [
+    'bad"@example.com', "a\\b@example.com", "no-at", "a@localhost",
+    ".x@example.com", "x..y@example.com", "x@example.com.", "a@example.com;admin",
+    "x" * 250 + "@example.com", True, None, "",
+])
+def test_exact_email_injection_or_invalid_input_never_calls_cognito(email):
+    from guardoath.admin_users import InvalidUserLookup
+    provider = Fake()
+    with pytest.raises(InvalidUserLookup):
+        directory(provider).lookup(owner_sub=OWNER, email=email)
+    assert provider.calls == []
+
+
+def test_exact_user_owner_cannot_be_claimed_from_email():
+    from guardoath.admin_users import InvalidUserLookup
+    provider = Fake()
+    with pytest.raises(InvalidUserLookup):
+        directory(provider).lookup(owner_sub="customer@example.com", email="someone@example.com")
+    assert provider.calls == []
+
+
+@pytest.mark.parametrize("users", [
+    [{"Username":"one","Attributes":[{"Name":"email","Value":"someone@example.com"}]},
+     {"Username":"two","Attributes":[{"Name":"email","Value":"someone@example.com"}]}],
+    [{"Username":"one","Attributes":[{"Name":"email","Value":"different@example.com"}]}],
+    [{"Username":"one","Attributes":[]}],
+    [{"Username":"one","Attributes":[{"Name":"email","Value":"someone@example.com"},
+                                      {"Name":"email","Value":"someone@example.com"}]}],
+])
+def test_exact_user_ambiguous_or_inconsistent_provider_data_fails_closed(users):
+    from guardoath.admin_users import CognitoDirectoryUnavailable
+    class Inconsistent(Fake):
+        def list_users(self, **kw):
+            self.calls.append(kw)
+            return {"Users":users}
+    provider = Inconsistent()
+    with pytest.raises(CognitoDirectoryUnavailable):
+        directory(provider).lookup(owner_sub=OWNER, email="someone@example.com")
+    assert len(provider.calls) == 1
+
+
+def test_exact_user_provider_error_never_claims_success():
+    from guardoath.admin_users import CognitoDirectoryUnavailable
+    class Offline(Fake):
+        def list_users(self, **kw): raise RuntimeError("private internal details")
+    with pytest.raises(CognitoDirectoryUnavailable):
+        directory(Offline()).lookup(owner_sub=OWNER,email="someone@example.com")
+
+def test_exact_lookup_refuses_paged_single_match_without_global_uniqueness_proof():
+    from guardoath.admin_users import CognitoDirectoryUnavailable
+    class Paged(Fake):
+        def list_users(self, **kwargs):
+            self.calls.append(kwargs)
+            return {"Users":[{"Username":"subject",
+                "Attributes":[{"Name":"email","Value":"someone@example.com"}]}],
+                "PaginationToken":"more-identities"}
+    provider = Paged()
+    with pytest.raises(CognitoDirectoryUnavailable):
+        directory(provider).lookup(owner_sub=OWNER,email="someone@example.com")
+    assert len(provider.calls) == 1
+
+
+def test_missing_email_verification_is_unknown_not_false():
+    class NoVerification(Fake):
+        def list_users(self, **kwargs):
+            return {"Users":[{"Username":"subject","Enabled":True,
+                "Attributes":[{"Name":"email","Value":"someone@example.com"}]}]}
+    result = directory(NoVerification()).lookup(owner_sub=OWNER,email="someone@example.com")
+    assert result["user"]["email_verified"] is None

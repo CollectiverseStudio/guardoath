@@ -174,7 +174,10 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <section id="login" class="panel"><h2>Administrator sign-in</h2><p>Use your GuardOath administrator account with MFA. Customers and demo API keys do not have administrative access.</p><button id="login-start" type="button">Sign in with Cognito</button><p id="login-message" role="status"></p></section>
 <div id="app" hidden><section class="panel"><nav><button type="button" id="refresh">Refresh</button><button type="button" id="logout">Sign out</button></nav><p id="status" role="status"></p></section>
 <section class="panel"><h2>Overview</h2><div class="grid" id="metrics"></div></section>
-<section class="panel"><h2>Cognito users</h2><p class="muted">Owner-only, one provider page at a time; masked emails and unknown totals.</p><label for="user-search">Email prefix</label> <input id="user-search" maxlength="80" autocomplete="off"> <button id="user-search-go" type="button">Search users</button><div class="scroll"><table><thead><tr><th>Username</th><th>Masked email</th><th>Verified</th><th>Enabled</th><th>Status</th><th>Created (UTC)</th></tr></thead><tbody id="user-rows"></tbody></table></div><p id="user-status" role="status"></p><button id="user-next" type="button" disabled>Next users</button></section>
+<section class="panel"><h2>Cognito users</h2><p class="muted">Owner-only, one provider page at a time; masked emails and unknown totals.</p><label for="user-search">Email prefix</label> <input id="user-search" maxlength="80" autocomplete="off"> <button id="user-search-go" type="button">Search users</button><div class="scroll"><table><thead><tr><th>Username</th><th>Masked email</th><th>Verified</th><th>Enabled</th><th>Status</th><th>Created (UTC)</th></tr></thead><tbody id="user-rows"></tbody></table></div><p id="user-status" role="status"></p><button id="user-next" type="button" disabled>Next users</button>
+<h3>Inspect an exact Cognito account</h3><p class="muted">Use a known full email address. Only masked account state returns; this action does not change sign-in or billing.</p>
+<label for="user-exact-email">Exact account email</label> <input id="user-exact-email" type="email" maxlength="254" autocomplete="off" spellcheck="false">
+<button id="user-inspect" type="button">Inspect account</button><p id="user-inspect-result" role="status"></p></section>
 <section class="panel"><h2>Tenants</h2><p class="muted">API key counts are sourced from the persisted tenant record; actual key material is never displayed. Unknown counts remain unavailable.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
 <section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Select Verify Stripe beside a tenant to compare the current provider status with its saved tenant entitlement. Discrepancies are advisory: no paid access or billing state is modified here.</p><p id="billing-details" role="status">No subscription selected.</p></section>
 <section class="panel"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
@@ -210,10 +213,11 @@ _JS = r'''"use strict";
     el("tenant-rows").replaceChildren();
     el("user-rows").replaceChildren();
     el("categories").replaceChildren();
-    for (const id of ["status", "tenant-status", "user-status", "catalog-summary", "usage-details", "billing-details", "audit-result"]) say(id, "");
+    for (const id of ["status", "tenant-status", "user-status", "user-inspect-result", "catalog-summary", "usage-details", "billing-details", "audit-result"]) say(id, "");
     el("audit-id").value = "";
     el("search").value = "";
     el("user-search").value = "";
+    el("user-exact-email").value = "";
     nextUserCursor = null;
     el("user-next").disabled = true;
     nextCursor = null;
@@ -307,6 +311,43 @@ _JS = r'''"use strict";
       const result = await request("/v1/admin/users?" + qs);
       if (token && epoch === authEpoch) showUsers(result);
     } catch (err) { if (token && epoch === authEpoch) say("user-status", err.message); }
+  }
+  async function inspectUser() {
+    if (!token) return;
+    const email = el("user-exact-email").value.trim();
+    // The address is transient; no raw email is displayed or saved after lookup.
+    el("user-exact-email").value = "";
+    if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}$/.test(email) ||
+        email.length > 254 || email.startsWith(".") || email.includes("..") || email.endsWith(".")) {
+      say("user-inspect-result", "Enter a valid exact account email");
+      return;
+    }
+    const epoch = authEpoch;
+    say("user-inspect-result", "Inspecting Cognito account...");
+    try {
+      const result = await request("/v1/admin/users/lookup", {
+        method: "POST", body: JSON.stringify({email})
+      });
+      if (!token || epoch !== authEpoch) return;
+      if (result.status === "not_found") {
+        say("user-inspect-result", "Cognito has no exact email match; no account changes made");
+      } else if (result.status === "ok" && result.user &&
+                 ["CONFIRMED","UNCONFIRMED","ARCHIVED","COMPROMISED","UNKNOWN","RESET_REQUIRED",
+                  "FORCE_CHANGE_PASSWORD","EXTERNAL_PROVIDER"].includes(result.user.status)) {
+        const user = result.user;
+        say("user-inspect-result", "Account " + (user.username || "Unavailable") +
+            " · masked email " + (user.email_hint || "Unavailable") +
+            " · status " + user.status +
+            " · enabled " + (user.enabled === true ? "Yes" : user.enabled === false ? "No" : "Unavailable") +
+            " · verified email " + (user.email_verified === true ? "Yes" : user.email_verified === false ? "No" : "Unavailable") +
+            " · updated UTC " + (user.updated_utc || "Unavailable") +
+            " · source: " + (result.source || "Cognito"));
+      } else {
+        say("user-inspect-result", "Cognito identity inspection unavailable");
+      }
+    } catch (err) {
+      if (token && epoch === authEpoch) say("user-inspect-result", err.message);
+    }
   }
   function showTenants(data) {
     el("tenant-rows").replaceChildren();
@@ -555,6 +596,7 @@ _JS = r'''"use strict";
   el("search-go").addEventListener("click", () => {nextCursor=null;page();});
   el("user-search-go").addEventListener("click", () => {nextUserCursor=null;pageUsers();});
   el("user-next").addEventListener("click", pageUsers);
+  el("user-inspect").addEventListener("click", inspectUser);
   el("next").addEventListener("click", page);
   el("audit-go").addEventListener("click", inspectAudit);
   finishLogin().catch(err => say("login-message", err.message));

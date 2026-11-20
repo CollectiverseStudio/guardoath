@@ -216,3 +216,56 @@ def test_owner_only_admin_audit_receipt_endpoint_and_errors():
                                 audit_reader=AdminAuditReader(DB(False), "admin-audit")))
     assert TestClient(missing).get(url, headers=auth()).status_code == 404
     assert client(verified).get(url, headers=auth()).status_code == 503
+
+def test_exact_cognito_inspection_requires_owner_mfa_origin_and_redacts_private_attributes():
+    from guardoath.admin_users import CognitoUserDirectory
+    from datetime import datetime, timezone
+    calls = []
+    class Provider:
+        def list_users(self, **kwargs):
+            calls.append(kwargs)
+            return {"Users":[{"Username":"unmasked-cognito-internal",
+                "UserStatus":"UNCONFIRMED","Enabled":False,
+                "UserLastModifiedDate":datetime(2026,11,20,tzinfo=timezone.utc),
+                "Attributes":[{"Name":"email","Value":"someone@example.com"},
+                              {"Name":"custom:secret","Value":"no-export"}]}]}
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        verify_cognito_admin=lambda token: VerifiedAdmin(
+            "12345678-1234-1234-1234-123456789012",frozenset({"owner"}),True)
+        if token == "owner" else None,
+        admin_user_directory=CognitoUserDirectory(Provider(),"us-east-1_Example",b"a"*32)))
+    client = TestClient(app)
+    url = "/v1/admin/users/lookup"
+    body = {"email":"someone@example.com"}
+    origin = {"Origin":"https://guardoath.com"}
+    assert client.post(url,json=body,headers=origin).status_code == 401
+    assert client.post(url,json=body,headers={**origin,**auth("customer")}).status_code == 401
+    assert client.post(url,json=body,headers=auth()).status_code == 403
+    assert client.post(url,json=body,headers={**auth(), "Origin":"https://evil.example"}).status_code == 403
+    assert calls == []
+    ok = client.post(url,json=body,headers={**auth(),**origin})
+    assert ok.status_code == 200 and ok.json()["user"]["status"] == "UNCONFIRMED"
+    assert ok.json()["user"]["enabled"] is False
+    assert "someone@example.com" not in ok.text
+    assert "unmasked-cognito-internal" not in ok.text
+    assert "no-export" not in ok.text
+    assert ok.headers["cache-control"] == "no-store"
+    assert len(calls) == 1 and calls[0]["Limit"] == 2
+    assert client.post(url,json={"email":'x"@evil.example'},headers={**auth(),**origin}).status_code == 422
+    assert client.post(url,json={**body,"owner_sub":"spoof"},headers={**auth(),**origin}).status_code == 422
+    assert len(calls) == 1
+
+
+def test_exact_cognito_inspection_unavailable_is_503_without_leaking_error():
+    from guardoath.admin_users import CognitoDirectoryUnavailable
+    class Broken:
+        def lookup(self, **kw): raise CognitoDirectoryUnavailable("secret provider message")
+    app = FastAPI()
+    app.include_router(create_admin_router(verify_cognito_admin=verified, admin_user_directory=Broken()))
+    result = TestClient(app).post("/v1/admin/users/lookup",json={"email":"a@example.com"},
+        headers={**auth(), "Origin":"https://guardoath.com"})
+    assert result.status_code == 503 and "secret provider message" not in result.text
+    unavailable = client(verified)
+    assert unavailable.post("/v1/admin/users/lookup",json={"email":"a@example.com"},
+        headers={**auth(), "Origin":"https://guardoath.com"}).status_code == 503

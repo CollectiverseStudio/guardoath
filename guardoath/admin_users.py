@@ -11,8 +11,16 @@ from datetime import datetime, timezone
 class InvalidUserCursor(ValueError):
     pass
 
+class InvalidUserLookup(ValueError):
+    pass
+
+class CognitoDirectoryUnavailable(Exception):
+    pass
+
 _POOL = re.compile(r"^[a-z]{2}(?:-[a-z]+)+-\d_[A-Za-z0-9]+$")
 _FILTER = re.compile(r"^[A-Za-z0-9._+@-]{0,80}$")
+# Deliberately restricted ASCII email subset: never interpolate quotes or escapes into Cognito filters.
+_EXACT_EMAIL = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}$")
 _OWNER_SUB = re.compile(r"^[0-9a-fA-F-]{20,80}$")
 _STATES = {"UNCONFIRMED", "CONFIRMED", "ARCHIVED", "COMPROMISED", "UNKNOWN",
            "RESET_REQUIRED", "FORCE_CHANGE_PASSWORD", "EXTERNAL_PROVIDER"}
@@ -75,6 +83,29 @@ class CognitoUserDirectory:
             raise InvalidUserCursor("Invalid user cursor")
         return payload["token"]
 
+    def _project_user(self, entry):
+        if (not isinstance(entry, dict) or not isinstance(entry.get("Username"), str)
+                or not 1 <= len(entry["Username"]) <= 256):
+            raise ValueError("Invalid directory user")
+        attrs = entry.get("Attributes", [])
+        if not isinstance(attrs, list) or len(attrs) > 50:
+            raise ValueError("Invalid directory attributes")
+        approved = {a.get("Name"): a.get("Value") for a in attrs
+                    if isinstance(a, dict) and a.get("Name") in ("email", "email_verified")
+                    and isinstance(a.get("Value"), str)}
+        state = entry.get("UserStatus")
+        return {"username": _mask_email(entry["Username"]) or ("user-" + hmac.new(
+                          self.key, b"guardoath-cognito-user-label:" + entry["Username"].encode("utf-8"),
+                          hashlib.sha256).hexdigest()[:16]),
+                      "email_hint": _mask_email(approved.get("email")),
+                      "email_verified": (True if approved.get("email_verified") == "true"
+                                         else False if approved.get("email_verified") == "false"
+                                         else None),
+                      "enabled": entry.get("Enabled") if type(entry.get("Enabled")) is bool else None,
+                      "status": state if state in _STATES else "UNKNOWN",
+                      "created_utc": _utc(entry.get("UserCreateDate")),
+                      "updated_utc": _utc(entry.get("UserLastModifiedDate"))}
+
     def page(self, *, owner_sub: str, limit=20, query="", cursor=None):
         if not isinstance(owner_sub, str) or not _OWNER_SUB.fullmatch(owner_sub):
             raise ValueError("Verified owner subject required for user directory")
@@ -91,26 +122,7 @@ class CognitoUserDirectory:
         if (not isinstance(response, dict) or not isinstance(response.get("Users"), list)
                 or len(response["Users"]) > limit):
             raise ValueError("Invalid directory response")
-        users = []
-        for entry in response["Users"]:
-            if not isinstance(entry, dict) or not isinstance(entry.get("Username"), str):
-                raise ValueError("Invalid directory user")
-            attrs = entry.get("Attributes", [])
-            if not isinstance(attrs, list) or len(attrs) > 50:
-                raise ValueError("Invalid directory attributes")
-            approved = {a.get("Name"): a.get("Value") for a in attrs
-                        if isinstance(a, dict) and a.get("Name") in ("email", "email_verified")
-                        and isinstance(a.get("Value"), str)}
-            state = entry.get("UserStatus")
-            users.append({"username": _mask_email(entry["Username"]) or ("user-" + hmac.new(
-                              self.key, b"guardoath-cognito-user-label:" + entry["Username"].encode("utf-8"),
-                              hashlib.sha256).hexdigest()[:16]),
-                          "email_hint": _mask_email(approved.get("email")),
-                          "email_verified": approved.get("email_verified") == "true",
-                          "enabled": entry.get("Enabled") if type(entry.get("Enabled")) is bool else None,
-                          "status": state if state in _STATES else "UNKNOWN",
-                          "created_utc": _utc(entry.get("UserCreateDate")),
-                          "updated_utc": _utc(entry.get("UserLastModifiedDate"))})
+        users = [self._project_user(entry) for entry in response["Users"]]
         token = response.get("PaginationToken")
         if token is not None and (not isinstance(token, str) or not 1 <= len(token) <= 2048):
             raise ValueError("Invalid provider cursor")
@@ -118,3 +130,45 @@ class CognitoUserDirectory:
                 "retrieved_utc": _utc(datetime.now(timezone.utc)), "users": users,
                 "returned": len(users), "total": None, "limit": limit,
                 "next_cursor": self._cursor(token, query, limit, owner_sub) if token else None}
+
+    def lookup(self, *, owner_sub: str, email: str):
+        """One exact-match Cognito identity inspection, with no raw subject/email returned.
+
+        This is a read-only inspection; it never modifies Cognito or grants entitlement.
+        The trusted owner identity is injected by the authenticated API, not the caller.
+        """
+        if not isinstance(owner_sub, str) or not _OWNER_SUB.fullmatch(owner_sub):
+            raise InvalidUserLookup("Verified owner subject required")
+        if (not isinstance(email, str) or len(email) > 254 or
+                not _EXACT_EMAIL.fullmatch(email) or email.startswith(".") or
+                ".." in email or email.endswith(".")):
+            raise InvalidUserLookup("Invalid exact email")
+        try:
+            response = self.client.list_users(
+                UserPoolId=self.pool_id, Filter='email = "' + email + '"', Limit=2)
+        except Exception as exc:
+            raise CognitoDirectoryUnavailable("Cognito identity lookup unavailable") from exc
+        if (not isinstance(response, dict) or not isinstance(response.get("Users"), list)
+                or len(response["Users"]) > 2 or response.get("PaginationToken") is not None):
+            raise CognitoDirectoryUnavailable("Invalid Cognito lookup response")
+        entries = response["Users"]
+        result = {"source": "Cognito ListUsers exact-email lookup (one bounded read)",
+                  "retrieved_utc": _utc(datetime.now(timezone.utc))}
+        if not entries:
+            return {**result, "status": "not_found", "user": None}
+        if len(entries) != 1:
+            raise CognitoDirectoryUnavailable("Ambiguous Cognito lookup")
+        entry = entries[0]
+        try:
+            attrs = entry.get("Attributes")
+            if not isinstance(attrs, list) or len(attrs) > 50:
+                raise ValueError("Invalid attributes")
+            candidates = [attr.get("Value") for attr in attrs
+                          if isinstance(attr, dict) and attr.get("Name") == "email"]
+            if len(candidates) != 1 or not isinstance(candidates[0], str) or (
+                    candidates[0].casefold() != email.casefold()):
+                raise ValueError("Cognito exact match unverified")
+            safe = self._project_user(entry)
+        except (ValueError, TypeError, AttributeError, CognitoDirectoryUnavailable) as exc:
+            raise CognitoDirectoryUnavailable("Invalid Cognito lookup identity") from exc
+        return {**result, "status": "ok", "user": safe}

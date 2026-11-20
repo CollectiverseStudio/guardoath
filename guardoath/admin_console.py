@@ -20,7 +20,8 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from guardoath.admin_catalog import CatalogProvider, read_catalog
 from guardoath.admin_directory import DynamoAdminDirectory, InvalidCursor
 from guardoath.admin_usage import tenant_usage_report
-from guardoath.admin_users import CognitoUserDirectory, InvalidUserCursor
+from guardoath.admin_users import (CognitoUserDirectory, InvalidUserCursor,
+                                  InvalidUserLookup, CognitoDirectoryUnavailable)
 
 
 @dataclass(frozen=True)
@@ -59,6 +60,11 @@ class AllowanceCap(BaseModel):
     confirmation: str = Field(min_length=2,max_length=40)
     reason: str = Field(min_length=10,max_length=240)
     idempotency_key: str = Field(min_length=16,max_length=96)
+
+
+class ExactUserLookup(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    email: str = Field(min_length=5, max_length=254)
 
 
 class StatusChange(BaseModel):
@@ -221,6 +227,25 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Cognito user directory unavailable") from exc
         return admin_json(page)
+
+    @router.post("/v1/admin/users/lookup")
+    def exact_cognito_user(payload: ExactUserLookup, request: Request,
+                           principal: VerifiedAdmin = Depends(require_admin)):
+        # Exact email stays in the POST body, not the URL, access logs or redirects.
+        # Same-origin check and independently verified Cognito owner/MFA apply.
+        origin = request.headers.get("origin")
+        if origin != "https://guardoath.com" and not re.fullmatch(
+                r"http://(?:localhost|127\.0\.0\.1):\d+", origin or ""):
+            raise HTTPException(status_code=403, detail="Admin request origin refused")
+        if admin_user_directory is None:
+            raise HTTPException(status_code=503, detail="Cognito user directory unavailable")
+        try:
+            result = admin_user_directory.lookup(owner_sub=principal.subject, email=payload.email)
+        except InvalidUserLookup as exc:
+            raise HTTPException(status_code=422, detail="Invalid exact email") from exc
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="Cognito identity inspection unavailable") from exc
+        return admin_json(result)
 
     @router.get("/v1/admin/tenants")
     def tenants(search: str = Query(default="", max_length=40),
