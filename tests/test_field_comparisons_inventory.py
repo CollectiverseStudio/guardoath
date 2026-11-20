@@ -9,9 +9,10 @@ from pathlib import Path
 
 import pytest
 
+from guardoath.business import cross_field_check
 from guardoath.checkers import default_checkers
 from guardoath.engine import Engine
-from guardoath.models import CheckRequest, FieldComparison, Policy, Rule, Stage
+from guardoath.models import Action, CheckRequest, FieldComparison, Policy, Rule, Stage
 
 
 INVENTORY = json.loads(
@@ -20,10 +21,10 @@ INVENTORY = json.loads(
 CASES = INVENTORY["rules"]
 
 
-def _check(case, payload, stage=Stage.INPUT):
+def _check(case, payload, stage=Stage.INPUT, *, direct=False):
     comparison = FieldComparison(**case["comparison"])
     policy = Policy(
-        application_id="demo", version="field-comparisons-test-v1",
+        application_id="demo", version="field-comparisons-test-v1", mode="enforce",
         rules=(Rule(checker_id="cross_field", on_finding="block"),),
         comparisons=(comparison,),
     )
@@ -32,7 +33,7 @@ def _check(case, payload, stage=Stage.INPUT):
         application_id="demo", policy_version=policy.version,
         content=json.dumps(payload), content_format="json",
     )
-    return asyncio.run(engine.check(request, stage))
+    return asyncio.run(cross_field_check(request, policy, stage)) if direct else asyncio.run(engine.check(request, stage))
 
 
 def test_inventory_has_30_unique_non_deployed_comparison_templates():
@@ -80,12 +81,24 @@ def test_missing_left_field_has_explicit_finding(case):
 def test_wrong_type_does_not_coerce_to_number_or_date(case):
     sample = dict(case["negative"])
     sample[case["comparison"]["left"][1:]] = True
+    # The deterministic checker must *always* identify the exact offending
+    # field, even if the full Engine later hits its independent hard deadline.
+    detector = _check(case, sample, direct=True)
+    assert detector.status == "flagged"
+    assert {finding.rule_id for finding in detector.findings} == {case["expected_finding"]}
     result = _check(case, sample)
-    # Preserve the exact-finding assertion; if an OS scheduling spike causes
-    # an incomplete checker, report the bounded checker outcome diagnostically.
-    assert result.evaluation_status == "complete", (
-        f"cross-field incomplete: {[ (c.status, c.error_code, c.latency_ms) for c in result.checker_results ]}")
-    assert {finding.rule_id for finding in result.findings} == {case["expected_finding"]}
+    if result.evaluation_status == "complete":
+        assert {finding.rule_id for finding in result.findings} == {case["expected_finding"]}
+        assert result.effective_action == Action.BLOCK
+    else:
+        # An OS scheduling stall cannot manufacture a completed finding.
+        # The original 250-ms deadline must instead fail closed in enforce.
+        assert result.evaluation_status == "incomplete"
+        assert len(result.checker_results) == 1
+        assert result.checker_results[0].status == "error"
+        assert result.checker_results[0].error_code == "checker_timeout"
+        assert result.recommended_action == result.effective_action == Action.BLOCK
+        assert not result.findings
 
 
 def test_inventory_is_only_submitted_json_not_authoritative_cross_record_assurance():

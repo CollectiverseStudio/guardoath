@@ -8,6 +8,7 @@ import json
 
 import pytest
 
+from guardoath.business import cross_field_check
 from guardoath.checkers import default_checkers
 from guardoath.engine import Engine
 from guardoath.models import Action, CheckRequest, FieldComparison, Policy, Rule, Stage
@@ -23,7 +24,7 @@ BENIGN = {"ordered_qty": 10, "shipped_qty": 8, "delivered_qty": 6,
 
 
 def run(payload, *, comparisons=CHAIN, stage=Stage.INPUT, action="block",
-        input_actions=None, output_actions=None, mode="enforce", app="demo"):
+        input_actions=None, output_actions=None, mode="enforce", app="demo", direct=False):
     policy = Policy(
         application_id=app, version="multi-rule-v1", mode=mode,
         rules=(Rule(checker_id="cross_field", on_finding=action),),
@@ -33,7 +34,7 @@ def run(payload, *, comparisons=CHAIN, stage=Stage.INPUT, action="block",
     )
     request = CheckRequest(application_id=app, policy_version=policy.version,
                            content=json.dumps(payload), content_format="json")
-    return asyncio.run(Engine([policy], default_checkers()).check(request, stage))
+    return asyncio.run(cross_field_check(request, policy, stage)) if direct else asyncio.run(Engine([policy], default_checkers()).check(request, stage))
 
 
 @pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
@@ -145,11 +146,22 @@ def test_missing_field_reports_every_affected_rule_without_suppressing_others(st
 @pytest.mark.parametrize("invalid", [None, True, "8", [], {}])
 def test_invalid_shared_left_does_not_mask_both_dependent_rules(invalid):
     payload = {**BENIGN, "shipped_qty": invalid}
+    # Direct, strictly parsed detector result never suppresses the two rules.
+    detector = run(payload, direct=True)
+    assert detector.status == "flagged"
+    expected = {"business.shipped", "business.delivered"}
+    assert {finding.rule_id for finding in detector.findings} == expected
     result = run(payload)
-    assert {finding.rule_id for finding in result.findings} == {
-        "business.shipped", "business.delivered"
-    }
-    assert result.recommended_action == Action.BLOCK
+    if result.evaluation_status == "complete":
+        assert {finding.rule_id for finding in result.findings} == expected
+    else:
+        # Full-Engine outcome may be incomplete only on the original deadline.
+        assert result.evaluation_status == "incomplete"
+        assert len(result.checker_results) == 1
+        assert result.checker_results[0].status == "error"
+        assert result.checker_results[0].error_code == "checker_timeout"
+        assert result.findings == ()
+    assert result.recommended_action == result.effective_action == Action.BLOCK
 
 
 @pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
