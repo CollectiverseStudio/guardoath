@@ -1,5 +1,6 @@
 """Production-shaped adapter tests: no fake admin mode or full-table scans."""
 from dataclasses import dataclass
+from time import time
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 import pytest
@@ -24,7 +25,7 @@ class Sessions:
     def verified_claims(self, token):
         if token != "signed-owner":
             return None
-        return {"sub": SUB, "username": "operator", "amr": ["pwd", "mfa"]}
+        return {"sub": SUB, "username": "operator", "amr": ["pwd", "otp", "mfa"], "auth_time": int(time())}
 
 class Cognito:
     def get_user(self, *, AccessToken):

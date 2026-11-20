@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import time
 import pytest
 from guardoath.admin_cognito import verify_admin, make_verifier
 from guardoath.admin_console import create_admin_router
@@ -38,7 +39,7 @@ class Provider:
         return {"Groups": self.groups, **({"NextToken": self.next_token} if self.next_token else {})}
 
 def fixture():
-    sessions = Sessions(claims={"sub": SUB, "username": "operator", "amr": ["pwd", "mfa"]})
+    sessions = Sessions(claims={"sub": SUB, "username": "operator", "amr": ["pwd", "otp", "mfa"], "auth_time": int(time.time())})
     return sessions, Provider()
 
 def test_verified_owner_from_trusted_provider_and_signed_mfa():
@@ -54,7 +55,8 @@ def test_unsigned_or_unrecognized_session_is_denied_before_provider():
 
 def test_unproved_mfa_is_denied_even_if_user_is_admin():
     s, c = fixture()
-    for amr in ([], ["pwd"], None, "mfa", ["unknown"]):
+    for amr in ([], ["pwd"], ["otp"], ["pwd", "otp"], ["totp"],
+                ["software_token"], ["pwd", "software_token"], None, "mfa", ["unknown"]):
         s.claims["amr"] = amr
         assert verify_admin("real-signed-token", s, c) is None
     assert c.calls == []
@@ -102,3 +104,30 @@ def test_revoked_token_cannot_access_admin():
     app.include_router(create_admin_router(verify_cognito_admin=make_verifier(s,c)))
     response = TestClient(app).get("/admin", headers={"Authorization":"Bearer real-signed-token"})
     assert response.status_code == 503
+
+
+def test_expired_future_or_missing_signed_login_time_denied_even_with_mfa(monkeypatch):
+    import guardoath.admin_cognito as module
+    monkeypatch.setattr(module, "time", lambda: 100_000)
+    s, provider = fixture()
+    s.claims["amr"] = ["pwd", "otp", "mfa"]
+    for bad in (None, True, "99900", 0, 99_099, 100_031):
+        if bad is None:
+            s.claims.pop("auth_time", None)
+        else:
+            s.claims["auth_time"] = bad
+        assert verify_admin("real-signed-token", s, provider) is None
+    assert provider.calls == []
+    for allowed in (99_100, 100_000, 100_030):
+        s.claims["auth_time"] = allowed
+        assert verify_admin("real-signed-token", s, provider) is not None
+    assert len(provider.calls) == 9
+
+
+def test_refreshed_token_cannot_extend_original_mfa_age(monkeypatch):
+    import guardoath.admin_cognito as module
+    s, provider = fixture()
+    s.claims["auth_time"] = 80_000
+    monkeypatch.setattr(module, "time", lambda: 81_000)
+    assert verify_admin("real-signed-token", s, provider) is None
+    assert provider.calls == []

@@ -9,6 +9,7 @@ approved, independently verifiable MFA mechanism is available.
 from __future__ import annotations
 
 import re
+from time import time
 from typing import Any, Protocol
 
 from guardoath.admin_console import VerifiedAdmin
@@ -29,14 +30,23 @@ SUBJECT = re.compile(r"^[0-9a-fA-F-]{20,80}$")
 ADMIN_GROUP = "GuardOathOwners"
 # An explicit, signed authentication-method reference. Never infer this from
 # a user's preferred MFA settings, email verification or group membership.
-MFA_METHODS = frozenset({"mfa", "otp", "software_token", "totp"})
+# Cognito's signed "mfa" value means that multiple factors were completed.
+# "otp" alone can denote a SINGLE authenticator, not multifactor evidence.
+# Token refresh preserves AMR, so require a fresh signed auth_time too.
+ADMIN_MFA_MAX_AGE_SECONDS = 900
+ADMIN_CLOCK_SKEW_SECONDS = 30
 
 
 def _has_recent_mfa(claims: dict) -> bool:
     methods = claims.get("amr")
-    if not isinstance(methods, list) or not methods or not all(isinstance(v, str) for v in methods):
+    if (not isinstance(methods, list) or "mfa" not in methods
+            or not all(isinstance(v, str) for v in methods)):
         return False
-    return bool(MFA_METHODS.intersection(methods))
+    authenticated = claims.get("auth_time")
+    if type(authenticated) is not int:
+        return False
+    elapsed = int(time()) - authenticated
+    return -ADMIN_CLOCK_SKEW_SECONDS <= elapsed <= ADMIN_MFA_MAX_AGE_SECONDS
 
 
 def verify_admin(token: str, sessions: SessionValidator, cognito: CognitoAdminClient) -> VerifiedAdmin | None:
