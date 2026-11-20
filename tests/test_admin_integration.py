@@ -120,7 +120,7 @@ def test_browser_mounted_with_matching_config_and_both_routes_authorized():
     config = BrowserAuthConfig("sample.auth.us-east-1.amazoncognito.com", "adminclient", "https://guardoath.com/admin/login")
     exchange = BoundExchange(config, sender=lambda u, b: {"access_token": "signed-owner-token-long"})
     sessions = Sessions()
-    sessions.verified_claims = lambda token: {"sub": SUB, "username": "operator", "amr": ["pwd", "mfa"]} if token == "signed-owner-token-long" else None
+    sessions.verified_claims = lambda token: {"sub": SUB, "username": "operator", "amr": ["pwd", "mfa"], "auth_time": int(time())} if token == "signed-owner-token-long" else None
     sessions.client_id = config.client_id
     sessions.domain = config.domain
     app = FastAPI()
@@ -144,6 +144,17 @@ def test_browser_mounted_with_matching_config_and_both_routes_authorized():
     assert client.get("/v1/admin/tenants",headers={"X-GuardOath-Admin-Session":answer.json()["access_token"],
         "Authorization":"AWS4-HMAC-SHA256 Credential=cloudfront/test, SignedHeaders=host, Signature=abc"}).status_code == 200
     assert client.get("/v1/admin/tenants").status_code == 401
+    # An otherwise valid owner token with a stale or absent signed auth_time
+    # must be denied by both browser exchange and all authenticated APIs.
+    for signed_time in (None, int(time()) - 3600):
+        sessions.verified_claims = lambda token, signed_time=signed_time: {
+            "sub": SUB, "username": "operator", "amr": ["pwd", "mfa"],
+            **({} if signed_time is None else {"auth_time": signed_time}),
+        } if token == "signed-owner-token-long" else None
+        assert client.post("/v1/admin/auth/exchange",
+                           json={"code": "valid", "code_verifier": "x" * 43}).status_code == 403
+        assert client.get("/v1/admin/tenants",
+                          headers={"X-GuardOath-Admin-Session": "signed-owner-token-long"}).status_code == 401
 
 
 @pytest.mark.parametrize("reserved_path", [
