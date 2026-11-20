@@ -90,3 +90,7 @@ Both owner directory pagination and exact-email inspection now use one bounded *
 
 ## Consistent admin POST origin checks
 The authenticated owner-only exact-account lookup, catalog preview, tenant status, tenant rule-action and allowance-cap POST endpoints share one Origin verifier. Production accepts only `https://guardoath.com`. Local browser integration accepts exact `http://localhost:<port>` and `http://127.0.0.1:<port>` origins with port 1–65535. Missing, multiple, foreign, spoofed, malformed and out-of-range origins fail HTTP 403 before a provider or tenant mutation. The verifier is defense in depth: Cognito owner/MFA, session checks, audit and versioned tenant constraints remain mandatory.
+
+
+## Local-only admin Origin exception hardening
+All five owner-protected administrative POST routes accept `https://guardoath.com` as the production Origin. A `http://localhost:<port>` or `http://127.0.0.1:<port>` Origin is accepted **only** when the actual ASGI listener and target request URL use exactly the same loopback hostname, HTTP scheme and port. Production and nonlocal listeners reject those loopback Origin claims, including spoofed Host headers. The owner/MFA session, optimistic revision checks and atomic audit protections are unchanged. This is an origin-boundary defense-in-depth change, not an admin deployment or proof of full CSRF protection.

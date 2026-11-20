@@ -97,18 +97,31 @@ PAGE_LIMIT = 50
 # use a dedicated session header; never treat API keys as administrator sessions.
 ADMIN_SESSION_HEADER = "X-GuardOath-Admin-Session"
 
-_LOCAL_ADMIN_ORIGIN = re.compile(r"http://(?:localhost|127\.0\.0\.1):([0-9]{1,5})")
+_LOCAL_ADMIN_ORIGIN = re.compile(r"http://(localhost|127\.0\.0\.1):([0-9]{1,5})")
 
 
 def _require_admin_origin(request: Request) -> None:
-    """One trusted production or bounded loopback origin; deny ambiguity."""
+    """Deny foreign admin POST origins, including loopback sent to production.
+
+    A public host must not accept a claim that the request originated from
+    localhost. In local integration, the actual ASGI server address must match
+    the precise loopback hostname and port as well as the HTTP request URL;
+    a client-supplied Host header alone cannot establish local authority.
+    """
     origins = request.headers.getlist("origin")
     if len(origins) == 1:
         if origins[0] == "https://guardoath.com":
             return
         local = _LOCAL_ADMIN_ORIGIN.fullmatch(origins[0])
-        if local is not None and 1 <= int(local.group(1)) <= 65535:
-            return
+        if local is not None:
+            host, raw_port = local.groups()
+            port = int(raw_port)
+            server = request.scope.get("server")
+            if (1 <= port <= 65535 and request.url.scheme == "http"
+                    and request.url.hostname == host and request.url.port == port
+                    and isinstance(server, (tuple, list)) and len(server) == 2
+                    and server[0] == host and server[1] == port):
+                return
     raise HTTPException(status_code=403, detail="Admin request origin refused")
 
 

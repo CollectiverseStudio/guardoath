@@ -403,7 +403,32 @@ def test_one_owner_origin_policy_for_every_sensitive_admin_post():
         duplicate_headers = [("Authorization", "Bearer owner"), ("Origin", "https://guardoath.com"),
                              ("Origin", "https://evil.example")]
         assert c.post(endpoint, json=body, headers=duplicate_headers).status_code == 403
-        for origin in ("https://guardoath.com", "http://localhost:8000", "http://127.0.0.1:8080"):
-            assert c.post(endpoint, json=body, headers={**auth(), "Origin": origin}).status_code == 200, (endpoint, origin)
+        # A remote application must not accept a forged localhost Origin,
+        # even with a spoofed Host header. Only its production origin is valid.
+        for origin in ("http://localhost:8000", "http://127.0.0.1:8080"):
+            assert c.post(endpoint, json=body, headers={**auth(), "Origin": origin}).status_code == 403
+        assert c.post(endpoint, json=body, headers={
+            **auth(), "Host": "localhost:8000", "Origin": "http://localhost:8000",
+        }).status_code == 403
+        assert c.post(endpoint, json=body, headers={
+            **auth(), "Origin": "https://guardoath.com",
+        }).status_code == 200
+
+    # Real local ASGI listeners can use exact same-origin loopback requests;
+    # mismatched ports, schemes and hostnames cannot borrow that exception.
+    for local_url in ("http://localhost:8000", "http://127.0.0.1:8080"):
+        local_client = TestClient(app, base_url=local_url)
+        for endpoint, body in operations:
+            assert local_client.post(endpoint, json=body, headers={
+                **auth(), "Origin": local_url,
+            }).status_code == 200, (local_url, endpoint)
+            assert local_client.post(endpoint, json=body, headers={
+                **auth(), "Origin": local_url.rsplit(":", 1)[0] + ":9999",
+            }).status_code == 403
+            other_host = ("127.0.0.1" if "localhost" in local_url else "localhost")
+            assert local_client.post(endpoint, json=body, headers={
+                **auth(), "Origin": local_url.replace(
+                    "localhost" if "localhost" in local_url else "127.0.0.1", other_host),
+            }).status_code == 403
     assert directory.calls == 3
     assert len(actions.calls) == 9
