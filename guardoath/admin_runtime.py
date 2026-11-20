@@ -71,8 +71,10 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
         cognito_client = boto3.client("cognito-idp", region_name=pool.rsplit("_", 1)[0],
                                      config=Config(connect_timeout=1, read_timeout=2,
                                                    retries={"total_max_attempts": 2}))
-    # Writes require a separately created append-only audit table. Without it,
-    # the console remains read-only instead of offering unaudited mutations.
+    # Production owner data reads require the separate signed audit table.
+    # Without one, /admin/login remains usable but protected reads return 503;
+    # the customer app stays available and cannot expose unaudited owner data.
+    # Mutations additionally require the same audit table.
     audit_table = os.getenv("GUARDOATH_ADMIN_AUDIT_TABLE", "")
     mutator = None
     audit_reader = None
@@ -110,6 +112,7 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
                         cursor_signing_key=bytes.fromhex(key_hex), browser_config=config,
                         browser_exchange=BoundExchange(config), admin_mutator=mutator,
                         audit_reader=audit_reader, read_auditor=read_auditor,
+                        require_persistent_read_audit=True,
                         billing_reporter=billing_reporter,
                         record_validator=record_validator,rule_exists=rule_exists)
     return True

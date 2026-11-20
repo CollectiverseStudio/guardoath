@@ -1,5 +1,6 @@
 """Runtime opt-in and safety contracts without external AWS or Cognito calls."""
 from dataclasses import dataclass
+from time import time
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -96,3 +97,49 @@ def test_verifier_mismatch_is_refused(monkeypatch):
     with pytest.raises(AdminConfigurationError, match="must match"):
         configure_admin_from_environment(FastAPI(), tenants=Tenants(DB()),
             admin_sessions=Wrong(), cognito_client=Cognito())
+
+
+def test_hosted_runtime_denies_admin_data_without_persistent_audit_table(monkeypatch):
+    configure(monkeypatch)
+    monkeypatch.delenv("GUARDOATH_ADMIN_AUDIT_TABLE", raising=False)
+
+    class OwnerSessions(AdminSessions):
+        def verified_claims(self, token):
+            if token != "valid-owner":
+                return None
+            return {"sub": "12345678-1234-1234-1234-123456789012",
+                    "username": "operator", "amr": ["pwd", "mfa"],
+                    "auth_time": int(time())}
+
+    class OwnerCognito(Cognito):
+        def get_user(self, **kwargs):
+            return {"Username": "operator"}
+
+        def admin_get_user(self, **kwargs):
+            return {"Enabled": True, "UserStatus": "CONFIRMED",
+                    "UserAttributes": [{"Name": "sub",
+                       "Value": "12345678-1234-1234-1234-123456789012"}]}
+
+        def admin_list_groups_for_user(self, **kwargs):
+            return {"Groups": [{"GroupName": "GuardOathOwners"}]}
+
+    class NoTenantReads:
+        def scan(self, **kwargs):
+            raise AssertionError("Owner tenant data was accessed without a signed audit receipt")
+
+    class GuardedDB(DB):
+        _client = NoTenantReads()
+
+    app = FastAPI()
+    assert configure_admin_from_environment(
+        app, tenants=Tenants(GuardedDB()),
+        admin_sessions=OwnerSessions(), cognito_client=OwnerCognito()) is True
+    c = TestClient(app)
+    assert c.get("/admin/login").status_code == 200
+    token = {"X-GuardOath-Admin-Session": "valid-owner"}
+    for endpoint in ("/v1/admin/overview", "/v1/admin/features",
+                     "/v1/admin/tenants?limit=1", "/v1/admin/catalog"):
+        response = c.get(endpoint, headers=token)
+        assert response.status_code == 503
+        assert "read_audit_event_id" not in response.text
+    assert c.get("/v1/admin/overview").status_code == 401

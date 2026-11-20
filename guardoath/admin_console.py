@@ -162,6 +162,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                         admin_mutator: AdminTenantActions | None = None,
                         audit_reader: AdminAuditReader | None = None,
                         read_auditor: AdminSensitiveReadAuditor | None = None,
+                        require_persistent_read_audit: bool = False,
                         browser_entry_enabled: bool = False,
                         billing_reporter: AdminSubscriptionReporter | None = None,
                         record_validator=None, rule_exists=None) -> APIRouter:
@@ -171,6 +172,8 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
     belong in tests. No privilege inferred from email, custom tenant field,
     browser flags or a JWT group string without verification.
     """
+    if type(require_persistent_read_audit) is not bool:
+        raise ValueError("Persistent audit enforcement must be an explicit boolean")
     router = APIRouter()
 
     def require_admin(request: Request) -> VerifiedAdmin:
@@ -217,6 +220,8 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         # Optional persistent audit uses an existing explicitly provisioned
         # append-only table. An audit failure prevents the sensitive provider read.
         if read_auditor is None:
+            if require_persistent_read_audit:
+                raise HTTPException(status_code=503, detail="Protected read auditing unavailable")
             return None
         try:
             return read_auditor.log(actor_sub=principal.subject,

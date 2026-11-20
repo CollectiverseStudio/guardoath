@@ -1451,3 +1451,8 @@ FIRST re-read this file's governing Atlas-only #28/#31 override, then AGENTS.md,
   No AWS/Stripe requests, provider spending, tenant policy or 500-ms deadline
   changes. The current batch requires independent exact-SHA CI/Playwright
   checks and live 15-point verification; do not claim deployed or completed.
+
+
+## 2026-11-20 Atlas — hosted owner read-audit enforcement
+- Read latest main release-reservation override and AGENTS.md first; verified main 08885bd470ca9a4735dbaf02940fee80ddd82052 with exact-SHA Tests 13/13, CodeQL 3/3, PII, Stripe, trusted reference, FC and deploy-script workflows all successful. Issues #39–#42 still open; no failing exact-head jobs or competing main writer observed before this batch.
+- Hosted environment now sets strict read-audit requirement on its existing admin router. Without independent persisted audit configuration, authenticated owner data reads return 503 before tenant/provider access; public customer API remains mountable and login shell still functions. Isolated router tests remain explicitly configurable. Integrated Python tests cover denied/no-provider-read, signed-receipt success, strict flag validation, and real runtime wiring. Operator documentation reconciles older opt-in wording. No IAM, Stripe, tenant, subscription, AWS, shared Engine, PII deadline or infrastructure changes. Full exact-new-SHA CI and 15 live acceptance must be independently verified before deployment or closing #39–#42.
