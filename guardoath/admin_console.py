@@ -18,6 +18,8 @@ from guardoath.admin_audit import AdminAuditReader, AdminAuditUnavailable, EVENT
 from guardoath.admin_billing import AdminSubscriptionReporter, BillingUnavailable
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from guardoath.admin_catalog import CatalogProvider, read_catalog
+from guardoath.admin_catalog_preview import (
+    CatalogPreviewConflict, CatalogPreviewUnavailable, preview_rule_description)
 from guardoath.admin_directory import DynamoAdminDirectory, InvalidCursor
 from guardoath.admin_usage import tenant_usage_report
 from guardoath.admin_users import (CognitoUserDirectory, InvalidUserCursor,
@@ -60,6 +62,17 @@ class AllowanceCap(BaseModel):
     confirmation: str = Field(min_length=2,max_length=40)
     reason: str = Field(min_length=10,max_length=240)
     idempotency_key: str = Field(min_length=16,max_length=96)
+
+
+class CatalogRuleDescriptionPreview(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_registry_version: str = Field(pattern=r"^[1-9][0-9]{0,8}$", max_length=9)
+    proposed_registry_version: str = Field(pattern=r"^[1-9][0-9]{0,8}$", max_length=9)
+    category_id: str = Field(pattern=r"^[a-z][a-z0-9_]{0,59}$", max_length=60)
+    check_id: str = Field(pattern=r"^[a-z][a-z0-9_]{0,59}$", max_length=60)
+    rule_id: str = Field(pattern=r"^[A-Za-z0-9_.:-]{3,100}$", max_length=100)
+    title: str = Field(min_length=3, max_length=120)
+    use_case: str = Field(min_length=3, max_length=500)
 
 
 class ExactUserLookup(BaseModel):
@@ -184,6 +197,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            "tenant_rule_changes": admin_mutator is not None and callable(record_validator) and callable(rule_exists),
                            "monthly_cost_caps": admin_mutator is not None and callable(record_validator),
                            "rule_publishing": False,
+                           "catalog_preview": catalog_provider is not None,
                            "audit_required_for_writes": True,
                            "audit_receipt_lookup": audit_reader is not None})
 
@@ -343,6 +357,27 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Published catalog unavailable") from exc
         return admin_json({"status": "ok", **result})
+
+    @router.post("/v1/admin/catalog/preview")
+    def preview_catalog_rule(payload: CatalogRuleDescriptionPreview, request: Request,
+                             principal: VerifiedAdmin = Depends(require_admin)):
+        # Authenticated metadata-only preview. No draft is saved and no published
+        # detector, tenant record, or customer rule action can be modified.
+        origin = request.headers.get("origin")
+        if origin != "https://guardoath.com" and not re.fullmatch(
+                r"http://(?:localhost|127\\.0\\.1):\\d+", origin or ""):
+            raise HTTPException(status_code=403, detail="Admin request origin refused")
+        if catalog_provider is None:
+            raise HTTPException(status_code=503, detail="Published catalog unavailable")
+        try:
+            result = preview_rule_description(catalog_provider, **payload.model_dump())
+        except CatalogPreviewConflict as exc:
+            raise HTTPException(status_code=409, detail="Catalog changed; refresh before preview") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="Invalid catalog preview") from exc
+        except CatalogPreviewUnavailable as exc:
+            raise HTTPException(status_code=503, detail="Published catalog unavailable") from exc
+        return admin_json(result)
 
     if admin_mutator is not None:
         @router.post("/v1/admin/tenants/{tenant_id}/status")

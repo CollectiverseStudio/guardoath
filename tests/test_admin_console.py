@@ -293,3 +293,59 @@ def test_exact_owner_lookup_returns_429_when_rate_limited_before_provider_read()
     refused = client.post("/v1/admin/users/lookup", **args)
     assert refused.status_code == 429
     assert provider.calls == 20
+
+def test_catalog_metadata_preview_requires_verified_owner_and_origin_and_does_not_publish():
+    app = FastAPI()
+    app.include_router(create_admin_router(verify_cognito_admin=verified, catalog_provider=sample_catalog))
+    c = TestClient(app)
+    body = {"expected_registry_version": "3", "proposed_registry_version": "4",
+            "category_id": "privacy", "check_id": "pii", "rule_id": "pii.email",
+            "title": "Updated email rule title", "use_case": "Protect email addresses"}
+    path = "/v1/admin/catalog/preview"
+    assert c.post(path, json=body).status_code == 401
+    assert c.post(path, json=body, headers=auth("app-key")).status_code == 401
+    assert c.post(path, json=body, headers=auth()).status_code == 403
+    assert c.post(path, json=body, headers={**auth(), "Origin": "https://evil.example"}).status_code == 403
+    valid_headers = {**auth(), "Origin": "https://guardoath.com"}
+    result = c.post(path, json=body, headers=valid_headers)
+    assert result.status_code == 200
+    preview = result.json()
+    assert preview["status"] == "preview_only" and preview["published"] is False
+    assert preview["persisted"] is False and preview["tenant_policies_changed"] is False
+    assert preview["detector_behavior_changed"] is False
+    assert preview["registry_version"] == "3" and preview["candidate_registry_version"] == "4"
+    assert preview["changes"]["title"]["before"] == "Email address"
+    assert preview["changes"]["title"]["after"] == "Updated email rule title"
+    assert "private-path" not in result.text
+    unchanged = c.get("/v1/admin/catalog", headers=auth()).json()
+    assert unchanged["registry_version"] == "3"
+    assert unchanged["categories"][0]["checks"][0]["rules"][0]["title"] == "Email address"
+    assert c.get("/v1/admin/features", headers=auth()).json()["catalog_preview"] is True
+    assert c.get("/v1/admin/features", headers=auth()).json()["rule_publishing"] is False
+    for alteration, expected_status in [
+        ({"expected_registry_version": "2"}, 409),
+        ({"proposed_registry_version": "5"}, 409),
+        ({"rule_id": "pii.missing"}, 409),
+        ({"category_id": "unknown"}, 409),
+        ({"title": "Email address"}, 422),
+        ({"title": "x" * 121}, 422),
+        ({"title": "unsafe\\ncontrol"}, 422),
+        ({"unknown_customer_permission": True}, 422),
+    ]:
+        candidate = {**body, **alteration}
+        assert c.post(path, json=candidate, headers=valid_headers).status_code == expected_status
+
+
+def test_catalog_preview_provider_failure_stays_unavailable_and_no_bypass():
+    def broken():
+        raise RuntimeError("private server catalog")
+    app = FastAPI()
+    app.include_router(create_admin_router(verify_cognito_admin=verified, catalog_provider=broken))
+    body = {"expected_registry_version": "3", "proposed_registry_version": "4",
+            "category_id": "privacy", "check_id": "pii", "rule_id": "pii.email",
+            "title": "Updated email title", "use_case": "Protect email addresses"}
+    r = TestClient(app).post("/v1/admin/catalog/preview", json=body,
+                             headers={**auth(), "Origin": "https://guardoath.com"})
+    assert r.status_code == 503 and "private server" not in r.text
+    assert client(verified, Store()).post("/v1/admin/catalog/preview", json=body,
+            headers={**auth(), "Origin": "https://guardoath.com"}).status_code == 503

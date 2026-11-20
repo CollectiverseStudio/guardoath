@@ -182,7 +182,13 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Select Verify Stripe beside a tenant to compare the current provider status with its saved tenant entitlement. Discrepancies are advisory: no paid access or billing state is modified here.</p><p id="billing-details" role="status">No subscription selected.</p></section>
 <section class="panel"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
 <section class="panel"><h2>Audit receipt lookup</h2><p class="muted">Read one stored administrative event by its exact event ID. No exports or audit enumeration.</p><label for="audit-id">Audit event ID</label> <input id="audit-id" maxlength="64" autocomplete="off" spellcheck="false"> <button type="button" id="audit-go">Verify receipt</button><p id="audit-result" role="status"></p></section>
-<section class="panel"><h2>Categories and checks</h2><p id="catalog-summary"></p><div id="categories"></div></section></div>
+<section class="panel"><h2>Categories and checks</h2><p id="catalog-summary"></p><div id="categories"></div>
+<h3>Preview a versioned catalog description proposal</h3><p class="muted">Select Preview description beside a published rule. This checks the change against the live registry version; it does not save, publish, enable or change any rule.</p>
+<p id="proposal-target">No rule selected.</p>
+<label for="proposal-title">Proposed rule title</label><p><input id="proposal-title" maxlength="120" disabled></p>
+<label for="proposal-use-case">Proposed use case</label><p><textarea id="proposal-use-case" rows="3" maxlength="500" disabled></textarea></p>
+<button id="proposal-go" type="button" disabled>Preview description change</button>
+<p id="proposal-result" role="status"></p></section></div>
 </main><script src="/admin/client.js" defer></script></body></html>"""
 
 # Zero third-party scripts. OAuth access token is deliberately memory-only.
@@ -192,6 +198,7 @@ _JS = r'''"use strict";
   let config = null;
   let nextCursor = null;
   let nextUserCursor = null;
+  let previewSelection = null;
   let authEpoch = 0;
   let features = {tenant_status_changes:false};
   const el = id => document.getElementById(id);
@@ -213,7 +220,14 @@ _JS = r'''"use strict";
     el("tenant-rows").replaceChildren();
     el("user-rows").replaceChildren();
     el("categories").replaceChildren();
-    for (const id of ["status", "tenant-status", "user-status", "user-inspect-result", "catalog-summary", "usage-details", "billing-details", "audit-result"]) say(id, "");
+    for (const id of ["status", "tenant-status", "user-status", "user-inspect-result", "catalog-summary", "usage-details", "billing-details", "audit-result", "proposal-result"]) say(id, "");
+    previewSelection = null;
+    say("proposal-target", "No rule selected.");
+    el("proposal-title").value = "";
+    el("proposal-use-case").value = "";
+    el("proposal-title").disabled = true;
+    el("proposal-use-case").disabled = true;
+    el("proposal-go").disabled = true;
     el("audit-id").value = "";
     el("search").value = "";
     el("user-search").value = "";
@@ -246,6 +260,12 @@ _JS = r'''"use strict";
       el("metrics").append(card);
     }
     features = available;
+    previewSelection = null;
+    say("proposal-target", "No rule selected.");
+    say("proposal-result", "");
+    el("proposal-go").disabled = true;
+    el("proposal-title").disabled = true;
+    el("proposal-use-case").disabled = true;
     showUsers(users);
     showTenants(tenants);
     const categories = Array.isArray(catalog.categories) ? catalog.categories : [];
@@ -270,6 +290,23 @@ _JS = r'''"use strict";
           const entry = document.createElement("li");
           entry.append(textNode("strong", rule.rule_id),
             textNode("span", " — " + (rule.title || "") + ": " + (rule.use_case || "")));
+          if (features.catalog_preview) {
+            const preview = document.createElement("button");
+            preview.type = "button";
+            preview.textContent = "Preview description";
+            preview.addEventListener("click", () => {
+              previewSelection = {category_id:category.category_id, check_id:check.check_id,
+                rule_id:rule.rule_id, registry_version:catalog.registry_version};
+              say("proposal-target", "Selected " + rule.rule_id + " · published registry " + catalog.registry_version);
+              el("proposal-title").value = rule.title || "";
+              el("proposal-use-case").value = rule.use_case || "";
+              el("proposal-title").disabled = false;
+              el("proposal-use-case").disabled = false;
+              el("proposal-go").disabled = false;
+              say("proposal-result", "Edit the title or use case, then preview. No changes will be saved.");
+            });
+            entry.append(preview);
+          }
           if (features.tenant_rule_changes) {
             const button = document.createElement("button");
             button.type = "button";
@@ -285,6 +322,36 @@ _JS = r'''"use strict";
     }
     say("status", "Read-only administration loaded");
   }
+  async function previewCatalogRule() {
+    if (!token || !features.catalog_preview || !previewSelection) return;
+    const selection = {...previewSelection};
+    const epoch = authEpoch;
+    const version = Number(selection.registry_version);
+    if (!Number.isSafeInteger(version) || version < 1) {
+      say("proposal-result", "Published catalog version unavailable"); return;
+    }
+    try {
+      const result = await request("/v1/admin/catalog/preview", {method:"POST",
+        body:JSON.stringify({expected_registry_version:selection.registry_version,
+          proposed_registry_version:String(version + 1), category_id:selection.category_id,
+          check_id:selection.check_id, rule_id:selection.rule_id,
+          title:el("proposal-title").value, use_case:el("proposal-use-case").value})});
+      if (!token || epoch !== authEpoch || previewSelection?.rule_id !== selection.rule_id) return;
+      if (result.status !== "preview_only" || result.published !== false ||
+          result.persisted !== false || result.registry_version !== selection.registry_version ||
+          result.rule_id !== selection.rule_id || result.tenant_policies_changed !== false ||
+          result.detector_behavior_changed !== false || !Array.isArray(result.changed_fields)) {
+        throw new Error("Catalog preview verification unavailable");
+      }
+      say("proposal-result", "Preview only — NOT saved or published. Candidate registry " +
+        result.candidate_registry_version + " · proposed fields: " +
+        result.changed_fields.join(", ") + ". Tenant settings and detector behavior unchanged. " +
+        (result.requires || "Review and tests required"));
+    } catch(err) {
+      if (token && epoch === authEpoch) say("proposal-result", err.message);
+    }
+  }
+
   function showUsers(data) {
     el("user-rows").replaceChildren();
     for (const user of data.users || []) {
@@ -612,5 +679,6 @@ _JS = r'''"use strict";
   el("user-inspect").addEventListener("click", inspectUser);
   el("next").addEventListener("click", page);
   el("audit-go").addEventListener("click", inspectAudit);
+  el("proposal-go").addEventListener("click", previewCatalogRule);
   finishLogin().catch(err => say("login-message", err.message));
 })();'''

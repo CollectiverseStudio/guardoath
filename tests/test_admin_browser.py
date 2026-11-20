@@ -229,3 +229,16 @@ def test_audit_browser_distinguishes_signed_integrity_from_legacy_receipts():
     assert "Legacy receipt — integrity unverified" in script
     assert "Audit integrity status unavailable" in script
     assert "innerHTML" not in script
+
+
+def test_catalog_proposal_is_structured_owner_only_preview_without_publishing():
+    shell = app().get("/admin/login").text
+    script = app().get("/admin/client.js").text
+    assert 'id="proposal-title"' in shell and 'id="proposal-use-case"' in shell
+    assert 'id="proposal-go"' in shell and 'id="proposal-result"' in shell
+    assert 'request("/v1/admin/catalog/preview", {method:"POST"' in script
+    assert 'preview.textContent = "Preview description"' in script
+    assert 'result.published !== false' in script and 'result.persisted !== false' in script
+    assert 'result.tenant_policies_changed !== false' in script
+    assert 'el("proposal-go").disabled = true' in script
+    assert 'previewCatalogRule);' in script
