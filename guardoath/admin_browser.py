@@ -183,7 +183,7 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <section class="panel"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
 <section class="panel"><h2>Audit receipt lookup</h2><p class="muted">Read one stored administrative event by its exact event ID. No exports or audit enumeration.</p><label for="audit-id">Audit event ID</label> <input id="audit-id" maxlength="64" autocomplete="off" spellcheck="false"> <button type="button" id="audit-go">Verify receipt</button><p id="audit-result" role="status"></p></section>
 <section class="panel"><h2>Categories and checks</h2><p id="catalog-summary"></p><div id="categories"></div>
-<h3>Preview a versioned catalog description proposal</h3><p class="muted">Select Preview description beside a published rule. This checks the change against the live registry version; it does not save, publish, enable or change any rule.</p>
+<h3>Preview a versioned catalog description proposal</h3><p class="muted">Select Preview description beside a published rule. This checks the change against the live registry version; it does not save, publish, enable or change any rule. Review fingerprints are not signatures or approvals.</p>
 <p id="proposal-target">No rule selected.</p>
 <label for="proposal-title">Proposed rule title</label><p><input id="proposal-title" maxlength="120" disabled></p>
 <label for="proposal-use-case">Proposed use case</label><p><textarea id="proposal-use-case" rows="3" maxlength="500" disabled></textarea></p>
@@ -343,12 +343,18 @@ _JS = r'''"use strict";
       if (result.status !== "preview_only" || result.published !== false ||
           result.persisted !== false || result.registry_version !== selection.registry_version ||
           result.rule_id !== selection.rule_id || result.tenant_policies_changed !== false ||
-          result.detector_behavior_changed !== false || !Array.isArray(result.changed_fields)) {
+          result.detector_behavior_changed !== false || !Array.isArray(result.changed_fields) ||
+          result.fingerprint_kind !== "review_only_untrusted_sha256_not_signature" ||
+          !/^[a-f0-9]{64}$/.test(result.baseline_sha256) ||
+          !/^[a-f0-9]{64}$/.test(result.proposal_sha256)) {
         throw new Error("Catalog preview verification unavailable");
       }
       say("proposal-result", "Preview only — NOT saved or published. Candidate registry " +
         result.candidate_registry_version + " · proposed fields: " +
         result.changed_fields.join(", ") + ". Tenant settings and detector behavior unchanged. " +
+        "Published baseline SHA-256: " + result.baseline_sha256 +
+        " · Proposal SHA-256: " + result.proposal_sha256 +
+        " (review identifiers only; NOT signatures or approval). " +
         (result.requires || "Review and tests required") + readAuditLabel(result));
     } catch(err) {
       if (token && epoch === authEpoch) say("proposal-result", err.message);
