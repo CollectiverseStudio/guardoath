@@ -255,6 +255,13 @@ def test_catalog_proposal_is_structured_owner_only_preview_without_publishing():
     assert 'preview.textContent = "Preview description"' in script
     assert 'result.published !== false' in script and 'result.persisted !== false' in script
     assert 'result.tenant_policies_changed !== false' in script
+    assert 'result.fingerprint_kind !== "review_only_untrusted_sha256_not_signature"' in script
+    assert '/^[a-f0-9]{64}$/.test(result.baseline_sha256)' in script
+    assert '/^[a-f0-9]{64}$/.test(result.proposal_sha256)' in script
+    assert "Published baseline SHA-256: " in script
+    assert "Proposal SHA-256: " in script
+    assert "NOT signatures or approval" in script
+    assert "Review fingerprints are not signatures or approvals" in shell
     assert 'el("proposal-go").disabled = true' in script
     assert 'previewCatalogRule);' in script
     assert {"proposal-result", "billing-details", "audit-result"} <= cleared_on_logout(script)
