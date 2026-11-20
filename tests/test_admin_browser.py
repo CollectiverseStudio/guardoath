@@ -208,3 +208,16 @@ def test_owner_browser_can_inspect_exact_identity_without_url_pii_or_mutating_ac
     assert 'user-inspect-result' in script
     assert 'innerHTML' not in script
     assert 'admin_disable_user' not in script and 'admin_enable_user' not in script
+
+def test_usage_quota_advisory_is_visible_only_in_admin_authenticated_browser():
+    shell = app().get("/admin/login").text
+    script = app().get("/admin/client.js").text
+    assert 'id="usage-details"' in shell
+    assert 'request("/v1/admin/tenants/" + encodeURIComponent(tenant.tenant_id) + "/usage")' in script
+    assert "usage.usage_threshold || {}" in script
+    assert 'signal.utilization_percent_floor' in script
+    assert '" · Recorded quota signal: " + level' in script
+    assert '" · Saved-cap behavior: " + policy' in script
+    assert '" · AWS costs: Unavailable · Stripe invoices: Unavailable' in script
+    assert '"usage-details"' in script.split("const clearAdminData =", 1)[1].split("const signOut", 1)[0]
+    assert "innerHTML" not in script

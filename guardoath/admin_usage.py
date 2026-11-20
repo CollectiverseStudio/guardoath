@@ -40,6 +40,27 @@ def tenant_usage_report(record, *, clock: Callable[[], datetime] | None = None) 
         raise UsageUnavailable("Invalid stored usage counter")
     recent = [{"month_utc": key, "requests": usage[key]} for key in sorted(usage, reverse=True)[:12]]
     count = usage.get(month)
+    # On-demand quota signal from persisted month-to-date counters only. Never
+    # call this an AWS cost alert, predicted bill or persistent notification.
+    if count is None:
+        signal = "unavailable"
+    elif count > allowance:
+        signal = "over_limit"
+    elif count == allowance:
+        signal = "at_limit"
+    elif count * 100 >= allowance * 95:
+        signal = "near_limit"
+    elif count * 100 >= allowance * 80:
+        signal = "watch"
+    else:
+        signal = "within_limit"
+    threshold = {
+        "state": signal,
+        "utilization_percent_floor": count * 100 // allowance if count is not None and allowance else None,
+        "policy": "blocks_at_saved_cap" if overage == "block" else "records_overage",
+        "basis": "recorded current-month requests vs saved monthly allowance",
+        "persisted_alert": False,
+    }
     return {
         "tenant_id": tenant_id,
         "period_utc": month,
@@ -48,6 +69,7 @@ def tenant_usage_report(record, *, clock: Callable[[], datetime] | None = None) 
         "remaining_before_allowance": max(0, allowance - count) if count is not None else None,
         "overage_policy": overage,
         "blocking_cap_enabled": overage == "block",
+        "usage_threshold": threshold,
         "recent_recorded_months": recent,
         "source": "authoritative GuardOath tenant usage record",
         "record_revision": revision,

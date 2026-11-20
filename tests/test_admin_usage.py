@@ -91,3 +91,31 @@ def test_corrupt_usage_never_returns_partial_data():
     response = TestClient(app).get("/v1/admin/tenants/usr-usage/usage", headers={"X-GuardOath-Admin-Session":"owner-token"})
     assert response.status_code == 503
     assert "bogus" not in response.text
+
+@pytest.mark.parametrize("count,cap,state,percent", [
+    (None,1000,"unavailable",None), (0,1000,"within_limit",0),
+    (799,1000,"within_limit",79), (800,1000,"watch",80),
+    (949,1000,"watch",94), (950,1000,"near_limit",95),
+    (999,1000,"near_limit",99), (1000,1000,"at_limit",100),
+    (1001,1000,"over_limit",100), (0,0,"at_limit",None),
+    (1,0,"over_limit",None),
+])
+def test_owner_usage_quota_signal_is_derived_only_from_authoritative_counter(count, cap, state, percent):
+    data = {} if count is None else {"2026-11": count}
+    report = tenant_usage_report(Tenant(usage=data, monthly_allowance=cap), clock=NOW)
+    signal = report["usage_threshold"]
+    assert signal["state"] == state
+    assert signal["utilization_percent_floor"] == percent
+    assert signal["policy"] == "blocks_at_saved_cap"
+    assert signal["persisted_alert"] is False
+    assert report["requests_recorded"] == count
+    assert report["aws_cost_usd"] is None and report["stripe_invoice_usd"] is None
+
+
+def test_usage_soft_overage_signal_cannot_claim_blocking_or_estimated_billing():
+    report = tenant_usage_report(Tenant(usage={"2026-11":1200}, monthly_allowance=1000,
+                                        overage="allow_and_record"), clock=NOW)
+    assert report["usage_threshold"]["state"] == "over_limit"
+    assert report["usage_threshold"]["policy"] == "records_overage"
+    assert report["blocking_cap_enabled"] is False
+    assert report["aws_cost_usd"] is None and report["stripe_invoice_usd"] is None

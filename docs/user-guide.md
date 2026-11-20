@@ -3584,3 +3584,7 @@ JSON also Blocks if the enabled schema checker did not complete. Ordinary
 unstructured text and stages with no configured schema are unchanged. This
 does not increase the original checker deadline, disable a privacy check or
 silently turn any tenant rule on.
+
+
+### GuardOath owner administration: quota signals
+The owner-only Usage panel derives a read-time warning from persisted current-month request counts and each tenant's saved allowance. An unrecorded month reports **Unavailable** rather than zero; 80% and 95% are advisory markers, 100% is the saved allowance, and above 100% is recorded overage. The actual `block` versus `allow_and_record` policy is always shown separately. Signals do not create alerts, bills, extra quota, active subscriptions, estimated AWS charges, or daily forecasts. Unverified Stripe and AWS cost figures remain unavailable. Customer Input/Output validation and 500-ms PII budgets are unaffected.

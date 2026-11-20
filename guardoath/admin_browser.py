@@ -400,11 +400,21 @@ _JS = r'''"use strict";
       const usage = result.usage || {};
       const count = usage.requests_recorded;
       const remaining = usage.remaining_before_allowance;
+      const signal = usage.usage_threshold || {};
+      const level = ["unavailable", "within_limit", "watch", "near_limit", "at_limit", "over_limit"].includes(signal.state)
+        ? signal.state.replaceAll("_", " ") : "unavailable";
+      const percent = Number.isSafeInteger(signal.utilization_percent_floor) && signal.utilization_percent_floor >= 0
+        ? signal.utilization_percent_floor + "%" : "Unavailable";
+      const policy = ["blocks_at_saved_cap", "records_overage"].includes(signal.policy)
+        ? signal.policy.replaceAll("_", " ") : "unavailable";
       say("usage-details", tenant.tenant_id + " · UTC " + (usage.period_utc || "unknown") +
         " · Recorded: " + (count === null || count === undefined ? "Unavailable" : count) +
         " · Allowance: " + (usage.monthly_allowance ?? "Unavailable") +
         " · Remaining before allowance: " + (remaining === null || remaining === undefined ? "Unavailable" : remaining) +
         " · Overage policy: " + (usage.overage_policy || "Unavailable") +
+        " · Recorded quota signal: " + level + " (" + percent + ")" +
+        " · Saved-cap behavior: " + policy +
+        " · Record updated: " + (usage.record_updated_at || "Unavailable") +
         " · AWS costs: Unavailable · Stripe invoices: Unavailable · Source: " + (usage.source || "unknown"));
     } catch (err) {
       if (token && epoch === authEpoch) say("usage-details", err.message);
