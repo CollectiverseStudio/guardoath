@@ -39,6 +39,26 @@ def test_data_quality_api_expectations(clients,name,case):
     assert sorted(f['rule_id'] for f in data['findings'])==sorted(expected['finding_rule_ids'])
     assert data['cost_usd']==0 and data['simulated'] is False
 
+@pytest.mark.parametrize('stage', list(Stage))
+def test_non_json_ledger_skip_does_not_depend_on_checker_deadline(stage, monkeypatch):
+    """Known inapplicable built-in check is not misreported as an error under scheduler lag."""
+    import guardoath.engine as engine_module
+
+    policy = load_policies(ROOT / 'policies' / 'ledger-batch.json')[0]
+    # Simulate a large scheduler/clock jump around Engine.check. The bypass
+    # applies only to the original built-in ledger checker, not a replacement.
+    elapsed = iter(range(100000))
+    monkeypatch.setattr(engine_module, 'perf_counter', lambda: next(elapsed) / 10)
+    request = CheckRequest(
+        application_id='demo', policy_version='ledger-v1',
+        content='This is not a ledger packet.', content_format='text',
+    )
+    response = asyncio.run(Engine([policy], default_checkers()).check(request, stage))
+    assert len(response.checker_results) == 1
+    assert response.checker_results[0].status == 'skipped'
+    assert response.checker_results[0].error_code == 'ledger_json_required'
+
+
 @pytest.mark.parametrize('name',NAMES)
 @pytest.mark.parametrize('stage',list(Stage))
 def test_checks_never_need_a_network_connection(name,stage,monkeypatch):
