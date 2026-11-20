@@ -153,6 +153,18 @@ class Engine:
             if checker is None:
                 return CheckerResult(checker_id=checker_id, checker_version="unknown",
                                      status="unsupported", error_code="checker_unavailable")
+            # The built-in ledger checker is explicitly not applicable to text.
+            # Resolve that immutable format decision before starting a timed
+            # validation; scheduler stalls cannot turn an inapplicable text
+            # request into a spurious checker_timeout. Do not bypass custom
+            # checkers, JSON ledger validation, or privacy/redaction deadlines.
+            if checker_id == "ledger" and content_request.content_format != "json":
+                from guardoath.data_quality import ledger_check
+                if checker is ledger_check:
+                    return CheckerResult(
+                        checker_id="ledger", checker_version="1", status="skipped",
+                        error_code="ledger_json_required",
+                    )
             simulated = bool(getattr(checker, "simulated", False))
             version = getattr(checker, "checker_version", "unknown")
             try:
