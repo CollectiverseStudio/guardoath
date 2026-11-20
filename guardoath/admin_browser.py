@@ -501,6 +501,12 @@ _JS = r'''"use strict";
           (state.verified ? state.status : "unverified (" + (state.status || "unavailable") + ")") +
           " · Reconciliation: " + level + " (" + (assessment.code || "unknown") + ")" +
           " · " + (assessment.next_step || "Unable to establish billing agreement") +
+          " · Current period ends (UTC): " +
+          (state.verified && typeof state.current_period_end_utc === "string" ? state.current_period_end_utc : "Unavailable") +
+          " · Cancel at period end: " +
+          (state.verified && state.cancel_at_period_end === true ? "Yes" :
+           state.verified && state.cancel_at_period_end === false ? "No" : "Unavailable") +
+          " · Next invoice amount: Unavailable" +
           " · UTC provider read: " + (state.verified_at || "Unavailable"));
         say("status", tenant.tenant_id + ": subscription reviewed; no entitlement change");
       }

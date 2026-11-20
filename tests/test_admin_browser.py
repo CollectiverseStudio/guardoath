@@ -254,3 +254,13 @@ def test_catalog_proposal_is_structured_owner_only_preview_without_publishing():
     assert 'el("proposal-go").disabled = true' in script
     assert 'previewCatalogRule);' in script
     assert {"proposal-result", "billing-details", "audit-result"} <= cleared_on_logout(script)
+
+
+def test_owner_browser_shows_verified_stripe_period_end_and_cancellation_without_invoice_claim():
+    script = app().get("/admin/client.js").text
+    assert 'state.verified && typeof state.current_period_end_utc === "string"' in script
+    assert 'state.verified && state.cancel_at_period_end === true' in script
+    assert 'state.verified && state.cancel_at_period_end === false' in script
+    assert "Current period ends (UTC): " in script
+    assert "Next invoice amount: Unavailable" in script
+    assert "innerHTML" not in script

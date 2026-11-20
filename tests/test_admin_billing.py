@@ -176,3 +176,30 @@ def test_authenticated_subscription_route_reports_critical_drift_without_sensiti
     assert len(provider_reads) == 1
     for secret in ("cus_test1234", "sub_test1234", "pm_private", "secret@example.com"):
         assert secret not in actual.text
+
+
+def test_owner_billing_period_end_and_cancellation_are_verified_provider_advisories():
+    from datetime import datetime, timezone
+    stamp = 1796083200  # 2026-12-01 UTC; no inference from server clock
+    view = reporter(lambda *_: snapshot(current_period_end=stamp, cancel_at_period_end=True)).read(Tenant())
+    assert view["verified"] is True and view["cancel_at_period_end"] is True
+    assert view["current_period_end_utc"] == datetime.fromtimestamp(stamp, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    assert view["subscription_entitlement"] is True
+    assert "invoice" in view["billing_cycle_source"]
+    assert "latest_invoice" not in view and "invoice_amount" not in view
+    assert "cus_" not in str(view) and "pm_private" not in str(view)
+
+
+@pytest.mark.parametrize("value", [None, True, -1, "1796083200", 1.5, 4102444801])
+def test_invalid_optional_stripe_cycle_timestamp_is_unknown_not_fabricated(value):
+    view = reporter(lambda *_: snapshot(current_period_end=value, cancel_at_period_end="true")).read(Tenant())
+    assert view["verified"] is True and view["current_period_end_utc"] is None
+    assert view["cancel_at_period_end"] is None
+    assert view["subscription_entitlement"] is True  # optional schedule metadata cannot modify entitlement
+
+
+def test_unbound_subscription_never_gets_fabricated_schedule_or_provider_read():
+    reads = []
+    view = reporter(lambda *_: reads.append(1)).read(Tenant(payer_id=None))
+    assert not view["verified"] and "current_period_end_utc" not in view
+    assert not reads

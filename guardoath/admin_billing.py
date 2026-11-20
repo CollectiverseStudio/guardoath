@@ -110,8 +110,21 @@ class AdminSubscriptionReporter:
         # active entitlement after independent provider AND saved-state checks.
         concordant = (state == "active" and stored_status == "active"
                       and tenant_status == "active" and billing_mode == "stripe")
+        # Billing-cycle metadata is advisory and must come from the same verified
+        # provider snapshot. Missing/malformed fields are unknown, never a
+        # projected invoice amount or authorization to grant paid access.
+        cancel_flag = snapshot.get("cancel_at_period_end")
+        cancel_flag = cancel_flag if type(cancel_flag) is bool else None
+        period_end = snapshot.get("current_period_end")
+        period_end_utc = (datetime.fromtimestamp(period_end, tz=timezone.utc)
+                          .isoformat(timespec="seconds").replace("+00:00", "Z")
+                          if type(period_end) is int and 946684800 <= period_end <= 4102444800
+                          else None)
         return {
             "status": state, "provider": "Stripe", "verified": True,
+            "cancel_at_period_end": cancel_flag,
+            "current_period_end_utc": period_end_utc,
+            "billing_cycle_source": "same verified Stripe subscription (not an invoice)",
             "price_verified": True, "provider_active": state == "active",
             "subscription_entitlement": concordant,
             "stored_status": stored_status if stored_status in
