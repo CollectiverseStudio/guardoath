@@ -569,7 +569,8 @@ _JS = r'''"use strict";
       if (receipt.operation === "admin.read") {
         if (receipt.integrity_status !== "signed_verified" || change.field !== "protected_read" ||
             !["cognito.exact_user","stripe.subscription","audit.receipt","cognito.user_directory",
-              "tenant.directory","tenant.detail","tenant.usage","catalog.registry","catalog.preview"].includes(change.resource) ||
+              "tenant.directory","tenant.detail","tenant.usage","catalog.registry","catalog.preview",
+              "admin.overview","admin.features"].includes(change.resource) ||
             receipt.prior_revision !== undefined || receipt.new_revision !== undefined)
           throw new Error("Protected read receipt invalid");
         say("audit-result", "Stored receipt · " + integrity + " · protected read " +

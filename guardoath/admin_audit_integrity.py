@@ -50,6 +50,10 @@ def seal_audit(item: dict, key: bytes) -> dict:
 def verify_audit(item: dict, key: bytes) -> bool:
     if not isinstance(item, dict):
         return False
+    # A caller supplying a complete receipt must not attach fields outside
+    # the signed schema and still describe the whole row as verified.
+    if any(name not in SIGNED_FIELDS and name != "integrity_mac" for name in item):
+        return False
     field = item.get("integrity_mac")
     if (not isinstance(field, dict) or set(field) != {"S"} or
             not isinstance(field["S"], str) or

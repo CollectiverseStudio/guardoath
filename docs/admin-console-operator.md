@@ -169,3 +169,22 @@ retain rollback versions, and verify customer tenant Off settings and host
 reference trust remain unchanged. Existing read-attempt auditing still protects
 the preview route in hosted environments. Neither fingerprint is a MAC or a
 proof of provenance.
+
+
+## Audit viewer resource parity and full-receipt integrity
+
+The owner-only audit receipt viewer recognizes the exact set of protected read
+resource codes supported by the signed server audit reader, including
+\`admin.overview\` and \`admin.features\`. Previously, receipts generated for
+those two legitimate endpoints were displayed on the page but rejected when
+operators attempted to verify them by ID. The parity regression now compares
+the browser's accepted resource set with the server's authoritative read
+resource set, preventing silent drift as future read types are added.
+
+Full signed audit rows containing unsigned, unrecognized attributes are not
+treated as cryptographically verified. Existing signed receipt fields, HMAC
+algorithm and projection-based reader behavior are unchanged. For direct
+DynamoDB reads, the reader projects the approved signed fields; any unrelated
+unprojected provider attributes are outside that projection and cannot be
+evaluated by the reader. Neither change authorizes new provider requests,
+modifies a tenant, relaxes PII validation or represents deployment/live acceptance.

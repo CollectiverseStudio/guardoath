@@ -30,3 +30,21 @@ def test_owner_browser_read_receipt_and_mutation_receipt_are_separately_validate
                      "receipt.new_revision !== receipt.prior_revision + 1"):
         assert fragment in script.text
     assert "innerHTML" not in script.text
+
+
+def test_audit_viewer_accepts_exactly_the_server_supported_sensitive_read_resources():
+    """Keep the authenticated browser receipt verifier in parity with signed API types.
+
+    No independently introduced client-side resource or omitted server-side
+    receipt can silently appear approved as new protected reads are added.
+    """
+    import json
+    import re
+    from guardoath.admin_audit import SENSITIVE_READS
+    from guardoath.admin_browser import _JS
+    match = re.search(r'!\[(.*?)\]\.includes\(change\.resource\)', _JS, re.S)
+    assert match is not None
+    options = json.loads("[" + match.group(1) + "]")
+    assert len(options) == len(set(options))
+    assert set(options) == SENSITIVE_READS
+    assert "admin.overview" in options and "admin.features" in options

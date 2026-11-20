@@ -101,3 +101,16 @@ def test_key_revoke_audit_receipt_rejects_impossible_counts(old,new):
     item["new_key_count"] = {"N": str(new)}
     with pytest.raises(AdminAuditUnavailable):
         AdminAuditReader(Provider(item), "audit-table").read(EVENT)
+
+
+def test_signed_audit_verifier_rejects_unsigned_extra_fields_in_full_receipts():
+    from guardoath.admin_audit_integrity import seal_audit, verify_audit
+    key = b"k" * 32
+    original = seal_audit(row("tenant.status"), key)
+    assert verify_audit(original, key)
+    # A signed subset cannot authenticate an attacker-appended unapproved field.
+    extra = {**original, "unaudited_extra": {"S": "should not be authenticated"}}
+    assert not verify_audit(extra, key)
+    with pytest.raises(AdminAuditUnavailable):
+        AdminAuditReader(Provider(extra), "audit-table", verify_key=key).read(EVENT)
+    assert verify_audit(original, key)  # original immutable record still valid
