@@ -132,3 +132,16 @@ def test_rate_limit_rejects_after_thirty_per_minute():
         assert exchanger.exchange("code", "x" * 43) == "a" * 40
     with pytest.raises(ExchangeUnavailable):
         exchanger.exchange("code", "x" * 43)
+
+
+def test_cognito_user_table_and_owner_only_browser_request():
+    page = app().get("/admin/login")
+    assert 'id="user-rows"' in page.text
+    assert 'id="user-search-go"' in page.text
+    assert 'id="user-next"' in page.text
+    script = app().get("/admin/client.js").text
+    assert 'request("/v1/admin/users?limit=20")' in script
+    assert "showUsers(users)" in script
+    assert 'headers["X-GuardOath-Admin-Session"] = token' in script
+    assert "email_hint" in script and "user-rows" in script
+    assert "innerHTML" not in script

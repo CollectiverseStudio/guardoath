@@ -129,7 +129,23 @@ def test_the_site_role_can_use_only_its_table_and_log_group(template):
     statements = resources(template, "AWS::IAM::Role")["SiteRole"]["Policies"][0]["PolicyDocument"]["Statement"]
     assert statements[1]["Action"] == ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem", "dynamodb:Scan"]
     assert statements[1]["Resource"] == {"Fn::GetAtt": ["TenantTable", "Arn"]}
-    assert all("*" not in json.dumps(s["Resource"]) for s in statements)
+    # Resource scope must remain explicit even for conditional admin IAM.
+    # CloudFormation Fn::If is a statement wrapper, not a direct Resource key.
+    for statement in statements:
+        if "Fn::If" in statement:
+            condition, conditional, absent = statement["Fn::If"]
+            assert condition == "AdminConsoleEnabled"
+            assert absent == {"Ref": "AWS::NoValue"}
+            assert conditional["Effect"] == "Allow"
+            assert conditional["Action"] == [
+                "cognito-idp:AdminGetUser", "cognito-idp:AdminListGroupsForUser", "cognito-idp:ListUsers"
+            ]
+            assert conditional["Resource"] == {
+                "Fn::Sub": "arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPool}"
+            }
+        else:
+            assert "Resource" in statement
+            assert "*" not in json.dumps(statement["Resource"])
 
 
 def test_the_table_stays_within_the_free_capacity(template):

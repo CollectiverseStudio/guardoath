@@ -174,6 +174,7 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <section id="login" class="panel"><h2>Administrator sign-in</h2><p>Use your GuardOath administrator account with MFA. Customers and demo API keys do not have administrative access.</p><button id="login-start" type="button">Sign in with Cognito</button><p id="login-message" role="status"></p></section>
 <div id="app" hidden><section class="panel"><nav><button type="button" id="refresh">Refresh</button><button type="button" id="logout">Sign out</button></nav><p id="status" role="status"></p></section>
 <section class="panel"><h2>Overview</h2><div class="grid" id="metrics"></div></section>
+<section class="panel"><h2>Cognito users</h2><p class="muted">Owner-only, one provider page at a time; masked emails and unknown totals.</p><label for="user-search">Email prefix</label> <input id="user-search" maxlength="80" autocomplete="off"> <button id="user-search-go" type="button">Search users</button><div class="scroll"><table><thead><tr><th>Username</th><th>Masked email</th><th>Verified</th><th>Enabled</th><th>Status</th><th>Created (UTC)</th></tr></thead><tbody id="user-rows"></tbody></table></div><p id="user-status" role="status"></p><button id="user-next" type="button" disabled>Next users</button></section>
 <section class="panel"><h2>Tenants</h2><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
 <section class="panel"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
 <section class="panel"><h2>Categories and checks</h2><p id="catalog-summary"></p><div id="categories"></div></section></div>
@@ -185,6 +186,7 @@ _JS = r'''"use strict";
   let token = null;
   let config = null;
   let nextCursor = null;
+  let nextUserCursor = null;
   let authEpoch = 0;
   let features = {tenant_status_changes:false};
   const el = id => document.getElementById(id);
@@ -204,9 +206,13 @@ _JS = r'''"use strict";
   const clearAdminData = () => {
     el("metrics").replaceChildren();
     el("tenant-rows").replaceChildren();
+    el("user-rows").replaceChildren();
     el("categories").replaceChildren();
-    for (const id of ["status", "tenant-status", "catalog-summary", "usage-details"]) say(id, "");
+    for (const id of ["status", "tenant-status", "user-status", "catalog-summary", "usage-details"]) say(id, "");
     el("search").value = "";
+    el("user-search").value = "";
+    nextUserCursor = null;
+    el("user-next").disabled = true;
     nextCursor = null;
     features = {tenant_status_changes:false};
     el("next").disabled = true;
@@ -221,9 +227,10 @@ _JS = r'''"use strict";
   async function load() {
     if (!token) return;
     const epoch = authEpoch;
-    const [overview, tenants, catalog, available] = await Promise.all([
+    const [overview, tenants, catalog, available, users] = await Promise.all([
       request("/v1/admin/overview"), request("/v1/admin/tenants?limit=20"),
-      request("/v1/admin/catalog"), request("/v1/admin/features")]);
+      request("/v1/admin/catalog"), request("/v1/admin/features"),
+      request("/v1/admin/users?limit=20").catch(() => ({status:"unavailable",users:[]}))]);
     if (!token || epoch !== authEpoch) return;
     el("metrics").replaceChildren();
     for (const [name, metric] of Object.entries(overview.metrics || {})) {
@@ -232,6 +239,7 @@ _JS = r'''"use strict";
       el("metrics").append(card);
     }
     features = available;
+    showUsers(users);
     showTenants(tenants);
     const categories = Array.isArray(catalog.categories) ? catalog.categories : [];
     say("catalog-summary", "Published registry: " + (catalog.registry_version ?? "unknown") +
@@ -269,6 +277,33 @@ _JS = r'''"use strict";
       el("categories").append(container);
     }
     say("status", "Read-only administration loaded");
+  }
+  function showUsers(data) {
+    el("user-rows").replaceChildren();
+    for (const user of data.users || []) {
+      const row = document.createElement("tr");
+      for (const field of ["username", "email_hint", "email_verified", "enabled", "status", "created_utc"]) {
+        const value = typeof user[field] === "boolean" ? (user[field] ? "Yes" : "No") : user[field];
+        row.append(textNode("td", value));
+      }
+      el("user-rows").append(row);
+    }
+    nextUserCursor = data.next_cursor || null;
+    el("user-next").disabled = !nextUserCursor;
+    say("user-status", data.status === "ok" ?
+      (data.returned ?? 0) + " users on this page · " + (data.source || "Cognito") +
+      " · UTC retrieved: " + (data.retrieved_utc || "unknown") + " · total unavailable" :
+      "Cognito user directory unavailable");
+  }
+  async function pageUsers() {
+    if (!token) return;
+    const epoch = authEpoch;
+    const qs = new URLSearchParams({limit:"20",query:el("user-search").value});
+    if (nextUserCursor) qs.set("cursor", nextUserCursor);
+    try {
+      const result = await request("/v1/admin/users?" + qs);
+      if (token && epoch === authEpoch) showUsers(result);
+    } catch (err) { if (token && epoch === authEpoch) say("user-status", err.message); }
   }
   function showTenants(data) {
     el("tenant-rows").replaceChildren();
@@ -458,6 +493,8 @@ _JS = r'''"use strict";
   el("refresh").addEventListener("click", () => load().catch(e => say("status", e.message)));
   el("logout").addEventListener("click", () => signOut());
   el("search-go").addEventListener("click", () => {nextCursor=null;page();});
+  el("user-search-go").addEventListener("click", () => {nextUserCursor=null;pageUsers();});
+  el("user-next").addEventListener("click", pageUsers);
   el("next").addEventListener("click", page);
   finishLogin().catch(err => say("login-message", err.message));
 })();'''

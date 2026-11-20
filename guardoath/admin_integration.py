@@ -14,6 +14,7 @@ from guardoath.admin_browser import BrowserAuthConfig, BoundExchange, create_bro
 from guardoath.admin_cognito import make_verifier
 from guardoath.admin_console import create_admin_router
 from guardoath.admin_directory import DynamoAdminDirectory
+from guardoath.admin_users import CognitoUserDirectory
 
 
 class AdminConfigurationError(ValueError):
@@ -87,11 +88,13 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
             raise AdminConfigurationError("Admin browser login has already been mounted")
 
     directory = DynamoAdminDirectory(store._client, store.table_name, cursor_signing_key)
+    users = CognitoUserDirectory(cognito, sessions.pool_id, cursor_signing_key) if callable(getattr(cognito, 'list_users', None)) else None
     verifier = make_verifier(sessions, cognito)
     app.include_router(create_admin_router(
         verify_cognito_admin=verifier,
         tenant_store=store,
         admin_directory=directory,
+        admin_user_directory=users,
         catalog_provider=published_catalog,
         admin_mutator=admin_mutator,
         billing_reporter=billing_reporter,

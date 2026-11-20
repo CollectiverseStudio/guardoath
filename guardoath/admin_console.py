@@ -19,6 +19,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from guardoath.admin_catalog import CatalogProvider, read_catalog
 from guardoath.admin_directory import DynamoAdminDirectory, InvalidCursor
 from guardoath.admin_usage import tenant_usage_report
+from guardoath.admin_users import CognitoUserDirectory, InvalidUserCursor
 
 
 @dataclass(frozen=True)
@@ -97,6 +98,7 @@ def _safe_record(record) -> dict:
 def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                         tenant_store: TenantStore | None = None,
                         admin_directory: DynamoAdminDirectory | None = None,
+                        admin_user_directory: CognitoUserDirectory | None = None,
                         catalog_provider: CatalogProvider | None = None,
                         admin_mutator: AdminTenantActions | None = None,
                         browser_entry_enabled: bool = False,
@@ -183,6 +185,22 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             "revenue_usd": {"value": None, "source": "Stripe", "status": "unavailable"},
             "aws_cost_usd": {"value": None, "source": "AWS billing", "status": "unavailable"},
         }})
+
+    @router.get("/v1/admin/users")
+    def cognito_users(query: str = Query(default="", max_length=80),
+                      limit: int = Query(default=20, ge=1, le=50),
+                      cursor: str | None = Query(default=None, max_length=4096),
+                      principal: VerifiedAdmin = Depends(require_admin)):
+        # Provider enumeration requires freshly verified owner+MFA, never a tenant token.
+        if admin_user_directory is None:
+            raise HTTPException(status_code=503, detail="Cognito user directory unavailable")
+        try:
+            page = admin_user_directory.page(limit=limit, query=query, cursor=cursor)
+        except (InvalidUserCursor, ValueError) as exc:
+            raise HTTPException(status_code=422, detail="Invalid user directory request") from exc
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="Cognito user directory unavailable") from exc
+        return admin_json(page)
 
     @router.get("/v1/admin/tenants")
     def tenants(search: str = Query(default="", max_length=40),

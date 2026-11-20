@@ -141,3 +141,32 @@ def test_admin_catalog_provider_failure_denies_data():
     response = TestClient(app).get("/v1/admin/catalog", headers=auth())
     assert response.status_code == 503
     assert "secret internal" not in response.text
+
+
+def test_owner_only_cognito_user_directory_route_denial_and_sanitized_status():
+    class Directory:
+        def page(self, **kwargs):
+            if kwargs["query"] == "fault":
+                raise RuntimeError("upstream private details")
+            if kwargs["cursor"] == "bad":
+                from guardoath.admin_users import InvalidUserCursor
+                raise InvalidUserCursor("private cursor")
+            return {"status": "ok", "source": "Cognito",
+                    "users": [{"username": "sub-1", "email_hint": "u***@example.org",
+                               "status": "CONFIRMED"}], "total": None, "next_cursor": None}
+    app = FastAPI()
+    app.include_router(create_admin_router(verify_cognito_admin=verified, admin_user_directory=Directory()))
+    c = TestClient(app)
+    assert c.get("/v1/admin/users").status_code == 401
+    assert c.get("/v1/admin/users", headers=auth("customer-key")).status_code == 401
+    ok = c.get("/v1/admin/users?query=ab&limit=3", headers=auth())
+    assert ok.status_code == 200 and ok.json()["users"][0]["email_hint"] == "u***@example.org"
+    assert ok.json()["total"] is None
+    assert c.get("/v1/admin/users?limit=51", headers=auth()).status_code == 422
+    assert c.get("/v1/admin/users?cursor=bad", headers=auth()).status_code == 422
+    fail = c.get("/v1/admin/users?query=fault", headers=auth())
+    assert fail.status_code == 503 and "private details" not in fail.text
+
+def test_cognito_user_directory_not_configured_is_not_false_zero():
+    c = client(verified, Store())
+    assert c.get("/v1/admin/users", headers=auth()).status_code == 503
