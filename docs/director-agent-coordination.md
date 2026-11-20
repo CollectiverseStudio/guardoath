@@ -1435,3 +1435,19 @@ FIRST re-read this file's governing Atlas-only #28/#31 override, then AGENTS.md,
 - Before editing, read current release-reservation override, AGENTS, exact main SHA ad983ac4c3130e47b3cc0768af0d14364851756d, open #39–#42 and #30; observed exact-head Tests 13/13, CodeQL 3/3 and specialized acceptance workflows all successful. No failing exact-head CI jobs.
 - Extended optional signed append-only before-read auditing to owner tenant directory, detail, recorded usage, published registry and metadata-only catalog preview; protected reads return a verifiable event ID, fail closed on audit outage. Browser surfaces IDs and verifies all supported read-resource codes (fixes omission of directory receipt verification). Tightened route tenant IDs to authoritative record pattern. Added successful/outage, no-provider-before-audit, fallback-store, signed-integrity/tamper, unauthorized, browser and documentation regressions. No Stripe/customer mutation, AWS provisioning/spending, policy change or 500-ms budget relaxation.
 - This batch's exact-SHA CI and live /admin 15 checks are pending; do not claim deployed or #39–#42 closed.
+
+
+## 2026-11-20 Atlas — owner overview and capability read receipts
+- Reviewed latest main coordination override (release freeze lifted; no Director gate),
+  AGENTS.md, SHA `84863c5b706471c09f5b2ef815a64b35cb6fc40e`,
+  owner issues #39–#42 and exact-SHA CI. Tests 13/13, CodeQL 3/3 and the
+  specialized release workflows all succeeded; no current-head failure to
+  repair before this batch. No competing main writer was observed.
+- Extended the existing opt-in persistent signed admin read-audit path to
+  protected overview and feature-capability endpoints, with their own fixed
+  resource IDs; audit outages fail closed and authenticated UI exposes receipt
+  IDs or missing-audit configuration. Added signed receipt, denied/failed
+  request and UI regression coverage, operator instructions and source tests.
+  No AWS/Stripe requests, provider spending, tenant policy or 500-ms deadline
+  changes. The current batch requires independent exact-SHA CI/Playwright
+  checks and live 15-point verification; do not claim deployed or completed.

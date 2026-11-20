@@ -36,6 +36,8 @@ def auditor(db):
     ("tenant.usage", "usr-good"),
     ("catalog.registry", "system"),
     ("catalog.preview", "system"),
+    ("admin.overview", "system"),
+    ("admin.features", "system"),
 ])
 def test_persisted_read_receipt_is_signed_and_has_no_private_identity(resource, tenant):
     db = DB()

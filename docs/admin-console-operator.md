@@ -124,3 +124,20 @@ If the existing optional `GUARDOATH_ADMIN_AUDIT_TABLE` is configured, every auth
 ## Signed owner tenant, usage and published-catalog read receipts (opt-in)
 
 When the existing independent admin audit table is enabled, owner-only tenant directory pagination (DynamoDB-backed or local store), exact tenant detail, monthly recorded-usage lookup, published category/check/rule catalog reads and catalog preview requests now append signed, immutable metadata-only read-attempt receipts **before** the store or registry access. Each successful response contains `read_audit_event_id` for verification in the existing authenticated audit viewer, and the relevant UI displays the receipt. Only a fixed resource code, verified owner subject, UTC time and, for exact tenant detail/usage, the validated tenant ID are retained. Search terms, cursors, catalog proposals, provider bindings, raw requests and credentials are never persisted. Failed audit writes return HTTP 503 before protected data reads. A receipt establishes an attempted read, not a successful provider operation. Missing audit configuration retains the prior read-only behavior, so permanent enforcement still requires deployment configuration and #40 remains open. These are conditional writes to the **existing** audit table and can consume its already-provisioned capacity; this source change makes no AWS changes or provider purchases. The 500-ms PII deadline and tenant enforcement are unaffected.
+
+
+## Signed owner overview and capability-read receipts
+When the existing independent administrative audit table is configured, the
+authenticated `GET /v1/admin/overview` and `GET /v1/admin/features` endpoints
+each append a separate immutable, HMAC-signed `admin.overview` or
+`admin.features` read-attempt receipt before exposing platform metadata.
+The receipt stores only the owner subject, fixed resource, system scope and UTC
+time; no client token, raw request, customer identity or billing data. Both
+responses return `read_audit_event_id`, and the existing owner page displays
+these IDs alongside the loaded console status. Audit-write failures prevent
+both reads (HTTP 503). When no audit table is configured, these metadata reads
+retain the existing read-only behavior, but the UI explicitly states that
+persistent read auditing is not configured. No cost, subscription, entitlement,
+tenant policy, rule, PII deadline or infrastructure settings change. This
+does not constitute deployment-wide mandatory audit enforcement or live
+admin acceptance; issues #39–#42 remain open.

@@ -321,7 +321,9 @@ _JS = r'''"use strict";
       }
       el("categories").append(container);
     }
-    say("status", "Read-only administration loaded");
+    say("status", "Read-only administration loaded · Overview" + readAuditLabel(overview) +
+      " · Capabilities" + readAuditLabel(available) +
+      (features.sensitive_read_audit ? "" : " · Persistent read auditing not configured"));
   }
   async function previewCatalogRule() {
     if (!token || !features.catalog_preview || !previewSelection) return;

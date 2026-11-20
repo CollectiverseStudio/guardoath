@@ -240,6 +240,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
 
     @router.get("/v1/admin/features")
     def available_admin_features(principal: VerifiedAdmin = Depends(require_admin)):
+        read_event = audit_sensitive_read(principal, "admin.features")
         return admin_json({"tenant_status_changes": admin_mutator is not None,
                            "billing_changes": False, "billing_verify": billing_reporter is not None,
                            "tenant_rule_changes": admin_mutator is not None and callable(record_validator) and callable(rule_exists),
@@ -249,7 +250,8 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            "catalog_preview": catalog_provider is not None,
                            "audit_required_for_writes": True,
                            "audit_receipt_lookup": audit_reader is not None,
-                           "sensitive_read_audit": read_auditor is not None})
+                           "sensitive_read_audit": read_auditor is not None,
+                           **({"read_audit_event_id": read_event} if read_event else {})})
 
     @router.get("/v1/admin/audit/{event_id}")
     def audit_receipt(event_id: str, principal: VerifiedAdmin = Depends(require_admin)):
@@ -268,6 +270,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
 
     @router.get("/v1/admin/overview")
     def overview(principal: VerifiedAdmin = Depends(require_admin)):
+        read_event = audit_sensitive_read(principal, "admin.overview")
         # Data not sourced from actual billing/provider systems must be unknown,
         # not an invented 0 or fabricated live revenue/cost metric.
         return admin_json({"status": "read_only", "metrics": {
@@ -275,7 +278,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             "active_subscriptions": {"value": None, "source": "Stripe", "status": "unavailable"},
             "revenue_usd": {"value": None, "source": "Stripe", "status": "unavailable"},
             "aws_cost_usd": {"value": None, "source": "AWS billing", "status": "unavailable"},
-        }})
+        }, **({"read_audit_event_id": read_event} if read_event else {})})
 
     @router.get("/v1/admin/users")
     def cognito_users(query: str = Query(default="", max_length=80),

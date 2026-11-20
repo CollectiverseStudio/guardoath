@@ -16,6 +16,7 @@ FIELDS = (*SIGNED_FIELDS, "integrity_mac")
 SENSITIVE_READS = frozenset({
     "cognito.exact_user", "cognito.user_directory", "stripe.subscription", "audit.receipt",
     "tenant.directory", "tenant.detail", "tenant.usage", "catalog.registry", "catalog.preview",
+    "admin.overview", "admin.features",
 })
 READ_REASON = "Owner requested sensitive account inspection"
 
