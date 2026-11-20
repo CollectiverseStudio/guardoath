@@ -11,7 +11,8 @@ from guardoath.checkers import Checker
 from guardoath.config import validate_local_schema
 from guardoath.formats import validate_schema_formats
 from guardoath.groups import GROUPS, group_results
-from guardoath.models import Action, CheckerResult, CheckRequest, CheckResponse, Policy, Stage, RedactionResult
+from guardoath.models import Action, CheckerResult, CheckRequest, CheckResponse, Policy, Stage, RedactionResult, Finding
+from guardoath.json_data import parse_json
 from guardoath.validation_packs import PackRegistry, PackSelectionError
 
 PRIORITY = {Action.ALLOW: 0, Action.FLAG: 1, Action.REDACT: 2, Action.BLOCK: 3}
@@ -206,6 +207,26 @@ class Engine:
                 for reference in active_trusted_references)
         )
         results = await run_rules(request)
+        # A configured JSON schema check that times out/errors/disappears cannot
+        # make malformed canonical JSON pass merely because its rule is optional.
+        # Most requests do not pay for an additional parse. Only on an incomplete
+        # structural checker do we use the same bounded strict JSON parser to
+        # preserve an independent, content-free structural finding.
+        schema = policy.input_schema if stage == Stage.INPUT else policy.output_schema
+        schema_incomplete = (request.content_format == "json" and schema is not None and
+            any(rule.checker_id == "schema" and result.status in {"error", "skipped", "unsupported"}
+                for rule, result in zip(rules, results)))
+        structure_findings = ()
+        if schema_incomplete:
+            try:
+                parse_json(request.content)
+            except (ValueError, RecursionError):
+                structure_findings = (Finding(
+                    rule_id="schema.invalid_json", category="structure", severity="high",
+                    explanation="Content is malformed JSON or exceeds supported strict-JSON limits."),)
+            except Exception:
+                # Remain fail-closed without exposing parser exception content.
+                pass
         # An enabled privacy/secret scanner which did not finish cannot authorize
         # release, even when the tenant observes other checks or normally flags
         # incomplete generic checks. A timeout/capacity error is not a clean scan.
@@ -215,8 +236,8 @@ class Engine:
             for rule, result in zip(rules, results)
         )
         actions = [Action.ALLOW]
-        incomplete = privacy_incomplete
-        if privacy_incomplete:
+        incomplete = privacy_incomplete or schema_incomplete
+        if privacy_incomplete or schema_incomplete:
             actions.append(Action.BLOCK)
         for rule, result in zip(rules, results):
             if result.status == "flagged":
@@ -262,7 +283,7 @@ class Engine:
                     actions.append(Action.BLOCK)
         # Withheld redaction must never be treated as a safe observed preview:
         # a failed mandatory second pass has not verified the transformed text.
-        privacy_fail_closed = privacy_incomplete or redaction.status == "withheld"
+        privacy_fail_closed = privacy_incomplete or schema_incomplete or redaction.status == "withheld"
         recommended = max(actions, key=PRIORITY.__getitem__)
         return CheckResponse(
             check_id=str(uuid4()), application_id=request.application_id,
@@ -271,7 +292,7 @@ class Engine:
             recommended_action=recommended,
             effective_action=(Action.BLOCK if untrusted_reference or privacy_fail_closed else
                               Action.ALLOW if policy.mode == "observe" else recommended),
-            findings=tuple(f for r in results for f in r.findings),
+            findings=structure_findings + tuple(f for r in results for f in r.findings),
             checker_results=tuple(results), simulated=any(r.simulated for r in results),
             total_latency_ms=round((perf_counter() - started) * 1000, 3),
             groups=group_results(policy, results, stage),

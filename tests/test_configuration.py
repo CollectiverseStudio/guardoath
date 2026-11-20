@@ -1,4 +1,5 @@
 import json
+import asyncio
 
 import pytest
 from fastapi.testclient import TestClient
@@ -7,7 +8,7 @@ from guardoath.app import create_app
 from guardoath.checkers import default_checkers
 from guardoath.config import load_policies
 from guardoath.engine import Engine
-from guardoath.models import Policy, Rule
+from guardoath.models import Policy, Rule, CheckRequest, CheckerResult, Stage
 
 
 def test_example_file_loads():
@@ -180,3 +181,40 @@ def test_pii_checker_loads_only_its_declared_dependencies():
     outside = {module: origin for module, origin in loaded.items()
                if not {re.sub(r"[-_.]+", "-", owner).lower() for owner in owners.get(module, [])} & allowed}
     assert loaded and not outside, outside
+
+
+@pytest.mark.parametrize("schema_status", ["error", "skipped", "unsupported"])
+@pytest.mark.parametrize("content,malformed", [
+    ("not json", True),
+    ('{"message":"well formed"}', False),
+])
+def test_optional_schema_unavailable_cannot_fail_open_for_canonical_json(schema_status, content, malformed):
+    """Reproduce an unavailable/timed-out schema adapter without changing CI timeouts."""
+    async def unavailable_schema(request, policy, stage):
+        return CheckerResult(checker_id="schema", checker_version="2",
+                             status=schema_status,
+                             error_code="checker_timeout" if schema_status == "error" else None)
+    policy = load_policies("policies/support.json")[0]
+    engine = Engine([policy], {**default_checkers(), "schema": unavailable_schema})
+    request = CheckRequest(application_id="demo", policy_version="support-v1",
+                           content=content, content_format="json")
+    result = asyncio.run(engine.check(request, Stage.INPUT))
+    assert result.evaluation_status == "incomplete"
+    assert result.recommended_action == "block"
+    assert result.effective_action == "block"
+    assert result.checker_results[0].status == schema_status
+    assert any(f.rule_id == "schema.invalid_json" and f.category == "structure"
+               for f in result.findings) is malformed
+
+
+def test_optional_schema_not_configured_for_text_still_does_not_block_benign_chat():
+    async def unavailable_schema(request, policy, stage):
+        return CheckerResult(checker_id="schema", checker_version="2",
+                             status="skipped")
+    policy = load_policies("policies/support.json")[0]
+    engine = Engine([policy], {**default_checkers(), "schema": unavailable_schema})
+    request = CheckRequest(application_id="demo", policy_version="support-v1",
+                           content="ordinary greeting", content_format="text")
+    result = asyncio.run(engine.check(request, Stage.INPUT))
+    assert result.evaluation_status == "complete"
+    assert result.recommended_action == "allow"

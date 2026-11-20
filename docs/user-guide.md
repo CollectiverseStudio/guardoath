@@ -3570,3 +3570,17 @@ acceptance; those financial operations require separate audited workflows.
 ### Administrator Stripe discrepancy review
 
 The owner-only subscription verification panel now distinguishes verified provider state from the saved tenant entitlement. It explicitly flags a **saved active Stripe entitlement without a verified active provider** for urgent investigation, including missing provider bindings, and flags active provider payments when the tenant is inactive, disabled or uses another billing mode. All assessments are read-only and contain no billing secrets or payment details. Owner operators can use existing independently audited tenant suspension when necessary; this screen cannot grant a subscription, bill a customer, refund a payment, reconcile payment records or calculate live AWS costs. No customer-facing policy or timeout is changed.
+
+### Optional structured JSON validator failures fail closed
+
+When a tenant or legacy policy enables a JSON schema for a stage, the strict-JSON
+structure check must complete even if that checker rule was configured as
+optional. If the schema adapter times out, errors, is skipped unexpectedly or
+is unavailable for JSON input/output, the result is **incomplete and Block**
+(including observe mode). For malformed JSON, a bounded independent strict
+syntax pass supplies a content-free `schema.invalid_json` structural finding;
+the original failed checker status and error code are retained. Well-formed
+JSON also Blocks if the enabled schema checker did not complete. Ordinary
+unstructured text and stages with no configured schema are unchanged. This
+does not increase the original checker deadline, disable a privacy check or
+silently turn any tenant rule on.
