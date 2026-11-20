@@ -2,6 +2,7 @@
 import asyncio
 import json
 from types import SimpleNamespace
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
@@ -179,11 +180,15 @@ def test_authenticated_saved_tenant_arithmetic_two_stage_actions_and_one_meter()
         assert body["evaluation_status"] == "complete"
         assert {f["rule_id"] for f in body["findings"] if f["rule_id"].startswith("business.")} == ids
         assert body["effective_action"] == action
-        # Keep the no-customer-amount-echo contract across *every* response
-        # field while excluding only legitimate numeric execution timings.
-        # A checker latency of 1000.x ms is not a leak of the 1000 emissions
-        # value and must not turn a privacy regression into a false failure.
+        # The generated UUIDv4 correlation ID and execution timings are not
+        # customer data. Both can coincidentally contain the digits "1000",
+        # as observed in exact-SHA CI. Verify the UUID contract before excluding
+        # it; every customer-facing finding, message and metadata field stays
+        # in scope for the sensitive numeric no-echo check.
+        assert UUID(body["check_id"]).version == 4
+        assert str(UUID(body["check_id"])) == body["check_id"]
         sanitized = dict(body)
+        sanitized.pop("check_id", None)
         sanitized.pop("total_latency_ms", None)
         sanitized["checker_results"] = [
             {key: value for key, value in checker.items() if key != "latency_ms"}
