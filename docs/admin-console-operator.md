@@ -34,3 +34,6 @@ Owner authorization requires a **signed** Cognito access-token `amr` array conta
 
 ## Directory identifier privacy
 Provider usernames that are not email addresses are now displayed as stable, key-dependent opaque `user-...` labels rather than unmasked Cognito usernames or arbitrary truncated identifiers. The labels are HMAC-SHA256-derived with a dedicated domain separator and do not grant account-selection or mutation privileges. Email-like usernames continue to use masked email hints. The raw provider usernames remain server-side, and the signing secret is never returned to the browser.
+
+## Subscription item quantity verification
+The owner read-only subscription reporter now rejects missing, zero, negative, noninteger or excessive Stripe item quantities, even if Stripe reports the subscription as active. Valid positive quantities preserve the independent provider-price/environment/customer and persisted tenant checks. Rejected provider snapshots are unavailable, never converted to a paid entitlement. No Stripe mutation or billing charge is performed.

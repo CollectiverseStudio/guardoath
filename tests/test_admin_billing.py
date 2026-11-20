@@ -27,7 +27,7 @@ class Store:
 def snapshot(**updates):
     return {"id": "sub_test1234", "customer": "cus_test1234", "object": "subscription",
             "status": "active", "livemode": False,
-            "items": {"data": [{"price": {"id": PRICE}}], "has_more": False},
+            "items": {"data": [{"price": {"id": PRICE}, "quantity": 1}], "has_more": False},
             "customer_email": "secret@example.com", "payment_method": "pm_private", **updates}
 
 
@@ -71,9 +71,15 @@ def test_active_provider_does_not_override_disabled_unpaid_or_unbound_tenant(rec
 @pytest.mark.parametrize("wrong", [
     {"customer": "cus_someoneelse"}, {"id": "sub_wrong"}, {"status": "invented"},
     {"object": "invoice"}, {"livemode": True}, {"livemode": None},
-    {"items": {"data": [{"price": "price_wrong"}], "has_more": False}},
-    {"items": {"data": [{"price": {"id": PRICE}}, {"price": {"id": PRICE}}], "has_more": False}},
-    {"items": {"data": [{"price": {"id": PRICE}}], "has_more": True}},
+    {"items": {"data": [{"price": "price_wrong", "quantity": 1}], "has_more": False}},
+    {"items": {"data": [{"price": {"id": PRICE}, "quantity": 1}, {"price": {"id": PRICE}, "quantity": 1}], "has_more": False}},
+    {"items": {"data": [{"price": {"id": PRICE}, "quantity": 1}], "has_more": True}},
+    {"items": {"data": [{"price": {"id": PRICE}}], "has_more": False}},
+    {"items": {"data": [{"price": {"id": PRICE}, "quantity": 0}], "has_more": False}},
+    {"items": {"data": [{"price": {"id": PRICE}, "quantity": -1}], "has_more": False}},
+    {"items": {"data": [{"price": {"id": PRICE}, "quantity": True}], "has_more": False}},
+    {"items": {"data": [{"price": {"id": PRICE}, "quantity": "1"}], "has_more": False}},
+    {"items": {"data": [{"price": {"id": PRICE}, "quantity": 1000001}], "has_more": False}},
     {"items": {}}, {"items": None},
 ])
 def test_bad_provider_snapshot_fails_closed(wrong):
@@ -102,3 +108,11 @@ def test_billing_endpoint_denies_customer_and_preserves_data_boundary():
     assert "secret@example.com" not in response.text
     assert response.json()["subscription"]["subscription_entitlement"] is True
     assert cli.get("/v1/admin/subscriptions/usr-notfound", headers={"X-GuardOath-Admin-Session": "admin"}).status_code == 404
+
+
+def test_positive_subscription_quantity_preserves_read_only_verification():
+    for quantity in (1, 2, 10):
+        result = reporter(lambda *args: snapshot(items={"data": [
+            {"price": {"id": PRICE}, "quantity": quantity}], "has_more": False})).read(Tenant())
+        assert result["verified"] and result["provider_active"]
+        assert result["subscription_entitlement"] is True

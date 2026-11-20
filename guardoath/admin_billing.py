@@ -67,6 +67,12 @@ class AdminSubscriptionReporter:
         actual_price = price.get("id") if isinstance(price, dict) else price
         if actual_price != self.expected_price_id:
             raise BillingUnavailable("Stripe subscription plan mismatch")
+        # Stripe items normally include a positive quantity. An empty/zero or
+        # malformed item must never become a paid entitlement merely because
+        # the subscription object says 'active'. Quantity is checked server-side.
+        quantity = entries[0].get("quantity")
+        if type(quantity) is not int or not 1 <= quantity <= 1000000:
+            raise BillingUnavailable("Invalid Stripe subscription quantity")
         state = snapshot.get("status")
         if state not in STATES:
             raise BillingUnavailable("Unrecognized Stripe subscription status")
