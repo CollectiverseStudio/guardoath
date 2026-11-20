@@ -194,7 +194,11 @@ def test_shared_engine_tenant_isolation_during_concurrent_requests(stage):
     assert all({finding.rule_id for finding in result.findings} == {"business.refund"}
                and result.recommended_action == Action.BLOCK for result in first)
     assert all(result.findings == () and result.recommended_action == Action.ALLOW
-               for result in second)
+               for result in second), [
+        (r.evaluation_status, r.recommended_action.value,
+         [(c.checker_id, c.status, c.error_code, c.latency_ms) for c in r.checker_results])
+        for r in second
+    ]
 
 
 @pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])

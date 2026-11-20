@@ -58,3 +58,7 @@ The subsequent Timestamp regression batch adds **14 parametrized test executions
 | Unsupported fractional precision | Seven fractional second digits | Incomplete / `timestamps_invalid_document` / Block |
 
 The 200-sample limit is a **configured local data-quality resource bound** and must not be confused with the disallowed arbitrary 50-comparisons-per-tenant product ceiling in the unrelated Field Comparisons category. Tests preserve the existing strict time grammar, fail-closed contract and no-raw-input response privacy. These additional cases are not described as CI-passing until the exact correction commit completes all required checks.
+
+
+### Strict timestamp parser latency and equivalence
+The bounded timestamps checker validates its precise timestamp grammar directly before using Python's calendar-aware ISO parser. Offset-minute values 60–99 are explicitly rejected because Python otherwise normalizes them; unsupported precision, unknown `-00:00`, impossible dates and invalid offsets still fail closed. This avoids running a generic RFC3339 schema-format adapter separately for each of the at most 200 configured samples; the policy's `max_samples=200`, original 250-ms checker deadline and Block on incomplete validation are unchanged. Tests compare supported and rejected boundary strings to the canonical schema-format contract and preserve both stage results.

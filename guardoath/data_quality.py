@@ -10,7 +10,6 @@ from typing import Any, Literal
 
 from pydantic import Field, ValidationError
 
-from guardoath.formats import FORMAT_CHECKER
 from guardoath.json_data import parse_json
 from guardoath.models import Contract, CheckerResult, Finding
 
@@ -82,8 +81,17 @@ STAMP = re.compile(r'[0-9]{4}-[0-9]{2}-[0-9]{2}[Tt][0-9]{2}:[0-9]{2}:[0-9]{2}(?:
 
 
 def instant(text):
-    if not STAMP.fullmatch(text) or text.endswith('-00:00') or not FORMAT_CHECKER.conforms(text, 'date-time'):
+    # STAMP already fixes the exact RFC3339 subset accepted by this checker:
+    # ASCII year/calendar/time fields, at most six fractional digits, and an
+    # explicit Z or numeric offset. Python validates calendar, hour/second and
+    # the offset magnitude. Check offset minutes ourselves: fromisoformat()
+    # normalizes invalid +00:60/+00:99 instead of rejecting them.
+    # Avoid repeating the general JSON-Schema format adapter for every one
+    # of up to 500 samples on the 250-ms strict data-quality path.
+    if not STAMP.fullmatch(text) or text.endswith('-00:00'):
         raise ValueError('Unsupported timestamp')
+    if text[-6] in '+-' and int(text[-2:]) >= 60:
+        raise ValueError('Unsupported timestamp offset minutes')
     return datetime.fromisoformat(text.upper().replace('Z', '+00:00')).astimezone(timezone.utc)
 
 

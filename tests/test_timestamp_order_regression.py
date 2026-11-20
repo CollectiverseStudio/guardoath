@@ -126,7 +126,9 @@ def test_configured_sample_budget_has_exact_boundary(stage, count, expected_stat
     document = samples(*((origin + timedelta(seconds=n)).isoformat().replace("+00:00", "Z")
                          for n in range(count)))
     response = assess(document, stage)
-    assert response.evaluation_status == ("complete" if expected_error is None else "incomplete")
+    assert response.evaluation_status == ("complete" if expected_error is None else "incomplete"), [
+        (c.checker_id, c.status, c.error_code, c.latency_ms) for c in response.checker_results
+    ]
     assert response.recommended_action == ("allow" if expected_error is None else "block")
     assert response.effective_action == ("allow" if expected_error is None else "block")
     assert not response.findings
@@ -151,3 +153,53 @@ def test_invalid_offsets_or_precision_fail_closed(stage, invalid):
                and c.error_code == "timestamps_invalid_document"
                for c in response.checker_results)
     assert invalid not in response.model_dump_json()
+
+
+@pytest.mark.parametrize("invalid", [
+    "2026-11-04T09:00:00+00:60",
+    "2026-11-04T09:00:00+02:99",
+    "2026-11-04T09:00:00-23:60",
+    "2026-11-04T09:00:00+24:00",
+    "2026-11-04T09:00:00.1234567Z",
+])
+def test_strict_timestamp_fast_path_rejects_offsets_and_overprecise_fraction(invalid):
+    from guardoath.data_quality import instant
+    with pytest.raises(ValueError):
+        instant(invalid)
+
+
+@pytest.mark.parametrize("valid", [
+    "2026-11-04T09:00:00Z",
+    "2026-11-04t09:00:00z",
+    "2026-11-04T10:00:00+01:00",
+    "2026-11-04T05:00:00-04:00",
+    "2026-11-04T09:00:00.000001Z",
+    "2026-11-04T09:00:00+23:59",
+])
+def test_strict_timestamp_fast_path_preserves_supported_rfc3339_instants(valid):
+    from datetime import timezone
+    from guardoath.data_quality import instant
+    assert instant(valid).tzinfo == timezone.utc
+
+
+def test_strict_timestamp_parser_does_not_weaken_schema_format_contract():
+    from guardoath.data_quality import instant
+    from guardoath.formats import FORMAT_CHECKER
+    boundary = (
+        "2026-11-04T09:00:00Z", "2026-11-04t09:00:00z",
+        "2026-11-04T09:00:00.123456Z", "2026-11-04T09:00:00.1234567Z",
+        "2026-11-04T09:00:00+23:59", "2026-11-04T09:00:00-00:00",
+        "2026-11-04T09:00:00+00:60", "2026-11-04T09:00:00+24:00",
+        "2026-02-30T09:00:00Z", "2026-11-04T09:00:60Z",
+    )
+    for stamp in boundary:
+        original_accepts = (stamp != "2026-11-04T09:00:00-00:00"
+                            and len(stamp.split(".")) <= 2
+                            and not stamp.endswith(".1234567Z")
+                            and FORMAT_CHECKER.conforms(stamp, "date-time"))
+        try:
+            instant(stamp)
+            fast_accepts = True
+        except ValueError:
+            fast_accepts = False
+        assert fast_accepts == original_accepts, stamp
