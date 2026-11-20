@@ -1315,3 +1315,7 @@ FIRST re-read this file's governing Atlas-only #28/#31 override, then AGENTS.md,
 
 ## 2026-11-20 Atlas — audited-owner tenant API-key inventory visibility
 - Added a redacted API-key count in the owner tenant list/detail and existing authenticated browser tenant table, reading the same authoritative tenant record (including production DynamoDB pagination). Missing/malformed legacy count is unknown rather than zero. No API key hashes or secrets leave the store; no changes to issuance, revocation, paid entitlement or validation engine. Updated read-only API/DOM/legacy-negative tests and operator documentation. Requirements #39–#42 remain open; exact-SHA CI and live acceptance needed after commit. No AWS or provider spending.
+
+## 2026-11-20 Atlas — audited admin tenant action revision evidence
+- Re-read owner override, AGENTS.md, current main and issues #39–#42. Added prior_revision/new_revision to existing atomic rule-action and downward allowance-cap audit items and corresponding positive regression assertions; status actions already had these fields. Existing conditional tenant revision checks, fail-closed audit transaction, admin identity, tenant settings and all customer safeguards unchanged. Documentation updated.
+- Source anchors/expected audit fields structurally checked before commit. Full Python tests, exact-SHA CI, browser and 15 live acceptance have NOT been verified here. No AWS/Stripe changes, provider spend, release gate waiver or production deployment.

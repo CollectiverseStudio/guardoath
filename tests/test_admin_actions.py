@@ -115,6 +115,10 @@ def test_rule_change_preserves_stage_check_and_uses_atomic_audit():
     assert "output_rule_actions" not in doc
     assert doc["status"]=="active"
     assert audit["Put"]["Item"]["rule_id"]["S"]=="pii.email"
+    assert audit["Put"]["Item"]["prior_revision"]["N"] == "7"
+    assert audit["Put"]["Item"]["new_revision"]["N"] == "8"
+    assert audit["Put"]["Item"]["old_action"]["S"] == "same_as_check"
+    assert audit["Put"]["Item"]["new_action"]["S"] == "block"
     assert "cus_hidden" not in json.dumps(audit)
 
 
@@ -154,3 +158,7 @@ def test_cost_cap_cannot_increase_usage_and_is_automatically_blocking():
     updated=json.loads(ops[0]["Update"]["ExpressionAttributeValues"][":record"]["S"])
     assert updated["monthly_allowance"]==7000 and updated["overage"]=="block"
     assert ops[1]["Put"]["Item"]["operation"]["S"]=="tenant.allowance_cap"
+    assert ops[1]["Put"]["Item"]["prior_revision"]["N"] == "7"
+    assert ops[1]["Put"]["Item"]["new_revision"]["N"] == "8"
+    assert ops[1]["Put"]["Item"]["old_limit"]["N"] == "10000"
+    assert ops[1]["Put"]["Item"]["new_limit"]["N"] == "7000"

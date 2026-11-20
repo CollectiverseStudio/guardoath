@@ -168,6 +168,8 @@ class AdminTenantActions:
                      "actor_sub":{"S":actor},"operation":{"S":"tenant.rule_action"},
                      "rule_id":{"S":rule_id},"stage":{"S":stage},
                      "old_action":{"S":before},"new_action":{"S":action},
+                     "prior_revision":{"N":str(expected_revision)},
+                     "new_revision":{"N":str(expected_revision+1)},
                      "reason":{"S":reason},"when_utc":{"S":timestamp}}
             self.ddb.transact_write_items(TransactItems=[
                 {"Update":{"TableName":self.tenant_table,"Key":{"tenant_id":{"S":tenant_id}},
@@ -229,6 +231,8 @@ class AdminTenantActions:
             audit={"event_id":{"S":event_id},"tenant_id":{"S":tenant_id},
                    "actor_sub":{"S":actor},"operation":{"S":"tenant.allowance_cap"},
                    "old_limit":{"N":str(old)},"new_limit":{"N":str(new_limit)},
+                   "prior_revision":{"N":str(expected_revision)},
+                   "new_revision":{"N":str(expected_revision+1)},
                    "reason":{"S":reason},"when_utc":{"S":now}}
             self.ddb.transact_write_items(TransactItems=[
                 {"Update":{"TableName":self.tenant_table,"Key":{"tenant_id":{"S":tenant_id}},

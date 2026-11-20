@@ -40,3 +40,6 @@ The owner read-only subscription reporter now rejects missing, zero, negative, n
 
 ## Per-tenant API-key inventory (read-only, redacted)
 The authenticated tenant directory and tenant detail now report `api_key_count` from the authoritative saved tenant's key-hash list, including the production DynamoDB paged projection. Only the number of issued API keys (0–2) is emitted; no key hashes, tokens or Stripe bindings are returned. Missing/malformed legacy key metadata is reported as unavailable rather than a fabricated zero. This is an inventory count, not a key-usage metric and does not change revocation, billing or access.
+
+## Audited owner action revision receipts
+Admin rule-action edits and downward allowance caps now persist the prior and next tenant revisions in the same atomic audit record as the before/after changed values. This aligns the existing status-action audit with rule and cap operations. The authoritative tenant record is updated conditionally or neither mutation nor audit insertion succeeds. The audit event contains no raw tenant document, Stripe credentials or customer API keys.
