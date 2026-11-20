@@ -52,7 +52,7 @@ def test_only_services_with_a_free_allowance_or_covered_by_the_free_plan_are_use
                      "AWS::Route53::RecordSet", "AWS::PricingPlanManager::Subscription", "AWS::CloudWatch::Alarm",
                      # Tenant sign-in: Cognito Lite, free for 10,000 monthly active users per account or organization.
                      "AWS::Cognito::UserPool", "AWS::Cognito::UserPoolDomain", "AWS::Cognito::UserPoolClient",
-                     "AWS::Cognito::UserPoolIdentityProvider"}
+                     "AWS::Cognito::UserPoolIdentityProvider", "AWS::Cognito::UserPoolGroup"}
 
 
 def test_the_free_plan_covers_the_distribution_web_acl_and_hosted_zone(template):
@@ -319,7 +319,7 @@ def test_tenant_sign_in_uses_the_free_lite_plan_with_required_authenticator_mfa(
 
 
 def test_the_dashboard_client_has_no_secret_and_cannot_change_its_tenant(template):
-    (client,) = resources(template, "AWS::Cognito::UserPoolClient").values()
+    client = resources(template, "AWS::Cognito::UserPoolClient")["UserPoolClient"]
     assert client["GenerateSecret"] is False and client["AllowedOAuthFlows"] == ["code"]
     assert client["AllowedOAuthScopes"] == ["openid", "email", "aws.cognito.signin.user.admin"]
     assert client["CallbackURLs"] == client["LogoutURLs"] == [{"Fn::Sub": "https://${DomainName}/dashboard"}]
@@ -386,3 +386,32 @@ def test_google_sign_in_is_explicitly_provisionable_without_customer_secrets_in_
     assert template["Outputs"]["GoogleLoginConfigured"]["Value"] == {
         "Fn::If": ["GoogleLoginEnabled", "true", "false"]
     }
+
+def test_admin_identity_infrastructure_is_strictly_opt_in(template):
+    assert default(template, "EnableAdminConsole") == "0"
+    assert template["Conditions"]["AdminConsoleEnabled"] == {"Fn::Equals": [{"Ref": "EnableAdminConsole"}, "1"]}
+    key = template["Parameters"]["AdminCursorHmacKey"]
+    assert key["NoEcho"] is True and key["Default"] == "" and key["MaxLength"] == 128
+    assert "AdminConfiguration" in template["Rules"]
+    group = template["Resources"]["AdminOwnerGroup"]
+    assert group["Condition"] == "AdminConsoleEnabled"
+    assert group["Properties"]["GroupName"] == "GuardOathOwners"
+    assert group["Properties"]["UserPoolId"] == {"Ref": "UserPool"}
+    client = template["Resources"]["AdminUserPoolClient"]
+    assert client["Condition"] == "AdminConsoleEnabled"
+    props = client["Properties"]
+    assert props["UserPoolId"] == {"Ref": "UserPool"}
+    assert props["GenerateSecret"] is False and props["AllowedOAuthFlows"] == ["code"]
+    assert props["CallbackURLs"] == [{"Fn::Sub": "https://${DomainName}/admin/login"}]
+    assert props["SupportedIdentityProviders"] == ["COGNITO"]
+    assert props["EnableTokenRevocation"] is True
+    env = template["Resources"]["SiteFunction"]["Properties"]["Environment"]["Variables"]
+    assert env["GUARDOATH_ADMIN_ENABLED"] == {"Ref": "EnableAdminConsole"}
+    for key in ("GUARDOATH_ADMIN_CLIENT_ID", "GUARDOATH_ADMIN_COGNITO_DOMAIN", "GUARDOATH_ADMIN_CURSOR_HMAC_KEY"):
+        assert env[key]["Fn::If"][0] == "AdminConsoleEnabled"
+        assert env[key]["Fn::If"][2] == {"Ref": "AWS::NoValue"}
+    policy = template["Resources"]["SiteRole"]["Properties"]["Policies"][0]["PolicyDocument"]["Statement"][-1]["Fn::If"]
+    assert policy[0] == "AdminConsoleEnabled" and policy[2] == {"Ref": "AWS::NoValue"}
+    assert set(policy[1]["Action"]) == {"cognito-idp:AdminGetUser", "cognito-idp:AdminListGroupsForUser", "cognito-idp:ListUsers"}
+    assert policy[1]["Resource"] == {"Fn::Sub": "arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPool}"}
+    assert "GUARDOATH_ADMIN_AUDIT_TABLE" not in env

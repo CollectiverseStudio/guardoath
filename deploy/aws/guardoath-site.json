@@ -92,6 +92,23 @@
         "1"
       ],
       "Description": "Opt-in Cognito email/password registration; Google sign-in is optional. Registration does not grant paid access."
+    },
+    "EnableAdminConsole": {
+      "Type": "String",
+      "Default": "0",
+      "AllowedValues": [
+        "0",
+        "1"
+      ],
+      "Description": "Opt-in owner console; default disabled."
+    },
+    "AdminCursorHmacKey": {
+      "Type": "String",
+      "Default": "",
+      "NoEcho": true,
+      "MaxLength": 128,
+      "AllowedPattern": "^$|^[a-fA-F0-9]{64,128}$",
+      "Description": "Independent random 32-64 byte hexadecimal secret required when admin enabled."
     }
   },
   "Rules": {
@@ -154,6 +171,33 @@
             ]
           },
           "AssertDescription": "Google login needs a Google OAuth Web Application client ID and nonempty private secret when enabled."
+        }
+      ]
+    },
+    "AdminConfiguration": {
+      "RuleCondition": {
+        "Fn::Equals": [
+          {
+            "Ref": "EnableAdminConsole"
+          },
+          "1"
+        ]
+      },
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Equals": [
+                  {
+                    "Ref": "AdminCursorHmacKey"
+                  },
+                  ""
+                ]
+              }
+            ]
+          },
+          "AssertDescription": "Provide independent 32-64 byte hexadecimal admin cursor key when enabled."
         }
       ]
     }
@@ -248,6 +292,25 @@
                       "Arn"
                     ]
                   }
+                },
+                {
+                  "Fn::If": [
+                    "AdminConsoleEnabled",
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "cognito-idp:AdminGetUser",
+                        "cognito-idp:AdminListGroupsForUser",
+                        "cognito-idp:ListUsers"
+                      ],
+                      "Resource": {
+                        "Fn::Sub": "arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPool}"
+                      }
+                    },
+                    {
+                      "Ref": "AWS::NoValue"
+                    }
+                  ]
                 }
               ]
             }
@@ -311,6 +374,42 @@
             },
             "GUARDOATH_GOOGLE_LOGIN_ENABLED": {
               "Ref": "EnableGoogleLogin"
+            },
+            "GUARDOATH_ADMIN_ENABLED": {
+              "Ref": "EnableAdminConsole"
+            },
+            "GUARDOATH_ADMIN_CLIENT_ID": {
+              "Fn::If": [
+                "AdminConsoleEnabled",
+                {
+                  "Ref": "AdminUserPoolClient"
+                },
+                {
+                  "Ref": "AWS::NoValue"
+                }
+              ]
+            },
+            "GUARDOATH_ADMIN_COGNITO_DOMAIN": {
+              "Fn::If": [
+                "AdminConsoleEnabled",
+                {
+                  "Fn::Sub": "${SignInDomainPrefix}.auth.${AWS::Region}.amazoncognito.com"
+                },
+                {
+                  "Ref": "AWS::NoValue"
+                }
+              ]
+            },
+            "GUARDOATH_ADMIN_CURSOR_HMAC_KEY": {
+              "Fn::If": [
+                "AdminConsoleEnabled",
+                {
+                  "Ref": "AdminCursorHmacKey"
+                },
+                {
+                  "Ref": "AWS::NoValue"
+                }
+              ]
             }
           }
         }
@@ -976,6 +1075,72 @@
           "email_verified": "email_verified"
         }
       }
+    },
+    "AdminOwnerGroup": {
+      "Type": "AWS::Cognito::UserPoolGroup",
+      "Condition": "AdminConsoleEnabled",
+      "Properties": {
+        "UserPoolId": {
+          "Ref": "UserPool"
+        },
+        "GroupName": "GuardOathOwners",
+        "Description": "Privileged membership is assigned explicitly; never created automatically."
+      }
+    },
+    "AdminUserPoolClient": {
+      "Type": "AWS::Cognito::UserPoolClient",
+      "Condition": "AdminConsoleEnabled",
+      "Properties": {
+        "UserPoolId": {
+          "Ref": "UserPool"
+        },
+        "ClientName": "guardoath-owner-admin",
+        "GenerateSecret": false,
+        "AllowedOAuthFlowsUserPoolClient": true,
+        "AllowedOAuthFlows": [
+          "code"
+        ],
+        "AllowedOAuthScopes": [
+          "openid",
+          "email",
+          "aws.cognito.signin.user.admin"
+        ],
+        "CallbackURLs": [
+          {
+            "Fn::Sub": "https://${DomainName}/admin/login"
+          }
+        ],
+        "LogoutURLs": [
+          {
+            "Fn::Sub": "https://${DomainName}/admin/login"
+          }
+        ],
+        "SupportedIdentityProviders": [
+          "COGNITO"
+        ],
+        "ExplicitAuthFlows": [
+          "ALLOW_REFRESH_TOKEN_AUTH"
+        ],
+        "PreventUserExistenceErrors": "ENABLED",
+        "EnableTokenRevocation": true,
+        "AccessTokenValidity": 15,
+        "IdTokenValidity": 15,
+        "RefreshTokenValidity": 1,
+        "TokenValidityUnits": {
+          "AccessToken": "minutes",
+          "IdToken": "minutes",
+          "RefreshToken": "days"
+        },
+        "ReadAttributes": [
+          "email",
+          "email_verified",
+          "custom:tenant_id"
+        ],
+        "WriteAttributes": [
+          "email",
+          "email_verified"
+        ]
+      }
     }
   },
   "Outputs": {
@@ -1051,6 +1216,13 @@
       "Value": {
         "Ref": "UserPoolClient"
       }
+    },
+    "AdminClientId": {
+      "Condition": "AdminConsoleEnabled",
+      "Value": {
+        "Ref": "AdminUserPoolClient"
+      },
+      "Description": "Admin OAuth client ID, no memberships assigned automatically."
     }
   },
   "Conditions": {
@@ -1066,6 +1238,14 @@
       "Fn::Equals": [
         {
           "Ref": "EnableSelfRegistration"
+        },
+        "1"
+      ]
+    },
+    "AdminConsoleEnabled": {
+      "Fn::Equals": [
+        {
+          "Ref": "EnableAdminConsole"
         },
         "1"
       ]
