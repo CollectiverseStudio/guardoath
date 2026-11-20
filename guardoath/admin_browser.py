@@ -387,6 +387,11 @@ _JS = r'''"use strict";
       }
     }
   }
+  function readAuditLabel(result) {
+    const id = result && result.read_audit_event_id;
+    return typeof id === "string" && /^[a-f0-9]{64}$/.test(id) ?
+      " · Protected read receipt " + id : "";
+  }
   async function inspectUser() {
     if (!token) return;
     const email = el("user-exact-email").value.trim();
@@ -405,7 +410,7 @@ _JS = r'''"use strict";
       });
       if (!token || epoch !== authEpoch) return;
       if (result.status === "not_found") {
-        say("user-inspect-result", "Cognito has no exact email match; no account changes made");
+        say("user-inspect-result", "Cognito has no exact email match; no account changes made" + readAuditLabel(result));
       } else if (result.status === "ok" && result.user &&
                  ["CONFIRMED","UNCONFIRMED","ARCHIVED","COMPROMISED","UNKNOWN","RESET_REQUIRED",
                   "FORCE_CHANGE_PASSWORD","EXTERNAL_PROVIDER"].includes(result.user.status)) {
@@ -416,7 +421,7 @@ _JS = r'''"use strict";
             " · enabled " + (user.enabled === true ? "Yes" : user.enabled === false ? "No" : "Unavailable") +
             " · verified email " + (user.email_verified === true ? "Yes" : user.email_verified === false ? "No" : "Unavailable") +
             " · updated UTC " + (user.updated_utc || "Unavailable") +
-            " · source: " + (result.source || "Cognito"));
+            " · source: " + (result.source || "Cognito") + readAuditLabel(result));
       } else {
         say("user-inspect-result", "Cognito identity inspection unavailable");
       }
@@ -524,7 +529,7 @@ _JS = r'''"use strict";
           (state.verified && state.cancel_at_period_end === true ? "Yes" :
            state.verified && state.cancel_at_period_end === false ? "No" : "Unavailable") +
           " · Next invoice amount: Unavailable" +
-          " · UTC provider read: " + (state.verified_at || "Unavailable"));
+          " · UTC provider read: " + (state.verified_at || "Unavailable") + readAuditLabel(result));
         say("status", tenant.tenant_id + ": subscription reviewed; no entitlement change");
       }
     } catch(err) { if (token && epoch === authEpoch) {
@@ -547,20 +552,31 @@ _JS = r'''"use strict";
       const response = await request("/v1/admin/audit/" + encodeURIComponent(event));
       if (!token || epoch !== authEpoch) return;
       const receipt = response.audit || {};
-      if (receipt.event_id !== event || receipt.status !== "ok" ||
-          !Number.isSafeInteger(receipt.new_revision) ||
-          receipt.new_revision !== receipt.prior_revision + 1) {
+      if (receipt.event_id !== event || receipt.status !== "ok")
         throw new Error("Audit receipt verification unavailable");
-      }
       const change = receipt.change || {};
       const integrity = receipt.integrity_status === "signed_verified" ? "HMAC integrity verified" :
         receipt.integrity_status === "legacy_unverified" ? "Legacy receipt — integrity unverified" : null;
       if (!integrity) throw new Error("Audit integrity status unavailable");
+      if (receipt.operation === "admin.read") {
+        if (receipt.integrity_status !== "signed_verified" || change.field !== "protected_read" ||
+            !["cognito.exact_user","stripe.subscription","audit.receipt"].includes(change.resource) ||
+            receipt.prior_revision !== undefined || receipt.new_revision !== undefined)
+          throw new Error("Protected read receipt invalid");
+        say("audit-result", "Stored receipt · " + integrity + " · protected read " +
+          change.resource + " · tenant " + (receipt.tenant_id || "unknown") +
+          " · UTC " + (receipt.when_utc || "unknown") + readAuditLabel(response));
+        return;
+      }
+      if (!Number.isSafeInteger(receipt.new_revision) ||
+          receipt.new_revision !== receipt.prior_revision + 1)
+        throw new Error("Mutation audit receipt invalid");
       say("audit-result", "Stored receipt · " + integrity + " · " + (receipt.operation || "unknown") +
         " · tenant " + (receipt.tenant_id || "unknown") +
         " · " + (change.field || "change") + ": " + (change.before ?? "unknown") +
         " → " + (change.after ?? "unknown") +
-        " · revision " + receipt.new_revision + " · UTC " + (receipt.when_utc || "unknown"));
+        " · revision " + receipt.new_revision + " · UTC " + (receipt.when_utc || "unknown") +
+        readAuditLabel(response));
     } catch (err) {
       if (token && epoch === authEpoch) say("audit-result", err.message);
     }

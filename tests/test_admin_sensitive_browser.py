@@ -1,0 +1,28 @@
+"""Existing authenticated owner UI renders signed read receipts without exposing account email."""
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from guardoath.admin_browser import BrowserAuthConfig, BoundExchange, create_browser_router
+from guardoath.admin_console import VerifiedAdmin
+
+
+def test_owner_browser_read_receipt_and_mutation_receipt_are_separately_validated():
+    app = FastAPI()
+    cfg = BrowserAuthConfig(
+        "acme.auth.us-east-1.amazoncognito.com", "testclient123",
+        "https://guardoath.com/admin/login")
+    app.include_router(create_browser_router(
+        cfg, BoundExchange(cfg, sender=lambda url, body: {"access_token": "a" * 40}),
+        lambda _: VerifiedAdmin("subject", frozenset({"owner"}), True)))
+    client = TestClient(app)
+    page = client.get("/admin/login")
+    script = client.get("/admin/client.js")
+    assert page.status_code == script.status_code == 200
+    assert 'id="audit-go"' in page.text and 'id="user-inspect"' in page.text
+    for fragment in ("function readAuditLabel(result)", "readAuditLabel(result)",
+                     "readAuditLabel(response)", 'receipt.operation === "admin.read"',
+                     'receipt.integrity_status !== "signed_verified"',
+                     'change.field !== "protected_read"',
+                     '"cognito.exact_user","stripe.subscription","audit.receipt"',
+                     "receipt.new_revision !== receipt.prior_revision + 1"):
+        assert fragment in script.text
+    assert "innerHTML" not in script.text

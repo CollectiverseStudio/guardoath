@@ -15,7 +15,7 @@ SIGNED_FIELDS = (
     "event_id", "tenant_id", "actor_sub", "operation", "when_utc", "reason",
     "prior_revision", "new_revision", "old_status", "new_status",
     "rule_id", "stage", "old_action", "new_action", "old_limit", "new_limit",
-    "old_key_count", "new_key_count",
+    "old_key_count", "new_key_count", "read_resource",
 )
 _DOMAIN = b"guardoath-admin-audit-integrity-v1\x00"
 

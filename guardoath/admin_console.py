@@ -14,7 +14,7 @@ from typing import Callable, Protocol
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 from guardoath.admin_actions import AdminActionConflict, AdminActionUnavailable, AdminTenantActions
-from guardoath.admin_audit import AdminAuditReader, AdminAuditUnavailable, EVENT
+from guardoath.admin_audit import AdminAuditReader, AdminSensitiveReadAuditor, AdminAuditUnavailable, EVENT
 from guardoath.admin_billing import AdminSubscriptionReporter, BillingUnavailable
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from guardoath.admin_catalog import CatalogProvider, read_catalog
@@ -161,6 +161,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                         catalog_provider: CatalogProvider | None = None,
                         admin_mutator: AdminTenantActions | None = None,
                         audit_reader: AdminAuditReader | None = None,
+                        read_auditor: AdminSensitiveReadAuditor | None = None,
                         browser_entry_enabled: bool = False,
                         billing_reporter: AdminSubscriptionReporter | None = None,
                         record_validator=None, rule_exists=None) -> APIRouter:
@@ -212,6 +213,17 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
     def admin_json(data: dict) -> JSONResponse:
         return JSONResponse(data, headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
 
+    def audit_sensitive_read(principal: VerifiedAdmin, resource: str, tenant_id: str = "system"):
+        # Optional persistent audit uses an existing explicitly provisioned
+        # append-only table. An audit failure prevents the sensitive provider read.
+        if read_auditor is None:
+            return None
+        try:
+            return read_auditor.log(actor_sub=principal.subject,
+                                    resource=resource, tenant_id=tenant_id)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="Protected read auditing unavailable") from exc
+
     if browser_entry_enabled:
         @router.get("/admin", include_in_schema=False)
         def admin_entry():
@@ -236,7 +248,8 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            "rule_publishing": False,
                            "catalog_preview": catalog_provider is not None,
                            "audit_required_for_writes": True,
-                           "audit_receipt_lookup": audit_reader is not None})
+                           "audit_receipt_lookup": audit_reader is not None,
+                           "sensitive_read_audit": read_auditor is not None})
 
     @router.get("/v1/admin/audit/{event_id}")
     def audit_receipt(event_id: str, principal: VerifiedAdmin = Depends(require_admin)):
@@ -244,13 +257,14 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             raise HTTPException(status_code=422, detail="Invalid audit event ID")
         if audit_reader is None:
             raise HTTPException(status_code=503, detail="Administrative audit lookup unavailable")
+        read_event = audit_sensitive_read(principal, "audit.receipt")
         try:
             event = audit_reader.read(event_id)
         except (ValueError, AdminAuditUnavailable) as exc:
             raise HTTPException(status_code=503, detail="Administrative audit lookup unavailable") from exc
         if event is None:
             raise HTTPException(status_code=404, detail="Audit event not found")
-        return admin_json({"audit": event})
+        return admin_json({"audit": event, **({"read_audit_event_id": read_event} if read_event else {})})
 
     @router.get("/v1/admin/overview")
     def overview(principal: VerifiedAdmin = Depends(require_admin)):
@@ -289,6 +303,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         _require_admin_origin(request)
         if admin_user_directory is None:
             raise HTTPException(status_code=503, detail="Cognito user directory unavailable")
+        read_event = audit_sensitive_read(principal, "cognito.exact_user")
         try:
             result = admin_user_directory.lookup(owner_sub=principal.subject, email=payload.email)
         except InvalidUserLookup as exc:
@@ -297,7 +312,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             raise HTTPException(status_code=429, detail="Cognito account lookup temporarily limited") from exc
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Cognito identity inspection unavailable") from exc
-        return admin_json(result)
+        return admin_json({**result, **({"read_audit_event_id": read_event} if read_event else {})})
 
     @router.get("/v1/admin/tenants")
     def tenants(search: str = Query(default="", max_length=40),
@@ -368,6 +383,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             raise HTTPException(status_code=404, detail="Tenant not found")
         if tenant_store is None or billing_reporter is None:
             raise HTTPException(status_code=503, detail="Subscription verification unavailable")
+        read_event = audit_sensitive_read(principal, "stripe.subscription", tenant_id)
         try:
             record = tenant_store.get(tenant_id)
             if record is None:
@@ -379,7 +395,8 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             raise HTTPException(status_code=503, detail="Subscription verification unavailable") from exc
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Subscription verification unavailable") from exc
-        return admin_json({"tenant_id":tenant_id, "subscription":result})
+        return admin_json({"tenant_id":tenant_id, "subscription":result,
+                           **({"read_audit_event_id": read_event} if read_event else {})})
 
     @router.get("/v1/admin/catalog")
     def catalog(category_id: str | None = Query(default=None, min_length=1, max_length=60,

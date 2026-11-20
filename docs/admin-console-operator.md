@@ -111,3 +111,8 @@ cannot commit the revocation. The receipt stores only prior and new key
 Cognito identities and verified Stripe entitlement are unchanged.
 The operation cannot be undone by restoring old keys; customers must issue new ones.
 It does not provision AWS resources or perform Stripe mutations.
+
+
+## Persistent signed sensitive-read receipts (opt-in)
+
+With the existing explicitly provisioned and retained administrator audit table, exact Cognito account inspection, server-verified Stripe subscription inspection, and individual audit-receipt lookup first append a distinct signed **read-attempt** receipt. It includes only the authenticated owner, a fixed resource code, UTC time, and optional validated tenant ID. It never includes an email address, provider username, Stripe customer/subscription binding, inspected event ID, request/response body or API key. The response includes `read_audit_event_id` after success and the existing owner UI can verify the signed read receipt by ID. This receipt attests to a read **attempt**, not downstream provider success; failures after logging leave the attempt recorded. If audit append fails, the sensitive read fails closed with HTTP 503 before contacting the provider. Uses only the current opt-in table and its existing put/get permissions; no new services, capacity allocations, plan upgrades or AWS deployments were made. Existing provisioned write capacity may throttle bursts. When the audit table is disabled, earlier read-only behavior is unchanged; the remaining administrative read routes are **not yet durably audited** and #40 remains open.

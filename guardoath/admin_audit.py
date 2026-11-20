@@ -1,8 +1,10 @@
 """Owner-only bounded DynamoDB lookup of an immutable administrative audit receipt."""
 from __future__ import annotations
+from datetime import datetime, timezone
 import re
+import secrets
 
-from guardoath.admin_audit_integrity import SIGNED_FIELDS, verify_audit
+from guardoath.admin_audit_integrity import SIGNED_FIELDS, seal_audit, verify_audit
 
 EVENT = re.compile(r"^[a-f0-9]{64}$")
 TENANT = re.compile(r"^[a-z][a-z0-9-]{1,39}$")
@@ -11,10 +13,47 @@ RULE = re.compile(r"^[A-Za-z0-9_.:-]{3,100}$")
 UTC = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
 ACTIONS = frozenset({"off", "allow", "flag", "block", "same_as_check"})
 FIELDS = (*SIGNED_FIELDS, "integrity_mac")
+SENSITIVE_READS = frozenset({"cognito.exact_user", "stripe.subscription", "audit.receipt"})
+READ_REASON = "Owner requested sensitive account inspection"
 
 
 class AdminAuditUnavailable(Exception):
     """Provider failures and invalid rows are never returned to clients."""
+
+
+class AdminSensitiveReadAuditor:
+    """Append signed, metadata-only read-attempt receipt before sensitive provider reads."""
+
+    def __init__(self, ddb, audit_table: str, *, signing_key: bytes, clock=None):
+        if (not callable(getattr(ddb, "put_item", None)) or
+                not isinstance(audit_table, str) or
+                not re.fullmatch(r"[A-Za-z0-9_.-]{3,255}", audit_table) or
+                not isinstance(signing_key, bytes) or len(signing_key) < 32):
+            raise ValueError("Independent signed audit configuration required")
+        self.ddb, self.audit_table, self.signing_key = ddb, audit_table, signing_key
+        self.clock = clock or (lambda: datetime.now(timezone.utc))
+
+    def log(self, *, actor_sub: str, resource: str, tenant_id: str = "system") -> str:
+        if (not isinstance(actor_sub, str) or not SUBJECT.fullmatch(actor_sub) or
+                resource not in SENSITIVE_READS or not isinstance(tenant_id, str)
+                or not TENANT.fullmatch(tenant_id)):
+            raise ValueError("Invalid protected read audit context")
+        try:
+            now = self.clock()
+            if not isinstance(now, datetime) or now.tzinfo is None:
+                raise ValueError("Invalid audit time")
+            event_id = secrets.token_hex(32)
+            item = {
+                "event_id": {"S": event_id}, "tenant_id": {"S": tenant_id},
+                "actor_sub": {"S": actor_sub}, "operation": {"S": "admin.read"},
+                "read_resource": {"S": resource}, "reason": {"S": READ_REASON},
+                "when_utc": {"S": now.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")}}
+            self.ddb.put_item(TableName=self.audit_table,
+                              Item=seal_audit(item, self.signing_key),
+                              ConditionExpression="attribute_not_exists(event_id)")
+            return event_id
+        except Exception as exc:
+            raise AdminAuditUnavailable("Protected administrative read audit unavailable") from exc
 
 
 class AdminAuditReader:
@@ -62,15 +101,27 @@ class AdminAuditReader:
 
             tenant, actor, operation, when, reason = (string(k) for k in
                 ("tenant_id", "actor_sub", "operation", "when_utc", "reason"))
-            previous, revision = number("prior_revision"), number("new_revision")
             if (string("event_id") != event_id or not tenant or not TENANT.fullmatch(tenant)
                     or not actor or not SUBJECT.fullmatch(actor)
                     or operation not in ("tenant.status", "tenant.rule_action", "tenant.allowance_cap",
-                                         "tenant.keys_revoke")
+                                         "tenant.keys_revoke", "admin.read")
                     or not when or not UTC.fullmatch(when)
-                    or not reason or not 10 <= len(reason) <= 240
-                    or previous < 1 or revision != previous + 1):
+                    or not reason or not 10 <= len(reason) <= 240):
                 raise AdminAuditUnavailable("Invalid audit receipt")
+            if operation == "admin.read":
+                resource = string("read_resource")
+                if (integrity_status != "signed_verified" or resource not in SENSITIVE_READS
+                        or reason != READ_REASON or "prior_revision" in item
+                        or "new_revision" in item):
+                    raise AdminAuditUnavailable("Invalid protected read receipt")
+                return {"status": "ok", "integrity_status": integrity_status,
+                        "source": "persistent DynamoDB administrative audit receipt",
+                        "event_id": event_id, "tenant_id": tenant, "actor_sub": actor,
+                        "operation": operation, "when_utc": when, "reason": reason,
+                        "change": {"field": "protected_read", "resource": resource}}
+            previous, revision = number("prior_revision"), number("new_revision")
+            if previous < 1 or revision != previous + 1 or "read_resource" in item:
+                raise AdminAuditUnavailable("Invalid mutation receipt")
             if operation == "tenant.status":
                 before, after = string("old_status"), string("new_status")
                 if before not in ("active", "disabled") or after not in ("active", "disabled") or before == after:
