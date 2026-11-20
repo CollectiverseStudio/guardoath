@@ -285,6 +285,9 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         # Provider enumeration requires freshly verified owner+MFA, never a tenant token.
         if admin_user_directory is None:
             raise HTTPException(status_code=503, detail="Cognito user directory unavailable")
+        # Persist an owner-authenticated, signed read attempt before Cognito
+        # enumeration. Audit outages must never result in unaudited reads.
+        read_event = audit_sensitive_read(principal, "cognito.user_directory")
         try:
             page = admin_user_directory.page(owner_sub=principal.subject, limit=limit, query=query, cursor=cursor)
         except (InvalidUserCursor, ValueError) as exc:
@@ -293,7 +296,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             raise HTTPException(status_code=429, detail="Cognito user directory temporarily limited") from exc
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Cognito user directory unavailable") from exc
-        return admin_json(page)
+        return admin_json({**page, **({"read_audit_event_id": read_event} if read_event else {})})
 
     @router.post("/v1/admin/users/lookup")
     def exact_cognito_user(payload: ExactUserLookup, request: Request,

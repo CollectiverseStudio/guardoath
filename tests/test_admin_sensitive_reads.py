@@ -28,6 +28,7 @@ def auditor(db):
 
 @pytest.mark.parametrize("resource,tenant", [
     ("cognito.exact_user", "system"),
+    ("cognito.user_directory", "system"),
     ("stripe.subscription", "usr-good"),
     ("audit.receipt", "system"),
 ])
@@ -88,6 +89,9 @@ def test_authenticated_sensitive_api_reads_audit_first_and_deny_on_audit_failure
             if self.failed: raise AdminAuditUnavailable("private audit outage")
             return "b" * 64
     class Users:
+        def page(self, **kwargs):
+            calls.append(("users_page", kwargs))
+            return {"status": "ok", "users": [], "total": None}
         def lookup(self, **kwargs):
             calls.append(("users", kwargs))
             return {"status": "not_found", "user": None}
@@ -114,6 +118,11 @@ def test_authenticated_sensitive_api_reads_audit_first_and_deny_on_audit_failure
 
     headers = {"Authorization": "Bearer owner", "Origin": "https://guardoath.com"}
     c = make_client(False)
+    page = c.get("/v1/admin/users", headers=headers)
+    assert page.status_code == 200 and page.json()["read_audit_event_id"] == "b" * 64
+    assert [name for name, _ in calls] == ["audit", "users_page"]
+    assert calls[0][1]["resource"] == "cognito.user_directory"
+    calls.clear()
     r = c.post("/v1/admin/users/lookup", json={"email": "private@example.com"}, headers=headers)
     assert r.status_code == 200 and r.json()["read_audit_event_id"] == "b" * 64
     assert [name for name, _ in calls] == ["audit", "users"]
@@ -129,6 +138,7 @@ def test_authenticated_sensitive_api_reads_audit_first_and_deny_on_audit_failure
 
     c = make_client(True)
     for method, path, opts in (
+        ("get", "/v1/admin/users", {}),
         ("post", "/v1/admin/users/lookup", {"json": {"email": "private@example.com"}}),
         ("get", "/v1/admin/subscriptions/usr-good", {}),
         ("get", "/v1/admin/audit/" + "a" * 64, {}),

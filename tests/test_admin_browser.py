@@ -292,3 +292,13 @@ def test_owner_browser_key_revocation_uses_signed_receipt_and_tenant_confirmatio
     assert "auditReceipt(outcome, tenant.tenant_id, tenant.revision)" in script
     assert "Customers must issue new keys" in script
     assert "Application keys revoked" in script
+
+
+def test_user_directory_page_displays_signed_read_receipt_when_present():
+    shell = app().get("/admin/login").text
+    script = app().get("/admin/client.js").text
+    assert 'id="user-status"' in shell
+    assert '" · total unavailable" + readAuditLabel(data)' in script
+    assert "read_audit_event_id" in script
+    assert "user-status" in cleared_on_logout(script)
+    assert "innerHTML" not in script

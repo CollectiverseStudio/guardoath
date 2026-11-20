@@ -367,7 +367,7 @@ _JS = r'''"use strict";
     el("user-next").disabled = !nextUserCursor;
     say("user-status", data.status === "ok" ?
       (data.returned ?? 0) + " users on this page · " + (data.source || "Cognito") +
-      " · UTC retrieved: " + (data.retrieved_utc || "unknown") + " · total unavailable" :
+      " · UTC retrieved: " + (data.retrieved_utc || "unknown") + " · total unavailable" + readAuditLabel(data) :
       "Cognito user directory unavailable");
   }
   async function pageUsers() {
