@@ -14,8 +14,10 @@ def row(operation="tenant.status"):
         data.update(old_status="active", new_status="disabled")
     elif operation == "tenant.rule_action":
         data.update(rule_id="pii.email", stage="input", old_action="allow", new_action="block")
-    else:
+    elif operation == "tenant.allowance_cap":
         data.update(old_limit=10000, new_limit=9000)
+    else:
+        data.update(old_key_count=2, new_key_count=0)
     return {k: {"N" if type(v) is int else "S": str(v)} for k,v in data.items()}
 
 
@@ -28,7 +30,7 @@ class Provider:
 
 
 def test_three_operations_strict_projection_and_no_leakage():
-    for op in ("tenant.status", "tenant.rule_action", "tenant.allowance_cap"):
+    for op in ("tenant.status", "tenant.rule_action", "tenant.allowance_cap", "tenant.keys_revoke"):
         item=row(op)
         item["record"]={"S":"secret"}
         item["payer_id"]={"S":"cus_private"}
@@ -72,7 +74,7 @@ def test_provider_outage_does_not_leak_error():
 def test_signed_audit_receipts_verify_and_tampering_fails_closed():
     from guardoath.admin_audit_integrity import seal_audit
     key = b"k" * 32
-    for operation in ("tenant.status", "tenant.rule_action", "tenant.allowance_cap"):
+    for operation in ("tenant.status", "tenant.rule_action", "tenant.allowance_cap", "tenant.keys_revoke"):
         signed = seal_audit(row(operation), key)
         verified = AdminAuditReader(Provider(signed), "audit-table", verify_key=key).read(EVENT)
         assert verified["integrity_status"] == "signed_verified"
@@ -91,3 +93,11 @@ def test_signed_audit_receipts_verify_and_tampering_fails_closed():
 def test_invalid_audit_verification_key_configuration_fails_closed():
     with pytest.raises(ValueError):
         AdminAuditReader(Provider(row()), "audit-table", verify_key=b"short")
+
+@pytest.mark.parametrize("old,new", [(0,0),(3,0),(1,1),(2,1)])
+def test_key_revoke_audit_receipt_rejects_impossible_counts(old,new):
+    item = row("tenant.keys_revoke")
+    item["old_key_count"] = {"N": str(old)}
+    item["new_key_count"] = {"N": str(new)}
+    with pytest.raises(AdminAuditUnavailable):
+        AdminAuditReader(Provider(item), "audit-table").read(EVENT)

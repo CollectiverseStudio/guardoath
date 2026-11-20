@@ -197,3 +197,114 @@ def test_all_audited_tenant_mutations_include_verifiable_integrity_mac():
         assert len(audit["integrity_mac"]["S"]) == 64
         assert not verify_audit({**audit, "reason": {"S": "Tampered reason"}}, b"k" * 32)
         assert not verify_audit(audit, b"x" * 32)
+
+def test_owner_key_revocation_is_atomic_revisioned_and_never_audits_hashes():
+    from types import SimpleNamespace
+    from guardoath.admin_audit_integrity import verify_audit
+    db = DDB()
+    original = db.get_item
+    def read(**kw):
+        item = original(**kw)
+        record = json.loads(item["Item"]["record"]["S"])
+        record["key_hashes"] = ["a" * 64, "b" * 64]
+        item["Item"]["record"]["S"] = json.dumps(record)
+        return item
+    db.get_item = read
+    params = dict(tenant_id="usr-good", expected_revision=7,
+                  confirmation="usr-good", reason="Operator verified key compromise",
+                  actor=SUB, idempotency_key="revoke123456789123",
+                  validate_record=lambda doc: SimpleNamespace(model_dump=lambda: doc))
+    result = manager(db).revoke_all_keys(**params)
+    assert result["api_key_count"] == 0 and result["revision"] == 8
+    ops = db.writes[0]["TransactItems"]
+    updated = json.loads(ops[0]["Update"]["ExpressionAttributeValues"][":record"]["S"])
+    assert updated["key_hashes"] == [] and updated["payer_id"] == "cus_hidden"
+    assert "#revision = :prior" in ops[0]["Update"]["ConditionExpression"]
+    receipt = ops[1]["Put"]["Item"]
+    assert receipt["operation"]["S"] == "tenant.keys_revoke"
+    assert receipt["old_key_count"]["N"] == "2" and receipt["new_key_count"]["N"] == "0"
+    assert verify_audit(receipt, b"k"*32)
+    assert not verify_audit({**receipt, "old_key_count": {"N": "1"}}, b"k"*32)
+    assert "a" * 64 not in json.dumps(receipt) and "b" * 64 not in json.dumps(receipt)
+    assert "private-hash" not in json.dumps(receipt)
+    assert len(db.writes) == 1
+
+
+def test_key_revocation_invalid_records_conflicts_and_failed_audit_leave_keys_untouched():
+    from types import SimpleNamespace
+    for hashes in ([], ["bad-hash"], ["a"*64, "a"*64], ["a"*64]*3):
+        db = DDB()
+        original = db.get_item
+        def read(**kw):
+            item = original(**kw)
+            record = json.loads(item["Item"]["record"]["S"])
+            record["key_hashes"] = hashes
+            item["Item"]["record"]["S"] = json.dumps(record)
+            return item
+        db.get_item = read
+        with pytest.raises(AdminActionConflict):
+            manager(db).revoke_all_keys(
+                tenant_id="usr-good", expected_revision=7, confirmation="usr-good",
+                reason="Operator verified compromised application key", actor=SUB,
+                idempotency_key="revoke123456789123",
+                validate_record=lambda doc: SimpleNamespace(model_dump=lambda: doc))
+        assert not db.writes
+    db = DDB(revision=8)
+    with pytest.raises(AdminActionConflict):
+        manager(db).revoke_all_keys(
+            tenant_id="usr-good", expected_revision=7, confirmation="usr-good",
+            reason="Operator verified compromised application key", actor=SUB,
+            idempotency_key="revoke123456789123",
+            validate_record=lambda doc: SimpleNamespace(model_dump=lambda: doc))
+    assert not db.writes
+    # A transaction rejected by DynamoDB must never be reported as revocation.
+    db = DDB(error=True)
+    original = db.get_item
+    def read_valid(**kw):
+        item = original(**kw)
+        doc = json.loads(item["Item"]["record"]["S"])
+        doc["key_hashes"] = ["a"*64]
+        item["Item"]["record"]["S"] = json.dumps(doc)
+        return item
+    db.get_item = read_valid
+    with pytest.raises(AdminActionUnavailable):
+        manager(db).revoke_all_keys(
+            tenant_id="usr-good", expected_revision=7, confirmation="usr-good",
+            reason="Operator verified compromised application key", actor=SUB,
+            idempotency_key="revoke123456789123",
+            validate_record=lambda doc: SimpleNamespace(model_dump=lambda: doc))
+    assert not db.writes
+
+
+def test_owner_key_revocation_route_denies_public_unconfirmed_and_unavailable():
+    from types import SimpleNamespace
+    db = DDB()
+    original = db.get_item
+    def read(**kw):
+        item = original(**kw)
+        doc = json.loads(item["Item"]["record"]["S"])
+        doc["key_hashes"] = ["a"*64]
+        item["Item"]["record"]["S"] = json.dumps(doc)
+        return item
+    db.get_item = read
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        verify_cognito_admin=lambda token: VerifiedAdmin(SUB, frozenset({"owner"}), True)
+                                    if token=="owner" else None,
+        admin_mutator=manager(db),
+        record_validator=lambda doc: SimpleNamespace(model_dump=lambda: doc)))
+    client = TestClient(app)
+    url = "/v1/admin/tenants/usr-good/revoke-keys"
+    body = {"expected_revision":7, "confirmation":"usr-good",
+            "reason":"Operator verified compromised application key",
+            "idempotency_key":"revoke123456789123"}
+    assert client.post(url,json=body).status_code == 401
+    assert client.post(url,json=body,headers={"Authorization":"Bearer owner"}).status_code == 403
+    assert client.post(url,json={**body,"confirmation":"other"},
+                       headers={"Authorization":"Bearer owner","Origin":"https://guardoath.com"}).status_code == 422
+    assert db.writes == []
+    ok = client.post(url,json=body,
+                     headers={"Authorization":"Bearer owner","Origin":"https://guardoath.com"})
+    assert ok.status_code == 200 and ok.json()["api_key_count"] == 0
+    assert len(db.writes) == 1
+    assert client.get("/v1/admin/features",headers={"Authorization":"Bearer owner"}).json()["tenant_key_revocation"] is True

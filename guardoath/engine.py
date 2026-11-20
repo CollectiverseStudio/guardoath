@@ -188,7 +188,11 @@ class Engine:
             return result.model_copy(update={"latency_ms": round((perf_counter() - tick) * 1000, 3)})
 
         async def run_rules(content_request):
-            # Every check runs here, in this process (no content leaves GuardOath, 2026-11-05).
+            # A single deadline-bound checker need not be scheduled through
+            # gather; avoid the extra event-loop hop. Preserve the existing
+            # timeout context and monotonic late-result rejection in execute.
+            if len(rules) == 1:
+                return (await execute(rules[0].checker_id, content_request),)
             return tuple(await asyncio.gather(*(execute(r.checker_id, content_request) for r in rules)))
 
         # A missing/expired/forged host reference must never be treated as clean.

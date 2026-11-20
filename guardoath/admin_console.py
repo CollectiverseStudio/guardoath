@@ -64,6 +64,14 @@ class AllowanceCap(BaseModel):
     idempotency_key: str = Field(min_length=16,max_length=96)
 
 
+class RevokeTenantKeys(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_revision: int = Field(ge=1, strict=True)
+    confirmation: str = Field(min_length=2, max_length=40)
+    reason: str = Field(min_length=10, max_length=240)
+    idempotency_key: str = Field(min_length=16, max_length=96)
+
+
 class CatalogRuleDescriptionPreview(BaseModel):
     model_config = ConfigDict(extra="forbid")
     expected_registry_version: str = Field(pattern=r"^[1-9][0-9]{0,8}$", max_length=9)
@@ -224,6 +232,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            "billing_changes": False, "billing_verify": billing_reporter is not None,
                            "tenant_rule_changes": admin_mutator is not None and callable(record_validator) and callable(rule_exists),
                            "monthly_cost_caps": admin_mutator is not None and callable(record_validator),
+                           "tenant_key_revocation": admin_mutator is not None and callable(record_validator),
                            "rule_publishing": False,
                            "catalog_preview": catalog_provider is not None,
                            "audit_required_for_writes": True,
@@ -464,6 +473,28 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                 raise HTTPException(status_code=409,detail="Tenant state changed; refresh") from exc
             except AdminActionUnavailable as exc:
                 raise HTTPException(status_code=503,detail="Audited cost control unavailable") from exc
+            return admin_json(result)
+
+
+    if admin_mutator is not None and callable(record_validator):
+        @router.post("/v1/admin/tenants/{tenant_id}/revoke-keys")
+        def revoke_tenant_keys(tenant_id: str, payload: RevokeTenantKeys, request: Request,
+                               principal: VerifiedAdmin = Depends(require_admin)):
+            _require_admin_origin(request)
+            if not TENANT_ID.fullmatch(tenant_id):
+                raise HTTPException(status_code=404, detail="Tenant not found")
+            try:
+                result = admin_mutator.revoke_all_keys(
+                    tenant_id=tenant_id, expected_revision=payload.expected_revision,
+                    confirmation=payload.confirmation, reason=payload.reason,
+                    actor=principal.subject, idempotency_key=payload.idempotency_key,
+                    validate_record=record_validator)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail="Invalid key revocation request") from exc
+            except AdminActionConflict as exc:
+                raise HTTPException(status_code=409, detail="Tenant keys or revision changed; refresh") from exc
+            except AdminActionUnavailable as exc:
+                raise HTTPException(status_code=503, detail="Audited key revocation unavailable") from exc
             return admin_json(result)
 
     return router

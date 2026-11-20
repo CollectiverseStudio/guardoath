@@ -23,7 +23,12 @@ def check(schema, payload, stage):
               "content_format": "json", "content": json.dumps(payload)})
     assert response.status_code == 200
     result = response.json()
-    assert result["evaluation_status"] == "complete"
+    # Failure diagnostics contain only checker metadata, never submitted
+    # content, schema fields or the findings themselves.
+    safe_diagnostics = [(entry.get("checker_id"), entry.get("status"),
+                         entry.get("error_code"), entry.get("latency_ms"))
+                        for entry in result.get("checker_results", [])]
+    assert result["evaluation_status"] == "complete", safe_diagnostics
     return result["effective_action"]
 
 

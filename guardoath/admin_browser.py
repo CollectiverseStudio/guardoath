@@ -170,7 +170,7 @@ def create_browser_router(config: BrowserAuthConfig, exchange: BoundExchange,
 
 _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GuardOath Admin</title>
 <style>:root{font-family:system-ui,sans-serif;color:#14273a;background:#f5f7fb}body{margin:0}header{background:#12273c;color:white;padding:20px max(20px,5vw)}main{max-width:1100px;margin:24px auto;padding:0 20px}.panel{background:white;border:1px solid #dbe3ee;border-radius:12px;padding:20px;margin-bottom:16px}button{background:#154e82;color:white;border:0;border-radius:6px;padding:10px 16px;cursor:pointer}button:disabled{opacity:.5;cursor:default}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.metric{border:1px solid #ddd;border-radius:8px;padding:12px}.muted{color:#526678}table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid #dfe5ed;padding:9px;text-align:left}.scroll{overflow-x:auto}input{padding:9px;max-width:100%}nav{display:flex;flex-wrap:wrap;gap:12px}nav button{background:#30546f}#app[hidden]{display:none}</style></head><body>
-<header><h1>GuardOath Administration</h1><p>Owner console · Read-only</p></header><main>
+<header><h1>GuardOath Administration</h1><p>Owner console · Read-only inspection with optional audited access controls</p></header><main>
 <section id="login" class="panel"><h2>Administrator sign-in</h2><p>Use your GuardOath administrator account with MFA. Customers and demo API keys do not have administrative access.</p><button id="login-start" type="button">Sign in with Cognito</button><p id="login-message" role="status"></p></section>
 <div id="app" hidden><section class="panel"><nav><button type="button" id="refresh">Refresh</button><button type="button" id="logout">Sign out</button></nav><p id="status" role="status"></p></section>
 <section class="panel"><h2>Overview</h2><div class="grid" id="metrics"></div></section>
@@ -450,6 +450,15 @@ _JS = r'''"use strict";
         cap.addEventListener("click", () => capUsage(tenant));
         actions.append(cap);
       }
+      if (features.tenant_key_revocation && tenant.demo === false &&
+          Number.isSafeInteger(tenant.revision) && Number.isInteger(tenant.api_key_count) &&
+          tenant.api_key_count > 0) {
+        const revoke = document.createElement("button");
+        revoke.type = "button";
+        revoke.textContent = "Revoke keys";
+        revoke.addEventListener("click", () => revokeTenantKeys(tenant));
+        actions.append(revoke);
+      }
       if (features.tenant_status_changes && tenant.demo === false && Number.isInteger(tenant.revision)) {
         const button = document.createElement("button");
         button.type = "button";
@@ -590,6 +599,28 @@ _JS = r'''"use strict";
       const receipt = auditReceipt(outcome, tenant.tenant_id, tenant.revision);
       if (token && epoch === authEpoch) {await load();say("status","Cost cap saved · " + receipt);}
     } catch(err) {if(token && epoch===authEpoch) say("status",err.message);}
+  }
+  async function revokeTenantKeys(tenant) {
+    if (!token || !features.tenant_key_revocation || !Number.isSafeInteger(tenant.revision) ||
+        !Number.isInteger(tenant.api_key_count) || tenant.api_key_count < 1) return;
+    const confirmation = prompt("This immediately revokes ALL application API keys for " +
+      tenant.tenant_id + ". Type the tenant ID exactly:");
+    if (confirmation !== tenant.tenant_id) return;
+    const reason = prompt("Reason for revoking application keys (10–240 characters; no personal data):");
+    if (!reason || reason.length < 10 || reason.length > 240) return;
+    if (!confirm("Permanently revoke " + tenant.api_key_count +
+        " application API keys for " + tenant.tenant_id + "? Customers must issue new keys.")) return;
+    const epoch = authEpoch;
+    try {
+      const outcome = await request("/v1/admin/tenants/" +
+        encodeURIComponent(tenant.tenant_id) + "/revoke-keys", {
+        method:"POST", body:JSON.stringify({expected_revision:tenant.revision,
+          confirmation,reason,idempotency_key:crypto.randomUUID().replaceAll("-", "")})
+      });
+      const receipt = auditReceipt(outcome, tenant.tenant_id, tenant.revision);
+      if (outcome.api_key_count !== 0) throw new Error("Revocation response is unverified; refresh before retry");
+      if (token && epoch===authEpoch) {await load();say("status","Application keys revoked · " + receipt);}
+    } catch (err) {if (token && epoch===authEpoch) say("status",err.message);}
   }
   async function setTenantRule(ruleId) {
     if (!token || !features.tenant_rule_changes) return;

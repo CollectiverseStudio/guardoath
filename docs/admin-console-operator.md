@@ -94,3 +94,20 @@ The authenticated owner-only exact-account lookup, catalog preview, tenant statu
 
 ## Local-only admin Origin exception hardening
 All five owner-protected administrative POST routes accept `https://guardoath.com` as the production Origin. A `http://localhost:<port>` or `http://127.0.0.1:<port>` Origin is accepted **only** when the actual ASGI listener and target request URL use exactly the same loopback hostname, HTTP scheme and port. Production and nonlocal listeners reject those loopback Origin claims, including spoofed Host headers. The owner/MFA session, optimistic revision checks and atomic audit protections are unchanged. This is an origin-boundary defense-in-depth change, not an admin deployment or proof of full CSRF protection.
+
+## Audited emergency application-key revocation (opt-in)
+When the existing independent administrative audit table and owner MFA gate are enabled,
+the authenticated tenant list offers **Revoke keys** only for a nondemo tenant
+with a known positive count of issued application API keys. The operator must
+type the exact tenant ID, enter a 10–240 character non-sensitive reason and
+confirm that **all** application keys will be invalidated immediately.
+The owner-only `POST /v1/admin/tenants/{tenant_id}/revoke-keys` executes an
+optimistic, revision-conditional DynamoDB transaction that clears only
+`key_hashes` in the authoritative tenant record and inserts a keyed,
+tamper-evident, immutable audit receipt in the separately retained table.
+A failed audit write, absent keys, invalid hash metadata or stale revision
+cannot commit the revocation. The receipt stores only prior and new key
+**counts**, never plaintext keys, hashes, customer emails or Stripe identifiers.
+Cognito identities and verified Stripe entitlement are unchanged.
+The operation cannot be undone by restoring old keys; customers must issue new ones.
+It does not provision AWS resources or perform Stripe mutations.

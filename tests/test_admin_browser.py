@@ -277,3 +277,14 @@ def test_browser_cognito_rate_limit_clears_stale_directory_rows_and_pagination()
     assert 'nextUserCursor = null;' in pager
     assert 'el("user-next").disabled = true;' in pager
     assert 'say("user-status", err.message);' in pager
+
+def test_owner_browser_key_revocation_uses_signed_receipt_and_tenant_confirmation():
+    client = app()
+    script = client.get("/admin/client.js").text
+    assert "Revoke keys" in script
+    assert "features.tenant_key_revocation" in script
+    assert "tenant.api_key_count > 0" in script
+    assert 'encodeURIComponent(tenant.tenant_id) + "/revoke-keys"' in script
+    assert "auditReceipt(outcome, tenant.tenant_id, tenant.revision)" in script
+    assert "Customers must issue new keys" in script
+    assert "Application keys revoked" in script

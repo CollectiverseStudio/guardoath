@@ -65,7 +65,8 @@ class AdminAuditReader:
             previous, revision = number("prior_revision"), number("new_revision")
             if (string("event_id") != event_id or not tenant or not TENANT.fullmatch(tenant)
                     or not actor or not SUBJECT.fullmatch(actor)
-                    or operation not in ("tenant.status", "tenant.rule_action", "tenant.allowance_cap")
+                    or operation not in ("tenant.status", "tenant.rule_action", "tenant.allowance_cap",
+                                         "tenant.keys_revoke")
                     or not when or not UTC.fullmatch(when)
                     or not reason or not 10 <= len(reason) <= 240
                     or previous < 1 or revision != previous + 1):
@@ -83,11 +84,16 @@ class AdminAuditReader:
                     raise AdminAuditUnavailable("Invalid rule receipt")
                 change = {"field": "rule_action", "rule_id": rule, "stage": stage,
                           "before": before, "after": after}
-            else:
+            elif operation == "tenant.allowance_cap":
                 before, after = number("old_limit"), number("new_limit")
                 if after > before or before > 1000000000:
                     raise AdminAuditUnavailable("Invalid cost cap receipt")
                 change = {"field": "monthly_allowance", "before": before, "after": after}
+            else:
+                before, after = number("old_key_count"), number("new_key_count")
+                if before not in (1, 2) or after != 0:
+                    raise AdminAuditUnavailable("Invalid key revocation receipt")
+                change = {"field": "api_keys", "before_count": before, "after_count": after}
             return {"status": "ok", "integrity_status": integrity_status,
                     "source": "persistent DynamoDB administrative audit receipt",
                     "event_id": event_id, "tenant_id": tenant, "actor_sub": actor,

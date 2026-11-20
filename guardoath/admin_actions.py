@@ -253,3 +253,74 @@ class AdminTenantActions:
         return {"tenant_id":tenant_id,"monthly_allowance":new_limit,
                 "overage":"block","revision":expected_revision+1,
                 "audit_event_id":event_id}
+
+    def revoke_all_keys(self, *, tenant_id: str, expected_revision: int,
+                        confirmation: str, reason: str, actor: str,
+                        idempotency_key: str, validate_record) -> dict:
+        """Atomically revoke existing tenant application keys, preserving billing and login."""
+        if (not isinstance(tenant_id, str) or not TENANT.fullmatch(tenant_id)
+                or confirmation != tenant_id
+                or type(expected_revision) is not int or expected_revision < 1
+                or not isinstance(reason, str) or not REASON.fullmatch(reason)
+                or not isinstance(actor, str) or not 12 <= len(actor) <= 128
+                or not isinstance(idempotency_key, str) or not IDEMPOTENCY.fullmatch(idempotency_key)
+                or not callable(validate_record)):
+            raise ValueError("Invalid or unconfirmed application-key revocation")
+        event_id = hmac.new(
+            self.audit_key, (actor + "\0" + tenant_id + "\0" + idempotency_key).encode(),
+            hashlib.sha256).hexdigest()
+        try:
+            item = self.ddb.get_item(
+                TableName=self.tenant_table,
+                Key={"tenant_id": {"S": tenant_id}}, ConsistentRead=True).get("Item")
+            if not item or int(item["revision"]["N"]) != expected_revision:
+                raise AdminActionConflict("Tenant missing or revision changed")
+            doc = json.loads(item["record"]["S"])
+            if (not isinstance(doc, dict) or doc.get("tenant_id") != tenant_id
+                    or doc.get("demo") is True or doc.get("status") not in ("active", "disabled")):
+                raise AdminActionConflict("Tenant is not eligible")
+            keys = doc.get("key_hashes")
+            if (not isinstance(keys, list) or not 1 <= len(keys) <= 2 or
+                    any(not isinstance(key, str) or not re.fullmatch(r"[0-9a-f]{64}", key)
+                        for key in keys) or len(set(keys)) != len(keys)):
+                raise AdminActionConflict("Tenant has no verified keys to revoke")
+            now = self.clock().astimezone(timezone.utc).isoformat(
+                timespec="seconds").replace("+00:00", "Z")
+            updated = {**doc, "key_hashes": [], "updated_at": now}
+            validated = validate_record({**updated, "revision": expected_revision + 1})
+            if not callable(getattr(validated, "model_dump", None)):
+                raise ValueError("Invalid tenant record validation")
+            body = json.dumps(updated, sort_keys=True, separators=(",", ":"))
+            if len(body.encode()) > 350000:
+                raise AdminActionUnavailable("Tenant record exceeds safe size")
+            audit = {
+                "event_id": {"S": event_id}, "tenant_id": {"S": tenant_id},
+                "actor_sub": {"S": actor}, "operation": {"S": "tenant.keys_revoke"},
+                "old_key_count": {"N": str(len(keys))}, "new_key_count": {"N": "0"},
+                "prior_revision": {"N": str(expected_revision)},
+                "new_revision": {"N": str(expected_revision + 1)},
+                "reason": {"S": reason}, "when_utc": {"S": now},
+            }
+            self.ddb.transact_write_items(TransactItems=[
+                {"Update": {
+                    "TableName": self.tenant_table,
+                    "Key": {"tenant_id": {"S": tenant_id}},
+                    "UpdateExpression": "SET #record = :record, #revision = :next",
+                    "ConditionExpression": "attribute_exists(tenant_id) AND #revision = :prior",
+                    "ExpressionAttributeNames": {"#record": "record", "#revision": "revision"},
+                    "ExpressionAttributeValues": {
+                        ":record": {"S": body},
+                        ":next": {"N": str(expected_revision + 1)},
+                        ":prior": {"N": str(expected_revision)},
+                    },
+                }},
+                {"Put": {"TableName": self.audit_table,
+                         "Item": seal_audit(audit, self.audit_key),
+                         "ConditionExpression": "attribute_not_exists(event_id)"}},
+            ])
+        except (AdminActionConflict, AdminActionUnavailable, ValueError):
+            raise
+        except Exception as exc:
+            raise AdminActionUnavailable("Key revocation could not be verified") from exc
+        return {"tenant_id": tenant_id, "api_key_count": 0,
+                "revision": expected_revision + 1, "audit_event_id": event_id}
