@@ -116,3 +116,63 @@ def test_positive_subscription_quantity_preserves_read_only_verification():
             {"price": {"id": PRICE}, "quantity": quantity}], "has_more": False})).read(Tenant())
         assert result["verified"] and result["provider_active"]
         assert result["subscription_entitlement"] is True
+
+
+@pytest.mark.parametrize("provider_status,saved_status,tenant_status,billing_mode,expected_level,expected_code", [
+    ("active", "active", "active", "stripe", "consistent", "states_agree"),
+    ("past_due", "active", "active", "stripe", "critical", "saved_active_without_verified_provider"),
+    ("canceled", "active", "active", "stripe", "critical", "saved_active_without_verified_provider"),
+    ("unpaid", "active", "active", "stripe", "critical", "saved_active_without_verified_provider"),
+    ("trialing", "active", "active", "stripe", "critical", "saved_active_without_verified_provider"),
+    ("active", "inactive", "active", "stripe", "review", "provider_active_saved_inactive"),
+    ("active", "past_due", "active", "stripe", "review", "provider_active_saved_inactive"),
+    ("active", "active", "disabled", "stripe", "review", "provider_active_tenant_disabled"),
+    ("active", "active", "active", "internal", "review", "provider_active_billing_mode_mismatch"),
+    ("canceled", "canceled", "active", "stripe", "consistent", "states_agree"),
+])
+def test_owner_billing_reconciliation_diagnostic_is_read_only_and_grounded(
+        provider_status, saved_status, tenant_status, billing_mode, expected_level, expected_code):
+    record = Tenant(subscription_status=saved_status, status=tenant_status, billing_mode=billing_mode)
+    before = dict(record.__dict__)
+    result = reporter(lambda *_: snapshot(status=provider_status)).read(record)
+    assert result["reconciliation"]["level"] == expected_level
+    assert result["reconciliation"]["code"] == expected_code
+    assert result["subscription_entitlement"] is (provider_status == "active" and
+        saved_status == "active" and tenant_status == "active" and billing_mode == "stripe")
+    assert record.__dict__ == before
+    assert "pm_private" not in str(result) and "secret@example.com" not in str(result)
+    assert "verified_at" in result and result["verified"] is True
+
+
+def test_missing_provider_binding_flags_saved_active_entitlement_without_provider_call():
+    calls = []
+    stored_active = Tenant(payer_id=None, subscription_status="active")
+    outcome = reporter(lambda *_: calls.append(1)).read(stored_active)
+    assert outcome["status"] == "unbound" and not outcome["verified"]
+    assert outcome["reconciliation"] == {
+        "level": "critical", "code": "saved_active_without_verified_provider",
+        "next_step": "Investigate trusted reconciliation; use audited tenant suspension if access must be blocked"}
+    assert not calls
+    innocent = reporter(lambda *_: calls.append(1)).read(Tenant(payer_id=None, subscription_status="inactive"))
+    assert innocent["reconciliation"]["level"] == "unavailable"
+    assert not calls
+
+
+def test_authenticated_subscription_route_reports_critical_drift_without_sensitive_provider_data():
+    provider_reads = []
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        verify_cognito_admin=lambda t: VerifiedAdmin("trusted-subject", frozenset({"owner"}), True)
+        if t == "admin" else None, tenant_store=Store(),
+        billing_reporter=reporter(lambda *a: (provider_reads.append(a), snapshot(status="canceled"))[1])))
+    path = "/v1/admin/subscriptions/usr-billing"
+    c = TestClient(app)
+    assert c.get(path).status_code == 401
+    assert c.get(path, headers={"X-GuardOath-Key": "admin"}).status_code == 401
+    assert provider_reads == []
+    actual = c.get(path, headers={"X-GuardOath-Admin-Session": "admin"})
+    assert actual.status_code == 200
+    assert actual.json()["subscription"]["reconciliation"]["level"] == "critical"
+    assert len(provider_reads) == 1
+    for secret in ("cus_test1234", "sub_test1234", "pm_private", "secret@example.com"):
+        assert secret not in actual.text

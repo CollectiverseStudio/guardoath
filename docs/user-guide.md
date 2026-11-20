@@ -3566,3 +3566,7 @@ GUARDOATH_STRIPE_SECRET_KEY must be valid server-side values. Neither is
 accepted from the browser. Verification does not mutate Stripe or tenant
 entitlements, and does not prove invoice settlement or production payment
 acceptance; those financial operations require separate audited workflows.
+
+### Administrator Stripe discrepancy review
+
+The owner-only subscription verification panel now distinguishes verified provider state from the saved tenant entitlement. It explicitly flags a **saved active Stripe entitlement without a verified active provider** for urgent investigation, including missing provider bindings, and flags active provider payments when the tenant is inactive, disabled or uses another billing mode. All assessments are read-only and contain no billing secrets or payment details. Owner operators can use existing independently audited tenant suspension when necessary; this screen cannot grant a subscription, bill a customer, refund a payment, reconcile payment records or calculate live AWS costs. No customer-facing policy or timeout is changed.

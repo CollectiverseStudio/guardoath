@@ -176,6 +176,7 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <section class="panel"><h2>Overview</h2><div class="grid" id="metrics"></div></section>
 <section class="panel"><h2>Cognito users</h2><p class="muted">Owner-only, one provider page at a time; masked emails and unknown totals.</p><label for="user-search">Email prefix</label> <input id="user-search" maxlength="80" autocomplete="off"> <button id="user-search-go" type="button">Search users</button><div class="scroll"><table><thead><tr><th>Username</th><th>Masked email</th><th>Verified</th><th>Enabled</th><th>Status</th><th>Created (UTC)</th></tr></thead><tbody id="user-rows"></tbody></table></div><p id="user-status" role="status"></p><button id="user-next" type="button" disabled>Next users</button></section>
 <section class="panel"><h2>Tenants</h2><p class="muted">API key counts are sourced from the persisted tenant record; actual key material is never displayed. Unknown counts remain unavailable.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
+<section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Select Verify Stripe beside a tenant to compare the current provider status with its saved tenant entitlement. Discrepancies are advisory: no paid access or billing state is modified here.</p><p id="billing-details" role="status">No subscription selected.</p></section>
 <section class="panel"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
 <section class="panel"><h2>Audit receipt lookup</h2><p class="muted">Read one stored administrative event by its exact event ID. No exports or audit enumeration.</p><label for="audit-id">Audit event ID</label> <input id="audit-id" maxlength="64" autocomplete="off" spellcheck="false"> <button type="button" id="audit-go">Verify receipt</button><p id="audit-result" role="status"></p></section>
 <section class="panel"><h2>Categories and checks</h2><p id="catalog-summary"></p><div id="categories"></div></section></div>
@@ -209,7 +210,7 @@ _JS = r'''"use strict";
     el("tenant-rows").replaceChildren();
     el("user-rows").replaceChildren();
     el("categories").replaceChildren();
-    for (const id of ["status", "tenant-status", "user-status", "catalog-summary", "usage-details", "audit-result"]) say(id, "");
+    for (const id of ["status", "tenant-status", "user-status", "catalog-summary", "usage-details", "billing-details", "audit-result"]) say(id, "");
     el("audit-id").value = "";
     el("search").value = "";
     el("user-search").value = "";
@@ -375,10 +376,20 @@ _JS = r'''"use strict";
       const result = await request("/v1/admin/subscriptions/" + encodeURIComponent(tenant.tenant_id));
       if (token && epoch === authEpoch) {
         const state = result.subscription || {};
-        say("status", tenant.tenant_id + ": Stripe " + (state.status || "unavailable") +
-            " · " + (state.verified ? "verified provider response" : "no live subscription binding"));
+        const assessment = state.reconciliation || {};
+        const level = ["critical","review","consistent","unavailable"].includes(assessment.level) ?
+          assessment.level : "unavailable";
+        say("billing-details", tenant.tenant_id + " · Provider: " +
+          (state.verified ? state.status : "unverified (" + (state.status || "unavailable") + ")") +
+          " · Reconciliation: " + level + " (" + (assessment.code || "unknown") + ")" +
+          " · " + (assessment.next_step || "Unable to establish billing agreement") +
+          " · UTC provider read: " + (state.verified_at || "Unavailable"));
+        say("status", tenant.tenant_id + ": subscription reviewed; no entitlement change");
       }
-    } catch(err) { if (token && epoch === authEpoch) say("status", err.message); }
+    } catch(err) { if (token && epoch === authEpoch) {
+      say("billing-details", tenant.tenant_id + ": Stripe verification unavailable; no entitlement change");
+      say("status", err.message);
+    }}
   }
   async function inspectAudit() {
     if (!token || !features.audit_receipt_lookup) {

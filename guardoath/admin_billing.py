@@ -22,6 +22,30 @@ class BillingUnavailable(Exception):
     pass
 
 
+
+def _reconciliation_assessment(provider_status, stored_status, tenant_status, billing_mode):
+    """Triage two independent sources; never infer or mutate an entitlement."""
+    if (tenant_status == "active" and billing_mode == "stripe" and
+            stored_status == "active" and provider_status != "active"):
+        return {"level": "critical",
+                "code": "saved_active_without_verified_provider",
+                "next_step": "Investigate trusted reconciliation; use audited tenant suspension if access must be blocked"}
+    if provider_status == "active" and tenant_status != "active":
+        return {"level": "review", "code": "provider_active_tenant_disabled",
+                "next_step": "Review billing while tenant access is suspended"}
+    if provider_status == "active" and billing_mode != "stripe":
+        return {"level": "review", "code": "provider_active_billing_mode_mismatch",
+                "next_step": "Review trusted billing binding; never override tenant entitlement here"}
+    if provider_status == "active" and stored_status != "active":
+        return {"level": "review", "code": "provider_active_saved_inactive",
+                "next_step": "Inspect webhook/reconciliation health; no manual subscription unlock"}
+    if provider_status is None:
+        return {"level": "unavailable", "code": "no_provider_binding",
+                "next_step": "Provider verification requires a saved customer and subscription binding"}
+    return {"level": "consistent", "code": "states_agree",
+            "next_step": "No billing mutation performed; inspect Stripe provider if needed"}
+
+
 class AdminSubscriptionReporter:
     def __init__(self, fetch: Callable[[str, str, str], dict], *,
                  expected_price_id: str, expected_livemode: bool):
@@ -40,7 +64,10 @@ class AdminSubscriptionReporter:
         customer_id = getattr(record, "payer_id", None)
         subscription_id = getattr(record, "stripe_subscription_id", None)
         if not customer_id or not subscription_id:
-            return {"status": "unbound", "provider": "Stripe", "verified": False}
+            return {"status": "unbound", "provider": "Stripe", "verified": False,
+                    "reconciliation": _reconciliation_assessment(
+                        None, getattr(record, "subscription_status", None),
+                        getattr(record, "status", None), getattr(record, "billing_mode", None))}
         if (not isinstance(tenant_id, str) or not tenant_id.startswith("usr-")
                 or not isinstance(customer_id, str) or not CUSTOMER.fullmatch(customer_id)
                 or not isinstance(subscription_id, str) or not SUBSCRIPTION.fullmatch(subscription_id)):
@@ -90,6 +117,8 @@ class AdminSubscriptionReporter:
             "stored_status": stored_status if stored_status in
                 {"active", "inactive", "past_due", "canceled"} else "unknown",
             "entitlement_source": "direct Stripe subscription plus persisted tenant state",
+            "reconciliation": _reconciliation_assessment(
+                state, stored_status, tenant_status, billing_mode),
             "verified_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "note": "Read-only verification; no Stripe or tenant entitlement was modified",
         }

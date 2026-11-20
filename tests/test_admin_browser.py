@@ -180,3 +180,17 @@ def test_owner_browser_audit_lookup_uses_authenticated_request_and_clears_after_
     assert '"audit-result"]) say(id, "")' in script
     assert 'el("audit-id").value = ""' in script
     assert "innerHTML" not in script
+
+
+def test_subscription_reconciliation_diagnostics_visible_only_in_authenticated_owner_browser():
+    shell = app().get("/admin/login").text
+    script = app().get("/admin/client.js").text
+    assert 'id="billing-details"' in shell
+    assert "Subscription reconciliation review" in shell
+    assert 'request("/v1/admin/subscriptions/" + encodeURIComponent(tenant.tenant_id))' in script
+    assert "state.reconciliation || {}" in script
+    assert '["critical","review","consistent","unavailable"]' in script
+    assert 'say("billing-details", tenant.tenant_id' in script
+    assert "no entitlement change" in script
+    assert '"billing-details", "audit-result"]) say(id, "")' in script
+    assert "innerHTML" not in script
