@@ -144,3 +144,28 @@ persistent auditing or live admin acceptance; issues #39–#42 remain open.
 ## Hosted owner read-audit enforcement (source change, not deployed)
 
 The production environment mount now explicitly requires a signed persisted read receipt for each protected owner data read. A missing `GUARDOATH_ADMIN_AUDIT_TABLE` does not stop the public GuardOath app from mounting: `/admin/login` remains a public sign-in shell, but authenticated owner Overview, Features, Tenant directory, Catalog and all other guarded data reads return HTTP 503 rather than silently accessing unaudited records. Invalid or unavailable audit writes also fail closed before provider reads. Deployment must configure an independent retained DynamoDB audit table and least-privilege PutItem/GetItem permissions before operators can use the data UI; this source change provisions nothing and cannot establish 15 live acceptance or real AWS costs. Directly constructed routers retain explicit optional read auditing for isolated tests; the hosted environment always sets strict enforcement. Each successful data read consumes one signed audit write in already-authorized capacity. No Stripe, tenant, Cognito or shared-engine mutation is introduced.
+
+
+## Versioned catalog metadata preview fingerprints (review only)
+
+The authenticated **Catalog → Preview description** workflow checks an existing
+published category/check/rule against the currently shipped registry version,
+then returns two deterministic SHA-256 identifiers: `baseline_sha256` for the
+**entire server-projected published registry** and `proposal_sha256` for the
+specific next-version candidate, target identities, changed title/use-case
+fields and the baseline identifier. A revisioned catalog source change, even
+if its version label was mistakenly left unchanged, yields a different
+baseline/proposal fingerprint. Dictionary key order does not change either
+digest. The owner UI verifies the two lower-case 64-character digests and
+labels them as **review identifiers only, not signatures or approvals**.
+
+No draft is durably saved, no independent reviewer is recorded, no immutable
+approval is established, and there is **no publish/rollback endpoint** yet.
+Do not treat a checksum or a successful preview as permission to deploy a
+changed registry. An eventual publisher must independently reload/compare
+current source and revision, authorize a distinct reviewer, run positive,
+adversarial and original release gates, write a durable approval/audit record,
+retain rollback versions, and verify customer tenant Off settings and host
+reference trust remain unchanged. Existing read-attempt auditing still protects
+the preview route in hosted environments. Neither fingerprint is a MAC or a
+proof of provenance.
