@@ -89,6 +89,13 @@ class CatalogDraftRequest(CatalogRuleDescriptionPreview):
     idempotency_key: str = Field(pattern=r"^[A-Za-z0-9_-]{16,96}$", max_length=96)
 
 
+class CatalogDraftReviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    confirmation: str = Field(min_length=15, max_length=80)
+    reason: str = Field(min_length=10, max_length=240)
+    idempotency_key: str = Field(pattern=r"^[A-Za-z0-9_-]{16,96}$", max_length=96)
+
+
 class ExactUserLookup(BaseModel):
     model_config = ConfigDict(extra="forbid")
     email: str = Field(min_length=5, max_length=254)
@@ -259,6 +266,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            "monthly_cost_caps": admin_mutator is not None and callable(record_validator),
                            "tenant_key_revocation": admin_mutator is not None and callable(record_validator),
                            "rule_publishing": False, "catalog_drafts": catalog_drafts is not None,
+                           "catalog_review_receipts": catalog_drafts is not None and catalog_provider is not None,
                            "catalog_preview": catalog_provider is not None,
                            "audit_required_for_writes": True,
                            "audit_receipt_lookup": audit_reader is not None,
@@ -510,6 +518,65 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             return admin_json({"draft":record, "stale":stale, "published":False,
                 "ready_to_publish":False,
                 **({"read_audit_event_id":read_event} if read_event else {})})
+
+        @router.post("/v1/admin/catalog/drafts/{draft_id}/review")
+        def review_catalog_draft(draft_id: str, payload: CatalogDraftReviewRequest,
+                                 request: Request,
+                                 principal: VerifiedAdmin = Depends(require_admin)):
+            # This signed review receipt never publishes a catalog definition.
+            _require_admin_origin(request)
+            if not re.fullmatch(r"[0-9a-f]{64}", draft_id):
+                raise HTTPException(status_code=422, detail="Invalid draft ID")
+            if catalog_provider is None:
+                raise HTTPException(status_code=503, detail="Published catalog unavailable")
+            read_event = audit_sensitive_read(principal, "catalog.draft")
+            try:
+                draft = catalog_drafts.read(principal.subject, draft_id)
+                if draft is None:
+                    raise HTTPException(status_code=404, detail="Catalog draft not found")
+                refreshed = preview_rule_description(
+                    catalog_provider,
+                    expected_registry_version=draft["registry_version"],
+                    proposed_registry_version=draft["candidate_registry_version"],
+                    category_id=draft["category_id"], check_id=draft["check_id"],
+                    rule_id=draft["rule_id"], title=draft["title"],
+                    use_case=draft["use_case"])
+                if (refreshed["baseline_sha256"] != draft["baseline_sha256"] or
+                        refreshed["proposal_sha256"] != draft["proposal_sha256"]):
+                    raise DraftConflict("Published catalog source changed")
+                review = catalog_drafts.review(
+                    actor=principal.subject, draft_id=draft_id,
+                    nonce=payload.idempotency_key, reason=payload.reason,
+                    confirmation=payload.confirmation,
+                    baseline_sha256=refreshed["baseline_sha256"],
+                    proposal_sha256=refreshed["proposal_sha256"])
+            except HTTPException:
+                raise
+            except (CatalogPreviewConflict, DraftConflict, ValueError, KeyError) as exc:
+                if isinstance(exc, ValueError) and not isinstance(
+                        exc, (CatalogPreviewConflict, DraftConflict)):
+                    raise HTTPException(status_code=422, detail="Invalid catalog review") from exc
+                raise HTTPException(status_code=409, detail="Catalog draft/source changed; refresh") from exc
+            except (DraftUnavailable, CatalogPreviewUnavailable, TypeError) as exc:
+                raise HTTPException(status_code=503, detail="Catalog review unavailable") from exc
+            return admin_json({**review, "persisted": True, "reviewed": True,
+                "ready_to_publish": False,
+                **({"read_audit_event_id": read_event} if read_event else {})})
+
+        @router.get("/v1/admin/catalog/reviews/{review_id}")
+        def read_catalog_review(review_id: str, principal: VerifiedAdmin = Depends(require_admin)):
+            if not re.fullmatch(r"[0-9a-f]{64}", review_id):
+                raise HTTPException(status_code=422, detail="Invalid review ID")
+            read_event = audit_sensitive_read(principal, "catalog.draft")
+            try:
+                review = catalog_drafts.read_review(principal.subject, review_id)
+            except DraftUnavailable as exc:
+                raise HTTPException(status_code=503, detail="Catalog review integrity unavailable") from exc
+            if review is None:
+                raise HTTPException(status_code=404, detail="Catalog review not found")
+            return admin_json({"review": review, "published": False,
+                "ready_to_publish": False,
+                **({"read_audit_event_id": read_event} if read_event else {})})
 
     if admin_mutator is not None:
         @router.post("/v1/admin/tenants/{tenant_id}/status")

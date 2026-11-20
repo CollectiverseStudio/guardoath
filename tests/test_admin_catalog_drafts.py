@@ -159,3 +159,136 @@ def test_owner_admin_api_denies_anonymous_cross_origin_and_stale_source():
     assert client.post(endpoint, json={**body, "idempotency_key": "another-unique-key-123"},
                        headers=authorized).status_code == 409
     assert db.writes == 1
+
+
+def test_review_is_signed_immutable_idempotent_owner_scoped_and_never_publishes():
+    db, store = make_store()
+    draft = store.save(**saving_args())
+    args = {"actor": OWNER, "draft_id": draft["draft_id"],
+            "nonce": "review-safe-unique-key-123",
+            "reason": "Verified current metadata and exact catalog fingerprint",
+            "confirmation": "REVIEW " + draft["draft_id"][-8:],
+            "baseline_sha256": draft["baseline_sha256"],
+            "proposal_sha256": draft["proposal_sha256"]}
+    baseline = deepcopy(REGISTRY)
+    first = store.review(**args)
+    assert first["status"] == "review_recorded"
+    assert first["published"] is False and first["tenant_policies_changed"] is False
+    assert first["detector_behavior_changed"] is False
+    assert first["draft_id"] == draft["draft_id"] and len(first["review_id"]) == 64
+    assert db.writes == 2 and REGISTRY == baseline
+    assert store.read_review(OWNER, first["review_id"]) == first
+    assert store.review(**args) == first and db.writes == 2
+    with pytest.raises(DraftConflict):
+        store.review(**{**args, "reason": "Different sufficiently long review reason"})
+    with pytest.raises(DraftUnavailable):
+        store.read_review(OTHER, first["review_id"])
+    assert db.writes == 2
+    db.items[first["review_id"]]["document"]["S"] = db.items[first["review_id"]]["document"]["S"].replace(
+        "review_recorded", "review_injected")
+    with pytest.raises(DraftUnavailable):
+        store.read_review(OWNER, first["review_id"])
+    with pytest.raises(DraftUnavailable):
+        store.review(**args)
+
+
+@pytest.mark.parametrize("change", [
+    {"actor": "invalid-owner"},
+    {"draft_id": "not-a-digest"},
+    {"nonce": "short"},
+    {"reason": "short"},
+    {"confirmation": "REVIEW wrong-id"},
+    {"baseline_sha256": "0" * 64},
+    {"proposal_sha256": "f" * 64},
+])
+def test_review_invalid_or_mismatched_binding_never_writes(change):
+    db, store = make_store()
+    draft = store.save(**saving_args())
+    args = {"actor": OWNER, "draft_id": draft["draft_id"],
+            "nonce": "review-safe-unique-key-123",
+            "reason": "Verified current metadata and exact catalog fingerprint",
+            "confirmation": "REVIEW " + draft["draft_id"][-8:],
+            "baseline_sha256": draft["baseline_sha256"],
+            "proposal_sha256": draft["proposal_sha256"]}
+    with pytest.raises((ValueError, DraftConflict, DraftUnavailable)):
+        store.review(**{**args, **change})
+    assert db.writes == 1
+
+
+def test_review_requires_actual_persistence_and_verified_immutable_draft():
+    db, store = make_store()
+    draft = store.save(**saving_args())
+    args = {"actor": OWNER, "draft_id": draft["draft_id"],
+            "nonce": "review-safe-unique-key-123",
+            "reason": "Verified current metadata and exact catalog fingerprint",
+            "confirmation": "REVIEW " + draft["draft_id"][-8:],
+            "baseline_sha256": draft["baseline_sha256"],
+            "proposal_sha256": draft["proposal_sha256"]}
+    db.fail_write = True
+    with pytest.raises(DraftUnavailable):
+        store.review(**args)
+    assert db.writes == 1
+    db.fail_write = False
+    db.fail_read = True
+    with pytest.raises(DraftUnavailable):
+        store.review(**args)
+    db.fail_read = False
+    db.items[draft["draft_id"]]["document"]["S"] = "{}"
+    with pytest.raises(DraftUnavailable):
+        store.review(**args)
+    assert db.writes == 1
+
+
+def test_review_routes_enforce_mfa_authority_origin_and_fresh_source():
+    db, store = make_store()
+    source = deepcopy(REGISTRY)
+    draft = store.save(**saving_args())
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        verify_cognito_admin=lambda token: (
+            VerifiedAdmin(OWNER, frozenset({"owner"}), True)
+            if token == "verified-owner-token" else
+            VerifiedAdmin(OTHER, frozenset({"owner"}), True)
+            if token == "other-owner-token" else
+            VerifiedAdmin(OWNER, frozenset({"owner"}), False)
+            if token == "no-mfa-token" else None),
+        catalog_provider=lambda: source, catalog_drafts=store))
+    client = TestClient(app)
+    endpoint = "/v1/admin/catalog/drafts/" + draft["draft_id"] + "/review"
+    body = {"confirmation": "REVIEW " + draft["draft_id"][-8:],
+            "reason": "Independent verified review of metadata proposal",
+            "idempotency_key": "review-safe-unique-key-123"}
+    owner = {"Authorization": "Bearer verified-owner-token",
+             "Origin": "https://guardoath.com"}
+    assert client.post(endpoint, json=body).status_code == 401
+    assert client.post(endpoint, json=body, headers={"Authorization": "Bearer verified-owner-token"}).status_code == 403
+    assert client.post(endpoint, json=body, headers={
+        **owner, "Origin": "https://evil.invalid"}).status_code == 403
+    assert client.post(endpoint, json=body, headers={
+        "Authorization": "Bearer no-mfa-token", "Origin": "https://guardoath.com"}).status_code == 403
+    assert client.post(endpoint, json=body, headers={
+        "Authorization": "Bearer other-owner-token", "Origin": "https://guardoath.com"}).status_code == 503
+    assert client.post(endpoint, json={**body, "confirmation": "REVIEW 12345678"},
+                       headers=owner).status_code == 422
+    assert db.writes == 1
+    response = client.post(endpoint, json=body, headers=owner)
+    assert response.status_code == 200, response.text
+    receipt = response.json()
+    assert receipt["persisted"] is True and receipt["reviewed"] is True
+    assert receipt["published"] is False and receipt["ready_to_publish"] is False
+    review_id = receipt["review_id"]
+    check = client.get("/v1/admin/catalog/reviews/" + review_id, headers=owner)
+    assert check.status_code == 200
+    assert check.json()["review"]["review_id"] == review_id
+    assert check.json()["review"]["published"] is False
+    assert db.writes == 2
+    again = client.post(endpoint, json=body, headers=owner)
+    assert again.status_code == 200 and again.json()["review_id"] == review_id
+    assert db.writes == 2
+    assert client.get("/v1/admin/catalog/reviews/" + review_id).status_code == 401
+    assert client.get("/v1/admin/catalog/reviews/" + review_id, headers={
+        "Authorization": "Bearer other-owner-token"}).status_code == 503
+    source["domains"][0]["controls"][0]["rules"][0]["title"] = "Stale current catalog"
+    assert client.post(endpoint, json={**body, "idempotency_key": "fresh-review-key-1234"},
+                       headers=owner).status_code == 409
+    assert db.writes == 2

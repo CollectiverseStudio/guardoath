@@ -46,6 +46,27 @@ def test_catalog_draft_browser_workflow_is_authenticated_and_never_publishes():
     assert '"catalog.draft"' in script
 
 
+def test_catalog_review_ui_is_owner_session_bound_and_receipt_verified():
+    page = app().get("/admin/login").text
+    script = app().get("/admin/client.js").text
+    assert 'id="draft-review"' in page
+    assert 'type="button" disabled>Record signed review' in page
+    assert "draftReadyForReview = null;" in script
+    assert "features.catalog_review_receipts" in script
+    assert "if (!result.stale && features.catalog_review_receipts" in script
+    assert '"REVIEW " + selected.id.slice(-8)' in script
+    assert 'request("/v1/admin/catalog/drafts/" + selected.id + "/review", {' in script
+    assert 'request("/v1/admin/catalog/reviews/" + result.review_id)' in script
+    assert 'result.reviewed !== true' in script
+    assert 'result.published !== false' in script
+    assert 'verified.review.published !== false' in script
+    assert 'verified.ready_to_publish !== false' in script
+    assert "el(\"draft-review\").disabled = true;" in script
+    assert 'addEventListener("click", reviewCatalogDraft)' in script
+    assert "NOT publish rules" in script or "NOT publish" in script
+    assert 'sessionStorage.setItem("access_token"' not in script
+
+
 def test_login_shell_is_public_but_contains_no_sensitive_information():
     client = app()
     page = client.get("/admin/login")

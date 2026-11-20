@@ -193,6 +193,7 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <h3>Inspect a saved catalog draft</h3><label for="draft-id">Draft ID</label>
 <input id="draft-id" maxlength="64" autocomplete="off" spellcheck="false">
 <button id="draft-inspect" type="button">Inspect draft</button>
+<button id="draft-review" type="button" disabled>Record signed review</button>
 <p id="draft-result" role="status"></p></section></div>
 </main><script src="/admin/client.js" defer></script></body></html>"""
 
@@ -205,6 +206,7 @@ _JS = r'''"use strict";
   let nextUserCursor = null;
   let previewSelection = null;
   let previewReady = null;
+  let draftReadyForReview = null;
   let authEpoch = 0;
   let features = {tenant_status_changes:false};
   const el = id => document.getElementById(id);
@@ -230,6 +232,8 @@ _JS = r'''"use strict";
     for (const id of ["status", "tenant-status", "user-status", "user-inspect-result", "catalog-summary", "usage-details", "billing-details", "audit-result", "proposal-result", "draft-result"]) say(id, "");
     previewSelection = null;
     previewReady = null;
+    draftReadyForReview = null;
+    el("draft-review").disabled = true;
     el("proposal-save").disabled = true;
     el("draft-id").value = "";
     say("proposal-target", "No rule selected.");
@@ -402,6 +406,8 @@ _JS = r'''"use strict";
           result.published !== false || result.tenant_policies_changed !== false ||
           !/^[a-f0-9]{64}$/.test(result.draft_id)) throw new Error("Draft receipt unavailable");
       el("draft-id").value = result.draft_id;
+      draftReadyForReview = null;
+      el("draft-review").disabled = true;
       previewReady = null;
       el("proposal-save").disabled = true;
       say("proposal-result", "Signed draft saved · " + result.draft_id +
@@ -410,6 +416,8 @@ _JS = r'''"use strict";
     } catch (err) {if (token && epoch === authEpoch) say("proposal-result", err.message);}
   }
   async function inspectCatalogDraft() {
+    draftReadyForReview = null;
+    el("draft-review").disabled = true;
     if (!token || !features.catalog_drafts) return;
     const id = el("draft-id").value.trim();
     if (!/^[a-f0-9]{64}$/.test(id)) {say("draft-result", "Enter a valid draft ID");return;}
@@ -420,6 +428,13 @@ _JS = r'''"use strict";
       if (!result.draft || result.draft.draft_id !== id ||
           result.draft.published !== false || result.ready_to_publish !== false ||
           typeof result.stale !== "boolean") throw new Error("Draft integrity unavailable");
+      if (!result.stale && features.catalog_review_receipts &&
+          /^[a-f0-9]{64}$/.test(result.draft.baseline_sha256) &&
+          /^[a-f0-9]{64}$/.test(result.draft.proposal_sha256)) {
+        draftReadyForReview = {id, baseline:result.draft.baseline_sha256,
+                               proposal:result.draft.proposal_sha256};
+        el("draft-review").disabled = false;
+      }
       say("draft-result", "Signed persistent draft · " + id +
         " · target " + result.draft.rule_id +
         " · baseline SHA-256 " + result.draft.baseline_sha256 +
@@ -428,6 +443,57 @@ _JS = r'''"use strict";
         " · NOT published" + readAuditLabel(result));
     } catch (err) {if (token && epoch === authEpoch) say("draft-result", err.message);}
   }
+  async function reviewCatalogDraft() {
+    if (!token || !features.catalog_review_receipts || !draftReadyForReview) return;
+    const selected = {...draftReadyForReview};
+    if (el("draft-id").value.trim() !== selected.id) {
+      draftReadyForReview = null;
+      el("draft-review").disabled = true;
+      say("draft-result", "Draft selection changed; inspect again before review");
+      return;
+    }
+    const confirmation = prompt("To record a review, type REVIEW " + selected.id.slice(-8));
+    if (confirmation !== "REVIEW " + selected.id.slice(-8)) {
+      say("draft-result", "Exact review confirmation required");
+      return;
+    }
+    const reason = prompt("Review reason (10–240 characters; no secrets or customer data):");
+    if (!reason || reason.length < 10 || reason.length > 240) return;
+    if (!confirm("Record an immutable catalog review? This does NOT publish rules, change detector behavior, or modify tenants.")) return;
+    const epoch = authEpoch;
+    draftReadyForReview = null;
+    el("draft-review").disabled = true;
+    try {
+      const result = await request("/v1/admin/catalog/drafts/" + selected.id + "/review", {
+        method:"POST", body:JSON.stringify({
+          confirmation, reason, idempotency_key:crypto.randomUUID().replaceAll("-", "")
+        })
+      });
+      if (!token || epoch !== authEpoch) return;
+      if (result.status !== "review_recorded" || result.persisted !== true ||
+          result.reviewed !== true || result.published !== false ||
+          result.ready_to_publish !== false || result.draft_id !== selected.id ||
+          result.baseline_sha256 !== selected.baseline ||
+          result.proposal_sha256 !== selected.proposal ||
+          !/^[a-f0-9]{64}$/.test(result.review_id))
+        throw new Error("Review receipt verification unavailable");
+      const verified = await request("/v1/admin/catalog/reviews/" + result.review_id);
+      if (!token || epoch !== authEpoch) return;
+      if (!verified.review || verified.review.review_id !== result.review_id ||
+          verified.review.draft_id !== selected.id ||
+          verified.review.baseline_sha256 !== selected.baseline ||
+          verified.review.proposal_sha256 !== selected.proposal ||
+          verified.review.status !== "review_recorded" ||
+          verified.review.published !== false || verified.published !== false ||
+          verified.ready_to_publish !== false)
+        throw new Error("Persisted catalog review integrity unavailable");
+      say("draft-result", "Immutable signed review verified · " + result.review_id +
+        " · source baseline " + selected.baseline +
+        " · publication NOT authorized; versioned tests, source release and rollback remain required" +
+        readAuditLabel(verified));
+    } catch(err) {if (token && epoch === authEpoch) say("draft-result", err.message);}
+  }
+
   function showUsers(data) {
     el("user-rows").replaceChildren();
     for (const user of data.users || []) {
@@ -811,6 +877,7 @@ _JS = r'''"use strict";
   el("login-start").addEventListener("click", beginLogin);
   el("proposal-save").addEventListener("click", saveCatalogDraft);
   el("draft-inspect").addEventListener("click", inspectCatalogDraft);
+  el("draft-review").addEventListener("click", reviewCatalogDraft);
   el("refresh").addEventListener("click", () => load().catch(e => say("status", e.message)));
   el("logout").addEventListener("click", () => signOut());
   el("search-go").addEventListener("click", () => {nextCursor=null;page();});
