@@ -44,6 +44,7 @@ def test_bounded_cursor_pagination_avoids_full_scan():
     assert [t["tenant_id"] for t in two["tenants"]] == ["beta"]
     assert len(fake.calls) == 2 and all(c["Limit"] == 1 for c in fake.calls)
     assert one["total"] is None
+    assert one["tenants"][0]["api_key_count"] == 1
     assert "HIDDEN_SECRET" not in str(one)
     assert "cus_SECRET" not in str(two)
 
@@ -109,3 +110,21 @@ def test_invalid_usage_record_rejected_not_silently_zeroed():
             row["usage"]={"M":{current:{"N":"not-a-number"}}}
             return {"Items":[row]}
     with pytest.raises(ValueError):directory(Malformed()).page(limit=10)
+
+def test_missing_or_malformed_legacy_key_metadata_is_unknown_not_zero():
+    class Missing:
+        def scan(self, **kw):
+            row = item("alpha")
+            doc = json.loads(row["record"]["S"])
+            doc.pop("key_hashes", None)
+            row["record"]["S"] = json.dumps(doc)
+            return {"Items": [row]}
+    assert directory(Missing()).page(limit=5)["tenants"][0]["api_key_count"] is None
+    class Malformed:
+        def scan(self, **kw):
+            row = item("alpha")
+            doc = json.loads(row["record"]["S"])
+            doc["key_hashes"] = "plaintext-not-a-list"
+            row["record"]["S"] = json.dumps(doc)
+            return {"Items": [row]}
+    assert directory(Malformed()).page(limit=5)["tenants"][0]["api_key_count"] is None

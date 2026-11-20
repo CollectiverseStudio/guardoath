@@ -37,3 +37,6 @@ Provider usernames that are not email addresses are now displayed as stable, key
 
 ## Subscription item quantity verification
 The owner read-only subscription reporter now rejects missing, zero, negative, noninteger or excessive Stripe item quantities, even if Stripe reports the subscription as active. Valid positive quantities preserve the independent provider-price/environment/customer and persisted tenant checks. Rejected provider snapshots are unavailable, never converted to a paid entitlement. No Stripe mutation or billing charge is performed.
+
+## Per-tenant API-key inventory (read-only, redacted)
+The authenticated tenant directory and tenant detail now report `api_key_count` from the authoritative saved tenant's key-hash list, including the production DynamoDB paged projection. Only the number of issued API keys (0–2) is emitted; no key hashes, tokens or Stripe bindings are returned. Missing/malformed legacy key metadata is reported as unavailable rather than a fabricated zero. This is an inventory count, not a key-usage metric and does not change revocation, billing or access.

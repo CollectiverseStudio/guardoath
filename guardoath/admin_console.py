@@ -87,6 +87,9 @@ def _safe_record(record) -> dict:
         "demo": bool(record.demo),
         "subscription_status": str(getattr(record, "subscription_status", "unknown")),
         "monthly_allowance": int(record.monthly_allowance),
+        # Count only; plaintext keys, hashes and identifiers never leave the tenant store.
+        "api_key_count": (len(record.key_hashes) if isinstance(getattr(record, "key_hashes", None), (tuple, list))
+                          and len(record.key_hashes) <= 2 else None),
         "subscription_source": "persisted tenant record; not live Stripe verification",
         "usage_month": datetime.now(timezone.utc).strftime("%Y-%m"),
         "usage_month_count": getattr(record, "usage", {}).get(datetime.now(timezone.utc).strftime("%Y-%m")),

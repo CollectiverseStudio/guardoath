@@ -111,6 +111,13 @@ class DynamoAdminDirectory:
                 "demo": doc.get("demo") is True,
                 "subscription_status": str(doc.get("subscription_status", "unknown")),
                 "monthly_allowance": int(doc.get("monthly_allowance", 0)),
+                # Metadata only; an absent or malformed legacy key list is unknown,
+                # not an invented zero and never a leak of stored key hashes.
+                "api_key_count": (len(doc["key_hashes"])
+                                  if isinstance(doc.get("key_hashes"), list)
+                                  and len(doc["key_hashes"]) <= 2
+                                  and all(isinstance(key, str) for key in doc["key_hashes"])
+                                  else None),
                 "usage_month": month,
                 "usage_month_count": usage_count,
                 "subscription_source": "persisted tenant record; not live Stripe verification",

@@ -78,6 +78,8 @@ def test_owner_read_only_tenant_directory_masks_keys_and_billing_bindings():
     assert r.status_code == 200
     assert r.json()["total"] == 1
     assert r.json()["tenants"][0]["tenant_id"] == "alpha"
+    assert r.json()["tenants"][0]["api_key_count"] == 1
+    assert c.get("/v1/admin/tenants/alpha", headers=auth()).json()["tenant"]["api_key_count"] == 1
     for sensitive in ("SUPER_SECRET", "cus_PRIVATE", "key_hashes", "payer_id"):
         assert sensitive not in r.text
     assert c.get("/v1/admin/tenants/alpha", headers=auth()).status_code == 200

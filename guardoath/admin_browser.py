@@ -175,7 +175,7 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <div id="app" hidden><section class="panel"><nav><button type="button" id="refresh">Refresh</button><button type="button" id="logout">Sign out</button></nav><p id="status" role="status"></p></section>
 <section class="panel"><h2>Overview</h2><div class="grid" id="metrics"></div></section>
 <section class="panel"><h2>Cognito users</h2><p class="muted">Owner-only, one provider page at a time; masked emails and unknown totals.</p><label for="user-search">Email prefix</label> <input id="user-search" maxlength="80" autocomplete="off"> <button id="user-search-go" type="button">Search users</button><div class="scroll"><table><thead><tr><th>Username</th><th>Masked email</th><th>Verified</th><th>Enabled</th><th>Status</th><th>Created (UTC)</th></tr></thead><tbody id="user-rows"></tbody></table></div><p id="user-status" role="status"></p><button id="user-next" type="button" disabled>Next users</button></section>
-<section class="panel"><h2>Tenants</h2><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
+<section class="panel"><h2>Tenants</h2><p class="muted">API key counts are sourced from the persisted tenant record; actual key material is never displayed. Unknown counts remain unavailable.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
 <section class="panel"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
 <section class="panel"><h2>Categories and checks</h2><p id="catalog-summary"></p><div id="categories"></div></section></div>
 </main><script src="/admin/client.js" defer></script></body></html>"""
@@ -309,7 +309,7 @@ _JS = r'''"use strict";
     el("tenant-rows").replaceChildren();
     for (const tenant of data.tenants || []) {
       const row = document.createElement("tr");
-      for (const field of ["tenant_id", "display_name", "status", "subscription_status", "monthly_allowance", "usage_month_count"]) row.append(textNode("td", tenant[field]));
+      for (const field of ["tenant_id", "display_name", "status", "subscription_status", "monthly_allowance", "usage_month_count", "api_key_count"]) row.append(textNode("td", tenant[field]));
       const actions = document.createElement("td");
       const usage = document.createElement("button");
       usage.type = "button";

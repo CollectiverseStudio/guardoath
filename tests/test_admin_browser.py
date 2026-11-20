@@ -137,6 +137,8 @@ def test_rate_limit_rejects_after_thirty_per_minute():
 def test_cognito_user_table_and_owner_only_browser_request():
     page = app().get("/admin/login")
     assert 'id="user-rows"' in page.text
+    assert "<th>API keys</th>" in page.text
+    assert '"api_key_count"' in app().get("/admin/client.js").text
     assert 'id="user-search-go"' in page.text
     assert 'id="user-next"' in page.text
     script = app().get("/admin/client.js").text
