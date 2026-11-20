@@ -157,7 +157,11 @@ def test_owner_mutation_ui_requires_consistent_atomic_audit_receipt():
     assert 'result.revision !== priorRevision + 1' in script
     assert '/^[a-f0-9]{64}$/.test(result.audit_event_id)' in script
     assert "Administrative change has no verifiable audit receipt" in script
-    assert script.count("const receipt = auditReceipt(outcome,") == 3
+    # Every owner mutation must verify the same atomic audit receipt, including
+    # full application-key revocation. Do not weaken the shared validator.
+    assert script.count("const receipt = auditReceipt(outcome,") == 4
+    for endpoint in ("/status", "/rule-action", "/allowance-cap", "/revoke-keys"):
+        assert endpoint in script
     assert 'say("status","Cost cap saved · " + receipt)' in script
     assert 'say("status","Tenant rule saved · " + receipt)' in script
     assert 'say("status", "Tenant access updated · " + receipt)' in script
