@@ -198,7 +198,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         if admin_user_directory is None:
             raise HTTPException(status_code=503, detail="Cognito user directory unavailable")
         try:
-            page = admin_user_directory.page(limit=limit, query=query, cursor=cursor)
+            page = admin_user_directory.page(owner_sub=principal.subject, limit=limit, query=query, cursor=cursor)
         except (InvalidUserCursor, ValueError) as exc:
             raise HTTPException(status_code=422, detail="Invalid user directory request") from exc
         except Exception as exc:

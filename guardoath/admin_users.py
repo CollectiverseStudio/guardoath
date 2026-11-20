@@ -13,6 +13,7 @@ class InvalidUserCursor(ValueError):
 
 _POOL = re.compile(r"^[a-z]{2}(?:-[a-z]+)+-\d_[A-Za-z0-9]+$")
 _FILTER = re.compile(r"^[A-Za-z0-9._+@-]{0,80}$")
+_OWNER_SUB = re.compile(r"^[0-9a-fA-F-]{20,80}$")
 _STATES = {"UNCONFIRMED", "CONFIRMED", "ARCHIVED", "COMPROMISED", "UNKNOWN",
            "RESET_REQUIRED", "FORCE_CHANGE_PASSWORD", "EXTERNAL_PROVIDER"}
 
@@ -47,14 +48,14 @@ class CognitoUserDirectory:
             raise ValueError("Cognito user directory requires trusted configuration")
         self.client, self.pool_id, self.key, self.clock = client, pool_id, key, clock
 
-    def _cursor(self, token, query, limit):
-        payload = {"v": 1, "pool": self.pool_id, "q": query, "n": limit,
+    def _cursor(self, token, query, limit, owner_sub):
+        payload = {"v": 2, "pool": self.pool_id, "owner": owner_sub, "q": query, "n": limit,
                    "token": token, "exp": int(self.clock()) + 900}
         data = _b64(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode())
         signature = _b64(hmac.new(self.key, b"guardoath-user-directory:" + data.encode(), hashlib.sha256).digest())
         return data + "." + signature
 
-    def _verify(self, value, query, limit):
+    def _verify(self, value, query, limit, owner_sub):
         if not isinstance(value, str) or len(value) > 4096 or not value.isascii() or value.count(".") != 1:
             raise InvalidUserCursor("Invalid user cursor")
         data, supplied = value.split(".")
@@ -65,7 +66,8 @@ class CognitoUserDirectory:
             payload = json.loads(_unb64(data))
         except (ValueError, UnicodeDecodeError) as exc:
             raise InvalidUserCursor("Invalid user cursor") from exc
-        if (not isinstance(payload, dict) or payload.get("v") != 1 or payload.get("pool") != self.pool_id
+        if (not isinstance(payload, dict) or payload.get("v") != 2 or payload.get("pool") != self.pool_id
+                or payload.get("owner") != owner_sub
                 or payload.get("q") != query or type(payload.get("n")) is not int
                 or payload["n"] != limit or type(payload.get("exp")) is not int
                 or payload["exp"] <= self.clock() or not isinstance(payload.get("token"), str)
@@ -73,7 +75,9 @@ class CognitoUserDirectory:
             raise InvalidUserCursor("Invalid user cursor")
         return payload["token"]
 
-    def page(self, *, limit=20, query="", cursor=None):
+    def page(self, *, owner_sub: str, limit=20, query="", cursor=None):
+        if not isinstance(owner_sub, str) or not _OWNER_SUB.fullmatch(owner_sub):
+            raise ValueError("Verified owner subject required for user directory")
         if type(limit) is not int or not 1 <= limit <= 50:
             raise ValueError("Invalid user page size")
         if not isinstance(query, str) or not _FILTER.fullmatch(query):
@@ -82,7 +86,7 @@ class CognitoUserDirectory:
         if query:
             args["Filter"] = 'email ^= "' + query + '"'
         if cursor is not None:
-            args["PaginationToken"] = self._verify(cursor, query, limit)
+            args["PaginationToken"] = self._verify(cursor, query, limit, owner_sub)
         response = self.client.list_users(**args)
         if (not isinstance(response, dict) or not isinstance(response.get("Users"), list)
                 or len(response["Users"]) > limit):
@@ -113,4 +117,4 @@ class CognitoUserDirectory:
         return {"status": "ok", "source": "Cognito ListUsers (single bounded page)",
                 "retrieved_utc": _utc(datetime.now(timezone.utc)), "users": users,
                 "returned": len(users), "total": None, "limit": limit,
-                "next_cursor": self._cursor(token, query, limit) if token else None}
+                "next_cursor": self._cursor(token, query, limit, owner_sub) if token else None}

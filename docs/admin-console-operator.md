@@ -47,3 +47,6 @@ Admin rule-action edits and downward allowance caps now persist the prior and ne
 
 ## Operator action receipts in the browser
 Following a confirmed tenant suspend/reactivate, rule-action change, or downward allowance-cap mutation, the authenticated owner UI validates the response tenant ID, monotonic next revision, and 64-character audit event ID. A malformed or missing receipt is shown as an unverified change rather than falsely reporting success. Successful responses display the audit event identifier and saved revision for operator reconciliation. The backend continues to require an atomic tenant-write/audit-write transaction; this UI check never substitutes for server authorization, an audit read, or deployment verification.
+
+## Owner-scoped directory pagination
+Cognito user-list pagination cursors are now version 2 and bind the signing pool, requested email filter, page limit, expiration **and the independently verified administrator subject**. A cursor issued under one authorized owner cannot be replayed by another owner; mismatches fail locally before another Cognito read. The server derives the owner subject from its trusted Cognito/MFA verification, not browser query parameters. Old cursors fail closed. No customer data or credentials are embedded in a cursor beyond the opaque provider continuation token.

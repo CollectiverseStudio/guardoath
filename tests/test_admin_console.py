@@ -164,6 +164,9 @@ def test_owner_only_cognito_user_directory_route_denial_and_sanitized_status():
     ok = c.get("/v1/admin/users?query=ab&limit=3", headers=auth())
     assert ok.status_code == 200 and ok.json()["users"][0]["email_hint"] == "u***@example.org"
     assert ok.json()["total"] is None
+    # Identity scope comes exclusively from the authenticated verifier, never the query.
+    # This stub receives the principal subject and should see no untrusted override.
+    assert c.get("/v1/admin/users?owner_sub=someone-else", headers=auth()).status_code == 200
     assert c.get("/v1/admin/users?limit=51", headers=auth()).status_code == 422
     assert c.get("/v1/admin/users?cursor=bad", headers=auth()).status_code == 422
     fail = c.get("/v1/admin/users?query=fault", headers=auth())
