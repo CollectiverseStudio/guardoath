@@ -5,6 +5,8 @@ is published. The authenticated API is responsible for verifying owner + MFA.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 
 from guardoath.admin_catalog import CatalogProvider, read_catalog
@@ -21,6 +23,13 @@ class CatalogPreviewConflict(Exception):
 
 class CatalogPreviewUnavailable(Exception):
     """The authoritative published registry could not be verified."""
+
+
+def _fingerprint(domain: str, payload: dict) -> str:
+    """Stable metadata fingerprint, not a signature, approval or publish receipt."""
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                           ensure_ascii=True, allow_nan=False).encode("ascii")
+    return hashlib.sha256(domain.encode("ascii") + b"\x00" + canonical).hexdigest()
 
 
 def _copy(value: str, max_length: int) -> str:
@@ -75,9 +84,25 @@ def preview_rule_description(provider: CatalogProvider, *, expected_registry_ver
         changes["use_case"] = {"before": previous_use_case, "after": new_use_case}
     if not changes:
         raise ValueError("No description change to preview")
+    # Bind the proposal to the entire published projection, not just a version
+    # label. A same-version change also invalidates the review fingerprint.
+    # These digests are NOT signatures, approvals, or publish receipts.
+    try:
+        baseline_sha = _fingerprint("guardoath-admin-catalog-source-v1", catalog)
+        proposal_sha = _fingerprint("guardoath-admin-catalog-proposal-v1", {
+            "source_catalog_sha256": baseline_sha,
+            "expected_registry_version": current_version,
+            "candidate_registry_version": proposed_registry_version,
+            "category_id": category_id, "check_id": check_id, "rule_id": rule_id,
+            "changes": changes,
+        })
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise CatalogPreviewUnavailable("Published catalog fingerprint unavailable") from exc
     return {"status": "preview_only", "published": False, "persisted": False,
             "source": "server-side published GuardOath registry",
             "registry_version": current_version,
+            "baseline_sha256": baseline_sha, "proposal_sha256": proposal_sha,
+            "fingerprint_kind": "review_only_untrusted_sha256_not_signature",
             "candidate_registry_version": proposed_registry_version,
             "category_id": category_id, "check_id": check_id, "rule_id": rule_id,
             "changes": changes, "changed_fields": sorted(changes),
