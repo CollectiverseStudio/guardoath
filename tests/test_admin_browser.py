@@ -32,6 +32,20 @@ def payload(**kwargs):
     return {"code": "code1", "code_verifier": "x" * 43, **kwargs}
 
 
+def test_catalog_draft_browser_workflow_is_authenticated_and_never_publishes():
+    page = app().get("/admin/login").text
+    script = app().get("/admin/client.js").text
+    assert 'id="proposal-save"' in page
+    assert 'id="draft-id"' in page and 'id="draft-inspect"' in page
+    assert 'features.catalog_drafts' in script
+    assert 'request("/v1/admin/catalog/drafts", {method:"POST"' in script
+    assert 'request("/v1/admin/catalog/drafts/" + id)' in script
+    assert 'result.draft.published !== false' in script
+    assert 'ready_to_publish !== false' in script
+    assert 'previewReady = null;' in script
+    assert '"catalog.draft"' in script
+
+
 def test_login_shell_is_public_but_contains_no_sensitive_information():
     client = app()
     page = client.get("/admin/login")

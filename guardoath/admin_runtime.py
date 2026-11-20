@@ -17,6 +17,7 @@ from guardoath.admin_integration import AdminConfigurationError, mount_admin_con
 from guardoath.admin_actions import AdminTenantActions
 from guardoath.admin_audit import AdminAuditReader, AdminSensitiveReadAuditor
 from guardoath.admin_billing import AdminSubscriptionReporter
+from guardoath.admin_catalog_drafts import AdminCatalogDrafts
 
 _HEX_KEY = re.compile(r"^[a-fA-F0-9]{64,128}$")
 
@@ -79,6 +80,7 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
     mutator = None
     audit_reader = None
     read_auditor = None
+    catalog_drafts = None
     if audit_table:
         if audit_table == getattr(tenants.store, "table_name", None):
             raise AdminConfigurationError("Admin audit table must be independent")
@@ -88,6 +90,7 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
                                                  signing_key=audit_signing_key)
         mutator = AdminTenantActions(tenants.store._client, tenants.store.table_name,
                                      audit_table, audit_key=audit_signing_key)
+        catalog_drafts = AdminCatalogDrafts(tenants.store._client, audit_table, audit_signing_key)
     billing_reporter = None
     if os.getenv("GUARDOATH_STRIPE_SECRET_KEY", ""):
         secret = os.environ["GUARDOATH_STRIPE_SECRET_KEY"]
@@ -112,6 +115,7 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
                         cursor_signing_key=bytes.fromhex(key_hex), browser_config=config,
                         browser_exchange=BoundExchange(config), admin_mutator=mutator,
                         audit_reader=audit_reader, read_auditor=read_auditor,
+                        catalog_drafts=catalog_drafts,
                         require_persistent_read_audit=True,
                         billing_reporter=billing_reporter,
                         record_validator=record_validator,rule_exists=rule_exists)

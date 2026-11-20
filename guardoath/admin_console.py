@@ -18,6 +18,7 @@ from guardoath.admin_audit import AdminAuditReader, AdminSensitiveReadAuditor, A
 from guardoath.admin_billing import AdminSubscriptionReporter, BillingUnavailable
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from guardoath.admin_catalog import CatalogProvider, read_catalog
+from guardoath.admin_catalog_drafts import AdminCatalogDrafts, DraftConflict, DraftUnavailable
 from guardoath.admin_catalog_preview import (
     CatalogPreviewConflict, CatalogPreviewUnavailable, preview_rule_description)
 from guardoath.admin_directory import DynamoAdminDirectory, InvalidCursor
@@ -81,6 +82,11 @@ class CatalogRuleDescriptionPreview(BaseModel):
     rule_id: str = Field(pattern=r"^[A-Za-z0-9_.:-]{3,100}$", max_length=100)
     title: str = Field(min_length=3, max_length=120)
     use_case: str = Field(min_length=3, max_length=500)
+
+
+class CatalogDraftRequest(CatalogRuleDescriptionPreview):
+    reason: str = Field(min_length=10, max_length=240)
+    idempotency_key: str = Field(pattern=r"^[A-Za-z0-9_-]{16,96}$", max_length=96)
 
 
 class ExactUserLookup(BaseModel):
@@ -165,6 +171,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                         require_persistent_read_audit: bool = False,
                         browser_entry_enabled: bool = False,
                         billing_reporter: AdminSubscriptionReporter | None = None,
+                        catalog_drafts: AdminCatalogDrafts | None = None,
                         record_validator=None, rule_exists=None) -> APIRouter:
     """Build guarded admin routes; absent verifier => no admin access.
 
@@ -251,7 +258,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            "tenant_rule_changes": admin_mutator is not None and callable(record_validator) and callable(rule_exists),
                            "monthly_cost_caps": admin_mutator is not None and callable(record_validator),
                            "tenant_key_revocation": admin_mutator is not None and callable(record_validator),
-                           "rule_publishing": False,
+                           "rule_publishing": False, "catalog_drafts": catalog_drafts is not None,
                            "catalog_preview": catalog_provider is not None,
                            "audit_required_for_writes": True,
                            "audit_receipt_lookup": audit_reader is not None,
@@ -449,6 +456,60 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         except CatalogPreviewUnavailable as exc:
             raise HTTPException(status_code=503, detail="Published catalog unavailable") from exc
         return admin_json({**result, **({"read_audit_event_id": read_event} if read_event else {})})
+
+
+    if catalog_drafts is not None:
+        @router.post("/v1/admin/catalog/drafts")
+        def save_catalog_draft(payload: CatalogDraftRequest, request: Request,
+                               principal: VerifiedAdmin = Depends(require_admin)):
+            _require_admin_origin(request)
+            if catalog_provider is None:
+                raise HTTPException(status_code=503, detail="Published catalog unavailable")
+            read_event = audit_sensitive_read(principal, "catalog.preview")
+            try:
+                values = payload.model_dump(exclude={"reason", "idempotency_key"})
+                preview = preview_rule_description(catalog_provider, **values)
+                record = catalog_drafts.save(actor=principal.subject,
+                    nonce=payload.idempotency_key, reason=payload.reason, preview=preview,
+                    title=payload.title, use_case=payload.use_case)
+            except CatalogPreviewConflict as exc:
+                raise HTTPException(status_code=409, detail="Catalog version or source changed") from exc
+            except DraftConflict as exc:
+                raise HTTPException(status_code=409, detail="Draft idempotency conflict") from exc
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail="Invalid catalog draft") from exc
+            except (DraftUnavailable, CatalogPreviewUnavailable) as exc:
+                raise HTTPException(status_code=503, detail="Draft persistence unavailable") from exc
+            return admin_json({**record, "persisted": True, "reviewed": False,
+                **({"read_audit_event_id": read_event} if read_event else {})})
+
+        @router.get("/v1/admin/catalog/drafts/{draft_id}")
+        def read_catalog_draft(draft_id: str, principal: VerifiedAdmin = Depends(require_admin)):
+            if not re.fullmatch(r"[0-9a-f]{64}", draft_id):
+                raise HTTPException(status_code=422, detail="Invalid draft ID")
+            read_event = audit_sensitive_read(principal, "catalog.draft")
+            try:
+                record = catalog_drafts.read(principal.subject, draft_id)
+                if record is None:
+                    raise HTTPException(status_code=404, detail="Catalog draft not found")
+                if catalog_provider is None:
+                    raise CatalogPreviewUnavailable("Published catalog unavailable")
+                refreshed = preview_rule_description(catalog_provider,
+                    expected_registry_version=record["registry_version"],
+                    proposed_registry_version=record["candidate_registry_version"],
+                    category_id=record["category_id"], check_id=record["check_id"],
+                    rule_id=record["rule_id"], title=record["title"], use_case=record["use_case"])
+                stale = (refreshed["baseline_sha256"] != record["baseline_sha256"] or
+                         refreshed["proposal_sha256"] != record["proposal_sha256"])
+            except HTTPException:
+                raise
+            except (CatalogPreviewConflict, ValueError):
+                stale = True
+            except (DraftUnavailable, CatalogPreviewUnavailable, KeyError, TypeError) as exc:
+                raise HTTPException(status_code=503, detail="Catalog draft unavailable") from exc
+            return admin_json({"draft":record, "stale":stale, "published":False,
+                "ready_to_publish":False,
+                **({"read_audit_event_id":read_event} if read_event else {})})
 
     if admin_mutator is not None:
         @router.post("/v1/admin/tenants/{tenant_id}/status")

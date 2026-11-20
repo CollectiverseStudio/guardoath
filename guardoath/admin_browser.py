@@ -188,7 +188,12 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <label for="proposal-title">Proposed rule title</label><p><input id="proposal-title" maxlength="120" disabled></p>
 <label for="proposal-use-case">Proposed use case</label><p><textarea id="proposal-use-case" rows="3" maxlength="500" disabled></textarea></p>
 <button id="proposal-go" type="button" disabled>Preview description change</button>
-<p id="proposal-result" role="status"></p></section></div>
+<button id="proposal-save" type="button" disabled>Save immutable draft</button>
+<p id="proposal-result" role="status"></p>
+<h3>Inspect a saved catalog draft</h3><label for="draft-id">Draft ID</label>
+<input id="draft-id" maxlength="64" autocomplete="off" spellcheck="false">
+<button id="draft-inspect" type="button">Inspect draft</button>
+<p id="draft-result" role="status"></p></section></div>
 </main><script src="/admin/client.js" defer></script></body></html>"""
 
 # Zero third-party scripts. OAuth access token is deliberately memory-only.
@@ -199,6 +204,7 @@ _JS = r'''"use strict";
   let nextCursor = null;
   let nextUserCursor = null;
   let previewSelection = null;
+  let previewReady = null;
   let authEpoch = 0;
   let features = {tenant_status_changes:false};
   const el = id => document.getElementById(id);
@@ -221,8 +227,11 @@ _JS = r'''"use strict";
     el("tenant-rows").replaceChildren();
     el("user-rows").replaceChildren();
     el("categories").replaceChildren();
-    for (const id of ["status", "tenant-status", "user-status", "user-inspect-result", "catalog-summary", "usage-details", "billing-details", "audit-result", "proposal-result"]) say(id, "");
+    for (const id of ["status", "tenant-status", "user-status", "user-inspect-result", "catalog-summary", "usage-details", "billing-details", "audit-result", "proposal-result", "draft-result"]) say(id, "");
     previewSelection = null;
+    previewReady = null;
+    el("proposal-save").disabled = true;
+    el("draft-id").value = "";
     say("proposal-target", "No rule selected.");
     el("proposal-title").value = "";
     el("proposal-use-case").value = "";
@@ -262,6 +271,8 @@ _JS = r'''"use strict";
     }
     features = available;
     previewSelection = null;
+    previewReady = null;
+    el("proposal-save").disabled = true;
     say("proposal-target", "No rule selected.");
     say("proposal-result", "");
     el("proposal-go").disabled = true;
@@ -296,6 +307,8 @@ _JS = r'''"use strict";
             preview.type = "button";
             preview.textContent = "Preview description";
             preview.addEventListener("click", () => {
+              previewReady = null;
+              el("proposal-save").disabled = true;
               previewSelection = {category_id:category.category_id, check_id:check.check_id,
                 rule_id:rule.rule_id, registry_version:catalog.registry_version};
               say("proposal-target", "Selected " + rule.rule_id + " · published registry " + catalog.registry_version);
@@ -333,12 +346,15 @@ _JS = r'''"use strict";
     if (!Number.isSafeInteger(version) || version < 1) {
       say("proposal-result", "Published catalog version unavailable"); return;
     }
+    previewReady = null;
+    el("proposal-save").disabled = true;
+    const proposed = {expected_registry_version:selection.registry_version,
+      proposed_registry_version:String(version + 1), category_id:selection.category_id,
+      check_id:selection.check_id, rule_id:selection.rule_id,
+      title:el("proposal-title").value, use_case:el("proposal-use-case").value};
     try {
       const result = await request("/v1/admin/catalog/preview", {method:"POST",
-        body:JSON.stringify({expected_registry_version:selection.registry_version,
-          proposed_registry_version:String(version + 1), category_id:selection.category_id,
-          check_id:selection.check_id, rule_id:selection.rule_id,
-          title:el("proposal-title").value, use_case:el("proposal-use-case").value})});
+        body:JSON.stringify(proposed)});
       if (!token || epoch !== authEpoch || previewSelection?.rule_id !== selection.rule_id) return;
       if (result.status !== "preview_only" || result.published !== false ||
           result.persisted !== false || result.registry_version !== selection.registry_version ||
@@ -349,6 +365,8 @@ _JS = r'''"use strict";
           !/^[a-f0-9]{64}$/.test(result.proposal_sha256)) {
         throw new Error("Catalog preview verification unavailable");
       }
+      previewReady = proposed;
+      el("proposal-save").disabled = !features.catalog_drafts;
       say("proposal-result", "Preview only — NOT saved or published. Candidate registry " +
         result.candidate_registry_version + " · proposed fields: " +
         result.changed_fields.join(", ") + ". Tenant settings and detector behavior unchanged. " +
@@ -361,6 +379,55 @@ _JS = r'''"use strict";
     }
   }
 
+  async function saveCatalogDraft() {
+    if (!token || !features.catalog_drafts || !previewReady) return;
+    const proposed = {...previewReady};
+    if (el("proposal-title").value !== proposed.title ||
+        el("proposal-use-case").value !== proposed.use_case) {
+      previewReady = null;
+      el("proposal-save").disabled = true;
+      say("proposal-result", "Description changed; preview again before saving");
+      return;
+    }
+    const reason = prompt("Draft reason (10–240 characters; no sensitive information):");
+    if (!reason || reason.length < 10 || reason.length > 240) return;
+    if (!confirm("Save an immutable review draft? This does NOT publish a rule or change customer settings.")) return;
+    const epoch = authEpoch;
+    try {
+      const result = await request("/v1/admin/catalog/drafts", {method:"POST",
+        body:JSON.stringify({...proposed,reason,
+          idempotency_key:crypto.randomUUID().replaceAll("-", "")})});
+      if (!token || epoch !== authEpoch) return;
+      if (result.status !== "draft_saved" || result.persisted !== true ||
+          result.published !== false || result.tenant_policies_changed !== false ||
+          !/^[a-f0-9]{64}$/.test(result.draft_id)) throw new Error("Draft receipt unavailable");
+      el("draft-id").value = result.draft_id;
+      previewReady = null;
+      el("proposal-save").disabled = true;
+      say("proposal-result", "Signed draft saved · " + result.draft_id +
+        " · NOT reviewed or published; source-controlled release approval and tests still needed" +
+        readAuditLabel(result));
+    } catch (err) {if (token && epoch === authEpoch) say("proposal-result", err.message);}
+  }
+  async function inspectCatalogDraft() {
+    if (!token || !features.catalog_drafts) return;
+    const id = el("draft-id").value.trim();
+    if (!/^[a-f0-9]{64}$/.test(id)) {say("draft-result", "Enter a valid draft ID");return;}
+    const epoch = authEpoch;
+    try {
+      const result = await request("/v1/admin/catalog/drafts/" + id);
+      if (!token || epoch !== authEpoch) return;
+      if (!result.draft || result.draft.draft_id !== id ||
+          result.draft.published !== false || result.ready_to_publish !== false ||
+          typeof result.stale !== "boolean") throw new Error("Draft integrity unavailable");
+      say("draft-result", "Signed persistent draft · " + id +
+        " · target " + result.draft.rule_id +
+        " · baseline SHA-256 " + result.draft.baseline_sha256 +
+        " · " + (result.stale ? "STALE — source changed; preview again" :
+          "Current baseline — still requires review, tests and versioned source release") +
+        " · NOT published" + readAuditLabel(result));
+    } catch (err) {if (token && epoch === authEpoch) say("draft-result", err.message);}
+  }
   function showUsers(data) {
     el("user-rows").replaceChildren();
     for (const user of data.users || []) {
@@ -570,7 +637,7 @@ _JS = r'''"use strict";
         if (receipt.integrity_status !== "signed_verified" || change.field !== "protected_read" ||
             !["cognito.exact_user","stripe.subscription","audit.receipt","cognito.user_directory",
               "tenant.directory","tenant.detail","tenant.usage","catalog.registry","catalog.preview",
-              "admin.overview","admin.features"].includes(change.resource) ||
+              "admin.overview","admin.features","catalog.draft"].includes(change.resource) ||
             receipt.prior_revision !== undefined || receipt.new_revision !== undefined)
           throw new Error("Protected read receipt invalid");
         say("audit-result", "Stored receipt · " + integrity + " · protected read " +
@@ -742,6 +809,8 @@ _JS = r'''"use strict";
     try { await load(); } catch(err) { say("status", err.message); }
   }
   el("login-start").addEventListener("click", beginLogin);
+  el("proposal-save").addEventListener("click", saveCatalogDraft);
+  el("draft-inspect").addEventListener("click", inspectCatalogDraft);
   el("refresh").addEventListener("click", () => load().catch(e => say("status", e.message)));
   el("logout").addEventListener("click", () => signOut());
   el("search-go").addEventListener("click", () => {nextCursor=null;page();});
