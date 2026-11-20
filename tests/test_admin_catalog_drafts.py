@@ -281,6 +281,8 @@ def test_review_routes_enforce_mfa_authority_origin_and_fresh_source():
     assert check.status_code == 200
     assert check.json()["review"]["review_id"] == review_id
     assert check.json()["review"]["published"] is False
+    assert check.json()["stale"] is False and check.json()["source_current"] is True
+    assert check.json()["ready_to_publish"] is False
     assert db.writes == 2
     again = client.post(endpoint, json=body, headers=owner)
     assert again.status_code == 200 and again.json()["review_id"] == review_id
@@ -289,6 +291,50 @@ def test_review_routes_enforce_mfa_authority_origin_and_fresh_source():
     assert client.get("/v1/admin/catalog/reviews/" + review_id, headers={
         "Authorization": "Bearer other-owner-token"}).status_code == 503
     source["domains"][0]["controls"][0]["rules"][0]["title"] = "Stale current catalog"
+    stale = client.get("/v1/admin/catalog/reviews/" + review_id, headers=owner)
+    assert stale.status_code == 200
+    assert stale.json()["stale"] is True and stale.json()["source_current"] is False
+    assert stale.json()["published"] is False and stale.json()["ready_to_publish"] is False
     assert client.post(endpoint, json={**body, "idempotency_key": "fresh-review-key-1234"},
                        headers=owner).status_code == 409
+    source["domains"][0]["controls"][0]["rules"][0]["title"] = REGISTRY["domains"][0]["controls"][0]["rules"][0]["title"]
+    source["registry_version"] = "4"
+    later = client.get("/v1/admin/catalog/reviews/" + review_id, headers=owner)
+    assert later.status_code == 200
+    assert later.json()["stale"] is True and later.json()["source_current"] is False
+    assert db.writes == 2
+
+
+def test_catalog_review_read_requires_signed_draft_and_available_published_registry():
+    db, store = make_store()
+    source = deepcopy(REGISTRY)
+    draft = store.save(**saving_args())
+    review = store.review(
+        actor=OWNER, draft_id=draft["draft_id"], nonce="review-safe-key-for-outage",
+        reason="Review with immutable published catalog binding",
+        confirmation="REVIEW " + draft["draft_id"][-8:],
+        baseline_sha256=draft["baseline_sha256"],
+        proposal_sha256=draft["proposal_sha256"])
+    provider = {"available": True}
+    def catalog():
+        if not provider["available"]:
+            raise RuntimeError("Registry unavailable")
+        return source
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        verify_cognito_admin=lambda token: (
+            VerifiedAdmin(OWNER, frozenset({"owner"}), True)
+            if token == "verified-owner-token" else None),
+        catalog_provider=catalog, catalog_drafts=store))
+    client = TestClient(app)
+    url = "/v1/admin/catalog/reviews/" + review["review_id"]
+    headers = {"Authorization": "Bearer verified-owner-token"}
+    assert client.get(url, headers=headers).json()["source_current"] is True
+    provider["available"] = False
+    assert client.get(url, headers=headers).status_code == 503
+    provider["available"] = True
+    db.items[draft["draft_id"]]["document"]["S"] = "{}"
+    assert client.get(url, headers=headers).status_code == 503
+    del db.items[draft["draft_id"]]
+    assert client.get(url, headers=headers).status_code == 503
     assert db.writes == 2

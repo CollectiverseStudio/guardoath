@@ -485,10 +485,14 @@ _JS = r'''"use strict";
           verified.review.proposal_sha256 !== selected.proposal ||
           verified.review.status !== "review_recorded" ||
           verified.review.published !== false || verified.published !== false ||
-          verified.ready_to_publish !== false)
+          verified.ready_to_publish !== false ||
+          typeof verified.stale !== "boolean" ||
+          verified.source_current !== !verified.stale)
         throw new Error("Persisted catalog review integrity unavailable");
       say("draft-result", "Immutable signed review verified · " + result.review_id +
         " · source baseline " + selected.baseline +
+        (verified.stale ? " · STALE — published catalog changed; review cannot be used as current-source evidence" :
+          " · current-source fingerprint independently verified") +
         " · publication NOT authorized; versioned tests, source release and rollback remain required" +
         readAuditLabel(verified));
     } catch(err) {if (token && epoch === authEpoch) say("draft-result", err.message);}

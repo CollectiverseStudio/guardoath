@@ -61,6 +61,9 @@ def test_catalog_review_ui_is_owner_session_bound_and_receipt_verified():
     assert 'result.published !== false' in script
     assert 'verified.review.published !== false' in script
     assert 'verified.ready_to_publish !== false' in script
+    assert 'typeof verified.stale !== "boolean"' in script
+    assert 'verified.source_current !== !verified.stale' in script
+    assert "review cannot be used as current-source evidence" in script
     assert "el(\"draft-review\").disabled = true;" in script
     assert 'addEventListener("click", reviewCatalogDraft)' in script
     assert "NOT publish rules" in script or "NOT publish" in script

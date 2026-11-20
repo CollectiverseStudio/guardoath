@@ -570,11 +570,35 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             read_event = audit_sensitive_read(principal, "catalog.draft")
             try:
                 review = catalog_drafts.read_review(principal.subject, review_id)
-            except DraftUnavailable as exc:
-                raise HTTPException(status_code=503, detail="Catalog review integrity unavailable") from exc
-            if review is None:
-                raise HTTPException(status_code=404, detail="Catalog review not found")
-            return admin_json({"review": review, "published": False,
+                if review is None:
+                    raise HTTPException(status_code=404, detail="Catalog review not found")
+                # Historical receipt integrity is NOT a claim of current source.
+                draft = catalog_drafts.read(principal.subject, review["draft_id"])
+                if (draft is None or
+                        draft["baseline_sha256"] != review["baseline_sha256"] or
+                        draft["proposal_sha256"] != review["proposal_sha256"]):
+                    raise DraftUnavailable("Catalog review/draft binding unavailable")
+                if catalog_provider is None:
+                    raise CatalogPreviewUnavailable("Published catalog unavailable")
+                try:
+                    refreshed = preview_rule_description(
+                        catalog_provider,
+                        expected_registry_version=draft["registry_version"],
+                        proposed_registry_version=draft["candidate_registry_version"],
+                        category_id=draft["category_id"], check_id=draft["check_id"],
+                        rule_id=draft["rule_id"], title=draft["title"],
+                        use_case=draft["use_case"])
+                except (CatalogPreviewConflict, ValueError):
+                    stale = True
+                else:
+                    stale = (refreshed["baseline_sha256"] != review["baseline_sha256"] or
+                             refreshed["proposal_sha256"] != review["proposal_sha256"])
+            except HTTPException:
+                raise
+            except (DraftUnavailable, CatalogPreviewUnavailable, KeyError, TypeError) as exc:
+                raise HTTPException(status_code=503, detail="Catalog review verification unavailable") from exc
+            return admin_json({"review": review, "stale": stale,
+                "source_current": not stale, "published": False,
                 "ready_to_publish": False,
                 **({"read_audit_event_id": read_event} if read_event else {})})
 
