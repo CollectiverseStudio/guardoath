@@ -355,3 +355,55 @@ def test_catalog_preview_provider_failure_stays_unavailable_and_no_bypass():
     assert r.status_code == 503 and "private server" not in r.text
     assert client(verified, Store()).post("/v1/admin/catalog/preview", json=body,
             headers={**auth(), "Origin": "https://guardoath.com"}).status_code == 503
+
+
+def test_one_owner_origin_policy_for_every_sensitive_admin_post():
+    class Directory:
+        def __init__(self): self.calls = 0
+        def lookup(self, **kwargs):
+            self.calls += 1
+            return {"status": "not_found", "user": None}
+    class Actions:
+        def __init__(self): self.calls = []
+        def change_status(self, **kwargs): self.calls.append("status"); return {"ok": True}
+        def change_rule_action(self, **kwargs): self.calls.append("rule"); return {"ok": True}
+        def cap_monthly_allowance(self, **kwargs): self.calls.append("cap"); return {"ok": True}
+    directory, actions = Directory(), Actions()
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        verify_cognito_admin=verified, admin_user_directory=directory,
+        catalog_provider=sample_catalog, admin_mutator=actions,
+        record_validator=lambda *_: object(), rule_exists=lambda *_: True))
+    c = TestClient(app)
+    operations = [
+        ("/v1/admin/users/lookup", {"email": "someone@example.com"}),
+        ("/v1/admin/catalog/preview", {
+            "expected_registry_version": "3", "proposed_registry_version": "4",
+            "category_id": "privacy", "check_id": "pii", "rule_id": "pii.email",
+            "title": "Revised email rule title", "use_case": "Protect email addresses"}),
+        ("/v1/admin/tenants/alpha/status", {
+            "expected_revision": 2, "status": "disabled", "confirmation": "alpha",
+            "reason": "Operator confirmed status change", "idempotency_key": "Z" * 20}),
+        ("/v1/admin/tenants/alpha/rule-action", {
+            "expected_revision": 2, "stage": "input", "rule_id": "pii.email",
+            "action": "block", "confirmation": "alpha",
+            "reason": "Operator confirmed rule change", "idempotency_key": "Z" * 20}),
+        ("/v1/admin/tenants/alpha/allowance-cap", {
+            "expected_revision": 2, "new_limit": 100, "confirmation": "alpha",
+            "reason": "Operator confirmed cost control", "idempotency_key": "Z" * 20}),
+    ]
+    for endpoint, body in operations:
+        for origin in (None, "https://evil.example", "https://guardoath.com.evil.example",
+                       "null", "http://127.0.1:8080", "http://localhost:0",
+                       "http://localhost:65536", "http://localhost:8080/"):
+            headers = auth()
+            if origin is not None:
+                headers["Origin"] = origin
+            assert c.post(endpoint, json=body, headers=headers).status_code == 403, (endpoint, origin)
+        duplicate_headers = [("Authorization", "Bearer owner"), ("Origin", "https://guardoath.com"),
+                             ("Origin", "https://evil.example")]
+        assert c.post(endpoint, json=body, headers=duplicate_headers).status_code == 403
+        for origin in ("https://guardoath.com", "http://localhost:8000", "http://127.0.0.1:8080"):
+            assert c.post(endpoint, json=body, headers={**auth(), "Origin": origin}).status_code == 200, (endpoint, origin)
+    assert directory.calls == 3
+    assert len(actions.calls) == 9

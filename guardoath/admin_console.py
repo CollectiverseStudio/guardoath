@@ -97,6 +97,21 @@ PAGE_LIMIT = 50
 # use a dedicated session header; never treat API keys as administrator sessions.
 ADMIN_SESSION_HEADER = "X-GuardOath-Admin-Session"
 
+_LOCAL_ADMIN_ORIGIN = re.compile(r"http://(?:localhost|127\.0\.0\.1):([0-9]{1,5})")
+
+
+def _require_admin_origin(request: Request) -> None:
+    """One trusted production or bounded loopback origin; deny ambiguity."""
+    origins = request.headers.getlist("origin")
+    if len(origins) == 1:
+        if origins[0] == "https://guardoath.com":
+            return
+        local = _LOCAL_ADMIN_ORIGIN.fullmatch(origins[0])
+        if local is not None and 1 <= int(local.group(1)) <= 65535:
+            return
+    raise HTTPException(status_code=403, detail="Admin request origin refused")
+
+
 
 def _safe_record(record) -> dict:
     """Strict field allowlist; never serializes API key hashes, raw data or secrets."""
@@ -249,10 +264,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            principal: VerifiedAdmin = Depends(require_admin)):
         # Exact email stays in the POST body, not the URL, access logs or redirects.
         # Same-origin check and independently verified Cognito owner/MFA apply.
-        origin = request.headers.get("origin")
-        if origin != "https://guardoath.com" and not re.fullmatch(
-                r"http://(?:localhost|127\.0\.0\.1):\d+", origin or ""):
-            raise HTTPException(status_code=403, detail="Admin request origin refused")
+        _require_admin_origin(request)
         if admin_user_directory is None:
             raise HTTPException(status_code=503, detail="Cognito user directory unavailable")
         try:
@@ -365,10 +377,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                              principal: VerifiedAdmin = Depends(require_admin)):
         # Authenticated metadata-only preview. No draft is saved and no published
         # detector, tenant record, or customer rule action can be modified.
-        origin = request.headers.get("origin")
-        if origin != "https://guardoath.com" and not re.fullmatch(
-                r"http://(?:localhost|127\\.0\\.1):\\d+", origin or ""):
-            raise HTTPException(status_code=403, detail="Admin request origin refused")
+        _require_admin_origin(request)
         if catalog_provider is None:
             raise HTTPException(status_code=503, detail="Published catalog unavailable")
         try:
@@ -387,10 +396,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                                  principal: VerifiedAdmin = Depends(require_admin)):
             # Browser admin tokens use a non-simple custom header. Enforce origin
             # on all writes as defense in depth against cross-site attempts.
-            origin = request.headers.get("origin")
-            if origin != "https://guardoath.com" and not re.fullmatch(
-                    r"http://(?:localhost|127\.0\.1):\d+", origin or ""):
-                raise HTTPException(status_code=403, detail="Admin request origin refused")
+            _require_admin_origin(request)
             if not TENANT_ID.fullmatch(tenant_id):
                 raise HTTPException(status_code=404, detail="Tenant not found")
             try:
@@ -411,10 +417,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         @router.post("/v1/admin/tenants/{tenant_id}/rule-action")
         def change_rule_action(tenant_id: str, payload: TenantRuleChange, request: Request,
                                principal: VerifiedAdmin = Depends(require_admin)):
-            origin = request.headers.get("origin")
-            if origin != "https://guardoath.com" and not re.fullmatch(
-                    r"http://(?:localhost|127\.0\.1):\d+",origin or ""):
-                raise HTTPException(status_code=403,detail="Admin request origin refused")
+            _require_admin_origin(request)
             try:
                 result=admin_mutator.change_rule_action(
                     tenant_id=tenant_id,expected_revision=payload.expected_revision,
@@ -434,10 +437,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         @router.post("/v1/admin/tenants/{tenant_id}/allowance-cap")
         def cap_allowance(tenant_id:str, payload:AllowanceCap, request:Request,
                           principal:VerifiedAdmin=Depends(require_admin)):
-            origin=request.headers.get("origin")
-            if origin!="https://guardoath.com" and not re.fullmatch(
-                    r"http://(?:localhost|127\.0\.1):\d+",origin or ""):
-                raise HTTPException(status_code=403,detail="Admin request origin refused")
+            _require_admin_origin(request)
             try:
                 result=admin_mutator.cap_monthly_allowance(
                     tenant_id=tenant_id,expected_revision=payload.expected_revision,
