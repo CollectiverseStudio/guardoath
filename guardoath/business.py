@@ -2,7 +2,6 @@
 
 from datetime import date
 from decimal import Decimal, DecimalException
-import json
 import operator
 import re
 
@@ -62,10 +61,10 @@ async def cross_field_check(request, policy, stage):
     if not (comparisons or arithmetic or identity or conversion_time or trusted_refs or drift) or request.content_format != "json":
         return CheckerResult(checker_id="cross_field", checker_version="2", status="skipped")
     try:
-        # Preserve the strict parser's duplicate/size/depth/finite-number guards,
-        # then decode the same canonical text with exact decimal float tokens.
-        parse_json(request.content)
-        payload = json.loads(request.content, parse_float=exact_number)
+        # A single strict parse retains bounded depth, duplicate-key and
+        # finite-number checks while preserving exact decimal comparison tokens.
+        # Avoid redundant JSON decoding under Windows CI CPU contention.
+        payload = parse_json(request.content, float_converter=exact_number)
     except (ValueError, RecursionError, DecimalException):
         return CheckerResult(checker_id="cross_field", checker_version="2", status="flagged", findings=(
             Finding(rule_id="business.invalid_json", category="business", severity="high",

@@ -30,7 +30,7 @@ def check_nesting(content: str):
             depth -= 1
 
 
-def parse_json(content: str):
+def parse_json(content: str, *, float_converter=None):
     if len(content.encode("utf-8")) > MAX_JSON_BYTES:
         raise ValueError("JSON byte limit")
     check_nesting(content)
@@ -50,8 +50,16 @@ def parse_json(content: str):
             raise ValueError("JSON number limit")
         return converter(value)
 
+    def float_number(token):
+        # Preserve strict default finite-float/size checks before any lossless
+        # decimal conversion. The old cross-field path parsed this document twice.
+        baseline = number(token, float)
+        if not math.isfinite(baseline):
+            raise ValueError("Nonfinite JSON number")
+        return baseline if float_converter is None else float_converter(token)
+
     result = json.loads(content, object_pairs_hook=pairs, parse_constant=reject_constant,
-                        parse_int=lambda v: number(v, int), parse_float=lambda v: number(v, float))
+                        parse_int=lambda v: number(v, int), parse_float=float_number)
 
     def finite(value):
         if isinstance(value, str) and any(0xD800 <= ord(c) <= 0xDFFF for c in value):

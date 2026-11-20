@@ -81,6 +81,10 @@ def test_wrong_type_does_not_coerce_to_number_or_date(case):
     sample = dict(case["negative"])
     sample[case["comparison"]["left"][1:]] = True
     result = _check(case, sample)
+    # Preserve the exact-finding assertion; if an OS scheduling spike causes
+    # an incomplete checker, report the bounded checker outcome diagnostically.
+    assert result.evaluation_status == "complete", (
+        f"cross-field incomplete: {[ (c.status, c.error_code, c.latency_ms) for c in result.checker_results ]}")
     assert {finding.rule_id for finding in result.findings} == {case["expected_finding"]}
 
 
