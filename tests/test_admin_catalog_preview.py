@@ -42,10 +42,10 @@ def test_preview_only_and_no_source_mutation():
     ({"category_id": "security"}, CatalogPreviewConflict),
     ({"check_id": "other"}, CatalogPreviewConflict),
     ({"title": "Email rule"}, ValueError),
-    ({"title": "\\rOverwrite"}, ValueError),
+    ({"title": "\rOverwrite"}, ValueError),
     ({"title": "x" * 121}, ValueError),
     ({"rule_id": "../../file"}, ValueError),
-    ({"use_case": "\\x00bad"}, ValueError),
+    ({"use_case": "\x00bad"}, ValueError),
 ])
 def test_reject_stale_nondistinct_malformed_and_unknown(change, expected_exception):
     proposed = args()

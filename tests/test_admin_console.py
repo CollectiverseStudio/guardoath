@@ -329,7 +329,7 @@ def test_catalog_metadata_preview_requires_verified_owner_and_origin_and_does_no
         ({"category_id": "unknown"}, 409),
         ({"title": "Email address"}, 422),
         ({"title": "x" * 121}, 422),
-        ({"title": "unsafe\\ncontrol"}, 422),
+        ({"title": "unsafe\ncontrol"}, 422),
         ({"unknown_customer_permission": True}, 422),
     ]:
         candidate = {**body, **alteration}
