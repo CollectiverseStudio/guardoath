@@ -131,25 +131,33 @@ def test_the_site_role_can_use_only_its_table_and_log_group(template):
     assert statements[1]["Resource"] == {"Fn::GetAtt": ["TenantTable", "Arn"]}
     # Resource scope must remain explicit even for conditional admin IAM.
     # CloudFormation Fn::If is a statement wrapper, not a direct Resource key.
+    conditionals = {}
     for statement in statements:
         if "Fn::If" in statement:
             condition, conditional, absent = statement["Fn::If"]
-            assert condition == "AdminConsoleEnabled"
             assert absent == {"Ref": "AWS::NoValue"}
             assert conditional["Effect"] == "Allow"
-            assert conditional["Action"] == [
-                "cognito-idp:AdminGetUser", "cognito-idp:AdminListGroupsForUser", "cognito-idp:ListUsers"
-            ]
-            assert conditional["Resource"] == {
-                "Fn::Sub": "arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPool}"
-            }
+            assert "Resource" in conditional and "*" not in json.dumps(conditional["Resource"])
+            assert condition not in conditionals
+            conditionals[condition] = conditional
         else:
             assert "Resource" in statement
             assert "*" not in json.dumps(statement["Resource"])
+    assert set(conditionals) == {"AdminConsoleEnabled", "AdminMutationsEnabled"}
+    cognito = conditionals["AdminConsoleEnabled"]
+    assert cognito["Action"] == [
+        "cognito-idp:AdminGetUser", "cognito-idp:AdminListGroupsForUser", "cognito-idp:ListUsers"
+    ]
+    assert cognito["Resource"] == {
+        "Fn::Sub": "arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPool}"
+    }
+    audit = conditionals["AdminMutationsEnabled"]
+    assert audit["Action"] == ["dynamodb:PutItem"]
+    assert audit["Resource"] == {"Fn::GetAtt": ["AdminAuditTable", "Arn"]}
 
 
 def test_the_table_stays_within_the_free_capacity(template):
-    (table,) = resources(template, "AWS::DynamoDB::Table").values()
+    table = resources(template, "AWS::DynamoDB::Table")["TenantTable"]
     assert table["BillingMode"] == "PROVISIONED"
     for name in ("TableReadCapacity", "TableWriteCapacity"):
         assert template["Parameters"][name]["MaxValue"] <= 25 and default(template, name) <= 25
@@ -426,8 +434,39 @@ def test_admin_identity_infrastructure_is_strictly_opt_in(template):
     for key in ("GUARDOATH_ADMIN_CLIENT_ID", "GUARDOATH_ADMIN_COGNITO_DOMAIN", "GUARDOATH_ADMIN_CURSOR_HMAC_KEY"):
         assert env[key]["Fn::If"][0] == "AdminConsoleEnabled"
         assert env[key]["Fn::If"][2] == {"Ref": "AWS::NoValue"}
-    policy = template["Resources"]["SiteRole"]["Properties"]["Policies"][0]["PolicyDocument"]["Statement"][-1]["Fn::If"]
+    policy = template["Resources"]["SiteRole"]["Properties"]["Policies"][0]["PolicyDocument"]["Statement"][-2]["Fn::If"]
     assert policy[0] == "AdminConsoleEnabled" and policy[2] == {"Ref": "AWS::NoValue"}
     assert set(policy[1]["Action"]) == {"cognito-idp:AdminGetUser", "cognito-idp:AdminListGroupsForUser", "cognito-idp:ListUsers"}
     assert policy[1]["Resource"] == {"Fn::Sub": "arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPool}"}
-    assert "GUARDOATH_ADMIN_AUDIT_TABLE" not in env
+    assert env["GUARDOATH_ADMIN_AUDIT_TABLE"] == {
+        "Fn::If": ["AdminMutationsEnabled", {"Ref": "AdminAuditTable"}, {"Ref": "AWS::NoValue"}]
+    }
+
+
+def test_admin_mutations_require_explicit_opt_in_and_retained_append_only_audit(template):
+    assert default(template, "EnableAdminConsole") == default(template, "EnableAdminMutations") == "0"
+    assert template["Conditions"]["AdminMutationsEnabled"] == {"Fn::Equals": [
+        {"Ref": "EnableAdminMutations"}, "1"]}
+    rules = template["Rules"]["AdminMutationSafeguards"]
+    assert rules["RuleCondition"] == {"Fn::Equals": [{"Ref": "EnableAdminMutations"}, "1"]}
+    assert len(rules["Assertions"]) == 3
+    assert rules["Assertions"][0]["Assert"] == {"Fn::Equals": [{"Ref": "EnableAdminConsole"}, "1"]}
+    for i, name in enumerate(("TableReadCapacity", "TableWriteCapacity"), start=1):
+        assert rules["Assertions"][i]["Assert"] == {
+            "Fn::Not": [{"Fn::Equals": [{"Ref": name}, "25"]}]}
+    audit = template["Resources"]["AdminAuditTable"]
+    assert audit["Condition"] == "AdminMutationsEnabled"
+    assert audit["DeletionPolicy"] == audit["UpdateReplacePolicy"] == "Retain"
+    props = audit["Properties"]
+    assert props["BillingMode"] == "PROVISIONED"
+    assert props["ProvisionedThroughput"] == {"ReadCapacityUnits": 1, "WriteCapacityUnits": 1}
+    assert props["DeletionProtectionEnabled"] is True
+    assert props["KeySchema"] == [{"AttributeName": "event_id", "KeyType": "HASH"}]
+    assert props["AttributeDefinitions"] == [{"AttributeName": "event_id", "AttributeType": "S"}]
+    # The application can append an audit entry, but cannot edit, delete, scan or enumerate the log.
+    statements = template["Resources"]["SiteRole"]["Properties"]["Policies"][0]["PolicyDocument"]["Statement"]
+    audit_policy = statements[-1]["Fn::If"]
+    assert audit_policy == ["AdminMutationsEnabled", {
+        "Effect": "Allow", "Action": ["dynamodb:PutItem"],
+        "Resource": {"Fn::GetAtt": ["AdminAuditTable", "Arn"]}}, {"Ref": "AWS::NoValue"}]
+    assert template["Outputs"]["AdminAuditTableName"]["Condition"] == "AdminMutationsEnabled"

@@ -109,6 +109,15 @@
       "MaxLength": 128,
       "AllowedPattern": "^$|^[a-fA-F0-9]{64,128}$",
       "Description": "Independent random 32-64 byte hexadecimal secret required when admin enabled."
+    },
+    "EnableAdminMutations": {
+      "Type": "String",
+      "Default": "0",
+      "AllowedValues": [
+        "0",
+        "1"
+      ],
+      "Description": "Optional persistent admin audit table and tenant mutations; incurs an additional provisioned DynamoDB unit. Off by default."
     }
   },
   "Rules": {
@@ -198,6 +207,59 @@
             ]
           },
           "AssertDescription": "Provide independent 32-64 byte hexadecimal admin cursor key when enabled."
+        }
+      ]
+    },
+    "AdminMutationSafeguards": {
+      "RuleCondition": {
+        "Fn::Equals": [
+          {
+            "Ref": "EnableAdminMutations"
+          },
+          "1"
+        ]
+      },
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Equals": [
+              {
+                "Ref": "EnableAdminConsole"
+              },
+              "1"
+            ]
+          },
+          "AssertDescription": "Audited admin mutations require an explicitly enabled protected admin console."
+        },
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Equals": [
+                  {
+                    "Ref": "TableReadCapacity"
+                  },
+                  "25"
+                ]
+              }
+            ]
+          },
+          "AssertDescription": "Leave one RCU available under the 25 RCU account allowance for the admin audit table."
+        },
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Equals": [
+                  {
+                    "Ref": "TableWriteCapacity"
+                  },
+                  "25"
+                ]
+              }
+            ]
+          },
+          "AssertDescription": "Leave one WCU available under the 25 WCU account allowance for the admin audit table."
         }
       ]
     }
@@ -311,6 +373,26 @@
                       "Ref": "AWS::NoValue"
                     }
                   ]
+                },
+                {
+                  "Fn::If": [
+                    "AdminMutationsEnabled",
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "dynamodb:PutItem"
+                      ],
+                      "Resource": {
+                        "Fn::GetAtt": [
+                          "AdminAuditTable",
+                          "Arn"
+                        ]
+                      }
+                    },
+                    {
+                      "Ref": "AWS::NoValue"
+                    }
+                  ]
                 }
               ]
             }
@@ -405,6 +487,17 @@
                 "AdminConsoleEnabled",
                 {
                   "Ref": "AdminCursorHmacKey"
+                },
+                {
+                  "Ref": "AWS::NoValue"
+                }
+              ]
+            },
+            "GUARDOATH_ADMIN_AUDIT_TABLE": {
+              "Fn::If": [
+                "AdminMutationsEnabled",
+                {
+                  "Ref": "AdminAuditTable"
                 },
                 {
                   "Ref": "AWS::NoValue"
@@ -1141,6 +1234,35 @@
           "email_verified"
         ]
       }
+    },
+    "AdminAuditTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Condition": "AdminMutationsEnabled",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "TableName": {
+          "Fn::Sub": "${AWS::StackName}-admin-audit"
+        },
+        "BillingMode": "PROVISIONED",
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "event_id",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "event_id",
+            "KeyType": "HASH"
+          }
+        ],
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 1,
+          "WriteCapacityUnits": 1
+        },
+        "DeletionProtectionEnabled": true
+      }
     }
   },
   "Outputs": {
@@ -1223,6 +1345,13 @@
         "Ref": "AdminUserPoolClient"
       },
       "Description": "Admin OAuth client ID, no memberships assigned automatically."
+    },
+    "AdminAuditTableName": {
+      "Condition": "AdminMutationsEnabled",
+      "Value": {
+        "Ref": "AdminAuditTable"
+      },
+      "Description": "Owner audit table; append-only application IAM, retained on stack deletion."
     }
   },
   "Conditions": {
@@ -1246,6 +1375,14 @@
       "Fn::Equals": [
         {
           "Ref": "EnableAdminConsole"
+        },
+        "1"
+      ]
+    },
+    "AdminMutationsEnabled": {
+      "Fn::Equals": [
+        {
+          "Ref": "EnableAdminMutations"
         },
         "1"
       ]
