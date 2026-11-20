@@ -177,6 +177,7 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <section class="panel"><h2>Cognito users</h2><p class="muted">Owner-only, one provider page at a time; masked emails and unknown totals.</p><label for="user-search">Email prefix</label> <input id="user-search" maxlength="80" autocomplete="off"> <button id="user-search-go" type="button">Search users</button><div class="scroll"><table><thead><tr><th>Username</th><th>Masked email</th><th>Verified</th><th>Enabled</th><th>Status</th><th>Created (UTC)</th></tr></thead><tbody id="user-rows"></tbody></table></div><p id="user-status" role="status"></p><button id="user-next" type="button" disabled>Next users</button></section>
 <section class="panel"><h2>Tenants</h2><p class="muted">API key counts are sourced from the persisted tenant record; actual key material is never displayed. Unknown counts remain unavailable.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
 <section class="panel"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
+<section class="panel"><h2>Audit receipt lookup</h2><p class="muted">Read one stored administrative event by its exact event ID. No exports or audit enumeration.</p><label for="audit-id">Audit event ID</label> <input id="audit-id" maxlength="64" autocomplete="off" spellcheck="false"> <button type="button" id="audit-go">Verify receipt</button><p id="audit-result" role="status"></p></section>
 <section class="panel"><h2>Categories and checks</h2><p id="catalog-summary"></p><div id="categories"></div></section></div>
 </main><script src="/admin/client.js" defer></script></body></html>"""
 
@@ -208,7 +209,8 @@ _JS = r'''"use strict";
     el("tenant-rows").replaceChildren();
     el("user-rows").replaceChildren();
     el("categories").replaceChildren();
-    for (const id of ["status", "tenant-status", "user-status", "catalog-summary", "usage-details"]) say(id, "");
+    for (const id of ["status", "tenant-status", "user-status", "catalog-summary", "usage-details", "audit-result"]) say(id, "");
+    el("audit-id").value = "";
     el("search").value = "";
     el("user-search").value = "";
     nextUserCursor = null;
@@ -378,6 +380,36 @@ _JS = r'''"use strict";
       }
     } catch(err) { if (token && epoch === authEpoch) say("status", err.message); }
   }
+  async function inspectAudit() {
+    if (!token || !features.audit_receipt_lookup) {
+      say("audit-result", "Persistent audit lookup unavailable");
+      return;
+    }
+    const event = el("audit-id").value.trim();
+    if (!/^[a-f0-9]{64}$/.test(event)) {
+      say("audit-result", "Enter a valid 64-character audit event ID");
+      return;
+    }
+    const epoch = authEpoch;
+    try {
+      const response = await request("/v1/admin/audit/" + encodeURIComponent(event));
+      if (!token || epoch !== authEpoch) return;
+      const receipt = response.audit || {};
+      if (receipt.event_id !== event || receipt.status !== "ok" ||
+          !Number.isSafeInteger(receipt.new_revision) ||
+          receipt.new_revision !== receipt.prior_revision + 1) {
+        throw new Error("Audit receipt verification unavailable");
+      }
+      const change = receipt.change || {};
+      say("audit-result", "Verified stored receipt · " + (receipt.operation || "unknown") +
+        " · tenant " + (receipt.tenant_id || "unknown") +
+        " · " + (change.field || "change") + ": " + (change.before ?? "unknown") +
+        " → " + (change.after ?? "unknown") +
+        " · revision " + receipt.new_revision + " · UTC " + (receipt.when_utc || "unknown"));
+    } catch (err) {
+      if (token && epoch === authEpoch) say("audit-result", err.message);
+    }
+  }
   function auditReceipt(result, tenantId, priorRevision) {
     // A 2xx response without a signed-by-server transaction receipt is not
     // evidence that the tenant revision was actually changed and audited.
@@ -513,5 +545,6 @@ _JS = r'''"use strict";
   el("user-search-go").addEventListener("click", () => {nextUserCursor=null;pageUsers();});
   el("user-next").addEventListener("click", pageUsers);
   el("next").addEventListener("click", page);
+  el("audit-go").addEventListener("click", inspectAudit);
   finishLogin().catch(err => say("login-message", err.message));
 })();'''

@@ -15,6 +15,7 @@ import hashlib
 from guardoath.admin_browser import BrowserAuthConfig, BoundExchange
 from guardoath.admin_integration import AdminConfigurationError, mount_admin_console
 from guardoath.admin_actions import AdminTenantActions
+from guardoath.admin_audit import AdminAuditReader
 from guardoath.admin_billing import AdminSubscriptionReporter
 
 _HEX_KEY = re.compile(r"^[a-fA-F0-9]{64,128}$")
@@ -74,9 +75,11 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
     # the console remains read-only instead of offering unaudited mutations.
     audit_table = os.getenv("GUARDOATH_ADMIN_AUDIT_TABLE", "")
     mutator = None
+    audit_reader = None
     if audit_table:
         if audit_table == getattr(tenants.store, "table_name", None):
             raise AdminConfigurationError("Admin audit table must be independent")
+        audit_reader = AdminAuditReader(tenants.store._client, audit_table)
         mutator = AdminTenantActions(tenants.store._client, tenants.store.table_name,
                                      audit_table, audit_key=hmac.new(bytes.fromhex(key_hex), b"guardoath-admin-audit-v1", hashlib.sha256).digest())
     billing_reporter = None
@@ -102,6 +105,7 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
     mount_admin_console(app, sessions=admin_sessions, tenants=tenants, cognito=cognito_client,
                         cursor_signing_key=bytes.fromhex(key_hex), browser_config=config,
                         browser_exchange=BoundExchange(config), admin_mutator=mutator,
+                        audit_reader=audit_reader,
                         billing_reporter=billing_reporter,
                         record_validator=record_validator,rule_exists=rule_exists)
     return True

@@ -152,7 +152,7 @@ def test_the_site_role_can_use_only_its_table_and_log_group(template):
         "Fn::Sub": "arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPool}"
     }
     audit = conditionals["AdminMutationsEnabled"]
-    assert audit["Action"] == ["dynamodb:PutItem"]
+    assert audit["Action"] == ["dynamodb:PutItem", "dynamodb:GetItem"]
     assert audit["Resource"] == {"Fn::GetAtt": ["AdminAuditTable", "Arn"]}
 
 
@@ -463,10 +463,10 @@ def test_admin_mutations_require_explicit_opt_in_and_retained_append_only_audit(
     assert props["DeletionProtectionEnabled"] is True
     assert props["KeySchema"] == [{"AttributeName": "event_id", "KeyType": "HASH"}]
     assert props["AttributeDefinitions"] == [{"AttributeName": "event_id", "AttributeType": "S"}]
-    # The application can append an audit entry, but cannot edit, delete, scan or enumerate the log.
+    # The application can append or inspect a single receipt, but cannot edit, delete, scan or enumerate the log.
     statements = template["Resources"]["SiteRole"]["Properties"]["Policies"][0]["PolicyDocument"]["Statement"]
     audit_policy = statements[-1]["Fn::If"]
     assert audit_policy == ["AdminMutationsEnabled", {
-        "Effect": "Allow", "Action": ["dynamodb:PutItem"],
+        "Effect": "Allow", "Action": ["dynamodb:PutItem", "dynamodb:GetItem"],
         "Resource": {"Fn::GetAtt": ["AdminAuditTable", "Arn"]}}, {"Ref": "AWS::NoValue"}]
     assert template["Outputs"]["AdminAuditTableName"]["Condition"] == "AdminMutationsEnabled"

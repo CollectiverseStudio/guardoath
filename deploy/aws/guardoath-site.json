@@ -380,7 +380,8 @@
                     {
                       "Effect": "Allow",
                       "Action": [
-                        "dynamodb:PutItem"
+                        "dynamodb:PutItem",
+                        "dynamodb:GetItem"
                       ],
                       "Resource": {
                         "Fn::GetAtt": [

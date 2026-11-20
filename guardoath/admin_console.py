@@ -14,6 +14,7 @@ from typing import Callable, Protocol
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 from guardoath.admin_actions import AdminActionConflict, AdminActionUnavailable, AdminTenantActions
+from guardoath.admin_audit import AdminAuditReader, AdminAuditUnavailable, EVENT
 from guardoath.admin_billing import AdminSubscriptionReporter, BillingUnavailable
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from guardoath.admin_catalog import CatalogProvider, read_catalog
@@ -104,6 +105,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                         admin_user_directory: CognitoUserDirectory | None = None,
                         catalog_provider: CatalogProvider | None = None,
                         admin_mutator: AdminTenantActions | None = None,
+                        audit_reader: AdminAuditReader | None = None,
                         browser_entry_enabled: bool = False,
                         billing_reporter: AdminSubscriptionReporter | None = None,
                         record_validator=None, rule_exists=None) -> APIRouter:
@@ -176,7 +178,22 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            "tenant_rule_changes": admin_mutator is not None and callable(record_validator) and callable(rule_exists),
                            "monthly_cost_caps": admin_mutator is not None and callable(record_validator),
                            "rule_publishing": False,
-                           "audit_required_for_writes": True})
+                           "audit_required_for_writes": True,
+                           "audit_receipt_lookup": audit_reader is not None})
+
+    @router.get("/v1/admin/audit/{event_id}")
+    def audit_receipt(event_id: str, principal: VerifiedAdmin = Depends(require_admin)):
+        if not EVENT.fullmatch(event_id):
+            raise HTTPException(status_code=422, detail="Invalid audit event ID")
+        if audit_reader is None:
+            raise HTTPException(status_code=503, detail="Administrative audit lookup unavailable")
+        try:
+            event = audit_reader.read(event_id)
+        except (ValueError, AdminAuditUnavailable) as exc:
+            raise HTTPException(status_code=503, detail="Administrative audit lookup unavailable") from exc
+        if event is None:
+            raise HTTPException(status_code=404, detail="Audit event not found")
+        return admin_json({"audit": event})
 
     @router.get("/v1/admin/overview")
     def overview(principal: VerifiedAdmin = Depends(require_admin)):

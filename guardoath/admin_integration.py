@@ -43,7 +43,7 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
                         cursor_signing_key: bytes,
                         browser_config: BrowserAuthConfig | None = None,
                         browser_exchange: BoundExchange | None = None,
-                        admin_mutator=None, billing_reporter=None,
+                        admin_mutator=None, audit_reader=None, billing_reporter=None,
                         record_validator=None, rule_exists=None) -> None:
     """Register the guarded read-only admin routes on an existing GuardOath app.
 
@@ -97,6 +97,7 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
         admin_user_directory=users,
         catalog_provider=published_catalog,
         admin_mutator=admin_mutator,
+        audit_reader=audit_reader,
         billing_reporter=billing_reporter,
         record_validator=record_validator,
         rule_exists=rule_exists,

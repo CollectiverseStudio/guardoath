@@ -168,3 +168,15 @@ def test_admin_browser_disables_cap_action_when_allowance_is_unknown():
     assert "Number.isSafeInteger(tenant.monthly_allowance) && tenant.monthly_allowance >= 0" in script
     assert "if (!Number.isSafeInteger(tenant.monthly_allowance) || tenant.monthly_allowance < 0) return;" in script
     assert "innerHTML" not in script
+
+def test_owner_browser_audit_lookup_uses_authenticated_request_and_clears_after_logout():
+    shell = app().get("/admin/login").text
+    script = app().get("/admin/client.js").text
+    assert 'id="audit-id"' in shell and 'id="audit-result"' in shell
+    assert 'id="audit-go"' in shell
+    assert "features.audit_receipt_lookup" in script
+    assert 'request("/v1/admin/audit/" + encodeURIComponent(event))' in script
+    assert 'el("audit-go").addEventListener("click", inspectAudit)' in script
+    assert '"audit-result"]) say(id, "")' in script
+    assert 'el("audit-id").value = ""' in script
+    assert "innerHTML" not in script

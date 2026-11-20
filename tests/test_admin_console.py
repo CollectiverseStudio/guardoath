@@ -175,3 +175,44 @@ def test_owner_only_cognito_user_directory_route_denial_and_sanitized_status():
 def test_cognito_user_directory_not_configured_is_not_false_zero():
     c = client(verified, Store())
     assert c.get("/v1/admin/users", headers=auth()).status_code == 503
+
+def test_owner_only_admin_audit_receipt_endpoint_and_errors():
+    from guardoath.admin_audit import AdminAuditReader
+    e = "a" * 64
+    class DB:
+        def __init__(self, exists=True):
+            self.calls = []
+            self.exists = exists
+        def get_item(self, **kwargs):
+            self.calls.append(kwargs)
+            if not self.exists:
+                return {}
+            return {"Item": {
+                "event_id": {"S": e}, "tenant_id": {"S": "usr-good"},
+                "actor_sub": {"S": "12345678-1234-1234-1234-123456789012"},
+                "operation": {"S": "tenant.status"}, "when_utc": {"S": "2026-11-20T04:00:00Z"},
+                "reason": {"S": "Owner reviewed this change"}, "prior_revision": {"N": "6"},
+                "new_revision": {"N": "7"}, "old_status": {"S": "active"},
+                "new_status": {"S": "disabled"}, "key_hashes": {"S": "must-not-leak"}}}
+    d = DB()
+    app = FastAPI()
+    app.include_router(create_admin_router(verify_cognito_admin=verified,
+                                           audit_reader=AdminAuditReader(d, "admin-audit")))
+    c = TestClient(app)
+    url = "/v1/admin/audit/" + e
+    assert c.get(url).status_code == 401
+    assert c.get(url, headers={"X-GuardOath-Key": "owner"}).status_code == 401
+    assert c.get(url, headers=auth("customer")).status_code == 401
+    assert d.calls == []
+    ok = c.get(url, headers=auth())
+    assert ok.status_code == 200 and ok.json()["audit"]["new_revision"] == 7
+    assert ok.json()["audit"]["change"] == {"field": "status", "before": "active", "after": "disabled"}
+    assert "must-not-leak" not in ok.text
+    assert len(d.calls) == 1 and d.calls[0]["ConsistentRead"] is True
+    assert c.get("/v1/admin/audit/" + "A" * 64, headers=auth()).status_code == 422
+    assert len(d.calls) == 1
+    missing = FastAPI()
+    missing.include_router(create_admin_router(verify_cognito_admin=verified,
+                                audit_reader=AdminAuditReader(DB(False), "admin-audit")))
+    assert TestClient(missing).get(url, headers=auth()).status_code == 404
+    assert client(verified).get(url, headers=auth()).status_code == 503
