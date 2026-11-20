@@ -237,3 +237,54 @@ def test_exact_lookup_rate_window_rejects_untrusted_clock_without_provider_call(
     with pytest.raises(CognitoDirectoryUnavailable):
         service.lookup(owner_sub=OWNER,email="someone@example.com")
     assert provider.calls == []
+
+
+def test_directory_pagination_shares_twenty_call_budget_and_blocks_before_cognito():
+    from guardoath.admin_users import CognitoLookupRateLimited
+    clock = [100.0]
+    provider = Fake()
+    service = directory(provider, clock=lambda: clock[0])
+    for _ in range(20):
+        assert service.page(owner_sub=OWNER, limit=2)["status"] == "ok"
+    with pytest.raises(CognitoLookupRateLimited):
+        service.page(owner_sub=OWNER, limit=2)
+    assert len(provider.calls) == 20
+    # Verified owners have independent windows; the same owner can retry after expiry.
+    assert service.page(owner_sub=OTHER_OWNER, limit=2)["status"] == "ok"
+    assert len(provider.calls) == 21
+    clock[0] = 160.01
+    assert service.page(owner_sub=OWNER, limit=2)["status"] == "ok"
+    assert len(provider.calls) == 22
+
+
+def test_pagination_and_exact_lookup_cannot_bypass_each_others_provider_budget():
+    from guardoath.admin_users import CognitoLookupRateLimited
+    class Mixed(Fake):
+        def list_users(self, **kwargs):
+            self.calls.append(kwargs)
+            return {"Users": []}
+    provider = Mixed()
+    service = directory(provider)
+    for _ in range(10):
+        service.page(owner_sub=OWNER)
+    for _ in range(10):
+        service.lookup(owner_sub=OWNER, email="someone@example.com")
+    with pytest.raises(CognitoLookupRateLimited):
+        service.page(owner_sub=OWNER)
+    with pytest.raises(CognitoLookupRateLimited):
+        service.lookup(owner_sub=OWNER, email="someone@example.com")
+    assert len(provider.calls) == 20
+
+
+def test_rejected_page_cursor_does_not_spend_directory_quota_or_call_provider():
+    from guardoath.admin_users import CognitoLookupRateLimited
+    provider = Fake()
+    service = directory(provider)
+    cursor = service.page(owner_sub=OWNER, limit=3)["next_cursor"]
+    with pytest.raises(InvalidUserCursor):
+        service.page(owner_sub=OWNER, limit=3, cursor=cursor + "corrupt")
+    for _ in range(19):
+        service.page(owner_sub=OWNER, limit=3)
+    with pytest.raises(CognitoLookupRateLimited):
+        service.page(owner_sub=OWNER, limit=3)
+    assert len(provider.calls) == 20

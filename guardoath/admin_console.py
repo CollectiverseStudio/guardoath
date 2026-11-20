@@ -238,6 +238,8 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             page = admin_user_directory.page(owner_sub=principal.subject, limit=limit, query=query, cursor=cursor)
         except (InvalidUserCursor, ValueError) as exc:
             raise HTTPException(status_code=422, detail="Invalid user directory request") from exc
+        except CognitoLookupRateLimited as exc:
+            raise HTTPException(status_code=429, detail="Cognito user directory temporarily limited") from exc
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Cognito user directory unavailable") from exc
         return admin_json(page)

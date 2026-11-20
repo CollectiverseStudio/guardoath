@@ -150,6 +150,9 @@ def test_owner_only_cognito_user_directory_route_denial_and_sanitized_status():
         def page(self, **kwargs):
             if kwargs["query"] == "fault":
                 raise RuntimeError("upstream private details")
+            if kwargs["query"] == "throttle":
+                from guardoath.admin_users import CognitoLookupRateLimited
+                raise CognitoLookupRateLimited("provider-private quota details")
             if kwargs["cursor"] == "bad":
                 from guardoath.admin_users import InvalidUserCursor
                 raise InvalidUserCursor("private cursor")
@@ -167,6 +170,9 @@ def test_owner_only_cognito_user_directory_route_denial_and_sanitized_status():
     # Identity scope comes exclusively from the authenticated verifier, never the query.
     # This stub receives the principal subject and should see no untrusted override.
     assert c.get("/v1/admin/users?owner_sub=someone-else", headers=auth()).status_code == 200
+    limited = c.get("/v1/admin/users?query=throttle", headers=auth())
+    assert limited.status_code == 429
+    assert "provider-private" not in limited.text
     assert c.get("/v1/admin/users?limit=51", headers=auth()).status_code == 422
     assert c.get("/v1/admin/users?cursor=bad", headers=auth()).status_code == 422
     fail = c.get("/v1/admin/users?query=fault", headers=auth())

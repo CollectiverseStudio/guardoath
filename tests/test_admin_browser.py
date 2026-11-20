@@ -264,3 +264,16 @@ def test_owner_browser_shows_verified_stripe_period_end_and_cancellation_without
     assert "Current period ends (UTC): " in script
     assert "Next invoice amount: Unavailable" in script
     assert "innerHTML" not in script
+
+
+def test_browser_cognito_rate_limit_clears_stale_directory_rows_and_pagination():
+    script = app().get("/admin/client.js").text
+    assert 'result.status === 429' in script
+    assert 'Cognito directory request limit reached (429)' in script
+    start = script.index("async function pageUsers()")
+    end = script.index("async function inspectUser()", start)
+    pager = script[start:end]
+    assert 'el("user-rows").replaceChildren();' in pager
+    assert 'nextUserCursor = null;' in pager
+    assert 'el("user-next").disabled = true;' in pager
+    assert 'say("user-status", err.message);' in pager

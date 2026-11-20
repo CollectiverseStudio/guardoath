@@ -127,6 +127,9 @@ class CognitoUserDirectory:
             args["Filter"] = 'email ^= "' + query + '"'
         if cursor is not None:
             args["PaginationToken"] = self._verify(cursor, query, limit, owner_sub)
+        # Share the same per-owner Cognito call budget with exact-email inspection.
+        # Check the signed cursor and all filters first: rejected input consumes no provider quota.
+        self._reserve_provider_read(owner_sub)
         response = self.client.list_users(**args)
         if (not isinstance(response, dict) or not isinstance(response.get("Users"), list)
                 or len(response["Users"]) > limit):
@@ -140,8 +143,8 @@ class CognitoUserDirectory:
                 "returned": len(users), "total": None, "limit": limit,
                 "next_cursor": self._cursor(token, query, limit, owner_sub) if token else None}
 
-    def _limit_lookup(self, owner_sub: str):
-        # Bound lookup abuse and Cognito API usage before any provider network call.
+    def _reserve_provider_read(self, owner_sub: str):
+        # Bound BOTH directory pages and exact lookups before any provider read.
         # A Lambda instance maintains this window across warm invocations only.
         try:
             now = float(self.clock())
@@ -174,7 +177,7 @@ class CognitoUserDirectory:
                 not _EXACT_EMAIL.fullmatch(email) or email.startswith(".") or
                 ".." in email or email.endswith(".")):
             raise InvalidUserLookup("Invalid exact email")
-        self._limit_lookup(owner_sub)
+        self._reserve_provider_read(owner_sub)
         try:
             response = self.client.list_users(
                 UserPoolId=self.pool_id, Filter='email = "' + email + '"', Limit=2)

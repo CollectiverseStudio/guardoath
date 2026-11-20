@@ -209,6 +209,7 @@ _JS = r'''"use strict";
     const result = await fetch(path, { ...options, headers, cache:"no-store", credentials:"omit" });
     if (!result.ok) {
       if (token && (result.status === 401 || result.status === 403)) signOut("Administrator session expired or access revoked");
+      if (result.status === 429) throw new Error("Cognito directory request limit reached (429); retry later");
       throw new Error("Request failed (" + result.status + ")");
     }
     return result.json();
@@ -377,7 +378,14 @@ _JS = r'''"use strict";
     try {
       const result = await request("/v1/admin/users?" + qs);
       if (token && epoch === authEpoch) showUsers(result);
-    } catch (err) { if (token && epoch === authEpoch) say("user-status", err.message); }
+    } catch (err) {
+      if (token && epoch === authEpoch) {
+        el("user-rows").replaceChildren();
+        nextUserCursor = null;
+        el("user-next").disabled = true;
+        say("user-status", err.message);
+      }
+    }
   }
   async function inspectUser() {
     if (!token) return;
