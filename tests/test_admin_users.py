@@ -25,7 +25,9 @@ def test_list_is_one_bounded_page_masked_and_paginates():
     assert first["users"][0] == {"username":first["users"][0]["username"],"email_hint":"s***@example.com",
                                  "email_verified":True,"enabled":True,"status":"CONFIRMED",
                                  "created_utc":"2026-11-01T00:00:00Z","updated_utc":None}
-    assert first["users"][0]["username"].startswith("user-") and len(first["users"][0]["username"]) == 21\n    assert "test-subject" not in str(first)\n    assert first["total"] is None and first["next_cursor"]
+    assert first["users"][0]["username"].startswith("user-") and len(first["users"][0]["username"]) == 21
+    assert "test-subject" not in str(first)
+    assert first["total"] is None and first["next_cursor"]
     assert "someone@example.com" not in str(first) and "private-tenant" not in str(first)
     after=d.page(limit=5,query="someone@",cursor=first["next_cursor"])
     assert after["users"]==[] and after["next_cursor"] is None

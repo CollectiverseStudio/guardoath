@@ -98,7 +98,9 @@ class CognitoUserDirectory:
                         if isinstance(a, dict) and a.get("Name") in ("email", "email_verified")
                         and isinstance(a.get("Value"), str)}
             state = entry.get("UserStatus")
-            users.append({"username": _mask_email(entry["Username"]) or ("user-" + hmac.new(\n                              self.key, b"guardoath-cognito-user-label:" + entry["Username"].encode("utf-8"),\n                              hashlib.sha256).hexdigest()[:16]),
+            users.append({"username": _mask_email(entry["Username"]) or ("user-" + hmac.new(
+                              self.key, b"guardoath-cognito-user-label:" + entry["Username"].encode("utf-8"),
+                              hashlib.sha256).hexdigest()[:16]),
                           "email_hint": _mask_email(approved.get("email")),
                           "email_verified": approved.get("email_verified") == "true",
                           "enabled": entry.get("Enabled") if type(entry.get("Enabled")) is bool else None,
