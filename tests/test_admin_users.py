@@ -22,10 +22,10 @@ def directory(fake=None, clock=lambda: 100):
 def test_list_is_one_bounded_page_masked_and_paginates():
     f=Fake(); d=directory(f); first=d.page(limit=5,query="someone@")
     assert len(f.calls)==1 and f.calls[0]=={"UserPoolId":"us-east-1_Example","Limit":5,"Filter":'email ^= "someone@"'}
-    assert first["users"][0] == {"username":"test-subject","email_hint":"s***@example.com",
+    assert first["users"][0] == {"username":first["users"][0]["username"],"email_hint":"s***@example.com",
                                  "email_verified":True,"enabled":True,"status":"CONFIRMED",
                                  "created_utc":"2026-11-01T00:00:00Z","updated_utc":None}
-    assert first["total"] is None and first["next_cursor"]
+    assert first["users"][0]["username"].startswith("user-") and len(first["users"][0]["username"]) == 21\n    assert "test-subject" not in str(first)\n    assert first["total"] is None and first["next_cursor"]
     assert "someone@example.com" not in str(first) and "private-tenant" not in str(first)
     after=d.page(limit=5,query="someone@",cursor=first["next_cursor"])
     assert after["users"]==[] and after["next_cursor"] is None
@@ -68,3 +68,20 @@ def test_cognito_email_username_is_masked():
     result = directory(EmailUsername()).page()
     assert result["users"][0]["username"] == "p***@example.com"
     assert "person@example.com" not in str(result)
+
+
+def test_opaque_cognito_username_is_stable_keyed_and_never_leaks_raw_subject():
+    class InternalUsername(Fake):
+        def list_users(self, **kw):
+            return {"Users": [{"Username": "internal-account-admin-492843",
+                               "Enabled": True, "Attributes": []}]}
+    provider = InternalUsername()
+    a = CognitoUserDirectory(provider, "us-east-1_Example", b"a" * 32, lambda: 100).page()
+    b = CognitoUserDirectory(provider, "us-east-1_Example", b"a" * 32, lambda: 100).page()
+    c = CognitoUserDirectory(provider, "us-east-1_Example", b"b" * 32, lambda: 100).page()
+    label = a["users"][0]["username"]
+    assert label.startswith("user-") and len(label) == 21
+    assert label == b["users"][0]["username"] and label != c["users"][0]["username"]
+    assert "internal-account-admin-492843" not in str(a)
+    assert "internal-account-admin-492843" not in str(b)
+    assert "internal-account-admin-492843" not in str(c)
