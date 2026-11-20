@@ -1,5 +1,6 @@
 """Prove browser PKCE bootstrap does not disclose a token without provider-verified owner+MFA."""
 import json
+import re
 from urllib.parse import parse_qs
 
 import pytest
@@ -169,6 +170,16 @@ def test_admin_browser_disables_cap_action_when_allowance_is_unknown():
     assert "if (!Number.isSafeInteger(tenant.monthly_allowance) || tenant.monthly_allowance < 0) return;" in script
     assert "innerHTML" not in script
 
+def cleared_on_logout(script):
+    """Confirm logout invokes the full private-status reset; order is not significant."""
+    clear = script.split("  const clearAdminData = () => {", 1)[1].split("  const signOut =", 1)[0]
+    signout = script.split("  const signOut =", 1)[1].split("  async function load()", 1)[0]
+    assert "clearAdminData();" in signout
+    match = re.search(r'for \(const id of \[([^\]]+)\]\) say\(id, ""\);', clear)
+    assert match is not None, "Private statuses must be reset to empty strings"
+    return set(json.loads("[" + match.group(1) + "]"))
+
+
 def test_owner_browser_audit_lookup_uses_authenticated_request_and_clears_after_logout():
     shell = app().get("/admin/login").text
     script = app().get("/admin/client.js").text
@@ -177,7 +188,7 @@ def test_owner_browser_audit_lookup_uses_authenticated_request_and_clears_after_
     assert "features.audit_receipt_lookup" in script
     assert 'request("/v1/admin/audit/" + encodeURIComponent(event))' in script
     assert 'el("audit-go").addEventListener("click", inspectAudit)' in script
-    assert '"audit-result"]) say(id, "")' in script
+    assert "audit-result" in cleared_on_logout(script)
     assert 'el("audit-id").value = ""' in script
     assert "innerHTML" not in script
 
@@ -192,7 +203,7 @@ def test_subscription_reconciliation_diagnostics_visible_only_in_authenticated_o
     assert '["critical","review","consistent","unavailable"]' in script
     assert 'say("billing-details", tenant.tenant_id' in script
     assert "no entitlement change" in script
-    assert '"billing-details", "audit-result"]) say(id, "")' in script
+    assert {"billing-details", "audit-result"} <= cleared_on_logout(script)
     assert "innerHTML" not in script
 
 def test_owner_browser_can_inspect_exact_identity_without_url_pii_or_mutating_accounts():
@@ -242,3 +253,4 @@ def test_catalog_proposal_is_structured_owner_only_preview_without_publishing():
     assert 'result.tenant_policies_changed !== false' in script
     assert 'el("proposal-go").disabled = true' in script
     assert 'previewCatalogRule);' in script
+    assert {"proposal-result", "billing-details", "audit-result"} <= cleared_on_logout(script)
