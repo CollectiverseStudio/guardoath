@@ -43,3 +43,7 @@ The authenticated tenant directory and tenant detail now report `api_key_count` 
 
 ## Audited owner action revision receipts
 Admin rule-action edits and downward allowance caps now persist the prior and next tenant revisions in the same atomic audit record as the before/after changed values. This aligns the existing status-action audit with rule and cap operations. The authoritative tenant record is updated conditionally or neither mutation nor audit insertion succeeds. The audit event contains no raw tenant document, Stripe credentials or customer API keys.
+
+
+## Operator action receipts in the browser
+Following a confirmed tenant suspend/reactivate, rule-action change, or downward allowance-cap mutation, the authenticated owner UI validates the response tenant ID, monotonic next revision, and 64-character audit event ID. A malformed or missing receipt is shown as an unverified change rather than falsely reporting success. Successful responses display the audit event identifier and saved revision for operator reconciliation. The backend continues to require an atomic tenant-write/audit-write transaction; this UI check never substitutes for server authorization, an audit read, or deployment verification.

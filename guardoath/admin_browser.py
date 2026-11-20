@@ -377,6 +377,18 @@ _JS = r'''"use strict";
       }
     } catch(err) { if (token && epoch === authEpoch) say("status", err.message); }
   }
+  function auditReceipt(result, tenantId, priorRevision) {
+    // A 2xx response without a signed-by-server transaction receipt is not
+    // evidence that the tenant revision was actually changed and audited.
+    if (!result || result.tenant_id !== tenantId ||
+        !Number.isSafeInteger(priorRevision) ||
+        result.revision !== priorRevision + 1 ||
+        typeof result.audit_event_id !== "string" ||
+        !/^[a-f0-9]{64}$/.test(result.audit_event_id)) {
+      throw new Error("Administrative change has no verifiable audit receipt; refresh before retrying");
+    }
+    return "Audit event " + result.audit_event_id + " · saved tenant revision " + result.revision;
+  }
   async function capUsage(tenant) {
     if (!token || !features.monthly_cost_caps) return;
     const input = prompt("New monthly request cap for " + tenant.tenant_id +
@@ -391,11 +403,12 @@ _JS = r'''"use strict";
     if (!confirm("Apply monthly cap " + limit + " and BLOCK overages for " + tenant.tenant_id + "?")) return;
     const epoch=authEpoch;
     try {
-      await request("/v1/admin/tenants/" + encodeURIComponent(tenant.tenant_id) + "/allowance-cap", {
+      const outcome = await request("/v1/admin/tenants/" + encodeURIComponent(tenant.tenant_id) + "/allowance-cap", {
         method:"POST",body:JSON.stringify({expected_revision:tenant.revision,new_limit:limit,
           confirmation,reason,idempotency_key:crypto.randomUUID().replaceAll("-", "")})
       });
-      if (token && epoch === authEpoch) {await load();say("status","Cost cap saved and audited");}
+      const receipt = auditReceipt(outcome, tenant.tenant_id, tenant.revision);
+      if (token && epoch === authEpoch) {await load();say("status","Cost cap saved · " + receipt);}
     } catch(err) {if(token && epoch===authEpoch) say("status",err.message);}
   }
   async function setTenantRule(ruleId) {
@@ -415,12 +428,13 @@ _JS = r'''"use strict";
     try {
       const current=await request("/v1/admin/tenants/"+encodeURIComponent(tenantId));
       if (!token || epoch!==authEpoch || !Number.isInteger(current.tenant?.revision)) return;
-      await request("/v1/admin/tenants/"+encodeURIComponent(tenantId)+"/rule-action", {
+      const outcome = await request("/v1/admin/tenants/"+encodeURIComponent(tenantId)+"/rule-action", {
         method:"POST",body:JSON.stringify({expected_revision:current.tenant.revision,
           stage,rule_id:ruleId,action,confirmation,reason,
           idempotency_key:crypto.randomUUID().replaceAll("-", "")})
       });
-      if (token && epoch===authEpoch) {await load();say("status","Tenant rule saved and audited");}
+      const receipt = auditReceipt(outcome, tenantId, current.tenant.revision);
+      if (token && epoch===authEpoch) {await load();say("status","Tenant rule saved · " + receipt);}
     } catch(err) {if(token && epoch===authEpoch) say("status",err.message);}
   }
   async function changeStatus(tenant) {
@@ -434,14 +448,15 @@ _JS = r'''"use strict";
     if (!confirm("Apply " + nextStatus + " to " + tenant.tenant_id + "? This affects customer access.")) return;
     const epoch = authEpoch;
     try {
-      await request("/v1/admin/tenants/" + encodeURIComponent(tenant.tenant_id) + "/status", {
+      const outcome = await request("/v1/admin/tenants/" + encodeURIComponent(tenant.tenant_id) + "/status", {
         method: "POST", body: JSON.stringify({status:nextStatus, confirmation, reason,
           expected_revision:tenant.revision, idempotency_key: crypto.randomUUID().replaceAll("-", "")})
       });
+      const receipt = auditReceipt(outcome, tenant.tenant_id, tenant.revision);
       if (token && epoch === authEpoch) {
         nextCursor = null;
         await load();
-        say("status", "Tenant access updated and audited");
+        say("status", "Tenant access updated · " + receipt);
       }
     } catch(err) { if (token && epoch === authEpoch) say("status", err.message); }
   }

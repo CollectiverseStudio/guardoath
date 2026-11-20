@@ -1319,3 +1319,8 @@ FIRST re-read this file's governing Atlas-only #28/#31 override, then AGENTS.md,
 ## 2026-11-20 Atlas — audited admin tenant action revision evidence
 - Re-read owner override, AGENTS.md, current main and issues #39–#42. Added prior_revision/new_revision to existing atomic rule-action and downward allowance-cap audit items and corresponding positive regression assertions; status actions already had these fields. Existing conditional tenant revision checks, fail-closed audit transaction, admin identity, tenant settings and all customer safeguards unchanged. Documentation updated.
 - Source anchors/expected audit fields structurally checked before commit. Full Python tests, exact-SHA CI, browser and 15 live acceptance have NOT been verified here. No AWS/Stripe changes, provider spend, release gate waiver or production deployment.
+
+
+## 2026-11-20 Atlas — owner administrative audit receipt UI
+- Verified governing override, AGENTS.md, latest SHA and open #39–#42. Integrated receipt checks in existing authenticated admin browser for three audited tenant mutations (status, rule-action and allowance cap). Successful responses must match tenant ID, prior+1 revision and 64-character audit event ID before the UI reports success; malformed 2xx responses do not get success language. Added browser regression assertions and operator documentation. No backend, tenant engine, IAM, billing or provider change.
+- Source anchors and focused static browser expectations validated while building the commit. Full pytest/Playwright/exact-SHA CI and live production checks still required; no AWS deployment or production feature flag change.

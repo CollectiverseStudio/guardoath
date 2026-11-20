@@ -147,3 +147,17 @@ def test_cognito_user_table_and_owner_only_browser_request():
     assert 'headers["X-GuardOath-Admin-Session"] = token' in script
     assert "email_hint" in script and "user-rows" in script
     assert "innerHTML" not in script
+
+
+def test_owner_mutation_ui_requires_consistent_atomic_audit_receipt():
+    script = app().get("/admin/client.js").text
+    assert "function auditReceipt(result, tenantId, priorRevision)" in script
+    assert 'result.tenant_id !== tenantId' in script
+    assert 'result.revision !== priorRevision + 1' in script
+    assert '/^[a-f0-9]{64}$/.test(result.audit_event_id)' in script
+    assert "Administrative change has no verifiable audit receipt" in script
+    assert script.count("const receipt = auditReceipt(outcome,") == 3
+    assert 'say("status","Cost cap saved · " + receipt)' in script
+    assert 'say("status","Tenant rule saved · " + receipt)' in script
+    assert 'say("status", "Tenant access updated · " + receipt)' in script
+    assert "innerHTML" not in script
