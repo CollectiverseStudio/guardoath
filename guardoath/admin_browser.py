@@ -463,7 +463,10 @@ _JS = r'''"use strict";
         throw new Error("Audit receipt verification unavailable");
       }
       const change = receipt.change || {};
-      say("audit-result", "Verified stored receipt · " + (receipt.operation || "unknown") +
+      const integrity = receipt.integrity_status === "signed_verified" ? "HMAC integrity verified" :
+        receipt.integrity_status === "legacy_unverified" ? "Legacy receipt — integrity unverified" : null;
+      if (!integrity) throw new Error("Audit integrity status unavailable");
+      say("audit-result", "Stored receipt · " + integrity + " · " + (receipt.operation || "unknown") +
         " · tenant " + (receipt.tenant_id || "unknown") +
         " · " + (change.field || "change") + ": " + (change.before ?? "unknown") +
         " → " + (change.after ?? "unknown") +

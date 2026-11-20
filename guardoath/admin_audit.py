@@ -2,15 +2,15 @@
 from __future__ import annotations
 import re
 
+from guardoath.admin_audit_integrity import SIGNED_FIELDS, verify_audit
+
 EVENT = re.compile(r"^[a-f0-9]{64}$")
 TENANT = re.compile(r"^[a-z][a-z0-9-]{1,39}$")
 SUBJECT = re.compile(r"^[A-Za-z0-9_-]{12,128}$")
 RULE = re.compile(r"^[A-Za-z0-9_.:-]{3,100}$")
 UTC = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
 ACTIONS = frozenset({"off", "allow", "flag", "block", "same_as_check"})
-FIELDS = ("event_id", "tenant_id", "actor_sub", "operation", "when_utc", "reason",
-          "prior_revision", "new_revision", "old_status", "new_status",
-          "rule_id", "stage", "old_action", "new_action", "old_limit", "new_limit")
+FIELDS = (*SIGNED_FIELDS, "integrity_mac")
 
 
 class AdminAuditUnavailable(Exception):
@@ -18,12 +18,13 @@ class AdminAuditUnavailable(Exception):
 
 
 class AdminAuditReader:
-    def __init__(self, ddb, audit_table: str):
+    def __init__(self, ddb, audit_table: str, *, verify_key: bytes | None = None):
         if (not callable(getattr(ddb, "get_item", None)) or
                 not isinstance(audit_table, str) or
-                not re.fullmatch(r"[A-Za-z0-9_.-]{3,255}", audit_table)):
+                not re.fullmatch(r"[A-Za-z0-9_.-]{3,255}", audit_table) or
+                (verify_key is not None and (not isinstance(verify_key, bytes) or len(verify_key) < 32))):
             raise ValueError("Separate audit table and trusted DynamoDB client required")
-        self.ddb, self.audit_table = ddb, audit_table
+        self.ddb, self.audit_table, self.verify_key = ddb, audit_table, verify_key
 
     def read(self, event_id: str) -> dict | None:
         if not isinstance(event_id, str) or not EVENT.fullmatch(event_id):
@@ -41,6 +42,12 @@ class AdminAuditReader:
                 return None
             if not isinstance(item, dict):
                 raise AdminAuditUnavailable("Invalid audit receipt")
+
+            integrity_status = "legacy_unverified"
+            if "integrity_mac" in item:
+                if self.verify_key is None or not verify_audit(item, self.verify_key):
+                    raise AdminAuditUnavailable("Audit receipt integrity verification failed")
+                integrity_status = "signed_verified"
 
             def string(key):
                 value = item.get(key)
@@ -81,7 +88,8 @@ class AdminAuditReader:
                 if after > before or before > 1000000000:
                     raise AdminAuditUnavailable("Invalid cost cap receipt")
                 change = {"field": "monthly_allowance", "before": before, "after": after}
-            return {"status": "ok", "source": "persistent DynamoDB administrative audit receipt",
+            return {"status": "ok", "integrity_status": integrity_status,
+                    "source": "persistent DynamoDB administrative audit receipt",
                     "event_id": event_id, "tenant_id": tenant, "actor_sub": actor,
                     "operation": operation, "when_utc": when, "reason": reason,
                     "prior_revision": previous, "new_revision": revision, "change": change}

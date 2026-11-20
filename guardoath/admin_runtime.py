@@ -79,9 +79,10 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
     if audit_table:
         if audit_table == getattr(tenants.store, "table_name", None):
             raise AdminConfigurationError("Admin audit table must be independent")
-        audit_reader = AdminAuditReader(tenants.store._client, audit_table)
+        audit_signing_key = hmac.new(bytes.fromhex(key_hex), b"guardoath-admin-audit-v1", hashlib.sha256).digest()
+        audit_reader = AdminAuditReader(tenants.store._client, audit_table, verify_key=audit_signing_key)
         mutator = AdminTenantActions(tenants.store._client, tenants.store.table_name,
-                                     audit_table, audit_key=hmac.new(bytes.fromhex(key_hex), b"guardoath-admin-audit-v1", hashlib.sha256).digest())
+                                     audit_table, audit_key=audit_signing_key)
     billing_reporter = None
     if os.getenv("GUARDOATH_STRIPE_SECRET_KEY", ""):
         secret = os.environ["GUARDOATH_STRIPE_SECRET_KEY"]

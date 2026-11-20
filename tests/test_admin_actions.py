@@ -162,3 +162,38 @@ def test_cost_cap_cannot_increase_usage_and_is_automatically_blocking():
     assert ops[1]["Put"]["Item"]["new_revision"]["N"] == "8"
     assert ops[1]["Put"]["Item"]["old_limit"]["N"] == "10000"
     assert ops[1]["Put"]["Item"]["new_limit"]["N"] == "7000"
+
+def test_all_audited_tenant_mutations_include_verifiable_integrity_mac():
+    from guardoath.admin_audit_integrity import verify_audit
+    from types import SimpleNamespace
+    for operation in ("status", "rule", "cap"):
+        db = DDB()
+        if operation == "status":
+            manager(db).change_status(**payload())
+        elif operation == "rule":
+            manager(db).change_rule_action(
+                tenant_id="usr-good", expected_revision=7, stage="input",
+                rule_id="pii.email", action="block", confirmation="usr-good",
+                reason="Operator approved targeted rule update", actor=SUB,
+                idempotency_key="change123456789123",
+                validate_record=lambda doc: SimpleNamespace(model_dump=lambda: doc),
+                rule_exists=lambda rid: rid == "pii.email")
+        else:
+            original = db.get_item
+            def read(**kw):
+                response = original(**kw)
+                record = json.loads(response["Item"]["record"]["S"])
+                record["monthly_allowance"] = 10000
+                response["Item"]["record"]["S"] = json.dumps(record)
+                return response
+            db.get_item = read
+            manager(db).cap_monthly_allowance(
+                tenant_id="usr-good", expected_revision=7, new_limit=8000,
+                confirmation="usr-good", reason="Operator approved lower usage ceiling",
+                actor=SUB, idempotency_key="change123456789123",
+                validate_record=lambda doc: SimpleNamespace(model_dump=lambda: doc))
+        audit = db.writes[0]["TransactItems"][1]["Put"]["Item"]
+        assert verify_audit(audit, b"k" * 32)
+        assert len(audit["integrity_mac"]["S"]) == 64
+        assert not verify_audit({**audit, "reason": {"S": "Tampered reason"}}, b"k" * 32)
+        assert not verify_audit(audit, b"x" * 32)

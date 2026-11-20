@@ -68,3 +68,26 @@ def test_provider_outage_does_not_leak_error():
     with pytest.raises(AdminAuditUnavailable) as err:
         AdminAuditReader(Down(),"audit-table").read(EVENT)
     assert "internal secret" not in str(err.value)
+
+def test_signed_audit_receipts_verify_and_tampering_fails_closed():
+    from guardoath.admin_audit_integrity import seal_audit
+    key = b"k" * 32
+    for operation in ("tenant.status", "tenant.rule_action", "tenant.allowance_cap"):
+        signed = seal_audit(row(operation), key)
+        verified = AdminAuditReader(Provider(signed), "audit-table", verify_key=key).read(EVENT)
+        assert verified["integrity_status"] == "signed_verified"
+        assert AdminAuditReader(Provider(row(operation)), "audit-table", verify_key=key).read(EVENT)[
+            "integrity_status"] == "legacy_unverified"
+        with pytest.raises(AdminAuditUnavailable):
+            AdminAuditReader(Provider(signed), "audit-table").read(EVENT)
+        for field, changed in (("reason", {"S": "Operator changed this memo"}),
+                               ("prior_revision", {"N": "6"}),
+                               ("integrity_mac", {"S": "0" * 64})):
+            corrupted = {**signed, field: changed}
+            with pytest.raises(AdminAuditUnavailable):
+                AdminAuditReader(Provider(corrupted), "audit-table", verify_key=key).read(EVENT)
+
+
+def test_invalid_audit_verification_key_configuration_fails_closed():
+    with pytest.raises(ValueError):
+        AdminAuditReader(Provider(row()), "audit-table", verify_key=b"short")

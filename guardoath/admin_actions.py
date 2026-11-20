@@ -15,6 +15,8 @@ import json
 import re
 from typing import Callable
 
+from guardoath.admin_audit_integrity import seal_audit
+
 TENANT = re.compile(r"^[a-z][a-z0-9-]{1,39}$")
 REASON = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .,;:_()/#-]{9,239}$")
 IDEMPOTENCY = re.compile(r"^[a-zA-Z0-9_-]{16,96}$")
@@ -92,7 +94,7 @@ class AdminTenantActions:
                         ":prior": {"N": str(expected_revision)},
                     }
                 }},
-                {"Put": {"TableName": self.audit_table, "Item": audit,
+                {"Put": {"TableName": self.audit_table, "Item": seal_audit(audit, self.audit_key),
                          "ConditionExpression": "attribute_not_exists(event_id)"}}
             ])
         except (AdminActionConflict, AdminActionUnavailable):
@@ -179,7 +181,7 @@ class AdminTenantActions:
                            "ExpressionAttributeValues":{
                                ":record":{"S":serialized},":next":{"N":str(expected_revision+1)},
                                ":prior":{"N":str(expected_revision)}}}},
-                {"Put":{"TableName":self.audit_table,"Item":audit,
+                {"Put":{"TableName":self.audit_table,"Item":seal_audit(audit,self.audit_key),
                         "ConditionExpression":"attribute_not_exists(event_id)"}},
             ])
         except (AdminActionConflict,AdminActionUnavailable):
@@ -242,7 +244,7 @@ class AdminTenantActions:
                     "ExpressionAttributeValues":{":record":{"S":body},
                         ":next":{"N":str(expected_revision+1)},
                         ":prior":{"N":str(expected_revision)}}}},
-                {"Put":{"TableName":self.audit_table,"Item":audit,
+                {"Put":{"TableName":self.audit_table,"Item":seal_audit(audit,self.audit_key),
                         "ConditionExpression":"attribute_not_exists(event_id)"}}
             ])
         except (AdminActionConflict,AdminActionUnavailable):raise

@@ -221,3 +221,11 @@ def test_usage_quota_advisory_is_visible_only_in_admin_authenticated_browser():
     assert '" · AWS costs: Unavailable · Stripe invoices: Unavailable' in script
     assert '"usage-details"' in script.split("const clearAdminData =", 1)[1].split("const signOut", 1)[0]
     assert "innerHTML" not in script
+
+def test_audit_browser_distinguishes_signed_integrity_from_legacy_receipts():
+    script = app().get("/admin/client.js").text
+    assert 'receipt.integrity_status === "signed_verified"' in script
+    assert 'receipt.integrity_status === "legacy_unverified"' in script
+    assert "Legacy receipt — integrity unverified" in script
+    assert "Audit integrity status unavailable" in script
+    assert "innerHTML" not in script
