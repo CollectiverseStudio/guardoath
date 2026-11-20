@@ -269,3 +269,27 @@ def test_exact_cognito_inspection_unavailable_is_503_without_leaking_error():
     unavailable = client(verified)
     assert unavailable.post("/v1/admin/users/lookup",json={"email":"a@example.com"},
         headers={**auth(), "Origin":"https://guardoath.com"}).status_code == 503
+
+def test_exact_owner_lookup_returns_429_when_rate_limited_before_provider_read():
+    from guardoath.admin_users import CognitoUserDirectory
+    class Provider:
+        def __init__(self): self.calls=0
+        def list_users(self, **kwargs):
+            self.calls += 1
+            return {"Users":[]}
+    provider = Provider()
+    service = CognitoUserDirectory(provider,"us-east-1_Example",b"a"*32,clock=lambda: 100)
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        verify_cognito_admin=lambda token: VerifiedAdmin(
+            "12345678-1234-1234-1234-123456789012",frozenset({"owner"}),True)
+        if token == "owner" else None,
+        admin_user_directory=service))
+    client = TestClient(app)
+    args = {"json":{"email":"someone@example.com"},
+            "headers":{**auth(),"Origin":"https://guardoath.com"}}
+    for _ in range(20):
+        assert client.post("/v1/admin/users/lookup", **args).status_code == 200
+    refused = client.post("/v1/admin/users/lookup", **args)
+    assert refused.status_code == 429
+    assert provider.calls == 20

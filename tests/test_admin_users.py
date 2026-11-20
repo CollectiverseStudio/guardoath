@@ -110,7 +110,14 @@ def test_invalid_owner_subject_fails_before_cognito_read(invalid):
     assert provider.calls == []
 
 def test_exact_account_inspection_uses_one_bounded_email_match_and_no_private_identity():
-    provider = Fake()
+    # ListUsers prefix pagination fixture has a continuation token; an exact
+    # identity lookup must have no continuation in order to prove uniqueness.
+    class ExactProvider(Fake):
+        def list_users(self, **kw):
+            result = super().list_users(**kw)
+            result.pop("PaginationToken", None)
+            return result
+    provider = ExactProvider()
     result = directory(provider).lookup(owner_sub=OWNER, email="someone@example.com")
     assert result["status"] == "ok"
     assert result["user"]["email_hint"] == "s***@example.com"
@@ -203,3 +210,30 @@ def test_missing_email_verification_is_unknown_not_false():
                 "Attributes":[{"Name":"email","Value":"someone@example.com"}]}]}
     result = directory(NoVerification()).lookup(owner_sub=OWNER,email="someone@example.com")
     assert result["user"]["email_verified"] is None
+
+def test_exact_lookup_rate_limit_rejects_before_provider_and_resets_next_minute():
+    from guardoath.admin_users import CognitoLookupRateLimited
+    clock = [100.0]
+    class SmallProvider(Fake):
+        def list_users(self, **kwargs):
+            self.calls.append(kwargs)
+            return {"Users":[]}
+    provider = SmallProvider()
+    service = directory(provider,clock=lambda: clock[0])
+    for _ in range(20):
+        assert service.lookup(owner_sub=OWNER,email="someone@example.com")["status"] == "not_found"
+    with pytest.raises(CognitoLookupRateLimited):
+        service.lookup(owner_sub=OWNER,email="someone@example.com")
+    assert len(provider.calls) == 20
+    clock[0] = 160.01
+    assert service.lookup(owner_sub=OWNER,email="someone@example.com")["status"] == "not_found"
+    assert len(provider.calls) == 21
+
+
+def test_exact_lookup_rate_window_rejects_untrusted_clock_without_provider_call():
+    from guardoath.admin_users import CognitoDirectoryUnavailable
+    provider = Fake()
+    service = directory(provider,clock=lambda: float("nan"))
+    with pytest.raises(CognitoDirectoryUnavailable):
+        service.lookup(owner_sub=OWNER,email="someone@example.com")
+    assert provider.calls == []

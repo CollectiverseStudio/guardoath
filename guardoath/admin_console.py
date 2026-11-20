@@ -21,7 +21,7 @@ from guardoath.admin_catalog import CatalogProvider, read_catalog
 from guardoath.admin_directory import DynamoAdminDirectory, InvalidCursor
 from guardoath.admin_usage import tenant_usage_report
 from guardoath.admin_users import (CognitoUserDirectory, InvalidUserCursor,
-                                  InvalidUserLookup, CognitoDirectoryUnavailable)
+                                  InvalidUserLookup, CognitoDirectoryUnavailable, CognitoLookupRateLimited)
 
 
 @dataclass(frozen=True)
@@ -243,6 +243,8 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             result = admin_user_directory.lookup(owner_sub=principal.subject, email=payload.email)
         except InvalidUserLookup as exc:
             raise HTTPException(status_code=422, detail="Invalid exact email") from exc
+        except CognitoLookupRateLimited as exc:
+            raise HTTPException(status_code=429, detail="Cognito account lookup temporarily limited") from exc
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Cognito identity inspection unavailable") from exc
         return admin_json(result)

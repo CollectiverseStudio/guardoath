@@ -1,6 +1,9 @@
 """Bounded Cognito owner directory; admin authorization happens before every call."""
 from __future__ import annotations
 import base64
+from collections import deque
+from threading import Lock
+import math
 import hashlib
 import hmac
 import json
@@ -15,6 +18,9 @@ class InvalidUserLookup(ValueError):
     pass
 
 class CognitoDirectoryUnavailable(Exception):
+    pass
+
+class CognitoLookupRateLimited(CognitoDirectoryUnavailable):
     pass
 
 _POOL = re.compile(r"^[a-z]{2}(?:-[a-z]+)+-\d_[A-Za-z0-9]+$")
@@ -55,6 +61,9 @@ class CognitoUserDirectory:
                 or len(key) < 32 or not callable(clock)):
             raise ValueError("Cognito user directory requires trusted configuration")
         self.client, self.pool_id, self.key, self.clock = client, pool_id, key, clock
+        # Best-effort per-instance provider-call cap; no replacement for a durable distributed limiter.
+        self._lookup_lock = Lock()
+        self._lookup_times = {}
 
     def _cursor(self, token, query, limit, owner_sub):
         payload = {"v": 2, "pool": self.pool_id, "owner": owner_sub, "q": query, "n": limit,
@@ -131,6 +140,28 @@ class CognitoUserDirectory:
                 "returned": len(users), "total": None, "limit": limit,
                 "next_cursor": self._cursor(token, query, limit, owner_sub) if token else None}
 
+    def _limit_lookup(self, owner_sub: str):
+        # Bound lookup abuse and Cognito API usage before any provider network call.
+        # A Lambda instance maintains this window across warm invocations only.
+        try:
+            now = float(self.clock())
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise CognitoDirectoryUnavailable("Directory rate window unavailable") from exc
+        if not math.isfinite(now):
+            raise CognitoDirectoryUnavailable("Directory rate window unavailable")
+        with self._lookup_lock:
+            if owner_sub not in self._lookup_times and len(self._lookup_times) >= 128:
+                self._lookup_times = {owner: times for owner, times in self._lookup_times.items()
+                                      if times and times[-1] > now - 60}
+                if len(self._lookup_times) >= 128:
+                    raise CognitoLookupRateLimited("Directory lookup temporarily limited")
+            times = self._lookup_times.setdefault(owner_sub, deque())
+            while times and times[0] <= now - 60:
+                times.popleft()
+            if len(times) >= 20:
+                raise CognitoLookupRateLimited("Directory lookup temporarily limited")
+            times.append(now)
+
     def lookup(self, *, owner_sub: str, email: str):
         """One exact-match Cognito identity inspection, with no raw subject/email returned.
 
@@ -143,6 +174,7 @@ class CognitoUserDirectory:
                 not _EXACT_EMAIL.fullmatch(email) or email.startswith(".") or
                 ".." in email or email.endswith(".")):
             raise InvalidUserLookup("Invalid exact email")
+        self._limit_lookup(owner_sub)
         try:
             response = self.client.list_users(
                 UserPoolId=self.pool_id, Filter='email = "' + email + '"', Limit=2)
