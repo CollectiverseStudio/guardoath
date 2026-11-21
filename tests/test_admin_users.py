@@ -5,7 +5,7 @@ import hmac
 import json
 from datetime import datetime, timezone
 import pytest
-from guardoath.admin_users import CognitoUserDirectory, InvalidUserCursor
+from guardoath.admin_users import CognitoUserDirectory, InvalidUserCursor, CognitoDirectoryUnavailable
 
 OWNER = "12345678-1234-1234-1234-123456789012"
 OTHER_OWNER = "87654321-4321-4321-4321-210987654321"
@@ -88,7 +88,7 @@ def test_ambiguous_or_malformed_user_directory_identity_fails_closed(attributes)
             return {"Users": [{"Username": "anonymous-subject",
                                "Attributes": attributes}]}
     provider = Ambiguous()
-    with pytest.raises(ValueError, match="Ambiguous Cognito directory identity"):
+    with pytest.raises(CognitoDirectoryUnavailable, match="Invalid Cognito directory response"):
         directory(provider).page(owner_sub=OWNER)
     assert len(provider.calls) == 1
 
@@ -114,7 +114,7 @@ def test_invalid_expired_or_changed_cursor_never_reaches_provider():
 def test_provider_oversize_or_unexpected_attributes_fail_closed():
     class Oversize(Fake):
         def list_users(self,**kw): return {"Users":[{"Username":"x"}]*51}
-    with pytest.raises(ValueError): directory(Oversize()).page(owner_sub=OWNER, )
+    with pytest.raises(CognitoDirectoryUnavailable): directory(Oversize()).page(owner_sub=OWNER, )
 
 def test_missing_provider_or_weak_key_is_rejected():
     with pytest.raises(ValueError): CognitoUserDirectory(object(),"us-east-1_Example",b"a"*32)
@@ -344,3 +344,65 @@ def test_rejected_page_cursor_does_not_spend_directory_quota_or_call_provider():
     with pytest.raises(CognitoLookupRateLimited):
         service.page(owner_sub=OWNER, limit=3)
     assert len(provider.calls) == 20
+
+
+@pytest.mark.parametrize("bad_response", [
+    {"Users": "provider-private-value"},
+    {"Users": [{"Username": "account", "UserStatus": {"secret": "do-not-leak"}, "Attributes": []}]},
+    {"Users": [{"Username": "account", "Attributes": ["provider-private-value"]}]},
+    {"Users": [], "PaginationToken": ["provider-private-value"]},
+    {"Users": [{"Username": "account", "Attributes": []}] * 51},
+])
+def test_malformed_cognito_pages_are_provider_failures_not_owner_input_errors(bad_response):
+    class Corrupt(Fake):
+        def list_users(self, **kwargs):
+            self.calls.append(kwargs)
+            return bad_response
+    provider = Corrupt()
+    with pytest.raises(CognitoDirectoryUnavailable, match="Invalid Cognito directory response") as raised:
+        directory(provider).page(owner_sub=OWNER, limit=50)
+    assert "provider-private-value" not in str(raised.value)
+    assert "do-not-leak" not in str(raised.value)
+    assert len(provider.calls) == 1
+
+
+def test_cognito_listing_exception_is_sanitized_provider_failure():
+    class Offline(Fake):
+        def list_users(self, **kwargs):
+            self.calls.append(kwargs)
+            raise RuntimeError("provider-private-value")
+    provider = Offline()
+    with pytest.raises(CognitoDirectoryUnavailable, match="Cognito directory provider unavailable") as raised:
+        directory(provider).page(owner_sub=OWNER)
+    assert "provider-private-value" not in str(raised.value)
+    assert len(provider.calls) == 1
+
+
+def test_authenticated_cognito_directory_api_distinguishes_provider_503_from_bad_query_422():
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from guardoath.admin_console import VerifiedAdmin, create_admin_router
+
+    class Corrupt(Fake):
+        def list_users(self, **kwargs):
+            self.calls.append(kwargs)
+            return {"Users": [{"Username": "account", "UserStatus": [], "Attributes": []}]}
+
+    provider = Corrupt()
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        verify_cognito_admin=lambda token: VerifiedAdmin(OWNER, frozenset({"owner"}), True)
+        if token == "verified-owner" else None,
+        admin_user_directory=directory(provider)))
+    client = TestClient(app)
+    route = "/v1/admin/users"
+    assert client.get(route).status_code == 401
+    assert client.get(route, headers={"X-GuardOath-Key": "verified-owner"}).status_code == 401
+    assert len(provider.calls) == 0
+    headers = {"X-GuardOath-Admin-Session": "verified-owner"}
+    invalid = client.get(route + "?query=invalid%22", headers=headers)
+    assert invalid.status_code == 422 and len(provider.calls) == 0
+    unavailable = client.get(route, headers=headers)
+    assert unavailable.status_code == 503 and len(provider.calls) == 1
+    assert "provider-private" not in unavailable.text
+    assert "Cognito user directory unavailable" in unavailable.text

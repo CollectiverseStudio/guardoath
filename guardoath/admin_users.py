@@ -115,7 +115,9 @@ class CognitoUserDirectory:
             raise ValueError("Invalid directory attributes")
         approved = {}
         for attribute in attrs:
-            if not isinstance(attribute, dict) or attribute.get("Name") not in ("email", "email_verified"):
+            if not isinstance(attribute, dict):
+                raise ValueError("Malformed Cognito directory attribute")
+            if attribute.get("Name") not in ("email", "email_verified"):
                 continue
             name, value = attribute["Name"], attribute.get("Value")
             # Do not turn conflicting or malformed provider identity attributes
@@ -124,6 +126,8 @@ class CognitoUserDirectory:
                 raise ValueError("Ambiguous Cognito directory identity")
             approved[name] = value
         state = entry.get("UserStatus")
+        if state is not None and not isinstance(state, str):
+            raise ValueError("Malformed Cognito directory status")
         return {"username": _mask_email(entry["Username"]) or ("user-" + hmac.new(
                           self.key, b"guardoath-cognito-user-label:" + entry["Username"].encode("utf-8"),
                           hashlib.sha256).hexdigest()[:16]),
@@ -151,14 +155,23 @@ class CognitoUserDirectory:
         # Share the same per-owner Cognito call budget with exact-email inspection.
         # Check the signed cursor and all filters first: rejected input consumes no provider quota.
         self._reserve_provider_read(owner_sub)
-        response = self.client.list_users(**args)
-        if (not isinstance(response, dict) or not isinstance(response.get("Users"), list)
-                or len(response["Users"]) > limit):
-            raise ValueError("Invalid directory response")
-        users = [self._project_user(entry) for entry in response["Users"]]
-        token = response.get("PaginationToken")
-        if token is not None and (not isinstance(token, str) or not 1 <= len(token) <= 2048):
-            raise ValueError("Invalid provider cursor")
+        try:
+            response = self.client.list_users(**args)
+        except Exception as exc:
+            raise CognitoDirectoryUnavailable("Cognito directory provider unavailable") from exc
+        # A provider failure or corrupted Cognito response is not an invalid
+        # owner query (422). Fail closed as provider-unavailable (503) and do
+        # not return an incomplete or misleading account directory.
+        try:
+            if (not isinstance(response, dict) or not isinstance(response.get("Users"), list)
+                    or len(response["Users"]) > limit):
+                raise ValueError("Invalid directory response")
+            users = [self._project_user(entry) for entry in response["Users"]]
+            token = response.get("PaginationToken")
+            if token is not None and (not isinstance(token, str) or not 1 <= len(token) <= 2048):
+                raise ValueError("Invalid provider cursor")
+        except (TypeError, ValueError, AttributeError) as exc:
+            raise CognitoDirectoryUnavailable("Invalid Cognito directory response") from exc
         return {"status": "ok", "source": "Cognito ListUsers (single bounded page)",
                 "retrieved_utc": _utc(datetime.now(timezone.utc)), "users": users,
                 "returned": len(users), "total": None, "limit": limit,
