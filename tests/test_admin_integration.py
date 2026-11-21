@@ -40,7 +40,7 @@ class DDB:
     def scan(self, **kwargs):
         self.calls.append(kwargs)
         return {"Items": [{"tenant_id":{"S":"demo-1"}, "revision":{"N":"2"},
-            "record":{"S":'{"tenant_id":"demo-1","display_name":"Sample","status":"active","subscription_status":"inactive","monthly_allowance":0,"key_hashes":["secret-hash"],"payer_id":"cus_private"}'}}]}
+            "record":{"S":'{"tenant_id":"demo-1","display_name":"Sample","status":"active","demo":false,"subscription_status":"inactive","monthly_allowance":0,"key_hashes":["secret-hash"],"payer_id":"cus_private"}'}}]}
 
 class Store:
     table_name="guard-test"
@@ -63,6 +63,9 @@ def test_mount_uses_real_store_bounded_pages_and_owner_auth():
     response=client.get("/v1/admin/tenants?limit=5",headers={"Authorization":"Bearer signed-owner"})
     assert response.status_code==200
     assert response.json()["tenants"][0]["tenant_id"]=="demo-1"
+    # The fake DynamoDB source must model an explicit, authoritative customer identity.
+    # A missing or string demo flag is a provider-integrity failure, not permission to mutate.
+    assert response.json()["tenants"][0]["demo"] is False
     assert "secret-hash" not in response.text and "cus_private" not in response.text
     assert len(store._client.calls)==1 and store._client.calls[0]["Limit"]==5
     assert store._client.calls[0]["ProjectionExpression"]=="tenant_id,#record,#revision,#usage"
