@@ -9,7 +9,7 @@ import hashlib
 import json
 import re
 
-from guardoath.admin_catalog import CatalogProvider, read_catalog
+from guardoath.admin_catalog import CatalogProvider, CatalogRegistryConflict, read_catalog
 
 
 _VERSION = re.compile(r"^[1-9][0-9]{0,8}$")
@@ -62,6 +62,10 @@ def preview_rule_description(provider: CatalogProvider, *, expected_registry_ver
     new_title, new_use_case = _copy(title, 120), _copy(use_case, 500)
     try:
         catalog = read_catalog(provider)
+    except CatalogRegistryConflict as exc:
+        # Preserve explicit stale/ambiguous-catalog (409) semantics without
+        # allowing a duplicate ID to be previewed or converted into an edit.
+        raise CatalogPreviewConflict("Published catalog identifiers ambiguous") from exc
     except Exception as exc:
         raise CatalogPreviewUnavailable("Published catalog unavailable") from exc
     current_version = catalog.get("registry_version")

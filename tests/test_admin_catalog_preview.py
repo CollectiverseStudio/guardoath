@@ -65,6 +65,18 @@ def test_duplicate_published_target_cannot_be_previewed():
         preview_rule_description(lambda: duplicated, **args())
 
 
+def test_duplicate_unrelated_identifier_stays_conflict_but_malformed_source_unavailable():
+    duplicated = deepcopy(BASE)
+    duplicated["domains"].append(deepcopy(duplicated["domains"][0]))
+    with pytest.raises(CatalogPreviewConflict):
+        preview_rule_description(lambda: duplicated, **args())
+
+    invalid = deepcopy(BASE)
+    invalid["domains"][0]["controls"][0]["rules"].append({"title": "Missing rule ID"})
+    with pytest.raises(CatalogPreviewUnavailable):
+        preview_rule_description(lambda: invalid, **args())
+
+
 def test_unavailable_provider_and_malformed_version_fail_closed():
     def failed():
         raise RuntimeError("internal provider details")

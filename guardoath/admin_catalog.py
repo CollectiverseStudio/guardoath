@@ -11,6 +11,10 @@ from typing import Callable
 CatalogProvider = Callable[[], dict]
 
 
+class CatalogRegistryConflict(ValueError):
+    """Duplicate published identifiers make a source ambiguous, never editable."""
+
+
 def published_catalog() -> dict:
     # Lazy: the isolated package can be tested without bundling the complete
     # GuardOath validation dependencies. Production uses the actual registry.
@@ -33,8 +37,10 @@ def read_catalog(provider: CatalogProvider, *, domain_id: str | None = None) -> 
         if not isinstance(domain, dict) or not isinstance(domain.get("domain_id"), str):
             raise ValueError("Invalid published domain")
         category_id = domain["domain_id"]
-        if not category_id or category_id in category_ids:
-            raise ValueError("Duplicate or empty published category")
+        if not category_id:
+            raise ValueError("Empty published category")
+        if category_id in category_ids:
+            raise CatalogRegistryConflict("Duplicate published category")
         category_ids.add(category_id)
         controls = domain.get("controls")
         if not isinstance(controls, list):
@@ -44,8 +50,10 @@ def read_catalog(provider: CatalogProvider, *, domain_id: str | None = None) -> 
             if not isinstance(check, dict) or not isinstance(check.get("control_id"), str):
                 raise ValueError("Invalid published control")
             control_id = check["control_id"]
-            if not control_id or control_id in check_ids:
-                raise ValueError("Duplicate or empty published check")
+            if not control_id:
+                raise ValueError("Empty published check")
+            if control_id in check_ids:
+                raise CatalogRegistryConflict("Duplicate published check")
             check_ids.add(control_id)
             rules = check.get("rules")
             if not isinstance(rules, list):
@@ -56,8 +64,10 @@ def read_catalog(provider: CatalogProvider, *, domain_id: str | None = None) -> 
             for rule in rules:
                 if (not isinstance(rule, dict) or
                         not isinstance(rule.get("rule_id"), str) or
-                        not rule["rule_id"] or rule["rule_id"] in rule_ids):
-                    raise ValueError("Invalid or duplicate published rule")
+                        not rule["rule_id"]):
+                    raise ValueError("Invalid published rule")
+                if rule["rule_id"] in rule_ids:
+                    raise CatalogRegistryConflict("Duplicate published rule")
                 rule_ids.add(rule["rule_id"])
             evidence = check.get("evidence")
             if evidence is not None and not isinstance(evidence, dict):
