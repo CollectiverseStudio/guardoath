@@ -403,7 +403,7 @@ def test_catalog_manifest_browser_requires_signed_fresh_review_and_never_calls_p
     assert 'result.acceptance_tests_run !== false' in script
     assert 'result.rollback_source_sha256 !== selected.baseline' in script
     assert "review-manifest-result" in cleared_on_logout(script)
-    assert '"NOT published or executable' in script
+    assert "NOT published or executable" in script
     assert "innerHTML" not in script
 
 
