@@ -246,3 +246,14 @@ mandatory.
 - Authenticated owner/MFA `GET /v1/admin/subscriptions/{tenant_id}/invoices` persists a signed protected read attempt before any tenant or provider read. It independently verifies the saved Stripe subscription/customer, configured price and environment before reading at most five provider invoices from server-owned IDs.
 - Every invoice must match the same customer, subscription and livemode with valid status, UTC timestamp and nonnegative minor-unit amounts; malformed or ambiguous pages fail closed. UI excludes provider IDs, customer email, links and payment method. Zero invoices in a verified page is distinct from unavailable provider data.
 - Read-only historical sample, not paid entitlement, revenue, a future invoice forecast or refund capability. No Stripe mutation, new service, AWS deployment, 500-ms privacy deadline change or 15 live acceptance is claimed. Exact-SHA CI and live provider acceptance remain required.
+
+## Read-only administrator infrastructure inventory
+From the repository root, with AWS SSO credentials available locally, run:
+
+```powershell
+python -m tools.verify_admin_activation --profile collectiverse-prod
+```
+
+The tool reads the existing stack parameters/outputs, Lambda feature flags, and Cognito MFA/group configuration without changing any AWS resource. It prints only predetermined booleans, never account identifiers, client IDs, user data or credentials. Exit code 2 means **not authorized for activation**; the tool always reports `signed_current_login_mfa_verified=false` because static configuration cannot attest to a real recent MFA login. Even when the admin infrastructure is provisioned, this is an inventory, not proof of authenticated admin access or a substitute for 15 live checks.
+
+For a legacy stack that lacks `EnableAdminConsole`, treat a missing parameter as unavailable rather than assuming the admin application is broken. Preserve `EnableSelfRegistration=1` in any future CloudFormation preview, and verify all unrelated modifications and conditional replacements before executing it. The currently documented Cognito Lite/classic UI cannot provide trustworthy proof of current-login MFA for the strict GuardOath admin verifier. Do not fake `amr`, treat user MFA enrollment as recent authentication, or silently upgrade to a potentially billable tier.
