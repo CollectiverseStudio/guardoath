@@ -235,3 +235,54 @@ def test_unbound_subscription_never_gets_fabricated_schedule_or_provider_read():
     view = reporter(lambda *_: reads.append(1)).read(Tenant(payer_id=None))
     assert not view["verified"] and "current_period_end_utc" not in view
     assert not reads
+
+@pytest.mark.parametrize("field, malformed", [
+    ("demo", None), ("demo", "false"), ("demo", 0),
+    ("subscription_status", []), ("subscription_status", {"status": "active"}),
+    ("subscription_status", False), ("subscription_status", "suspended"),
+    ("status", []), ("status", True), ("status", "suspended"),
+    ("billing_mode", {}), ("billing_mode", "unverified"),
+    ("payer_id", []), ("payer_id", "cus_"),
+    ("stripe_subscription_id", {}), ("stripe_subscription_id", "sub_"),
+    ("tenant_id", []), ("tenant_id", "example-tenant"),
+])
+def test_corrupt_saved_identity_or_billing_state_never_calls_stripe(field, malformed):
+    record = Tenant()
+    setattr(record, field, malformed)
+    reads = []
+    with pytest.raises(BillingUnavailable):
+        reporter(lambda *args: (reads.append(args), snapshot())[1]).read(record)
+    assert reads == []
+
+
+@pytest.mark.parametrize("malformed", [None, [], {}, {"status": "active"}, True, 17, ["active"]])
+def test_malformed_provider_status_is_unavailable_without_entitlement(malformed):
+    record = Tenant()
+    with pytest.raises(BillingUnavailable):
+        reporter(lambda *_: snapshot(status=malformed)).read(record)
+    assert record.subscription_status == "active"
+
+
+def test_authenticated_owner_provider_shape_failure_is_sanitized_503():
+    reads = []
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        verify_cognito_admin=lambda token: VerifiedAdmin(
+            "trusted-subject", frozenset({"owner"}), True) if token == "admin" else None,
+        tenant_store=Store(),
+        billing_reporter=reporter(lambda *args: (
+            reads.append(args),
+            snapshot(status={"private": "secret@example.com"})
+        )[1]),
+    ))
+    client = TestClient(app)
+    endpoint = "/v1/admin/subscriptions/usr-billing"
+    assert client.get(endpoint).status_code == 401
+    assert client.get(endpoint, headers={"X-GuardOath-Key": "admin"}).status_code == 401
+    assert reads == []
+    response = client.get(endpoint, headers={"X-GuardOath-Admin-Session": "admin"})
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Subscription verification unavailable"
+    assert len(reads) == 1
+    for private in ("secret@example.com", "cus_test1234", "sub_test1234", "pm_private"):
+        assert private not in response.text

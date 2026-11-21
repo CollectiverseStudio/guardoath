@@ -116,6 +116,23 @@ test("verified inactive Stripe disagreement appears in owner Billing without inv
   expect((await output.textContent())).not.toContain("subscription_entitlement: true");
 });
 
+test("unavailable verified Stripe read is visible and never claims paid entitlement", async ({page}) => {
+  const fixture = await signedIn(page,{override: request =>
+    /^\\/v1\\/admin\\/subscriptions\\/[^/]+$/.test(request.path)
+      ? {status:503,contentType:"application/json",body:JSON.stringify({
+          detail:"Subscription verification unavailable"})} : null});
+  await page.locator("#nav-tenants").click();
+  const row = page.locator("#tenant-rows tr").filter({hasText:"sample-studio"});
+  await row.getByRole("button",{name:"Verify Stripe",exact:true}).click();
+  await expect(page.locator("#section-billing")).toBeVisible();
+  const output = page.locator("#billing-details");
+  await expect(output).toContainText("Stripe verification unavailable; no entitlement change");
+  await expect(output).not.toContainText("Provider: active");
+  expect(fixture.calls.some(call => call.method === "GET" &&
+    call.path === "/v1/admin/subscriptions/sample-studio" &&
+    call.headers["x-guardoath-admin-session"] === fixture.token)).toBe(true);
+});
+
 test("mobile owner workspace keeps all sections accessible without document overflow", async ({page}) => {
   await page.setViewportSize({width:390,height:844});
   await signedIn(page);

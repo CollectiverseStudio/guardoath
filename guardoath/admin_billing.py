@@ -76,11 +76,30 @@ class AdminSubscriptionReporter:
         self.expected_livemode = expected_livemode
 
     def read(self, record) -> dict:
-        if getattr(record, "demo", True):
+        # A damaged saved identity or billing state cannot masquerade as
+        # a demo or an eligible paid account. Verify it before any Stripe read.
+        demo = getattr(record, "demo", None)
+        if type(demo) is not bool:
+            raise BillingUnavailable("Saved customer identity unavailable")
+        if demo:
             return {"status": "not_applicable", "provider": "Stripe", "verified": False}
         tenant_id = getattr(record, "tenant_id", "")
         customer_id = getattr(record, "payer_id", None)
         subscription_id = getattr(record, "stripe_subscription_id", None)
+        stored_status = getattr(record, "subscription_status", None)
+        tenant_status = getattr(record, "status", None)
+        billing_mode = getattr(record, "billing_mode", None)
+        if (not isinstance(tenant_id, str) or not tenant_id.startswith("usr-")
+                or not isinstance(tenant_status, str) or tenant_status not in ("active", "disabled")
+                or not isinstance(billing_mode, str) or billing_mode not in ("stripe", "partner", "internal")
+                or (stored_status is not None and
+                    (not isinstance(stored_status, str) or stored_status not in
+                     ("active", "inactive", "past_due", "canceled")))
+                or (customer_id is not None and
+                    (not isinstance(customer_id, str) or not CUSTOMER.fullmatch(customer_id)))
+                or (subscription_id is not None and
+                    (not isinstance(subscription_id, str) or not SUBSCRIPTION.fullmatch(subscription_id)))):
+            raise BillingUnavailable("Saved Stripe binding or entitlement unavailable")
         if not customer_id or not subscription_id:
             return {"status": "unbound", "provider": "Stripe", "verified": False,
                     "reconciliation": _reconciliation_assessment(
@@ -119,11 +138,10 @@ class AdminSubscriptionReporter:
         if type(quantity) is not int or not 1 <= quantity <= 1000000:
             raise BillingUnavailable("Invalid Stripe subscription quantity")
         state = snapshot.get("status")
-        if state not in STATES:
+        # A provider JSON list, object or bool is not a Stripe state. Reject
+        # unhashable values as unavailable, never an exception or entitlement.
+        if not isinstance(state, str) or state not in STATES:
             raise BillingUnavailable("Unrecognized Stripe subscription status")
-        stored_status = getattr(record, "subscription_status", None)
-        tenant_status = getattr(record, "status", None)
-        billing_mode = getattr(record, "billing_mode", None)
         # An admin display never grants entitlement. Only show a concordant
         # active entitlement after independent provider AND saved-state checks.
         concordant = (state == "active" and stored_status == "active"
