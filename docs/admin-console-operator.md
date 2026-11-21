@@ -227,8 +227,11 @@ credential are available. A typed \`RECONCILE <tenant-id>\` confirmation, audit
 reason, idempotency key, and exact tenant revision are mandatory. The backend
 independently re-fetches the saved Stripe binding and verifies configured price
 and environment. It only accepts non-active states, never upgrades or writes to
-Stripe. The conditional DynamoDB transaction sets saved subscription state to
-past_due/canceled/inactive, sets monthly allowance to **zero**, blocks overages,
+Stripe. The conditional DynamoDB transaction compares **both** the exact saved tenant
+record bytes and the numeric revision. An out-of-band same-revision edit during
+the verified provider read aborts without overwriting the customer's changes,
+even if the legacy writer failed to increment the revision. It sets saved
+subscription state to past_due/canceled/inactive, sets monthly allowance to **zero**, blocks overages,
 and writes an immutable HMAC-signed outcome receipt atomically. A separately
 signed read attempt precedes the provider call; the owner UI verifies the
 receipt through the authenticated audit API. Provider, revision, audit or

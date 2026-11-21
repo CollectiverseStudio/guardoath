@@ -73,7 +73,17 @@ def test_a_pattern_match_outside_other_detections_is_still_reported(checkers):
 @pytest.mark.parametrize("content,fmt,value,expected,inner", DUPLICATES)
 def test_redaction_still_masks_the_whole_value(checkers, content, fmt, value, expected, inner):
     result = check(checkers, content, fmt=fmt, action=Action.REDACT)
-    assert result.redaction.status == "preview"
+    # Only content-free checker metadata is printed on CI failure; distinguish
+    # an initial scan timeout from a failed mandatory second-pass recheck.
+    assert result.redaction.status == "preview", {
+        "evaluation": result.evaluation_status,
+        "action": result.effective_action.value,
+        "total_latency_ms": result.total_latency_ms,
+        "first_pass": [(c.checker_id, c.status, c.error_code, c.latency_ms)
+                       for c in result.checker_results],
+        "recheck": [(c.checker_id, c.status, c.error_code, c.latency_ms)
+                    for c in result.redaction.validation_results],
+    }
     label = next(iter(expected)).removeprefix("pii.").upper()
     expected_content = content.replace(value, "[REDACTED_" + label + "]")
     if fmt == "json":

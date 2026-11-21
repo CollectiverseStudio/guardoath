@@ -56,7 +56,11 @@ class AdminBillingDowngrade:
             item = reply.get("Item") if isinstance(reply, dict) else None
             if not item or int(item["revision"]["N"]) != expected_revision:
                 raise BillingDowngradeConflict("Tenant missing or revision changed")
-            record = json.loads(item["record"]["S"])
+            # Preserve the exact source snapshot as part of the conditional
+            # transaction. A same-revision/out-of-band tenant update during the
+            # independent Stripe read must not be overwritten.
+            original_document = item["record"]["S"]
+            record = json.loads(original_document)
             if (not isinstance(record, dict) or record.get("tenant_id") != tenant_id
                     or record.get("demo") is not False
                     or record.get("billing_mode") != "stripe"
@@ -101,11 +105,12 @@ class AdminBillingDowngrade:
                 {"Update": {
                     "TableName": self.tenant_table, "Key": {"tenant_id": {"S": tenant_id}},
                     "UpdateExpression": "SET #record = :record, #revision = :next",
-                    "ConditionExpression": "attribute_exists(tenant_id) AND #revision = :prior",
+                    "ConditionExpression": "attribute_exists(tenant_id) AND #revision = :prior AND #record = :original",
                     "ExpressionAttributeNames": {"#record": "record", "#revision": "revision"},
                     "ExpressionAttributeValues": {":record": {"S": body},
                         ":next": {"N": str(expected_revision+1)},
-                        ":prior": {"N": str(expected_revision)}}}},
+                        ":prior": {"N": str(expected_revision)},
+                        ":original": {"S": original_document}}}},
                 {"Put": {"TableName": self.audit_table,
                     "Item": seal_audit(receipt, self.key),
                     "ConditionExpression": "attribute_not_exists(event_id)"}}

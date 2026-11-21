@@ -47,9 +47,12 @@ class FakeDDB:
     def transact_write_items(self,**k):
         if self.fail:raise RuntimeError("Audit unavailable")
         update,audit=k["TransactItems"]
-        assert update["Update"]["ConditionExpression"]=="attribute_exists(tenant_id) AND #revision = :prior"
+        assert update["Update"]["ConditionExpression"]=="attribute_exists(tenant_id) AND #revision = :prior AND #record = :original"
         values=update["Update"]["ExpressionAttributeValues"]
         assert int(values[":prior"]["N"])==self.rev
+        # Model a same-revision legacy writer racing the provider read.
+        if values[":original"]["S"] != json.dumps(self.doc):
+            raise RuntimeError("ConditionalCheckFailed")
         event=audit["Put"]["Item"]
         assert event["event_id"]["S"] not in self.events
         self.events[event["event_id"]["S"]]=event
@@ -117,6 +120,28 @@ def test_unbound_or_not_active_avoids_provider_calls(bad):
     db=FakeDDB();db.doc.update(bad);reads=[]
     with pytest.raises(BillingDowngradeConflict):make(db,reads=reads).apply(**body())
     assert not reads and not db.transactions
+
+
+def test_same_revision_out_of_band_edit_during_stripe_read_aborts_atomically():
+    db=FakeDDB()
+    def read_and_race(*_args):
+        # A legacy writer changes a customer field without incrementing its
+        # revision after our strongly consistent read but before transaction.
+        db.doc["display_name"]="Concurrent verified name"
+        return provider("past_due")
+    reporter=AdminSubscriptionReporter(
+        read_and_race,expected_price_id=PRICE,expected_livemode=False)
+    action=AdminBillingDowngrade(
+        db,"tenant_table","audit_table",signing_key=KEY,
+        reporter=reporter,validate_record=lambda d:SimpleNamespace(**d,model_dump=lambda:d),
+        clock=lambda:datetime(2026,11,20,tzinfo=timezone.utc))
+    with pytest.raises(BillingDowngradeUnavailable):
+        action.apply(**body())
+    assert db.rev==7 and db.doc["display_name"]=="Concurrent verified name"
+    assert db.doc["subscription_status"]=="active"
+    assert db.doc["monthly_allowance"]==1000
+    assert db.doc["input_check_pii"]=="block"
+    assert not db.events and not db.transactions
 
 def test_audit_outage_never_writes():
     db=FakeDDB();db.fail=True
