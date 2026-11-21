@@ -56,8 +56,75 @@ def test_business_rules_and_asymmetric_actions():
     bad = {**valid, "end_date": "2026-09-30", "refund_amount": 101}
     for stage, expected in [(Stage.INPUT, "flag"), (Stage.OUTPUT, "block")]:
         result = evaluate(policy, json.dumps(bad), stage)
-        assert result.recommended_action == expected
+        diagnostic = [(c.checker_id, c.status, c.error_code, c.latency_ms)
+                      for c in result.checker_results]
+        assert result.evaluation_status == "complete", diagnostic
+        assert [(c.checker_id, c.status) for c in result.checker_results] == [
+            ("schema", "passed"), ("cross_field", "flagged")], diagnostic
+        assert result.recommended_action == expected, diagnostic
         assert {f.rule_id for f in result.findings} == {"business.date_order", "business.refund_limit"}
+
+
+def test_bundled_schema_comparison_pair_preserves_both_stages_without_extra_tasks(monkeypatch):
+    """Exact bundled CPU-only pair retains all verdicts and individual timed executes."""
+    policy = load_policies("policies/business.json")[0]
+
+    def unexpected_gather(*args, **kwargs):
+        raise AssertionError("Bundled non-yielding checkers must not be task-scheduled")
+
+    monkeypatch.setattr(asyncio, "gather", unexpected_gather)
+    valid = {"start_date": "2026-10-01", "end_date": "2026-10-03",
+             "purchase_amount": 100, "refund_amount": 25}
+    bad = {**valid, "end_date": "2026-09-30", "refund_amount": 101}
+    for stage, action in ((Stage.INPUT, Action.FLAG), (Stage.OUTPUT, Action.BLOCK)):
+        clean = evaluate(policy, json.dumps(valid), stage)
+        assert clean.evaluation_status == "complete" and clean.recommended_action == Action.ALLOW
+        flagged = evaluate(policy, json.dumps(bad), stage)
+        assert flagged.evaluation_status == "complete"
+        assert flagged.recommended_action == action
+        assert [r.checker_id for r in flagged.checker_results] == ["schema", "cross_field"]
+        assert [r.status for r in flagged.checker_results] == ["passed", "flagged"]
+        assert {f.rule_id for f in flagged.findings} == {
+            "business.date_order", "business.refund_limit"}
+    # The optimized scheduling path must not turn malformed input into Allow.
+    malformed = evaluate(policy, '{"start_date":', Stage.INPUT)
+    assert malformed.recommended_action == Action.BLOCK
+    assert malformed.evaluation_status == "complete"
+    assert "schema.invalid_json" in {f.rule_id for f in malformed.findings}
+
+
+def test_custom_async_schema_still_uses_the_original_concurrent_scheduler(monkeypatch):
+    """Only exact bundled checker identities may use the CPU-only fast path."""
+    from guardoath.checkers import schema_check
+
+    calls = []
+    original_gather = asyncio.gather
+
+    def recording_gather(*tasks, **kwargs):
+        calls.append(len(tasks))
+        return original_gather(*tasks, **kwargs)
+
+    monkeypatch.setattr(asyncio, "gather", recording_gather)
+
+    async def custom_schema(request, policy, stage):
+        await asyncio.sleep(0)
+        return await schema_check(request, policy, stage)
+
+    policy = load_policies("policies/business.json")[0]
+    checkers = default_checkers()
+    checkers["schema"] = custom_schema
+    engine = Engine([policy], checkers)
+    request = CheckRequest(
+        application_id=policy.application_id, policy_version=policy.version,
+        content=json.dumps({"start_date": "2026-10-01", "end_date": "2026-09-30",
+                            "purchase_amount": 100, "refund_amount": 101}),
+        content_format="json",
+    )
+    response = asyncio.run(engine.check(request, Stage.INPUT))
+    assert response.evaluation_status == "complete"
+    assert response.recommended_action == Action.FLAG
+    assert [c.status for c in response.checker_results] == ["passed", "flagged"]
+    assert calls == [2]
 
 
 @pytest.mark.parametrize("left,right", [(True, 5), ("3", 5), (None, 5), (3, None)])

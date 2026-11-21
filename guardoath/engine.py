@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from jsonschema import Draft202012Validator
 
-from guardoath.checkers import Checker
+from guardoath.checkers import Checker, schema_check, cross_field_check
 from guardoath.config import validate_local_schema
 from guardoath.formats import validate_schema_formats
 from guardoath.groups import GROUPS, group_results
@@ -205,6 +205,20 @@ class Engine:
             # timeout context and monotonic late-result rejection in execute.
             if len(rules) == 1:
                 return (await execute(rules[0].checker_id, content_request),)
+            # These two bundled checkers perform local, non-yielding CPU work.
+            # gather() cannot run them concurrently on one event-loop thread;
+            # it only adds task scheduling/jitter under Python/CI contention.
+            # Retain execute() and its ORIGINAL per-check timeout and monotonic
+            # late-result rejection for each rule. Never serialize replacement
+            # checkers, which may await legitimate asynchronous I/O.
+            if (len(rules) == 2
+                    and {rule.checker_id for rule in rules} == {"schema", "cross_field"}
+                    and self._checkers.get("schema") is schema_check
+                    and self._checkers.get("cross_field") is cross_field_check):
+                results = []
+                for rule in rules:
+                    results.append(await execute(rule.checker_id, content_request))
+                return tuple(results)
             return tuple(await asyncio.gather(*(execute(r.checker_id, content_request) for r in rules)))
 
         # A missing/expired/forged host reference must never be treated as clean.
