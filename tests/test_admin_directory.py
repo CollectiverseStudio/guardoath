@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 import pytest
 from guardoath.admin_console import VerifiedAdmin, create_admin_router
-from guardoath.admin_directory import DynamoAdminDirectory, InvalidCursor
+from guardoath.admin_directory import DirectoryUnavailable, DynamoAdminDirectory, InvalidCursor
 
 KEY = b"sample-test-signing-key-32-bytes-long-not-production"
 OWNER = "12345678-1234-1234-1234-123456789012"
@@ -111,7 +111,7 @@ def test_invalid_usage_record_rejected_not_silently_zeroed():
             row=item("alpha")
             row["usage"]={"M":{current:{"N":"not-a-number"}}}
             return {"Items":[row]}
-    with pytest.raises(ValueError):directory(Malformed()).page(owner_sub=OWNER, limit=10)
+    with pytest.raises(DirectoryUnavailable):directory(Malformed()).page(owner_sub=OWNER, limit=10)
 
 def test_missing_or_malformed_legacy_key_metadata_is_unknown_not_zero():
     class Missing:
@@ -197,3 +197,107 @@ def test_tenant_http_cursor_replay_by_another_owner_is_refused():
                         headers={"Authorization": "Bearer owner2"})
     assert replay.status_code == 422
     assert len(fake.calls) == 1
+
+
+@pytest.mark.parametrize("field,value", [
+    ("demo", "false"), ("demo", 0), ("demo", None), ("demo", []),
+    ("status", "pending"), ("status", None), ("status", ["active"]),
+    ("subscription_status", "paid"), ("subscription_status", True),
+    ("subscription_status", []), ("display_name", {"raw": "secret"}),
+    ("display_name", ""), ("updated_at", {"bad": "date"}),
+])
+def test_directory_refuses_ambiguous_account_identity_and_subscription(field, value):
+    class Corrupt:
+        def scan(self, **kw):
+            row = item("alpha")
+            doc = json.loads(row["record"]["S"])
+            doc[field] = value
+            row["record"]["S"] = json.dumps(doc)
+            return {"Items": [row]}
+    with pytest.raises(DirectoryUnavailable):
+        directory(Corrupt()).page(owner_sub=OWNER, limit=1)
+
+
+@pytest.mark.parametrize("change", [
+    "missing_demo", "wrong_tenant", "missing_revision", "negative_revision",
+    "float_revision", "huge_revision", "duplicate_id", "invalid_usage_map",
+    "invalid_historical_usage", "malformed_checkpoint",
+])
+def test_directory_rejects_corrupt_provider_pages_before_returning_any_tenants(change):
+    class Corrupt:
+        def scan(self, **kw):
+            row = item("alpha")
+            doc = json.loads(row["record"]["S"])
+            if change == "missing_demo":
+                doc.pop("demo")
+            elif change == "wrong_tenant":
+                doc["tenant_id"] = "beta"
+            elif change == "missing_revision":
+                row.pop("revision")
+            elif change == "negative_revision":
+                row["revision"] = {"N": "-1"}
+            elif change == "float_revision":
+                row["revision"] = {"N": "1.5"}
+            elif change == "huge_revision":
+                row["revision"] = {"N": "9" * 100}
+            elif change == "duplicate_id":
+                return {"Items": [row, row]}
+            elif change == "invalid_usage_map":
+                row["usage"] = {"M": "bad"}
+            elif change == "invalid_historical_usage":
+                row["usage"] = {"M": {"2026-13": {"N": "1"}}}
+            elif change == "malformed_checkpoint":
+                return {"Items": [row], "LastEvaluatedKey": {"tenant_id": {"S": "../bad"}}}
+            row["record"]["S"] = json.dumps(doc)
+            return {"Items": [row]}
+    with pytest.raises(DirectoryUnavailable):
+        directory(Corrupt()).page(owner_sub=OWNER, limit=2)
+
+
+def test_admin_directory_corruption_is_503_not_client_422_and_never_leaks_provider_data():
+    class Corrupt:
+        def scan(self, **kw):
+            row = item("alpha")
+            doc = json.loads(row["record"]["S"])
+            doc["demo"] = "false"
+            doc["payer_id"] = "cus_PRIVATE_PROVIDED"
+            row["record"]["S"] = json.dumps(doc)
+            return {"Items": [row]}
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        verify_cognito_admin=lambda t: VerifiedAdmin(OWNER, frozenset({"owner"}), True)
+        if t == "owner" else None, admin_directory=directory(Corrupt())))
+    client = TestClient(app)
+    assert client.get("/v1/admin/tenants").status_code == 401
+    response = client.get("/v1/admin/tenants", headers={"X-GuardOath-Admin-Session": "owner"})
+    assert response.status_code == 503
+    assert "cus_PRIVATE_PROVIDED" not in response.text
+    assert "tenant directory" in response.text.lower()
+
+
+def test_valid_legacy_unknown_billing_stays_unknown_and_real_demo_boolean_is_preserved():
+    class Legacy:
+        def scan(self, **kw):
+            row = item("alpha")
+            doc = json.loads(row["record"]["S"])
+            doc["demo"] = True
+            doc.pop("subscription_status")
+            row["record"]["S"] = json.dumps(doc)
+            return {"Items": [row]}
+    projected = directory(Legacy()).page(owner_sub=OWNER, limit=2)["tenants"][0]
+    assert projected["demo"] is True
+    assert projected["subscription_status"] is None
+    assert projected["status"] == "active"
+    assert projected["api_key_count"] == 1
+
+
+def test_filter_cannot_hide_malformed_provider_account_within_one_scanned_page():
+    class Corrupt:
+        def scan(self, **kw):
+            row = item("beta")
+            doc = json.loads(row["record"]["S"])
+            doc["demo"] = "wrong-type"
+            row["record"]["S"] = json.dumps(doc)
+            return {"Items": [row]}
+    with pytest.raises(DirectoryUnavailable):
+        directory(Corrupt()).page(owner_sub=OWNER, limit=1, search="alpha")

@@ -25,7 +25,7 @@ from guardoath.admin_catalog_preview import (
     CatalogPreviewConflict, CatalogPreviewUnavailable, preview_rule_description)
 from guardoath.admin_catalog_manifest import (
     CatalogManifestConflict, CatalogManifestUnavailable, reviewed_metadata_manifest)
-from guardoath.admin_directory import DynamoAdminDirectory, InvalidCursor
+from guardoath.admin_directory import DynamoAdminDirectory, DirectoryUnavailable, InvalidCursor
 from guardoath.admin_usage import tenant_usage_report
 from guardoath.admin_user_actions import (AdminCognitoUserActions, UserActionConflict, UserActionUnavailable)
 from guardoath.admin_users import (CognitoUserDirectory, InvalidUserCursor,
@@ -439,6 +439,8 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                 result = admin_directory.page(owner_sub=principal.subject, limit=limit, search=search, cursor=cursor)
             except InvalidCursor as exc:
                 raise HTTPException(status_code=422, detail="Invalid pagination cursor") from exc
+            except DirectoryUnavailable as exc:
+                raise HTTPException(status_code=503, detail="Tenant directory unavailable") from exc
             except ValueError as exc:
                 raise HTTPException(status_code=422, detail="Invalid directory request") from exc
             except Exception as exc:
