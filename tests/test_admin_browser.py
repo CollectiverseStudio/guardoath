@@ -391,6 +391,22 @@ def test_verified_invoice_history_is_an_authenticated_bounded_owner_browser_acti
     assert "innerHTML" not in script
 
 
+def test_catalog_manifest_browser_requires_signed_fresh_review_and_never_calls_publish():
+    shell = app().get("/admin/login").text
+    script = app().get("/admin/client.js").text
+    assert 'id="review-manifest"' in shell and 'id="review-manifest-result"' in shell
+    assert 'el("review-manifest").disabled = true;' in script
+    assert 'reviewReadyForManifest = {reviewId:result.review_id, draftId:selected.id,' in script
+    assert 'selected.reviewId + "/manifest"' in script
+    assert 'result.status !== "metadata_manifest_preview_only"' in script
+    assert 'result.ready_to_publish !== false' in script
+    assert 'result.acceptance_tests_run !== false' in script
+    assert 'result.rollback_source_sha256 !== selected.baseline' in script
+    assert '"review-manifest-result"' in cleared_on_logout(script)
+    assert '"NOT published or executable' in script
+    assert "innerHTML" not in script
+
+
 def test_invoice_browser_verifies_page_scoped_payment_review_without_claiming_failed_charge():
     script = app().get("/admin/client.js").text
     assert "history.payment_review" in script

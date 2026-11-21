@@ -138,3 +138,58 @@ test("provider text remains text and explicit logout clears all private panels",
   await expect(page.locator("#audit-result")).toBeEmpty();
   await expect(page.locator("#tenant-rows tr")).toHaveCount(0);
 });
+
+
+test("owner reviewed catalog metadata manifest is visible only after signed review", async ({page}) => {
+  const draftId = "d".repeat(64), reviewId = "e".repeat(64);
+  const baseline = "b".repeat(64), proposal = "c".repeat(64), candidate = "f".repeat(64);
+  const response = data => ({status:200,contentType:"application/json",body:JSON.stringify(data)});
+  const fixture = await signedIn(page, {
+    features:{catalog_drafts:true,catalog_review_receipts:true},
+    override: request => {
+      if (request.method === "GET" && request.path === "/v1/admin/catalog/drafts/"+draftId)
+        return response({draft:{draft_id:draftId,rule_id:"pii.email",published:false,
+          baseline_sha256:baseline,proposal_sha256:proposal},stale:false,ready_to_publish:false});
+      if (request.method === "POST" && request.path === "/v1/admin/catalog/drafts/"+draftId+"/review")
+        return response({status:"review_recorded",published:false,persisted:true,reviewed:true,
+          ready_to_publish:false,review_id:reviewId,draft_id:draftId,
+          baseline_sha256:baseline,proposal_sha256:proposal});
+      if (request.method === "GET" && request.path === "/v1/admin/catalog/reviews/"+reviewId)
+        return response({review:{review_id:reviewId,draft_id:draftId,
+          baseline_sha256:baseline,proposal_sha256:proposal,status:"review_recorded",
+          published:false},published:false,ready_to_publish:false,stale:false,source_current:true});
+      if (request.method === "GET" && request.path === "/v1/admin/catalog/reviews/"+reviewId+"/manifest")
+        return response({status:"metadata_manifest_preview_only",review_id:reviewId,draft_id:draftId,
+          reviewed_source_sha256:baseline,reviewed_proposal_sha256:proposal,
+          candidate_metadata_sha256:candidate,rollback_source_sha256:baseline,
+          registry_version:"3",candidate_registry_version:"4",category_id:"privacy",
+          check_id:"pii",rule_id:"pii.email",changed_fields:["title"],published:false,
+          ready_to_publish:false,tenant_policies_changed:false,detector_behavior_changed:false,
+          source_current:true,acceptance_tests_run:false,
+          release_kind:"review_only_projection_not_executable_source"});
+      return null;
+    }
+  });
+  await page.locator("#nav-catalog").click();
+  await expect(page.locator("#review-manifest")).toBeDisabled();
+  await page.locator("#draft-id").fill(draftId);
+  await page.locator("#draft-inspect").click();
+  await expect(page.locator("#draft-review")).toBeEnabled();
+  await expect(page.locator("#review-manifest")).toBeDisabled();
+  page.on("dialog", async dialog => {
+    if (dialog.type() === "prompt") {
+      if (dialog.message().includes("type REVIEW")) await dialog.accept("REVIEW "+draftId.slice(-8));
+      else await dialog.accept("Reviewed the current documented metadata");
+    } else await dialog.accept();
+  });
+  await page.locator("#draft-review").click();
+  await expect(page.locator("#review-manifest")).toBeEnabled();
+  await page.locator("#review-manifest").click();
+  await expect(page.locator("#review-manifest-result")).toContainText("NOT published or executable");
+  await expect(page.locator("#review-manifest-result")).toContainText(candidate);
+  expect(fixture.calls.some(c => c.path.endsWith("/manifest") &&
+    c.headers["x-guardoath-admin-session"] === fixture.token)).toBe(true);
+  await expect(page.locator("#review-manifest")).toBeDisabled();
+  await page.locator("#logout").click();
+  await expect(page.locator("#review-manifest-result")).toBeEmpty();
+});

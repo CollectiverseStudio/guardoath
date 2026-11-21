@@ -351,3 +351,25 @@ completeness; this low-confidence estimate is not a live bill, AWS cost,
 revenue forecast, persistent alert or a change to customer settings.
 No new provider reads, infrastructure or spending. Exact-SHA CI and
 live 15-check acceptance remain separate.
+
+
+## Reviewed metadata manifest (source-only, not publication)
+
+A current, HMAC-verified catalog draft and its HMAC-verified owner review can be used
+to calculate a deterministic metadata-only **release manifest** through the
+authenticated, signed-read-audited
+`GET /v1/admin/catalog/reviews/{review_id}/manifest` endpoint. The existing
+Catalog workspace enables **Preview reviewed metadata manifest** only after its
+independent signed review read confirms the source is current. The server fetches
+the published registry once, checks the whole-source and proposal hashes,
+applies only title/use-case metadata to an in-memory projection for the exactly
+next registry version, and returns a candidate fingerprint, exact target/field
+diff and baseline fingerprint for a future rollback. A stale registry responds
+409; missing/tampered review or audit failure responds 503. Neither operation
+writes a catalog, modifies a tenant or changes a detector.
+
+The manifest is **not** an executable registry, source publication, rollback
+action, rule approval, evidence of acceptance tests, or authority to deploy.
+Source generation, versioned release tests (benign/adversarial/negative/timeout),
+exact-SHA CI, rollback implementation and 15 live checks remain outstanding.
+No new AWS capacity, provider charges or privacy deadline change is introduced.

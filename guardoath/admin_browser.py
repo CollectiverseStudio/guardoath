@@ -285,7 +285,9 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <input id="draft-id" maxlength="64" autocomplete="off" spellcheck="false">
 <button id="draft-inspect" type="button">Inspect draft</button>
 <button id="draft-review" type="button" disabled>Record signed review</button>
-<p id="draft-result" role="status"></p></section></div></div>
+<button id="review-manifest" type="button" disabled>Preview reviewed metadata manifest</button>
+<p id="draft-result" role="status"></p>
+<p id="review-manifest-result" role="status"></p></section></div></div>
 </main><script src="/admin/client.js" defer></script></body></html>"""
 
 # Zero third-party scripts. OAuth access token is deliberately memory-only.
@@ -299,6 +301,7 @@ _JS = r'''"use strict";
   let previewSelection = null;
   let previewReady = null;
   let draftReadyForReview = null;
+  let reviewReadyForManifest = null;
   let authEpoch = 0;
   let features = {tenant_status_changes:false};
   const el = id => document.getElementById(id);
@@ -359,11 +362,13 @@ _JS = r'''"use strict";
     el("tenant-rows").replaceChildren();
     el("user-rows").replaceChildren();
     el("categories").replaceChildren();
-    for (const id of ["status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "usage-details", "billing-details", "invoice-details", "audit-result", "proposal-result", "draft-result"]) say(id, "");
+    for (const id of ["status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "usage-details", "billing-details", "invoice-details", "audit-result", "proposal-result", "draft-result", "review-manifest-result"]) say(id, "");
     previewSelection = null;
     previewReady = null;
     draftReadyForReview = null;
+    reviewReadyForManifest = null;
     el("draft-review").disabled = true;
+    el("review-manifest").disabled = true;
     el("proposal-save").disabled = true;
     el("draft-id").value = "";
     say("proposal-target", "No rule selected.");
@@ -554,6 +559,9 @@ _JS = r'''"use strict";
   }
   async function inspectCatalogDraft() {
     draftReadyForReview = null;
+    reviewReadyForManifest = null;
+    el("review-manifest").disabled = true;
+    say("review-manifest-result", "");
     el("draft-review").disabled = true;
     if (!token || !features.catalog_drafts) return;
     const id = el("draft-id").value.trim();
@@ -582,6 +590,9 @@ _JS = r'''"use strict";
   }
   async function reviewCatalogDraft() {
     if (!token || !features.catalog_review_receipts || !draftReadyForReview) return;
+    reviewReadyForManifest = null;
+    el("review-manifest").disabled = true;
+    say("review-manifest-result", "");
     const selected = {...draftReadyForReview};
     if (el("draft-id").value.trim() !== selected.id) {
       draftReadyForReview = null;
@@ -626,6 +637,11 @@ _JS = r'''"use strict";
           typeof verified.stale !== "boolean" ||
           verified.source_current !== !verified.stale)
         throw new Error("Persisted catalog review integrity unavailable");
+      if (!verified.stale) {
+        reviewReadyForManifest = {reviewId:result.review_id, draftId:selected.id,
+          baseline:selected.baseline, proposal:selected.proposal};
+        el("review-manifest").disabled = false;
+      }
       say("draft-result", "Immutable signed review verified · " + result.review_id +
         " · source baseline " + selected.baseline +
         (verified.stale ? " · STALE — published catalog changed; review cannot be used as current-source evidence" :
@@ -633,6 +649,51 @@ _JS = r'''"use strict";
         " · publication NOT authorized; versioned tests, source release and rollback remain required" +
         readAuditLabel(verified));
     } catch(err) {if (token && epoch === authEpoch) say("draft-result", err.message);}
+  }
+
+  async function inspectReviewManifest() {
+    if (!token || !features.catalog_review_receipts || !reviewReadyForManifest) return;
+    const selected = {...reviewReadyForManifest};
+    reviewReadyForManifest = null;
+    el("review-manifest").disabled = true;
+    if (el("draft-id").value.trim() !== selected.draftId) {
+      say("review-manifest-result", "Draft selection changed; inspect and review again");
+      return;
+    }
+    const epoch = authEpoch;
+    try {
+      const result = await request("/v1/admin/catalog/reviews/" +
+        selected.reviewId + "/manifest");
+      if (!token || epoch !== authEpoch) return;
+      if (result.status !== "metadata_manifest_preview_only" ||
+          result.review_id !== selected.reviewId ||
+          result.draft_id !== selected.draftId ||
+          result.reviewed_source_sha256 !== selected.baseline ||
+          result.reviewed_proposal_sha256 !== selected.proposal ||
+          !/^[a-f0-9]{64}$/.test(result.candidate_metadata_sha256) ||
+          result.rollback_source_sha256 !== selected.baseline ||
+          result.published !== false || result.ready_to_publish !== false ||
+          result.tenant_policies_changed !== false ||
+          result.detector_behavior_changed !== false ||
+          result.source_current !== true || result.acceptance_tests_run !== false ||
+          result.release_kind !== "review_only_projection_not_executable_source" ||
+          !Array.isArray(result.changed_fields) ||
+          !result.changed_fields.length || !result.changed_fields.every(
+            field => field === "title" || field === "use_case"))
+        throw new Error("Reviewed metadata manifest integrity unavailable");
+      say("review-manifest-result", "Reviewed catalog metadata manifest · version " +
+        result.registry_version + " → " + result.candidate_registry_version +
+        " · " + result.category_id + "/" + result.check_id + "/" + result.rule_id +
+        " · changed: " + result.changed_fields.join(", ") +
+        " · candidate metadata SHA-256 " + result.candidate_metadata_sha256 +
+        " · rollback fingerprint " + result.rollback_source_sha256 +
+        " · NOT published or executable; tests, exact source release and rollback required" +
+        readAuditLabel(result));
+    } catch(err) {
+      if (token && epoch === authEpoch)
+        say("review-manifest-result", "Manifest unavailable: " + err.message +
+          " · no publication attempted");
+    }
   }
 
   function showUsers(data) {
@@ -1285,6 +1346,7 @@ _JS = r'''"use strict";
   el("proposal-save").addEventListener("click", saveCatalogDraft);
   el("draft-inspect").addEventListener("click", inspectCatalogDraft);
   el("draft-review").addEventListener("click", reviewCatalogDraft);
+  el("review-manifest").addEventListener("click", inspectReviewManifest);
   el("refresh").addEventListener("click", () => load().catch(e => say("status", e.message)));
   el("logout").addEventListener("click", () => signOut());
   el("search-go").addEventListener("click", () => {nextCursor=null;page();});

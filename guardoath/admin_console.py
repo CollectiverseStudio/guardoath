@@ -23,6 +23,8 @@ from guardoath.admin_catalog import CatalogProvider, read_catalog
 from guardoath.admin_catalog_drafts import AdminCatalogDrafts, DraftConflict, DraftUnavailable
 from guardoath.admin_catalog_preview import (
     CatalogPreviewConflict, CatalogPreviewUnavailable, preview_rule_description)
+from guardoath.admin_catalog_manifest import (
+    CatalogManifestConflict, CatalogManifestUnavailable, reviewed_metadata_manifest)
 from guardoath.admin_directory import DynamoAdminDirectory, InvalidCursor
 from guardoath.admin_usage import tenant_usage_report
 from guardoath.admin_user_actions import (AdminCognitoUserActions, UserActionConflict, UserActionUnavailable)
@@ -700,6 +702,32 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             return admin_json({"review": review, "stale": stale,
                 "source_current": not stale, "published": False,
                 "ready_to_publish": False,
+                **({"read_audit_event_id": read_event} if read_event else {})})
+
+        @router.get("/v1/admin/catalog/reviews/{review_id}/manifest")
+        def review_metadata_manifest(review_id: str, principal: VerifiedAdmin = Depends(require_admin)):
+            # Calculation only: never publish a catalog, enable a check or change a tenant.
+            if not re.fullmatch(r"[0-9a-f]{64}", review_id):
+                raise HTTPException(status_code=422, detail="Invalid review ID")
+            read_event = audit_sensitive_read(principal, "catalog.draft")
+            try:
+                review = catalog_drafts.read_review(principal.subject, review_id)
+                if review is None:
+                    raise HTTPException(status_code=404, detail="Catalog review not found")
+                draft = catalog_drafts.read(principal.subject, review["draft_id"])
+                if draft is None:
+                    raise CatalogManifestUnavailable("Reviewed draft unavailable")
+                if catalog_provider is None:
+                    raise CatalogManifestUnavailable("Published registry unavailable")
+                manifest = reviewed_metadata_manifest(
+                    catalog_provider, draft=draft, review=review)
+            except HTTPException:
+                raise
+            except CatalogManifestConflict as exc:
+                raise HTTPException(status_code=409, detail="Reviewed source changed; refresh") from exc
+            except (DraftUnavailable, CatalogManifestUnavailable, KeyError, TypeError) as exc:
+                raise HTTPException(status_code=503, detail="Catalog manifest unavailable") from exc
+            return admin_json({**manifest,
                 **({"read_audit_event_id": read_event} if read_event else {})})
 
     if admin_mutator is not None:
