@@ -135,7 +135,11 @@ def test_metadata_manifest_route_owner_only_audited_and_fails_closed():
     assert client.get(path,headers={"X-GuardOath-Key":"owner"}).status_code == 401
     assert client.get(path,headers={"X-GuardOath-Admin-Session":"no-mfa"}).status_code == 403
     assert client.get(path,headers={"X-GuardOath-Admin-Session":"other"}).status_code == 503
-    assert client.get(path[:-1]+"x",headers={"X-GuardOath-Admin-Session":"owner"}).status_code == 422
+    # A valid independent owner's denied lookup still emits one signed read intent.
+    assert db.writes == 3
+    malformed = "/v1/admin/catalog/reviews/" + review["review_id"] + "x/manifest"
+    assert client.get(malformed,headers={"X-GuardOath-Admin-Session":"owner"}).status_code == 422
+    assert db.writes == 3  # malformed request never reads or audits protected data
     assert calls == []
     headers={"X-GuardOath-Admin-Session":"owner"}
     ok=client.get(path,headers=headers)
@@ -144,7 +148,7 @@ def test_metadata_manifest_route_owner_only_audited_and_fails_closed():
     assert result["review_id"] == review["review_id"]
     assert result["draft_id"] == draft["draft_id"]
     assert len(result["read_audit_event_id"]) == 64
-    assert calls == [1] and db.writes == 3  # one signed read + immutable review/draft
+    assert calls == [1] and db.writes == 4  # signed owner audit in addition to denied other-owner attempt
     assert SOURCE == source
     source["domains"][0]["controls"][0]["rules"][0]["title"] = "Changed by release"
     assert client.get(path,headers=headers).status_code == 409
