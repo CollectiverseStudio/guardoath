@@ -23,13 +23,13 @@ class Native:
         self.calls.append("begin")
         if self.unavailable:
             raise NativeMfaUnavailable("must never leak")
-        return "test-ticket" if password == "long-test-password" else None
+        return "t" * 60 if password == "long-test-password" else None
 
     def finish(self, ticket, otp):
         self.calls.append("finish")
         if self.unavailable:
             raise NativeMfaUnavailable("must never leak")
-        return self.token if (ticket, otp) == ("test-ticket", "123456") else None
+        return self.token if (ticket, otp) == ("t" * 60, "123456") else None
 
 
 def client(native=None, verifier=None):
@@ -92,7 +92,7 @@ def test_unauthorized_origins_are_denied_before_any_cognito_call():
         h = {"Origin": origin} if origin is not None else {}
         for route, payload in [
                 ("start", {"email": "owner@example.com", "password": "long-test-password"}),
-                ("finish", {"ticket": "test-ticket" + "x" * 50, "otp": "123456"})]:
+                ("finish", {"ticket": "t" * 60, "otp": "123456"})]:
             result = c.post("/v1/admin/auth/native/" + route, headers=h, json=payload)
             assert result.status_code == 403
     assert native.calls == []
@@ -101,7 +101,7 @@ def test_unauthorized_origins_are_denied_before_any_cognito_call():
 def test_missing_signed_recent_mfa_or_owner_group_is_fail_closed():
     c = client(Native(), verifier=lambda _: None)
     result = c.post("/v1/admin/auth/native/finish", headers=ORIGIN,
-                    json={"ticket": "test-ticket" + "x" * 50, "otp": "123456"})
+                    json={"ticket": "t" * 60, "otp": "123456"})
     assert result.status_code == 403
     assert "access_token" not in result.text
 
