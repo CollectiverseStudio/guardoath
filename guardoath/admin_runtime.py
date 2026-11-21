@@ -13,6 +13,7 @@ import hmac
 import hashlib
 
 from guardoath.admin_browser import BrowserAuthConfig, BoundExchange
+from guardoath.admin_native_mfa import CognitoNativeMfa
 from guardoath.admin_integration import AdminConfigurationError, mount_admin_console
 from guardoath.admin_actions import AdminTenantActions
 from guardoath.admin_audit import AdminAuditReader, AdminSensitiveReadAuditor
@@ -38,6 +39,9 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
         return False
     if enabled != "1":
         raise AdminConfigurationError("GUARDOATH_ADMIN_ENABLED must be 0 or 1")
+    native_enabled = os.getenv("GUARDOATH_ADMIN_NATIVE_MFA_ENABLED", "0")
+    if native_enabled not in {"0", "1"}:
+        raise AdminConfigurationError("GUARDOATH_ADMIN_NATIVE_MFA_ENABLED must be 0 or 1")
     pool = os.getenv("GUARDOATH_COGNITO_POOL_ID", "")
     domain = os.getenv("GUARDOATH_ADMIN_COGNITO_DOMAIN", "")
     client_id = os.getenv("GUARDOATH_ADMIN_CLIENT_ID", "")
@@ -73,6 +77,8 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
         cognito_client = boto3.client("cognito-idp", region_name=pool.rsplit("_", 1)[0],
                                      config=Config(connect_timeout=1, read_timeout=2,
                                                    retries={"total_max_attempts": 2}))
+    native_auth = (CognitoNativeMfa(cognito_client, client_id, bytes.fromhex(key_hex))
+                   if native_enabled == "1" else None)
     # Production owner data reads require the separate signed audit table.
     # Without one, /admin/login remains usable but protected reads return 503;
     # the customer app stays available and cannot expose unaudited owner data.
@@ -126,7 +132,8 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
             validate_record=record_validator)
     mount_admin_console(app, sessions=admin_sessions, tenants=tenants, cognito=cognito_client,
                         cursor_signing_key=bytes.fromhex(key_hex), browser_config=config,
-                        browser_exchange=BoundExchange(config), admin_mutator=mutator,
+                        browser_exchange=BoundExchange(config), native_auth=native_auth,
+                        admin_mutator=mutator,
                         audit_reader=audit_reader, read_auditor=read_auditor,
                         catalog_drafts=catalog_drafts,
                         require_persistent_read_audit=True,

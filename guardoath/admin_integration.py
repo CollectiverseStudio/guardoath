@@ -11,6 +11,7 @@ from fastapi import FastAPI
 
 from guardoath.admin_catalog import published_catalog
 from guardoath.admin_browser import BrowserAuthConfig, BoundExchange, create_browser_router
+from guardoath.admin_native_mfa import CognitoNativeMfa
 from guardoath.admin_cognito import make_verifier
 from guardoath.admin_console import create_admin_router
 from guardoath.admin_directory import DynamoAdminDirectory
@@ -43,6 +44,7 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
                         cursor_signing_key: bytes,
                         browser_config: BrowserAuthConfig | None = None,
                         browser_exchange: BoundExchange | None = None,
+                        native_auth: CognitoNativeMfa | None = None,
                         admin_mutator=None, audit_reader=None, read_auditor=None, catalog_drafts=None,
                         require_persistent_read_audit: bool = False,
                         billing_reporter=None, billing_downgrade=None, billing_invoices=None,
@@ -81,6 +83,8 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
     # to unverified access, even when the base read-only router is present.
     if (browser_config is None) != (browser_exchange is None):
         raise AdminConfigurationError("Admin browser callback and exchange are both required")
+    if native_auth is not None and browser_config is None:
+        raise AdminConfigurationError("Native admin MFA requires the bound browser verifier")
     if browser_config is not None:
         if (getattr(sessions, "client_id", None) != browser_config.client_id or
                 getattr(sessions, "domain", None) != browser_config.domain or
@@ -111,6 +115,7 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
         browser_entry_enabled=browser_config is not None,
     ))
     if browser_config is not None and browser_exchange is not None:
-        app.include_router(create_browser_router(browser_config, browser_exchange, verifier))
+        app.include_router(create_browser_router(browser_config, browser_exchange, verifier,
+                                                 native_auth=native_auth))
 
     app.state.guardoath_admin_mounted = True

@@ -18,11 +18,12 @@ from urllib.parse import urlencode
 import urllib.error
 import urllib.request
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from guardoath.admin_console import VerifiedAdmin
+from guardoath.admin_native_mfa import CognitoNativeMfa, NativeMfaUnavailable
 
 
 SAFE_DOMAIN = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.auth\.[a-z]{2}(?:-[a-z]+)+-\d\.amazoncognito\.com$")
@@ -49,6 +50,18 @@ class CodeExchange(BaseModel):
     model_config = ConfigDict(extra="forbid")
     code: str = Field(min_length=1, max_length=256)
     code_verifier: str = Field(min_length=43, max_length=128)
+
+
+class NativePasswordStart(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    email: str = Field(min_length=1, max_length=254)
+    password: SecretStr
+
+
+class NativePasswordFinish(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    ticket: str = Field(min_length=40, max_length=9000)
+    otp: str = Field(min_length=1, max_length=10)
 
 
 class ExchangeUnavailable(Exception):
@@ -123,7 +136,8 @@ class BoundExchange:
 
 
 def create_browser_router(config: BrowserAuthConfig, exchange: BoundExchange,
-                          verify_owner: Callable[[str], VerifiedAdmin | None]) -> APIRouter:
+                          verify_owner: Callable[[str], VerifiedAdmin | None],
+                          native_auth: CognitoNativeMfa | None = None) -> APIRouter:
     """Add the public shell/config and a fail-closed owner-only code exchange."""
     if exchange.config != config or not callable(verify_owner):
         raise ValueError("Browser auth services must match")
@@ -145,7 +159,9 @@ def create_browser_router(config: BrowserAuthConfig, exchange: BoundExchange,
     @router.get("/v1/admin/auth/config")
     def public_config():
         return JSONResponse({"domain": config.domain, "client_id": config.client_id,
-                             "redirect_uri": config.redirect_uri}, headers={"Cache-Control": "no-store"})
+                             "redirect_uri": config.redirect_uri,
+                             "native_mfa_enabled": native_auth is not None},
+                            headers={"Cache-Control": "no-store"})
 
     @router.post("/v1/admin/auth/exchange")
     def exchange_code(payload: CodeExchange):
@@ -165,13 +181,67 @@ def create_browser_router(config: BrowserAuthConfig, exchange: BoundExchange,
         return JSONResponse({"access_token": token, "token_type": "Bearer"}, headers={
             "Cache-Control": "no-store", "Pragma": "no-cache", "X-Content-Type-Options": "nosniff"})
 
+    if native_auth is not None:
+        def require_origin(request: Request):
+            # Password and OTP are only accepted from the production origin;
+            # never trust a supplied Host or arbitrary localhost Origin.
+            if request.headers.get("origin") != "https://guardoath.com":
+                raise HTTPException(status_code=403, detail="Administrator sign-in denied")
+
+        @router.post("/v1/admin/auth/native/start")
+        def native_password(payload: NativePasswordStart, request: Request):
+            require_origin(request)
+            try:
+                ticket = native_auth.begin(payload.email, payload.password.get_secret_value())
+            except NativeMfaUnavailable as exc:
+                raise HTTPException(status_code=503, detail="Administrator sign-in unavailable") from exc
+            if ticket is None:
+                raise HTTPException(status_code=401, detail="Administrator sign-in failed")
+            return JSONResponse({"challenge": "software_token_mfa",
+                                 "challenge_ticket": ticket},
+                                headers={"Cache-Control": "no-store",
+                                         "Pragma": "no-cache",
+                                         "Referrer-Policy": "no-referrer"})
+
+        @router.post("/v1/admin/auth/native/finish")
+        def native_otp(payload: NativePasswordFinish, request: Request):
+            require_origin(request)
+            try:
+                token = native_auth.finish(payload.ticket, payload.otp)
+                if token is None:
+                    raise HTTPException(status_code=401, detail="Administrator sign-in failed")
+                # This independent verifier MUST prove a signed MFA AMR +
+                # recent auth_time, plus live Cognito owner membership.
+                principal = verify_owner(token)
+            except HTTPException:
+                raise
+            except NativeMfaUnavailable as exc:
+                raise HTTPException(status_code=503, detail="Administrator sign-in unavailable") from exc
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="Administrator identity check unavailable") from exc
+            if (not isinstance(principal, VerifiedAdmin) or not principal.mfa_verified
+                    or "owner" not in principal.roles):
+                raise HTTPException(status_code=403, detail="Administrative authorization denied")
+            return JSONResponse({"access_token": token, "token_type": "Bearer"},
+                                headers={"Cache-Control": "no-store", "Pragma": "no-cache",
+                                         "Referrer-Policy": "no-referrer",
+                                         "X-Content-Type-Options": "nosniff"})
+
     return router
 
 
 _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GuardOath Admin</title>
 <style>:root{font-family:system-ui,sans-serif;color:#14273a;background:#f5f7fb}body{margin:0}header{background:#12273c;color:white;padding:20px max(20px,5vw)}main{max-width:1100px;margin:24px auto;padding:0 20px}.panel{background:white;border:1px solid #dbe3ee;border-radius:12px;padding:20px;margin-bottom:16px}button{background:#154e82;color:white;border:0;border-radius:6px;padding:10px 16px;cursor:pointer}button:disabled{opacity:.5;cursor:default}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.metric{border:1px solid #ddd;border-radius:8px;padding:12px}.muted{color:#526678}table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid #dfe5ed;padding:9px;text-align:left}.scroll{overflow-x:auto}input{padding:9px;max-width:100%}nav{display:flex;flex-wrap:wrap;gap:12px}nav button{background:#30546f}#app[hidden]{display:none}</style></head><body>
 <header><h1>GuardOath Administration</h1><p>Owner console · Read-only inspection with optional audited access controls</p></header><main>
-<section id="login" class="panel"><h2>Administrator sign-in</h2><p>Use your GuardOath administrator account with MFA. Customers and demo API keys do not have administrative access.</p><button id="login-start" type="button">Sign in with Cognito</button><p id="login-message" role="status"></p></section>
+<section id="login" class="panel"><h2>Administrator sign-in</h2><p>Use your GuardOath administrator account with MFA. Customers and demo API keys do not have administrative access.</p><button id="login-start" type="button">Sign in with Cognito</button>
+<div id="native-auth" hidden><p class="muted">Administrator password + authenticator app. Requires enrolled TOTP MFA.</p>
+<label for="native-email">Administrator email</label> <input id="native-email" type="email" autocomplete="username" maxlength="254">
+<label for="native-password">Password</label> <input id="native-password" type="password" autocomplete="current-password">
+<button id="native-start" type="button">Continue to authenticator</button>
+<div id="native-challenge" hidden><label for="native-code">Authenticator code</label>
+<input id="native-code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code">
+<button id="native-finish" type="button">Verify administrator</button></div></div>
+<p id="login-message" role="status"></p></section>
 <div id="app" hidden><section class="panel"><nav><button type="button" id="refresh">Refresh</button><button type="button" id="logout">Sign out</button></nav><p id="status" role="status"></p></section>
 <section class="panel"><h2>Overview</h2><div class="grid" id="metrics"></div></section>
 <section class="panel"><h2>Cognito users</h2><p class="muted">Owner-only, one provider page at a time; masked emails and unknown totals.</p><label for="user-search">Email prefix</label> <input id="user-search" maxlength="80" autocomplete="off"> <button id="user-search-go" type="button">Search users</button><div class="scroll"><table><thead><tr><th>Username</th><th>Masked email</th><th>Verified</th><th>Enabled</th><th>Status</th><th>Created (UTC)</th></tr></thead><tbody id="user-rows"></tbody></table></div><p id="user-status" role="status"></p><button id="user-next" type="button" disabled>Next users</button>
@@ -207,6 +277,7 @@ _JS = r'''"use strict";
 (() => {
   let token = null;
   let config = null;
+  let nativeTicket = null;
   let nextCursor = null;
   let nextUserCursor = null;
   let previewSelection = null;
@@ -262,6 +333,10 @@ _JS = r'''"use strict";
   const signOut = (message = "Signed out of this tab") => {
     authEpoch += 1;
     token = null;
+    nativeTicket = null;
+    el("native-password").value = "";
+    el("native-code").value = "";
+    el("native-challenge").hidden = true;
     clearAdminData();
     setLoggedIn(false);
     say("login-message", message);
@@ -1054,6 +1129,49 @@ _JS = r'''"use strict";
     setLoggedIn(true);
     try { await load(); } catch(err) { say("status", err.message); }
   }
+  async function beginNative() {
+    const email = el("native-email").value.trim();
+    const password = el("native-password").value;
+    el("native-password").value = "";
+    nativeTicket = null;
+    el("native-challenge").hidden = true;
+    try {
+      const challenge = await request("/v1/admin/auth/native/start", {
+        method:"POST",body:JSON.stringify({email,password})
+      });
+      if (challenge.challenge !== "software_token_mfa" ||
+          typeof challenge.challenge_ticket !== "string") throw new Error("Administrator sign-in rejected");
+      nativeTicket = challenge.challenge_ticket;
+      el("native-challenge").hidden = false;
+      say("login-message", "Enter the code from your authenticator app");
+    } catch(err) {say("login-message", err.message);}
+  }
+  async function finishNative() {
+    const ticket = nativeTicket;
+    nativeTicket = null;
+    const otp = el("native-code").value;
+    el("native-code").value = "";
+    el("native-challenge").hidden = true;
+    if (!ticket) return;
+    try {
+      const result = await request("/v1/admin/auth/native/finish", {
+        method:"POST",body:JSON.stringify({ticket,otp})
+      });
+      if (typeof result.access_token !== "string" || !result.access_token)
+        throw new Error("Administrator sign-in rejected");
+      authEpoch += 1;
+      token = result.access_token;
+      el("native-email").value = "";
+      clearAdminData();
+      setLoggedIn(true);
+      await load();
+    } catch(err) {say("login-message", err.message);}
+  }
+  request("/v1/admin/auth/config").then(value => {
+    if (value.native_mfa_enabled === true) el("native-auth").hidden = false;
+  }).catch(() => {});
+  el("native-start").addEventListener("click", beginNative);
+  el("native-finish").addEventListener("click", finishNative);
   el("login-start").addEventListener("click", beginLogin);
   el("proposal-save").addEventListener("click", saveCatalogDraft);
   el("draft-inspect").addEventListener("click", inspectCatalogDraft);

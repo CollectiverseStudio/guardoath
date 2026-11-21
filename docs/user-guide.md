@@ -3592,3 +3592,17 @@ The owner-only Usage panel derives a read-time warning from persisted current-mo
 
 ### Operator console: versioned catalog description proposal preview
 In the owner-only Categories and checks panel, expand a published check, select **Preview description** beside a rule, and edit its title or use case. **Preview description change** compares the proposal against the authoritative registry and enforces the next registry version, stable IDs, and bounded fields. The result is an advisory, unsaved, unpublished before/after metadata diff; it cannot change validation, severity, actions, tenant per-stage settings, attachment enforcement, reference trust, or API access. Stale versions, unknown rules, malformed fields and unchanged descriptions are refused. Publishing still needs a separate approved, reviewed, tested, versioned implementation and rollback. Production administrator access remains default off until release and live validation gates are satisfied.
+
+## Administrator sign-in — optional password and authenticator flow
+
+The operator-only `/admin` is disabled unless explicitly enabled by the AWS
+owner. When the separate admin native MFA option is configured, its sign-in
+page offers an authenticator-app method: enter the admin account email and
+password, then the current six-digit software-token code. The UI never
+stores the password, code or challenge ticket across page loads; it releases
+a session only after the server verifies Cognito's signed current-login MFA
+evidence and live `GuardOathOwners` membership. MFA setup-required and
+password-only accounts are refused. Customer sign-in or a paid subscription
+does not grant admin privileges. No credentials, MFA codes or tokens should
+be sent to GuardOath support. This operator feature is disabled by default,
+and no enabled admin UI or production readiness is implied by source code.

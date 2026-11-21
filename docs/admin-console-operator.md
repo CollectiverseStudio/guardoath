@@ -257,3 +257,42 @@ python -m tools.verify_admin_activation --profile collectiverse-prod
 The tool reads the existing stack parameters/outputs, Lambda feature flags, and Cognito MFA/group configuration without changing any AWS resource. It prints only predetermined booleans, never account identifiers, client IDs, user data or credentials. Exit code 2 means **not authorized for activation**; the tool always reports `signed_current_login_mfa_verified=false` because static configuration cannot attest to a real recent MFA login. Even when the admin infrastructure is provisioned, this is an inventory, not proof of authenticated admin access or a substitute for 15 live checks.
 
 For a legacy stack that lacks `EnableAdminConsole`, treat a missing parameter as unavailable rather than assuming the admin application is broken. Preserve `EnableSelfRegistration=1` in any future CloudFormation preview, and verify all unrelated modifications and conditional replacements before executing it. The currently documented Cognito Lite/classic UI cannot provide trustworthy proof of current-login MFA for the strict GuardOath admin verifier. Do not fake `amr`, treat user MFA enrollment as recent authentication, or silently upgrade to a potentially billable tier.
+
+## Optional Cognito Lite API software-token administrator sign-in
+
+The separate admin public Cognito app client can opt into a bounded two-step
+API sign-in without upgrading the user pool from Lite or switching the
+existing customer hosted UI: set `EnableAdminNativeMfa=1` **only** in a
+reviewed CloudFormation update with `EnableAdminConsole=1` and an independent
+owner signing key. Both options are default-off. The stack permits
+`ALLOW_USER_PASSWORD_AUTH` exclusively for the admin app client when opted in,
+not for the existing customer app client.
+
+The GuardOath administrator login page then offers password followed by a
+six-digit authenticator-app code. The server calls Cognito `InitiateAuth`
+and **requires** `SOFTWARE_TOKEN_MFA`; password-only sign-in, setup-required,
+unrecognized challenges, malformed signatures, stale challenge tickets and
+provider failures do not release administrator tokens. A 3-minute HMAC-bound
+challenge ticket remains in transient browser memory (never local storage);
+it contains a Cognito challenge session and must be treated as sensitive.
+The password and OTP are cleared immediately in the browser and never
+stored in a tenant or audit record. Same-origin, limited Cognito calls and
+content-free errors apply. MFA setup must be completed through an already
+trusted enrollment flow first; this login does not enroll a factor.
+
+On successful Cognito TOTP completion, the original live admin authorization
+still independently requires a **signed** access token whose `amr` includes
+`mfa`, a recent signed `auth_time`, live enabled Cognito account and
+`GuardOathOwners` group. No signed AMR or no authenticator challenge means
+**no admin session**, even if credentials and TOTP otherwise succeeded.
+Cognito's ACR/AMR rollout may not have reached a specific pool; verify
+a real current-login token, not the classic hosted UI's default claims,
+before production activation. OAuth/PKCE remains an independent existing
+sign-in path; it is not evidence that classic hosted UI achieved MFA.
+
+Activation is not automatic: the current deployed CloudFormation stack and
+owner enrollment must be reviewed, registration must remain enabled, no
+existing Cognito pool/customer Lambda/CloudFront resource may unexpectedly
+be replaced, no paid tier change is authorized, and all exact-source CI and
+15 live post-deployment checks remain required. The new source alone does
+not enable `/admin` or provision an owner account.

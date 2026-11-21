@@ -118,6 +118,15 @@
         "1"
       ],
       "Description": "Optional persistent admin audit table and tenant mutations; incurs an additional provisioned DynamoDB unit. Off by default."
+    },
+    "EnableAdminNativeMfa": {
+      "Type": "String",
+      "Default": "0",
+      "AllowedValues": [
+        "0",
+        "1"
+      ],
+      "Description": "Opt-in admin password plus Cognito SOFTWARE_TOKEN_MFA API sign-in; requires admin enabled and signed AMR evidence."
     }
   },
   "Rules": {
@@ -260,6 +269,33 @@
             ]
           },
           "AssertDescription": "Leave one WCU available under the 25 WCU account allowance for the admin audit table."
+        }
+      ]
+    },
+    "AdminNativeMfaRequiresConsole": {
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Or": [
+              {
+                "Fn::Equals": [
+                  {
+                    "Ref": "EnableAdminNativeMfa"
+                  },
+                  "0"
+                ]
+              },
+              {
+                "Fn::Equals": [
+                  {
+                    "Ref": "EnableAdminConsole"
+                  },
+                  "1"
+                ]
+              }
+            ]
+          },
+          "AssertDescription": "Admin native MFA cannot be enabled without the isolated admin console."
         }
       ]
     }
@@ -522,6 +558,9 @@
                   "Ref": "AWS::NoValue"
                 }
               ]
+            },
+            "GUARDOATH_ADMIN_NATIVE_MFA_ENABLED": {
+              "Ref": "EnableAdminNativeMfa"
             }
           }
         }
@@ -1231,7 +1270,16 @@
           "COGNITO"
         ],
         "ExplicitAuthFlows": [
-          "ALLOW_REFRESH_TOKEN_AUTH"
+          "ALLOW_REFRESH_TOKEN_AUTH",
+          {
+            "Fn::If": [
+              "AdminNativeMfaEnabled",
+              "ALLOW_USER_PASSWORD_AUTH",
+              {
+                "Ref": "AWS::NoValue"
+              }
+            ]
+          }
         ],
         "PreventUserExistenceErrors": "ENABLED",
         "EnableTokenRevocation": true,
@@ -1402,6 +1450,14 @@
       "Fn::Equals": [
         {
           "Ref": "EnableAdminMutations"
+        },
+        "1"
+      ]
+    },
+    "AdminNativeMfaEnabled": {
+      "Fn::Equals": [
+        {
+          "Ref": "EnableAdminNativeMfa"
         },
         "1"
       ]
