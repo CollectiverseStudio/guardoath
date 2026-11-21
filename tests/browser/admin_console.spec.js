@@ -34,6 +34,20 @@ test("owner workspace navigates every section and retains honest unavailable tot
   expect(await page.evaluate(() => Object.values(localStorage).join(" "))).not.toContain(fixture.token);
 });
 
+test("owner catalog shows safe source evidence counts and eligibility without deployment claims", async ({page}) => {
+  await signedIn(page);
+  await page.locator("#nav-catalog").click();
+  const catalog = page.locator("#categories");
+  await expect(catalog).toContainText("Stages: input, output");
+  await expect(catalog).toContainText("Actions: block, flag, allow, redact");
+  await expect(catalog).toContainText("Declared unit-test files: 2");
+  await expect(catalog).toContainText("Declared evaluation files: 1");
+  await expect(catalog).toContainText("NOT current CI or live deployment evidence");
+  await expect(catalog).toContainText("Check use case: Inspect identifiers in prompts and answers");
+  await expect(catalog).toContainText("Limitations: Free-text names are not reliably detected");
+  expect(await catalog.innerHTML()).not.toContain("tests/private-one.py");
+});
+
 test("tenant actions reveal usage, subscription and invoice results immediately", async ({page}) => {
   await signedIn(page);
   const row = page.locator("#tenant-rows tr").filter({hasText:"sample-studio"});

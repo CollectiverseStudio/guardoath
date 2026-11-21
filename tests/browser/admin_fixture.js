@@ -38,7 +38,13 @@ function createAdminFixture(options = {}) {
   const catalog = {registry_version:"3", source:"Synthetic browser catalog sample", read_only:true,
     total_categories:2, total_checks:2, total_rules:2, categories:[
       {category_id:"privacy", name:"Privacy and personal data", status:"active", checks:[
-        {check_id:"pii", name:"Personal data", rule_count:1, rules:[
+        {check_id:"pii", name:"Personal data", rule_count:1,
+         stages:["input","output"], supported_actions:["block","flag","allow","redact"],
+         use_case:"Inspect identifiers in prompts and answers",
+         limitations:"Free-text names are not reliably detected",
+         test_evidence:{unit_test_files_declared:2,evaluation_files_declared:1,
+           ci_verified_for_source:false,live_deployment_verified:null},
+         rules:[
           {rule_id:"pii.email", title:"Email address", use_case:"Review personal identifiers in prompts and responses."}]}]},
       {category_id:"secrets", name:"Secrets and confidential information", status:"active", checks:[
         {check_id:"secrets", name:"Credentials and secrets", rule_count:1, rules:[

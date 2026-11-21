@@ -448,6 +448,20 @@ _JS = r'''"use strict";
         title.append(textNode("strong", check.name || check.check_id),
           textNode("span", " — " + (check.rule_count ?? "?") + " rules"));
         item.append(title);
+        const evidence = check.test_evidence || {};
+        const fileCount = count => Number.isSafeInteger(count) && count >= 0 ? String(count) : "unavailable";
+        const stages = Array.isArray(check.stages) && check.stages.length ? check.stages.join(", ") : "unknown";
+        const actions = Array.isArray(check.supported_actions) && check.supported_actions.length
+          ? check.supported_actions.join(", ") : "unknown";
+        const evidenceLine = document.createElement("p");
+        evidenceLine.className = "muted";
+        evidenceLine.append(textNode("span", "Stages: " + stages + " · Actions: " + actions +
+          " · Declared unit-test files: " + fileCount(evidence.unit_test_files_declared) +
+          " · Declared evaluation files: " + fileCount(evidence.evaluation_files_declared) +
+          " · Registry declarations only; NOT current CI or live deployment evidence."));
+        item.append(evidenceLine);
+        if (check.use_case) item.append(textNode("p", "Check use case: " + check.use_case));
+        if (check.limitations) item.append(textNode("p", "Limitations: " + check.limitations));
         const entries = document.createElement("ul");
         for (const rule of check.rules || []) {
           const entry = document.createElement("li");
