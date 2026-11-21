@@ -118,7 +118,7 @@ test("verified inactive Stripe disagreement appears in owner Billing without inv
 
 test("unavailable verified Stripe read is visible and never claims paid entitlement", async ({page}) => {
   const fixture = await signedIn(page,{override: request =>
-    /^\\/v1\\/admin\\/subscriptions\\/[^/]+$/.test(request.path)
+    request.path === "/v1/admin/subscriptions/sample-studio"
       ? {status:503,contentType:"application/json",body:JSON.stringify({
           detail:"Subscription verification unavailable"})} : null});
   await page.locator("#nav-tenants").click();
