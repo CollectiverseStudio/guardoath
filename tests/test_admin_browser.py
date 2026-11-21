@@ -442,8 +442,8 @@ def test_cognito_owner_action_recovery_ui_uses_authenticated_read_and_clears_on_
         assert marker in page
     assert 'features.cognito_action_receipts' in script
     assert 'request("/v1/admin/users/status/receipt", {' in script
-    assert 'method:"POST", body:JSON.stringify({idempotency_key:key})' in script
-    assert 'current_provider_state_verified !== false' in script
+    assert 'method:"POST", body:JSON.stringify(email ? {idempotency_key:key,email} : {idempotency_key:key})' in script
+    assert 'result.current_provider_state_verified !== (email !== "" && result.status !== "not_found")' in script
     assert 'idempotency_key:actionKey' in script
     assert 'addEventListener("click", inspectUserActionReceipt)' in script
     assert 'el("user-action-key").value = ""' in script

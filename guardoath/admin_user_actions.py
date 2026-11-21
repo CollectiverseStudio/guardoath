@@ -125,7 +125,9 @@ class AdminCognitoUserActions:
                      or not _EXACT_EMAIL.fullmatch(email) or email.startswith(".")
                      or email.endswith(".") or ".." in email))):
             raise ValueError("Invalid owner action reference or exact account email")
-        key_source = (actor + "\0" + idempotency_key).encode()
+        # Must match the original mutation's literal backslash-zero separator.
+        # Changing this canonical byte string makes all signed history unreachable.
+        key_source = (actor + "\\0" + idempotency_key).encode()
         intent_id = hmac.new(self.audit_key, b"cognito-status-intent:" + key_source,
                              hashlib.sha256).hexdigest()
         outcome_id = hmac.new(self.audit_key, b"cognito-status-outcome:" + key_source,
