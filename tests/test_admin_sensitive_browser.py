@@ -22,7 +22,7 @@ def test_owner_browser_read_receipt_and_mutation_receipt_are_separately_validate
                      "readAuditLabel(response)", 'receipt.operation === "admin.read"',
                      'receipt.integrity_status !== "signed_verified"',
                      'change.field !== "protected_read"',
-                     '"cognito.exact_user","stripe.subscription","audit.receipt"',
+                     '"cognito.exact_user","stripe.subscription","stripe.invoices","audit.receipt"',
                      '"tenant.directory","tenant.detail","tenant.usage","catalog.registry","catalog.preview"',
                      'readAuditLabel(overview)', 'readAuditLabel(available)',
                      "Persistent read auditing not configured",

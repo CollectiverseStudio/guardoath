@@ -365,3 +365,20 @@ def test_cognito_sign_in_status_control_has_server_verified_audit_and_owner_sess
     assert 'addEventListener("click", changeUserStatus)' in script
     assert 'el("user-change-email").value = ""' in script
     assert 'sessionStorage.setItem("access_token"' not in script
+
+
+def test_verified_invoice_history_is_an_authenticated_bounded_owner_browser_action():
+    shell = app().get("/admin/login").text
+    script = app().get("/admin/client.js").text
+    assert 'id="invoice-details"' in shell
+    assert "Verified recent invoices" in shell
+    assert "features.billing_invoices" in script
+    assert 'invoices.addEventListener("click", () => inspectInvoices(tenant))' in script
+    assert 'encodeURIComponent(tenant.tenant_id) + "/invoices"' in script
+    assert "history.verified !== true" in script
+    assert "history.invoices.length > 5" in script
+    assert "Number.isSafeInteger(n)" in script
+    assert "row.amount_paid_minor" in script
+    assert "readAuditLabel(result)" in script
+    assert "invoice-details" in cleared_on_logout(script)
+    assert "innerHTML" not in script
