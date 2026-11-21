@@ -91,12 +91,19 @@ def test_login_shell_is_public_but_contains_no_sensitive_information():
     assert 'headers.Authorization = "Bearer " + token' not in script.text
 
 
-def test_public_config_contains_only_oauth_metadata():
-    result = app().get("/v1/admin/auth/config")
+def test_public_config_contains_only_oauth_metadata_and_native_capability():
+    calls = []
+    result = app(sender=lambda *_: calls.append("exchange"),
+                 checker=lambda _: calls.append("verify")).get("/v1/admin/auth/config")
     assert result.status_code == 200
     assert result.json() == {"domain": CFG.domain, "client_id": CFG.client_id,
-                             "redirect_uri": CFG.redirect_uri}
+                             "redirect_uri": CFG.redirect_uri,
+                             "native_mfa_enabled": False}
     assert result.headers["Cache-Control"] == "no-store"
+    # A public capability read cannot authenticate or disclose private session state.
+    assert calls == []
+    assert "access_token" not in result.text
+    assert "challenge_ticket" not in result.text
 
 
 def test_exchange_uses_only_fixed_server_url_and_redirect():
@@ -382,3 +389,4 @@ def test_verified_invoice_history_is_an_authenticated_bounded_owner_browser_acti
     assert "readAuditLabel(result)" in script
     assert "invoice-details" in cleared_on_logout(script)
     assert "innerHTML" not in script
+

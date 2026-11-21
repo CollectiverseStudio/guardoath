@@ -296,3 +296,38 @@ existing Cognito pool/customer Lambda/CloudFront resource may unexpectedly
 be replaced, no paid tier change is authorized, and all exact-source CI and
 15 live post-deployment checks remain required. The new source alone does
 not enable `/admin` or provision an owner account.
+
+
+## Owner workspace navigation and visible results
+
+The owner interface now has seven sections: Overview, Users, Tenants, Billing,
+Usage, Audit and Catalog. Desktop navigation remains in a sidebar; small screens
+use a compact wrapped navigation grid. The active section is named in the page
+title and identified for assistive technology. Every existing administrative
+control and its server authorization remains in place.
+
+From **Tenants**, choose **Usage**, **Verify Stripe** or **Invoices** to open the
+matching result section immediately. Loading and provider-failure messages appear
+with the selected results. A native MFA login followed by a protected-data failure
+now shows the error in the visible workspace instead of the hidden sign-in form.
+Unavailable platform totals remain unavailable; navigation does not create new
+metrics, grants, provider writes or source access.
+
+For an isolated visual review of the actual source interface, run:
+
+```sh
+node tools/render_admin_preview.js /tmp/guardoath-admin-preview.html
+```
+
+Open the resulting HTML file in a browser. Its permanent preview banner explains
+that accounts, invoices and audit receipts are synthetic. All HTTP responses and
+OAuth callback state are confined to a lexical test adapter in this generated
+file; it cannot connect to Cognito, Stripe, AWS, or production tenant APIs. The
+production HTML and JavaScript are extracted from `admin_browser.py` unchanged.
+This review copy is not authentication evidence or an AWS deployment.
+
+`tests/browser/admin_console.spec.js` executes the real source with synthetic API
+fixtures: seven-section navigation, mobile overflow, result navigation, visible
+post-MFA failure, directory paging/rate failure, 401/403 clearing, safe text and
+logout. These tests supplement server tests; live MFA, provider checks, required
+exact-SHA release jobs and the 15 production checks remain separate requirements.

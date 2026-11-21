@@ -45,7 +45,13 @@ def client(native=None, verifier=None):
 
 def test_native_flow_not_registered_without_explicit_opt_in():
     c = client()
-    assert c.get("/v1/admin/auth/config").json()["native_mfa_enabled"] is False
+    config = c.get("/v1/admin/auth/config")
+    assert config.status_code == 200
+    assert config.json() == {
+        "domain": CONFIG.domain, "client_id": CONFIG.client_id,
+        "redirect_uri": CONFIG.redirect_uri, "native_mfa_enabled": False,
+    }
+    assert config.headers["cache-control"] == "no-store"
     assert c.post("/v1/admin/auth/native/start", json={
         "email": "owner@example.com", "password": "long-test-password"}, headers=ORIGIN).status_code == 404
     assert 'id="native-auth" hidden' in c.get("/admin/login").text
@@ -54,7 +60,16 @@ def test_native_flow_not_registered_without_explicit_opt_in():
 def test_owner_mfa_challenge_is_required_before_releasing_signed_session():
     native = Native()
     c = client(native)
-    assert c.get("/v1/admin/auth/config").json()["native_mfa_enabled"] is True
+    config = c.get("/v1/admin/auth/config")
+    assert config.status_code == 200
+    assert config.json() == {
+        "domain": CONFIG.domain, "client_id": CONFIG.client_id,
+        "redirect_uri": CONFIG.redirect_uri, "native_mfa_enabled": True,
+    }
+    assert config.headers["cache-control"] == "no-store"
+    assert native.calls == []
+    assert GOOD not in config.text and "challenge_ticket" not in config.text
+    assert "long-test-password" not in config.text
     page = c.get("/admin/login").text
     script = c.get("/admin/client.js").text
     assert 'id="native-password"' in page and 'id="native-code"' in page
@@ -113,3 +128,4 @@ def test_provider_failure_never_leaks_password_or_provider_message():
     assert result.status_code == 503
     assert "long-test-password" not in result.text
     assert "must never leak" not in result.text
+

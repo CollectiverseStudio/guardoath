@@ -231,9 +231,16 @@ def create_browser_router(config: BrowserAuthConfig, exchange: BoundExchange,
 
 
 _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GuardOath Admin</title>
-<style>:root{font-family:system-ui,sans-serif;color:#14273a;background:#f5f7fb}body{margin:0}header{background:#12273c;color:white;padding:20px max(20px,5vw)}main{max-width:1100px;margin:24px auto;padding:0 20px}.panel{background:white;border:1px solid #dbe3ee;border-radius:12px;padding:20px;margin-bottom:16px}button{background:#154e82;color:white;border:0;border-radius:6px;padding:10px 16px;cursor:pointer}button:disabled{opacity:.5;cursor:default}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.metric{border:1px solid #ddd;border-radius:8px;padding:12px}.muted{color:#526678}table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid #dfe5ed;padding:9px;text-align:left}.scroll{overflow-x:auto}input{padding:9px;max-width:100%}nav{display:flex;flex-wrap:wrap;gap:12px}nav button{background:#30546f}#app[hidden]{display:none}</style></head><body>
-<header><h1>GuardOath Administration</h1><p>Owner console · Read-only inspection with optional audited access controls</p></header><main>
-<section id="login" class="panel"><h2>Administrator sign-in</h2><p>Use your GuardOath administrator account with MFA. Customers and demo API keys do not have administrative access.</p><button id="login-start" type="button">Sign in with Cognito</button>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#183247;background:#f2f5f8;font-synthesis:none;--navy:#102b3f;--teal:#087f81;--line:#dfe7ed;--muted:#607584}
+*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}button,a,input,select,textarea,summary{-webkit-tap-highlight-color:transparent}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid #3bbdc0;outline-offset:3px}[hidden]{display:none!important}
+.topbar{min-height:88px;background:var(--navy);color:#fff;padding:18px 34px;display:flex;align-items:center;justify-content:space-between;gap:24px;border-bottom:1px solid #254356}.brand{display:flex;align-items:center;gap:14px}.brand-mark{width:42px;height:46px;display:grid;place-items:center;background:#117f83;border:1px solid #55b3b4;border-radius:11px 11px 18px 18px;font-size:25px;font-weight:750}.topbar h1{font-size:19px;line-height:1.3;letter-spacing:-.4px;margin:3px 0 0}.eyebrow{font-size:10px;letter-spacing:1.7px;font-weight:750;text-transform:uppercase;margin:0 0 7px;color:var(--teal)}.topbar .eyebrow{color:#89ced1;margin:0}.header-note{margin:0;font-size:12px;line-height:1.7;text-align:right;color:#dae8ef}.header-note span{display:block;color:#9db4c2;font-size:11px}main{max-width:1600px;margin:0 auto}.admin-layout{display:grid;grid-template-columns:218px minmax(0,1fr);min-height:calc(100vh - 88px)}.sidebar{background:var(--navy);padding:29px 16px;display:flex;flex-direction:column;gap:17px}.sidebar-heading{margin:0 13px 0;color:#8eaab9;font-size:10px;letter-spacing:1.4px;font-weight:750}#admin-navigation{display:grid;gap:6px}.section-link{background:transparent;border:1px solid transparent;border-radius:8px;color:#c7d7e1;width:100%;min-height:44px;text-align:left;padding:11px 13px;display:flex;gap:13px;align-items:center;font-size:13px;font-weight:600}.section-link:hover{background:#1c3d51;color:#fff}.section-link[aria-current="page"]{background:#173f50;border-color:#276071;color:#fff;box-shadow:inset 3px 0 #42c5be}.nav-index{font-size:10px;font-variant-numeric:tabular-nums;letter-spacing:1px;color:#6f9aaa}.section-link[aria-current="page"] .nav-index{color:#64d5ca}.sidebar-note{margin:26px 12px 0;padding-top:20px;border-top:1px solid #294454;color:#b7cdd8;font-size:11px;line-height:1.7}.sidebar-note p{color:#8ca8b9;margin:5px 0 0}.status-dot{display:inline-block;width:6px;height:6px;background:#52c2b8;border-radius:50%;margin-right:7px}.workspace{min-width:0;padding:30px 34px 48px}.workspace-header{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:20px}.workspace-header h2{font-size:29px;font-weight:700;letter-spacing:-.8px;margin:0 0 7px}.workspace-header p:not(.eyebrow){font-size:13px;line-height:1.6;color:var(--muted);margin:0;max-width:650px}.workspace-actions{display:flex;gap:8px;flex-shrink:0}.workspace-status{border:1px solid #d9e7e8;border-left:3px solid #369b9b;background:#edf5f5;border-radius:7px;padding:12px 14px;font-size:11px;line-height:1.6;color:#456670;overflow-wrap:anywhere;margin:0 0 20px}.workspace-status:empty{display:none}
+.panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:25px;margin:0 0 18px;min-width:0;box-shadow:0 2px 5px #19364b03}.panel:focus,.section-stack:focus{outline:none}.panel h2{font-size:18px;letter-spacing:-.3px;margin:0 0 11px;line-height:1.4}.panel h3{font-size:14px;margin:25px 0 9px;line-height:1.5}.panel p{font-size:13px;line-height:1.75;overflow-wrap:anywhere}.panel label{font-size:12px;font-weight:650;color:#354f60}.muted{color:var(--muted)}.section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.section-heading h2{margin:0}.section-tag{font-size:10px;border:1px solid #d7e5e6;border-radius:20px;padding:5px 9px;color:#46747b;background:#f2f8f7;white-space:nowrap}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:13px;margin-top:22px}.metric{border:1px solid var(--line);border-radius:9px;padding:17px;background:#fafcfd;min-width:0}.metric>div{font-size:11px;text-transform:capitalize;letter-spacing:.2px;color:#657b8a;margin-bottom:13px}.metric strong{display:block;font-size:22px;line-height:1.3;letter-spacing:-.6px;font-weight:650;margin-bottom:11px;overflow-wrap:anywhere}.metric small{display:block;font-size:10px;line-height:1.6;color:#788b98}.overview-guides{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:24px}.overview-guides button{color:#244957;background:#fff;text-align:left;padding:16px;border:1px solid var(--line);border-radius:9px;font-size:13px}.overview-guides button:hover{border-color:#60a9a8;background:#f4fbfa}.overview-guides span{display:block;color:var(--muted);font-size:11px;font-weight:400;line-height:1.6;margin-top:7px}
+button{background:var(--teal);color:#fff;border:1px solid transparent;border-radius:7px;padding:10px 14px;cursor:pointer;font-size:12px;font-weight:650;line-height:1.4;transition:background .15s,border-color .15s}button:hover{background:#066e71}button:disabled{opacity:.45;cursor:default}.secondary{background:#fff;color:#365264;border-color:#d0dce4}.secondary:hover{background:#e7eef2}input,select,textarea{border:1px solid #cfdae3;background:#fff;color:#173347;border-radius:6px;padding:9px 10px;font-size:13px;max-width:100%;min-height:38px}input:disabled,textarea:disabled{background:#f3f6f8;color:#82939f}textarea{width:100%;resize:vertical}input{margin:5px 5px 5px 0}#proposal-title{width:100%}#audit-id,#draft-id{width:min(100%,520px);font-family:ui-monospace,monospace;font-size:12px}.scroll{overflow:auto;max-width:100%;border:1px solid var(--line);border-radius:8px;margin-top:19px}table{width:100%;min-width:650px;border-collapse:collapse;font-size:12px}th{font-size:10px;color:#637a8a;background:#f4f7f9;letter-spacing:.4px;white-space:nowrap}td,th{border-bottom:1px solid #e7edf1;padding:13px 12px;text-align:left;vertical-align:top}tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:#f8fbfc}td button{margin:0 5px 6px 0;padding:6px 9px;font-size:10px;white-space:nowrap}td:last-child>span{display:block;color:#788d9b;font-size:10px}#tenant-rows td:last-child{min-width:170px}#categories details{border:1px solid var(--line);border-radius:8px;margin:9px 0;padding:0 14px}#categories details details{background:#f8fafb;margin-bottom:13px}summary{padding:14px 0;cursor:pointer;font-size:12px;line-height:1.5}summary span{color:var(--muted);font-size:11px}#categories ul{padding-left:19px;font-size:12px;line-height:1.8}#categories li{margin:10px 0;overflow-wrap:anywhere}#categories li button{font-size:10px;padding:6px 9px;margin:6px}#proposal-target{background:#f3f7f9;border-radius:6px;padding:10px 12px;color:#557382;font-size:12px}.login-panel{max-width:560px;margin:64px auto;padding:36px}.login-panel h2{font-size:25px;letter-spacing:-.6px}.login-panel>p{color:var(--muted)}.login-panel>button{margin:12px 0 6px;min-height:43px}.login-panel .eyebrow{color:var(--teal)}#native-auth{border-top:1px solid var(--line);margin-top:24px;padding-top:15px}#native-auth label{display:block;margin-top:13px}#native-auth input{display:block;width:100%;margin:7px 0 12px}#native-challenge{margin-top:18px}#login-message{color:#456670;overflow-wrap:anywhere}#login-message:empty{display:none}
+@media(min-width:1500px){.workspace{padding:34px 45px}}@media(max-width:1080px){.admin-layout{grid-template-columns:180px minmax(0,1fr)}.workspace{padding:26px 22px}.sidebar{padding:28px 10px}.workspace-header{align-items:flex-start}.overview-guides{grid-template-columns:1fr}.overview-guides button{padding:13px}.overview-guides span{margin-top:4px}}@media(max-width:720px){.topbar{padding:16px 18px;min-height:78px;gap:12px}.topbar h1{font-size:16px}.brand{gap:10px}.brand-mark{width:34px;height:39px;font-size:21px}.header-note{display:none}.admin-layout{display:block;min-height:calc(100vh - 78px)}.sidebar{padding:12px 14px;gap:8px}.sidebar-heading,.sidebar-note{display:none}#admin-navigation{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.section-link{justify-content:center;font-size:11px;padding:9px 5px;min-height:36px;text-align:center}.nav-index{display:none}.section-link[aria-current="page"]{box-shadow:inset 0 -2px #42c5be}.workspace{padding:21px 14px 30px}.workspace-header{gap:13px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}.workspace-header h2{font-size:25px}.workspace-header p:not(.eyebrow){font-size:12px}.workspace-actions{width:100%;justify-content:flex-end}.workspace-actions button{padding:8px 12px}.panel{padding:18px;border-radius:10px}.panel h2{font-size:17px}.section-heading{align-items:flex-start}.section-tag{font-size:9px;padding:4px 7px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}.metric{padding:13px}.metric strong{font-size:18px}.login-panel{margin:28px 14px;padding:25px}.panel>input{width:100%}.panel>label{display:block;margin-top:13px}.panel>button{margin-top:5px}.workspace-status{font-size:10px;padding:10px 12px}.overview-guides{margin-top:17px}}@media(prefers-reduced-motion:reduce){button{transition:none}}
+</style></head><body>
+<header class="topbar"><div class="brand"><span class="brand-mark" aria-hidden="true">G</span><div><p class="eyebrow">Owner workspace</p><h1>GuardOath Administration</h1></div></div><p class="header-note">Owner console<span>Audited access · MFA required</span></p></header><main>
+<section id="login" class="panel login-panel"><p class="eyebrow">Secure administration</p><h2>Administrator sign-in</h2><p>Use your GuardOath administrator account with MFA. Customers and demo API keys do not have administrative access.</p><button id="login-start" type="button">Sign in with Cognito</button>
 <div id="native-auth" hidden><p class="muted">Administrator password + authenticator app. Requires enrolled TOTP MFA.</p>
 <label for="native-email">Administrator email</label> <input id="native-email" type="email" autocomplete="username" maxlength="254">
 <label for="native-password">Password</label> <input id="native-password" type="password" autocomplete="current-password">
@@ -242,9 +249,18 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <input id="native-code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code">
 <button id="native-finish" type="button">Verify administrator</button></div></div>
 <p id="login-message" role="status"></p></section>
-<div id="app" hidden><section class="panel"><nav><button type="button" id="refresh">Refresh</button><button type="button" id="logout">Sign out</button></nav><p id="status" role="status"></p></section>
-<section class="panel"><h2>Overview</h2><div class="grid" id="metrics"></div></section>
-<section class="panel"><h2>Cognito users</h2><p class="muted">Owner-only, one provider page at a time; masked emails and unknown totals.</p><label for="user-search">Email prefix</label> <input id="user-search" maxlength="80" autocomplete="off"> <button id="user-search-go" type="button">Search users</button><div class="scroll"><table><thead><tr><th>Username</th><th>Masked email</th><th>Verified</th><th>Enabled</th><th>Status</th><th>Created (UTC)</th></tr></thead><tbody id="user-rows"></tbody></table></div><p id="user-status" role="status"></p><button id="user-next" type="button" disabled>Next users</button>
+<div id="app" hidden class="admin-layout"><aside class="sidebar"><p class="sidebar-heading">Manage GuardOath</p><nav id="admin-navigation" aria-label="Administration sections">
+<button type="button" class="section-link" id="nav-overview" data-section="overview" aria-controls="section-overview" aria-current="page"><span class="nav-index" aria-hidden="true">01</span>Overview</button>
+<button type="button" class="section-link" id="nav-users" data-section="users" aria-controls="section-users"><span class="nav-index" aria-hidden="true">02</span>Users</button>
+<button type="button" class="section-link" id="nav-tenants" data-section="tenants" aria-controls="section-tenants"><span class="nav-index" aria-hidden="true">03</span>Tenants</button>
+<button type="button" class="section-link" id="nav-billing" data-section="billing" aria-controls="section-billing"><span class="nav-index" aria-hidden="true">04</span>Billing</button>
+<button type="button" class="section-link" id="nav-usage" data-section="usage" aria-controls="section-usage"><span class="nav-index" aria-hidden="true">05</span>Usage</button>
+<button type="button" class="section-link" id="nav-audit" data-section="audit" aria-controls="section-audit"><span class="nav-index" aria-hidden="true">06</span>Audit</button>
+<button type="button" class="section-link" id="nav-catalog" data-section="catalog" aria-controls="section-catalog"><span class="nav-index" aria-hidden="true">07</span>Catalog</button>
+</nav><div class="sidebar-note"><span class="status-dot" aria-hidden="true"></span>Owner access only<p>Session credentials stay in this tab.</p></div></aside><div class="workspace">
+<section class="workspace-header"><div><p class="eyebrow">Control center</p><h2 id="workspace-title">Overview</h2><p id="workspace-description">Inspect your platform, accounts and safeguards from one workspace.</p></div><div class="workspace-actions"><button type="button" id="refresh">Refresh</button><button type="button" id="logout" class="secondary">Sign out</button></div></section><p id="status" class="workspace-status" role="status"></p>
+<section id="section-overview" data-admin-section class="panel" tabindex="-1" aria-label="Overview"><div class="section-heading"><h2>Platform overview</h2><span class="section-tag">Source availability</span></div><p class="muted">Current source-backed metrics. A missing source remains unavailable.</p><div class="grid" id="metrics"></div><div class="overview-guides"><button type="button" data-section="users" aria-controls="section-users">Inspect accounts<span>Search users and review sign-in access.</span></button><button type="button" data-section="tenants" aria-controls="section-tenants">Manage tenants<span>Inspect saved entitlements, usage and access.</span></button><button type="button" data-section="catalog" aria-controls="section-catalog">Explore the catalog<span>Review published categories, checks and rules.</span></button></div></section>
+<section id="section-users" data-admin-section class="panel" hidden tabindex="-1" aria-label="Users"><h2>Cognito users</h2><p class="muted">Owner-only, one provider page at a time; masked emails and unknown totals.</p><label for="user-search">Email prefix</label> <input id="user-search" maxlength="80" autocomplete="off"> <button id="user-search-go" type="button">Search users</button><div class="scroll"><table><thead><tr><th>Username</th><th>Masked email</th><th>Verified</th><th>Enabled</th><th>Status</th><th>Created (UTC)</th></tr></thead><tbody id="user-rows"></tbody></table></div><p id="user-status" role="status"></p><button id="user-next" type="button" disabled>Next users</button>
 <h3>Inspect an exact Cognito account</h3><p class="muted">Use a known full email address. Only masked account state returns; this action does not change sign-in or billing.</p>
 <label for="user-exact-email">Exact account email</label> <input id="user-exact-email" type="email" maxlength="254" autocomplete="off" spellcheck="false">
 <button id="user-inspect" type="button">Inspect account</button><p id="user-inspect-result" role="status"></p>
@@ -252,12 +268,12 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <label for="user-change-email">Exact account email</label> <input id="user-change-email" type="email" maxlength="254" autocomplete="off" spellcheck="false">
 <label for="user-change-action">Action</label> <select id="user-change-action"><option value="disable">Disable sign-in</option><option value="enable">Enable sign-in</option></select>
 <button id="user-change" type="button" disabled>Apply audited change</button><p id="user-change-result" role="status"></p></section>
-<section class="panel"><h2>Tenants</h2><p class="muted">API key counts are sourced from the persisted tenant record; actual key material is never displayed. Unknown counts remain unavailable.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
-<section class="panel"><h2>Verified recent invoices</h2><p class="muted">Up to five Stripe invoice summaries for an independently verified customer subscription. Amounts are in minor currency units, not a revenue total or forecast.</p><p id="invoice-details" role="status">No invoice history selected.</p></section>
+<section id="section-tenants" data-admin-section class="panel" hidden tabindex="-1" aria-label="Tenants"><h2>Tenants</h2><p class="muted">API key counts are sourced from the persisted tenant record; actual key material is never displayed. Unknown counts remain unavailable.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
+<section id="section-billing" data-admin-section class="section-stack" hidden tabindex="-1" aria-label="Billing"><section class="panel"><h2>Verified recent invoices</h2><p class="muted">Up to five Stripe invoice summaries for an independently verified customer subscription. Amounts are in minor currency units, not a revenue total or forecast.</p><p id="invoice-details" role="status">No invoice history selected.</p></section>
 <section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Select Verify Stripe beside a tenant to compare the current provider status with its saved tenant entitlement. Discrepancies are advisory: no paid access or billing state is modified here.</p><p id="billing-details" role="status">No subscription selected.</p></section>
-<section class="panel"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
-<section class="panel"><h2>Audit receipt lookup</h2><p class="muted">Read one stored administrative event by its exact event ID. No exports or audit enumeration.</p><label for="audit-id">Audit event ID</label> <input id="audit-id" maxlength="64" autocomplete="off" spellcheck="false"> <button type="button" id="audit-go">Verify receipt</button><p id="audit-result" role="status"></p></section>
-<section class="panel"><h2>Categories and checks</h2><p id="catalog-summary"></p><div id="categories"></div>
+</section><section id="section-usage" data-admin-section class="panel" hidden tabindex="-1" aria-label="Usage"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
+<section id="section-audit" data-admin-section class="panel" hidden tabindex="-1" aria-label="Audit"><h2>Audit receipt lookup</h2><p class="muted">Read one stored administrative event by its exact event ID. No exports or audit enumeration.</p><label for="audit-id">Audit event ID</label> <input id="audit-id" maxlength="64" autocomplete="off" spellcheck="false"> <button type="button" id="audit-go">Verify receipt</button><p id="audit-result" role="status"></p></section>
+<section id="section-catalog" data-admin-section class="panel" hidden tabindex="-1" aria-label="Catalog"><h2>Categories and checks</h2><p id="catalog-summary"></p><div id="categories"></div>
 <h3>Preview a versioned catalog description proposal</h3><p class="muted">Select Preview description beside a published rule. This checks the change against the live registry version; it does not save, publish, enable or change any rule. Review fingerprints are not signatures or approvals.</p>
 <p id="proposal-target">No rule selected.</p>
 <label for="proposal-title">Proposed rule title</label><p><input id="proposal-title" maxlength="120" disabled></p>
@@ -269,7 +285,7 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <input id="draft-id" maxlength="64" autocomplete="off" spellcheck="false">
 <button id="draft-inspect" type="button">Inspect draft</button>
 <button id="draft-review" type="button" disabled>Record signed review</button>
-<p id="draft-result" role="status"></p></section></div>
+<p id="draft-result" role="status"></p></section></div></div>
 </main><script src="/admin/client.js" defer></script></body></html>"""
 
 # Zero third-party scripts. OAuth access token is deliberately memory-only.
@@ -287,6 +303,39 @@ _JS = r'''"use strict";
   let features = {tenant_status_changes:false};
   const el = id => document.getElementById(id);
   const say = (id, value) => { el(id).textContent = value; };
+  const sectionCopy = {
+    overview: ["Overview", "Inspect your platform, accounts and safeguards from one workspace."],
+    users: ["Users", "Search Cognito accounts, inspect identity state and manage sign-in access."],
+    tenants: ["Tenants", "Inspect saved customer entitlements, request usage and audited access controls."],
+    billing: ["Billing", "Review provider-verified subscriptions and recent invoice summaries."],
+    usage: ["Usage and costs", "Inspect recorded requests and saved quotas; unavailable costs stay unavailable."],
+    audit: ["Audit", "Verify one persisted administrative receipt using its exact event ID."],
+    catalog: ["Catalog", "Explore published rules and review versioned description proposals."]
+  };
+  function showSection(name, focus = false) {
+    if (!token || !Object.prototype.hasOwnProperty.call(sectionCopy, name)) return;
+    const target = el("section-" + name);
+    for (const panel of document.querySelectorAll("[data-admin-section]")) panel.hidden = panel !== target;
+    for (const button of document.querySelectorAll("#admin-navigation [data-section]")) {
+      if (button.dataset.section === name) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
+    }
+    say("workspace-title", sectionCopy[name][0]);
+    say("workspace-description", sectionCopy[name][1]);
+    document.title = "GuardOath Admin · " + sectionCopy[name][0];
+    const emptyStates = {
+      "usage-details": "Choose Usage beside a tenant to view recorded requests and saved quotas.",
+      "billing-details": "Choose Verify Stripe beside a tenant to review its subscription.",
+      "invoice-details": "Choose Invoices beside a tenant to inspect verified recent history."
+    };
+    for (const [id, message] of Object.entries(emptyStates)) {
+      if (target.contains(el(id)) && !el(id).textContent) say(id, message);
+    }
+    if (focus) {
+      target.focus({preventScroll:true});
+      window.scrollTo({top:0, behavior:"auto"});
+    }
+  }
   async function request(path, options = {}) {
     const headers = {"Accept":"application/json", ...(options.body ? {"Content-Type":"application/json"} : {})};
     if (token) headers["X-GuardOath-Admin-Session"] = token;
@@ -299,7 +348,12 @@ _JS = r'''"use strict";
     return result.json();
   }
   const textNode = (tag, value) => { const item = document.createElement(tag); item.textContent = String(value ?? "Unavailable"); return item; };
-  const setLoggedIn = logged => { el("login").hidden = logged; el("app").hidden = !logged; };
+  const setLoggedIn = logged => {
+    el("login").hidden = logged;
+    el("app").hidden = !logged;
+    if (logged) showSection("overview");
+    else document.title = "GuardOath Admin";
+  };
   const clearAdminData = () => {
     el("metrics").replaceChildren();
     el("tenant-rows").replaceChildren();
@@ -421,7 +475,7 @@ _JS = r'''"use strict";
       }
       el("categories").append(container);
     }
-    say("status", "Read-only administration loaded · Overview" + readAuditLabel(overview) +
+    say("status", "Administration loaded · Overview" + readAuditLabel(overview) +
       " · Capabilities" + readAuditLabel(available) +
       (features.sensitive_read_audit ? "" : " · Persistent read auditing not configured"));
   }
@@ -787,6 +841,8 @@ _JS = r'''"use strict";
   async function inspectUsage(tenant) {
     if (!token) return;
     const epoch = authEpoch;
+    showSection("usage", true);
+    say("usage-details", "Inspecting recorded usage for " + tenant.tenant_id + "...");
     try {
       const result = await request("/v1/admin/tenants/" + encodeURIComponent(tenant.tenant_id) + "/usage");
       if (!token || epoch !== authEpoch) return;
@@ -816,6 +872,8 @@ _JS = r'''"use strict";
   async function verifyBilling(tenant) {
     if (!token || !features.billing_verify) return;
     const epoch = authEpoch;
+    showSection("billing", true);
+    say("billing-details", "Verifying subscription for " + tenant.tenant_id + "...");
     try {
       const result = await request("/v1/admin/subscriptions/" + encodeURIComponent(tenant.tenant_id));
       if (token && epoch === authEpoch) {
@@ -844,6 +902,7 @@ _JS = r'''"use strict";
   async function inspectInvoices(tenant) {
     if (!token || !features.billing_invoices) return;
     const epoch = authEpoch;
+    showSection("billing", true);
     say("invoice-details", "Inspecting verified Stripe history...");
     try {
       const result = await request("/v1/admin/subscriptions/" +
@@ -1165,12 +1224,15 @@ _JS = r'''"use strict";
       clearAdminData();
       setLoggedIn(true);
       await load();
-    } catch(err) {say("login-message", err.message);}
+    } catch(err) {say(token ? "status" : "login-message", err.message);}
   }
   request("/v1/admin/auth/config").then(value => {
     if (value.native_mfa_enabled === true) el("native-auth").hidden = false;
   }).catch(() => {});
   el("native-start").addEventListener("click", beginNative);
+  for (const button of document.querySelectorAll("[data-section]")) {
+    button.addEventListener("click", () => showSection(button.dataset.section, true));
+  }
   el("native-finish").addEventListener("click", finishNative);
   el("login-start").addEventListener("click", beginLogin);
   el("proposal-save").addEventListener("click", saveCatalogDraft);
@@ -1188,3 +1250,4 @@ _JS = r'''"use strict";
   el("proposal-go").addEventListener("click", previewCatalogRule);
   finishLogin().catch(err => say("login-message", err.message));
 })();'''
+

@@ -3606,3 +3606,23 @@ password-only accounts are refused. Customer sign-in or a paid subscription
 does not grant admin privileges. No credentials, MFA codes or tokens should
 be sent to GuardOath support. This operator feature is disabled by default,
 and no enabled admin UI or production readiness is implied by source code.
+
+
+## Owner console navigation
+
+After administrator sign-in, use **Overview, Users, Tenants, Billing, Usage,
+Audit and Catalog** to move between tasks. The selected section stays highlighted.
+On a phone, the same sections appear above the workspace. Customer sign-in and
+application API keys do not grant access to this console.
+
+Open **Tenants** to search customer records. **Usage** opens recorded requests
+and saved quota information. **Verify Stripe** opens subscription reconciliation,
+and **Invoices** opens the verified recent invoice sample. Each action takes you
+directly to its results, including loading and unavailable-source messages.
+Missing aggregate figures remain **Unavailable**, not zero. A successful sign-in
+that cannot load protected data shows its error in the workspace.
+
+A file labeled **Interactive preview — sample data — not connected to production**
+is an isolated review of the interface. Its example accounts, invoices and audit
+receipts are synthetic, and it cannot change production. The live owner console
+still requires its separately enabled infrastructure and verified MFA session.
