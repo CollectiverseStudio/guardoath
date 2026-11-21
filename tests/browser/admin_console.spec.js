@@ -47,6 +47,10 @@ test("tenant actions reveal usage, subscription and invoice results immediately"
     await expect(page.locator("#section-"+section)).toBeVisible();
     await expect(page.locator("#nav-"+section)).toHaveAttribute("aria-current","page");
     await expect(page.locator("#"+result)).toContainText(text);
+    if (action === "Usage") {
+      await expect(page.locator("#usage-details")).toContainText("Projected recorded month-end requests: 2190");
+      await expect(page.locator("#usage-details")).toContainText("Advisory linear pacing only");
+    }
     await expect(page.locator("#section-"+section)).toBeFocused();
   }
 });

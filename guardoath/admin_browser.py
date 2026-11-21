@@ -856,6 +856,19 @@ _JS = r'''"use strict";
         ? signal.utilization_percent_floor + "%" : "Unavailable";
       const policy = ["blocks_at_saved_cap", "records_overage"].includes(signal.policy)
         ? signal.policy.replaceAll("_", " ") : "unavailable";
+      const pacing = usage.quota_pacing || {};
+      const pacingStates = ["unknown_counter", "stale_or_unknown_metadata", "zero_allowance",
+        "insufficient_observation", "already_over_limit", "already_at_limit",
+        "projected_over_limit", "projected_near_limit", "projected_watch",
+        "projected_within_limit"];
+      const pacingState = pacingStates.includes(pacing.state)
+        ? pacing.state.replaceAll("_", " ") : "unavailable";
+      const projected = Number.isSafeInteger(pacing.projected_month_end_requests_floor) &&
+        pacing.projected_month_end_requests_floor >= 0
+        ? pacing.projected_month_end_requests_floor : "Unavailable";
+      const metadata = ["recent_record_metadata", "stale_record_metadata", "unavailable"]
+        .includes(pacing.record_metadata_freshness)
+        ? pacing.record_metadata_freshness.replaceAll("_", " ") : "unavailable";
       say("usage-details", tenant.tenant_id + " · UTC " + (usage.period_utc || "unknown") +
         " · Recorded: " + (count === null || count === undefined ? "Unavailable" : count) +
         " · Allowance: " + (usage.monthly_allowance ?? "Unavailable") +
@@ -863,6 +876,10 @@ _JS = r'''"use strict";
         " · Overage policy: " + (usage.overage_policy || "Unavailable") +
         " · Recorded quota signal: " + level + " (" + percent + ")" +
         " · Saved-cap behavior: " + policy +
+        " · Projected recorded month-end requests: " + projected +
+        " · Quota pacing: " + pacingState +
+        " · Record metadata: " + metadata +
+        " · Advisory linear pacing only; not a live cost or automated alert" +
         " · Record updated: " + (usage.record_updated_at || "Unavailable") +
         " · AWS costs: Unavailable · Stripe invoices: Unavailable · Source: " + (usage.source || "unknown") + readAuditLabel(result));
     } catch (err) {

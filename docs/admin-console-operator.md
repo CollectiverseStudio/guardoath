@@ -335,3 +335,19 @@ exact-SHA release jobs and the 15 production checks remain separate requirements
 
 ## Invoice page payment-review signals (2026-11-20)
 An independently verified Stripe invoice page now includes `payment_review` with counts of **open invoices with remaining balances** and **uncollectible invoices**, plus a currency-separated sum of remaining open balances. The owner UI cross-checks the summary against redacted invoice rows and fails closed on mismatched counts or amounts. A page is limited to five invoices; `complete_history=false` and a partial-history warning are shown if Stripe reports more results. These are bounded operator-review signals **not** verified payment failures, aging, account-wide receivables, collected revenue, refunds, entitlement status or AWS costs. No new Stripe calls, financial writes, credentials, provider spending or tenant-policy changes are introduced.
+
+
+## On-demand recorded-request quota pacing (source integration)
+The authenticated **Tenants → Usage** view now separates the stored monthly
+quota threshold from advisory linear month-end recorded-request pacing.
+Projection uses the authoritative current-month counter, UTC day, saved
+allowance and an updated-at record timestamp within 48 hours. It is
+suppressed for missing counters, invalid/future/stale timestamps, zero
+allowance and fewer than seven elapsed calendar days. A saved zero is
+not a missing counter. The server distinguishes projected risks from
+already-at/over-cap observations, and the UI shows the unchanged stored
+enforcement setting. Fresh record metadata does not prove request-ledger
+completeness; this low-confidence estimate is not a live bill, AWS cost,
+revenue forecast, persistent alert or a change to customer settings.
+No new provider reads, infrastructure or spending. Exact-SHA CI and
+live 15-check acceptance remain separate.

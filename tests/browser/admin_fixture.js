@@ -109,6 +109,9 @@ function createAdminFixture(options = {}) {
         period_utc:"2026-11", requests_recorded:1460, monthly_allowance:10000,
         remaining_before_allowance:8540, overage_policy:"block", record_updated_at:FIXTURE_TIME,
         usage_threshold:{state:"within_limit",utilization_percent_floor:14,policy:"blocks_at_saved_cap"},
+        quota_pacing:{state:"projected_within_limit",projected_month_end_requests_floor:2190,
+          record_metadata_freshness:"recent_record_metadata",calendar_days_elapsed:20,
+          calendar_days_in_month:30,persisted_alert:false},
         source:"Synthetic saved tenant record"}}));
       if (/^\/v1\/admin\/subscriptions\/[^/]+\/invoices$/.test(pathname)) return json(withReceipt({history:{
         verified:true,status:"verified",count:1,has_more:false,read_at_utc:FIXTURE_TIME,

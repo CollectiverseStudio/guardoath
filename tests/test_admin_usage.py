@@ -119,3 +119,59 @@ def test_usage_soft_overage_signal_cannot_claim_blocking_or_estimated_billing():
     assert report["usage_threshold"]["policy"] == "records_overage"
     assert report["blocking_cap_enabled"] is False
     assert report["aws_cost_usd"] is None and report["stripe_invoice_usd"] is None
+
+
+def test_quota_pacing_is_bounded_utc_projection_not_financial_spend():
+    late = lambda: datetime(2026, 11, 19, 18, tzinfo=timezone.utc)
+    record = Tenant(usage={"2026-11": 410}, monthly_allowance=500,
+                    updated_at="2026-11-19T17:00:00Z")
+    report = tenant_usage_report(record, clock=late)
+    pacing = report["quota_pacing"]
+    assert pacing["projected_month_end_requests_floor"] == 410 * 30 // 19
+    assert pacing["state"] == "projected_over_limit"
+    assert pacing["record_metadata_freshness"] == "recent_record_metadata"
+    assert pacing["calendar_days_elapsed"] == 19
+    assert pacing["calendar_days_in_month"] == 30
+    assert pacing["persisted_alert"] is False
+    assert report["aws_cost_usd"] is None and report["stripe_invoice_usd"] is None
+    assert record.monthly_allowance == 500 and record.usage == {"2026-11": 410}
+
+
+@pytest.mark.parametrize("usage, cap, updated, day, expected", [
+    ({}, 1000, "2026-11-19T17:00:00Z", 19, "unknown_counter"),
+    ({"2026-11": 0}, 1000, "2026-11-19T17:00:00Z", 19, "projected_within_limit"),
+    ({"2026-11": 410}, 500, "2026-11-15T17:00:00Z", 19, "stale_or_unknown_metadata"),
+    ({"2026-11": 410}, 500, None, 19, "stale_or_unknown_metadata"),
+    ({"2026-11": 410}, 500, "not-a-time", 19, "stale_or_unknown_metadata"),
+    ({"2026-11": 410}, 500, "2026-11-30T17:00:00Z", 19, "stale_or_unknown_metadata"),
+    ({"2026-11": 5}, 500, "2026-11-06T17:00:00Z", 6, "insufficient_observation"),
+    ({"2026-11": 0}, 0, "2026-11-19T17:00:00Z", 19, "zero_allowance"),
+    ({"2026-11": 500}, 500, "2026-11-19T17:00:00Z", 19, "already_at_limit"),
+    ({"2026-11": 501}, 500, "2026-11-19T17:00:00Z", 19, "already_over_limit"),
+])
+def test_quota_pacing_unknown_stale_and_limits_are_explicit(usage, cap, updated, day, expected):
+    now = lambda: datetime(2026, 11, day, 18, tzinfo=timezone.utc)
+    pacing = tenant_usage_report(Tenant(usage=usage, monthly_allowance=cap,
+                                        updated_at=updated), clock=now)["quota_pacing"]
+    assert pacing["state"] == expected
+    if expected in {"unknown_counter", "stale_or_unknown_metadata",
+                    "insufficient_observation", "zero_allowance"}:
+        assert pacing["projected_month_end_requests_floor"] is None
+    assert pacing["persisted_alert"] is False
+
+
+def test_quota_pacing_api_is_owner_only():
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        tenant_store=Store(Tenant(usage={"2026-11": 400},
+                                  updated_at="2026-11-19T17:00:00Z")),
+        verify_cognito_admin=lambda tok: VerifiedAdmin("trusted-subject", frozenset({"owner"}), True)
+        if tok == "owner-token" else None,
+    ))
+    cli = TestClient(app)
+    path = "/v1/admin/tenants/usr-usage/usage"
+    assert cli.get(path).status_code == 401
+    assert cli.get(path, headers={"X-GuardOath-Key": "owner-token"}).status_code == 401
+    response = cli.get(path, headers={"X-GuardOath-Admin-Session": "owner-token"})
+    assert response.status_code == 200
+    assert response.json()["usage"]["quota_pacing"]["persisted_alert"] is False

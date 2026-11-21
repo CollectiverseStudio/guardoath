@@ -6,15 +6,71 @@ API-key material is included in the response.
 """
 from __future__ import annotations
 
+from calendar import monthrange
 from datetime import datetime, timezone
 import re
 from typing import Callable
 
 MONTH = re.compile(r"^\d{4}-(?:0[1-9]|1[0-2])$")
+UTC_RECORD = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
 
 
 class UsageUnavailable(ValueError):
     """Authoritative counters are malformed or cannot be safely projected."""
+
+
+def _quota_pacing(count: int | None, allowance: int, overage: str,
+                  record_updated_at: object, now: datetime) -> dict:
+    """Advisory request pacing; no live billing, AWS cost or persistent alert."""
+    freshness = "unavailable"
+    if isinstance(record_updated_at, str) and UTC_RECORD.fullmatch(record_updated_at):
+        try:
+            updated = datetime.strptime(record_updated_at, "%Y-%m-%dT%H:%M:%SZ").replace(
+                tzinfo=timezone.utc)
+            age_seconds = (now - updated).total_seconds()
+            if -300 <= age_seconds <= 48 * 3600:
+                freshness = "recent_record_metadata"
+            elif age_seconds > 48 * 3600:
+                freshness = "stale_record_metadata"
+        except ValueError:
+            pass
+
+    total_days = monthrange(now.year, now.month)[1]
+    estimate = None
+    if count is None:
+        state = "unknown_counter"
+    elif freshness != "recent_record_metadata":
+        state = "stale_or_unknown_metadata"
+    elif allowance == 0:
+        state = "zero_allowance"
+    elif now.day < 7:
+        state = "insufficient_observation"
+    else:
+        estimate = count * total_days // now.day
+        if count > allowance:
+            state = "already_over_limit"
+        elif count == allowance:
+            state = "already_at_limit"
+        elif estimate > allowance:
+            state = "projected_over_limit"
+        elif estimate * 100 >= allowance * 95:
+            state = "projected_near_limit"
+        elif estimate * 100 >= allowance * 80:
+            state = "projected_watch"
+        else:
+            state = "projected_within_limit"
+    return {
+        "state": state,
+        "projected_month_end_requests_floor": estimate,
+        "record_metadata_freshness": freshness,
+        "calendar_days_elapsed": now.day,
+        "calendar_days_in_month": total_days,
+        "enforcement": "blocks_at_saved_cap" if overage == "block" else "records_overage",
+        "persisted_alert": False,
+        "basis": "linear calendar-day extrapolation of stored current-month counter",
+        "note": "Advisory recorded-request pacing only; record metadata does not prove "
+                "counter completeness. Not live throughput, AWS costs, billing or alerts.",
+    }
 
 
 def tenant_usage_report(record, *, clock: Callable[[], datetime] | None = None) -> dict:
@@ -61,6 +117,8 @@ def tenant_usage_report(record, *, clock: Callable[[], datetime] | None = None) 
         "basis": "recorded current-month requests vs saved monthly allowance",
         "persisted_alert": False,
     }
+    pacing = _quota_pacing(count, allowance, overage,
+                           getattr(record, "updated_at", None), now)
     return {
         "tenant_id": tenant_id,
         "period_utc": month,
@@ -70,6 +128,7 @@ def tenant_usage_report(record, *, clock: Callable[[], datetime] | None = None) 
         "overage_policy": overage,
         "blocking_cap_enabled": overage == "block",
         "usage_threshold": threshold,
+        "quota_pacing": pacing,
         "recent_recorded_months": recent,
         "source": "authoritative GuardOath tenant usage record",
         "record_revision": revision,
