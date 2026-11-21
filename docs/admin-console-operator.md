@@ -373,3 +373,8 @@ action, rule approval, evidence of acceptance tests, or authority to deploy.
 Source generation, versioned release tests (benign/adversarial/negative/timeout),
 exact-SHA CI, rollback implementation and 15 live checks remain outstanding.
 No new AWS capacity, provider charges or privacy deadline change is introduced.
+
+
+## Recovering indeterminate Cognito owner actions
+
+The owner Users workspace now displays the one-time action-reference key used for a confirmed account disable/enable operation. If the independent provider recheck or signed outcome write fails, **do not replay the action**: enter the same reference in **Inspect signed action**. The MFA-authorized, same-origin, signed read-before-provider operation `POST /v1/admin/users/status/receipt` checks strongly consistent persisted signed intent/outcome rows. `not_found` means no signed intent for the owner/reference; `indeterminate` means an intent exists but the Cognito outcome is not verified; `outcome_recorded` verifies the historical signed pair. None establishes the **current** provider state; independently inspect the exact Cognito account before additional changes. The endpoint performs no Cognito call or mutation, exposes no email, refuses tampering and audit outages, and never grants paid entitlement. The transient reference is cleared on sign-out. Source changes are not evidence of production deployment.

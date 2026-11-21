@@ -114,6 +114,11 @@ class ExactUserLookup(BaseModel):
     email: str = Field(min_length=5, max_length=254)
 
 
+class CognitoStatusReceiptRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    idempotency_key: str = Field(pattern=r"^[A-Za-z0-9_-]{16,96}$", max_length=96)
+
+
 class CognitoStatusChange(BaseModel):
     model_config = ConfigDict(extra="forbid")
     email: str = Field(min_length=5, max_length=254)
@@ -299,6 +304,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         read_event = audit_sensitive_read(principal, "admin.features")
         return admin_json({"tenant_status_changes": admin_mutator is not None,
                            "cognito_user_status_changes": user_actions is not None,
+                           "cognito_action_receipts": user_actions is not None,
                            "billing_changes": False, "billing_verify": billing_reporter is not None,
                            "billing_downgrade": billing_downgrade is not None,
                            "billing_invoices": billing_invoices is not None,
@@ -400,6 +406,21 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             except UserActionUnavailable as exc:
                 raise HTTPException(status_code=503, detail="Cognito action not verified; inspect account and audit before retrying") from exc
             return admin_json(outcome)
+
+        @router.post("/v1/admin/users/status/receipt")
+        def inspect_cognito_action_receipt(payload: CognitoStatusReceiptRequest, request: Request,
+                                           principal: VerifiedAdmin = Depends(require_admin)):
+            _require_admin_origin(request)
+            read_event = audit_sensitive_read(principal, "audit.receipt")
+            try:
+                receipt = user_actions.inspect_receipt(
+                    actor=principal.subject, idempotency_key=payload.idempotency_key)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail="Invalid action reference") from exc
+            except UserActionUnavailable as exc:
+                raise HTTPException(status_code=503, detail="Signed account-action history unavailable") from exc
+            return admin_json({**receipt,
+                               **({"read_audit_event_id": read_event} if read_event else {})})
 
     @router.get("/v1/admin/tenants")
     def tenants(search: str = Query(default="", max_length=40),

@@ -222,3 +222,74 @@ def test_modified_signed_outcome_cannot_be_verified():
     outcome = client.post(URL, json=body(), headers=HEADERS).json()
     db.rows[outcome["audit_event_id"]]["new_enabled"]["S"] = "true"
     assert client.get("/v1/admin/audit/" + outcome["audit_event_id"], headers=HEADERS).status_code == 503
+
+
+def test_account_action_history_recovers_signed_pair_without_provider_replay():
+    client, db, provider = make()
+    result = client.post(URL, json=body(), headers=HEADERS).json()
+    calls = provider.calls[:]
+    response = client.post(URL + "/receipt",
+        json={"idempotency_key": body()["idempotency_key"]}, headers=HEADERS)
+    assert response.status_code == 200, response.text
+    history = response.json()
+    assert history["status"] == "outcome_recorded"
+    assert history["enabled_at_verification"] is False
+    assert history["current_provider_state_verified"] is False
+    assert history["intent_event_id"] == result["intent_event_id"]
+    assert history["outcome_event_id"] == result["audit_event_id"]
+    assert history["read_audit_event_id"] in db.rows
+    assert provider.calls == calls
+    assert EMAIL not in response.text
+
+
+def test_account_action_history_indeterminate_fails_closed_without_retry():
+    provider = Cognito()
+    provider.fail_after = True
+    client, db, provider = make(provider=provider)
+    assert client.post(URL, json=body(), headers=HEADERS).status_code == 503
+    calls = provider.calls[:]
+    response = client.post(URL + "/receipt",
+        json={"idempotency_key": body()["idempotency_key"]}, headers=HEADERS)
+    assert response.status_code == 200 and response.json()["status"] == "indeterminate"
+    assert response.json()["outcome_event_id"] is None
+    assert response.json()["current_provider_state_verified"] is False
+    assert provider.calls == calls
+    assert client.post(URL, json=body(), headers=HEADERS).status_code == 409
+
+
+def test_account_action_history_owner_binding_denials_and_missing_receipts():
+    client, db, provider = make()
+    key = {"idempotency_key": "unknownreference00000001"}
+    assert client.post(URL + "/receipt", json=key).status_code == 401
+    assert client.post(URL + "/receipt", json=key, headers={
+        "X-GuardOath-Key":"owner", "Origin":"https://guardoath.com"}).status_code == 401
+    assert client.post(URL + "/receipt", json=key, headers={
+        **HEADERS, "Origin":"https://foreign.example"}).status_code == 403
+    assert client.post(URL + "/receipt", json={"idempotency_key":"short"}, headers=HEADERS).status_code == 422
+    assert client.post(URL + "/receipt", json=key, headers=HEADERS).json()["status"] == "not_found"
+    assert provider.calls == []
+    assert client.post(URL, json=body(), headers=HEADERS).status_code == 200
+    other = FastAPI()
+    other.include_router(create_admin_router(
+        verify_cognito_admin=lambda token: VerifiedAdmin(
+            "12345678-1234-1234-1234-987654321098", frozenset({"owner"}), True)
+            if token == "other" else None,
+        admin_user_directory=CognitoUserDirectory(provider, POOL, KEY, clock=lambda: 100),
+        read_auditor=AdminSensitiveReadAuditor(db, "audit_table", signing_key=KEY)))
+    foreign = TestClient(other).post(URL + "/receipt",
+        json={"idempotency_key":body()["idempotency_key"]},
+        headers={**HEADERS, "X-GuardOath-Admin-Session":"other"})
+    assert foreign.status_code == 200 and foreign.json()["status"] == "not_found"
+
+
+def test_account_action_history_corrupt_signed_or_orphaned_outcome_denied():
+    client, db, provider = make()
+    ids = client.post(URL, json=body(), headers=HEADERS).json()
+    db.rows[ids["audit_event_id"]]["reason"]["S"] = "Unauthorized changed reason"
+    response = client.post(URL + "/receipt",
+        json={"idempotency_key":body()["idempotency_key"]}, headers=HEADERS)
+    assert response.status_code == 503
+    assert EMAIL not in response.text
+    db.rows.pop(ids["intent_event_id"])
+    assert client.post(URL + "/receipt",
+        json={"idempotency_key":body()["idempotency_key"]}, headers=HEADERS).status_code == 503

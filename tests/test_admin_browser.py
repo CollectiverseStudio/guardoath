@@ -418,3 +418,20 @@ def test_invoice_browser_verifies_page_scoped_payment_review_without_claiming_fa
     assert "Partial invoice history" in script
     assert "not revenue or overdue determination" in script
     assert "innerHTML" not in script
+
+
+def test_cognito_owner_action_recovery_ui_uses_authenticated_read_and_clears_on_logout():
+    page = app().get("/admin/login").text
+    script = app().get("/admin/client.js").text
+    for marker in ('id="user-action-key"', 'id="user-action-inspect"', 'id="user-action-result"'):
+        assert marker in page
+    assert 'features.cognito_action_receipts' in script
+    assert 'request("/v1/admin/users/status/receipt", {' in script
+    assert 'method:"POST", body:JSON.stringify({idempotency_key:key})' in script
+    assert 'current_provider_state_verified !== false' in script
+    assert 'idempotency_key:actionKey' in script
+    assert 'addEventListener("click", inspectUserActionReceipt)' in script
+    assert 'el("user-action-key").value = ""' in script
+    assert 'user-action-result' in cleared_on_logout(script)
+    assert 'current Cognito status NOT checked' in script
+    assert "innerHTML" not in script

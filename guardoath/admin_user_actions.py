@@ -14,6 +14,7 @@ import hmac
 import re
 
 from guardoath.admin_audit_integrity import seal_audit
+from guardoath.admin_audit import AdminAuditReader
 from guardoath.admin_users import ADMIN_GROUP, _EXACT_EMAIL, _OWNER_SUB
 from guardoath.admin_actions import IDEMPOTENCY, REASON
 
@@ -48,6 +49,54 @@ class AdminCognitoUserActions:
         self.ddb.put_item(TableName=self.audit_table,
                           Item=seal_audit(item, self.audit_key),
                           ConditionExpression="attribute_not_exists(event_id)")
+
+    def inspect_receipt(self, *, actor: str, idempotency_key: str) -> dict:
+        """Inspect owner-bound signed intent/outcome; never retry a Cognito write."""
+        if (not isinstance(actor, str) or not _OWNER_SUB.fullmatch(actor)
+                or not isinstance(idempotency_key, str)
+                or not IDEMPOTENCY.fullmatch(idempotency_key)):
+            raise ValueError("Invalid owner action reference")
+        key_source = (actor + "\\0" + idempotency_key).encode()
+        intent_id = hmac.new(self.audit_key, b"cognito-status-intent:" + key_source,
+                             hashlib.sha256).hexdigest()
+        outcome_id = hmac.new(self.audit_key, b"cognito-status-outcome:" + key_source,
+                              hashlib.sha256).hexdigest()
+        try:
+            reader = AdminAuditReader(self.ddb, self.audit_table, verify_key=self.audit_key)
+            intent, outcome = reader.read(intent_id), reader.read(outcome_id)
+        except Exception as exc:
+            raise UserActionUnavailable("Signed account-action audit unavailable") from exc
+        if intent is None:
+            if outcome is not None:
+                raise UserActionUnavailable("Orphaned account-action outcome")
+            return {"status": "not_found", "intent_event_id": None,
+                    "outcome_event_id": None, "current_provider_state_verified": False,
+                    "note": "No signed intent found; no account state inferred"}
+        before = intent.get("change") or {}
+        if (intent.get("operation") != "cognito.user.status.intent"
+                or intent.get("actor_sub") != actor
+                or intent.get("integrity_status") != "signed_verified"
+                or before.get("field") != "cognito_enabled"):
+            raise UserActionUnavailable("Account-action intent integrity unavailable")
+        if outcome is None:
+            return {"status": "indeterminate", "intent_event_id": intent_id,
+                    "outcome_event_id": None, "current_provider_state_verified": False,
+                    "note": "Signed intent exists but no verified outcome; Cognito may have acted"}
+        after = outcome.get("change") or {}
+        if (outcome.get("operation") != "cognito.user.status.outcome"
+                or outcome.get("integrity_status") != "signed_verified"
+                or outcome.get("actor_sub") != actor
+                or after.get("related_event_id") != intent_id
+                or after.get("field") != "cognito_enabled"
+                or after.get("before") is not before.get("before")
+                or after.get("after") is not before.get("after")
+                or after.get("target_fingerprint") != before.get("target_fingerprint")
+                or outcome.get("reason") != intent.get("reason")):
+            raise UserActionUnavailable("Account-action outcome does not match intent")
+        return {"status": "outcome_recorded", "intent_event_id": intent_id,
+                "outcome_event_id": outcome_id, "enabled_at_verification": after["after"],
+                "current_provider_state_verified": False,
+                "note": "Historical signed outcome only; inspect live Cognito state separately"}
 
     def change(self, *, actor: str, email: str, action: str, expected_enabled: bool,
                confirmation: str, reason: str, idempotency_key: str) -> dict:

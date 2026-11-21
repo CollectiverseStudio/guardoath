@@ -267,7 +267,9 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <h3>Change Cognito sign-in access</h3><p class="muted">Disable or re-enable a non-owner account only after exact inspection. Does not grant a subscription, change a tenant, or reset MFA. Each action is independently audited and re-read from Cognito. If verification fails, inspect the account rather than retrying blindly.</p>
 <label for="user-change-email">Exact account email</label> <input id="user-change-email" type="email" maxlength="254" autocomplete="off" spellcheck="false">
 <label for="user-change-action">Action</label> <select id="user-change-action"><option value="disable">Disable sign-in</option><option value="enable">Enable sign-in</option></select>
-<button id="user-change" type="button" disabled>Apply audited change</button><p id="user-change-result" role="status"></p></section>
+<button id="user-change" type="button" disabled>Apply audited change</button><p id="user-change-result" role="status"></p>
+<h3>Recover an account-action receipt</h3><p class="muted">Retain the action reference when changing access. This checks signed intent/outcome history without retrying or claiming current Cognito state.</p>
+<label for="user-action-key">Action reference</label> <input id="user-action-key" maxlength="96" autocomplete="off" spellcheck="false"><button id="user-action-inspect" type="button" disabled>Inspect signed action</button><p id="user-action-result" role="status"></p></section>
 <section id="section-tenants" data-admin-section class="panel" hidden tabindex="-1" aria-label="Tenants"><h2>Tenants</h2><p class="muted">API key counts are sourced from the persisted tenant record; actual key material is never displayed. Unknown counts remain unavailable.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
 <section id="section-billing" data-admin-section class="section-stack" hidden tabindex="-1" aria-label="Billing"><section class="panel"><h2>Verified recent invoices</h2><p class="muted">Up to five Stripe invoice summaries for an independently verified customer subscription. Amounts are in minor currency units, not a revenue total or forecast.</p><p id="invoice-details" role="status">No invoice history selected.</p></section>
 <section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Select Verify Stripe beside a tenant to compare the current provider status with its saved tenant entitlement. Discrepancies are advisory: no paid access or billing state is modified here.</p><p id="billing-details" role="status">No subscription selected.</p></section>
@@ -362,7 +364,7 @@ _JS = r'''"use strict";
     el("tenant-rows").replaceChildren();
     el("user-rows").replaceChildren();
     el("categories").replaceChildren();
-    for (const id of ["status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "usage-details", "billing-details", "invoice-details", "audit-result", "proposal-result", "draft-result", "review-manifest-result"]) say(id, "");
+    for (const id of ["status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "user-action-result", "usage-details", "billing-details", "invoice-details", "audit-result", "proposal-result", "draft-result", "review-manifest-result"]) say(id, "");
     previewSelection = null;
     previewReady = null;
     draftReadyForReview = null;
@@ -382,7 +384,9 @@ _JS = r'''"use strict";
     el("user-search").value = "";
     el("user-exact-email").value = "";
     el("user-change-email").value = "";
+    el("user-action-key").value = "";
     el("user-change").disabled = true;
+    el("user-action-inspect").disabled = true;
     nextUserCursor = null;
     el("user-next").disabled = true;
     nextCursor = null;
@@ -416,6 +420,7 @@ _JS = r'''"use strict";
     }
     features = available;
     el("user-change").disabled = !features.cognito_user_status_changes;
+    el("user-action-inspect").disabled = !features.cognito_action_receipts;
     previewSelection = null;
     previewReady = null;
     el("proposal-save").disabled = true;
@@ -800,10 +805,13 @@ _JS = r'''"use strict";
       const reason = prompt("Why is this sign-in access change needed? (10–240 characters; no personal data)");
       if (!reason || reason.length < 10 || reason.length > 240) return;
       if (!confirm("Change Cognito sign-in access for this exact account? This does NOT change Stripe or paid entitlement.")) return;
+      const actionKey = crypto.randomUUID().replaceAll("-","");
+      el("user-action-key").value = actionKey;
+      say("user-action-result", "Retain action reference: " + actionKey);
       const result = await request("/v1/admin/users/status", {
         method:"POST", body:JSON.stringify({
           email, action, expected_enabled:expected, confirmation, reason,
-          idempotency_key:crypto.randomUUID().replaceAll("-","")
+          idempotency_key:actionKey
         })
       });
       if (!token || epoch !== authEpoch) return;
@@ -830,6 +838,49 @@ _JS = r'''"use strict";
     } catch (err) {
       if (token && epoch === authEpoch)
         say("user-change-result", err.message + " · inspect account and audit before another change");
+    }
+  }
+
+  async function inspectUserActionReceipt() {
+    if (!token || !features.cognito_action_receipts) return;
+    const key = el("user-action-key").value.trim();
+    if (!/^[A-Za-z0-9_-]{16,96}$/.test(key)) {
+      say("user-action-result", "Enter the original 16–96 character action reference.");
+      return;
+    }
+    const epoch = authEpoch;
+    say("user-action-result", "Inspecting signed action trail...");
+    try {
+      const result = await request("/v1/admin/users/status/receipt", {
+        method:"POST", body:JSON.stringify({idempotency_key:key})
+      });
+      if (!token || epoch !== authEpoch) return;
+      if (result.current_provider_state_verified !== false ||
+          !["not_found","indeterminate","outcome_recorded"].includes(result.status))
+        throw new Error("Action receipt verification response invalid");
+      if (result.status === "not_found") {
+        if (result.intent_event_id !== null || result.outcome_event_id !== null)
+          throw new Error("Action receipt identifiers invalid");
+        say("user-action-result", "No signed intent for this owner reference; account state unknown." + readAuditLabel(result));
+        return;
+      }
+      if (!/^[a-f0-9]{64}$/.test(result.intent_event_id || ""))
+        throw new Error("Action intent identifier invalid");
+      if (result.status === "indeterminate") {
+        if (result.outcome_event_id !== null) throw new Error("Unverified outcome");
+        say("user-action-result", "Signed intent " + result.intent_event_id +
+            " exists, but provider outcome is INDETERMINATE. Inspect exact Cognito account before another action." + readAuditLabel(result));
+        return;
+      }
+      if (!/^[a-f0-9]{64}$/.test(result.outcome_event_id || "") ||
+          typeof result.enabled_at_verification !== "boolean")
+        throw new Error("Historical action outcome invalid");
+      say("user-action-result", "Signed intent " + result.intent_event_id +
+          " · signed historical outcome " + result.outcome_event_id +
+          " · enabled at verification: " + result.enabled_at_verification +
+          " · current Cognito status NOT checked. Inspect exact account before any new action." + readAuditLabel(result));
+    } catch (err) {
+      if (token && epoch === authEpoch) say("user-action-result", err.message);
     }
   }
 
@@ -1354,6 +1405,7 @@ _JS = r'''"use strict";
   el("user-next").addEventListener("click", pageUsers);
   el("user-inspect").addEventListener("click", inspectUser);
   el("user-change").addEventListener("click", changeUserStatus);
+  el("user-action-inspect").addEventListener("click", inspectUserActionReceipt);
   el("next").addEventListener("click", page);
   el("audit-go").addEventListener("click", inspectAudit);
   el("proposal-go").addEventListener("click", previewCatalogRule);
