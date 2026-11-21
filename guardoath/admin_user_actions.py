@@ -14,8 +14,7 @@ import hmac
 import re
 
 from guardoath.admin_audit_integrity import seal_audit
-from guardoath.admin_cognito import ADMIN_GROUP, SUBJECT
-from guardoath.admin_users import _EXACT_EMAIL, _OWNER_SUB
+from guardoath.admin_users import ADMIN_GROUP, _EXACT_EMAIL, _OWNER_SUB
 from guardoath.admin_actions import IDEMPOTENCY, REASON
 
 
@@ -51,7 +50,7 @@ class AdminCognitoUserActions:
 
     def change(self, *, actor: str, email: str, action: str, expected_enabled: bool,
                confirmation: str, reason: str, idempotency_key: str) -> dict:
-        if (not isinstance(actor, str) or not SUBJECT.fullmatch(actor)
+        if (not isinstance(actor, str) or not _OWNER_SUB.fullmatch(actor)
                 or not isinstance(email, str) or len(email) > 254
                 or not _EXACT_EMAIL.fullmatch(email) or email.startswith(".")
                 or email.endswith(".") or ".." in email

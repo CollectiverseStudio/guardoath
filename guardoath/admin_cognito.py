@@ -13,6 +13,7 @@ from time import time
 from typing import Any, Protocol
 
 from guardoath.admin_console import VerifiedAdmin
+from guardoath.admin_users import ADMIN_GROUP
 
 
 class SessionValidator(Protocol):
@@ -27,7 +28,6 @@ class CognitoAdminClient(Protocol):
 
 
 SUBJECT = re.compile(r"^[0-9a-fA-F-]{20,80}$")
-ADMIN_GROUP = "GuardOathOwners"
 # An explicit, signed authentication-method reference. Never infer this from
 # a user's preferred MFA settings, email verification or group membership.
 # Cognito's signed "mfa" value means that multiple factors were completed.

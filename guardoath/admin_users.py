@@ -23,6 +23,9 @@ class CognitoDirectoryUnavailable(Exception):
 class CognitoLookupRateLimited(CognitoDirectoryUnavailable):
     pass
 
+# Shared, server-trusted owner group name; never read from browser input.
+ADMIN_GROUP = "GuardOathOwners"
+
 _POOL = re.compile(r"^[a-z]{2}(?:-[a-z]+)+-\d_[A-Za-z0-9]+$")
 _FILTER = re.compile(r"^[A-Za-z0-9._+@-]{0,80}$")
 # Deliberately restricted ASCII email subset: never interpolate quotes or escapes into Cognito filters.
