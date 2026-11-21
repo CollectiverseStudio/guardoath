@@ -32,6 +32,21 @@ def payload(**kwargs):
     return {"code": "code1", "code_verifier": "x" * 43, **kwargs}
 
 
+def test_signed_cognito_receipt_live_comparison_is_explicit_and_wipes_input():
+    page = app().get("/admin/login").text
+    script = app().get("/admin/client.js").text
+    assert 'id="user-action-email"' in page
+    assert 'Optional exact account email for live comparison' in page
+    assert 'el("user-action-email").value = "";' in script
+    assert 'el("user-action-email").value = email;' in script
+    assert 'email ? {idempotency_key:key,email} : {idempotency_key:key}' in script
+    assert "result.current_provider_state_verified" in script
+    assert "current_matches_recorded_outcome" in script
+    assert "not proof of the historical provider action" in script
+    assert 'request("/v1/admin/users/status/receipt"' in script
+    assert "innerHTML" not in script
+
+
 def test_catalog_draft_browser_workflow_is_authenticated_and_never_publishes():
     page = app().get("/admin/login").text
     script = app().get("/admin/client.js").text

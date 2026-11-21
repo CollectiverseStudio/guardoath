@@ -50,13 +50,82 @@ class AdminCognitoUserActions:
                           Item=seal_audit(item, self.audit_key),
                           ConditionExpression="attribute_not_exists(event_id)")
 
-    def inspect_receipt(self, *, actor: str, idempotency_key: str) -> dict:
-        """Inspect owner-bound signed intent/outcome; never retry a Cognito write."""
+    def _verified_live_state(self, *, actor: str, email: str, fingerprint: str) -> dict:
+        """Read current Cognito state only for the signed action's exact target.
+
+        A matching current state cannot establish that an earlier indeterminate
+        provider write succeeded. Never return raw email, username or subject.
+        """
+        try:
+            self.reserve_read(actor)
+        except Exception as exc:
+            raise UserActionUnavailable("Cognito read budget unavailable") from exc
+        try:
+            directory = self.cognito.list_users(
+                UserPoolId=self.pool_id, Filter='email = "' + email + '"', Limit=2)
+            if (not isinstance(directory, dict) or not isinstance(directory.get("Users"), list)
+                    or len(directory["Users"]) != 1 or directory.get("PaginationToken") is not None):
+                raise UserActionConflict("Signed action target no longer uniquely matches the supplied account")
+            entry = directory["Users"][0]
+            username = entry.get("Username") if isinstance(entry, dict) else None
+            attrs = entry.get("Attributes") if isinstance(entry, dict) else None
+            if (not isinstance(username, str) or not 1 <= len(username) <= 128
+                    or not isinstance(attrs, list) or len(attrs) > 50):
+                raise UserActionUnavailable("Cognito target identity unavailable")
+
+            def identities(attributes):
+                if not isinstance(attributes, list) or len(attributes) > 50:
+                    raise UserActionUnavailable("Cognito attributes unavailable")
+                emails = [a.get("Value") for a in attributes
+                          if isinstance(a, dict) and a.get("Name") == "email"]
+                subs = [a.get("Value") for a in attributes
+                        if isinstance(a, dict) and a.get("Name") == "sub"]
+                if (len(emails) != 1 or len(subs) != 1
+                        or not isinstance(emails[0], str) or emails[0].casefold() != email.casefold()
+                        or not isinstance(subs[0], str) or not _OWNER_SUB.fullmatch(subs[0])):
+                    raise UserActionConflict("Signed action target does not match current Cognito identity")
+                return subs[0]
+            sub = identities(attrs)
+            actual = hmac.new(self.audit_key, b"cognito-user:" + sub.encode(),
+                              hashlib.sha256).hexdigest()
+            if not hmac.compare_digest(actual, fingerprint):
+                raise UserActionConflict("Signed action reference belongs to another account")
+            observed = self.cognito.admin_get_user(UserPoolId=self.pool_id, Username=username)
+            if (not isinstance(observed, dict) or observed.get("Username") != username
+                    or identities(observed.get("UserAttributes")) != sub
+                    or type(entry.get("Enabled")) is not bool
+                    or type(observed.get("Enabled")) is not bool
+                    or entry["Enabled"] is not observed["Enabled"]
+                    or not isinstance(observed.get("UserStatus"), str)
+                    or entry.get("UserStatus") != observed["UserStatus"]):
+                raise UserActionUnavailable("Cognito state changed during independent inspection")
+            current = observed["Enabled"]
+        except (UserActionConflict, UserActionUnavailable):
+            raise
+        except Exception as exc:
+            raise UserActionUnavailable("Current Cognito status unavailable") from exc
+        now = self.clock()
+        if not isinstance(now, datetime) or now.tzinfo is None:
+            raise UserActionUnavailable("Current Cognito observation time unavailable")
+        return {"current_provider_state_verified": True, "current_enabled": current,
+                "current_observed_at_utc": now.astimezone(timezone.utc).isoformat(
+                    timespec="seconds").replace("+00:00", "Z")}
+
+    def inspect_receipt(self, *, actor: str, idempotency_key: str,
+                        email: str | None = None) -> dict:
+        """Verify owner-bound history; optionally compare a fresh exact Cognito read.
+
+        No receipt inspection ever retries the original mutation. Live status
+        does not resolve the causal outcome of an indeterminate signed intent.
+        """
         if (not isinstance(actor, str) or not _OWNER_SUB.fullmatch(actor)
                 or not isinstance(idempotency_key, str)
-                or not IDEMPOTENCY.fullmatch(idempotency_key)):
-            raise ValueError("Invalid owner action reference")
-        key_source = (actor + "\\0" + idempotency_key).encode()
+                or not IDEMPOTENCY.fullmatch(idempotency_key)
+                or (email is not None and (not isinstance(email, str) or len(email) > 254
+                     or not _EXACT_EMAIL.fullmatch(email) or email.startswith(".")
+                     or email.endswith(".") or ".." in email))):
+            raise ValueError("Invalid owner action reference or exact account email")
+        key_source = (actor + "\0" + idempotency_key).encode()
         intent_id = hmac.new(self.audit_key, b"cognito-status-intent:" + key_source,
                              hashlib.sha256).hexdigest()
         outcome_id = hmac.new(self.audit_key, b"cognito-status-outcome:" + key_source,
@@ -79,24 +148,35 @@ class AdminCognitoUserActions:
                 or before.get("field") != "cognito_enabled"):
             raise UserActionUnavailable("Account-action intent integrity unavailable")
         if outcome is None:
-            return {"status": "indeterminate", "intent_event_id": intent_id,
-                    "outcome_event_id": None, "current_provider_state_verified": False,
-                    "note": "Signed intent exists but no verified outcome; Cognito may have acted"}
-        after = outcome.get("change") or {}
-        if (outcome.get("operation") != "cognito.user.status.outcome"
-                or outcome.get("integrity_status") != "signed_verified"
-                or outcome.get("actor_sub") != actor
-                or after.get("related_event_id") != intent_id
-                or after.get("field") != "cognito_enabled"
-                or after.get("before") is not before.get("before")
-                or after.get("after") is not before.get("after")
-                or after.get("target_fingerprint") != before.get("target_fingerprint")
-                or outcome.get("reason") != intent.get("reason")):
-            raise UserActionUnavailable("Account-action outcome does not match intent")
-        return {"status": "outcome_recorded", "intent_event_id": intent_id,
-                "outcome_event_id": outcome_id, "enabled_at_verification": after["after"],
-                "current_provider_state_verified": False,
-                "note": "Historical signed outcome only; inspect live Cognito state separately"}
+            history = {"status": "indeterminate", "intent_event_id": intent_id,
+                       "outcome_event_id": None, "current_provider_state_verified": False,
+                       "note": "Signed intent exists without a verified outcome; Cognito may have acted"}
+        else:
+            after = outcome.get("change") or {}
+            if (outcome.get("operation") != "cognito.user.status.outcome"
+                    or outcome.get("integrity_status") != "signed_verified"
+                    or outcome.get("actor_sub") != actor
+                    or after.get("related_event_id") != intent_id
+                    or after.get("field") != "cognito_enabled"
+                    or after.get("before") is not before.get("before")
+                    or after.get("after") is not before.get("after")
+                    or after.get("target_fingerprint") != before.get("target_fingerprint")
+                    or outcome.get("reason") != intent.get("reason")):
+                raise UserActionUnavailable("Account-action outcome does not match intent")
+            history = {"status": "outcome_recorded", "intent_event_id": intent_id,
+                       "outcome_event_id": outcome_id, "enabled_at_verification": after["after"],
+                       "current_provider_state_verified": False,
+                       "note": "Historical signed outcome only; inspect live Cognito state separately"}
+        if email is None:
+            return history
+        live = self._verified_live_state(
+            actor=actor, email=email, fingerprint=before["target_fingerprint"])
+        matches = (live["current_enabled"] == history["enabled_at_verification"]
+                   if history["status"] == "outcome_recorded" else None)
+        return {**history, **live, "current_matches_recorded_outcome": matches,
+                "note": ("Independent Cognito snapshot only; a matching enabled state does "
+                         "not prove the historical mutation's cause or resolve an "
+                         "indeterminate provider outcome")}
 
     def change(self, *, actor: str, email: str, action: str, expected_enabled: bool,
                confirmation: str, reason: str, idempotency_key: str) -> dict:

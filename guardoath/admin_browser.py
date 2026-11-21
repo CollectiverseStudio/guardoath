@@ -268,8 +268,10 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <label for="user-change-email">Exact account email</label> <input id="user-change-email" type="email" maxlength="254" autocomplete="off" spellcheck="false">
 <label for="user-change-action">Action</label> <select id="user-change-action"><option value="disable">Disable sign-in</option><option value="enable">Enable sign-in</option></select>
 <button id="user-change" type="button" disabled>Apply audited change</button><p id="user-change-result" role="status"></p>
-<h3>Recover an account-action receipt</h3><p class="muted">Retain the action reference when changing access. This checks signed intent/outcome history without retrying or claiming current Cognito state.</p>
-<label for="user-action-key">Action reference</label> <input id="user-action-key" maxlength="96" autocomplete="off" spellcheck="false"><button id="user-action-inspect" type="button" disabled>Inspect signed action</button><p id="user-action-result" role="status"></p></section>
+<h3>Recover an account-action receipt</h3><p class="muted">Retain the action reference when changing access. Signed history never retries a provider write. Optionally enter an exact account email for a fresh independent Cognito state comparison; this cannot prove what caused an indeterminate action.</p>
+<label for="user-action-key">Action reference</label> <input id="user-action-key" maxlength="96" autocomplete="off" spellcheck="false">
+<label for="user-action-email">Optional exact account email for live comparison</label> <input id="user-action-email" type="email" maxlength="254" autocomplete="off" spellcheck="false">
+<button id="user-action-inspect" type="button" disabled>Inspect signed action</button><p id="user-action-result" role="status"></p></section>
 <section id="section-tenants" data-admin-section class="panel" hidden tabindex="-1" aria-label="Tenants"><h2>Tenants</h2><p class="muted">API key counts are sourced from the persisted tenant record; actual key material is never displayed. Unknown counts remain unavailable.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
 <section id="section-billing" data-admin-section class="section-stack" hidden tabindex="-1" aria-label="Billing"><section class="panel"><h2>Verified recent invoices</h2><p class="muted">Up to five Stripe invoice summaries for an independently verified customer subscription. Amounts are in minor currency units, not a revenue total or forecast.</p><p id="invoice-details" role="status">No invoice history selected.</p></section>
 <section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Select Verify Stripe beside a tenant to compare the current provider status with its saved tenant entitlement. Discrepancies are advisory: no paid access or billing state is modified here.</p><p id="billing-details" role="status">No subscription selected.</p></section>
@@ -385,6 +387,7 @@ _JS = r'''"use strict";
     el("user-exact-email").value = "";
     el("user-change-email").value = "";
     el("user-action-key").value = "";
+    el("user-action-email").value = "";
     el("user-change").disabled = true;
     el("user-action-inspect").disabled = true;
     nextUserCursor = null;
@@ -821,6 +824,7 @@ _JS = r'''"use strict";
       if (!confirm("Change Cognito sign-in access for this exact account? This does NOT change Stripe or paid entitlement.")) return;
       const actionKey = crypto.randomUUID().replaceAll("-","");
       el("user-action-key").value = actionKey;
+      el("user-action-email").value = email;
       say("user-action-result", "Retain action reference: " + actionKey);
       const result = await request("/v1/admin/users/status", {
         method:"POST", body:JSON.stringify({
@@ -862,15 +866,22 @@ _JS = r'''"use strict";
       say("user-action-result", "Enter the original 16–96 character action reference.");
       return;
     }
+    const email = el("user-action-email").value.trim();
+    if (email && (email.length > 254 || !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}$/.test(email) ||
+        email.startsWith(".") || email.endsWith(".") || email.includes(".."))) {
+      say("user-action-result", "Invalid exact email; no current account queried.");
+      return;
+    }
     const epoch = authEpoch;
-    say("user-action-result", "Inspecting signed action trail...");
+    say("user-action-result", email ? "Verifying signed history and live Cognito status..." :
+        "Inspecting signed action trail...");
     try {
       const result = await request("/v1/admin/users/status/receipt", {
-        method:"POST", body:JSON.stringify({idempotency_key:key})
+        method:"POST", body:JSON.stringify(email ? {idempotency_key:key,email} : {idempotency_key:key})
       });
       if (!token || epoch !== authEpoch) return;
-      if (result.current_provider_state_verified !== false ||
-          !["not_found","indeterminate","outcome_recorded"].includes(result.status))
+      if (!["not_found","indeterminate","outcome_recorded"].includes(result.status) ||
+          result.current_provider_state_verified !== (email !== "" && result.status !== "not_found"))
         throw new Error("Action receipt verification response invalid");
       if (result.status === "not_found") {
         if (result.intent_event_id !== null || result.outcome_event_id !== null)
@@ -880,19 +891,35 @@ _JS = r'''"use strict";
       }
       if (!/^[a-f0-9]{64}$/.test(result.intent_event_id || ""))
         throw new Error("Action intent identifier invalid");
+      if (email && (typeof result.current_enabled !== "boolean" ||
+          !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/.test(result.current_observed_at_utc || "")))
+        throw new Error("Current Cognito status verification invalid");
+      const liveLabel = email ? " · independently observed current Cognito enabled: " +
+        result.current_enabled + " · status observed UTC " + result.current_observed_at_utc +
+        " (not proof of the historical provider action)" : "";
       if (result.status === "indeterminate") {
-        if (result.outcome_event_id !== null) throw new Error("Unverified outcome");
+        if (result.outcome_event_id !== null ||
+            (email && result.current_matches_recorded_outcome !== null))
+          throw new Error("Unverified outcome");
         say("user-action-result", "Signed intent " + result.intent_event_id +
-            " exists, but provider outcome is INDETERMINATE. Inspect exact Cognito account before another action." + readAuditLabel(result));
+            " exists, but provider outcome is INDETERMINATE." + liveLabel +
+            " A current state cannot establish whether the earlier action succeeded." + readAuditLabel(result));
         return;
       }
       if (!/^[a-f0-9]{64}$/.test(result.outcome_event_id || "") ||
           typeof result.enabled_at_verification !== "boolean")
         throw new Error("Historical action outcome invalid");
+      if (email && (typeof result.current_matches_recorded_outcome !== "boolean" ||
+          result.current_matches_recorded_outcome !==
+            (result.current_enabled === result.enabled_at_verification)))
+        throw new Error("Current and historical Cognito status comparison invalid");
       say("user-action-result", "Signed intent " + result.intent_event_id +
           " · signed historical outcome " + result.outcome_event_id +
           " · enabled at verification: " + result.enabled_at_verification +
-          " · current Cognito status NOT checked. Inspect exact account before any new action." + readAuditLabel(result));
+          (email ? liveLabel + (result.current_matches_recorded_outcome ?
+            " · current enabled state matches historical snapshot" :
+            " · current enabled state DIFFERS from historical snapshot") :
+            " · current Cognito status NOT checked. Inspect exact account before another action.") + readAuditLabel(result));
     } catch (err) {
       if (token && epoch === authEpoch) say("user-action-result", err.message);
     }

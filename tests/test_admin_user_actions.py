@@ -293,3 +293,94 @@ def test_account_action_history_corrupt_signed_or_orphaned_outcome_denied():
     db.rows.pop(ids["intent_event_id"])
     assert client.post(URL + "/receipt",
         json={"idempotency_key":body()["idempotency_key"]}, headers=HEADERS).status_code == 503
+
+
+def test_signed_receipt_independent_cognito_read_reports_current_drift_without_mutation():
+    client, db, provider = make()
+    saved = client.post(URL, json=body(), headers=HEADERS).json()
+    provider.calls.clear()
+    request = {"idempotency_key": body()["idempotency_key"], "email": EMAIL}
+    response = client.post(URL + "/receipt", json=request, headers=HEADERS)
+    assert response.status_code == 200, response.text
+    observed = response.json()
+    assert observed["status"] == "outcome_recorded"
+    assert observed["current_provider_state_verified"] is True
+    assert observed["current_enabled"] is False
+    assert observed["enabled_at_verification"] is False
+    assert observed["current_matches_recorded_outcome"] is True
+    assert observed["current_observed_at_utc"].endswith("Z")
+    assert observed["intent_event_id"] == saved["intent_event_id"]
+    assert provider.calls == ["list", "get"]
+    assert EMAIL not in response.text and "opaque-target-id" not in response.text
+    assert observed["read_audit_event_id"] in db.rows
+    provider.enabled = True
+    drifted = client.post(URL + "/receipt", json=request, headers=HEADERS).json()
+    assert drifted["current_enabled"] is True
+    assert drifted["current_matches_recorded_outcome"] is False
+    assert provider.calls == ["list", "get", "list", "get"]
+
+
+def test_indeterminate_receipt_live_inspection_never_claims_mutation_success():
+    provider = Cognito()
+    provider.fail_after = True
+    client, db, provider = make(provider=provider)
+    assert client.post(URL, json=body(), headers=HEADERS).status_code == 503
+    provider.fail_after = False
+    provider.calls.clear()
+    result = client.post(URL + "/receipt", json={
+        "idempotency_key": body()["idempotency_key"], "email": EMAIL}, headers=HEADERS)
+    assert result.status_code == 200, result.text
+    assert result.json()["status"] == "indeterminate"
+    assert result.json()["current_enabled"] is False
+    assert result.json()["current_provider_state_verified"] is True
+    assert result.json()["current_matches_recorded_outcome"] is None
+    assert result.json()["outcome_event_id"] is None
+    assert provider.calls == ["list", "get"]
+    assert len([row for row in db.rows.values()
+                if row["operation"]["S"] == "cognito.user.status.outcome"]) == 0
+
+
+def test_live_receipt_rejects_different_target_ambiguous_or_invalid_identity():
+    client, db, provider = make()
+    saved = client.post(URL, json=body(), headers=HEADERS).json()
+    provider.calls.clear()
+    for invalid in ("no-at", "different@example.com..", "two quote@example.com"):
+        assert client.post(URL + "/receipt", json={
+            "idempotency_key": body()["idempotency_key"], "email": invalid},
+            headers=HEADERS).status_code == 422
+    assert provider.calls == []
+    provider.target_sub = "11223344-5566-7788-99aa-bbccddeeff00"
+    response = client.post(URL + "/receipt", json={
+        "idempotency_key": body()["idempotency_key"], "email": EMAIL},
+        headers=HEADERS)
+    assert response.status_code == 409
+    assert "11223344" not in response.text
+    assert provider.calls == ["list"]
+    provider.target_sub = TARGET
+    provider.calls.clear()
+    provider.ambiguous = True
+    assert client.post(URL + "/receipt", json={
+        "idempotency_key": body()["idempotency_key"], "email": EMAIL},
+        headers=HEADERS).status_code == 409
+    assert provider.calls == ["list"]
+    provider.ambiguous = False
+    provider.calls.clear()
+    assert client.post(URL + "/receipt", json={
+        "idempotency_key": "unknownreference00000001", "email": EMAIL},
+        headers=HEADERS).json()["status"] == "not_found"
+    assert provider.calls == []
+    assert saved["audit_event_id"] in db.rows
+
+
+def test_live_receipt_never_calls_cognito_without_owner_origin_and_durable_read_audit():
+    client, db, provider = make()
+    client.post(URL, json=body(), headers=HEADERS)
+    provider.calls.clear()
+    request = {"idempotency_key": body()["idempotency_key"], "email": EMAIL}
+    assert client.post(URL + "/receipt", json=request).status_code == 401
+    assert client.post(URL + "/receipt", json=request,
+                       headers={**HEADERS, "Origin": "https://foreign.example"}).status_code == 403
+    assert provider.calls == []
+    db.fail_writes = True
+    assert client.post(URL + "/receipt", json=request, headers=HEADERS).status_code == 503
+    assert provider.calls == []

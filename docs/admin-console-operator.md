@@ -384,3 +384,29 @@ The existing guarded owner Catalog page lists published category/check/rule meta
 
 ### Ambiguous published IDs and preview safety
 A duplicate published category, check or rule ID fails the inventory read and is an explicit stale/ambiguous-source conflict (HTTP 409) in the reviewed metadata-preview workflow; the proposal is never saved or published. Other malformed source objects and provider failures remain 503 unavailable. These are separate, fail-closed outcomes; neither authorizes changes.
+
+
+### Signed Cognito account-action recovery and optional live comparison
+
+The owner **Users → Recover an account-action receipt** control accepts the
+original action reference alone for owner-bound signed historical intent/outcome,
+or the reference plus **exact account email** to compare against a fresh Cognito
+\`Enabled\` read. Only an MFA-verified owner may call the same-origin
+\`POST /v1/admin/users/status/receipt\`. Exact email stays in the POST body,
+never an access URL, saved action receipt or returned account record. The signed
+protected-read attempt must persist *before* either Cognito lookup, and the
+existing per-owner rate budget applies.
+
+An independent provider lookup must match the saved signed action's HMAC
+subject fingerprint, require a unique exact-email identity and agree with a
+second Cognito account read. A different subject, ambiguous user, malformed
+identity, signed audit tampering, owner mismatch, unauthorized caller or audit
+outage prevents verified comparison. The API never retries the original
+suspension or reactivation, changes entitlements or exposes raw account IDs.
+
+A current Enabled snapshot is **not** a provider mutation receipt. If the
+saved intent has no signed outcome, status remains **indeterminate** regardless
+of current Enabled state; if it has an outcome, the browser explicitly reports
+whether the current state agrees with that historical snapshot. Both action
+reference and optional email are cleared on sign-out. This code is source
+progress only until exact-SHA CI, production MFA and all 15 live checks pass.

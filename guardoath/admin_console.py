@@ -117,6 +117,8 @@ class ExactUserLookup(BaseModel):
 class CognitoStatusReceiptRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     idempotency_key: str = Field(pattern=r"^[A-Za-z0-9_-]{16,96}$", max_length=96)
+    # The optional exact email stays solely in the signed-in POST body.
+    email: str | None = Field(default=None, min_length=5, max_length=254)
 
 
 class CognitoStatusChange(BaseModel):
@@ -414,7 +416,10 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             read_event = audit_sensitive_read(principal, "audit.receipt")
             try:
                 receipt = user_actions.inspect_receipt(
-                    actor=principal.subject, idempotency_key=payload.idempotency_key)
+                    actor=principal.subject, idempotency_key=payload.idempotency_key,
+                    email=payload.email)
+            except UserActionConflict as exc:
+                raise HTTPException(status_code=409, detail="Action reference does not match current account") from exc
             except ValueError as exc:
                 raise HTTPException(status_code=422, detail="Invalid action reference") from exc
             except UserActionUnavailable as exc:

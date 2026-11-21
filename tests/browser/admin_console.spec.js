@@ -207,3 +207,32 @@ test("owner reviewed catalog metadata manifest is visible only after signed revi
   await page.locator("#logout").click();
   await expect(page.locator("#review-manifest-result")).toBeEmpty();
 });
+
+
+test("signed action live comparison uses owner-bound POST and clears email on sign-out", async ({page}) => {
+  const key = "accountaction00000001";
+  const intent = "b".repeat(64), outcome = "c".repeat(64);
+  const fixture = await signedIn(page,{
+    features:{cognito_action_receipts:true},
+    override: request => request.path === "/v1/admin/users/status/receipt" && request.method === "POST"
+      ? {status:200,contentType:"application/json",body:JSON.stringify({
+          status:"outcome_recorded",intent_event_id:intent,outcome_event_id:outcome,
+          enabled_at_verification:false,current_provider_state_verified:true,current_enabled:true,
+          current_matches_recorded_outcome:false,current_observed_at_utc:"2026-11-21T09:00:00Z"
+        })} : null
+  });
+  await page.locator("#nav-users").click();
+  await page.locator("#user-action-key").fill(key);
+  await page.locator("#user-action-email").fill("person@example.com");
+  await page.locator("#user-action-inspect").click();
+  await expect(page.locator("#user-action-result")).toContainText("current enabled state DIFFERS");
+  await expect(page.locator("#user-action-result")).toContainText("not proof of the historical provider action");
+  const call = fixture.calls.find(c => c.path === "/v1/admin/users/status/receipt");
+  expect(call.method).toBe("POST");
+  expect(call.headers["x-guardoath-admin-session"]).toBe(fixture.token);
+  expect(call.headers["x-guardoath-key"]).toBeUndefined();
+  expect(call.body).toEqual({idempotency_key:key,email:"person@example.com"});
+  await page.locator("#logout").click();
+  await expect(page.locator("#user-action-email")).toHaveValue("");
+  await expect(page.locator("#user-action-result")).toBeEmpty();
+});
