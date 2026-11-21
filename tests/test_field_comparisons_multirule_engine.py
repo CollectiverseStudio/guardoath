@@ -139,8 +139,11 @@ def test_contradictory_strict_comparisons_both_report_on_equal_input():
 def test_missing_field_reports_every_affected_rule_without_suppressing_others(stage, missing, expected):
     payload = {key: value for key, value in BENIGN.items() if key != missing}
     result = run(payload, stage=stage)
-    assert {finding.rule_id for finding in result.findings} == expected
-    assert result.evaluation_status == "complete"
+    diagnostics = [(r.checker_id, r.status, r.error_code, r.latency_ms)
+                   for r in result.checker_results]
+    assert {finding.rule_id for finding in result.findings} == expected, (
+        stage, diagnostics, result.total_latency_ms)
+    assert result.evaluation_status == "complete", diagnostics
 
 
 @pytest.mark.parametrize("invalid", [None, True, "8", [], {}])

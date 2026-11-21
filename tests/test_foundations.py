@@ -93,6 +93,56 @@ def test_bundled_schema_comparison_pair_preserves_both_stages_without_extra_task
     assert "schema.invalid_json" in {f.rule_id for f in malformed.findings}
 
 
+
+def test_exact_non_yielding_builtin_checkers_avoid_timers_but_reject_late_results(monkeypatch):
+    """No timer scheduling for immutable CPU-only checkers; full deadline remains."""
+    from guardoath.checkers import schema_check, cross_field_check
+
+    # A future checker that yields must not silently inherit the CPU-only path.
+    for builtin, policy, content in (
+        (schema_check, load_policies("policies/business.json")[0],
+         '{"start_date":"2026-10-01","end_date":"2026-10-03","purchase_amount":100,"refund_amount":25}'),
+        (cross_field_check, load_policies("policies/business.json")[0],
+         '{"start_date":"2026-10-01","end_date":"2026-10-03","purchase_amount":100,"refund_amount":25}'),
+    ):
+        request = CheckRequest(application_id=policy.application_id, policy_version=policy.version,
+                               content=content, content_format="json")
+        coroutine = builtin(request, policy, Stage.INPUT)
+        try:
+            coroutine.send(None)
+        except StopIteration:
+            pass
+        else:
+            coroutine.close()
+            raise AssertionError("Built-in checker became yielding: restore cancellable timeout")
+
+    def unexpected_timeout(*_args, **_kwargs):
+        raise AssertionError("No event-loop timer for exact CPU-only checkers")
+
+    monkeypatch.setattr(asyncio, "timeout", unexpected_timeout)
+    original = load_policies("policies/business.json")[0]
+    payload = {"start_date":"2026-10-01","end_date":"2026-10-03",
+               "purchase_amount":100,"refund_amount":25}
+    for stage in (Stage.INPUT, Stage.OUTPUT):
+        result = evaluate(original, json.dumps(payload), stage)
+        assert result.evaluation_status == "complete"
+        assert [(r.checker_id, r.status) for r in result.checker_results] == [
+            ("schema", "passed"), ("cross_field", "passed")]
+
+    # Fake a monotonic 600-ms jump. Even a non-yielding built-in result is
+    # rejected after the original 500-ms deadline, with fail-closed action.
+    from guardoath import engine as engine_module
+    counter = [0.]
+    def advanced_clock():
+        counter[0] += 0.6
+        return counter[0]
+    monkeypatch.setattr(engine_module, "perf_counter", advanced_clock)
+    delayed = evaluate(original, json.dumps(payload), Stage.INPUT)
+    assert delayed.evaluation_status == "incomplete"
+    assert all(r.status == "error" and r.error_code == "checker_timeout"
+               for r in delayed.checker_results)
+    assert delayed.effective_action == Action.BLOCK
+
 def test_custom_async_schema_still_uses_the_original_concurrent_scheduler(monkeypatch):
     """Only exact bundled checker identities may use the CPU-only fast path."""
     from guardoath.checkers import schema_check

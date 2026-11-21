@@ -211,7 +211,9 @@ def test_all_eight_advanced_rules_run_together_and_return_all_findings():
         rules.append(rule)
     for stage in (Stage.INPUT, Stage.OUTPUT):
         result = check(engine(*rules), json.dumps(payload), stage)
-        assert result.evaluation_status == "complete"
+        diagnostics = [(r.checker_id, r.status, r.error_code, r.latency_ms)
+                       for r in result.checker_results]
+        assert result.evaluation_status == "complete", (stage, diagnostics, result.total_latency_ms)
         assert {f.rule_id for f in result.findings} == {
             "business." + kind for _case, kind in KINDS
         }

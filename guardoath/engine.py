@@ -172,8 +172,18 @@ class Engine:
                 # another task and an avoidable event-loop scheduling hop on
                 # every call. The timeout context keeps the same deadline;
                 # monotonic post-completion enforcement still rejects late work.
-                async with asyncio.timeout(policy.timeout_ms / 1000):
+                # The exact built-in schema and cross-field checkers are
+                # non-yielding local CPU coroutines. Their timeout context
+                # only schedules an event-loop timer that cannot interrupt
+                # a non-yielding operation. Avoid that scheduling cost;
+                # the unchanged monotonic post-completion guard below still
+                # rejects every verdict returned after the original deadline.
+                # Custom/replaced/async checkers keep asyncio.timeout.
+                if checker is schema_check or checker is cross_field_check:
                     result = await checker(content_request, policy, stage)
+                else:
+                    async with asyncio.timeout(policy.timeout_ms / 1000):
+                        result = await checker(content_request, policy, stage)
                 if result.checker_id != checker_id:
                     raise ValueError("Adapter returned wrong identity")
                 if (result.status == "flagged") != bool(result.findings):
