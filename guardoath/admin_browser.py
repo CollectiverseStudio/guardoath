@@ -183,6 +183,7 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <label for="user-change-action">Action</label> <select id="user-change-action"><option value="disable">Disable sign-in</option><option value="enable">Enable sign-in</option></select>
 <button id="user-change" type="button" disabled>Apply audited change</button><p id="user-change-result" role="status"></p></section>
 <section class="panel"><h2>Tenants</h2><p class="muted">API key counts are sourced from the persisted tenant record; actual key material is never displayed. Unknown counts remain unavailable.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
+<section class="panel"><h2>Verified recent invoices</h2><p class="muted">Up to five Stripe invoice summaries for an independently verified customer subscription. Amounts are in minor currency units, not a revenue total or forecast.</p><p id="invoice-details" role="status">No invoice history selected.</p></section>
 <section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Select Verify Stripe beside a tenant to compare the current provider status with its saved tenant entitlement. Discrepancies are advisory: no paid access or billing state is modified here.</p><p id="billing-details" role="status">No subscription selected.</p></section>
 <section class="panel"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
 <section class="panel"><h2>Audit receipt lookup</h2><p class="muted">Read one stored administrative event by its exact event ID. No exports or audit enumeration.</p><label for="audit-id">Audit event ID</label> <input id="audit-id" maxlength="64" autocomplete="off" spellcheck="false"> <button type="button" id="audit-go">Verify receipt</button><p id="audit-result" role="status"></p></section>
@@ -233,7 +234,7 @@ _JS = r'''"use strict";
     el("tenant-rows").replaceChildren();
     el("user-rows").replaceChildren();
     el("categories").replaceChildren();
-    for (const id of ["status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "usage-details", "billing-details", "audit-result", "proposal-result", "draft-result"]) say(id, "");
+    for (const id of ["status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "usage-details", "billing-details", "invoice-details", "audit-result", "proposal-result", "draft-result"]) say(id, "");
     previewSelection = null;
     previewReady = null;
     draftReadyForReview = null;
@@ -660,6 +661,13 @@ _JS = r'''"use strict";
         verify.addEventListener("click", () => verifyBilling(tenant));
         actions.append(verify);
       }
+      if (features.billing_invoices && tenant.demo === false) {
+        const invoices = document.createElement("button");
+        invoices.type = "button";
+        invoices.textContent = "Invoices";
+        invoices.addEventListener("click", () => inspectInvoices(tenant));
+        actions.append(invoices);
+      }
       if (features.billing_downgrade && tenant.demo === false &&
           tenant.subscription_status === "active" && Number.isSafeInteger(tenant.revision)) {
         const downgrade = document.createElement("button");
@@ -758,6 +766,46 @@ _JS = r'''"use strict";
       say("status", err.message);
     }}
   }
+  async function inspectInvoices(tenant) {
+    if (!token || !features.billing_invoices) return;
+    const epoch = authEpoch;
+    say("invoice-details", "Inspecting verified Stripe history...");
+    try {
+      const result = await request("/v1/admin/subscriptions/" +
+        encodeURIComponent(tenant.tenant_id) + "/invoices");
+      if (!token || epoch !== authEpoch) return;
+      const history = result.history || {};
+      if (history.verified === false && history.status === "unbound") {
+        say("invoice-details", tenant.tenant_id +
+          " · No verified Stripe binding; invoices unavailable" + readAuditLabel(result));
+        return;
+      }
+      if (history.verified !== true || history.status !== "verified" ||
+          !Array.isArray(history.invoices) || history.invoices.length > 5 ||
+          history.count !== history.invoices.length || typeof history.has_more !== "boolean")
+        throw new Error("Verified invoice history unavailable");
+      const rows = history.invoices.map(row => {
+        if (!["draft","open","paid","uncollectible","void"].includes(row.status) ||
+            !/^[a-z]{3}$/.test(row.currency) ||
+            ![row.amount_due_minor,row.amount_paid_minor,row.amount_remaining_minor]
+              .every(n => Number.isSafeInteger(n) && n >= 0) ||
+            typeof row.created_utc !== "string")
+          throw new Error("Invalid invoice summary");
+        return row.created_utc + " " + row.status + " " + row.currency.toUpperCase() +
+          " due " + row.amount_due_minor + " / paid " + row.amount_paid_minor +
+          " / remaining " + row.amount_remaining_minor + " (minor units)";
+      });
+      say("invoice-details", tenant.tenant_id + " · " +
+        (rows.length ? rows.join(" · ") : "No invoices in provider page") +
+        (history.has_more ? " · More exist; only first five shown" : "") +
+        " · Direct Stripe, not revenue · UTC " + (history.read_at_utc || "unknown") +
+        readAuditLabel(result));
+    } catch (err) {
+      if (token && epoch === authEpoch)
+        say("invoice-details", tenant.tenant_id + " · Invoice verification unavailable; no billing changes");
+    }
+  }
+
   async function reconcileUnpaid(tenant) {
     if (!token || !features.billing_downgrade ||
         tenant.subscription_status !== "active" || !Number.isSafeInteger(tenant.revision)) return;
@@ -818,7 +866,7 @@ _JS = r'''"use strict";
       if (!integrity) throw new Error("Audit integrity status unavailable");
       if (receipt.operation === "admin.read") {
         if (receipt.integrity_status !== "signed_verified" || change.field !== "protected_read" ||
-            !["cognito.exact_user","stripe.subscription","audit.receipt","cognito.user_directory",
+            !["cognito.exact_user","stripe.subscription","stripe.invoices","audit.receipt","cognito.user_directory",
               "tenant.directory","tenant.detail","tenant.usage","catalog.registry","catalog.preview",
               "admin.overview","admin.features","catalog.draft","cognito.mutation_preflight"].includes(change.resource) ||
             receipt.prior_revision !== undefined || receipt.new_revision !== undefined)

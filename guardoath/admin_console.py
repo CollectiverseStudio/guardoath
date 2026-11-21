@@ -17,6 +17,7 @@ from guardoath.admin_actions import AdminActionConflict, AdminActionUnavailable,
 from guardoath.admin_audit import AdminAuditReader, AdminSensitiveReadAuditor, AdminAuditUnavailable, EVENT
 from guardoath.admin_billing import AdminSubscriptionReporter, BillingUnavailable
 from guardoath.admin_billing_reconcile import AdminBillingDowngrade, BillingDowngradeConflict, BillingDowngradeUnavailable
+from guardoath.admin_invoices import AdminInvoiceHistory
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from guardoath.admin_catalog import CatalogProvider, read_catalog
 from guardoath.admin_catalog_drafts import AdminCatalogDrafts, DraftConflict, DraftUnavailable
@@ -199,6 +200,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                         browser_entry_enabled: bool = False,
                         billing_reporter: AdminSubscriptionReporter | None = None,
                         billing_downgrade: AdminBillingDowngrade | None = None,
+                        billing_invoices: AdminInvoiceHistory | None = None,
                         catalog_drafts: AdminCatalogDrafts | None = None,
                         record_validator=None, rule_exists=None) -> APIRouter:
     """Build guarded admin routes; absent verifier => no admin access.
@@ -297,6 +299,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            "cognito_user_status_changes": user_actions is not None,
                            "billing_changes": False, "billing_verify": billing_reporter is not None,
                            "billing_downgrade": billing_downgrade is not None,
+                           "billing_invoices": billing_invoices is not None,
                            "tenant_rule_changes": admin_mutator is not None and callable(record_validator) and callable(rule_exists),
                            "monthly_cost_caps": admin_mutator is not None and callable(record_validator),
                            "tenant_key_revocation": admin_mutator is not None and callable(record_validator),
@@ -485,6 +488,26 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Subscription verification unavailable") from exc
         return admin_json({"tenant_id":tenant_id, "subscription":result,
+                           **({"read_audit_event_id": read_event} if read_event else {})})
+
+    @router.get("/v1/admin/subscriptions/{tenant_id}/invoices")
+    def verified_invoice_history(tenant_id: str, principal: VerifiedAdmin = Depends(require_admin)):
+        if not TENANT_ID.fullmatch(tenant_id):
+            raise HTTPException(status_code=404, detail="Tenant not found")
+        if tenant_store is None or billing_invoices is None:
+            raise HTTPException(status_code=503, detail="Invoice history unavailable")
+        # Signed durable read intent must precede both tenant and provider reads.
+        read_event = audit_sensitive_read(principal, "stripe.invoices", tenant_id)
+        try:
+            record = tenant_store.get(tenant_id)
+            if record is None:
+                raise HTTPException(status_code=404, detail="Tenant not found")
+            result = billing_invoices.read(record)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="Invoice history unavailable") from exc
+        return admin_json({"tenant_id": tenant_id, "history": result,
                            **({"read_audit_event_id": read_event} if read_event else {})})
 
     if billing_downgrade is not None:

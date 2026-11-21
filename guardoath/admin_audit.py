@@ -14,7 +14,7 @@ UTC = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
 ACTIONS = frozenset({"off", "allow", "flag", "block", "same_as_check"})
 FIELDS = (*SIGNED_FIELDS, "integrity_mac")
 SENSITIVE_READS = frozenset({
-    "cognito.exact_user", "cognito.user_directory", "stripe.subscription", "audit.receipt",
+    "cognito.exact_user", "cognito.user_directory", "stripe.subscription", "stripe.invoices", "audit.receipt",
     "tenant.directory", "tenant.detail", "tenant.usage", "catalog.registry", "catalog.preview",
     "admin.overview", "admin.features", "catalog.draft", "cognito.mutation_preflight",
 })

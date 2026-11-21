@@ -240,3 +240,9 @@ Paid activation, refunds/credits, invoices, full costs, source catalog
 publishing and rollback remain outstanding. This source change is not a live
 Stripe operation or a deployment; exact-commit CI and 15 live acceptance remain
 mandatory.
+
+
+## Audited owner invoice history (source only)
+- Authenticated owner/MFA `GET /v1/admin/subscriptions/{tenant_id}/invoices` persists a signed protected read attempt before any tenant or provider read. It independently verifies the saved Stripe subscription/customer, configured price and environment before reading at most five provider invoices from server-owned IDs.
+- Every invoice must match the same customer, subscription and livemode with valid status, UTC timestamp and nonnegative minor-unit amounts; malformed or ambiguous pages fail closed. UI excludes provider IDs, customer email, links and payment method. Zero invoices in a verified page is distinct from unavailable provider data.
+- Read-only historical sample, not paid entitlement, revenue, a future invoice forecast or refund capability. No Stripe mutation, new service, AWS deployment, 500-ms privacy deadline change or 15 live acceptance is claimed. Exact-SHA CI and live provider acceptance remain required.
