@@ -1109,11 +1109,28 @@ _JS = r'''"use strict";
             !/^[a-z]{3}$/.test(row.currency) ||
             ![row.amount_due_minor,row.amount_paid_minor,row.amount_remaining_minor]
               .every(n => Number.isSafeInteger(n) && n >= 0) ||
-            typeof row.created_utc !== "string")
+            typeof row.created_utc !== "string" ||
+            ![null, "charge_automatically", "send_invoice"].includes(row.collection_method) ||
+            ![null, true, false].includes(row.attempted) ||
+            !(row.attempt_count === null ||
+              (Number.isSafeInteger(row.attempt_count) &&
+               row.attempt_count >= 0 && row.attempt_count <= 10000)) ||
+            !(row.next_payment_attempt_utc === null ||
+              (typeof row.next_payment_attempt_utc === "string" &&
+               /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/.test(row.next_payment_attempt_utc))))
           throw new Error("Invalid invoice summary");
+        const collection = row.status === "open" && row.amount_remaining_minor > 0
+          ? " · Collection: " + (row.collection_method || "Unavailable") +
+            " · Attempted: " + (row.attempted === null ? "Unavailable" :
+              (row.attempted ? "Yes" : "No")) +
+            " · attempts recorded: " + (row.attempt_count === null ? "Unavailable" :
+              row.attempt_count) +
+            " · next attempt recorded: " + (row.next_payment_attempt_utc || "Unavailable") +
+            " (not proof of payment failure)"
+          : "";
         return row.created_utc + " " + row.status + " " + row.currency.toUpperCase() +
           " due " + row.amount_due_minor + " / paid " + row.amount_paid_minor +
-          " / remaining " + row.amount_remaining_minor + " (minor units)";
+          " / remaining " + row.amount_remaining_minor + " (minor units)" + collection;
       });
       // Recompute provider-page review from the already-validated redacted rows.
       // This is not evidence of failed payment, overdue status, or total revenue.

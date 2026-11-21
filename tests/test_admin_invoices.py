@@ -63,7 +63,13 @@ def test_unbound_and_demo_skip_invoice_provider():
 @pytest.mark.parametrize("changes", [
     {"id":"in_slash/invalid"}, {"customer":"cus_other"}, {"subscription":"sub_other"},
     {"subscription":None}, {"livemode":True}, {"livemode":None}, {"object":"charge"},
-    {"status":"refunded"}, {"currency":"USD"}, {"amount_due":-1},
+    {"status":"refunded"}, {"status":[]}, {"status":{"open":True}},
+    {"currency":"USD"}, {"amount_due":-1},
+    {"collection_method":"unknown"}, {"collection_method":[]},
+    {"attempted":1}, {"attempted":"false"},
+    {"attempt_count":True}, {"attempt_count":-1}, {"attempt_count":10001},
+    {"attempt_count":"2"}, {"next_payment_attempt":False},
+    {"next_payment_attempt":"1795161600"}, {"next_payment_attempt":9999999999},
     {"amount_paid":1.2}, {"amount_remaining":True}, {"created":0}, {"created":"bad"},
 ])
 def test_mismatched_invoice_rejected(changes):
@@ -152,6 +158,35 @@ def test_payment_review_is_only_for_verified_first_page_and_keeps_currencies_sep
     assert "overdue" in review["note"] and "failed payment" in review["note"]
     assert result["has_more"] is True
     assert "in_us_" not in str(result) and "cus_owner" not in str(result)
+
+
+def test_verified_invoice_collection_attempts_are_redacted_and_not_failure_claims():
+    result = history(fetch=lambda *_: {"object": "list", "has_more": False, "data": [
+        invoice(id="in_open_attempts", status="open", amount_due=2500,
+                amount_paid=0, amount_remaining=2500,
+                collection_method="charge_automatically", attempted=True,
+                attempt_count=2, next_payment_attempt=1795435200),
+        invoice(id="in_sent", status="open", amount_due=1000, amount_paid=0,
+                amount_remaining=1000, collection_method="send_invoice",
+                attempted=False, attempt_count=0, next_payment_attempt=None),
+    ]}).read(Tenant())
+    recorded, manual = result["invoices"]
+    assert recorded["collection_method"] == "charge_automatically"
+    assert recorded["attempted"] is True and recorded["attempt_count"] == 2
+    assert recorded["next_payment_attempt_utc"] == "2026-11-23T12:00:00Z"
+    assert manual["collection_method"] == "send_invoice"
+    assert manual["attempted"] is False and manual["attempt_count"] == 0
+    assert manual["next_payment_attempt_utc"] is None
+    assert result["payment_review"]["open_with_balance_count"] == 2
+    assert "not proof of failed payment" in result["note"]
+    assert "in_open_attempts" not in str(result) and "cus_owner" not in str(result)
+    assert "secret@example.com" not in str(result)
+
+
+def test_missing_collection_evidence_stays_unknown_not_zero():
+    row = history().read(Tenant())["invoices"][0]
+    assert row["collection_method"] is None and row["attempted"] is None
+    assert row["attempt_count"] is None and row["next_payment_attempt_utc"] is None
 
 
 def test_payment_review_zero_means_zero_in_verified_page_only():

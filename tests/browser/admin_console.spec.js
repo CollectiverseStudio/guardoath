@@ -69,6 +69,31 @@ test("tenant actions reveal usage, subscription and invoice results immediately"
   }
 });
 
+test("owner Billing shows verified collection attempt metadata without claiming failed payment", async ({page}) => {
+  const fixture = await signedIn(page, {override: request =>
+    /^\/v1\/admin\/subscriptions\/[^/]+\/invoices$/.test(request.path)
+      ? {status:200, contentType:"application/json", body:JSON.stringify({
+          history:{verified:true,status:"verified",count:1,has_more:false,
+            read_at_utc:"2026-11-21T12:00:00Z",invoices:[{
+              status:"open",currency:"usd",created_utc:"2026-11-20T12:00:00Z",
+              amount_due_minor:2500,amount_paid_minor:0,amount_remaining_minor:2500,
+              collection_method:"charge_automatically",attempted:true,attempt_count:2,
+              next_payment_attempt_utc:"2026-11-23T12:00:00Z"}]},
+          read_audit_event_id:"a".repeat(64)})} : null});
+  await page.locator("#nav-tenants").click();
+  const row = page.locator("#tenant-rows tr").filter({hasText:"sample-studio"});
+  await row.getByRole("button",{name:"Invoices",exact:true}).click();
+  const output = page.locator("#invoice-details");
+  await expect(output).toContainText("open USD due 2500");
+  await expect(output).toContainText("Collection: charge_automatically");
+  await expect(output).toContainText("Attempted: Yes");
+  await expect(output).toContainText("attempts recorded: 2");
+  await expect(output).toContainText("next attempt recorded: 2026-11-23T12:00:00Z");
+  await expect(output).toContainText("not proof of payment failure");
+  expect(fixture.calls.some(call => call.path.endsWith("/invoices") &&
+    call.headers["x-guardoath-admin-session"] === fixture.token)).toBe(true);
+});
+
 test("verified inactive Stripe disagreement appears in owner Billing without inventing paid access", async ({page}) => {
   const fixture = await signedIn(page,{override: request =>
     /^\/v1\/admin\/subscriptions\/[^/]+$/.test(request.path)

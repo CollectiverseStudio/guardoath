@@ -252,6 +252,18 @@ mandatory.
 - Every invoice must match the same customer, subscription and livemode with valid status, UTC timestamp and nonnegative minor-unit amounts; malformed or ambiguous pages fail closed. UI excludes provider IDs, customer email, links and payment method. Zero invoices in a verified page is distinct from unavailable provider data.
 - Read-only historical sample, not paid entitlement, revenue, a future invoice forecast or refund capability. No Stripe mutation, new service, AWS deployment, 500-ms privacy deadline change or 15 live acceptance is claimed. Exact-SHA CI and live provider acceptance remain required.
 
+### Provider collection-attempt evidence (shown in owner Billing)
+For each **verified** invoice the bounded provider page now projects only collection method
+(automatic or send-invoice), whether an attempt is recorded, bounded attempt count and
+a provider-recorded next-attempt timestamp in UTC. All four fields are **unavailable**
+when Stripe does not provide them; missing evidence is never treated as zero attempts.
+The authenticated Billing UI displays this data on open invoices with a positive
+remaining balance and labels it **not proof of payment failure**. These fields are
+provider-reported hints, not paid entitlement, overdue status, charge success,
+a forecast, a payment failure, or authorization for a refund. Malformed or ambiguous
+provider types fail closed without rendering a partial financial page. No additional
+Stripe API call or provider mutation is introduced.
+
 ## Read-only administrator infrastructure inventory
 From the repository root, with AWS SSO credentials available locally, run:
 

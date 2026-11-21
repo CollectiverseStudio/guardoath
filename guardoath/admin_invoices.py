@@ -101,11 +101,24 @@ class AdminInvoiceHistory:
                 subscription = subscription.get("id")
             values = [item.get(k) for k in ("amount_due", "amount_paid", "amount_remaining")]
             created = item.get("created")
+            status = item.get("status")
+            collection_method = item.get("collection_method")
+            attempted = item.get("attempted")
+            attempt_count = item.get("attempt_count")
+            next_attempt = item.get("next_payment_attempt")
             if (item.get("object") != "invoice" or not isinstance(invoice_id, str)
                     or not INVOICE.fullmatch(invoice_id) or invoice_id in seen
                     or customer != record.payer_id or subscription != record.stripe_subscription_id
                     or item.get("livemode") is not self.reporter.expected_livemode
-                    or item.get("status") not in STATUSES
+                    or not isinstance(status, str) or status not in STATUSES
+                    or (collection_method is not None and collection_method not in
+                        ("charge_automatically", "send_invoice"))
+                    or (attempted is not None and type(attempted) is not bool)
+                    or (attempt_count is not None and
+                        (type(attempt_count) is not int or not 0 <= attempt_count <= 10000))
+                    or (next_attempt is not None and
+                        (type(next_attempt) is not int or
+                         not 946684800 <= next_attempt <= 4102444800))
                     or not isinstance(item.get("currency"), str)
                     or not CURRENCY.fullmatch(item["currency"])
                     or any(type(v) is not int or v < 0 or v > 1_000_000_000_000 for v in values)
@@ -116,7 +129,13 @@ class AdminInvoiceHistory:
                          .isoformat(timespec="seconds").replace("+00:00", "Z"),
                          "status": item["status"], "currency": item["currency"],
                          "amount_due_minor": values[0], "amount_paid_minor": values[1],
-                         "amount_remaining_minor": values[2]})
+                         "amount_remaining_minor": values[2],
+                         "collection_method": collection_method,
+                         "attempted": attempted, "attempt_count": attempt_count,
+                         "next_payment_attempt_utc": (
+                             datetime.fromtimestamp(next_attempt, timezone.utc)
+                             .isoformat(timespec="seconds").replace("+00:00", "Z")
+                             if next_attempt is not None else None)})
             if item["status"] == "open" and values[2] > 0:
                 open_count += 1
                 currency = item["currency"]
@@ -137,4 +156,5 @@ class AdminInvoiceHistory:
                 "read_at_utc":
                 datetime.now(timezone.utc).isoformat(timespec="seconds"),
                 "source": "direct Stripe invoice list for verified subscription",
-                "note": "Minor currency units, at most five invoices; not revenue or a forecast"}
+                "note": "Minor currency units, at most five invoices; recorded collection "
+                        "attempts are not proof of failed payment, overdue debt or future charges"}

@@ -125,7 +125,9 @@ function createAdminFixture(options = {}) {
       if (/^\/v1\/admin\/subscriptions\/[^/]+\/invoices$/.test(pathname)) return json(withReceipt({history:{
         verified:true,status:"verified",count:1,has_more:false,read_at_utc:FIXTURE_TIME,
         invoices:[{status:"paid",currency:"usd",created_utc:FIXTURE_TIME,
-          amount_due_minor:2900,amount_paid_minor:2900,amount_remaining_minor:0}]}}));
+          amount_due_minor:2900,amount_paid_minor:2900,amount_remaining_minor:0,
+          collection_method:"charge_automatically",attempted:true,attempt_count:1,
+          next_payment_attempt_utc:null}]}}));
       if (/^\/v1\/admin\/subscriptions\/[^/]+$/.test(pathname)) return json(withReceipt({subscription:{
         verified:true,status:"active",verified_at:FIXTURE_TIME,current_period_end_utc:"2026-12-20T12:00:00Z",
         cancel_at_period_end:false,reconciliation:{level:"consistent",code:"agreement",
