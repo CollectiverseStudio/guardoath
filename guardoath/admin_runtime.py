@@ -17,6 +17,7 @@ from guardoath.admin_integration import AdminConfigurationError, mount_admin_con
 from guardoath.admin_actions import AdminTenantActions
 from guardoath.admin_audit import AdminAuditReader, AdminSensitiveReadAuditor
 from guardoath.admin_billing import AdminSubscriptionReporter
+from guardoath.admin_billing_reconcile import AdminBillingDowngrade
 from guardoath.admin_catalog_drafts import AdminCatalogDrafts
 
 _HEX_KEY = re.compile(r"^[a-fA-F0-9]{64,128}$")
@@ -111,12 +112,18 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
         from guardoath.rule_catalog import RULES
         record_validator = TenantRecord.model_validate
         rule_exists = lambda rule_id: rule_id in RULES
+    billing_downgrade = None
+    if mutator is not None and billing_reporter is not None:
+        billing_downgrade = AdminBillingDowngrade(
+            tenants.store._client, tenants.store.table_name, audit_table,
+            signing_key=audit_signing_key, reporter=billing_reporter,
+            validate_record=record_validator)
     mount_admin_console(app, sessions=admin_sessions, tenants=tenants, cognito=cognito_client,
                         cursor_signing_key=bytes.fromhex(key_hex), browser_config=config,
                         browser_exchange=BoundExchange(config), admin_mutator=mutator,
                         audit_reader=audit_reader, read_auditor=read_auditor,
                         catalog_drafts=catalog_drafts,
                         require_persistent_read_audit=True,
-                        billing_reporter=billing_reporter,
+                        billing_reporter=billing_reporter, billing_downgrade=billing_downgrade,
                         record_validator=record_validator,rule_exists=rule_exists)
     return True

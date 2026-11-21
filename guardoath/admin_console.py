@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from guardoath.admin_actions import AdminActionConflict, AdminActionUnavailable, AdminTenantActions
 from guardoath.admin_audit import AdminAuditReader, AdminSensitiveReadAuditor, AdminAuditUnavailable, EVENT
 from guardoath.admin_billing import AdminSubscriptionReporter, BillingUnavailable
+from guardoath.admin_billing_reconcile import AdminBillingDowngrade, BillingDowngradeConflict, BillingDowngradeUnavailable
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from guardoath.admin_catalog import CatalogProvider, read_catalog
 from guardoath.admin_catalog_drafts import AdminCatalogDrafts, DraftConflict, DraftUnavailable
@@ -72,6 +73,14 @@ class RevokeTenantKeys(BaseModel):
     confirmation: str = Field(min_length=2, max_length=40)
     reason: str = Field(min_length=10, max_length=240)
     idempotency_key: str = Field(min_length=16, max_length=96)
+
+
+class ReconcileUnpaidSubscription(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_revision: int = Field(ge=1, strict=True)
+    confirmation: str = Field(min_length=12, max_length=55)
+    reason: str = Field(min_length=10, max_length=240)
+    idempotency_key: str = Field(pattern=r"^[A-Za-z0-9_-]{16,96}$", max_length=96)
 
 
 class CatalogRuleDescriptionPreview(BaseModel):
@@ -189,6 +198,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                         require_persistent_read_audit: bool = False,
                         browser_entry_enabled: bool = False,
                         billing_reporter: AdminSubscriptionReporter | None = None,
+                        billing_downgrade: AdminBillingDowngrade | None = None,
                         catalog_drafts: AdminCatalogDrafts | None = None,
                         record_validator=None, rule_exists=None) -> APIRouter:
     """Build guarded admin routes; absent verifier => no admin access.
@@ -286,6 +296,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         return admin_json({"tenant_status_changes": admin_mutator is not None,
                            "cognito_user_status_changes": user_actions is not None,
                            "billing_changes": False, "billing_verify": billing_reporter is not None,
+                           "billing_downgrade": billing_downgrade is not None,
                            "tenant_rule_changes": admin_mutator is not None and callable(record_validator) and callable(rule_exists),
                            "monthly_cost_caps": admin_mutator is not None and callable(record_validator),
                            "tenant_key_revocation": admin_mutator is not None and callable(record_validator),
@@ -475,6 +486,27 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             raise HTTPException(status_code=503, detail="Subscription verification unavailable") from exc
         return admin_json({"tenant_id":tenant_id, "subscription":result,
                            **({"read_audit_event_id": read_event} if read_event else {})})
+
+    if billing_downgrade is not None:
+        @router.post("/v1/admin/subscriptions/{tenant_id}/downgrade")
+        def downgrade_subscription(tenant_id: str, payload: ReconcileUnpaidSubscription,
+                                   request: Request, principal: VerifiedAdmin = Depends(require_admin)):
+            _require_admin_origin(request)
+            if not TENANT_ID.fullmatch(tenant_id):
+                raise HTTPException(status_code=404, detail="Tenant not found")
+            read_event = audit_sensitive_read(principal, "stripe.subscription", tenant_id)
+            try:
+                result = billing_downgrade.apply(
+                    tenant_id=tenant_id, expected_revision=payload.expected_revision,
+                    confirmation=payload.confirmation, reason=payload.reason,
+                    actor=principal.subject, idempotency_key=payload.idempotency_key)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail="Invalid billing reconciliation") from exc
+            except BillingDowngradeConflict as exc:
+                raise HTTPException(status_code=409, detail="No verified provider downgrade or revision changed") from exc
+            except BillingDowngradeUnavailable as exc:
+                raise HTTPException(status_code=503, detail="Audited billing reconciliation unavailable") from exc
+            return admin_json({**result, **({"read_audit_event_id": read_event} if read_event else {})})
 
     @router.get("/v1/admin/catalog")
     def catalog(category_id: str | None = Query(default=None, min_length=1, max_length=60,

@@ -109,7 +109,8 @@ class AdminAuditReader:
                     or not actor or not SUBJECT.fullmatch(actor)
                     or operation not in ("tenant.status", "tenant.rule_action", "tenant.allowance_cap",
                                          "tenant.keys_revoke", "admin.read",
-                                         "cognito.user.status.intent", "cognito.user.status.outcome")
+                                         "cognito.user.status.intent", "cognito.user.status.outcome",
+                                         "billing.downgrade")
                     or not when or not UTC.fullmatch(when)
                     or not reason or not 10 <= len(reason) <= 240):
                 raise AdminAuditUnavailable("Invalid audit receipt")
@@ -144,7 +145,22 @@ class AdminAuditReader:
             previous, revision = number("prior_revision"), number("new_revision")
             if previous < 1 or revision != previous + 1 or "read_resource" in item:
                 raise AdminAuditUnavailable("Invalid mutation receipt")
-            if operation == "tenant.status":
+            if operation == "billing.downgrade":
+                before, after, provider = (string(k) for k in
+                    ("old_subscription_status", "new_subscription_status", "provider_status"))
+                old_limit, new_limit = number("old_limit"), number("new_limit")
+                mapping = {"past_due": "past_due", "canceled": "canceled",
+                           "unpaid": "inactive", "incomplete": "inactive",
+                           "incomplete_expired": "inactive", "trialing": "inactive",
+                           "paused": "inactive"}
+                if (integrity_status != "signed_verified" or before != "active"
+                        or provider not in mapping or after != mapping[provider]
+                        or not 0 <= old_limit <= 1000000000 or new_limit != 0):
+                    raise AdminAuditUnavailable("Invalid billing downgrade receipt")
+                change = {"field": "subscription_status", "before": before,
+                          "after": after, "provider_status": provider,
+                          "allowance_before": old_limit, "allowance_after": new_limit}
+            elif operation == "tenant.status":
                 before, after = string("old_status"), string("new_status")
                 if before not in ("active", "disabled") or after not in ("active", "disabled") or before == after:
                     raise AdminAuditUnavailable("Invalid status receipt")

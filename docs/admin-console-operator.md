@@ -218,3 +218,25 @@ The feature is source-integrated only. Actual permissions and operations remain 
 ### Sign-in mutation idempotency and provider-call bounds
 
 Before any Cognito account inspection or mutation, a strongly consistent read of the existing signed audit intent key rejects previously consumed idempotency keys. The conditional intent insertion remains the atomic concurrent-request arbiter if two requests race. A failed audit lookup blocks all Cognito calls (503); an existing key returns 409 without another Cognito provider invocation. After a 503 from a post-provider failure, inspect the account and saved attempt/outcome receipts rather than automatically retrying the same action with a different key. This preserves the fail-closed audit trail and does not alter subscription entitlements or create new provider resources.
+
+
+### Verified negative billing reconciliation (owner-only; not a paid unlock)
+Authenticated \`/admin\` offers **Reconcile unpaid** on saved-active Stripe tenants
+when the existing independent signed audit table and a configured Stripe read
+credential are available. A typed \`RECONCILE <tenant-id>\` confirmation, audit
+reason, idempotency key, and exact tenant revision are mandatory. The backend
+independently re-fetches the saved Stripe binding and verifies configured price
+and environment. It only accepts non-active states, never upgrades or writes to
+Stripe. The conditional DynamoDB transaction sets saved subscription state to
+past_due/canceled/inactive, sets monthly allowance to **zero**, blocks overages,
+and writes an immutable HMAC-signed outcome receipt atomically. A separately
+signed read attempt precedes the provider call; the owner UI verifies the
+receipt through the authenticated audit API. Provider, revision, audit or
+integrity failure returns no success; operator should inspect before retry.
+The receipt excludes provider IDs, credentials, payment details and raw bodies.
+Tenant rules/Off settings, Cognito, keys and PII deadline remain unchanged.
+
+Paid activation, refunds/credits, invoices, full costs, source catalog
+publishing and rollback remain outstanding. This source change is not a live
+Stripe operation or a deployment; exact-commit CI and 15 live acceptance remain
+mandatory.

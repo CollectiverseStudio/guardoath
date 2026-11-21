@@ -660,6 +660,14 @@ _JS = r'''"use strict";
         verify.addEventListener("click", () => verifyBilling(tenant));
         actions.append(verify);
       }
+      if (features.billing_downgrade && tenant.demo === false &&
+          tenant.subscription_status === "active" && Number.isSafeInteger(tenant.revision)) {
+        const downgrade = document.createElement("button");
+        downgrade.type = "button";
+        downgrade.textContent = "Reconcile unpaid";
+        downgrade.addEventListener("click", () => reconcileUnpaid(tenant));
+        actions.append(downgrade);
+      }
       if (features.monthly_cost_caps && tenant.demo === false && Number.isInteger(tenant.revision) &&
           Number.isSafeInteger(tenant.monthly_allowance) && tenant.monthly_allowance >= 0) {
         const cap = document.createElement("button");
@@ -749,6 +757,43 @@ _JS = r'''"use strict";
       say("billing-details", tenant.tenant_id + ": Stripe verification unavailable; no entitlement change");
       say("status", err.message);
     }}
+  }
+  async function reconcileUnpaid(tenant) {
+    if (!token || !features.billing_downgrade ||
+        tenant.subscription_status !== "active" || !Number.isSafeInteger(tenant.revision)) return;
+    const confirmation = prompt("Only REVOKES paid entitlement after verified Stripe delinquency. Type RECONCILE " + tenant.tenant_id);
+    if (confirmation !== "RECONCILE " + tenant.tenant_id) return;
+    const reason = prompt("Reason for verified billing downgrade (10–240 characters; no sensitive data):");
+    if (!reason || reason.length < 10 || reason.length > 240) return;
+    if (!confirm("Recheck exact Stripe subscription and, if non-active, set saved allowance to zero and block overages for " +
+        tenant.tenant_id + "? This cannot restore subscriptions.")) return;
+    const epoch = authEpoch;
+    try {
+      const result = await request("/v1/admin/subscriptions/" +
+        encodeURIComponent(tenant.tenant_id) + "/downgrade", {
+        method:"POST", body:JSON.stringify({expected_revision:tenant.revision,
+          confirmation,reason,idempotency_key:crypto.randomUUID().replaceAll("-", "")})
+      });
+      const label = auditReceipt(result, tenant.tenant_id, tenant.revision);
+      if (!["past_due","canceled","inactive"].includes(result.subscription_status) ||
+          result.monthly_allowance !== 0 || result.overage !== "block")
+        throw new Error("Billing downgrade response not verified; inspect before retry");
+      const receipt = await request("/v1/admin/audit/" + encodeURIComponent(result.audit_event_id));
+      if (!token || epoch !== authEpoch) return;
+      const change = receipt.audit?.change;
+      if (receipt.audit?.integrity_status !== "signed_verified" ||
+          receipt.audit?.operation !== "billing.downgrade" ||
+          receipt.audit?.tenant_id !== tenant.tenant_id ||
+          receipt.audit?.new_revision !== result.revision ||
+          change?.field !== "subscription_status" || change?.before !== "active" ||
+          change?.after !== result.subscription_status ||
+          change?.provider_status !== result.provider_status ||
+          change?.allowance_after !== 0)
+        throw new Error("Billing outcome audit unverified; inspect before retry");
+      nextCursor = null;
+      await load();
+      say("status","Verified unpaid downgrade saved · " + label);
+    } catch(err) { if (token && epoch === authEpoch) say("status",err.message + " · inspect before retry"); }
   }
   async function inspectAudit() {
     if (!token || !features.audit_receipt_lookup) {
