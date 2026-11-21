@@ -85,6 +85,9 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
         raise AdminConfigurationError("Admin browser callback and exchange are both required")
     if native_auth is not None and browser_config is None:
         raise AdminConfigurationError("Native admin MFA requires the bound browser verifier")
+    if (native_auth is not None and browser_config is not None and
+            getattr(native_auth, "client_id", None) != browser_config.client_id):
+        raise AdminConfigurationError("Native admin challenge client must match the signed token verifier")
     if browser_config is not None:
         if (getattr(sessions, "client_id", None) != browser_config.client_id or
                 getattr(sessions, "domain", None) != browser_config.domain or

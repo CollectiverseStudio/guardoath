@@ -170,3 +170,42 @@ def test_existing_admin_namespace_cannot_shadow_guarded_routes(reserved_path):
                             cognito=Cognito(), cursor_signing_key=KEY)
     assert tuple(all_routes(app.routes)) == before
     assert not getattr(app.state, "guardoath_admin_mounted", False)
+
+
+def test_native_mfa_challenge_client_must_match_independent_admin_token_client():
+    from guardoath.admin_browser import BrowserAuthConfig, BoundExchange
+    from guardoath.admin_native_mfa import CognitoNativeMfa
+
+    class Challenges:
+        def initiate_auth(self, **kw):
+            raise AssertionError("No provider calls during route mounting")
+        def respond_to_auth_challenge(self, **kw):
+            raise AssertionError("No provider calls during route mounting")
+
+    config = BrowserAuthConfig("sample.auth.us-east-1.amazoncognito.com",
+                               "adminclient", "https://guardoath.com/admin/login")
+    exchange = BoundExchange(config, sender=lambda url, body: {"access_token": "a"*40})
+    sessions = Sessions()
+    sessions.client_id = config.client_id
+    sessions.domain = config.domain
+
+    mismatch = CognitoNativeMfa(Challenges(), "otherclient", KEY)
+    app = FastAPI()
+    with pytest.raises(AdminConfigurationError, match="Native admin challenge client"):
+        mount_admin_console(app, sessions=sessions, tenants=Tenants(Store()),
+                            cognito=Cognito(), cursor_signing_key=KEY,
+                            browser_config=config, browser_exchange=exchange,
+                            native_auth=mismatch)
+    assert not any(route.path == "/admin" for route in all_routes(app.routes))
+
+    bound = CognitoNativeMfa(Challenges(), "adminclient", KEY)
+    app = FastAPI()
+    mount_admin_console(app, sessions=sessions, tenants=Tenants(Store()),
+                        cognito=Cognito(), cursor_signing_key=KEY,
+                        browser_config=config, browser_exchange=exchange,
+                        native_auth=bound)
+    client = TestClient(app)
+    assert client.get("/v1/admin/auth/config").json()["native_mfa_enabled"] is True
+    assert client.post("/v1/admin/auth/native/start",
+                       json={"email":"owner@example.com","password":"private-password"},
+                       headers={"Origin":"https://untrusted.example"}).status_code == 403

@@ -50,6 +50,11 @@ class CognitoNativeMfa:
         self._requests = deque()
         self._slots = BoundedSemaphore(2)
 
+    @property
+    def client_id(self) -> str:
+        """The public admin OAuth client to which all challenges are bound."""
+        return self._client
+
     def _call(self, callback):
         with self._lock:
             now = self._clock()
