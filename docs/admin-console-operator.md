@@ -331,3 +331,7 @@ fixtures: seven-section navigation, mobile overflow, result navigation, visible
 post-MFA failure, directory paging/rate failure, 401/403 clearing, safe text and
 logout. These tests supplement server tests; live MFA, provider checks, required
 exact-SHA release jobs and the 15 production checks remain separate requirements.
+
+
+## Invoice page payment-review signals (2026-11-20)
+An independently verified Stripe invoice page now includes `payment_review` with counts of **open invoices with remaining balances** and **uncollectible invoices**, plus a currency-separated sum of remaining open balances. The owner UI cross-checks the summary against redacted invoice rows and fails closed on mismatched counts or amounts. A page is limited to five invoices; `complete_history=false` and a partial-history warning are shown if Stripe reports more results. These are bounded operator-review signals **not** verified payment failures, aging, account-wide receivables, collected revenue, refunds, entitlement status or AWS costs. No new Stripe calls, financial writes, credentials, provider spending or tenant-policy changes are introduced.

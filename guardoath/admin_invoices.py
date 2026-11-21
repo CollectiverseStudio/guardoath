@@ -77,7 +77,8 @@ class AdminInvoiceHistory:
             raise InvoiceHistoryUnavailable("Subscription verification unavailable") from exc
         if verified.get("verified") is not True:
             return {"status": "unbound", "verified": False, "invoices": [],
-                    "count": None, "has_more": None, "source": "unavailable: unverified subscription"}
+                    "count": None, "has_more": None, "payment_review": None,
+                    "source": "unavailable: unverified subscription"}
         try:
             snapshot = self.fetch(record.tenant_id, record.payer_id, record.stripe_subscription_id)
         except Exception as exc:
@@ -87,6 +88,8 @@ class AdminInvoiceHistory:
                 or not isinstance(snapshot.get("data"), list) or len(snapshot["data"]) > 5):
             raise InvoiceHistoryUnavailable("Incomplete invoice page")
         rows, seen = [], set()
+        # Bounded page-review signals, not full accounts receivable.
+        open_balances, open_count, uncollectible_count = {}, 0, 0
         for item in snapshot["data"]:
             if not isinstance(item, dict):
                 raise InvoiceHistoryUnavailable("Invalid invoice")
@@ -114,8 +117,24 @@ class AdminInvoiceHistory:
                          "status": item["status"], "currency": item["currency"],
                          "amount_due_minor": values[0], "amount_paid_minor": values[1],
                          "amount_remaining_minor": values[2]})
+            if item["status"] == "open" and values[2] > 0:
+                open_count += 1
+                currency = item["currency"]
+                open_balances[currency] = open_balances.get(currency, 0) + values[2]
+            if item["status"] == "uncollectible":
+                uncollectible_count += 1
         return {"status": "verified", "verified": True, "invoices": rows, "count": len(rows),
-                "has_more": snapshot["has_more"], "read_at_utc":
+                "has_more": snapshot["has_more"],
+                "payment_review": {
+                    "scope": "verified_first_page_only",
+                    "open_with_balance_count": open_count,
+                    "uncollectible_count": uncollectible_count,
+                    "open_balance_by_currency_minor": dict(sorted(open_balances.items())),
+                    "complete_history": not snapshot["has_more"],
+                    "note": "Open balances are not proof of overdue or failed payment; "
+                            "uncollectible is a provider status, not a refund or owner action",
+                },
+                "read_at_utc":
                 datetime.now(timezone.utc).isoformat(timespec="seconds"),
                 "source": "direct Stripe invoice list for verified subscription",
                 "note": "Minor currency units, at most five invoices; not revenue or a forecast"}

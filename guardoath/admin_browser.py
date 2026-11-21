@@ -929,10 +929,40 @@ _JS = r'''"use strict";
           " due " + row.amount_due_minor + " / paid " + row.amount_paid_minor +
           " / remaining " + row.amount_remaining_minor + " (minor units)";
       });
+      // Recompute provider-page review from the already-validated redacted rows.
+      // This is not evidence of failed payment, overdue status, or total revenue.
+      const review = history.payment_review;
+      let reviewLabel = "";
+      if (review != null) {
+        const open = history.invoices.filter(row =>
+          row.status === "open" && row.amount_remaining_minor > 0);
+        const uncollectible = history.invoices.filter(row => row.status === "uncollectible");
+        const expectedBalances = Object.create(null);
+        for (const row of open)
+          expectedBalances[row.currency] = (expectedBalances[row.currency] || 0) + row.amount_remaining_minor;
+        const reported = review.open_balance_by_currency_minor;
+        if (review.scope !== "verified_first_page_only" ||
+            review.open_with_balance_count !== open.length ||
+            review.uncollectible_count !== uncollectible.length ||
+            review.complete_history !== !history.has_more ||
+            !reported || typeof reported !== "object" || Array.isArray(reported) ||
+            Object.keys(reported).length !== Object.keys(expectedBalances).length ||
+            Object.entries(expectedBalances).some(([currency, amount]) => reported[currency] !== amount))
+          throw new Error("Invoice review summary mismatch");
+        reviewLabel = " · Open with balance (shown page): " + open.length +
+          " · Uncollectible (shown page): " + uncollectible.length +
+          " · Open remaining by currency: " +
+          (Object.keys(expectedBalances).length
+            ? Object.entries(expectedBalances).map(([currency, minor]) =>
+                currency.toUpperCase() + " " + minor + " minor units").join(", ")
+            : "none") +
+          (history.has_more ? " · Partial invoice history" : " · Complete provider page");
+      }
       say("invoice-details", tenant.tenant_id + " · " +
         (rows.length ? rows.join(" · ") : "No invoices in provider page") +
         (history.has_more ? " · More exist; only first five shown" : "") +
-        " · Direct Stripe, not revenue · UTC " + (history.read_at_utc || "unknown") +
+        reviewLabel +
+        " · Direct Stripe, not revenue or overdue determination · UTC " + (history.read_at_utc || "unknown") +
         readAuditLabel(result));
     } catch (err) {
       if (token && epoch === authEpoch)

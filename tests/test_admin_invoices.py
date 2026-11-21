@@ -129,3 +129,46 @@ def test_authorized_route_and_fail_closed_persistent_audit():
         require_persistent_read_audit=True))
     assert TestClient(app2).get(path,headers={"X-GuardOath-Admin-Session":"admin"}).status_code==503
     assert calls==[1]
+
+def test_payment_review_is_only_for_verified_first_page_and_keeps_currencies_separate():
+    invoices = [
+        invoice(id="in_us_open", status="open", amount_due=1700,
+                amount_paid=200, amount_remaining=1500),
+        invoice(id="in_eu_open", status="open", currency="eur",
+                amount_due=2500, amount_paid=500, amount_remaining=2000),
+        invoice(id="in_us_written", status="uncollectible", amount_due=800,
+                amount_paid=0, amount_remaining=800),
+        invoice(id="in_us_paid", status="paid", amount_due=400,
+                amount_paid=400, amount_remaining=0),
+    ]
+    result = history(fetch=lambda *_: {"object": "list", "data": invoices,
+                                        "has_more": True}).read(Tenant())
+    review = result["payment_review"]
+    assert review["scope"] == "verified_first_page_only"
+    assert review["open_with_balance_count"] == 2
+    assert review["uncollectible_count"] == 1
+    assert review["open_balance_by_currency_minor"] == {"eur": 2000, "usd": 1500}
+    assert review["complete_history"] is False
+    assert "overdue" in review["note"] and "failed payment" in review["note"]
+    assert result["has_more"] is True
+    assert "in_us_" not in str(result) and "cus_owner" not in str(result)
+
+
+def test_payment_review_zero_means_zero_in_verified_page_only():
+    result = history(fetch=lambda *_: {"object": "list", "data": [],
+                                        "has_more": False}).read(Tenant())
+    assert result["verified"] is True
+    assert result["payment_review"]["open_with_balance_count"] == 0
+    assert result["payment_review"]["uncollectible_count"] == 0
+    assert result["payment_review"]["open_balance_by_currency_minor"] == {}
+    assert result["payment_review"]["complete_history"] is True
+    assert history().read(Tenant(payer_id=None))["payment_review"] is None
+
+
+def test_open_invoice_with_no_remaining_balance_is_not_payment_attention():
+    result = history(fetch=lambda *_: {
+        "object": "list", "has_more": False, "data": [
+            invoice(status="open", amount_due=0, amount_paid=0, amount_remaining=0)
+        ]}).read(Tenant())
+    assert result["payment_review"]["open_with_balance_count"] == 0
+    assert result["payment_review"]["open_balance_by_currency_minor"] == {}

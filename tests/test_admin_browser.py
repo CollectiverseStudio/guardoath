@@ -390,3 +390,15 @@ def test_verified_invoice_history_is_an_authenticated_bounded_owner_browser_acti
     assert "invoice-details" in cleared_on_logout(script)
     assert "innerHTML" not in script
 
+
+def test_invoice_browser_verifies_page_scoped_payment_review_without_claiming_failed_charge():
+    script = app().get("/admin/client.js").text
+    assert "history.payment_review" in script
+    assert 'review.scope !== "verified_first_page_only"' in script
+    assert "review.open_with_balance_count !== open.length" in script
+    assert "review.uncollectible_count !== uncollectible.length" in script
+    assert "review.complete_history !== !history.has_more" in script
+    assert "Invoice review summary mismatch" in script
+    assert "Partial invoice history" in script
+    assert "not revenue or overdue determination" in script
+    assert "innerHTML" not in script
