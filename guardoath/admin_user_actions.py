@@ -27,6 +27,20 @@ class UserActionUnavailable(Exception):
     pass
 
 
+def _matches_exact_cognito_identity(attributes: object, email: str, subject: str) -> bool:
+    """Refuse changed, missing or ambiguous Cognito email/sub at every read."""
+    if (not isinstance(attributes, list) or len(attributes) > 50
+            or any(not isinstance(item, dict)
+                   or not isinstance(item.get("Name"), str)
+                   or not isinstance(item.get("Value"), str)
+                   for item in attributes)):
+        return False
+    emails = [item["Value"] for item in attributes if item["Name"] == "email"]
+    subjects = [item["Value"] for item in attributes if item["Name"] == "sub"]
+    return (len(emails) == 1 and emails[0].casefold() == email.casefold()
+            and subjects == [subject])
+
+
 class AdminCognitoUserActions:
     def __init__(self, cognito, ddb, pool_id: str, audit_table: str, *,
                  audit_key: bytes, reserve_read, clock=None):
@@ -242,9 +256,7 @@ class AdminCognitoUserActions:
             # A fresh account read must agree with the unique exact-email result.
             before = self.cognito.admin_get_user(UserPoolId=self.pool_id, Username=username)
             before_attrs = before.get("UserAttributes") if isinstance(before, dict) else None
-            if (not isinstance(before_attrs, list)
-                    or [a.get("Value") for a in before_attrs
-                        if isinstance(a, dict) and a.get("Name") == "sub"] != subs
+            if (not _matches_exact_cognito_identity(before_attrs, email, subs[0])
                     or before.get("Username") != username):
                 raise UserActionUnavailable("Cognito preflight identity unverified")
             if (type(before.get("Enabled")) is not bool
@@ -290,9 +302,7 @@ class AdminCognitoUserActions:
             method(UserPoolId=self.pool_id, Username=username)
             observed = self.cognito.admin_get_user(UserPoolId=self.pool_id, Username=username)
             observed_attrs = observed.get("UserAttributes") if isinstance(observed, dict) else None
-            if (not isinstance(observed_attrs, list)
-                    or [a.get("Value") for a in observed_attrs
-                        if isinstance(a, dict) and a.get("Name") == "sub"] != subs
+            if (not _matches_exact_cognito_identity(observed_attrs, email, subs[0])
                     or observed.get("Username") != username
                     or observed.get("Enabled") is not (not expected_enabled)):
                 raise UserActionUnavailable("Cognito state verification unavailable")

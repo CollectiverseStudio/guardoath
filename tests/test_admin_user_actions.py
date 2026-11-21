@@ -142,6 +142,64 @@ def test_enable_is_real_cognito_operation_but_never_grants_entitlement():
     assert "subscription" not in str(db.rows) and "tenant" not in result.json()
 
 
+
+class EmailDriftCognito(Cognito):
+    def __init__(self, *, phase, duplicate=False):
+        super().__init__()
+        self.phase, self.duplicate = phase, duplicate
+
+    def admin_get_user(self, **kw):
+        result = super().admin_get_user(**kw)
+        written = "disable" in self.calls or "enable" in self.calls
+        if self.phase == "before" or (self.phase == "after" and written):
+            attributes = result["UserAttributes"]
+            if self.duplicate:
+                attributes.append({"Name": "email", "Value": "alternate@example.com"})
+            else:
+                for attribute in attributes:
+                    if attribute["Name"] == "email":
+                        attribute["Value"] = "alternate@example.com"
+        return result
+
+
+@pytest.mark.parametrize("duplicate", [False, True])
+def test_preflight_rejects_changed_or_ambiguous_confirmed_email_without_cognito_write(duplicate):
+    client, db, provider = make(provider=EmailDriftCognito(phase="before", duplicate=duplicate))
+    result = client.post(URL, json=body(), headers=HEADERS)
+    assert result.status_code == 503, result.text
+    assert provider.calls == ["list", "get"]
+    assert provider.enabled is True
+    assert not any(row["operation"]["S"].endswith(".intent") for row in db.rows.values())
+
+
+def test_postwrite_email_change_returns_indeterminate_signed_intent_not_false_success():
+    client, db, provider = make(provider=EmailDriftCognito(phase="after"))
+    result = client.post(URL, json=body(), headers=HEADERS)
+    assert result.status_code == 503, result.text
+    assert provider.enabled is False
+    assert provider.calls == ["list", "get", "groups", "disable", "get"]
+    assert sum(row["operation"]["S"].endswith(".intent") for row in db.rows.values()) == 1
+    assert not any(row["operation"]["S"].endswith(".outcome") for row in db.rows.values())
+    assert client.post(URL, json=body(), headers=HEADERS).status_code == 409
+    assert provider.calls.count("disable") == 1
+
+
+def test_case_insensitive_same_confirmed_email_is_not_false_drift():
+    class CaseOnly(Cognito):
+        def admin_get_user(self, **kw):
+            result = super().admin_get_user(**kw)
+            for attribute in result["UserAttributes"]:
+                if attribute["Name"] == "email":
+                    attribute["Value"] = EMAIL.upper()
+            return result
+
+    client, db, provider = make(provider=CaseOnly())
+    result = client.post(URL, json=body(), headers=HEADERS)
+    assert result.status_code == 200, result.text
+    assert provider.enabled is False
+    assert sum(row["operation"]["S"].endswith(".outcome") for row in db.rows.values()) == 1
+
+
 @pytest.mark.parametrize("change", [
     {"confirmation": "DISABLE someone@example.com"},
     {"expected_enabled": False}, {"reason": "short"},
