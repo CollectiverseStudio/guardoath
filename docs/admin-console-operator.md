@@ -435,3 +435,18 @@ leaking internal source contents. Returned eligibility lists are copies, not
 mutable references to provider data. This is an admission safeguard for future
 versioned catalog publishing, **not** a publisher or a claim of live deployment,
 current-source CI, or a modification of tenant settings and the shared Engine.
+
+
+## Exact-record transaction concurrency guard (2026-11-21)
+
+All four owner-initiated tenant mutations (account status, stage-specific rule action,
+emergency allowance cap and application-key revocation) now use one DynamoDB
+transaction that conditions the tenant write on **both** its saved revision and the
+exact original stored tenant document. This prevents a concurrent legacy writer
+that accidentally changes the document without increasing its revision from being
+silently overwritten. A failed compare-and-swap also prevents the paired signed
+audit receipt from being recorded and returns an unavailable action rather than
+a false confirmation. Customer tenant policies, Stripe bindings, subscription
+entitlement, input/output saved Off settings, host reference trust and fail-closed
+attachment behavior are not modified by this change. This protects source state;
+it is not a substitute for revisioned provider reconciliation or deployment tests.

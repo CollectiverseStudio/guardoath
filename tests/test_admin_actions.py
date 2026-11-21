@@ -308,3 +308,84 @@ def test_owner_key_revocation_route_denies_public_unconfirmed_and_unavailable():
     assert ok.status_code == 200 and ok.json()["api_key_count"] == 0
     assert len(db.writes) == 1
     assert client.get("/v1/admin/features",headers={"Authorization":"Bearer owner"}).json()["tenant_key_revocation"] is True
+
+
+@pytest.mark.parametrize("operation", ("status", "rule", "cap", "keys"))
+def test_owner_mutations_reject_same_revision_out_of_band_tenant_edits(operation):
+    """A legacy writer without revision bump must not be overwritten by admin.
+
+    DynamoDB's conditional transaction protects the exact document as well as
+    the revision. A failed condition must also prevent the paired audit receipt.
+    """
+    from types import SimpleNamespace
+
+    class SameRevisionRace(DDB):
+        def __init__(self):
+            super().__init__()
+            self.document = {
+                "tenant_id": "usr-good", "demo": False, "status": "active",
+                "payer_id": "cus_hidden", "billing_mode": "stripe",
+                "subscription_status": "active", "monthly_allowance": 10000,
+                "overage": "allow_and_record", "key_hashes": ["a" * 64],
+                "display_name": "Before concurrent write",
+            }
+            self.guard_checked = False
+
+        def get_item(self, **kw):
+            return {"Item": {
+                "revision": {"N": str(self.revision)},
+                "record": {"S": json.dumps(self.document, sort_keys=True)},
+            }}
+
+        def transact_write_items(self, **kw):
+            change, receipt = kw["TransactItems"]
+            update = change["Update"]
+            values = update["ExpressionAttributeValues"]
+            self.guard_checked = (
+                "#record = :original" in update["ConditionExpression"]
+                and ":original" in values
+                and values[":original"]["S"] == json.dumps(self.document, sort_keys=True)
+                and values[":prior"]["N"] == "7"
+                and receipt["Put"]["ConditionExpression"] == "attribute_not_exists(event_id)"
+            )
+            # Simulate a trusted legacy writer changing an unrelated field after
+            # the strong read without incrementing revision.
+            self.document["display_name"] = "Concurrent authoritative name"
+            if not self.guard_checked:
+                # Without the exact-document CAS, DynamoDB would allow the
+                # transaction and overwrite the other writer's update.
+                self.writes.append(kw)
+                return
+            if values[":original"]["S"] != json.dumps(self.document, sort_keys=True):
+                raise RuntimeError("ConditionalCheckFailed")
+            self.writes.append(kw)
+
+    db = SameRevisionRace()
+    instance = manager(db)
+    validate = lambda doc: SimpleNamespace(model_dump=lambda: doc)
+    args = dict(tenant_id="usr-good", expected_revision=7,
+                confirmation="usr-good", reason="Owner verified security recovery",
+                actor=SUB, idempotency_key="raceguard123456789")
+    with pytest.raises(AdminActionUnavailable):
+        if operation == "status":
+            instance.change_status(**{**args, "status": "disabled"})
+        elif operation == "rule":
+            instance.change_rule_action(**{
+                **args, "stage": "input", "rule_id": "pii.email",
+                "action": "block", "validate_record": validate,
+                "rule_exists": lambda rule: rule == "pii.email",
+            })
+        elif operation == "cap":
+            instance.cap_monthly_allowance(**{
+                **args, "new_limit": 7000, "validate_record": validate,
+            })
+        else:
+            instance.revoke_all_keys(**{**args, "validate_record": validate})
+    assert db.guard_checked
+    assert db.writes == []
+    assert db.revision == 7
+    assert db.document["display_name"] == "Concurrent authoritative name"
+    assert db.document["status"] == "active"
+    assert db.document["monthly_allowance"] == 10000
+    assert db.document["key_hashes"] == ["a" * 64]
+    assert db.document["subscription_status"] == "active"

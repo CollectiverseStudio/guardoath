@@ -86,12 +86,12 @@ class AdminTenantActions:
                 {"Update": {
                     "TableName": self.tenant_table, "Key": {"tenant_id": {"S": tenant_id}},
                     "UpdateExpression": "SET #record = :record, #revision = :next",
-                    "ConditionExpression": "attribute_exists(tenant_id) AND #revision = :prior",
+                    "ConditionExpression": "attribute_exists(tenant_id) AND #revision = :prior AND #record = :original",
                     "ExpressionAttributeNames": {"#record": "record", "#revision": "revision"},
                     "ExpressionAttributeValues": {
                         ":record": {"S": updated_json},
                         ":next": {"N": str(expected_revision+1)},
-                        ":prior": {"N": str(expected_revision)},
+                        ":prior": {"N": str(expected_revision)}, ":original": {"S": item["record"]["S"]},
                     }
                 }},
                 {"Put": {"TableName": self.audit_table, "Item": seal_audit(audit, self.audit_key),
@@ -176,11 +176,11 @@ class AdminTenantActions:
             self.ddb.transact_write_items(TransactItems=[
                 {"Update":{"TableName":self.tenant_table,"Key":{"tenant_id":{"S":tenant_id}},
                            "UpdateExpression":"SET #record = :record, #revision = :next",
-                           "ConditionExpression":"attribute_exists(tenant_id) AND #revision = :prior",
+                           "ConditionExpression":"attribute_exists(tenant_id) AND #revision = :prior AND #record = :original",
                            "ExpressionAttributeNames":{"#record":"record","#revision":"revision"},
                            "ExpressionAttributeValues":{
                                ":record":{"S":serialized},":next":{"N":str(expected_revision+1)},
-                               ":prior":{"N":str(expected_revision)}}}},
+                               ":prior":{"N":str(expected_revision)}, ":original": {"S": item["record"]["S"]}}}},
                 {"Put":{"TableName":self.audit_table,"Item":seal_audit(audit,self.audit_key),
                         "ConditionExpression":"attribute_not_exists(event_id)"}},
             ])
@@ -239,11 +239,11 @@ class AdminTenantActions:
             self.ddb.transact_write_items(TransactItems=[
                 {"Update":{"TableName":self.tenant_table,"Key":{"tenant_id":{"S":tenant_id}},
                     "UpdateExpression":"SET #record = :record, #revision = :next",
-                    "ConditionExpression":"attribute_exists(tenant_id) AND #revision = :prior",
+                    "ConditionExpression":"attribute_exists(tenant_id) AND #revision = :prior AND #record = :original",
                     "ExpressionAttributeNames":{"#record":"record","#revision":"revision"},
                     "ExpressionAttributeValues":{":record":{"S":body},
                         ":next":{"N":str(expected_revision+1)},
-                        ":prior":{"N":str(expected_revision)}}}},
+                        ":prior":{"N":str(expected_revision)}, ":original": {"S": item["record"]["S"]}}}},
                 {"Put":{"TableName":self.audit_table,"Item":seal_audit(audit,self.audit_key),
                         "ConditionExpression":"attribute_not_exists(event_id)"}}
             ])
@@ -306,12 +306,12 @@ class AdminTenantActions:
                     "TableName": self.tenant_table,
                     "Key": {"tenant_id": {"S": tenant_id}},
                     "UpdateExpression": "SET #record = :record, #revision = :next",
-                    "ConditionExpression": "attribute_exists(tenant_id) AND #revision = :prior",
+                    "ConditionExpression": "attribute_exists(tenant_id) AND #revision = :prior AND #record = :original",
                     "ExpressionAttributeNames": {"#record": "record", "#revision": "revision"},
                     "ExpressionAttributeValues": {
                         ":record": {"S": body},
                         ":next": {"N": str(expected_revision + 1)},
-                        ":prior": {"N": str(expected_revision)},
+                        ":prior": {"N": str(expected_revision)}, ":original": {"S": item["record"]["S"]},
                     },
                 }},
                 {"Put": {"TableName": self.audit_table,
