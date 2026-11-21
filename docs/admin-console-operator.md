@@ -416,3 +416,17 @@ progress only until exact-SHA CI, production MFA and all 15 live checks pass.
 The owner **Tenants → Usage** view compares the existing gated month-end request-count projection with the median of **three consecutive preceding UTC months** in the authoritative tenant usage record. Absent months remain unavailable (not zero). Early observations, stale record metadata or a missing current-month counter suppress the comparison; a prior-month median under 30 suppresses misleading percentage differences. Possible surge (200%+), elevated (150%+), lower (50% or less) and typical-range descriptions are purely advisory.
 
 This is neither a verified AWS cost anomaly nor a Stripe invoice, automated alert or quota enforcement. Historical counters can be incomplete. A visible browser test and API tests cover owner access, missing history, year boundary and non-mutation. No production AWS change, outside provider request, additional spend, subscription change or PII deadline change is implied.
+
+
+## Fail-closed published-catalog metadata admission (2026-11-21)
+The owner Catalog API validates the **entire** versioned source registry before
+projecting any category, including when a category filter is supplied. Published
+identifiers, text fields, stage/action eligibility, evidence declarations and
+bounded domain/check/rule inventories must be well formed. Explicitly malformed
+empty eligibility values are not normalized into valid empty lists, and invalid
+metadata objects are never rendered as arbitrary strings. A malformed provider
+snapshot yields an unavailable response rather than a misleading catalog or
+leaking internal source contents. Returned eligibility lists are copies, not
+mutable references to provider data. This is an admission safeguard for future
+versioned catalog publishing, **not** a publisher or a claim of live deployment,
+current-source CI, or a modification of tenant settings and the shared Engine.

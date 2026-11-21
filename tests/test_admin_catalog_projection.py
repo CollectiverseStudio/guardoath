@@ -47,6 +47,19 @@ def test_evidence_is_counts_only_and_never_current_ci_or_live_attestation():
     lambda p: p["domains"][0]["controls"][0].update({"actions": ["grant_paid"]}),
     lambda p: p["domains"][0]["controls"][0].update({"evidence": {"unit_tests": "private/raw/path"}}),
     lambda p: p["domains"][1].update({"domain_id": "privacy"}),
+    lambda p: p.update({"registry_version": True}),
+    lambda p: p.update({"registry_version": "not_versioned"}),
+    lambda p: p["domains"][0].update({"name": {"private": "provider internal"}}),
+    lambda p: p["domains"][0].update({"status": "\x00forged"}),
+    lambda p: p["domains"][0]["controls"][0].update({"name": ["private"]}),
+    lambda p: p["domains"][0]["controls"][0].update({"use_case": "x" * 4097}),
+    lambda p: p["domains"][0]["controls"][0].update({"stages": {}}),
+    lambda p: p["domains"][0]["controls"][0].update({"stages": None}),
+    lambda p: p["domains"][0]["controls"][0].update({"stages": [True]}),
+    lambda p: p["domains"][0]["controls"][0].update({"actions": False}),
+    lambda p: p["domains"][0]["controls"][0].update({"actions": [[]]}),
+    lambda p: p["domains"][0]["controls"][0]["rules"][0].update({"title": {"secret": 1}}),
+    lambda p: p["domains"][0]["controls"][0]["rules"][0].update({"use_case": "x" * 4097}),
 ])
 def test_corrupt_source_is_rejected_even_when_category_view_is_filtered(mutate):
     p = source()
@@ -65,3 +78,42 @@ def test_real_registry_shapes_and_declared_counts_are_compatible():
             assert check["test_evidence"]["ci_verified_for_source"] is False
             assert check["test_evidence"]["live_deployment_verified"] is None
             assert check["rule_count"] == len(check["rules"])
+
+
+def test_catalog_projection_does_not_share_mutable_eligibility_with_registry():
+    raw = source()
+    report = read_catalog(lambda: raw)
+    published = raw["domains"][0]["controls"][0]
+    item = report["categories"][0]["checks"][0]
+    item["stages"].append("output-other")
+    item["supported_actions"].append("grant_paid")
+    assert published["stages"] == ["input", "output"]
+    assert published["actions"] == ["block", "redact"]
+
+
+def test_catalog_rejects_oversized_unfiltered_provider_data():
+    raw = source()
+    raw["domains"] = [dict(domain_id="item" + str(i), controls=[])
+                      for i in range(129)]
+    with pytest.raises(ValueError):
+        read_catalog(lambda: raw, domain_id="planned")
+
+
+def test_admin_api_fails_closed_without_leaking_invalid_catalog_metadata():
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from guardoath.admin_console import VerifiedAdmin, create_admin_router
+    raw = source()
+    raw["domains"][0]["controls"][0]["rules"][0]["title"] = {"secret": "NEVER_LOG_THIS"}
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        verify_cognito_admin=lambda token: VerifiedAdmin(
+            "12345678-1234-1234-1234-123456789012", frozenset({"owner"}), True)
+        if token == "owner" else None,
+        catalog_provider=lambda: raw))
+    client = TestClient(app)
+    url = "/v1/admin/catalog?category_id=planned"
+    assert client.get(url).status_code == 401
+    result = client.get(url, headers={"X-GuardOath-Admin-Session": "owner"})
+    assert result.status_code == 503
+    assert "NEVER_LOG_THIS" not in result.text
