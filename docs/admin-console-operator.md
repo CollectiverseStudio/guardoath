@@ -450,3 +450,8 @@ a false confirmation. Customer tenant policies, Stripe bindings, subscription
 entitlement, input/output saved Off settings, host reference trust and fail-closed
 attachment behavior are not modified by this change. This protects source state;
 it is not a substitute for revisioned provider reconciliation or deployment tests.
+
+
+## Exact saved identity and stage-map guards for owner tenant actions (2026-11-21)
+
+All four owner-initiated tenant writes (status, rule action, downward allowance cap and API-key revocation) require the **stored** `demo` field to be the literal JSON boolean `false`. A missing value, null, numeric zero/one or text that resembles a boolean is corrupt or ambiguous and is refused before an atomic write. This does not change a customer's access, subscription status or valid tenant data. In the stage-specific rule editor, an absent rule-action map retains the existing legacy empty default, but an explicitly present null, false, list or string is rejected rather than silently normalized. Both protections preserve the authoritative saved Input/Output Off settings; no DynamoDB tenant update or signed audit receipt is written for these rejected records. Recovery requires an independently verified tenant-record correction, not an admin override.

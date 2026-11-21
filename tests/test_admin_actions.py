@@ -389,3 +389,76 @@ def test_owner_mutations_reject_same_revision_out_of_band_tenant_edits(operation
     assert db.document["monthly_allowance"] == 10000
     assert db.document["key_hashes"] == ["a" * 64]
     assert db.document["subscription_status"] == "active"
+
+
+@pytest.mark.parametrize("operation", ("status", "rule", "cap", "keys"))
+@pytest.mark.parametrize("saved_demo", (None, "false", "true", 0, 1, "__missing__"))
+def test_owner_tenant_mutations_require_literal_false_demo_flag(operation, saved_demo):
+    """Never mutate an ambiguous or malformed persisted demo/customer identity.
+
+    Python truthiness and numeric zero must not stand in for JSON false.
+    The source document and signed audit must both remain unchanged.
+    """
+    from types import SimpleNamespace
+    db = DDB()
+    original = db.get_item
+
+    def read(**kw):
+        response = original(**kw)
+        doc = json.loads(response["Item"]["record"]["S"])
+        if saved_demo == "__missing__":
+            doc.pop("demo", None)
+        else:
+            doc["demo"] = saved_demo
+        doc["monthly_allowance"] = 10000
+        doc["overage"] = "allow_and_record"
+        doc["key_hashes"] = ["a" * 64]
+        response["Item"]["record"]["S"] = json.dumps(doc)
+        return response
+
+    db.get_item = read
+    opts = dict(tenant_id="usr-good", expected_revision=7,
+                confirmation="usr-good",
+                reason="Owner verified the authoritative tenant account",
+                actor=SUB, idempotency_key="strictdemo12345678")
+    validate = lambda doc: SimpleNamespace(model_dump=lambda: doc)
+    with pytest.raises(AdminActionConflict):
+        if operation == "status":
+            manager(db).change_status(**opts, status="disabled")
+        elif operation == "rule":
+            manager(db).change_rule_action(**opts, stage="input",
+                rule_id="pii.email", action="block",
+                validate_record=validate, rule_exists=lambda rid: rid == "pii.email")
+        elif operation == "cap":
+            manager(db).cap_monthly_allowance(**opts, new_limit=5000,
+                                              validate_record=validate)
+        else:
+            manager(db).revoke_all_keys(**opts, validate_record=validate)
+    assert db.writes == []
+
+
+@pytest.mark.parametrize("stage", ("input", "output"))
+@pytest.mark.parametrize("invalid_map", (None, [], "", False))
+def test_owner_rule_action_rejects_present_malformed_stage_map(stage, invalid_map):
+    """An explicit invalid map is not equivalent to a missing legacy map."""
+    from types import SimpleNamespace
+    db = DDB()
+    original = db.get_item
+
+    def read(**kw):
+        response = original(**kw)
+        doc = json.loads(response["Item"]["record"]["S"])
+        doc[stage + "_rule_actions"] = invalid_map
+        response["Item"]["record"]["S"] = json.dumps(doc)
+        return response
+
+    db.get_item = read
+    with pytest.raises(AdminActionConflict):
+        manager(db).change_rule_action(
+            tenant_id="usr-good", expected_revision=7, stage=stage,
+            rule_id="pii.email", action="block", confirmation="usr-good",
+            reason="Owner inspected exact saved stage action map",
+            actor=SUB, idempotency_key="strictactions12345",
+            validate_record=lambda doc: SimpleNamespace(model_dump=lambda: doc),
+            rule_exists=lambda rid: rid == "pii.email")
+    assert db.writes == []

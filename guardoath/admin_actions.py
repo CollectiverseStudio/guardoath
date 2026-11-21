@@ -65,7 +65,7 @@ class AdminTenantActions:
                 raise AdminActionConflict("Tenant missing or revision changed")
             record = json.loads(item["record"]["S"])
             if (not isinstance(record, dict) or record.get("tenant_id") != tenant_id or
-                    record.get("demo") is True or record.get("status") not in ("active", "disabled") or
+                    record.get("demo") is not False or record.get("status") not in ("active", "disabled") or
                     record["status"] == status):
                 raise AdminActionConflict("Tenant is not eligible for this action")
             before = record["status"]
@@ -138,10 +138,13 @@ class AdminTenantActions:
             if not item or int(item["revision"]["N"]) != expected_revision:
                 raise AdminActionConflict("Tenant missing or revision changed")
             doc = json.loads(item["record"]["S"])
-            if not isinstance(doc, dict) or doc.get("demo") is True or doc.get("tenant_id") != tenant_id:
+            if not isinstance(doc, dict) or doc.get("demo") is not False or doc.get("tenant_id") != tenant_id:
                 raise AdminActionConflict("Tenant cannot be changed")
             field = stage + "_rule_actions"
-            previous = doc.get(field) or {}
+            # A missing map is a valid legacy default. An *explicit* null,
+            # empty list/string or false is corrupt stored tenant policy and
+            # must never be silently rewritten into an empty action map.
+            previous = doc.get(field, {})
             if not isinstance(previous, dict):
                 raise AdminActionConflict("Stored rule actions invalid")
             before = previous.get(rule_id,"same_as_check")
@@ -218,7 +221,7 @@ class AdminTenantActions:
             if not item or int(item["revision"]["N"])!=expected_revision:
                 raise AdminActionConflict("Tenant missing or revision changed")
             doc=json.loads(item["record"]["S"])
-            if not isinstance(doc,dict) or doc.get("tenant_id")!=tenant_id or doc.get("demo") is True:
+            if not isinstance(doc,dict) or doc.get("tenant_id")!=tenant_id or doc.get("demo") is not False:
                 raise AdminActionConflict("Tenant not eligible")
             old=doc.get("monthly_allowance")
             if type(old) is not int or new_limit>old or (new_limit==old and doc.get("overage")=="block"):
@@ -277,7 +280,7 @@ class AdminTenantActions:
                 raise AdminActionConflict("Tenant missing or revision changed")
             doc = json.loads(item["record"]["S"])
             if (not isinstance(doc, dict) or doc.get("tenant_id") != tenant_id
-                    or doc.get("demo") is True or doc.get("status") not in ("active", "disabled")):
+                    or doc.get("demo") is not False or doc.get("status") not in ("active", "disabled")):
                 raise AdminActionConflict("Tenant is not eligible")
             keys = doc.get("key_hashes")
             if (not isinstance(keys, list) or not 1 <= len(keys) <= 2 or
