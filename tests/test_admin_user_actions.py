@@ -186,6 +186,7 @@ def test_provider_post_write_failure_is_indeterminate_and_never_false_success():
     count = provider.calls.count("disable")
     assert client.post(URL, json=body(), headers=HEADERS).status_code == 409
     assert provider.calls.count("disable") == count
+    assert provider.calls == ["list", "get", "groups", "disable", "get"]
 
 
 def test_missing_verified_outcome_audit_fails_closed_without_false_success():

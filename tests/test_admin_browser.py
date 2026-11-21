@@ -257,7 +257,8 @@ def test_owner_browser_can_inspect_exact_identity_without_url_pii_or_mutating_ac
     assert 'method: "POST", body: JSON.stringify({email})' in script
     assert 'el("user-exact-email").value = "";' in script
     assert 'el("user-inspect").addEventListener("click", inspectUser)' in script
-    assert '"user-inspect-result", "catalog-summary"' in script
+    # Both existing account inspection and new status management must be wiped on sign-out.
+    assert '"user-inspect-result", "user-change-result", "catalog-summary"' in script
     assert 'user-inspect-result' in script
     assert 'innerHTML' not in script
     assert 'admin_disable_user' not in script and 'admin_enable_user' not in script

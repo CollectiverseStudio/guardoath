@@ -42,7 +42,9 @@ def test_audit_viewer_accepts_exactly_the_server_supported_sensitive_read_resour
     import re
     from guardoath.admin_audit import SENSITIVE_READS
     from guardoath.admin_browser import _JS
-    match = re.search(r'!\[(.*?)\]\.includes\(change\.resource\)', _JS, re.S)
+    # Match only the literal receipt-resource array. Other interactive controls
+    # legitimately use unrelated ![...].includes(...) guards earlier in the script.
+    match = re.search(r'!\[([^\]]*?)\]\.includes\(change\.resource\)', _JS, re.S)
     assert match is not None
     options = json.loads("[" + match.group(1) + "]")
     assert len(options) == len(set(options))

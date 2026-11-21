@@ -33,6 +33,7 @@ class AdminCognitoUserActions:
                     "admin_disable_user", "admin_enable_user")
         if (not all(callable(getattr(cognito, method, None)) for method in required)
                 or not callable(getattr(ddb, "put_item", None))
+                or not callable(getattr(ddb, "get_item", None))
                 or not re.fullmatch(r"^[a-z]{2}(?:-[a-z]+)+-\d_[A-Za-z0-9]+$", pool_id or "")
                 or not re.fullmatch(r"^[A-Za-z0-9_.-]{3,255}$", audit_table or "")
                 or not isinstance(audit_key, bytes) or len(audit_key) < 32
@@ -60,8 +61,30 @@ class AdminCognitoUserActions:
                 or not isinstance(reason, str) or not REASON.fullmatch(reason)
                 or not isinstance(idempotency_key, str) or not IDEMPOTENCY.fullmatch(idempotency_key)):
             raise ValueError("Unconfirmed or invalid Cognito sign-in change")
+        # Consume idempotency in the independent audit store BEFORE any
+        # Cognito provider call. The eventual conditional PutItem is still
+        # required to arbitrate concurrent requests racing this read.
+        key_source = (actor + "\\0" + idempotency_key).encode()
+        intent_id = hmac.new(self.audit_key, b"cognito-status-intent:" + key_source, hashlib.sha256).hexdigest()
+        outcome_id = hmac.new(self.audit_key, b"cognito-status-outcome:" + key_source, hashlib.sha256).hexdigest()
+        try:
+            prior = self.ddb.get_item(
+                TableName=self.audit_table, Key={"event_id": {"S": intent_id}},
+                ConsistentRead=True)
+            if not isinstance(prior, dict):
+                raise UserActionUnavailable("Idempotency lookup unavailable")
+            if prior.get("Item") is not None:
+                raise UserActionConflict("Action key already consumed; inspect account before new request")
+        except (UserActionConflict, UserActionUnavailable):
+            raise
+        except Exception as exc:
+            raise UserActionUnavailable("Idempotency lookup unavailable") from exc
+
         # Reuse the bounded directory read rate window, even for mutations.
-        self.reserve_read(actor)
+        try:
+            self.reserve_read(actor)
+        except Exception as exc:
+            raise UserActionUnavailable("Cognito request budget unavailable") from exc
         try:
             directory = self.cognito.list_users(
                 UserPoolId=self.pool_id, Filter='email = "' + email + '"', Limit=2)
@@ -111,9 +134,6 @@ class AdminCognitoUserActions:
         except Exception as exc:
             raise UserActionUnavailable("Cognito preflight unavailable") from exc
 
-        key_source = (actor + "\\0" + idempotency_key).encode()
-        intent_id = hmac.new(self.audit_key, b"cognito-status-intent:" + key_source, hashlib.sha256).hexdigest()
-        outcome_id = hmac.new(self.audit_key, b"cognito-status-outcome:" + key_source, hashlib.sha256).hexdigest()
         target = hmac.new(self.audit_key, b"cognito-user:" + subs[0].encode(), hashlib.sha256).hexdigest()
         when = self.clock().astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
         before_value = "true" if expected_enabled else "false"
