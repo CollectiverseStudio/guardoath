@@ -1,4 +1,8 @@
 """Provider failures, cursor forgery, leakage and bounds fail closed."""
+import base64
+import hashlib
+import hmac
+import json
 from datetime import datetime, timezone
 import pytest
 from guardoath.admin_users import CognitoUserDirectory, InvalidUserCursor
@@ -35,6 +39,58 @@ def test_list_is_one_bounded_page_masked_and_paginates():
     after=d.page(owner_sub=OWNER, limit=5,query="someone@",cursor=first["next_cursor"])
     assert after["users"]==[] and after["next_cursor"] is None
     assert f.calls[-1]["PaginationToken"]=="next-provider"
+
+
+def test_cursor_hides_verified_owner_subject_and_personal_email_prefix():
+    provider = Fake()
+    service = directory(provider)
+    query = "someone@example.com"
+    cursor = service.page(owner_sub=OWNER, limit=5, query=query)["next_cursor"]
+    raw = cursor.split(".", 1)[0]
+    payload = json.loads(base64.urlsafe_b64decode(raw + "=" * (-len(raw) % 4)))
+    assert payload["v"] == 3
+    assert payload["owner"] != OWNER and payload["q"] != query
+    assert OWNER not in json.dumps(payload) and query not in json.dumps(payload)
+    assert OWNER not in cursor and query not in cursor
+    assert payload["token"] == "next-provider"
+    assert service.page(owner_sub=OWNER, limit=5, query=query, cursor=cursor)["status"] == "ok"
+    assert provider.calls[-1]["PaginationToken"] == "next-provider"
+
+
+def test_legacy_signed_but_cleartext_cursors_fail_closed_before_provider_read():
+    provider = Fake()
+    service = directory(provider)
+    payload = {"v": 2, "pool": "us-east-1_Example", "owner": OWNER, "q": "some", "n": 5,
+               "token": "next-provider", "exp": 1000}
+    data = base64.urlsafe_b64encode(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    ).rstrip(b"=").decode("ascii")
+    tag = base64.urlsafe_b64encode(
+        hmac.new(b"a" * 32, b"guardoath-user-directory:" + data.encode(), hashlib.sha256).digest()
+    ).rstrip(b"=").decode("ascii")
+    with pytest.raises(InvalidUserCursor):
+        service.page(owner_sub=OWNER, limit=5, query="some", cursor=data + "." + tag)
+    assert provider.calls == []
+
+
+@pytest.mark.parametrize("attributes", [
+    [{"Name": "email", "Value": "one@example.com"},
+     {"Name": "email", "Value": "two@example.com"}],
+    [{"Name": "email_verified", "Value": "true"},
+     {"Name": "email_verified", "Value": "false"}],
+    [{"Name": "email", "Value": 123}],
+    [{"Name": "email_verified", "Value": None}],
+])
+def test_ambiguous_or_malformed_user_directory_identity_fails_closed(attributes):
+    class Ambiguous(Fake):
+        def list_users(self, **kw):
+            self.calls.append(kw)
+            return {"Users": [{"Username": "anonymous-subject",
+                               "Attributes": attributes}]}
+    provider = Ambiguous()
+    with pytest.raises(ValueError, match="Ambiguous Cognito directory identity"):
+        directory(provider).page(owner_sub=OWNER)
+    assert len(provider.calls) == 1
 
 @pytest.mark.parametrize("query",['broken"',"bad\\","é"," a","a"*81])
 def test_reject_unsafe_filters_before_provider(query):

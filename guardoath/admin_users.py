@@ -68,8 +68,18 @@ class CognitoUserDirectory:
         self._lookup_lock = Lock()
         self._lookup_times = {}
 
+    def _cursor_binding(self, kind: str, value: str) -> str:
+        # HMAC signatures prevent modification but do not hide base64 payload
+        # fields. Pseudonymize owner and email prefix independently to prevent
+        # their disclosure in browser-visible continuation cursors.
+        message = (b"guardoath-user-directory-cursor-v3:" + kind.encode("ascii")
+                   + b":" + value.encode("utf-8"))
+        return _b64(hmac.new(self.key, message, hashlib.sha256).digest())
+
     def _cursor(self, token, query, limit, owner_sub):
-        payload = {"v": 2, "pool": self.pool_id, "owner": owner_sub, "q": query, "n": limit,
+        payload = {"v": 3, "pool": self.pool_id,
+                   "owner": self._cursor_binding("owner", owner_sub),
+                   "q": self._cursor_binding("filter", query), "n": limit,
                    "token": token, "exp": int(self.clock()) + 900}
         data = _b64(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode())
         signature = _b64(hmac.new(self.key, b"guardoath-user-directory:" + data.encode(), hashlib.sha256).digest())
@@ -86,9 +96,10 @@ class CognitoUserDirectory:
             payload = json.loads(_unb64(data))
         except (ValueError, UnicodeDecodeError) as exc:
             raise InvalidUserCursor("Invalid user cursor") from exc
-        if (not isinstance(payload, dict) or payload.get("v") != 2 or payload.get("pool") != self.pool_id
-                or payload.get("owner") != owner_sub
-                or payload.get("q") != query or type(payload.get("n")) is not int
+        if (not isinstance(payload, dict) or payload.get("v") != 3 or payload.get("pool") != self.pool_id
+                or payload.get("owner") != self._cursor_binding("owner", owner_sub)
+                or payload.get("q") != self._cursor_binding("filter", query)
+                or type(payload.get("n")) is not int
                 or payload["n"] != limit or type(payload.get("exp")) is not int
                 or payload["exp"] <= self.clock() or not isinstance(payload.get("token"), str)
                 or not 1 <= len(payload["token"]) <= 2048):
@@ -102,9 +113,16 @@ class CognitoUserDirectory:
         attrs = entry.get("Attributes", [])
         if not isinstance(attrs, list) or len(attrs) > 50:
             raise ValueError("Invalid directory attributes")
-        approved = {a.get("Name"): a.get("Value") for a in attrs
-                    if isinstance(a, dict) and a.get("Name") in ("email", "email_verified")
-                    and isinstance(a.get("Value"), str)}
+        approved = {}
+        for attribute in attrs:
+            if not isinstance(attribute, dict) or attribute.get("Name") not in ("email", "email_verified"):
+                continue
+            name, value = attribute["Name"], attribute.get("Value")
+            # Do not turn conflicting or malformed provider identity attributes
+            # into an apparently authoritative masked account-state summary.
+            if name in approved or not isinstance(value, str):
+                raise ValueError("Ambiguous Cognito directory identity")
+            approved[name] = value
         state = entry.get("UserStatus")
         return {"username": _mask_email(entry["Username"]) or ("user-" + hmac.new(
                           self.key, b"guardoath-cognito-user-label:" + entry["Username"].encode("utf-8"),
