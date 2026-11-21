@@ -73,6 +73,54 @@ def _quota_pacing(count: int | None, allowance: int, overage: str,
     }
 
 
+def _historical_volume_signal(usage: dict, now: datetime, pacing: dict) -> dict:
+    """Advisory volume comparison, never a cost or a persistent alert.
+
+    Compare a gated month-end projection with three consecutive preceding
+    recorded UTC months. Missing month records are unknown, not zero.
+    """
+    projection = pacing["projected_month_end_requests_floor"]
+    result = {
+        "state": "unavailable", "history_months_utc": [],
+        "history_median_monthly_requests": None,
+        "projected_vs_history_percent_floor": None,
+        "persisted_alert": False,
+        "basis": "projected saved-request count vs median of 3 preceding UTC months",
+        "note": "Advisory only; past records may be incomplete. "
+                "Not AWS costs, Stripe billing, an alert or enforcement.",
+    }
+    if projection is None:
+        return result
+    month_index = now.year * 12 + now.month - 1
+    months = []
+    for offset in (1, 2, 3):
+        previous = month_index - offset
+        if previous < 12:
+            result["state"] = "insufficient_history"
+            return result
+        months.append(f"{previous // 12:04d}-{previous % 12 + 1:02d}")
+    if any(period not in usage for period in months):
+        result["state"] = "insufficient_history"
+        return result
+    baseline = sorted(usage[period] for period in months)[1]
+    result["history_months_utc"] = months
+    result["history_median_monthly_requests"] = baseline
+    if baseline < 30:
+        result["state"] = "low_volume_history"
+        return result
+    ratio = projection * 100 // baseline
+    result["projected_vs_history_percent_floor"] = ratio
+    if ratio >= 200:
+        result["state"] = "possible_request_surge"
+    elif ratio >= 150:
+        result["state"] = "elevated_request_volume"
+    elif ratio <= 50:
+        result["state"] = "lower_request_volume"
+    else:
+        result["state"] = "within_historical_range"
+    return result
+
+
 def tenant_usage_report(record, *, clock: Callable[[], datetime] | None = None) -> dict:
     now = (clock or (lambda: datetime.now(timezone.utc)))()
     if not isinstance(now, datetime) or now.tzinfo is None:
@@ -119,6 +167,7 @@ def tenant_usage_report(record, *, clock: Callable[[], datetime] | None = None) 
     }
     pacing = _quota_pacing(count, allowance, overage,
                            getattr(record, "updated_at", None), now)
+    history = _historical_volume_signal(usage, now, pacing)
     return {
         "tenant_id": tenant_id,
         "period_utc": month,
@@ -129,6 +178,7 @@ def tenant_usage_report(record, *, clock: Callable[[], datetime] | None = None) 
         "blocking_cap_enabled": overage == "block",
         "usage_threshold": threshold,
         "quota_pacing": pacing,
+        "historical_volume": history,
         "recent_recorded_months": recent,
         "source": "authoritative GuardOath tenant usage record",
         "record_revision": revision,

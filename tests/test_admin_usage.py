@@ -175,3 +175,70 @@ def test_quota_pacing_api_is_owner_only():
     response = cli.get(path, headers={"X-GuardOath-Admin-Session": "owner-token"})
     assert response.status_code == 200
     assert response.json()["usage"]["quota_pacing"]["persisted_alert"] is False
+
+@pytest.mark.parametrize("current,state,ratio", [
+    (1300, "possible_request_surge", 205),
+    (1000, "elevated_request_volume", 157),
+    (300, "lower_request_volume", 47),
+    (650, "within_historical_range", 102),
+])
+def test_historical_volume_compares_three_complete_months_only(current, state, ratio):
+    clock = lambda: datetime(2026, 11, 19, 18, tzinfo=timezone.utc)
+    saved = {"2026-11": current, "2026-10": 1000,
+             "2026-09": 1100, "2026-08": 900, "2027-01": 999999}
+    record = Tenant(usage=saved, updated_at="2026-11-19T17:00:00Z")
+    report = tenant_usage_report(record, clock=clock)
+    signal = report["historical_volume"]
+    assert signal["history_months_utc"] == ["2026-10", "2026-09", "2026-08"]
+    assert signal["history_median_monthly_requests"] == 1000
+    assert signal["state"] == state
+    assert signal["projected_vs_history_percent_floor"] == ratio
+    assert signal["persisted_alert"] is False
+    assert report["aws_cost_usd"] is None and report["stripe_invoice_usd"] is None
+    assert record.usage == saved
+
+
+@pytest.mark.parametrize("saved,updated,day,expected", [
+    ({"2026-11": 600}, "2026-11-19T17:00:00Z", 19, "insufficient_history"),
+    ({"2026-11": 600, "2026-10": 50, "2026-09": 60},
+     "2026-11-19T17:00:00Z", 19, "insufficient_history"),
+    ({"2026-11": 600, "2026-10": 0, "2026-09": 10, "2026-08": 15},
+     "2026-11-19T17:00:00Z", 19, "low_volume_history"),
+    ({"2026-11": 600, "2026-10": 1000, "2026-09": 1000, "2026-08": 1000},
+     "2026-11-15T17:00:00Z", 19, "unavailable"),
+    ({"2026-11": 600, "2026-10": 1000, "2026-09": 1000, "2026-08": 1000},
+     "2026-11-06T17:00:00Z", 6, "unavailable"),
+    ({"2026-10": 1000, "2026-09": 1000, "2026-08": 1000},
+     "2026-11-19T17:00:00Z", 19, "unavailable"),
+])
+def test_history_missing_stale_and_low_volume_cannot_fabricate_anomaly(
+        saved, updated, day, expected):
+    clock = lambda: datetime(2026, 11, day, 18, tzinfo=timezone.utc)
+    signal = tenant_usage_report(
+        Tenant(usage=saved, updated_at=updated), clock=clock)["historical_volume"]
+    assert signal["state"] == expected
+    assert signal["projected_vs_history_percent_floor"] is None
+    assert signal["persisted_alert"] is False
+
+
+def test_history_year_boundary_and_owner_only_usage_api():
+    clock = lambda: datetime(2027, 1, 19, 18, tzinfo=timezone.utc)
+    record = Tenant(usage={"2027-01": 1300, "2026-12": 1000,
+                           "2026-11": 1100, "2026-10": 900},
+                    updated_at="2027-01-19T17:00:00Z")
+    result = tenant_usage_report(record, clock=clock)["historical_volume"]
+    assert result["history_months_utc"] == ["2026-12", "2026-11", "2026-10"]
+    assert result["state"] == "possible_request_surge"
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        tenant_store=Store(record),
+        verify_cognito_admin=lambda tok: VerifiedAdmin(
+            "trusted-subject", frozenset({"owner"}), True) if tok == "owner-token" else None))
+    client = TestClient(app)
+    path = "/v1/admin/tenants/usr-usage/usage"
+    assert client.get(path).status_code == 401
+    assert client.get(path, headers={"X-GuardOath-Key": "owner-token"}).status_code == 401
+    response = client.get(path, headers={"X-GuardOath-Admin-Session": "owner-token"})
+    assert response.status_code == 200
+    assert response.json()["usage"]["historical_volume"]["persisted_alert"] is False
+    assert "key_hash" not in response.text and "payer_id" not in response.text

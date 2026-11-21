@@ -1022,6 +1022,18 @@ _JS = r'''"use strict";
       const metadata = ["recent_record_metadata", "stale_record_metadata", "unavailable"]
         .includes(pacing.record_metadata_freshness)
         ? pacing.record_metadata_freshness.replaceAll("_", " ") : "unavailable";
+      const history = usage.historical_volume || {};
+      const historyStates = ["unavailable", "insufficient_history", "low_volume_history",
+        "possible_request_surge", "elevated_request_volume", "lower_request_volume",
+        "within_historical_range"];
+      const historyState = historyStates.includes(history.state)
+        ? history.state.replaceAll("_", " ") : "unavailable";
+      const historyMedian = Number.isSafeInteger(history.history_median_monthly_requests) &&
+        history.history_median_monthly_requests >= 0
+        ? history.history_median_monthly_requests : "Unavailable";
+      const historyRatio = Number.isSafeInteger(history.projected_vs_history_percent_floor) &&
+        history.projected_vs_history_percent_floor >= 0
+        ? history.projected_vs_history_percent_floor + "%" : "Unavailable";
       say("usage-details", tenant.tenant_id + " · UTC " + (usage.period_utc || "unknown") +
         " · Recorded: " + (count === null || count === undefined ? "Unavailable" : count) +
         " · Allowance: " + (usage.monthly_allowance ?? "Unavailable") +
@@ -1033,6 +1045,10 @@ _JS = r'''"use strict";
         " · Quota pacing: " + pacingState +
         " · Record metadata: " + metadata +
         " · Advisory linear pacing only; not a live cost or automated alert" +
+        " · Historical recorded-request volume: " + historyState +
+        " · Prior 3-month median: " + historyMedian +
+        " · Projected vs prior median: " + historyRatio +
+        " · Volume comparison is advisory; historical records may be incomplete" +
         " · Record updated: " + (usage.record_updated_at || "Unavailable") +
         " · AWS costs: Unavailable · Stripe invoices: Unavailable · Source: " + (usage.source || "unknown") + readAuditLabel(result));
     } catch (err) {

@@ -410,3 +410,9 @@ of current Enabled state; if it has an outcome, the browser explicitly reports
 whether the current state agrees with that historical snapshot. Both action
 reference and optional email are cleared on sign-out. This code is source
 progress only until exact-SHA CI, production MFA and all 15 live checks pass.
+
+## Advisory historical recorded-request volume (source only; 2026-11-21)
+
+The owner **Tenants → Usage** view compares the existing gated month-end request-count projection with the median of **three consecutive preceding UTC months** in the authoritative tenant usage record. Absent months remain unavailable (not zero). Early observations, stale record metadata or a missing current-month counter suppress the comparison; a prior-month median under 30 suppresses misleading percentage differences. Possible surge (200%+), elevated (150%+), lower (50% or less) and typical-range descriptions are purely advisory.
+
+This is neither a verified AWS cost anomaly nor a Stripe invoice, automated alert or quota enforcement. Historical counters can be incomplete. A visible browser test and API tests cover owner access, missing history, year boundary and non-mutation. No production AWS change, outside provider request, additional spend, subscription change or PII deadline change is implied.
