@@ -138,22 +138,27 @@ def test_the_site_role_can_use_only_its_table_and_log_group(template):
             assert absent == {"Ref": "AWS::NoValue"}
             assert conditional["Effect"] == "Allow"
             assert "Resource" in conditional and "*" not in json.dumps(conditional["Resource"])
-            assert condition not in conditionals
-            conditionals[condition] = conditional
+            conditionals.setdefault(condition, []).append(conditional)
         else:
             assert "Resource" in statement
             assert "*" not in json.dumps(statement["Resource"])
     assert set(conditionals) == {"AdminConsoleEnabled", "AdminMutationsEnabled"}
-    cognito = conditionals["AdminConsoleEnabled"]
+    assert len(conditionals["AdminConsoleEnabled"]) == 1
+    assert len(conditionals["AdminMutationsEnabled"]) == 2
+    cognito = conditionals["AdminConsoleEnabled"][0]
     assert cognito["Action"] == [
         "cognito-idp:AdminGetUser", "cognito-idp:AdminListGroupsForUser", "cognito-idp:ListUsers"
     ]
     assert cognito["Resource"] == {
         "Fn::Sub": "arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPool}"
     }
-    audit = conditionals["AdminMutationsEnabled"]
+    mutation_policies = conditionals["AdminMutationsEnabled"]
+    audit = next(p for p in mutation_policies if "dynamodb:PutItem" in p["Action"])
     assert audit["Action"] == ["dynamodb:PutItem", "dynamodb:GetItem"]
     assert audit["Resource"] == {"Fn::GetAtt": ["AdminAuditTable", "Arn"]}
+    cognito_mutations = next(p for p in mutation_policies if "cognito-idp:AdminDisableUser" in p["Action"])
+    assert cognito_mutations["Action"] == ["cognito-idp:AdminDisableUser", "cognito-idp:AdminEnableUser"]
+    assert cognito_mutations["Resource"] == cognito["Resource"]
 
 
 def test_the_table_stays_within_the_free_capacity(template):

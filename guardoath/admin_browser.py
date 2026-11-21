@@ -177,7 +177,11 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <section class="panel"><h2>Cognito users</h2><p class="muted">Owner-only, one provider page at a time; masked emails and unknown totals.</p><label for="user-search">Email prefix</label> <input id="user-search" maxlength="80" autocomplete="off"> <button id="user-search-go" type="button">Search users</button><div class="scroll"><table><thead><tr><th>Username</th><th>Masked email</th><th>Verified</th><th>Enabled</th><th>Status</th><th>Created (UTC)</th></tr></thead><tbody id="user-rows"></tbody></table></div><p id="user-status" role="status"></p><button id="user-next" type="button" disabled>Next users</button>
 <h3>Inspect an exact Cognito account</h3><p class="muted">Use a known full email address. Only masked account state returns; this action does not change sign-in or billing.</p>
 <label for="user-exact-email">Exact account email</label> <input id="user-exact-email" type="email" maxlength="254" autocomplete="off" spellcheck="false">
-<button id="user-inspect" type="button">Inspect account</button><p id="user-inspect-result" role="status"></p></section>
+<button id="user-inspect" type="button">Inspect account</button><p id="user-inspect-result" role="status"></p>
+<h3>Change Cognito sign-in access</h3><p class="muted">Disable or re-enable a non-owner account only after exact inspection. Does not grant a subscription, change a tenant, or reset MFA. Each action is independently audited and re-read from Cognito. If verification fails, inspect the account rather than retrying blindly.</p>
+<label for="user-change-email">Exact account email</label> <input id="user-change-email" type="email" maxlength="254" autocomplete="off" spellcheck="false">
+<label for="user-change-action">Action</label> <select id="user-change-action"><option value="disable">Disable sign-in</option><option value="enable">Enable sign-in</option></select>
+<button id="user-change" type="button" disabled>Apply audited change</button><p id="user-change-result" role="status"></p></section>
 <section class="panel"><h2>Tenants</h2><p class="muted">API key counts are sourced from the persisted tenant record; actual key material is never displayed. Unknown counts remain unavailable.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
 <section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Select Verify Stripe beside a tenant to compare the current provider status with its saved tenant entitlement. Discrepancies are advisory: no paid access or billing state is modified here.</p><p id="billing-details" role="status">No subscription selected.</p></section>
 <section class="panel"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
@@ -229,7 +233,7 @@ _JS = r'''"use strict";
     el("tenant-rows").replaceChildren();
     el("user-rows").replaceChildren();
     el("categories").replaceChildren();
-    for (const id of ["status", "tenant-status", "user-status", "user-inspect-result", "catalog-summary", "usage-details", "billing-details", "audit-result", "proposal-result", "draft-result"]) say(id, "");
+    for (const id of ["status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "usage-details", "billing-details", "audit-result", "proposal-result", "draft-result"]) say(id, "");
     previewSelection = null;
     previewReady = null;
     draftReadyForReview = null;
@@ -246,6 +250,8 @@ _JS = r'''"use strict";
     el("search").value = "";
     el("user-search").value = "";
     el("user-exact-email").value = "";
+    el("user-change-email").value = "";
+    el("user-change").disabled = true;
     nextUserCursor = null;
     el("user-next").disabled = true;
     nextCursor = null;
@@ -274,6 +280,7 @@ _JS = r'''"use strict";
       el("metrics").append(card);
     }
     features = available;
+    el("user-change").disabled = !features.cognito_user_status_changes;
     previewSelection = null;
     previewReady = null;
     el("proposal-save").disabled = true;
@@ -574,6 +581,67 @@ _JS = r'''"use strict";
       if (token && epoch === authEpoch) say("user-inspect-result", err.message);
     }
   }
+  async function changeUserStatus() {
+    if (!token || !features.cognito_user_status_changes) return;
+    const email = el("user-change-email").value.trim();
+    const action = el("user-change-action").value;
+    el("user-change-email").value = "";
+    if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}$/.test(email) ||
+        email.length > 254 || email.startsWith(".") || email.includes("..") || email.endsWith(".") ||
+        !["disable","enable"].includes(action)) {
+      say("user-change-result", "Enter a valid exact account email and action");
+      return;
+    }
+    const epoch = authEpoch;
+    say("user-change-result", "Rechecking account state before any change...");
+    try {
+      const inspected = await request("/v1/admin/users/lookup", {
+        method:"POST", body:JSON.stringify({email})
+      });
+      if (!token || epoch !== authEpoch) return;
+      const expected = action === "disable";
+      if (inspected.status !== "ok" || !inspected.user || inspected.user.enabled !== expected) {
+        say("user-change-result", "Account unavailable or state changed. Inspect it before retrying.");
+        return;
+      }
+      const confirmation = action.toUpperCase() + " " + email;
+      if (prompt("Type exactly to confirm: " + confirmation) !== confirmation) return;
+      const reason = prompt("Why is this sign-in access change needed? (10–240 characters; no personal data)");
+      if (!reason || reason.length < 10 || reason.length > 240) return;
+      if (!confirm("Change Cognito sign-in access for this exact account? This does NOT change Stripe or paid entitlement.")) return;
+      const result = await request("/v1/admin/users/status", {
+        method:"POST", body:JSON.stringify({
+          email, action, expected_enabled:expected, confirmation, reason,
+          idempotency_key:crypto.randomUUID().replaceAll("-","")
+        })
+      });
+      if (!token || epoch !== authEpoch) return;
+      if (result.status !== "verified" || result.enabled !== !expected ||
+          !/^[a-f0-9]{64}$/.test(result.audit_event_id || "") ||
+          !/^[a-f0-9]{64}$/.test(result.intent_event_id || "") ||
+          !/^[a-f0-9]{64}$/.test(result.target_fingerprint || ""))
+        throw new Error("Cognito status outcome unverified; inspect account before any new action");
+      const verified = await request("/v1/admin/audit/" + result.audit_event_id);
+      if (!token || epoch !== authEpoch) return;
+      const receipt = verified.audit;
+      const change = receipt && receipt.change;
+      if (!receipt || receipt.integrity_status !== "signed_verified" ||
+          receipt.operation !== "cognito.user.status.outcome" ||
+          receipt.event_id !== result.audit_event_id ||
+          change?.field !== "cognito_enabled" || change.before !== expected ||
+          change.after !== !expected || change.related_event_id !== result.intent_event_id ||
+          change.target_fingerprint !== result.target_fingerprint)
+        throw new Error("Cognito outcome audit integrity unavailable; inspect account before any new action");
+      say("user-change-result", "Cognito sign-in access changed and verified · signed outcome " +
+          result.audit_event_id + " · immutable intent " + result.intent_event_id +
+          " · saved audit source " + (receipt.source || "unavailable") + readAuditLabel(verified));
+      await pageUsers();
+    } catch (err) {
+      if (token && epoch === authEpoch)
+        say("user-change-result", err.message + " · inspect account and audit before another change");
+    }
+  }
+
   function showTenants(data) {
     el("tenant-rows").replaceChildren();
     for (const tenant of data.tenants || []) {
@@ -707,11 +775,26 @@ _JS = r'''"use strict";
         if (receipt.integrity_status !== "signed_verified" || change.field !== "protected_read" ||
             !["cognito.exact_user","stripe.subscription","audit.receipt","cognito.user_directory",
               "tenant.directory","tenant.detail","tenant.usage","catalog.registry","catalog.preview",
-              "admin.overview","admin.features","catalog.draft"].includes(change.resource) ||
+              "admin.overview","admin.features","catalog.draft","cognito.mutation_preflight"].includes(change.resource) ||
             receipt.prior_revision !== undefined || receipt.new_revision !== undefined)
           throw new Error("Protected read receipt invalid");
         say("audit-result", "Stored receipt · " + integrity + " · protected read " +
           change.resource + " · tenant " + (receipt.tenant_id || "unknown") +
+          " · UTC " + (receipt.when_utc || "unknown") + readAuditLabel(response));
+        return;
+      }
+      if (receipt.operation === "cognito.user.status.intent" ||
+          receipt.operation === "cognito.user.status.outcome") {
+        if (receipt.integrity_status !== "signed_verified" ||
+            change.field !== "cognito_enabled" ||
+            typeof change.before !== "boolean" || typeof change.after !== "boolean" ||
+            change.before === change.after || !/^[a-f0-9]{64}$/.test(change.target_fingerprint || "") ||
+            (receipt.operation.endsWith(".outcome") && !/^[a-f0-9]{64}$/.test(change.related_event_id || ""))) {
+          throw new Error("Cognito user status receipt invalid");
+        }
+        say("audit-result", "Signed Cognito account " +
+          (receipt.operation.endsWith(".outcome") ? "verified outcome" : "attempt (NOT outcome)") +
+          " · enabled " + change.before + " → " + change.after +
           " · UTC " + (receipt.when_utc || "unknown") + readAuditLabel(response));
         return;
       }
@@ -888,6 +971,7 @@ _JS = r'''"use strict";
   el("user-search-go").addEventListener("click", () => {nextUserCursor=null;pageUsers();});
   el("user-next").addEventListener("click", pageUsers);
   el("user-inspect").addEventListener("click", inspectUser);
+  el("user-change").addEventListener("click", changeUserStatus);
   el("next").addEventListener("click", page);
   el("audit-go").addEventListener("click", inspectAudit);
   el("proposal-go").addEventListener("click", previewCatalogRule);

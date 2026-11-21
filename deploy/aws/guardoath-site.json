@@ -357,6 +357,24 @@
                 },
                 {
                   "Fn::If": [
+                    "AdminMutationsEnabled",
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "cognito-idp:AdminDisableUser",
+                        "cognito-idp:AdminEnableUser"
+                      ],
+                      "Resource": {
+                        "Fn::Sub": "arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPool}"
+                      }
+                    },
+                    {
+                      "Ref": "AWS::NoValue"
+                    }
+                  ]
+                },
+                {
+                  "Fn::If": [
                     "AdminConsoleEnabled",
                     {
                       "Effect": "Allow",

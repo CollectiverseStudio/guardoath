@@ -347,3 +347,20 @@ def test_user_directory_page_displays_signed_read_receipt_when_present():
     assert "read_audit_event_id" in script
     assert "user-status" in cleared_on_logout(script)
     assert "innerHTML" not in script
+
+def test_cognito_sign_in_status_control_has_server_verified_audit_and_owner_session():
+    page = app().get("/admin/login").text
+    script = app().get("/admin/client.js").text
+    assert 'id="user-change-email"' in page and 'id="user-change-action"' in page
+    assert 'id="user-change"' in page and 'id="user-change-result"' in page
+    assert 'features.cognito_user_status_changes' in script
+    assert 'request("/v1/admin/users/lookup"' in script
+    assert 'request("/v1/admin/users/status"' in script
+    assert 'expected_enabled:expected' in script
+    assert 'receipt.integrity_status !== "signed_verified"' in script
+    assert 'receipt.operation !== "cognito.user.status.outcome"' in script
+    assert 'change.related_event_id !== result.intent_event_id' in script
+    assert 'change.target_fingerprint !== result.target_fingerprint' in script
+    assert 'addEventListener("click", changeUserStatus)' in script
+    assert 'el("user-change-email").value = ""' in script
+    assert 'sessionStorage.setItem("access_token"' not in script

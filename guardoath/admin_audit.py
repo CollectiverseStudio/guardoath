@@ -16,7 +16,7 @@ FIELDS = (*SIGNED_FIELDS, "integrity_mac")
 SENSITIVE_READS = frozenset({
     "cognito.exact_user", "cognito.user_directory", "stripe.subscription", "audit.receipt",
     "tenant.directory", "tenant.detail", "tenant.usage", "catalog.registry", "catalog.preview",
-    "admin.overview", "admin.features", "catalog.draft",
+    "admin.overview", "admin.features", "catalog.draft", "cognito.mutation_preflight",
 })
 READ_REASON = "Owner requested sensitive account inspection"
 
@@ -108,7 +108,8 @@ class AdminAuditReader:
             if (string("event_id") != event_id or not tenant or not TENANT.fullmatch(tenant)
                     or not actor or not SUBJECT.fullmatch(actor)
                     or operation not in ("tenant.status", "tenant.rule_action", "tenant.allowance_cap",
-                                         "tenant.keys_revoke", "admin.read")
+                                         "tenant.keys_revoke", "admin.read",
+                                         "cognito.user.status.intent", "cognito.user.status.outcome")
                     or not when or not UTC.fullmatch(when)
                     or not reason or not 10 <= len(reason) <= 240):
                 raise AdminAuditUnavailable("Invalid audit receipt")
@@ -123,6 +124,23 @@ class AdminAuditReader:
                         "event_id": event_id, "tenant_id": tenant, "actor_sub": actor,
                         "operation": operation, "when_utc": when, "reason": reason,
                         "change": {"field": "protected_read", "resource": resource}}
+            if operation in ("cognito.user.status.intent", "cognito.user.status.outcome"):
+                before, after, target = string("old_enabled"), string("new_enabled"), string("target_fingerprint")
+                related = string("related_event_id")
+                if (integrity_status != "signed_verified" or before not in ("true", "false")
+                        or after not in ("true", "false") or before == after
+                        or not target or not EVENT.fullmatch(target)
+                        or "read_resource" in item or "prior_revision" in item or "new_revision" in item
+                        or (operation.endswith(".outcome") and (not related or not EVENT.fullmatch(related)))
+                        or (operation.endswith(".intent") and "related_event_id" in item)):
+                    raise AdminAuditUnavailable("Invalid Cognito status receipt")
+                return {"status": "ok", "integrity_status": integrity_status,
+                        "source": "persistent DynamoDB administrative audit receipt",
+                        "event_id": event_id, "tenant_id": tenant, "actor_sub": actor,
+                        "operation": operation, "when_utc": when, "reason": reason,
+                        "change": {"field": "cognito_enabled", "before": before == "true",
+                                   "after": after == "true", "target_fingerprint": target,
+                                   **({"related_event_id": related} if related else {})}}
             previous, revision = number("prior_revision"), number("new_revision")
             if previous < 1 or revision != previous + 1 or "read_resource" in item:
                 raise AdminAuditUnavailable("Invalid mutation receipt")

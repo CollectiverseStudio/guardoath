@@ -23,6 +23,7 @@ from guardoath.admin_catalog_preview import (
     CatalogPreviewConflict, CatalogPreviewUnavailable, preview_rule_description)
 from guardoath.admin_directory import DynamoAdminDirectory, InvalidCursor
 from guardoath.admin_usage import tenant_usage_report
+from guardoath.admin_user_actions import (AdminCognitoUserActions, UserActionConflict, UserActionUnavailable)
 from guardoath.admin_users import (CognitoUserDirectory, InvalidUserCursor,
                                   InvalidUserLookup, CognitoDirectoryUnavailable, CognitoLookupRateLimited)
 
@@ -99,6 +100,16 @@ class CatalogDraftReviewRequest(BaseModel):
 class ExactUserLookup(BaseModel):
     model_config = ConfigDict(extra="forbid")
     email: str = Field(min_length=5, max_length=254)
+
+
+class CognitoStatusChange(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    email: str = Field(min_length=5, max_length=254)
+    action: str = Field(pattern=r"^(disable|enable)$")
+    expected_enabled: bool = Field(strict=True)
+    confirmation: str = Field(min_length=10, max_length=270)
+    reason: str = Field(min_length=10, max_length=240)
+    idempotency_key: str = Field(pattern=r"^[A-Za-z0-9_-]{16,96}$", max_length=96)
 
 
 class StatusChange(BaseModel):
@@ -189,6 +200,18 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
     if type(require_persistent_read_audit) is not bool:
         raise ValueError("Persistent audit enforcement must be an explicit boolean")
     router = APIRouter()
+    user_actions = None
+    if (isinstance(admin_user_directory, CognitoUserDirectory)
+            and isinstance(read_auditor, AdminSensitiveReadAuditor)):
+        try:
+            user_actions = AdminCognitoUserActions(
+                admin_user_directory.client, read_auditor.ddb,
+                admin_user_directory.pool_id, read_auditor.audit_table,
+                audit_key=read_auditor.signing_key,
+                reserve_read=admin_user_directory._reserve_provider_read)
+        except ValueError:
+            pass  # Incomplete provider permissions/configuration never expose a write route.
+
 
     def require_admin(request: Request) -> VerifiedAdmin:
         # The hosted CloudFront origin uses Authorization for AWS SigV4. A
@@ -261,6 +284,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
     def available_admin_features(principal: VerifiedAdmin = Depends(require_admin)):
         read_event = audit_sensitive_read(principal, "admin.features")
         return admin_json({"tenant_status_changes": admin_mutator is not None,
+                           "cognito_user_status_changes": user_actions is not None,
                            "billing_changes": False, "billing_verify": billing_reporter is not None,
                            "tenant_rule_changes": admin_mutator is not None and callable(record_validator) and callable(rule_exists),
                            "monthly_cost_caps": admin_mutator is not None and callable(record_validator),
@@ -339,6 +363,27 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Cognito identity inspection unavailable") from exc
         return admin_json({**result, **({"read_audit_event_id": read_event} if read_event else {})})
+
+    if user_actions is not None:
+        @router.post("/v1/admin/users/status")
+        def change_cognito_user_status(payload: CognitoStatusChange, request: Request,
+                                       principal: VerifiedAdmin = Depends(require_admin)):
+            _require_admin_origin(request)
+            # Preflight Cognito account reads are signed before the provider call.
+            audit_sensitive_read(principal, "cognito.mutation_preflight")
+            try:
+                outcome = user_actions.change(
+                    actor=principal.subject, email=payload.email, action=payload.action,
+                    expected_enabled=payload.expected_enabled,
+                    confirmation=payload.confirmation, reason=payload.reason,
+                    idempotency_key=payload.idempotency_key)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail="Invalid Cognito status action") from exc
+            except UserActionConflict as exc:
+                raise HTTPException(status_code=409, detail="Account state or action key changed; inspect before retrying") from exc
+            except UserActionUnavailable as exc:
+                raise HTTPException(status_code=503, detail="Cognito action not verified; inspect account and audit before retrying") from exc
+            return admin_json(outcome)
 
     @router.get("/v1/admin/tenants")
     def tenants(search: str = Query(default="", max_length=40),
