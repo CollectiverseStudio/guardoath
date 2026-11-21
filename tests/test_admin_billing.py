@@ -144,6 +144,38 @@ def test_owner_billing_reconciliation_diagnostic_is_read_only_and_grounded(
     assert "verified_at" in result and result["verified"] is True
 
 
+@pytest.mark.parametrize("provider_status,saved_status,tenant_status,billing_mode,level,code", [
+    ("canceled", "past_due", "disabled", "stripe", "review",
+     "saved_nonactive_state_differs_from_provider"),
+    ("past_due", "inactive", "disabled", "stripe", "review",
+     "saved_nonactive_state_differs_from_provider"),
+    ("unpaid", "canceled", "active", "stripe", "review",
+     "saved_nonactive_state_differs_from_provider"),
+    ("incomplete", "past_due", "disabled", "stripe", "review",
+     "saved_nonactive_state_differs_from_provider"),
+    ("canceled", "active", "disabled", "stripe", "critical",
+     "saved_active_without_verified_provider"),
+    ("past_due", "active", "disabled", "internal", "critical",
+     "saved_active_without_verified_provider"),
+    ("trialing", "inactive", "disabled", "stripe", "consistent", "states_agree"),
+    ("paused", "inactive", "disabled", "stripe", "consistent", "states_agree"),
+    ("canceled", "canceled", "active", "stripe", "consistent", "states_agree"),
+])
+def test_nonactive_provider_and_saved_billing_disagreements_are_never_called_consistent(
+        provider_status, saved_status, tenant_status, billing_mode, level, code):
+    record = Tenant(subscription_status=saved_status, status=tenant_status, billing_mode=billing_mode)
+    before = dict(record.__dict__)
+    reads = []
+    result = reporter(lambda *args: (reads.append(args), snapshot(status=provider_status))[1]).read(record)
+    assert reads == [(record.tenant_id, record.payer_id, record.stripe_subscription_id)]
+    assert result["verified"] is True and result["provider_active"] is False
+    assert result["subscription_entitlement"] is False
+    assert (result["reconciliation"]["level"], result["reconciliation"]["code"]) == (level, code)
+    assert record.__dict__ == before
+    assert "secret@example.com" not in str(result)
+    assert "cus_" not in str(result) and "pm_private" not in str(result)
+
+
 def test_missing_provider_binding_flags_saved_active_entitlement_without_provider_call():
     calls = []
     stored_active = Tenant(payer_id=None, subscription_status="active")

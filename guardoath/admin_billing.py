@@ -42,6 +42,24 @@ def _reconciliation_assessment(provider_status, stored_status, tenant_status, bi
     if provider_status is None:
         return {"level": "unavailable", "code": "no_provider_binding",
                 "next_step": "Provider verification requires a saved customer and subscription binding"}
+    if provider_status != "active":
+        # A disabled tenant can still carry a stale *saved* active subscription.
+        # Do not report agreement just because it is currently suspended.
+        if stored_status == "active":
+            return {"level": "critical", "code": "saved_active_without_verified_provider",
+                    "next_step": "Investigate trusted reconciliation; use audited tenant suspension if access must be blocked"}
+        # Provider states can intentionally collapse into the tenant's
+        # conservative inactive state. Everything else is drift, not agreement.
+        expected_saved = {"past_due": "past_due", "canceled": "canceled",
+                          "unpaid": "inactive", "incomplete": "inactive",
+                          "incomplete_expired": "inactive", "trialing": "inactive",
+                          "paused": "inactive"}.get(provider_status)
+        if expected_saved is None:
+            return {"level": "unavailable", "code": "unrecognized_provider_state",
+                    "next_step": "Verify the subscription provider state independently"}
+        if stored_status != expected_saved:
+            return {"level": "review", "code": "saved_nonactive_state_differs_from_provider",
+                    "next_step": "Review trusted Stripe reconciliation; do not grant access or rewrite saved billing state"}
     return {"level": "consistent", "code": "states_agree",
             "next_step": "No billing mutation performed; inspect Stripe provider if needed"}
 

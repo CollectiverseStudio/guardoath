@@ -69,6 +69,28 @@ test("tenant actions reveal usage, subscription and invoice results immediately"
   }
 });
 
+test("verified inactive Stripe disagreement appears in owner Billing without inventing paid access", async ({page}) => {
+  const fixture = await signedIn(page,{override: request =>
+    /^\/v1\/admin\/subscriptions\/[^/]+$/.test(request.path)
+      ? {status:200,contentType:"application/json",body:JSON.stringify({
+          subscription:{verified:true,status:"canceled",verified_at:"2026-11-21T12:00:00Z",
+            reconciliation:{level:"review",code:"saved_nonactive_state_differs_from_provider",
+              next_step:"Review trusted Stripe reconciliation; do not grant access or rewrite saved billing state"}},
+          read_audit_event_id:"a".repeat(64)})} : null});
+  await page.locator("#nav-tenants").click();
+  const row = page.locator("#tenant-rows tr").filter({hasText:"sample-studio"});
+  await row.getByRole("button",{name:"Verify Stripe",exact:true}).click();
+  const output = page.locator("#billing-details");
+  await expect(page.locator("#section-billing")).toBeVisible();
+  await expect(output).toContainText("Provider: canceled");
+  await expect(output).toContainText("Reconciliation: review (saved_nonactive_state_differs_from_provider)");
+  await expect(output).toContainText("do not grant access or rewrite saved billing state");
+  await expect(output).toContainText("Next invoice amount: Unavailable");
+  expect(fixture.calls.some(call => call.path === "/v1/admin/subscriptions/sample-studio"
+    && call.method === "GET" && call.headers["x-guardoath-admin-session"] === fixture.token)).toBe(true);
+  expect((await output.textContent())).not.toContain("subscription_entitlement: true");
+});
+
 test("mobile owner workspace keeps all sections accessible without document overflow", async ({page}) => {
   await page.setViewportSize({width:390,height:844});
   await signedIn(page);
