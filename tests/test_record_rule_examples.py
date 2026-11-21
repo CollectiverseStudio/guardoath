@@ -174,8 +174,50 @@ def test_a_thousand_comparisons_are_listed_within_the_record_budgets(shape):
     assert 0 < listed <= MAX_LISTED_BYTES
     first = rules["business.c0"]
     assert first["example"] and first["look_alike"]
-    assert [f.rule_id for f in run(items, first["example"], Stage.INPUT).findings] == ["business.c0"]
-    assert run(items, first["look_alike"], Stage.OUTPUT).findings == ()
+    violation = run(items, first["example"], Stage.INPUT)
+    # An incomplete deadline/failure result has no findings and must never
+    # masquerade as a clean evaluation. Record only safe checker diagnostics.
+    assert violation.evaluation_status == "complete", [
+        (c.checker_id, c.status, c.error_code, c.latency_ms) for c in violation.checker_results
+    ]
+    assert [f.rule_id for f in violation.findings] == ["business.c0"]
+    clean = run(items, first["look_alike"], Stage.OUTPUT)
+    assert clean.evaluation_status == "complete", [
+        (c.checker_id, c.status, c.error_code, c.latency_ms) for c in clean.checker_results
+    ]
+    assert clean.findings == ()
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_shared_field_comparisons_resolve_each_pointer_once_per_request(monkeypatch, stage):
+    from guardoath import business
+
+    seen = []
+    original = business.resolve
+
+    def observed_resolve(payload, pointer):
+        seen.append(pointer)
+        return original(payload, pointer)
+
+    monkeypatch.setattr(business, "resolve", observed_resolve)
+    items = comparisons(("/a", "/b", "lt"), ("/b", "/c", "lt"), ("/c", "/d", "lt"))
+    result = run(items, '{"a":3,"b":2,"c":1,"d":4}', stage)
+    assert result.evaluation_status == "complete"
+    assert [finding.rule_id for finding in result.findings] == ["business.c0", "business.c1"]
+    assert seen == ["/a", "/b", "/c", "/d"]
+
+
+@pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
+def test_shared_pointer_cache_is_scoped_to_value_type_and_preserves_invalid_findings(stage):
+    items = comparisons(("/a", "/b", "lt"), ("/a", "/end", "lt"),
+                        value_type=["number", "date"])
+    result = run(items, '{"a":3,"b":4,"end":"2026-12-01"}', stage)
+    assert result.evaluation_status == "complete"
+    assert [finding.rule_id for finding in result.findings] == ["business.c1"]
+    missing = comparisons(("/a", "/missing", "lt"), ("/missing", "/b", "lt"))
+    result = run(missing, '{"a":1,"b":2}', stage)
+    assert result.evaluation_status == "complete"
+    assert [finding.rule_id for finding in result.findings] == ["business.c0", "business.c1"]
 
 
 def test_the_content_limit_is_the_checks_own():

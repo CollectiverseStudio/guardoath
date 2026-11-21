@@ -69,10 +69,22 @@ async def cross_field_check(request, policy, stage):
         return CheckerResult(checker_id="cross_field", checker_version="2", status="flagged", findings=(
             Finding(rule_id="business.invalid_json", category="business", severity="high",
                     explanation="Field comparison requires valid bounded JSON."),))
+    # A record may compare the same pointer hundreds of times (e.g. a
+    # thousand-rule chain). Decode and validate each pointer/kind only once
+    # *within this request*. Do not share values between tenants, stages, or
+    # documents. An invalid value still fails every rule that uses it.
+    typed_values = {}
+
+    def checked_value(pointer, kind):
+        key = (pointer, kind)
+        if key not in typed_values:
+            typed_values[key] = typed(resolve(payload, pointer), kind)
+        return typed_values[key]
+
     findings = []
     for rule in comparisons:
         try:
-            left, right = (typed(resolve(payload, path), rule.value_type) for path in (rule.left, rule.right))
+            left, right = (checked_value(path, rule.value_type) for path in (rule.left, rule.right))
             valid = OPERATORS[rule.operator](left, right)
         except (ValueError, KeyError, IndexError, TypeError, OverflowError, DecimalException):
             valid = False
