@@ -243,25 +243,23 @@ def test_history_year_boundary_and_owner_only_usage_api():
     assert response.json()["usage"]["historical_volume"]["persisted_alert"] is False
     assert "key_hash" not in response.text and "payer_id" not in response.text
 
-@pytest.mark.parametrize("count,allowance,updated,day,state,estimate", [
-    (101, 100, "2026-11-01T00:00:00Z", 2, "already_over_limit", None),
-    (100, 100, "2026-11-02T17:00:00Z", 2, "already_at_limit", None),
-    (1, 0, None, 2, "already_over_limit", None),
-    (0, 0, None, 2, "zero_allowance", None),
-    (501, 500, "2026-11-01T00:00:00Z", 19, "already_over_limit", None),
-    (500, 500, "2026-11-19T17:00:00Z", 19, "already_at_limit", 500 * 30 // 19),
-    (99, 100, "2026-11-02T17:00:00Z", 2, "insufficient_observation", None),
-    (50, 100, None, 19, "stale_or_unknown_metadata", None),
+@pytest.mark.parametrize("count,allowance,updated,day,threshold,state,estimate", [
+    (101, 100, "2026-11-01T00:00:00Z", 2, "over_limit", "already_over_limit", None),
+    (100, 100, "2026-11-02T17:00:00Z", 2, "at_limit", "already_at_limit", None),
+    (1, 0, None, 2, "over_limit", "already_over_limit", None),
+    (0, 0, None, 2, "at_limit", "zero_allowance", None),
+    (501, 500, "2026-11-01T00:00:00Z", 19, "over_limit", "already_over_limit", None),
+    (500, 500, "2026-11-19T17:00:00Z", 19, "at_limit", "already_at_limit", 500 * 30 // 19),
+    (99, 100, "2026-11-02T17:00:00Z", 2, "near_limit", "insufficient_observation", None),
+    (50, 100, None, 19, "within_limit", "stale_or_unknown_metadata", None),
 ])
 def test_recorded_cap_state_precedes_stale_or_early_month_projection(
-        count, allowance, updated, day, state, estimate):
+        count, allowance, updated, day, threshold, state, estimate):
     clock = lambda: datetime(2026, 11, day, 18, tzinfo=timezone.utc)
     report = tenant_usage_report(Tenant(
         usage={"2026-11": count}, monthly_allowance=allowance,
         updated_at=updated), clock=clock)
-    assert report["usage_threshold"]["state"] == (
-        "over_limit" if count > allowance
-        else "at_limit" if count == allowance else "within_limit")
+    assert report["usage_threshold"]["state"] == threshold
     assert report["quota_pacing"]["state"] == state
     assert report["quota_pacing"]["projected_month_end_requests_floor"] == estimate
     assert report["quota_pacing"]["persisted_alert"] is False
