@@ -77,6 +77,20 @@ def test_manifest_uses_one_snapshot_and_is_a_stable_nonpublishing_projection():
     assert result["reviewed_source_sha256"] == draft["baseline_sha256"]
     assert result["rollback_source_sha256"] == draft["baseline_sha256"]
     assert result["candidate_metadata_sha256"] != draft["baseline_sha256"]
+    patch = result["reversible_patch"]
+    assert patch["kind"] == "reviewed_metadata_source_plan_only"
+    assert patch["target"] == {"category_id": "privacy", "check_id": "pii", "rule_id": "pii.email"}
+    assert patch["round_trip_verified"] is True
+    assert patch["published"] is False and patch["executable_source_committed"] is False
+    assert patch["tenant_policies_changed"] is False
+    assert patch["forward"]["expected_registry_version"] == "3"
+    assert patch["forward"]["candidate_registry_version"] == "4"
+    assert patch["rollback"]["expected_registry_version"] == "4"
+    assert patch["rollback"]["candidate_registry_version"] == "3"
+    assert patch["forward"]["changes"] == {"title": {"before": "Email rule", "after": "Revised email rule"}}
+    assert patch["rollback"]["changes"] == {"title": {"before": "Revised email rule", "after": "Email rule"}}
+    assert patch["forward"]["expected_metadata_sha256"] == patch["rollback"]["candidate_metadata_sha256"] == result["reviewed_source_sha256"]
+    assert patch["forward"]["candidate_metadata_sha256"] == patch["rollback"]["expected_metadata_sha256"] == result["candidate_metadata_sha256"]
     assert result["published"] is False and result["ready_to_publish"] is False
     assert result["acceptance_tests_run"] is False
     assert result["tenant_policies_changed"] is False and result["detector_behavior_changed"] is False
@@ -171,3 +185,31 @@ def test_missing_or_tampered_signed_review_is_never_materialized():
     db.rows[review["review_id"]]["document"]["S"]="{}"
     assert client.get(base+review["review_id"]+"/manifest",headers=headers).status_code==503
     assert db.writes==2
+
+
+def test_reversible_plan_with_two_metadata_fields_preserves_source_and_does_not_persist():
+    source, db = deepcopy(SOURCE), DB()
+    draft_store = AdminCatalogDrafts(db, "admin-audit", b"k"*32,
+        clock=lambda: datetime(2026, 11, 20, tzinfo=timezone.utc))
+    proposal = {**PROPOSAL, "title": "Safer email description",
+                "use_case": "Turn this on to review emails in questions and answers"}
+    preview = preview_rule_description(lambda: source, **proposal)
+    draft = draft_store.save(actor=OWNER, nonce="dual-field-draft-123456",
+        reason="Verify both metadata fields for release",
+        preview=preview, title=proposal["title"], use_case=proposal["use_case"])
+    review = draft_store.review(actor=OWNER, draft_id=draft["draft_id"],
+        nonce="dual-field-review-12345", reason="Review both description fields safely",
+        confirmation="REVIEW " + draft["draft_id"][-8:],
+        baseline_sha256=draft["baseline_sha256"],
+        proposal_sha256=draft["proposal_sha256"])
+    before = deepcopy(source)
+    manifest = reviewed_metadata_manifest(lambda: source, draft=draft, review=review)
+    patch = manifest["reversible_patch"]
+    assert set(patch["forward"]["changes"]) == {"title", "use_case"}
+    for field, forward in patch["forward"]["changes"].items():
+        assert patch["rollback"]["changes"][field] == {
+            "before": forward["after"], "after": forward["before"]}
+    assert patch["round_trip_verified"] is True
+    assert patch["rollback"]["candidate_metadata_sha256"] == manifest["reviewed_source_sha256"]
+    assert manifest["published"] is False and manifest["acceptance_tests_run"] is False
+    assert db.writes == 2 and source == before

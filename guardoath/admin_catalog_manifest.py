@@ -87,6 +87,49 @@ def reviewed_metadata_manifest(provider, *, draft: dict, review: dict) -> dict:
     candidate_sha = _fingerprint("guardoath-admin-catalog-source-v1", candidate)
     if candidate_sha == original_sha:
         raise CatalogManifestUnavailable("Candidate metadata did not change")
+    # Prove that the reviewed candidate can be reversed to the exact saved
+    # metadata projection before producing a source-plan-only rollback.
+    rollback = deepcopy(candidate)
+    matches = [
+        rule for category in rollback["categories"]
+        if category["category_id"] == draft["category_id"]
+        for check in category["checks"] if check["check_id"] == draft["check_id"]
+        for rule in check["rules"] if rule["rule_id"] == draft["rule_id"]
+    ]
+    if len(matches) != 1:
+        raise CatalogManifestUnavailable("Rollback target ambiguous")
+    for field, delta in refreshed["changes"].items():
+        if matches[0].get(field) != delta["after"]:
+            raise CatalogManifestUnavailable("Rollback value mismatch")
+        matches[0][field] = delta["before"]
+    rollback["registry_version"] = current["registry_version"]
+    if (rollback != current or
+            _fingerprint("guardoath-admin-catalog-source-v1", rollback) != original_sha):
+        raise CatalogManifestUnavailable("Exact rollback parity unavailable")
+    reversible_patch = {
+        "kind": "reviewed_metadata_source_plan_only",
+        "target": {"category_id": draft["category_id"],
+                   "check_id": draft["check_id"], "rule_id": draft["rule_id"]},
+        "forward": {
+            "expected_registry_version": current["registry_version"],
+            "candidate_registry_version": candidate["registry_version"],
+            "expected_metadata_sha256": original_sha,
+            "candidate_metadata_sha256": candidate_sha,
+            "changes": deepcopy(refreshed["changes"]),
+        },
+        "rollback": {
+            "expected_registry_version": candidate["registry_version"],
+            "candidate_registry_version": current["registry_version"],
+            "expected_metadata_sha256": candidate_sha,
+            "candidate_metadata_sha256": original_sha,
+            "changes": {field: {"before": delta["after"], "after": delta["before"]}
+                        for field, delta in refreshed["changes"].items()},
+        },
+        "round_trip_verified": True,
+        "executable_source_committed": False,
+        "published": False,
+        "tenant_policies_changed": False,
+    }
     return {
         "status": "metadata_manifest_preview_only",
         "source": "one independently verified published registry snapshot",
@@ -102,6 +145,7 @@ def reviewed_metadata_manifest(provider, *, draft: dict, review: dict) -> dict:
         "rule_id": draft["rule_id"],
         "changed_fields": sorted(refreshed["changes"]),
         "changed_metadata": refreshed["changes"],
+        "reversible_patch": reversible_patch,
         "category_count": current["total_categories"],
         "check_count": current["total_checks"],
         "rule_count": current["total_rules"],

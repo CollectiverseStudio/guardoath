@@ -736,6 +736,22 @@ _JS = r'''"use strict";
           result.detector_behavior_changed !== false ||
           result.source_current !== true || result.acceptance_tests_run !== false ||
           result.release_kind !== "review_only_projection_not_executable_source" ||
+          result.reversible_patch?.kind !== "reviewed_metadata_source_plan_only" ||
+          result.reversible_patch?.round_trip_verified !== true ||
+          result.reversible_patch?.published !== false ||
+          result.reversible_patch?.executable_source_committed !== false ||
+          result.reversible_patch?.tenant_policies_changed !== false ||
+          result.reversible_patch?.target?.category_id !== result.category_id ||
+          result.reversible_patch?.target?.check_id !== result.check_id ||
+          result.reversible_patch?.target?.rule_id !== result.rule_id ||
+          result.reversible_patch?.forward?.expected_metadata_sha256 !== selected.baseline ||
+          result.reversible_patch?.forward?.candidate_metadata_sha256 !== result.candidate_metadata_sha256 ||
+          result.reversible_patch?.rollback?.expected_metadata_sha256 !== result.candidate_metadata_sha256 ||
+          result.reversible_patch?.rollback?.candidate_metadata_sha256 !== selected.baseline ||
+          result.reversible_patch?.forward?.expected_registry_version !== result.registry_version ||
+          result.reversible_patch?.forward?.candidate_registry_version !== result.candidate_registry_version ||
+          result.reversible_patch?.rollback?.expected_registry_version !== result.candidate_registry_version ||
+          result.reversible_patch?.rollback?.candidate_registry_version !== result.registry_version ||
           !Array.isArray(result.changed_fields) ||
           !result.changed_fields.length || !result.changed_fields.every(
             field => field === "title" || field === "use_case"))
@@ -745,6 +761,7 @@ _JS = r'''"use strict";
         " · " + result.category_id + "/" + result.check_id + "/" + result.rule_id +
         " · changed: " + result.changed_fields.join(", ") +
         " · candidate metadata SHA-256 " + result.candidate_metadata_sha256 +
+        " · metadata forward/rollback round-trip verified" +
         " · rollback fingerprint " + result.rollback_source_sha256 +
         " · NOT published or executable; tests, exact source release and rollback required" +
         readAuditLabel(result));

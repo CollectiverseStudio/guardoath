@@ -294,6 +294,7 @@ test("catalog preview and draft accept visible international text after rejectin
 test("owner reviewed catalog metadata manifest is visible only after signed review", async ({page}) => {
   const draftId = "d".repeat(64), reviewId = "e".repeat(64);
   const baseline = "b".repeat(64), proposal = "c".repeat(64), candidate = "f".repeat(64);
+  let corruptRollback = false;
   const response = data => ({status:200,contentType:"application/json",body:JSON.stringify(data)});
   const fixture = await signedIn(page, {
     features:{catalog_drafts:true,catalog_review_receipts:true},
@@ -317,6 +318,17 @@ test("owner reviewed catalog metadata manifest is visible only after signed revi
           check_id:"pii",rule_id:"pii.email",changed_fields:["title"],published:false,
           ready_to_publish:false,tenant_policies_changed:false,detector_behavior_changed:false,
           source_current:true,acceptance_tests_run:false,
+          reversible_patch:{
+            kind:"reviewed_metadata_source_plan_only",
+            target:{category_id:"privacy",check_id:"pii",rule_id:"pii.email"},
+            forward:{expected_registry_version:"3",candidate_registry_version:"4",
+              expected_metadata_sha256:baseline,candidate_metadata_sha256:candidate},
+            rollback:{expected_registry_version:"4",candidate_registry_version:"3",
+              expected_metadata_sha256:candidate,
+              candidate_metadata_sha256:corruptRollback ? "0".repeat(64) : baseline},
+            round_trip_verified:true,executable_source_committed:false,
+            published:false,tenant_policies_changed:false
+          },
           release_kind:"review_only_projection_not_executable_source"});
       return null;
     }
@@ -345,6 +357,14 @@ test("owner reviewed catalog metadata manifest is visible only after signed revi
   await page.locator("#review-manifest").click();
   await expect(page.locator("#review-manifest-result")).toContainText("NOT published or executable");
   await expect(page.locator("#review-manifest-result")).toContainText(candidate);
+  await expect(page.locator("#review-manifest-result")).toContainText("forward/rollback round-trip verified");
+  corruptRollback = true;
+  await page.locator("#draft-inspect").click();
+  await expect(page.locator("#draft-review")).toBeEnabled();
+  await page.locator("#draft-review").click();
+  await expect(page.locator("#review-manifest")).toBeEnabled();
+  await page.locator("#review-manifest").click();
+  await expect(page.locator("#review-manifest-result")).toContainText("integrity unavailable");
   expect(fixture.calls.some(c => c.path.endsWith("/manifest") &&
     c.headers["x-guardoath-admin-session"] === fixture.token)).toBe(true);
   await expect(page.locator("#review-manifest")).toBeDisabled();
