@@ -9,7 +9,7 @@ import hashlib
 import json
 import re
 
-from guardoath.admin_catalog import CatalogProvider, CatalogRegistryConflict, read_catalog
+from guardoath.admin_catalog import CatalogProvider, CatalogRegistryConflict, read_catalog, _unsafe_catalog_text
 
 
 _VERSION = re.compile(r"^[1-9][0-9]{0,8}$")
@@ -35,7 +35,7 @@ def _fingerprint(domain: str, payload: dict) -> str:
 def _copy(value: str, max_length: int) -> str:
     if not isinstance(value, str):
         raise ValueError("Invalid catalog description")
-    if any(ord(ch) < 32 or ord(ch) == 127 for ch in value):
+    if _unsafe_catalog_text(value):
         raise ValueError("Invalid catalog description")
     result = value.strip()
     if not 3 <= len(result) <= max_length:

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Callable
 import re
+import unicodedata
 
 
 _VERSION = re.compile(r"^[1-9][0-9]{0,8}$")
@@ -14,10 +15,23 @@ _CONTROL_ID = re.compile(r"^[a-z][a-z0-9_]{0,59}$")
 _RULE_ID = re.compile(r"^[A-Za-z0-9_.:-]{3,100}$")
 
 
+def _unsafe_catalog_text(value: str) -> bool:
+    """Reject nonprinting or bidirectional catalog descriptions and audit reasons.
+
+    This protects the operator's ability to review visible metadata changes;
+    it is not a user-content validation rule.
+    """
+    return any(
+        ord(ch) < 32 or 0x7f <= ord(ch) <= 0x9f or
+        unicodedata.category(ch) in ("Cf", "Cs", "Zl", "Zp")
+        for ch in value
+    )
+
+
 def _public_text(value, *, limit: int) -> str:
     """Reject malformed registry metadata rather than stringifying private objects."""
     if (not isinstance(value, str) or len(value) > limit or
-            any(ord(ch) < 32 or ord(ch) == 127 for ch in value)):
+            _unsafe_catalog_text(value)):
         raise ValueError("Invalid published catalog metadata")
     return value
 

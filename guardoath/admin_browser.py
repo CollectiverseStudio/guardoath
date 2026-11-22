@@ -530,6 +530,7 @@ _JS = r'''"use strict";
       " · Capabilities" + readAuditLabel(available) +
       (features.sensitive_read_audit ? "" : " · Persistent read auditing not configured"));
   }
+  const unsafeCatalogText = value => /[\\p{Cc}\\p{Cf}\\p{Cs}\\p{Zl}\\p{Zp}]/u.test(value);
   async function previewCatalogRule() {
     if (!token || !features.catalog_preview || !previewSelection) return;
     const selection = {...previewSelection};
@@ -544,6 +545,10 @@ _JS = r'''"use strict";
       proposed_registry_version:String(version + 1), category_id:selection.category_id,
       check_id:selection.check_id, rule_id:selection.rule_id,
       title:el("proposal-title").value, use_case:el("proposal-use-case").value};
+    if (unsafeCatalogText(proposed.title) || unsafeCatalogText(proposed.use_case)) {
+      say("proposal-result", "Catalog descriptions cannot contain invisible or bidirectional control characters");
+      return;
+    }
     try {
       const result = await request("/v1/admin/catalog/preview", {method:"POST",
         body:JSON.stringify(proposed)});
@@ -583,6 +588,10 @@ _JS = r'''"use strict";
     }
     const reason = prompt("Draft reason (10–240 characters; no sensitive information):");
     if (!reason || reason.length < 10 || reason.length > 240) return;
+    if (unsafeCatalogText(reason)) {
+      say("proposal-result", "Draft reason cannot contain invisible or bidirectional control characters");
+      return;
+    }
     if (!confirm("Save an immutable review draft? This does NOT publish a rule or change customer settings.")) return;
     const epoch = authEpoch;
     try {
@@ -653,6 +662,10 @@ _JS = r'''"use strict";
     }
     const reason = prompt("Review reason (10–240 characters; no secrets or customer data):");
     if (!reason || reason.length < 10 || reason.length > 240) return;
+    if (unsafeCatalogText(reason)) {
+      say("draft-result", "Review reason cannot contain invisible or bidirectional control characters");
+      return;
+    }
     if (!confirm("Record an immutable catalog review? This does NOT publish rules, change detector behavior, or modify tenants.")) return;
     const epoch = authEpoch;
     draftReadyForReview = null;

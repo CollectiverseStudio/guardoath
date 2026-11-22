@@ -218,6 +218,18 @@ test("provider text remains text and explicit logout clears all private panels",
 });
 
 
+
+test("catalog editor refuses invisible title before any authenticated preview request", async ({page}) => {
+  const fixture = await signedIn(page,{features:{catalog_preview:true,catalog_drafts:true}});
+  await page.locator("#nav-catalog").click();
+  await page.getByRole("button",{name:"Preview description",exact:true}).first().click();
+  await page.locator("#proposal-title").fill("Legitimate\u202edisguised title");
+  await page.locator("#proposal-go").click();
+  await expect(page.locator("#proposal-result")).toContainText("invisible or bidirectional control characters");
+  await expect(page.locator("#proposal-save")).toBeDisabled();
+  expect(fixture.calls.filter(call => call.path === "/v1/admin/catalog/preview")).toHaveLength(0);
+});
+
 test("owner reviewed catalog metadata manifest is visible only after signed review", async ({page}) => {
   const draftId = "d".repeat(64), reviewId = "e".repeat(64);
   const baseline = "b".repeat(64), proposal = "c".repeat(64), candidate = "f".repeat(64);

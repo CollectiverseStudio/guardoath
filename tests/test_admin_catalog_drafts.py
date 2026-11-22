@@ -110,6 +110,8 @@ def test_tampered_or_unavailable_audit_persistence_never_verifies_draft():
 
 @pytest.mark.parametrize("change", [
     {"actor": "wrong"}, {"nonce": "bad"}, {"reason": "short"},
+    {"reason": "Review\u202ereversed action"},
+    {"reason": "Invisible\u200boperator justification"},
     {"title": "a"}, {"use_case": "b"},
     {"preview": {"status": "preview_only", "published": True}},
 ])
@@ -197,6 +199,7 @@ def test_review_is_signed_immutable_idempotent_owner_scoped_and_never_publishes(
     {"draft_id": "not-a-digest"},
     {"nonce": "short"},
     {"reason": "short"},
+    {"reason": "Invisible\u2066review justification"},
     {"confirmation": "REVIEW wrong-id"},
     {"baseline_sha256": "0" * 64},
     {"proposal_sha256": "f" * 64},
@@ -384,3 +387,22 @@ def test_catalog_draft_whitespace_normalization_preserves_verified_identity_and_
                            "use_case": " " + args["use_case"] + " "})
     assert first["title"] == args["title"] and first["use_case"] == args["use_case"]
     assert store.save(**args) == first and db.writes == 1
+
+
+def test_owner_catalog_api_refuses_bidirectional_reason_without_persisting():
+    db, store = make_store()
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        verify_cognito_admin=lambda token: (
+            VerifiedAdmin(OWNER, frozenset({"owner"}), True)
+            if token == "verified-owner-token" else None),
+        catalog_provider=lambda: deepcopy(REGISTRY), catalog_drafts=store))
+    client = TestClient(app)
+    body = {**PROPOSAL, "reason": "Explain\u202econfusing severity",
+            "idempotency_key": "catalog-bidi-rejected-123"}
+    response = client.post("/v1/admin/catalog/drafts", json=body, headers={
+        "Authorization": "Bearer verified-owner-token", "Origin": "https://guardoath.com"})
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Invalid catalog draft"
+    assert db.writes == 0
+    assert REGISTRY["registry_version"] == "3"

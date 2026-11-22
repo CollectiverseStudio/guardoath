@@ -10,6 +10,8 @@ import hmac
 import json
 import re
 
+from guardoath.admin_catalog import _unsafe_catalog_text
+
 
 class DraftConflict(Exception):
     """An idempotency key was already used for another proposal."""
@@ -93,8 +95,11 @@ class AdminCatalogDrafts:
         if (not isinstance(actor, str) or not _OWNER.fullmatch(actor) or
                 not isinstance(nonce, str) or not _NONCE.fullmatch(nonce) or
                 not isinstance(reason, str) or not _REASON.fullmatch(reason) or
+                _unsafe_catalog_text(reason) or
                 not isinstance(title, str) or not 3 <= len(title) <= 120 or
+                _unsafe_catalog_text(title) or
                 not isinstance(use_case, str) or not 3 <= len(use_case) <= 500 or
+                _unsafe_catalog_text(use_case) or
                 not isinstance(preview, dict) or preview.get("status") != "preview_only" or
                 preview.get("published") is not False or
                 preview.get("persisted") is not False or
@@ -205,6 +210,7 @@ class AdminCatalogDrafts:
                 not isinstance(draft_id, str) or not _HEX.fullmatch(draft_id) or
                 not isinstance(nonce, str) or not _NONCE.fullmatch(nonce) or
                 not isinstance(reason, str) or not _REASON.fullmatch(reason) or
+                _unsafe_catalog_text(reason) or
                 confirmation != "REVIEW " + draft_id[-8:] or
                 not isinstance(baseline_sha256, str) or not _HEX.fullmatch(baseline_sha256) or
                 not isinstance(proposal_sha256, str) or not _HEX.fullmatch(proposal_sha256)):
