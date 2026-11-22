@@ -60,12 +60,14 @@ def export_plan(source=SOURCE, proposal=PROPOSAL, *, review_id="a"*64, draft_id=
         "changed_fields": sorted(changes),
         "changed_metadata": deepcopy(changes),
         "forward": {
-            "expected_registry_version": "3", "candidate_registry_version": "4",
+            "expected_registry_version": proposal["expected_registry_version"],
+            "candidate_registry_version": proposal["proposed_registry_version"],
             "expected_metadata_sha256": preview["baseline_sha256"],
             "candidate_metadata_sha256": next_sha, "changes": deepcopy(changes),
         },
         "rollback": {
-            "expected_registry_version": "4", "candidate_registry_version": "3",
+            "expected_registry_version": proposal["proposed_registry_version"],
+            "candidate_registry_version": proposal["expected_registry_version"],
             "expected_metadata_sha256": next_sha,
             "candidate_metadata_sha256": preview["baseline_sha256"],
             "changes": {field: {"before": item["after"], "after": item["before"]}
@@ -189,6 +191,10 @@ def test_fresh_reviewed_inverse_appends_not_erases_version_and_preserves_tenant_
     source, history = _current_after_first_release()
     before_source, before_history = deepcopy(source), deepcopy(history)
     inverse = _reviewed_inverse(source)
+    assert inverse["forward"]["expected_registry_version"] == "4"
+    assert inverse["forward"]["candidate_registry_version"] == "5"
+    assert inverse["rollback"]["expected_registry_version"] == "5"
+    assert inverse["rollback"]["candidate_registry_version"] == "4"
     rollback = candidate_rollback_release(inverse, lambda: deepcopy(source), history)
     assert source == before_source and history == before_history
     assert published_version(rollback) == "5"
@@ -259,6 +265,8 @@ def test_rollback_does_not_approve_unrelated_new_description_or_partial_inverse(
         proposal={**PROPOSAL, "expected_registry_version": "4",
                   "proposed_registry_version": "5", "title": "Another email rule"},
         review_id="c"*64, draft_id="d"*64)
+    assert arbitrary["forward"]["expected_registry_version"] == "4"
+    assert arbitrary["forward"]["candidate_registry_version"] == "5"
     # An ordinary new metadata release remains possible, but it cannot be
     # misrepresented as a rollback of the most recent published release.
     assert published_version(candidate_release(
