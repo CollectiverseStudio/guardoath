@@ -728,3 +728,25 @@ action receipt and current Cognito status. This avoids an observed two-read
 status race without claiming an atomic Cognito compare-and-set. The existing
 MFA, group, audit-first, tenant, entitlement and provider-spend boundaries
 remain unchanged.
+
+
+## Overview complete-page account and tenant totals (2026-11-22)
+
+Owner Overview reuses its existing protected Cognito Users and DynamoDB Tenants
+directory reads to display an observed count only when a **complete bounded
+first page** can be proven: `status: ok`, explicit `next_cursor: null`,
+matching bounded integer `returned` and list length, plus equal
+`scanned` and `returned` for the unfiltered DynamoDB page. A zero is
+shown only on a complete observed empty directory; malformed, paginated,
+failed or unverified reads show **Unavailable** and revoke stale previous
+counts on refresh. DynamoDB tenant-record counts include demos and are
+not equivalent to active subscriptions, paying customers or a transactional
+snapshot. Cognito first-page observations are not a guarantee against
+concurrent account changes.
+
+No new provider reads, subscriptions, credits, costs, revenue calculations,
+AWS Cost Explorer calls or tenant writes are introduced. `/v1/admin/overview`
+keeps unsourced global financial totals unavailable. Counts are calculated
+from the independently owner/MFA-authorized `/v1/admin/users` and
+`/v1/admin/tenants` responses already in the same UI refresh. Exact-SHA
+browser acceptance and live administrator verification remain required.

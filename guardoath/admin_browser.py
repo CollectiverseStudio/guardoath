@@ -469,10 +469,39 @@ _JS = r'''"use strict";
       request("/v1/admin/catalog"), request("/v1/admin/features"),
       request("/v1/admin/users?limit=20").catch(() => ({status:"unavailable",users:[]}))]);
     if (!token || epoch !== authEpoch) return;
+    // Reuse existing authenticated, bounded directory pages; never add a
+    // provider read for the Overview. A partial page is not a population total.
+    const completePageCount = (page, field) => {
+      if (!page || page.status !== "ok" || !Array.isArray(page[field]) ||
+          !Object.prototype.hasOwnProperty.call(page, "next_cursor") ||
+          page.next_cursor !== null || !Number.isSafeInteger(page.returned) ||
+          page.returned < 0 || page.returned > 20 ||
+          page.returned !== page[field].length ||
+          (field === "tenants" && (!Number.isSafeInteger(page.scanned) ||
+              page.scanned !== page.returned))) return null;
+      return page.returned;
+    };
+    const userCount = completePageCount(users, "users");
+    const tenantCount = completePageCount(tenants, "tenants");
+    const metrics = {...(overview.metrics || {})};
+    // These counts are only the complete directory pages observed on refresh.
+    // Saved subscription_status is never counted as a verified paid subscriber.
+    if (metrics.users?.value == null) {
+      metrics.users = {value:userCount,
+        source:userCount === null ? "Cognito · total unavailable (partial or failed read)" :
+          "Cognito ListUsers · complete bounded page",
+        status:userCount === null ? "unavailable" : "complete_single_page"};
+    }
+    metrics.tenant_records = {value:tenantCount,
+      source:tenantCount === null ? "DynamoDB · total unavailable (partial or failed read)" :
+        "DynamoDB tenant table · complete bounded page (includes demos)",
+      status:tenantCount === null ? "unavailable" : "complete_single_page"};
     el("metrics").replaceChildren();
-    for (const [name, metric] of Object.entries(overview.metrics || {})) {
+    for (const [name, metric] of Object.entries(metrics)) {
       const card = document.createElement("div"); card.className = "metric";
-      card.append(textNode("div", name.replaceAll("_", " ")), textNode("strong", metric?.value ?? "Unavailable"), textNode("small", metric?.source || "Unknown source"));
+      card.append(textNode("div", name.replaceAll("_", " ")),
+        textNode("strong", metric?.value ?? "Unavailable"),
+        textNode("small", metric?.source || "Unknown source"));
       el("metrics").append(card);
     }
     features = available;
