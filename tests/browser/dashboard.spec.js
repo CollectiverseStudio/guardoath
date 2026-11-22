@@ -1317,7 +1317,8 @@ test("every check and profile explains what it does and why", async ({ page }) =
   // Profiles were removed for tenants (2026-11-02): no profile choice is shown to a demo user.
   await expect(page.locator("#advanced")).toBeHidden();
 });
-test("the conversation box holds every step and Advanced starts open", async ({ page }) => {
+test("the conversation workbench retains every stage in paired desktop and ordered mobile layouts", async ({ page }) => {
+  await page.setViewportSize({width:1440,height:1100});
   await connect(page);
   const box = page.locator("section.workspace");
   for (const id of ["#advanced", "#input-title", "#input-check-title", "#output-title", "#output-check-title", "#answer-title"])
@@ -1326,9 +1327,40 @@ test("the conversation box holds every step and Advanced starts open", async ({ 
   await page.locator("#policy").selectOption("structure-v1");
   await expect(page.locator("#policy-help")).toContainText("JSON structure (schema)");
   await expect(page.locator("#policy-help a")).toHaveAttribute("href", /\/guide#profile-structure-v1$/);
-  const widths = await page.locator("section.workspace > .flow-step, section.workspace > .answer-panel").evaluateAll(nodes => nodes.map(n => Math.round(n.getBoundingClientRect().width)));
-  expect(widths.length).toBe(5);
-  expect(new Set(widths).size).toBe(1);
+  const panels = box.locator(".workbench-columns > .flow-step, .workbench-columns > .answer-panel");
+  await expect(panels).toHaveCount(5);
+  for (let i=0;i<5;i++) await expect(panels.nth(i)).toBeVisible();
+  expect(await panels.evaluateAll(nodes => nodes.map(node => node.id || node.getAttribute("aria-labelledby"))))
+    .toEqual(["wizard-input","wizard-input-check","wizard-output","wizard-output-check","answer-title"]);
+  const bounds = () => panels.evaluateAll(nodes => nodes.map(node => {
+    const {left,right,top,bottom,width}=node.getBoundingClientRect();
+    return {left,right,top,bottom,width};
+  }));
+  const desktop = await bounds();
+  // Each editor is paired with its actual action/results, without row overlap.
+  for (const [left,right] of [[0,1],[2,3]]) {
+    expect(desktop[left].width).toBeGreaterThan(0);
+    expect(desktop[right].width).toBeGreaterThan(0);
+    expect(desktop[left].right).toBeLessThan(desktop[right].left);
+    expect(Math.abs(desktop[left].top-desktop[right].top)).toBeLessThanOrEqual(1);
+  }
+  for (const [first,next] of [[0,2],[1,3],[1,4]]) {
+    expect(Math.abs(desktop[first].left-desktop[next].left)).toBeLessThanOrEqual(1);
+    expect(Math.abs(desktop[first].width-desktop[next].width)).toBeLessThanOrEqual(1);
+  }
+  expect(desktop[2].top).toBeGreaterThanOrEqual(Math.max(desktop[0].bottom,desktop[1].bottom));
+  expect(desktop[4].top).toBeGreaterThanOrEqual(Math.max(desktop[2].bottom,desktop[3].bottom));
+
+  await page.setViewportSize({width:390,height:844});
+  const mobile = await bounds();
+  for (let i=0;i<mobile.length;i++) {
+    await expect(panels.nth(i)).toBeVisible();
+    expect(mobile[i].width).toBeGreaterThan(0);
+    expect(Math.abs(mobile[i].left-mobile[0].left)).toBeLessThanOrEqual(1);
+    expect(Math.abs(mobile[i].width-mobile[0].width)).toBeLessThanOrEqual(1);
+    if (i) expect(mobile[i].top).toBeGreaterThanOrEqual(mobile[i-1].bottom);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 test("the proposed answer stays empty and locked until the input test passes", async ({page}) => {
   await connectDeveloperPolicyFixture(page);

@@ -81,7 +81,9 @@ def test_launcher_serves_dashboard_and_all_policies_with_fresh_key():
                 break
         assert key and key != 'old-key' and len(key) >= 32
         with opener.open(f'http://127.0.0.1:{port}/dashboard',timeout=2) as response:
-            assert b'Check playground' in response.read()
+            dashboard = response.read()
+            assert b'API test console' in dashboard
+            assert b'id="api-test"' in dashboard
         request = urllib.request.Request(f'http://127.0.0.1:{port}/v1/applications/current',
                                          headers={'Authorization':'Bearer '+key})
         with opener.open(request,timeout=2) as response:
