@@ -176,7 +176,7 @@ test("late failed Stripe check cannot replace newer tenant invoice view", async 
   const holdOld = new Promise(resolve => { releaseOld = resolve; });
   let signalOld;
   const oldStarted = new Promise(resolve => { signalOld = resolve; });
-  await page.route("**/v1/admin/subscriptions/*", async route => {
+  await page.route("**/v1/admin/subscriptions/**", async route => {
     const path = new URL(route.request().url()).pathname;
     if (path === "/v1/admin/subscriptions/sample-studio") {
       signalOld();
