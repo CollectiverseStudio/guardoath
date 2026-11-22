@@ -2,6 +2,10 @@ name: Tests
 on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
+env:
+  # Acceptance is offline. SDK-model/Stubber tests use explicit synthetic
+  # credentials; never discover cloud instance credentials on a test runner.
+  AWS_EC2_METADATA_DISABLED: 'true'
 # Each main push otherwise leaves another 13-job test matrix running, often
 # including overlapping Chrome/Playwright launches. Only the newest main SHA
 # can be released; cancel superseded *push* runs to conserve CI capacity.
@@ -80,6 +84,10 @@ jobs:
       - run: npm run test:browser
         env:
           PLAYWRIGHT_CHANNEL: chrome
+      - name: Authenticated guarded model invocation browser acceptance
+        run: npx playwright test --config playwright.invocations.config.js
+        env:
+          PLAYWRIGHT_CHANNEL: chrome
       - name: Retain exact browser failure context without customer secrets
         if: failure()
         uses: actions/upload-artifact@v4.6.2
@@ -111,8 +119,8 @@ jobs:
         with:
           python-version: '3.13'
       - run: python -m pip install -e '.[test,pii,aws]'
-      - name: DynamoDB tenant store (boto3)
-        run: python -m pytest tests/test_dynamodb_store.py -q
+      - name: DynamoDB and guarded model adapters (boto3, offline)
+        run: python -m pytest tests/test_dynamodb_store.py tests/test_invocation_adapters.py tests/test_invocation_store.py tests/test_invocation_runtime.py -q
 
   release-wheel:
     # The other jobs install the checkout in editable mode, which cannot show whether the built wheel ships its

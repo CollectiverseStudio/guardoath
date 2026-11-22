@@ -5,6 +5,8 @@ const dashboardStartup = window.guardoathDashboardStartup || Promise.resolve();
 let key = "", application = null, revision = 0, busy = false, tenantSaving = false, inputResult = null;
 // Ephemeral inspection only: never credentials, persistent history, or release authority.
 let apiInspection = {input: null, output: null}, apiPreview = null, inspectorSequence = 0;
+let invocation = {owner: null, catalog: null, catalogOwner: null, loading: false, busy: false,
+  sent: false, requestId: null, preview: null, receipt: null, receiptOwner: null, recent: [], catalogSequence: 0};
 // Only Block stops a message or answer (Greg, 2026-11-04). The decision decides, not whether something was found: Allow
 // goes through; Flag goes through and its findings are reported for review; Redact goes through as the cleaned text once
 // it has been checked again (redaction ready). A check that did not finish gets the record's failure action, so it
@@ -130,10 +132,10 @@ const receiptMatchesRequest = (r, stage, appId, policy, expectedFiles = 0) => re
     && Array.isArray(r.redaction.validation_results)
     && (r.redaction.status !== "ready" || redactionRecheckPassed(r))));
 function buttons() {
-  $("run").disabled = $("run-input").disabled = busy || tenantSaving || !application?.policies.length;
-  $("run-output").disabled = busy || tenantSaving || !application || !canProceed(inputResult);
-  $("input-attachments").disabled = busy || !application?.tenant;
-  $("output-attachments").disabled = busy || !application?.tenant || outputLocked();
+  $("run").disabled = $("run-input").disabled = busy || invocation.busy || tenantSaving || !application?.policies.length;
+  $("run-output").disabled = busy || invocation.busy || tenantSaving || !application || !canProceed(inputResult);
+  $("input-attachments").disabled = busy || invocation.busy || !application?.tenant;
+  $("output-attachments").disabled = busy || invocation.busy || !application?.tenant || outputLocked();
   updateOutputField();
   refreshExamplePickers();
   refreshWorkbench();
@@ -305,6 +307,7 @@ async function loadApplication(token, attempt, expectedDemoTenant = null) {
     // show both saved stages so neither protection column is silently hidden.
     $("tenant-panel").dispatchEvent(new CustomEvent("guardoath:focus-stage",
       {detail: {stage: "both"}}));
+    loadInvocationCatalog();
 }
 const guideUrl = "/guide#";
 const checkHelp = {"pii": {"what": "Finds personal identifiers: email addresses, card numbers (with a checksum), U.S. Social Security numbers, and 90 more types of bank, tax, health, ID-document, network, phone and postal identifiers for the U.S. and 17 other countries. It can also look for labeled phone, birth date, medical record, health plan and bank account fields.", "why": "Stop customers’ personal data from being sent to an AI model, or from leaking out in an AI answer. Redact replaces what it finds and checks the result again.", "limit": "Does not detect names, places or other free-text personal details.", "anchor": "check-pii"}, "encoded_pii": {"what": "Looks for the same personal identifiers inside one labeled Base64 or hex layer, such as “base64: …”.", "why": "Someone can encode an email or card number to slip it past a plain-text filter.", "limit": "One labeled layer only; unlabeled or nested encodings are not decoded.", "anchor": "check-encoded_pii"}, "secrets": {"what": "Finds credentials from selected providers, JWTs, private keys and passwords inside URLs. Optionally also quoted password assignments, labeled encoded secrets and your own confidential phrases (for example an internal project name).", "why": "Stop API keys, passwords or confidential names from being pasted into a model or shown in an answer.", "limit": "Selected formats only; credentials are never verified with the provider.", "anchor": "check-secrets"}, "text_security": {"what": "Finds selected invisible and control characters, characters that reverse text direction, and labeled Base64/hex text.", "why": "Hidden characters and encodings are used to smuggle instructions past people reviewing a conversation.", "limit": "Not a prompt-injection detector: a plainly worded attack passes.", "anchor": "check-text_security"}, "prompt_attack": {"what": "Looks for wording patterns of prompt attacks, including some two-, three- and four-message conditioning in submitted JSON chat: no-rules personas such as DAN, developer or opposite modes, role-play and hypothetical framing used to get around rules, instruction overrides (new instructions, end of system prompt, fake assistant replies, forget your instructions, never refuse), requests for the hidden prompt, instructions hidden in documents or pages for an AI that reads them, decode-then-obey, and answers that show an attack worked.", "why": "Stop or review a message, document or page that tries to take over your AI's instructions, and an answer that shows it worked. GuardOath checks this itself: nothing is sent to an outside service.", "limit": "Matches wording, not general intent: only bounded conditioning split across two or three consecutive submitted JSON chat turns is recognized. Longer, reworded or unstated-context attacks can pass; quoted benign discussions can match. Client-supplied roles are not verified history. Flag suits most uses; Block suits agents that act on what they read.", "anchor": "check-prompt_attack"}, "lexical_guards": {"what": "Looks for 161 wording patterns of risky instructions: requests to reveal a system prompt or secrets, to ignore instructions or get around safety, approval and audit steps, destructive or data-exposing commands for shells, databases, Git, Kubernetes and cloud accounts, and settings that turn security controls off.", "why": "Report a message that asks an AI agent to do something dangerous, or an AI answer that proposes it, so a person can review it before anything runs.", "limit": "Matches wording, not intent: harmless text that uses the same words is reported too, and reworded requests pass. Flag suits it better than Block.", "anchor": "check-lexical_guards"}, "human_safety": {"what": "Looks for 61 wording patterns that a person may be at risk, or that an answer could harm someone: self-harm and suicide, medical emergencies, unsafe medicine use, eating disorders, risks to children, household and machine hazards, stalking, extortion and coercion, scams and gambling, false professional claims, and violence.", "why": "Make sure a person in crisis gets support (in the U.S., 988 for a suicidal crisis; local emergency services for immediate danger), and stop an AI answer that could hurt someone before it is shown.", "limit": "Matches wording, not intent or medical facts: reworded messages pass and harmless text with the same words is reported. Not a clinical or crisis assessment. Flag suits input (offer support, never refuse help); Block suits output.", "anchor": "check-human_safety"}, "harmful_content": {"what": "Looks for 30 wording patterns of harmful content: hate against groups of people (dehumanizing, calls for violence, claims of inferiority, exclusion), insults and harassment, threats (to hurt, to a family, bombs, shootings, doxxing), sexual content involving minors and other explicit requests, violent extremism, and requests for violence such as poisoning, hiring a hitman, trafficking or making hard drugs.", "why": "Review or stop hateful, threatening, sexual or violent text before your AI acts on it or anyone sees it. GuardOath checks this itself: nothing is sent to an outside service.", "limit": "Matches wording, not meaning: reworded content passes, and quoted, reported or educational text with the same words is reported. Hate rules cover the groups they name. Flag suits input; Block suits output.", "anchor": "check-harmful_content"}, "schema": {"what": "Checks that JSON content matches your JSON Schema: required fields, data types, formats such as dates and emails, and size limits.", "why": "When your application expects structured data, reject a malformed request or AI answer before your code uses it.", "limit": "Needs JSON content and a schema on the record. It checks shape, not whether the values are true.", "anchor": "check-schema"}, "cross_field": {"what": "Compares two fields in the submitted JSON, for example a start date before an end date, or a refund no larger than the purchase.", "why": "Catch inconsistent values, such as an AI offering a refund bigger than the order.", "limit": "Both values come from the submission, so it is a consistency check, not an authoritative limit.", "anchor": "check-cross_field"}, "completeness": {"what": "Checks that required labeled sections are present and long enough. The demo requires “Summary:” in the message, and “Summary:” and “Next steps:” in the answer.", "why": "Make sure an AI answer includes the parts your process needs, such as next steps in a support reply.", "limit": "Checks that a section exists and its length, not whether its content is good.", "anchor": "check-completeness"}, "matched_outcomes": {"what": "Compares submitted decision records. If two records match except for a group attribute (in the demo, “group”) but got different decisions, it reports a finding.", "why": "Spot inconsistent decisions between groups, for example in loan or hiring recommendations.", "limit": "Needs structured records. It does not judge free-text bias or certify fairness.", "anchor": "check-matched_outcomes"}, "evidence": {"what": "Checks that an answer’s [[source]] citations and quotations match a source catalog on the record, word for word.", "why": "Catch made-up citations and misquoted policy text before an answer reaches your user.", "limit": "Not a fact checker: it does not judge whether a quote supports the claim.", "anchor": "check-evidence"}, "tool_calls": {"what": "Checks that tool calls proposed by an AI use allowed tool names and that their arguments match each tool’s schema. The demo allows lookup_order and request_refund.", "why": "Stop an AI agent from calling a tool it should not use, or passing it bad arguments.", "limit": "Nothing is run or authorized; your application still decides whether to make the call.", "anchor": "check-tool_calls"}, "ledger": {"what": "Checks that debit and credit entries add up exactly, in a set currency and number of decimal places (demo: USD, 2 places).", "why": "Catch arithmetic mistakes in financial summaries an AI produces.", "limit": "Exact arithmetic only; no fraud or accounting-rule checks.", "anchor": "check-ledger"}, "timestamps": {"what": "Checks that a list of timestamps is in order, with no earlier time after a later one.", "why": "Catch out-of-order event logs and timelines.", "limit": "No sorting, freshness checks or memory between requests.", "anchor": "check-timestamps"}, "graph": {"what": "Checks a declared directed graph for cycles, self-loops, duplicate edges and links to unknown nodes.", "why": "Validate workflow or dependency graphs before they are used.", "limit": "Checks the declared structure only, not whether the relationships are true.", "anchor": "check-graph"}, "integrity": {"what": "Checks that content’s SHA-256 fingerprint matches an approved reference stored on the record.", "why": "Confirm that a template, policy text or file has not changed by even one character.", "limit": "A match shows the bytes are unchanged, not that the content is safe.", "anchor": "check-integrity"}, "csv_formula": {"what": "Checks CSV text as spreadsheet cells and flags leading formula triggers (=, +, -, @), including quoted and whitespace-prefixed cells.", "why": "Prevent user-controlled CSV exports or AI-generated CSV answers from being opened as executable spreadsheet formulas.", "limit": "Use only for CSV text, not ordinary chat. This is a detection signal, not a sanitization or spreadsheet execution guarantee; negative numbers may be flagged.", "anchor": "check-csv_formula"}};
@@ -771,7 +774,7 @@ async function saveTenant(path, body, done) {
   // Do not overlap a reset/check-settings mutation with another mutation or
   // a user-triggered check. The tenant revision is authoritative only after
   // the save response and application reload have completed.
-  if (!application?.tenant || busy || tenantSaving) return false;
+  if (!application?.tenant || busy || tenantSaving || (invocation.busy && invocation.sent)) return false;
   if (path === "/v1/tenants/current/checks") {
     const collision = fieldComparisonIdCollision(body?.changes || {});
     if (collision) { $("tenant-message").textContent = collision; return false; }
@@ -2362,7 +2365,7 @@ async function buildCheckRequest(stage) {
     fileCount: attachments?.length || 0};
 }
 async function execute(target) {
-  if (!application || busy || tenantSaving || (target === "output" && !canProceed(inputResult))) return;
+  if (!application || busy || invocation.busy || tenantSaving || (target === "output" && !canProceed(inputResult))) return;
   // Settings changed in the checks panel are saved before the check, so a check always runs what the panel shows.
   // Saving reloads the record, which clears the input result, so an output run becomes a full run with the same
   // proposed answer.
@@ -2709,7 +2712,7 @@ function refreshWorkbench() {
   const changes = pendingChanges(), pending = Object.keys(changes).length > 0;
   $("workbench-pending").hidden = !pending;
   $("workbench-pending-detail").textContent = pending
-    ? "Running a check first saves all pending Input and Output changes on this tenant, including hidden settings." : "";
+    ? "Running a check or invoking a model first saves all pending Input and Output changes on this tenant, including hidden settings." : "";
   $("run-input").textContent = pending ? "Save changes and run input checks →" : "Run input checks →";
   $("run-output").textContent = pending ? "Save changes and run both stages →" : "Run output checks →";
   $("run").textContent = pending ? "Save changes and run both stages →" : "Run input and output checks →";
@@ -2721,6 +2724,7 @@ function refreshWorkbench() {
     ? "Customer session" : application?.tenant?.demo ? "Demo API key" : "Application API key";
   $("demo-key-reveal").disabled = $("demo-key-copy").disabled = !$("demo-key-value").value;
   refreshRequestInspector();
+  refreshInvocationControls();
 }
 async function copyInspection(kind) {
   if (!apiPreview) return;
@@ -2773,6 +2777,457 @@ $("demo-key-copy").addEventListener("click", async () => {
     await navigator.clipboard.writeText($("demo-key-value").value);
     $("demo-key-message").textContent = "Demo key copied by your explicit request. Integration examples still use a placeholder.";
   } catch (_) { $("demo-key-message").textContent = "Clipboard access is unavailable. Select Show demo key to copy it manually."; }
+});
+// Model invocation is a separate API operation. Its UI never converts a manual
+// check result into authorization and never retries a provider invocation.
+const invocationIdPattern = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$/;
+class InvocationDisplayError extends Error {}
+const isInvocationId = value => typeof value === "string" && invocationIdPattern.test(value);
+const invocationStatuses = new Set(["admitted", "input_checked", "dispatch_intent", "provider_result",
+  "completed", "input_blocked", "input_incomplete", "output_blocked", "output_incomplete",
+  "provider_withheld", "provider_rejected", "outcome_unknown", "quota_exceeded", "unavailable"]);
+const invocationReadiness = {
+  ready: "Approved connections are configured. Availability at the provider is confirmed only by a successful call. GuardOath checks the message and answer using this tenant’s saved policy.",
+  runtime_unconfigured: "Model invocation is not configured on this deployment. An operator must configure provider connections and durable receipt storage before a model can run. Manual validation below is available independently.",
+  runtime_invalid: "The server’s model invocation configuration is unavailable. Contact the operator; no provider can be selected or called here.",
+  demo_not_enabled: "Shared demo users cannot invoke paid models. Sign in to a customer account with an approved provider connection.",
+  subscription_required: "An active, verified subscription is required to invoke a model. Review this account’s billing status.",
+  enforcement_required: "Model invocation requires an enforced tenant policy. Review and save the tenant’s enforcement settings before refreshing connections.",
+  no_connections: "No provider connections are approved for this application. Ask the operator to configure a connection and its allowed models. Provider credentials are managed on the server."
+};
+function invocationPrincipal() {
+  const token = key, appId = application?.application_id, tenantId = application?.tenant?.tenant_id;
+  const session = sessionStorage.getItem("guardoath-session");
+  return () => Boolean(token && application) && key === token && application.application_id === appId
+    && application.tenant?.tenant_id === tenantId && sessionStorage.getItem("guardoath-session") === session
+    && (!token.startsWith(SESSION) || token.slice(SESSION.length) === session);
+}
+function clearInvocationReceipt() {
+  invocation.receipt = null; invocation.receiptOwner = null;
+  $("invocation-answer-panel").hidden = true; $("invocation-answer").textContent = "";
+  $("invocation-receipt-summary").hidden = true;
+  for (const id of ["interaction-id", "request-id", "target", "check-decisions", "dispatch", "policy", "usage"])
+    $("invocation-" + id).textContent = "";
+  $("invocation-receipt-json").textContent = "No receipt yet.";
+}
+function synchronizeInvocationOwner() {
+  if (invocation.owner?.()) return true;
+  if (invocation.owner || invocation.catalog || invocation.sent) {
+    invocation = {owner: null, catalog: null, catalogOwner: null, loading: false, busy: false,
+      sent: false, requestId: null, preview: null, receipt: null, receiptOwner: null, recent: [], catalogSequence: 0};
+    clearInvocationReceipt();
+    $("invocation-controls").open = false;
+    $("invocation-message").value = ""; $("invocation-tokens").value = "512";
+    $("invocation-connection").replaceChildren(new Option("Connect to load", ""));
+    $("invocation-model").replaceChildren(new Option("Select a connection", ""));
+    $("invocation-history-list").replaceChildren();
+    $("invocation-history-status").textContent = "Connect to retrieve receipts.";
+    $("invocation-error").textContent = $("invocation-copy-status").textContent = "";
+    $("invocation-configuration").textContent = "Connect your application to see its approved connections. Provider credentials are managed on the server.";
+    $("invocation-connection-detail").textContent = "Only models approved for this application appear here.";
+    $("invocation-availability").textContent = "Connect to begin";
+    $("invocation-http-status").textContent = "Not sent";
+    invocationStatus("Not sent", "The connection changed. Previous requests, answers and receipts were cleared.");
+  }
+  if (key && application && (!key.startsWith(SESSION) || key.slice(SESSION.length) === sessionStorage.getItem("guardoath-session"))) {
+    invocation.owner = invocationPrincipal(); return true;
+  }
+  return false;
+}
+function invocationStatus(title, detail, tone = "") {
+  $("invocation-status").textContent = title; $("invocation-status").dataset.tone = tone;
+  $("invocation-status-detail").textContent = detail;
+}
+function validInvocationCatalog(value) {
+  const bounded = (v, max) => typeof v === "string" && v.length > 0 && v.length <= max;
+  if (!value || value.application_id !== application?.application_id || typeof value.available !== "boolean"
+      || !Object.hasOwn(invocationReadiness, value.reason_code) || value.available !== (value.reason_code === "ready")
+      || !Array.isArray(value.connections) || value.connections.length > 20
+      || value.available !== Boolean(value.connections.length) || value.max_input_bytes !== 16384
+      || value.capabilities?.buffered_text !== true || value.capabilities?.response_retention !== false
+      || ["agents", "tools", "streaming", "files"].some(name => value.capabilities?.[name] !== false)) return false;
+  const ids = new Set();
+  return value.connections.every(connection => {
+    if (!connection || !isInvocationId(connection.id) || ids.has(connection.id)
+        || !isInvocationId(connection.version) || !bounded(connection.label, 120)
+        || !["aws_bedrock", "openai"].includes(connection.provider)
+        || !(connection.region === null || typeof connection.region === "string" && connection.region.length <= 40)
+        || !Number.isInteger(connection.monthly_call_limit) || connection.monthly_call_limit < 1
+        || !Number.isInteger(connection.monthly_output_token_limit) || connection.monthly_output_token_limit < 1
+        || !Array.isArray(connection.models) || !connection.models.length || connection.models.length > 20) return false;
+    ids.add(connection.id); const models = new Set();
+    return connection.models.every(model => {
+      if (!model || !isInvocationId(model.id) || models.has(model.id) || !bounded(model.label, 120)
+          || !bounded(model.provider_model_id, 1024) || !Number.isInteger(model.max_output_tokens)
+          || model.max_output_tokens < 1 || model.max_output_tokens > 4096) return false;
+      models.add(model.id); return true;
+    });
+  });
+}
+function selectedInvocationTarget() {
+  const connection = invocation.catalog?.connections.find(item => item.id === $("invocation-connection").value);
+  return {connection, model: connection?.models.find(item => item.id === $("invocation-model").value)};
+}
+function populateInvocationModels(preferred = "") {
+  const {connection} = selectedInvocationTarget();
+  $("invocation-model").replaceChildren();
+  if (!connection) $("invocation-model").append(new Option("Select a connection", ""));
+  else for (const model of connection.models) $("invocation-model").append(new Option(inspectionText(model.label), model.id));
+  if (connection?.models.some(model => model.id === preferred)) $("invocation-model").value = preferred;
+  const {model} = selectedInvocationTarget();
+  if (model && Number($("invocation-tokens").value) > model.max_output_tokens)
+    $("invocation-tokens").value = String(model.max_output_tokens);
+}
+async function invocationFetch(path, token, isCurrent, bodyText) {
+  const headers = await requestHeaders(token, bodyText);
+  if (!isCurrent()) throw new Error("The connection changed before the request was sent.");
+  // Deliberately bypass send(): no automatic replay after an uncertain dispatch.
+  return fetch(path, {method: bodyText === undefined ? "GET" : "POST", cache: "no-store",
+    redirect: "error", headers, ...(bodyText === undefined ? {} : {body: bodyText})});
+}
+function invocationAuthFailure(response, token, isCurrent) {
+  if (response.status !== 401 || !isCurrent()) return false;
+  if (token.startsWith(SESSION)) expireCustomerSession();
+  else {
+    invocation.catalog = null; invocation.catalogOwner = null;
+    $("invocation-availability").textContent = "Authorization expired";
+    $("invocation-configuration").textContent = "The application credential was rejected. Reconnect with an authorized credential.";
+    invocationStatus("Authorization expired", "The credential was rejected. No answer was released; reconnect before retrieving a receipt.", "held");
+  }
+  return true;
+}
+function loadInvocationCatalog() {
+  if (!synchronizeInvocationOwner()) { refreshInvocationControls(); return Promise.resolve(); }
+  if (application.invocation_catalog !== "/v1/connections") {
+    invocation.catalog = null; invocation.catalogOwner = null; invocation.loading = false;
+    $("invocation-controls").open = false;
+    $("invocation-availability").textContent = "Unavailable";
+    $("invocation-configuration").textContent = "This application’s API does not advertise model invocation. Manual validation remains available; connect to a supported application to load approved model connections.";
+    $("invocation-connection").replaceChildren(new Option("Invocation unavailable", "")); populateInvocationModels();
+    invocation.catalogPromise = Promise.resolve(); refreshInvocationControls(); return invocation.catalogPromise;
+  }
+  const work = invocation, isCurrent = currentInspectionOwner(), token = key;
+  const sequence = ++work.catalogSequence, connectionId = $("invocation-connection").value,
+    modelId = $("invocation-model").value;
+  work.loading = true; work.catalog = null; work.catalogOwner = null;
+  $("invocation-availability").textContent = "Loading connections";
+  $("invocation-configuration").textContent = "Retrieving this application’s approved connections…";
+  refreshInvocationControls();
+  work.catalogPromise = (async () => {
+    try {
+      const response = await invocationFetch("/v1/connections", token, isCurrent);
+      if (invocation !== work || sequence !== work.catalogSequence || !isCurrent()) return;
+      if (invocationAuthFailure(response, token, isCurrent)) return;
+      if (!response.ok) throw new Error("Approved connections could not be loaded (HTTP " + response.status + "). Refresh connections to retry.");
+      const data = await response.json();
+      if (invocation !== work || sequence !== work.catalogSequence || !isCurrent()) return;
+      if (!validInvocationCatalog(data)) throw new Error("The connection catalog was invalid. Invocation remains disabled.");
+      work.catalog = data; work.catalogOwner = isCurrent;
+      $("invocation-controls").open = data.available;
+      $("invocation-connection").replaceChildren();
+      if (!data.available) $("invocation-connection").append(new Option("No available connection", ""));
+      for (const connection of data.connections)
+        $("invocation-connection").append(new Option(inspectionText(connection.label), connection.id));
+      if (data.connections.some(connection => connection.id === connectionId)) $("invocation-connection").value = connectionId;
+      populateInvocationModels(modelId);
+      $("invocation-availability").textContent = data.available ? "Ready to invoke" : "Unavailable";
+      $("invocation-configuration").textContent = invocationReadiness[data.reason_code];
+    } catch (error) {
+      if (invocation !== work || sequence !== work.catalogSequence || !isCurrent()) return;
+      $("invocation-availability").textContent = "Unavailable";
+      $("invocation-controls").open = false;
+      $("invocation-configuration").textContent = error.message === "The connection catalog was invalid. Invocation remains disabled."
+        ? error.message : "Approved connections could not be loaded. Refresh connections to retry; no provider is available until the server confirms it.";
+      $("invocation-connection").replaceChildren(new Option("Connections unavailable", "")); populateInvocationModels();
+    } finally {
+      if (invocation === work && sequence === work.catalogSequence) { work.loading = false; refreshInvocationControls(); }
+    }
+  })();
+  return work.catalogPromise;
+}
+function buildInvocationRequest() {
+  if (!invocation.owner?.() || !invocation.catalog?.available || !invocation.catalogOwner?.())
+    throw new Error("Connect an application with an approved provider connection.");
+  const {connection, model} = selectedInvocationTarget(), message = $("invocation-message").value;
+  if (!connection || !model) throw new Error("Choose an approved connection and model.");
+  if (!message.trim()) throw new Error("Enter a message to build an executable invocation request.");
+  if (new TextEncoder().encode(message).length > invocation.catalog.max_input_bytes)
+    throw new Error("The message exceeds the 16,384 UTF-8 byte limit.");
+  const raw = $("invocation-tokens").value, max = Number(raw);
+  if (!/^[1-9][0-9]*$/.test(raw) || !Number.isInteger(max) || max > model.max_output_tokens)
+    throw new Error("Maximum output tokens must be a whole number from 1 to " + model.max_output_tokens + ".");
+  invocation.requestId ||= crypto.randomUUID();
+  return {application_id: application.application_id, request_id: invocation.requestId,
+    target: {kind: "model", connection_id: connection.id, model_id: model.id}, message, max_output_tokens: max};
+}
+function renderInvocationPreview() {
+  $("invocation-copy-request").disabled = $("invocation-copy-code").disabled = true;
+  if (!invocation.sent) {
+    invocation.preview = null;
+    try {
+      const body = buildInvocationRequest(), text = JSON.stringify(body), safe = inspectionText(text);
+      invocation.preview = {path: "/v1/interactions", bodyText: safe, redacted: safe !== text, isCurrent: currentInspectionOwner()};
+      $("invocation-inspection-note").textContent = safe !== text
+        ? "Authentication values were masked in this example. This is not the original request body."
+        : "Exact request preview. Submitting sends these bytes once and records the request ID; examples use an environment-variable key.";
+      if (Object.keys(pendingChanges()).length) $("invocation-inspection-note").textContent +=
+        " The console saves pending policy settings first. A copied API request does not save dashboard drafts.";
+    } catch (error) { $("invocation-inspection-note").textContent = error.message; }
+  }
+  const preview = invocation.preview;
+  if (!preview || !preview.isCurrent()) {
+    invocation.preview = null;
+    $("invocation-request-json").textContent = invocation.sent
+      ? "This receipt does not retain the request body." : "No executable request is available.";
+    $("invocation-code").textContent = "An executable request is required to generate an example."; return;
+  }
+  $("invocation-request-json").textContent = prettyInspection(inspectionText(preview.bodyText));
+  $("invocation-code").textContent = integrationExample($("invocation-code-language").value, preview);
+  $("invocation-copy-request").disabled = $("invocation-copy-code").disabled = false;
+}
+function refreshInvocationControls() {
+  if (!$("model-invocation")) return;
+  const connected = synchronizeInvocationOwner(), work = invocation;
+  if (work.receiptOwner && !work.receiptOwner()) clearInvocationReceipt();
+  const ready = connected && work.catalog?.available && work.catalogOwner?.(), locked = busy || tenantSaving || work.busy;
+  const editing = ready && !work.loading && !locked && !work.sent;
+  for (const id of ["connection", "model", "tokens", "message"]) $("invocation-" + id).disabled = !editing;
+  const advertised = application?.invocation_catalog === "/v1/connections";
+  $("invocation-reload").disabled = !connected || !advertised || locked || work.loading;
+  $("invocation-new").disabled = !connected || locked || !work.sent;
+  $("invocation-refresh").disabled = !connected || !advertised || locked || !work.sent;
+  $("invocation-history-refresh").disabled = !connected || !advertised || locked;
+  const {connection, model} = selectedInvocationTarget();
+  if (ready && connection && model) {
+    $("invocation-tokens").max = String(model.max_output_tokens);
+    $("invocation-connection-detail").textContent = inspectionText((connection.provider === "aws_bedrock" ? "AWS Bedrock" : "OpenAI")
+      + " · " + (connection.region ? "Region " + connection.region + " · " : "") + "Connection version " + connection.version
+      + " · Configured model: " + model.provider_model_id);
+    $("invocation-token-note").textContent = "1–" + model.max_output_tokens + " tokens per request. Connection limits: "
+      + connection.monthly_call_limit.toLocaleString() + " calls and " + connection.monthly_output_token_limit.toLocaleString() + " reserved output tokens per month.";
+  } else {
+    $("invocation-connection-detail").textContent = "No approved target is available until this application’s connection catalog is ready.";
+    $("invocation-token-note").textContent = "A hard output limit is required. The selected connection also has monthly call and output token limits.";
+  }
+  const bytes = new TextEncoder().encode($("invocation-message").value).length;
+  $("invocation-message-limit").textContent = bytes.toLocaleString() + " of 16,384 UTF-8 bytes.";
+  let valid = false; try { buildInvocationRequest(); valid = true; } catch (_) { /* No executable request. */ }
+  $("invocation-run").disabled = !editing || !valid;
+  $("invocation-run").textContent = work.busy ? "Processing request…" : Object.keys(pendingChanges()).length
+    ? "Save changes and invoke model" : "Invoke selected model";
+  renderInvocationPreview();
+}
+function validInvocationReceipt(receipt, expected) {
+  const text = (value, max) => typeof value === "string" && value.length > 0 && value.length <= max;
+  const digest = value => typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
+  const timestamp = value => typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(value);
+  if (!receipt || receipt.schema_version !== 1 || receipt.application_id !== application?.application_id
+      || typeof receipt.interaction_id !== "string" || !/^[0-9a-f]{32}$/.test(receipt.interaction_id) || !isInvocationId(receipt.request_id)
+      || !invocationStatuses.has(receipt.status) || receipt.response_retained !== false
+      || !Number.isInteger(receipt.policy_revision) || receipt.policy_revision < 1
+      || !digest(receipt.policy_digest) || !digest(receipt.event_digest)
+      || !timestamp(receipt.created_at) || !timestamp(receipt.updated_at) || !text(receipt.catalog_version, 100)
+      || !Number.isInteger(receipt.sequence) || receipt.sequence < 0 || receipt.sequence > 20
+      || !["not_dispatched", "intent_recorded", "response_observed", "outcome_unknown"].includes(receipt.dispatch_state)) return false;
+  const target = receipt.target;
+  if (!target || !isInvocationId(target.connection_id) || !isInvocationId(target.connection_version)
+      || !isInvocationId(target.model_id) || !["aws_bedrock", "openai"].includes(target.provider)
+      || !text(target.provider_model_id, 1024)
+      || !(target.region === null || typeof target.region === "string" && target.region.length <= 40)) return false;
+  for (const check of [receipt.input_check, receipt.output_check]) {
+    if (check === null) continue;
+    const identifiers = (values, max) => Array.isArray(values) && values.length <= max
+      && values.every(value => typeof value === "string" && /^[A-Za-z0-9_.-]{1,100}$/.test(value));
+    if (!check || !text(check.check_id, 100) || !["allow", "flag", "redact", "block"].includes(check.decision)
+        || !["complete", "incomplete"].includes(check.evaluation_status) || typeof check.simulated !== "boolean"
+        || !identifiers(check.checker_ids, 64) || !identifiers(check.finding_ids, 128)) return false;
+  }
+  if (receipt.status === "completed" && !releasableInvocation(receipt)) return false;
+  if (expected && (receipt.request_id !== expected.request_id || target.connection_id !== expected.target.connection_id
+      || target.model_id !== expected.target.model_id)) return false;
+  return true;
+}
+function releasableInvocation(receipt) {
+  return receipt.status === "completed" && receipt.dispatch_state === "response_observed"
+    && [receipt.input_check, receipt.output_check].every(check => check && check.simulated === false
+      && check.evaluation_status === "complete" && ["allow", "flag", "redact"].includes(check.decision));
+}
+function displayInvocationReceipt(receipt, isCurrent, response = null, replayed = false) {
+  if (!isCurrent() || !validInvocationReceipt(receipt)) throw new Error("Invalid interaction receipt.");
+  clearInvocationReceipt();
+  const safe = JSON.parse(inspectionText(JSON.stringify(receipt)));
+  invocation.receipt = safe; invocation.receiptOwner = isCurrent; invocation.requestId = receipt.request_id; invocation.sent = true;
+  $("invocation-controls").open = true;
+  $("invocation-receipt-summary").hidden = false;
+  $("invocation-interaction-id").textContent = safe.interaction_id;
+  $("invocation-request-id").textContent = safe.request_id;
+  $("invocation-target").textContent = safe.target.provider + " · " + safe.target.provider_model_id
+    + (safe.target.region ? " · " + safe.target.region : "") + " · connection " + safe.target.connection_id + " / " + safe.target.connection_version;
+  $("invocation-check-decisions").textContent = [safe.input_check, safe.output_check].map(check => check
+    ? check.decision + " (" + check.evaluation_status + ")" : "not run").join(" / ");
+  $("invocation-dispatch").textContent = safe.dispatch_state.replaceAll("_", " ");
+  $("invocation-policy").textContent = String(safe.policy_revision) + " · " + safe.policy_digest.slice(0, 12) + "…";
+  $("invocation-usage").textContent = safe.usage ? "Input " + (safe.usage.input_tokens ?? "unknown")
+    + " · Output " + (safe.usage.output_tokens ?? "unknown") : "Not reported";
+  $("invocation-receipt-json").textContent = JSON.stringify(safe, null, 2);
+  const unknown = ["admitted", "input_checked", "dispatch_intent", "provider_result", "outcome_unknown"].includes(receipt.status);
+  const title = receipt.status.replaceAll("_", " ").replace(/^./, letter => letter.toUpperCase());
+  let detail = unknown ? "The final outcome is not known. A provider call may have occurred. Refresh this receipt; this action never regenerates an answer."
+    : receipt.status === "completed" ? "The model answered and both validation stages completed under the recorded policy."
+    : receipt.status.startsWith("input_") ? "The input was held. The model was not invoked and no answer was released."
+    : receipt.status.startsWith("output_") ? "The model was invoked, but its answer was held by Output validation. No answer was released."
+    : "No answer was released. Review the status and reason code in the stored receipt.";
+  if (replayed) detail += " This is a receipt-only replay; no additional generation occurred.";
+  else if (response === null) detail += " Receipt lookup contains metadata only; messages and answers are not retained.";
+  invocationStatus(title, detail, unknown ? "unknown" : receipt.status === "completed" ? "success" : "held");
+  if (response !== null && !replayed && releasableInvocation(receipt)) {
+    $("invocation-answer").textContent = inspectionText(response);
+    $("invocation-answer-panel").hidden = false;
+  }
+}
+async function invokeSelectedModel() {
+  if (!synchronizeInvocationOwner() || invocation.busy || busy || tenantSaving || invocation.sent) return;
+  const work = invocation, principal = work.owner;
+  try { buildInvocationRequest(); } catch (error) { $("invocation-error").textContent = error.message; return; }
+  work.busy = true; $("invocation-error").textContent = ""; buttons();
+  try {
+    const changes = pendingChanges();
+    if (Object.keys(changes).length) {
+      invocationStatus("Saving policy", "Saving all pending Input and Output settings before invoking the model.");
+      const saved = await saveTenant("/v1/tenants/current/checks", {revision: application.tenant.revision, changes}, "Saved before model invocation.");
+      if (invocation !== work || !principal()) return;
+      if (!saved) throw new Error("Policy changes were not saved. No invocation was sent. Review the policy message and try again.");
+      await work.catalogPromise;
+      if (invocation !== work || !principal()) return;
+    }
+    const body = buildInvocationRequest(), text = JSON.stringify(body), owner = currentInspectionOwner(), token = key,
+      attempt = revision, {connection, model} = selectedInvocationTarget();
+    const safeText = inspectionText(text);
+    work.preview = {path: "/v1/interactions", bodyText: safeText, redacted: safeText !== text, isCurrent: owner};
+    work.sent = true; clearInvocationReceipt();
+    invocationStatus("Processing", "Input validation, provider dispatch and Output validation are running. This request will not be automatically resubmitted.");
+    $("invocation-inspection-note").textContent = (work.preview.redacted ? "Submitted request with authentication values masked. " : "Submitted request. ")
+      + "Keep this request ID for receipt recovery; a new request can invoke the model again.";
+    renderInvocationPreview();
+    const response = await invocationFetch("/v1/interactions", token, owner, text);
+    if (invocation !== work || !owner()) return;
+    if (invocationAuthFailure(response, token, owner)) return;
+    $("invocation-http-status").textContent = "POST HTTP " + response.status;
+    if (!response.ok) throw new Error("The invocation did not return a usable receipt (HTTP " + response.status + "). Refresh the receipt with the same request ID before starting a new request.");
+    const data = await response.json();
+    if (invocation !== work || !owner()) return;
+    if (attempt !== revision) throw new Error("The policy draft changed while this request was running. Its answer was discarded. Refresh the stored receipt to inspect the outcome.");
+    if (!data || typeof data.replayed !== "boolean" || !validInvocationReceipt(data.receipt, body)
+        || data.receipt.target.connection_version !== connection.version || data.receipt.target.provider !== connection.provider
+        || data.receipt.target.provider_model_id !== model.provider_model_id || data.receipt.target.region !== connection.region
+        || !(data.response === null || typeof data.response === "string" && new TextEncoder().encode(data.response).length <= 32000)
+        || data.response !== null && (data.replayed || !releasableInvocation(data.receipt)))
+      throw new Error("The invocation response did not match this request or its release requirements. No answer was displayed. Refresh the stored receipt.");
+    displayInvocationReceipt(data.receipt, owner, data.response, data.replayed);
+  } catch (error) {
+    if (invocation !== work || !principal()) return;
+    $("invocation-error").textContent = work.sent
+      ? "No trusted answer is available. Refresh this request’s receipt before starting a new request."
+      : error.message || "No invocation was sent.";
+    invocationStatus(work.sent ? "Receipt needed" : "Not sent", work.sent
+      ? "The provider may have received this request. Its identifier is preserved; Refresh receipt performs a read without another model call."
+      : error.message || "No invocation was sent.", work.sent ? "unknown" : "");
+  } finally {
+    if (invocation === work) { work.busy = false; buttons(); }
+    else refreshInvocationControls();
+  }
+}
+async function refreshInvocationReceipt(interactionId = null) {
+  if (!synchronizeInvocationOwner() || invocation.busy || busy || tenantSaving) return;
+  const work = invocation, owner = currentInspectionOwner(), token = key, requestId = work.requestId;
+  if (interactionId !== null && !/^[0-9a-f]{32}$/.test(interactionId)) return;
+  if (interactionId === null && !isInvocationId(requestId)) return;
+  work.busy = true; $("invocation-error").textContent = ""; buttons();
+  try {
+    const path = interactionId ? "/v1/interactions/" + interactionId : "/v1/interactions/by-request/" + encodeURIComponent(requestId);
+    const response = await invocationFetch(path, token, owner);
+    if (invocation !== work || !owner()) return;
+    if (invocationAuthFailure(response, token, owner)) return;
+    $("invocation-http-status").textContent = "Receipt GET HTTP " + response.status;
+    if (!response.ok) throw new InvocationDisplayError(response.status === 404
+      ? "No durable receipt was found for this request yet. No model call was made by this refresh."
+      : "The receipt could not be retrieved. No model call was made by this refresh.");
+    const receipt = await response.json();
+    if (invocation !== work || !owner()) return;
+    if (!validInvocationReceipt(receipt) || (interactionId ? receipt.interaction_id !== interactionId : receipt.request_id !== requestId))
+      throw new InvocationDisplayError("The returned receipt did not match this request. It was discarded.");
+    if (interactionId) {
+      work.preview = null; $("invocation-message").value = ""; $("invocation-tokens").value = "";
+      $("invocation-connection").value = receipt.target.connection_id; populateInvocationModels(receipt.target.model_id);
+      $("invocation-inspection-note").textContent = "This stored receipt contains metadata only. Its original message and request body are not retained. Select New request to build another invocation.";
+    }
+    displayInvocationReceipt(receipt, owner);
+  } catch (error) {
+    if (invocation === work && owner()) $("invocation-error").textContent = error instanceof InvocationDisplayError
+      ? error.message : "The receipt could not be retrieved. No model call was made by this refresh.";
+  } finally { if (invocation === work) { work.busy = false; buttons(); } else refreshInvocationControls(); }
+}
+async function loadInvocationHistory() {
+  if (!synchronizeInvocationOwner() || invocation.busy || busy || tenantSaving) return;
+  const work = invocation, owner = currentInspectionOwner(), token = key;
+  work.busy = true; buttons();
+  $("invocation-history-status").textContent = "Retrieving recent receipts…";
+  try {
+    const response = await invocationFetch("/v1/interactions?limit=20", token, owner);
+    if (invocation !== work || !owner()) return;
+    if (invocationAuthFailure(response, token, owner)) return;
+    if (!response.ok) throw new InvocationDisplayError("Recent receipts are unavailable (HTTP " + response.status + ").");
+    const data = await response.json();
+    if (invocation !== work || !owner()) return;
+    if (!data || !Array.isArray(data.items) || data.items.length > 20 || !data.items.every(item => validInvocationReceipt(item)))
+      throw new InvocationDisplayError("The receipt list was invalid and was discarded.");
+    work.recent = JSON.parse(inspectionText(JSON.stringify(data.items)));
+    $("invocation-history-list").replaceChildren();
+    for (const receipt of work.recent) {
+      const item = document.createElement("li"), label = document.createElement("span"), button = document.createElement("button");
+      label.textContent = receipt.created_at + " · " + receipt.target.model_id + " · " + receipt.status.replaceAll("_", " ") + " · " + receipt.request_id;
+      button.type = "button"; button.className = "secondary"; button.textContent = "View receipt";
+      button.setAttribute("aria-label", "View receipt " + receipt.request_id);
+      button.addEventListener("click", () => { if (owner() && invocation === work) refreshInvocationReceipt(receipt.interaction_id); });
+      item.append(label, button); $("invocation-history-list").append(item);
+    }
+    $("invocation-history-status").textContent = data.items.length ? data.items.length + " stored receipt(s). No messages or answers retained." : "No interaction receipts found.";
+  } catch (error) {
+    if (invocation === work && owner()) {
+      work.recent = []; $("invocation-history-list").replaceChildren();
+      $("invocation-history-status").textContent = error instanceof InvocationDisplayError
+        ? error.message : "Recent receipts could not be retrieved.";
+    }
+  } finally { if (invocation === work) { work.busy = false; buttons(); } else refreshInvocationControls(); }
+}
+async function copyInvocation(kind) {
+  if (!synchronizeInvocationOwner() || !invocation.preview?.isCurrent()) { refreshInvocationControls(); return; }
+  const work = invocation, owner = work.preview.isCurrent;
+  const text = kind === "request" ? inspectionText(work.preview.bodyText)
+    : integrationExample($("invocation-code-language").value, work.preview);
+  try {
+    await navigator.clipboard.writeText(text);
+    if (invocation === work && owner()) $("invocation-copy-status").textContent = "Copied. Authentication values are masked; code examples read your key from the environment.";
+  } catch (_) { if (invocation === work && owner()) $("invocation-copy-status").textContent = "Clipboard access is unavailable. Select the displayed text to copy it."; }
+}
+$("invocation-reload").addEventListener("click", loadInvocationCatalog);
+$("invocation-connection").addEventListener("change", () => { populateInvocationModels(); refreshInvocationControls(); });
+for (const id of ["invocation-model", "invocation-tokens", "invocation-message"])
+  $(id).addEventListener("input", () => { $("invocation-error").textContent = ""; refreshInvocationControls(); });
+$("invocation-code-language").addEventListener("change", refreshInvocationControls);
+$("invocation-run").addEventListener("click", invokeSelectedModel);
+$("invocation-refresh").addEventListener("click", () => refreshInvocationReceipt());
+$("invocation-history-refresh").addEventListener("click", loadInvocationHistory);
+$("invocation-copy-request").addEventListener("click", () => copyInvocation("request"));
+$("invocation-copy-code").addEventListener("click", () => copyInvocation("code"));
+$("invocation-new").addEventListener("click", () => {
+  if (!synchronizeInvocationOwner() || invocation.busy || busy || tenantSaving) return;
+  invocation.sent = false; invocation.requestId = crypto.randomUUID(); invocation.preview = null;
+  if (!$("invocation-tokens").value) $("invocation-tokens").value = String(Math.min(512, selectedInvocationTarget().model?.max_output_tokens || 512));
+  clearInvocationReceipt(); $("invocation-error").textContent = $("invocation-copy-status").textContent = "";
+  $("invocation-http-status").textContent = "Not sent";
+  invocationStatus("New request", "This is a new request identifier. Selecting Invoke can make another provider call and consume its quota.");
+  refreshInvocationControls(); $("invocation-message").focus();
 });
 refreshWorkbench();
 

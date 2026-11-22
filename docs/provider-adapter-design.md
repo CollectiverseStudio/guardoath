@@ -1,16 +1,16 @@
 # Provider adapter design
 
-**Status: proposed design, reviewed against provider documentation on 2026-11-22. No hosted provider invocation, connector registration, interaction ledger, or new endpoint is implemented by this document.**
+**Status: the first buffered text implementation has Bedrock/Boto3 and direct OpenAI adapters, approved connection discovery, guarded `/v1/interactions`, durable metadata receipts and a dashboard panel. Activation remains disabled until explicitly configured; tests do not imply paid live inference. Other integrations below remain design work. See the [implemented contract](guarded-model-invocations.md). Reviewed against provider documentation on 2026-11-22.**
 
 ## Recommendation and current boundary
 
 Use a small provider-neutral GuardOath contract with optional provider adapters. Boto3 is the appropriate AWS transport for IAM-authorized Bedrock model calls; it is not the common transport for every AI product. Start with a bounded, nonstreaming Bedrock `Converse` adapter behind the same contract that will support direct OpenAI, Microsoft, and Anthropic adapters. Customer choice remains explicit; adding AWS support must not make AWS the default provider for other tenants.
 
-The hosted API currently exposes independent input/output checks. The separate [gateway prototype](../guardoath/gateway_prototype/README.md) demonstrates input checks, a provider call, and buffered output checks, but its `/v1/interactions` route is not mounted in the hosted app. Its process-local idempotency cache and call budget are not production controls. The [source-of-record contract](ai-agent-activity-system-of-record.md) remains authoritative for durable evidence and customer-selected models, agents, and executors. The [published check contract](api-contract.md) remains unchanged.
+Independent input/output checks remain available alongside the optional hosted invocation implementation described in the [implemented contract](guarded-model-invocations.md). The separate [gateway prototype](../guardoath/gateway_prototype/README.md) demonstrates input checks, a provider call, and buffered output checks, but its `/v1/interactions` route is not mounted in the hosted app. Its process-local idempotency cache and call budget are not production controls. The [source-of-record contract](ai-agent-activity-system-of-record.md) remains authoritative for durable evidence and customer-selected models, agents, and executors. The [published check contract](api-contract.md) remains unchanged.
 
 ## Keep the integration surfaces distinct
 
-These are candidate adapters, not a list of currently supported GuardOath integrations.
+Bedrock Converse and direct OpenAI Responses are implemented for the bounded text contract. Other rows are candidate integrations, not current supported features.
 
 | Customer choice | Provider surface and binding | Boundary to preserve |
 | --- | --- | --- |
@@ -25,7 +25,7 @@ ChatGPT, Copilot Studio, and Claude applications need their own supported integr
 
 ## Proposed request and connector fields
 
-The following illustrates a future model request. **It is not accepted by the current check endpoints or the existing prototype schema.** Final endpoint/schema publication requires implementation and acceptance tests.
+The following remains a broader design illustration. **It differs from the implemented schema, which uses `target.connection_id`, top-level `message` and required `max_output_tokens`, without `input`, `generation` or `delivery` objects.** Use the [implemented contract](guarded-model-invocations.md) for actual calls.
 
 ```json
 {
@@ -56,7 +56,7 @@ Keep adapter responsibilities narrow: validate capabilities, serialize approved 
 
 For the first AWS path, map approved text into `Converse.messages`, the configured target into `modelId`, and supported generation limits into `inferenceConfig`. Initially omit tools, provider-managed retrieval, and provider-managed conversation state. This provides one real guarded model call without prematurely claiming control over remote agent side effects. Add a second provider to the same acceptance suite before declaring provider neutrality proven.
 
-Reuse initialized Boto3 clients and HTTP pools per process, keyed by tenant/connector version, region, and credential identity. Bound the client cache, expire obsolete connector versions, and close unused pools. Create sessions/clients outside concurrent request handling; Boto3 clients are generally thread-safe with documented caveats, while sessions/resources are not interchangeable concurrency primitives and clients must not be shared across processes. Run synchronous SDK I/O through a bounded worker pool in an async service; cancellation of an await does not prove the remote request stopped. [Boto3 client guidance](https://docs.aws.amazon.com/boto3/latest/guide/clients.html).
+As a later optimization, reuse initialized Boto3 clients and HTTP pools per process, keyed by tenant/connector version, region, and credential identity. The first explicit-credential adapter creates and closes its client per call; client pooling is not claimed. Bound the client cache, expire obsolete connector versions, and close unused pools. Create sessions/clients outside concurrent request handling; Boto3 clients are generally thread-safe with documented caveats, while sessions/resources are not interchangeable concurrency primitives and clients must not be shared across processes. Run synchronous SDK I/O through a bounded worker pool in an async service; cancellation of an await does not prove the remote request stopped. [Boto3 client guidance](https://docs.aws.amazon.com/boto3/latest/guide/clients.html).
 
 Set explicit connection/read timeouts and an overall request deadline that leaves time for output validation and durable recording. Keep connection-pool size, worker count, tenant concurrency, and admission limits consistent. For initial billable/side-effecting calls, use one SDK attempt (`retries={"mode": "standard", "total_max_attempts": 1}`); retry only when an adapter can establish a safe condition and the durable attempt policy permits it. A timeout after dispatch means outcome/usage may be unknown, not that nothing ran. Botocore's socket timeouts are not a complete wall-clock deadline. [Botocore configuration](https://docs.aws.amazon.com/botocore/latest/reference/config.html).
 

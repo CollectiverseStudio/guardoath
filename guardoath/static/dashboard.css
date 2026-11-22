@@ -206,3 +206,49 @@ a:focus-visible,summary:focus-visible,.api-code:focus-visible{outline:3px solid 
 .console-help video{max-width:100%;height:auto}
 @media(max-width:1050px){.workbench-columns{grid-template-columns:1fr}.console-badge{display:none}}
 @media(max-width:700px){main{padding:0 14px;margin-top:20px}.console-heading h1{font-size:28px}.compact-connection{grid-template-columns:1fr;padding:16px}.connection-context{grid-template-columns:1fr;gap:6px}.connection-context>div{display:flex;gap:10px;justify-content:space-between}.connection-context dd{text-align:right;margin:0}.workbench-nav{position:static;gap:2px}.workbench-nav a{padding:8px 10px}.pending-policy{position:static}.capability-note{display:block}.capability-note strong{display:block;margin-bottom:4px}#api-test{padding:15px}.workbench-columns{gap:16px}.parameter-grid{grid-template-columns:1fr;gap:4px}.api-metrics{grid-template-columns:1fr}.api-metrics>div{display:flex;justify-content:space-between;gap:12px}.api-metrics dd{margin:0}.api-inspector{padding:14px}.api-inspector .section-top{flex-wrap:wrap}.compact-connection .inline{flex-wrap:wrap}#api-test,#policy-workspace,#agent-activity-panel,#api-access,#console-help{scroll-margin-top:12px}}
+
+/* The invocation API has its own request and receipt; manual checks stay separate. */
+#model-invocation,#api-inspector{scroll-margin-top:84px}
+.invocation-panel{padding:22px;margin:24px 0;background:#fff;border-top:3px solid #4265a9}
+.invocation-heading{align-items:flex-start;gap:16px}
+.invocation-heading h2{margin:4px 0 8px;font-size:22px}
+.invocation-heading .hint{margin:0}
+.invocation-readiness{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:12px 14px;margin:18px 0;background:#f2f6fc;border:1px solid #dae4f1;border-radius:8px}
+.invocation-readiness p{margin:0;max-width:860px}
+.invocation-readiness button{flex-shrink:0}
+.invocation-controls>summary{font-weight:650;cursor:pointer;margin-bottom:14px}
+.invocation-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:24px;align-items:start}
+.invocation-grid>*,.invocation-targets>*,.invocation-inspection-columns>*{min-width:0}
+.invocation-targets{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 150px;gap:12px}
+.invocation-targets label{font-size:13px;min-height:32px}
+.invocation-targets select,.invocation-targets input{width:100%;min-width:0}
+.invocation-editor textarea{width:100%;min-height:102px}
+.invocation-editor .hint{margin:8px 0 12px}
+#invocation-connection-detail{overflow-wrap:anywhere}
+.invocation-editor :disabled{background:#f1f4f8;color:#64748a;cursor:not-allowed}
+.invocation-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.invocation-outcome{padding:17px;border:1px solid #dbe3ef;border-radius:9px;background:#f8faff}
+.invocation-outcome h3{font-size:16px;margin:0}
+.invocation-outcome .section-top{gap:10px;flex-wrap:wrap}
+.invocation-outcome>p{line-height:1.6}
+.invocation-receipt-summary{margin:14px 0}
+.invocation-receipt-summary>div{display:grid;grid-template-columns:125px minmax(0,1fr);gap:10px;padding:6px 0;border-bottom:1px solid #e4ebf5;font-size:13px}
+.invocation-receipt-summary dt{color:#53647e}
+.invocation-receipt-summary dd{margin:0;overflow-wrap:anywhere}
+.invocation-answer-panel{border-top:1px solid #cfdeec;margin-top:16px;padding-top:16px}
+.invocation-answer-panel pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto;font-family:inherit;font-size:14px;line-height:1.65;background:#fff;border:1px solid #d4e2db;border-radius:7px;padding:12px}
+.invocation-inspector,.invocation-history{margin-top:18px;padding-top:14px;border-top:1px solid #dfe7f2}
+.invocation-inspector summary,.invocation-history summary{font-weight:650;cursor:pointer;margin-bottom:12px}
+.invocation-inspection-columns{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.invocation-inspection-columns h3{font-size:14px;margin:16px 0 8px}
+#invocation-code-language{max-width:170px}
+.invocation-history-list{padding:0;list-style:none;margin:12px 0}
+.invocation-history-list li{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:10px 0;border-bottom:1px solid #e3eaf3}
+.invocation-history-list li span{overflow-wrap:anywhere;min-width:0}
+.invocation-history-list button{flex-shrink:0}
+#invocation-status[data-tone="success"]{background:#e0f3e8;color:#155834}
+#invocation-status[data-tone="held"]{background:#fff0db;color:#805117}
+#invocation-status[data-tone="unknown"]{background:#f6e8e7;color:#843a32}
+@media(max-width:1150px){.invocation-targets{grid-template-columns:1fr 1fr}.invocation-targets>div:last-child{grid-column:1 / -1;max-width:210px}.invocation-targets label{min-height:0}}
+@media(max-width:900px){.invocation-grid{grid-template-columns:1fr}.invocation-inspection-columns{grid-template-columns:1fr}.invocation-readiness{align-items:flex-start}}
+@media(max-width:700px){#model-invocation,#api-inspector{scroll-margin-top:12px}.invocation-panel{padding:15px}.invocation-heading,.invocation-readiness{flex-direction:column}.invocation-targets{grid-template-columns:1fr}.invocation-targets>div:last-child{max-width:none}.invocation-history-list li{align-items:flex-start;flex-direction:column}.invocation-receipt-summary>div{grid-template-columns:110px minmax(0,1fr)}}

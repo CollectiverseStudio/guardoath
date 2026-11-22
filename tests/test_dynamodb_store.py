@@ -383,6 +383,9 @@ def test_the_store_is_built_from_the_environment_without_calling_aws(monkeypatch
     pytest.importorskip("boto3")
     monkeypatch.setenv("GUARDOATH_TENANT_TABLE", "guardoath-tenants")
     monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "synthetic-offline-construction")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "synthetic-offline-construction")
+    monkeypatch.setenv("AWS_EC2_METADATA_DISABLED", "true")
     store = DynamoDBTenantStore.from_environment()
     assert store.table_name == "guardoath-tenants"
 

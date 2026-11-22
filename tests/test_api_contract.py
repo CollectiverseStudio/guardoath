@@ -242,8 +242,9 @@ def test_schema_describes_real_fields_without_invented_provider_metadata(configu
     assert "not inspected" in fields["request_context"]["description"]
     assert "nonempty selection is refused" in fields["validation_codes"]["description"]
     assert "not a tenant revision" in fields["policy_version"]["description"]
-    assert "/v1/interactions" not in document["paths"]
-    assert client.post("/v1/interactions", json={"message": "Synthetic"}).status_code == 404
+    assert "/v1/interactions" in document["paths"]
+    assert document["paths"]["/v1/interactions"]["post"]["tags"] == ["Model invocation"]
+    assert client.get("/v1/connections", headers={"X-GuardOath-Key": "invalid"}).status_code == 401
 
 
 @pytest.mark.parametrize("extra", [

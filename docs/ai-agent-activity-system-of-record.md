@@ -1,5 +1,5 @@
 # GuardOath AI and Agent Activity System of Record
-**Authoritative product contract — 2026-11-11. Proposed architecture; NOT an implemented event ledger.**
+**Authoritative broader product contract — 2026-11-11. The [first guarded model implementation](guarded-model-invocations.md) now supplies optional buffered model calls and durable metadata receipts. It does not complete the agent/tool/attestation/retention capabilities or all acceptance cases below; production activation is separately configured.**
 
 ## Non-negotiable provider independence
 

@@ -12,7 +12,8 @@ The canonical production origin is `https://guardoath.com`; it is documented,
 not selected as an off-origin default for local tests. The explicit production
 examples below are intentional production requests, unlike a local Swagger test.
 
-The interactive `/docs` reference starts with **Validation**, then customer
+The interactive `/docs` reference starts with **Validation**, then optional
+**Model invocation**, customer
 policy/access and diagnostics. Owner operations are grouped last and retain
 their separate security boundary. Protected owner routes require
 `X-GuardOath-Admin-Session` with signed recent MFA and live owner membership;
@@ -34,14 +35,15 @@ records a durable interaction. Output is an independent request: it does not
 require a successful input check or prove where the answer came from. The caller
 controls input → its chosen AI → output ordering and content release.
 
-The customer chooses their AI and agent. The intended provider-neutral
-interaction and system-of-record contract is documented in
-[ai-agent-activity-system-of-record.md](ai-agent-activity-system-of-record.md).
-Its hosted orchestration, durable event stream and trusted execution receipts
-remain unimplemented. `/v1/interactions` exists only in the separate test gateway
-prototype and is not mounted in the hosted app. Adding a `model` or `agent` field
-to a validation request does not implement that interaction; unknown fields are
-refused with 422.
+The separate optional [guarded model API](guarded-model-invocations.md) discovers
+approved connections at `GET /v1/connections` and performs buffered text generation
+at `POST /v1/interactions`, with a stable request ID, input/output checks and
+content-free durable receipts. It requires explicit provider/storage/quota
+configuration; demos cannot make paid calls. Bedrock/Boto3 and direct OpenAI are
+the first adapters. Agents, tools, streaming and other product/provider connectors
+remain separate work, alongside the broader
+[AI/agent system-of-record contract](ai-agent-activity-system-of-record.md).
+Adding a model or agent field to `/v1/checks/*` is still refused with 422.
 
 ## Authentication and production transport
 
@@ -88,9 +90,10 @@ creation; verified active subscription entitlement is required.
 | `request_context` | Optional string, at most 8,000 characters | Accepted but **not inspected**; not trusted instructions, model/agent identity or history |
 | `validation_codes` | Omit or `[]` for hosted tenants | Nonempty tenant selections return 422; legacy local configured engines have a separate pack facility |
 
-All extra fields are refused. No top-level `provider`, `model`, `agent`,
+All extra fields are refused by validation endpoints. No top-level `provider`, `model`, `agent`,
 `messages`, `conversation_id`, `request_id`, temperature or tool-selection
-parameter exists in this contract. Tenant controls cannot be overridden in a
+parameter exists in a `/v1/checks/*` request. The separate invocation contract
+defines its own target and idempotency parameters. Tenant controls cannot be overridden in a
 check request. Local legacy credentials must name their configured policy.
 
 Submitted JSON can contain a `messages` array *inside* `content`; selected

@@ -9,7 +9,7 @@ import re
 from time import perf_counter
 from typing import Annotated, Literal
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi import Path as PathParam
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -42,6 +42,10 @@ from guardoath.sigma_site import catalog_payload as sigma_catalog_payload, evalu
 from guardoath.agent_activity import compare_actions, InvalidAction
 from guardoath.api_contract import AGENT_ACTIVITY_RESPONSES, ATTACHMENT_RESPONSES, install_api_contract
 from guardoath.tenant_sessions import SESSION_HEADER, CognitoSessions, SignInBusy
+from guardoath.invocations.contracts import (ConnectionCatalog, InvocationRequest, InvocationResponse,
+                                            InvocationReceipt, ReceiptList, ID_PATTERN)
+from guardoath.invocations.runtime import InvocationRuntime, from_environment as invocation_runtime_from_environment
+from guardoath.invocations.store import InvocationConflict, InvocationStoreUnavailable
 
 
 def release_source_sha(path: Path | None = None) -> str | None:
@@ -141,7 +145,8 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                limits: ResourceLimits | None = None,
                tenant_registry: TenantRegistry | None = None,
                tenants: TenantService | None = None,
-               sessions: CognitoSessions | None = None) -> FastAPI:
+               sessions: CognitoSessions | None = None,
+               invocation_gateway=None) -> FastAPI:
     policy_file = os.getenv("GUARDOATH_POLICY_FILE")
     pack_file = os.getenv("GUARDOATH_PACK_FILE")
     if engine is not None:
@@ -176,6 +181,10 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         raise ValueError("Use tenant records or a tenant registry, not both")
     if sessions is not None and tenants is None:
         raise ValueError("Tenant sign-in needs tenant records (GUARDOATH_TENANT_STORE)")
+    if invocation_gateway is not None and tenants is None:
+        raise ValueError("Model invocation needs authoritative tenant records")
+    invocation_runtime = (InvocationRuntime(invocation_gateway, "ready") if invocation_gateway is not None
+                          else invocation_runtime_from_environment())
     budget_apps = set(bindings.values()) if tenant_registry is None else set(tenant_registry.application_ids())
     budgets = RequestBudgets(resource_limits, budget_apps)
     api = FastAPI(title="GuardOath", version="0.25.0")
@@ -277,7 +286,7 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             except SignInBusy:
                 raise HTTPException(503, "Sign-in checks are busy; try again shortly", headers={"Retry-After": "5"}) from None
             record = tenants.store.get(tenant_id) if tenant_id is not None else None
-            if record is None or record.status != "active" or record.demo:
+            if record is None or record.tenant_id != tenant_id or record.status != "active" or record.demo:
                 raise HTTPException(401, "Sign-in expired or not valid; sign in again")
             budgets.register(record.tenant_id)
             request.state.signed_in = True
@@ -1063,6 +1072,7 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         if isinstance(principal, TenantRecord):
             current = tenants.store.get(principal.tenant_id) or principal
             return {"application_id": current.tenant_id, "policies": tenants.engine_for(current).describe_policies(current.tenant_id),
+                    "invocation_catalog": "/v1/connections",
                     "resource_limits": {"scope": "server_process", **resource_limits.model_dump()},
                     "groups": [{"group_id": gid, "name": name, "checker_ids": ids, "limitations": limits}
                                for gid, name, ids, limits in GROUPS],
@@ -1106,6 +1116,86 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         if not isinstance(principal, TenantRecord):
             raise HTTPException(403, "Attachments require an authenticated tenant")
         return await assess_tenant(request, principal, Stage.OUTPUT, request.attachment_bytes())
+
+    def invocation_tenant(principal, request, *, allowed_query=()):
+        if not isinstance(principal, TenantRecord):
+            raise HTTPException(403, "Model invocation requires an authenticated tenant")
+        if any(name not in allowed_query for name in request.query_params):
+            raise HTTPException(422, "Unsupported invocation query parameter")
+        return principal
+
+    def configured_invocations():
+        if invocation_runtime.gateway is None:
+            raise HTTPException(503, "Model invocation is not configured", headers={"Cache-Control": "no-store"})
+        return invocation_runtime.gateway
+
+    @api.get("/v1/connections", response_model=ConnectionCatalog)
+    async def model_connections(request: Request, principal: Annotated[str | TenantRecord, Depends(authenticate)]):
+        record = invocation_tenant(principal, request)
+        catalog = (invocation_runtime.gateway.catalog(record) if invocation_runtime.gateway else
+                   ConnectionCatalog(application_id=record.tenant_id, available=False,
+                                     reason_code=invocation_runtime.reason_code))
+        return JSONResponse(catalog.model_dump(mode="json"), headers={"Cache-Control": "no-store"})
+
+    @api.post("/v1/interactions", response_model=InvocationResponse)
+    async def invoke_model(body: InvocationRequest, request: Request,
+                           principal: Annotated[str | TenantRecord, Depends(authenticate)]):
+        record = invocation_tenant(principal, request)
+        if body.application_id != record.tenant_id:
+            raise HTTPException(403, "Credential does not authorize this application")
+        gateway = configured_invocations()
+        try:
+            result = await gateway.invoke(body, record, tenants=tenants, budgets=budgets)
+        except InvocationConflict:
+            raise HTTPException(409, "Request ID is already bound to another request or changed state",
+                                headers={"Cache-Control": "no-store"}) from None
+        except InvocationStoreUnavailable:
+            raise HTTPException(503, "Receipt could not be confirmed; keep the same request ID and refresh its receipt",
+                                headers={"Cache-Control": "no-store"}) from None
+        return JSONResponse(result.model_dump(mode="json"), headers={"Cache-Control": "no-store"})
+
+    @api.get("/v1/interactions", response_model=ReceiptList)
+    async def recent_interactions(request: Request,
+                                  principal: Annotated[str | TenantRecord, Depends(authenticate)],
+                                  limit: Annotated[int, Query(ge=1, le=20)] = 20):
+        record = invocation_tenant(principal, request, allowed_query=("limit",))
+        gateway = configured_invocations()
+        try:
+            with budgets.check(record.tenant_id):
+                receipts = await gateway.recent(record.tenant_id, limit)
+        except InvocationStoreUnavailable:
+            raise HTTPException(503, "Interaction receipts are temporarily unavailable") from None
+        return JSONResponse(ReceiptList(items=receipts).model_dump(mode="json"), headers={"Cache-Control": "no-store"})
+
+    @api.get("/v1/interactions/by-request/{request_id}", response_model=InvocationReceipt)
+    async def interaction_by_request(request: Request,
+                                     request_id: Annotated[str, PathParam(pattern=ID_PATTERN)],
+                                     principal: Annotated[str | TenantRecord, Depends(authenticate)]):
+        record = invocation_tenant(principal, request)
+        gateway = configured_invocations()
+        try:
+            with budgets.check(record.tenant_id):
+                receipt = await run_in_threadpool(gateway.store.lookup_request, record.tenant_id, request_id)
+        except InvocationStoreUnavailable:
+            raise HTTPException(503, "Interaction receipt is temporarily unavailable") from None
+        if receipt is None:
+            raise HTTPException(404, "Interaction receipt not found")
+        return JSONResponse(receipt.model_dump(mode="json"), headers={"Cache-Control": "no-store"})
+
+    @api.get("/v1/interactions/{interaction_id}", response_model=InvocationReceipt)
+    async def interaction_receipt(request: Request,
+                                  interaction_id: Annotated[str, PathParam(pattern=r"^[0-9a-f]{32}$")],
+                                  principal: Annotated[str | TenantRecord, Depends(authenticate)]):
+        record = invocation_tenant(principal, request)
+        gateway = configured_invocations()
+        try:
+            with budgets.check(record.tenant_id):
+                receipt = await gateway.receipt(record.tenant_id, interaction_id)
+        except InvocationStoreUnavailable:
+            raise HTTPException(503, "Interaction receipt is temporarily unavailable") from None
+        if receipt is None:
+            raise HTTPException(404, "Interaction receipt not found")
+        return JSONResponse(receipt.model_dump(mode="json"), headers={"Cache-Control": "no-store"})
 
     install_api_contract(api)
     return api

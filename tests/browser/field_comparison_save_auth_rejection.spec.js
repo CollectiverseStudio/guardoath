@@ -12,6 +12,8 @@ async function signedInTenant(page, request) {
   });
   expect(summary.status()).toBe(200);
   const app = await summary.json();
+  // This synthetic policy-save session does not advertise invocation APIs.
+  delete app.invocation_catalog;
   app.application_id = "usr-fc-save-revoked";
   app.tenant = {...app.tenant, tenant_id: "usr-fc-save-revoked",
     demo: false, subscription_status: "active", subscription_active: true};

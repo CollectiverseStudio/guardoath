@@ -22,7 +22,7 @@ The inspector masks any current credential found in displayed content. When
 masking changes a request preview, a notice explains that the copied example
 contains replacement text rather than the original credential-bearing bytes.
 
-The available calls are `POST /v1/checks/input` and
+The manual validation calls are `POST /v1/checks/input` and
 `POST /v1/checks/output`, plus their attachment variants. Both require a
 credential-bound `application_id` and supplied `content`; optional fields and
 their real restrictions are documented in [the API contract](api-contract.md).
@@ -37,18 +37,32 @@ Pending policy edits and any save-before-run behavior must be visible before a
 test; a sample chooses content, not an alternate tenant policy. Examples and
 uploaded files use the same API and Engine as customer integrations.
 
-Your application still makes its own model or agent call between the current
-Input and Output endpoints. You supply the proposed output in the console.
-The endpoints do not accept model/provider/agent selectors, invoke an AI, bind
-an input/output pair, or retain a durable interaction timeline. The intended
-provider-neutral `/v1/interactions` gateway and source-of-record requirements
-are documented in [the AI/agent contract](ai-agent-activity-system-of-record.md),
-but are not hosted capabilities yet. Agent report comparison remains an
-unverified diagnostic and never grants execution authority.
-The [provider adapter design](provider-adapter-design.md) explains the proposed
-AWS Bedrock/Boto3, OpenAI, Microsoft and Anthropic connections and the distinct
-requirements for hosted agents. Those proposed fields are not current API
-parameters.
+The separate **Invoke a selected model** panel discovers approved connections
+with `GET /v1/connections`, then sends a text message, selected model alias,
+output-token limit and stable request ID to `POST /v1/interactions`. It shows
+the original checked answer and a durable receipt. **Refresh receipt** uses
+`/v1/interactions/by-request/{request_id}` or `/v1/interactions/{interaction_id}`
+without another generation. `/v1/interactions` also returns recent receipts.
+Reopening or retrying a receipt does not retrieve the answer: this ledger retains
+neither prompt nor answer. Pending policy changes must save first, and changed
+tenant/session ownership clears old results. Configuration failures visibly
+disable invocation. Public demo tenants do not make paid model calls.
+
+Invocation requires a verified active subscription, enforce mode, explicit
+provider credentials/approved targets, durable storage and reviewed quotas.
+The first adapters support AWS Bedrock/Boto3 and direct OpenAI Responses. This
+contract is buffered text only; agents, tools, files, streaming and direct
+Microsoft/Anthropic integrations remain unavailable. Ready means configured for
+testing, not proof that provider access has succeeded. See the
+[exact invocation contract](guarded-model-invocations.md).
+
+Your application can still call its own AI/agent between the independent Input
+and Output validation endpoints, where you supply proposed output. Those
+endpoints do not accept provider/model/agent selectors or bind an interaction.
+Agent report comparison remains an unverified diagnostic without execution
+authority. The broader [AI/agent contract](ai-agent-activity-system-of-record.md)
+and [adapter design](provider-adapter-design.md) distinguish model APIs,
+ChatGPT/Copilot/Claude product integrations and managed agents.
 
 Customer registration supports the configured Cognito email/password flow;
 Google is optional. A verified active subscription is required for paid

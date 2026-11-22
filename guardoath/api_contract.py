@@ -82,7 +82,7 @@ _CHECK_PATHS = frozenset({
     "/v1/checks/input/attachments", "/v1/checks/output/attachments",
 })
 _ENTITLED_PATHS = _CHECK_PATHS | {
-    "/v1/sigma/demo", "/v1/agent-activity/compare",
+    "/v1/sigma/demo", "/v1/agent-activity/compare", "/v1/interactions",
 }
 _BODY_HASH = {
     "name": "x-amz-content-sha256", "in": "header", "required": True,
@@ -97,6 +97,7 @@ _BODY_HASH = {
 }
 _TAGS = [
     {"name": "Validation", "description": "Start here: check input or a supplied answer with the authenticated tenant's saved controls. No AI/model invocation."},
+    {"name": "Model invocation", "description": "Optional configured model connections, one guarded buffered text call, and content-free durable receipts. Discover readiness first; agents, tools, files and streaming are not supported."},
     {"name": "Customer policy", "description": "Inspect bound tenant policy; customer settings changes require a signed-in owner session."},
     {"name": "Customer access", "description": "Public demo/sign-in entry, customer registration, API-key management and subscription operations."},
     {"name": "Diagnostics", "description": "Synthetic event tests and unverified action-report comparison; no agent execution."},
@@ -148,6 +149,8 @@ def _protected_admin_operations(routes, prefix="") -> set[tuple[str, str]]:
 def _tag(path: str) -> str:
     if path in _CHECK_PATHS:
         return "Validation"
+    if path == "/v1/connections" or path.startswith("/v1/interactions"):
+        return "Model invocation"
     if path.startswith("/v1/admin/auth/"):
         return "Administrator sign-in"
     if path.startswith("/v1/admin/"):
@@ -193,8 +196,12 @@ def install_api_contract(api: FastAPI) -> None:
             "Tenant-authoritative content validation. Call /v1/checks/input before your own AI/model "
             "invocation and /v1/checks/output on the supplied answer. These are independent requests: "
             "an output check does not require or prove an input check, and neither invokes a model "
-            "or agent. Model/provider/agent selection, a hosted /v1/interactions route, trusted "
-            "conversation history and a durable AI-call ledger are not implemented. HTTP 200 is a "
+            "or agent. For optional guarded model invocation, discover tenant-approved connections "
+            "at /v1/connections, then POST /v1/interactions with a stable request_id. That operation "
+            "checks input and buffered output under one saved policy snapshot and records durable "
+            "metadata without retaining prompts or answers. It is unavailable until explicitly "
+            "configured. Agents, tools, files, streaming and trusted conversation history are not "
+            "supported by this first invocation contract. HTTP 200 is a "
             "validation result, not permission by itself; inspect effective_action, evaluation_status, "
             "checker_results and redaction. Tenant settings and explicit Off remain authoritative."
         )
@@ -291,6 +298,23 @@ def install_api_contract(api: FastAPI) -> None:
                     }
                 if path == "/v1/agent-activity/compare":
                     descriptions.append("Caller-reported proposed/observed comparison only. It never authorizes or executes an action, authenticates telemetry or persists a receipt.")
+                if path == "/v1/connections":
+                    descriptions.append("Read the authenticated tenant's actual configured model connections and readiness. Empty/unavailable is not a demo generation. Provider credentials never appear in this response.")
+                if path == "/v1/interactions" and method == "post":
+                    descriptions.append(
+                        "Requires an active non-demo subscription, enforce mode, an approved connection/model alias, "
+                        "durable storage and provider quota. request_id binds identical request content across retries; "
+                        "a duplicate returns its original receipt with replayed=true and response=null. Never replace "
+                        "the ID after an uncertain outcome. Refresh /v1/interactions/by-request/{request_id}. "
+                        "Provider dispatch requires a durable quota reservation and dispatch intent. A response is "
+                        "released only when receipt.status=completed and output validation succeeded. Other HTTP 200 "
+                        "states include withheld or unknown outcomes. Token/call quotas are not verified monetary caps. "
+                        "Each completed input/output validation counts against the existing check allowance; if output "
+                        "capacity runs out after provider dispatch, its answer is withheld."
+                    )
+                    operation["responses"]["200"]["description"] = "Guarded interaction or receipt-only replay. Inspect receipt.status and response; HTTP success does not imply released output."
+                if path.startswith("/v1/interactions") and method == "get":
+                    descriptions.append("Tenant-bound content-free receipt lookup. Historical prompts/answers are not retained or replayed. Incomplete dispatch intent may require reconciliation; reading a receipt never calls a provider. The collection returns at most 20 recent interactions.")
                 if method == "post":
                     operation["parameters"].append(deepcopy(_BODY_HASH))
                     if admin_auth or path.startswith(("/v1/admin/auth/native/", "/v1/admin/auth/enrollment/")):
@@ -307,6 +331,8 @@ def install_api_contract(api: FastAPI) -> None:
                 if path in _ENTITLED_PATHS or (path == "/v1/tenants/current/keys" and method == "post"):
                     codes.add("402")
                 if method == "post" and (path in _SESSION_ONLY_PATHS or path in _OWNER_OR_DEMO_PATHS):
+                    codes.add("409")
+                if path == "/v1/interactions" and method == "post":
                     codes.add("409")
                 if path.startswith("/v1/admin/auth/") and method == "post":
                     codes.add("401")

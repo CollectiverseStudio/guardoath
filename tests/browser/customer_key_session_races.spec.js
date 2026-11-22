@@ -10,6 +10,8 @@ async function owner(page, request, {keyListStatus = 200, keyMutationStatus = 20
   });
   expect(summary.status()).toBe(200);
   const app = await summary.json();
+  // This synthetic key-management session does not advertise invocation APIs.
+  delete app.invocation_catalog;
   app.application_id = "usr-key-json-race";
   app.tenant = {...app.tenant, tenant_id: "usr-key-json-race", demo: false,
     subscription_status: "active", subscription_active: true};

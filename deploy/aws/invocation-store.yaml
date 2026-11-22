@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Optional GuardOath invocation metadata store. Disabled by default and separate
+  from the active site stack. Enable only after capacity, retention, provider
+  quota and account-wide cost review. This template does not enable invocation.
+Parameters:
+  CreateInvocationStore:
+    Type: String
+    Default: '0'
+    AllowedValues: ['0', '1']
+    Description: Explicit resource opt-in after the separate cost review.
+  TableName:
+    Type: String
+    Default: guardoath-invocations
+    AllowedPattern: '[A-Za-z0-9_.-]{3,255}'
+  ReadCapacity:
+    Type: Number
+    Default: 1
+    AllowedValues: [1, 2, 3, 4, 5]
+    Description: Review measured strong-read demand before selecting capacity.
+  WriteCapacity:
+    Type: Number
+    Default: 1
+    AllowedValues: [1, 2, 3, 4, 5]
+    Description: >-
+      Review transactional item sizes and throughput. One unit is a cost-review
+      placeholder, not production capacity or an invocation-per-second claim.
+Conditions:
+  InvocationStoreEnabled:
+    Fn::Equals: [{Ref: CreateInvocationStore}, '1']
+Resources:
+  InvocationTable:
+    Type: AWS::DynamoDB::Table
+    Condition: InvocationStoreEnabled
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: {Ref: TableName}
+      TableClass: STANDARD
+      BillingMode: PROVISIONED
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: {Ref: ReadCapacity}
+        WriteCapacityUnits: {Ref: WriteCapacity}
+      DeletionProtectionEnabled: true
+      Tags:
+        - Key: Application
+          Value: GuardOath
+        - Key: DataClass
+          Value: invocation-metadata
+Outputs:
+  InvocationTableName:
+    Condition: InvocationStoreEnabled
+    Value: {Ref: InvocationTable}
+  InvocationTableArn:
+    Condition: InvocationStoreEnabled
+    Value: {Fn::GetAtt: [InvocationTable, Arn]}

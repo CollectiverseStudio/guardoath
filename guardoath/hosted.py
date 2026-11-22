@@ -104,7 +104,7 @@ class TenantService:
         if tenant_id is None:
             return None
         record = self.store.get(tenant_id)
-        if record is None or record.status != "active" or not key_matches(record, token):
+        if record is None or record.tenant_id != tenant_id or record.status != "active" or not key_matches(record, token):
             return None
         return record
 

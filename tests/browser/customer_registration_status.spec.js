@@ -1,4 +1,6 @@
 const {test, expect} = require("@playwright/test");
+// These legacy account fixtures stub customer sessions and omit invocation
+// discovery. Real invocation authentication is covered by invocations.spec.js.
 
 // A synthetic owner session must serve the authenticated PSI-reference GET.
 // The real local backend correctly rejects synthetic tokens with HTTP 401;
@@ -68,6 +70,7 @@ test("registered but unpaid customer sees inactive plan and cannot click Create 
   });
   expect(sample.status()).toBe(200);
   const application = await sample.json();
+  delete application.invocation_catalog;
   application.application_id = "usr-synthetic-unpaid";
   application.tenant = {
     ...application.tenant,
@@ -195,6 +198,7 @@ test("verified Google session survives transient registration failure and retrie
   });
   expect(original.status()).toBe(200);
   const application = await original.json();
+  delete application.invocation_catalog;
   application.application_id = "usr-retry-unpaid";
   application.tenant = {
     ...application.tenant, tenant_id: "usr-retry-unpaid", display_name: "New customer",
@@ -331,6 +335,7 @@ test("Google OAuth callback preserves verified session after transient automatic
   });
   expect(summary.status()).toBe(200);
   const application = await summary.json();
+  delete application.invocation_catalog;
   application.application_id = "usr-oauth-callback-unpaid";
   application.tenant = {
     ...application.tenant,
@@ -572,6 +577,7 @@ test("Stripe success redirect does not activate an unpaid account", async ({page
     headers: {"X-GuardOath-Key": demoKey}
   });
   const application = await summary.json();
+  delete application.invocation_catalog;
   application.application_id = "usr-checkout-pending";
   application.tenant = {
     ...application.tenant, tenant_id: "usr-checkout-pending", demo: false,
@@ -635,6 +641,7 @@ test("customer API-key management sends signed-in session, never pasted API key"
     headers: {"X-GuardOath-Key": demoKey}
   });
   const application = await summary.json();
+  delete application.invocation_catalog;
   application.application_id = "usr-authenticated-keys";
   application.tenant = {...application.tenant, tenant_id: "usr-authenticated-keys",
     demo: false, subscription_status: "active", subscription_active: true};
@@ -748,6 +755,7 @@ test("late tenant-settings response cannot install an old owner's application af
   });
   expect(original.status()).toBe(200);
   const application = await original.json();
+  delete application.invocation_catalog;
   application.application_id = "usr-old-owner";
   application.tenant = {...application.tenant, tenant_id: "usr-old-owner", demo: false,
     subscription_status: "active", subscription_active: true};
@@ -820,6 +828,7 @@ test("verified paid subscription changes owner dashboard only after server statu
   });
   expect(source.status()).toBe(200);
   const application = await source.json();
+  delete application.invocation_catalog;
   let active = false;
   application.application_id = "usr-browser-reconcile";
   application.tenant = {
