@@ -498,7 +498,7 @@ _JS = r'''"use strict";
       tenants.tenants.filter(t => t.demo === false && t.subscription_status === "active").length : null;
     const sourceTime = page =>
       typeof page?.retrieved_utc === "string" &&
-      /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$/.test(page.retrieved_utc) ?
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(page.retrieved_utc) ?
         " · read at " + page.retrieved_utc + " (not activity freshness)" :
         " · read time unavailable";
     const metrics = {...(overview.metrics || {})};
