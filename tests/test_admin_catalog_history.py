@@ -115,6 +115,12 @@ class Audit:
 
 def test_owner_catalog_history_api_reuses_protected_existing_read_and_audit():
     source, history = source_chain()
+    # The API accepts raw registry_payload, NOT the read_catalog projection.
+    raw = deepcopy(SOURCE)
+    raw["registry_version"] = source["registry_version"]
+    raw["domains"][0]["controls"][0]["rules"][0]["title"] = (
+        source["categories"][0]["checks"][0]["rules"][0]["title"])
+    assert read_catalog(lambda: deepcopy(raw)) == source
     db = Audit()
     app = FastAPI()
     def verify(token):
@@ -125,7 +131,7 @@ def test_owner_catalog_history_api_reuses_protected_existing_read_and_audit():
         return None
     app.include_router(create_admin_router(
         verify_cognito_admin=verify,
-        catalog_provider=lambda: deepcopy(source),
+        catalog_provider=lambda: deepcopy(raw),
         catalog_history_provider=lambda: deepcopy(history),
         read_auditor=AdminSensitiveReadAuditor(db, "admin-audit", signing_key=b"a" * 32),
         require_persistent_read_audit=True))
@@ -143,7 +149,7 @@ def test_owner_catalog_history_api_reuses_protected_existing_read_and_audit():
     assert len(result["read_audit_event_id"]) == 64
     assert len(db.writes) == 1  # same pre-existing catalog read audit, no new provider call
     assert db.writes[0]["read_resource"]["S"] == "catalog.registry"
-    source["categories"][0]["checks"][0]["rules"][0]["title"] = "Drift"
+    raw["domains"][0]["controls"][0]["rules"][0]["title"] = "Drift"
     assert client.get(path, headers={"X-GuardOath-Admin-Session": "owner"}).status_code == 503
     db.failed = True
     assert client.get(path, headers={"X-GuardOath-Admin-Session": "owner"}).status_code == 503
