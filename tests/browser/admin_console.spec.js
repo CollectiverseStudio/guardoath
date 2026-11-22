@@ -80,6 +80,38 @@ test("tenant actions reveal usage, subscription and invoice results immediately"
   }
 });
 
+test("owner Usage displays an actual saved cap breach even when metadata is stale", async ({page}) => {
+  const fixture = await signedIn(page, {override: request =>
+    /^\/v1\/admin\/tenants\/[^/]+\/usage$/.test(request.path)
+      ? {status:200, contentType:"application/json", body:JSON.stringify({
+          usage:{
+            period_utc:"2026-11", requests_recorded:105, monthly_allowance:100,
+            remaining_before_allowance:0, overage_policy:"block",
+            usage_threshold:{state:"over_limit",utilization_percent_floor:105,
+              policy:"blocks_at_saved_cap",persisted_alert:false},
+            quota_pacing:{state:"already_over_limit",projected_month_end_requests_floor:null,
+              record_metadata_freshness:"stale_record_metadata",
+              calendar_days_elapsed:2,calendar_days_in_month:30,persisted_alert:false},
+            historical_volume:{state:"unavailable",persisted_alert:false},
+            record_updated_at:"2026-11-01T00:00:00Z",
+            aws_cost_usd:null,stripe_invoice_usd:null,
+            source:"Synthetic saved tenant record"},
+          read_audit_event_id:"a".repeat(64)})} : null
+  });
+  await page.locator("#nav-tenants").click();
+  await page.locator("#tenant-rows tr").filter({hasText:"sample-studio"})
+    .getByRole("button", {name:"Usage", exact:true}).click();
+  const details = page.locator("#usage-details");
+  await expect(details).toContainText("Recorded quota signal: over limit (105%)");
+  await expect(details).toContainText("Quota pacing: already over limit");
+  await expect(details).toContainText("Record metadata: stale record metadata");
+  await expect(details).toContainText("Projected recorded month-end requests: Unavailable");
+  await expect(details).toContainText("AWS costs: Unavailable");
+  expect(fixture.calls.some(call => call.path.endsWith("/usage") &&
+    call.headers["x-guardoath-admin-session"] === fixture.token &&
+    call.headers["x-guardoath-key"] === undefined)).toBe(true);
+});
+
 test("owner Billing shows verified collection attempt metadata without claiming failed payment", async ({page}) => {
   const fixture = await signedIn(page, {override: request =>
     /^\/v1\/admin\/subscriptions\/[^/]+\/invoices$/.test(request.path)

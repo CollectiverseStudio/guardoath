@@ -36,29 +36,33 @@ def _quota_pacing(count: int | None, allowance: int, overage: str,
             pass
 
     total_days = monthrange(now.year, now.month)[1]
-    estimate = None
+    # A recorded cap breach is a fact about the saved counter, not a
+    # forecast. Do not hide it behind early-month or stale-metadata gates.
+    # Keep the projection unavailable until its own freshness gate passes.
+    estimate = (count * total_days // now.day
+                if count is not None and allowance > 0 and
+                freshness == "recent_record_metadata" and now.day >= 7
+                else None)
     if count is None:
         state = "unknown_counter"
-    elif freshness != "recent_record_metadata":
-        state = "stale_or_unknown_metadata"
+    elif count > allowance:
+        state = "already_over_limit"
     elif allowance == 0:
         state = "zero_allowance"
+    elif count == allowance:
+        state = "already_at_limit"
+    elif freshness != "recent_record_metadata":
+        state = "stale_or_unknown_metadata"
     elif now.day < 7:
         state = "insufficient_observation"
+    elif estimate > allowance:
+        state = "projected_over_limit"
+    elif estimate * 100 >= allowance * 95:
+        state = "projected_near_limit"
+    elif estimate * 100 >= allowance * 80:
+        state = "projected_watch"
     else:
-        estimate = count * total_days // now.day
-        if count > allowance:
-            state = "already_over_limit"
-        elif count == allowance:
-            state = "already_at_limit"
-        elif estimate > allowance:
-            state = "projected_over_limit"
-        elif estimate * 100 >= allowance * 95:
-            state = "projected_near_limit"
-        elif estimate * 100 >= allowance * 80:
-            state = "projected_watch"
-        else:
-            state = "projected_within_limit"
+        state = "projected_within_limit"
     return {
         "state": state,
         "projected_month_end_requests_floor": estimate,

@@ -242,3 +242,51 @@ def test_history_year_boundary_and_owner_only_usage_api():
     assert response.status_code == 200
     assert response.json()["usage"]["historical_volume"]["persisted_alert"] is False
     assert "key_hash" not in response.text and "payer_id" not in response.text
+
+@pytest.mark.parametrize("count,allowance,updated,day,state,estimate", [
+    (101, 100, "2026-11-01T00:00:00Z", 2, "already_over_limit", None),
+    (100, 100, "2026-11-02T17:00:00Z", 2, "already_at_limit", None),
+    (1, 0, None, 2, "already_over_limit", None),
+    (0, 0, None, 2, "zero_allowance", None),
+    (501, 500, "2026-11-01T00:00:00Z", 19, "already_over_limit", None),
+    (500, 500, "2026-11-19T17:00:00Z", 19, "already_at_limit", 500 * 30 // 19),
+    (99, 100, "2026-11-02T17:00:00Z", 2, "insufficient_observation", None),
+    (50, 100, None, 19, "stale_or_unknown_metadata", None),
+])
+def test_recorded_cap_state_precedes_stale_or_early_month_projection(
+        count, allowance, updated, day, state, estimate):
+    clock = lambda: datetime(2026, 11, day, 18, tzinfo=timezone.utc)
+    report = tenant_usage_report(Tenant(
+        usage={"2026-11": count}, monthly_allowance=allowance,
+        updated_at=updated), clock=clock)
+    assert report["usage_threshold"]["state"] == (
+        "over_limit" if count > allowance
+        else "at_limit" if count == allowance else "within_limit")
+    assert report["quota_pacing"]["state"] == state
+    assert report["quota_pacing"]["projected_month_end_requests_floor"] == estimate
+    assert report["quota_pacing"]["persisted_alert"] is False
+    assert report["aws_cost_usd"] is None and report["stripe_invoice_usd"] is None
+    assert report["requests_recorded"] == count
+
+
+def test_authenticated_usage_exposes_recorded_breach_without_fake_live_costs():
+    record = Tenant(usage={datetime.now(timezone.utc).strftime("%Y-%m"): 101},
+                    monthly_allowance=100, updated_at="2026-01-01T00:00:00Z")
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        tenant_store=Store(record),
+        verify_cognito_admin=lambda token: VerifiedAdmin(
+            "trusted-subject", frozenset({"owner"}), True) if token == "owner-token" else None))
+    client = TestClient(app)
+    path = "/v1/admin/tenants/usr-usage/usage"
+    assert client.get(path).status_code == 401
+    assert client.get(path, headers={"X-GuardOath-Key": "owner-token"}).status_code == 401
+    response = client.get(path, headers={"X-GuardOath-Admin-Session": "owner-token"})
+    assert response.status_code == 200
+    usage = response.json()["usage"]
+    assert usage["usage_threshold"]["state"] == "over_limit"
+    assert usage["quota_pacing"]["state"] == "already_over_limit"
+    assert usage["quota_pacing"]["projected_month_end_requests_floor"] is None
+    assert usage["quota_pacing"]["record_metadata_freshness"] == "stale_record_metadata"
+    assert usage["aws_cost_usd"] is None and usage["stripe_invoice_usd"] is None
+    assert "key_hash" not in response.text and "payer_id" not in response.text
