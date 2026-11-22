@@ -274,6 +274,15 @@ def test_rollback_does_not_approve_unrelated_new_description_or_partial_inverse(
     rule = dual_source["domains"][0]["controls"][0]["rules"][0]
     rule["title"] = dual["title"]
     rule["use_case"] = dual["use_case"]
-    partial = _reviewed_inverse(dual_source)
+    # Intentionally revert only the title; the original release also changed
+    # use_case, so this MUST NOT count as a complete rollback.
+    partial = export_plan(
+        source=dual_source,
+        proposal={**PROPOSAL, "expected_registry_version": "4",
+                  "proposed_registry_version": "5", "title": "Email rule",
+                  "use_case": dual["use_case"]},
+        review_id="c"*64, draft_id="d"*64)
+    assert set(partial["changed_fields"]) == {"title"}
+    assert set(first["releases"][0]["changes"]) == {"title", "use_case"}
     with pytest.raises(SourceReleaseConflict):
         candidate_rollback_release(partial, lambda: deepcopy(dual_source), first)
