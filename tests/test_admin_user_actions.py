@@ -184,6 +184,67 @@ def test_postwrite_email_change_returns_indeterminate_signed_intent_not_false_su
     assert provider.calls.count("disable") == 1
 
 
+
+@pytest.mark.parametrize("drift,expected_status,expected_calls", [
+    ("empty_pagination_token", 409, ["list"]),
+    ("different_enabled", 503, ["list", "get"]),
+    ("missing_enabled", 503, ["list", "get"]),
+    ("nonboolean_enabled", 503, ["list", "get"]),
+    ("different_status", 503, ["list", "get"]),
+    ("missing_status", 503, ["list", "get"]),
+    ("nonstring_status", 503, ["list", "get"]),
+])
+def test_directory_incompleteness_and_cross_read_drift_deny_account_mutation(
+        drift, expected_status, expected_calls):
+    class InconsistentDirectory(Cognito):
+        def list_users(self, **kw):
+            page = super().list_users(**kw)
+            account = page["Users"][0]
+            if drift == "empty_pagination_token":
+                page["PaginationToken"] = ""
+            elif drift == "different_enabled":
+                account["Enabled"] = False
+            elif drift == "missing_enabled":
+                account.pop("Enabled")
+            elif drift == "nonboolean_enabled":
+                account["Enabled"] = 1
+            elif drift == "different_status":
+                account["UserStatus"] = "RESET_REQUIRED"
+            elif drift == "missing_status":
+                account.pop("UserStatus")
+            elif drift == "nonstring_status":
+                account["UserStatus"] = 3
+            return page
+
+    client, db, provider = make(provider=InconsistentDirectory())
+    response = client.post(URL, json=body(), headers=HEADERS)
+    assert response.status_code == expected_status, response.text
+    assert provider.calls == expected_calls
+    assert provider.enabled is True
+    assert "disable" not in provider.calls and "enable" not in provider.calls
+    assert not any(row["operation"]["S"].endswith(".intent") for row in db.rows.values())
+    assert not any(row["operation"]["S"].endswith(".outcome") for row in db.rows.values())
+
+
+def test_postwrite_cognito_status_drift_is_indeterminate_and_never_claims_success():
+    class StatusDriftAfterWrite(Cognito):
+        def admin_get_user(self, **kw):
+            item = super().admin_get_user(**kw)
+            if "disable" in self.calls or "enable" in self.calls:
+                item["UserStatus"] = "RESET_REQUIRED"
+            return item
+
+    client, db, provider = make(provider=StatusDriftAfterWrite())
+    response = client.post(URL, json=body(), headers=HEADERS)
+    assert response.status_code == 503, response.text
+    assert provider.calls == ["list", "get", "groups", "disable", "get"]
+    assert provider.enabled is False
+    assert sum(row["operation"]["S"].endswith(".intent") for row in db.rows.values()) == 1
+    assert not any(row["operation"]["S"].endswith(".outcome") for row in db.rows.values())
+    assert client.post(URL, json=body(), headers=HEADERS).status_code == 409
+    assert provider.calls.count("disable") == 1
+
+
 def test_case_insensitive_same_confirmed_email_is_not_false_drift():
     class CaseOnly(Cognito):
         def admin_get_user(self, **kw):

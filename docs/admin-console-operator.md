@@ -713,3 +713,18 @@ are fingerprints, not cryptographic signatures or release authorization. It
 does not update `rule_catalog.py`, `control_registry.py`, any deployment or
 tenant policy; a source implementation, exact-SHA tests, live 15-check
 acceptance and a verified rollback are still needed for issue #42.
+
+## Cognito user-status snapshot parity on owner writes (2026-11-22)
+For an authenticated owner enabling or disabling an account, the exact-email
+`ListUsers` result and independently fetched `AdminGetUser` record must agree
+on identity, Boolean enabled state and account status **before** creating the
+durable mutation intent or calling the provider write. Even an empty directory
+pagination token is an incomplete/ambiguous result and fails closed. After a
+Cognito write, the same account status must remain consistent alongside its
+independently verified identity and changed enabled state; unexpected status
+drift leaves the signed intent as **indeterminate** instead of recording false
+success. Never replay that idempotency key automatically; inspect the owner
+action receipt and current Cognito status. This avoids an observed two-read
+status race without claiming an atomic Cognito compare-and-set. The existing
+MFA, group, audit-first, tenant, entitlement and provider-spend boundaries
+remain unchanged.

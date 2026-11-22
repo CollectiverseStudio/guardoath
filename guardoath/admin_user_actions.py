@@ -234,7 +234,7 @@ class AdminCognitoUserActions:
             directory = self.cognito.list_users(
                 UserPoolId=self.pool_id, Filter='email = "' + email + '"', Limit=2)
             if (not isinstance(directory, dict) or not isinstance(directory.get("Users"), list)
-                    or len(directory["Users"]) != 1 or directory.get("PaginationToken")):
+                    or len(directory["Users"]) != 1 or directory.get("PaginationToken") is not None):
                 raise UserActionConflict("Account not uniquely identified")
             entry = directory["Users"][0]
             username = entry.get("Username")
@@ -257,7 +257,11 @@ class AdminCognitoUserActions:
             before = self.cognito.admin_get_user(UserPoolId=self.pool_id, Username=username)
             before_attrs = before.get("UserAttributes") if isinstance(before, dict) else None
             if (not _matches_exact_cognito_identity(before_attrs, email, subs[0])
-                    or before.get("Username") != username):
+                    or before.get("Username") != username
+                    or type(entry.get("Enabled")) is not bool
+                    or entry["Enabled"] is not before.get("Enabled")
+                    or not isinstance(entry.get("UserStatus"), str)
+                    or entry["UserStatus"] != before.get("UserStatus")):
                 raise UserActionUnavailable("Cognito preflight identity unverified")
             if (type(before.get("Enabled")) is not bool
                     or before["Enabled"] != expected_enabled
@@ -310,7 +314,8 @@ class AdminCognitoUserActions:
             observed_attrs = observed.get("UserAttributes") if isinstance(observed, dict) else None
             if (not _matches_exact_cognito_identity(observed_attrs, email, subs[0])
                     or observed.get("Username") != username
-                    or observed.get("Enabled") is not (not expected_enabled)):
+                    or observed.get("Enabled") is not (not expected_enabled)
+                    or observed.get("UserStatus") != before["UserStatus"]):
                 raise UserActionUnavailable("Cognito state verification unavailable")
             outcome = {**common, "event_id": {"S": outcome_id},
                        "operation": {"S": "cognito.user.status.outcome"},
