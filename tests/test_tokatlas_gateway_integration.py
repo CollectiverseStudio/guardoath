@@ -24,19 +24,39 @@ def fixture_checker(request, policy, stage):
     return build()
 
 
-def make_client(*, action="block", answer="approved answer", fail=False):
+def make_client(*, action="block", answer="approved answer", fail=False, sync_transport=False):
     sent = []
-    def fake_transport(url, headers, body, timeout):
+    async def fake_transport(url, headers, body, timeout):
         payload = json.loads(body)
         sent.append(payload)
         if fail:
             return b'{"choices":[]}'
         return json.dumps({"choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": answer}}],
                            "usage": {"prompt_tokens": 3, "completion_tokens": 5}}).encode()
-    adapter = TokatlasChatAdapter(model_limits=(('gpt-5', 128),), api_key="offline-test-credential", transport=fake_transport)
+    # The normal offline fixture stays in the event loop, so a cold OS worker
+    # thread cannot consume the *unchanged* 500 ms provider deadline under CI
+    # load before a no-I/O, deterministic mock gets CPU time.
+    # Keep a separate end-to-end test of the synchronous worker path below.
+    def threaded_transport(url, headers, body, timeout):
+        import asyncio
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError("Synchronous transport ran on the event loop")
+        payload = json.loads(body)
+        sent.append(payload)
+        if fail:
+            return b'{"choices":[]}'
+        return json.dumps({"choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": answer}}],
+                           "usage": {"prompt_tokens": 3, "completion_tokens": 5}}).encode()
+    adapter = TokatlasChatAdapter(model_limits=(('gpt-5', 128),), api_key="offline-test-credential",
+                                transport=threaded_transport if sync_transport else fake_transport)
     tenant = TenantRecord(tenant_id="tenant-a", display_name="Tenant A", check_secrets=action)
     binding = ProviderBinding(tenant_id="tenant-a", provider=adapter, allowed_models=("gpt-5",))
-    gateway = PrototypeGateway({"secrets": fixture_checker}, {"tenant-a": binding})
+    gateway = PrototypeGateway({"secrets": fixture_checker}, {"tenant-a": binding},
+                               provider_timeout=2.0 if sync_transport else 0.5)
     app = create_prototype_app(gateway, lambda key: tenant if key == "tenant-test-key" else None)
     return TestClient(app), sent
 
@@ -61,6 +81,19 @@ def test_allowed_input_reaches_tokatlas_and_passes_output_checks():
     assert result["response"] == "approved answer"
     assert result["usage"] == {"input_tokens": 3, "output_tokens": 5}
     assert sent == [{"model": "gpt-5", "messages": [{"role": "user", "content": "safe input"}], "stream": False, "max_completion_tokens": 128, "n": 1, "store": False}]
+    assert [row["stage"] for row in result["checks"]] == ["input", "output"]
+
+
+def test_synchronous_mock_transport_still_runs_in_worker_with_input_output_validation():
+    # Separate coverage of the actual off-event-loop path with a bounded,
+    # trusted 2-second *test-only* provider budget. No production deadline
+    # or existing 500-ms test budget is relaxed.
+    client, sent = make_client(sync_transport=True)
+    result = post(client, "safe input", "tokatlas-threaded").json()
+    assert result["status"] == "completed"
+    assert result["response"] == "approved answer"
+    assert result["usage"] == {"input_tokens": 3, "output_tokens": 5}
+    assert len(sent) == 1
     assert [row["stage"] for row in result["checks"]] == ["input", "output"]
 
 
