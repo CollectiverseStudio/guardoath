@@ -499,6 +499,21 @@ _JS = r'''"use strict";
       new Set(tenants.tenants.map(t => t.tenant_id)).size === tenantCount;
     const savedActiveFlags = savedStatesComplete ?
       tenants.tenants.filter(t => t.demo === false && t.subscription_status === "active").length : null;
+    // Never sum incomplete, mixed-month, ambiguous, or imprecise saved usage.
+    // Includes demo tenants: a stored validation counter is not a billable event.
+    const usagePeriod = typeof tenants?.retrieved_utc === "string" &&
+      /^[0-9]{4}-(0[1-9]|1[0-2])-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/.test(tenants.retrieved_utc)
+      ? tenants.retrieved_utc.slice(0, 7) : null;
+    let recordedMonthRequests = null;
+    if (tenantCount !== null && usagePeriod !== null &&
+        new Set(tenants.tenants.map(t => t?.tenant_id)).size === tenantCount &&
+        tenants.tenants.every(t => t && typeof t.tenant_id === "string" &&
+          /^[a-z][a-z0-9-]{1,39}$/.test(t.tenant_id) &&
+          t.usage_month === usagePeriod &&
+          Number.isSafeInteger(t.usage_month_count) && t.usage_month_count >= 0)) {
+      const sum = tenants.tenants.reduce((total, t) => total + t.usage_month_count, 0);
+      if (Number.isSafeInteger(sum)) recordedMonthRequests = sum;
+    }
     const sourceTime = page =>
       typeof page?.retrieved_utc === "string" &&
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(page.retrieved_utc) ?
@@ -523,6 +538,13 @@ _JS = r'''"use strict";
         "DynamoDB saved subscription_status=active" + sourceTime(tenants) +
         " · NOT Stripe-verified paid subscribers or revenue",
       status:savedActiveFlags === null ? "unavailable" : "complete_single_page_saved_flags_only"};
+    metrics.recorded_month_to_date_requests = {value:recordedMonthRequests,
+      source:recordedMonthRequests === null ?
+        "DynamoDB · unknown, partial, mixed-month or ambiguous recorded usage counters" :
+        "DynamoDB tenant usage counters · UTC " + usagePeriod +
+        " · complete bounded scan (includes demos)" + sourceTime(tenants) +
+        " · recorded validations only; NOT live traffic, billable usage, AWS cost or Stripe revenue",
+      status:recordedMonthRequests === null ? "unavailable" : "complete_single_page_recorded_usage"};
     el("metrics").replaceChildren();
     for (const [name, metric] of Object.entries(metrics)) {
       const card = document.createElement("div"); card.className = "metric";
