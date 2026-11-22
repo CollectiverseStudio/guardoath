@@ -1154,11 +1154,29 @@ for(const [sample,rule] of [['iban','iban_code'],['crypto','crypto'],['ip-addres
   });
 }
 test("demo video loads with its full length and size", async ({ page }) => {
+  const mediaPath = "/assets/guardoath_ai_final.mp4";
+  let mediaRequests = 0;
+  page.on("request", request => {
+    if (new URL(request.url()).pathname === mediaPath) mediaRequests++;
+  });
   await page.goto("/dashboard");
+  await expect(page.locator("#dashboard-startup")).toBeHidden();
   // These tests intentionally opt into the optional advanced configuration.
   await page.locator('#comparison-configuration').evaluate(el => { el.open = true; });
   const video = page.locator("#demo-video");
   await expect(video).toBeVisible();
+  await expect(video).toHaveAttribute("preload", "none");
+  expect(mediaRequests).toBe(0);
+  // Chrome's native media controls have no stable DOM selector. Make an explicit
+  // playback request on the real element, muted for consistent CI audio policy.
+  const [mediaResponse] = await Promise.all([
+    page.waitForResponse(response => new URL(response.url()).pathname === mediaPath
+      && response.request().method() === "GET"),
+    video.evaluate(async v => { v.muted = true; await v.play(); }),
+  ]);
+  expect(mediaResponse.ok()).toBe(true);
+  expect(mediaRequests).toBeGreaterThan(0);
+  await expect(video).toHaveJSProperty("paused", false);
   const meta = await video.evaluate(v => new Promise(resolve => {
     const done = () => resolve({ duration: v.duration, width: v.videoWidth, height: v.videoHeight, error: v.error ? v.error.code : null });
     if (v.readyState >= 1) return done();
