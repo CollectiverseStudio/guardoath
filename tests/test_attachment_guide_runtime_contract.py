@@ -65,6 +65,7 @@ def test_browser_file_selectors_and_attachment_routes_match_served_guide():
     assert "async function selectedAttachmentBytes(stage)" in script
     assert "file.arrayBuffer()" in script
     assert "if (!files.length) return null;" in script
-    assert "if (attachments_b64) request.attachments_b64 = attachments_b64;" in script
-    assert '(attachments_b64 ? "/attachments" : "")' in script
+    assert "async function buildCheckRequest(stage)" in script
+    assert "if (attachments) body.attachments_b64 = attachments;" in script
+    assert '(attachments ? "/attachments" : "")' in script
     assert "a filename or chat mention alone does not activate" in guide

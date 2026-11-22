@@ -54,6 +54,7 @@ test("the guided setup appears separately from conversation-testing steps", asyn
   await page.locator("#demo-user").selectOption("demo4");
   await page.getByRole("button", {name: "Get demo API key", exact: true}).click();
   await expect(page.locator("#checks-setup-wizard")).toBeVisible();
+  await page.locator("#guided-test-options > summary").click();
   await expect(page.locator("#conversation-wizard")).toBeVisible();
   await expect(page.locator("#checks-wizard-guidance")).toContainText("Input protection");
   await page.locator("#checks-wizard-start").click();

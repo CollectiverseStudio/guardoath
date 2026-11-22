@@ -2,26 +2,32 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GuardOath — Developer guide</title><link rel="stylesheet" href="/assets/dashboard.css"><link rel="stylesheet" href="/assets/guide.css"></head>
 <body>
-<header><div class="brand"><img class="logo" src="/assets/guardoath-shield.png" alt="" width="40" height="40"><span class="brand-text"><span class="brand-name">GuardOath</span><span class="motto">Building Confidence Into AI.</span></span><span class="tag">DEVELOPMENT PREVIEW</span></div><a href="/dashboard">Check playground</a><a href="/docs">API reference ↗</a></header>
+<header><div class="brand"><img class="logo" src="/assets/guardoath-shield.png" alt="" width="40" height="40"><span class="brand-text"><span class="brand-name">GuardOath</span><span class="motto">Building Confidence Into AI.</span></span><span class="tag">DEVELOPMENT PREVIEW</span></div><a href="/dashboard">API test console</a><a href="/docs">API reference ↗</a></header>
 <main class="guide">
 <section class="hero" aria-labelledby="guide-title"><div class="eyebrow">GUARDOATH · DEVELOPER GUIDE</div><h1 id="guide-title">Add GuardOath to your application</h1>
 <p class="intro">Check every message before it reaches your AI model, and every answer before it reaches your user. This guide covers keys, requests, results and every check.</p></section>
 <nav class="panel toc" aria-label="Contents"><strong>Contents</strong><ol>
-<li><a href="#overview">How it fits in</a></li><li><a href="#keys">Get an API key</a></li><li><a href="#requests">Send a check</a></li>
+<li><a href="#api-console">Test the API</a></li><li><a href="#overview">How it fits in</a></li><li><a href="#keys">Get an API key</a></li><li><a href="#requests">Send a check</a></li>
 <li><a href="#results">Read the result</a></li><li><a href="#endpoints">Endpoints</a></li><li><a href="#profiles">Profiles</a></li>
 <li><a href="#checks">Checks</a></li><li><a href="#settings">Change your checks</a></li><li><a href="#errors">Errors and limits</a></li><li><a href="#data">Your data</a></li></ol></nav>
+
+<section class="panel" id="api-console"><h2>Test the actual customer API</h2>
+<p>Open the <a href="/dashboard">API test console</a>, connect to your application or a shared demo, enter content and run Input checks. The console shows the actual endpoint, request JSON, HTTP status, elapsed request time and response. Its generated cURL, Python and Node examples use a key placeholder and compute the body hash from the same serialized bytes they send. Current credentials are masked in displayed content; a notice identifies any request preview changed by that masking. Keep integration keys on your server. A key entered in the console stays in page memory; customer sign-in uses this tab's session storage.</p>
+<p><strong>The currently hosted API validates supplied content.</strong> Use <code>POST /v1/checks/input</code> for a user message and <code>POST /v1/checks/output</code> for an answer supplied by your application. The dashboard's Input → supplied answer → Output sequence demonstrates those separate calls. The output endpoint itself does not require an earlier input receipt or create a durable conversation record.</p>
+<p><strong>AI and agent choice:</strong> your application chooses its provider, model and agent. The current check endpoints do not invoke them and reject extra <code>model</code>, <code>provider</code> and <code>agent</code> fields. The intended guarded interaction gateway and durable model/agent transaction history are not hosted capabilities yet; <code>/v1/interactions</code> is not available. An agent report comparison is an unverified diagnostic, not execution or proof of what a model or agent did.</p>
+<p>Use <strong>Policy</strong> to inspect the saved checks and actions that run. Pending edits are not a separate request policy: follow the console's save-and-run state before assuming an edit has taken effect. <strong>API access</strong> contains connection and customer key controls, and <strong>Help</strong> contains the introduction and video.</p></section>
 
 <section class="panel" id="overview"><h2>How it fits in</h2>
 <ol><li>Your user sends a message. Your application sends it to <code>POST /v1/checks/input</code>.</li>
 <li>Only if the input check lets it through, send the message to your AI model.</li>
 <li>Send the model's answer to <code>POST /v1/checks/output</code>.</li>
 <li>Only if the output check lets it through, show the answer to your user.</li></ol>
-<p>GuardOath does not call an AI model and does not write answers. It checks what you send and tells you what to do with it. You can try the four steps without writing code in the <a href="/dashboard">check playground</a>.</p></section>
+<p>The hosted check API does not call an AI model or generate answers. Your application performs that step and enforces the returned decision. Try the same input/output endpoints without writing code in the <a href="/dashboard">API test console</a>.</p></section>
 
 <section class="panel" id="keys"><h2>Get an API key</h2>
-<p>Keys look like <code>gok_&lt;tenant id&gt;_&lt;secret&gt;</code>. Each key belongs to one tenant record, which holds your checks, your settings and your monthly usage. Your tenant id is the part between <code>gok_</code> and the next <code>_</code>; you send it as <code>application_id</code>.</p>
+<p>Each key belongs to one tenant record, which holds your checks, settings and monthly usage. Treat the complete key as an opaque credential. Use the connected application's <code>application_id</code>, returned by <code>GET /v1/applications/current</code> with your key; do not infer application authority by editing or parsing a key.</p>
 <ul><li><strong>To try it:</strong> pick a demo user in the <a href="/dashboard">check playground</a> and select <strong>Get demo API key</strong>, or call <code>POST /v1/demo-users/demo1/key</code> with the body <code>{}</code>. Demo users are shared: anyone who picks the same one uses the same settings and the same 2,000 checks a month. Do not send real personal data through a demo user.</li>
-<li><strong>For your application:</strong> sign in using Google through the configured Cognito provider on the <a href="/dashboard">dashboard</a>. Registering creates an account but <strong>does not activate a paid subscription</strong>. An independently verified active subscription is required before you can run customer checks. When entitled, use <strong>Create API key</strong>; a key is shown once and only a fingerprint of it is stored. You can keep at most 2 keys and revoke them. Keep keys on your server, never in a web page or mobile app. Checkout and billing-portal routes exist, but production checkout requires configured server-owned Stripe credentials and price; subscription reconciliation and verified live payment onboarding have not been release-accepted. A redirect alone never activates validation.</li>
+<li><strong>For your application:</strong> use the configured Cognito email/password sign-in and registration from the <a href="/dashboard">dashboard</a>. Google is optional when the operator has configured it. Registering creates an account but <strong>does not activate a paid subscription</strong>. An independently verified active subscription is required before you can run customer checks. When entitled, use <strong>Create API key</strong>; a key is shown once and only a fingerprint of it is stored. You can keep at most 2 keys and revoke them. Keep keys on your server, never in a web page or mobile app. Checkout and billing-portal routes exist, but production checkout requires configured server-owned Stripe credentials and price; subscription reconciliation and verified live payment onboarding have not been release-accepted. A redirect alone never activates validation.</li>
 <li><strong>A key only runs checks.</strong> Changing a customer record's checks and keys needs a signed-in session, so a leaked key cannot change your settings. Demo users have no accounts: their demo key can change their own demo record.</li></ul></section>
 
 <section class="panel" id="requests"><h2>Send a check</h2>
@@ -39,15 +45,22 @@
 <tr><td><code>policy_version</code></td><td>no</td><td>Leave it out, or send <code>tenant</code>: a tenant key always runs the checks on your record. Any other value is refused (404) and not counted.</td></tr>
 <tr><td><code>request_context</code></td><td>no</td><td>Up to 8,000 characters of context. Accepted, but not inspected by the current checks.</td></tr>
 <tr><td><code>language</code></td><td>no</td><td><code>en</code>, the only supported value.</td></tr></tbody></table>
-<p>Any other field is refused with HTTP 422.</p>
+<p>Unknown fields are refused with HTTP 422. The legacy <code>validation_codes</code> field does not select checks for a hosted tenant: nonempty tenant overrides are refused. Saved tenant policy is authoritative. Put everything that needs inspection inside <code>content</code> or actual supported attachment bytes; <code>request_context</code> is not inspected and cannot establish trusted model, agent or reference provenance.</p>
 <h3>Python (standard library only)</h3><pre><code>import hashlib
 import json
+import os
 import urllib.error
 import urllib.request
 
 API = &quot;https://guardoath.com&quot;
-KEY = &quot;gok_demo1_...&quot;          # your API key; keep it on your server
-APPLICATION_ID = &quot;demo1&quot;       # your tenant id: the part of the key after &quot;gok_&quot;
+KEY = os.environ[&quot;GUARDOATH_API_KEY&quot;]  # keep your key on your server
+APPLICATION_ID = os.environ[&quot;GUARDOATH_APPLICATION_ID&quot;]
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None  # never forward your API key to another destination
+
+OPENER = urllib.request.build_opener(NoRedirect())
 
 def check(stage, content):
     &quot;&quot;&quot;stage is &quot;input&quot; (the user&#x27;s message) or &quot;output&quot; (the AI&#x27;s answer).
@@ -60,7 +73,7 @@ def check(stage, content):
         &quot;x-amz-content-sha256&quot;: hashlib.sha256(body).hexdigest(),  # SHA-256 of these exact bytes
     })
     try:
-        with urllib.request.urlopen(call, timeout=20) as response:
+        with OPENER.open(call, timeout=20) as response:
             return json.load(response)
     except urllib.error.HTTPError as error:
         raise RuntimeError(f&quot;GuardOath answered HTTP {error.code}: {error.read().decode()}&quot;) from None
@@ -70,13 +83,14 @@ print(result[&quot;effective_action&quot;], [f[&quot;rule_id&quot;] for f in res
 <h3>JavaScript (Node.js)</h3><pre><code>import { createHash } from &quot;node:crypto&quot;;   // Node.js 18 or later
 
 const API = &quot;https://guardoath.com&quot;;
-const KEY = process.env.GUARDOATH_KEY;      // keep the key on your server
-const APPLICATION_ID = &quot;demo1&quot;;
+const KEY = process.env.GUARDOATH_API_KEY;  // keep the key on your server
+const APPLICATION_ID = process.env.GUARDOATH_APPLICATION_ID;
 
 async function check(stage, content) {   // the checks that run are the ones on your record
   const body = JSON.stringify({ application_id: APPLICATION_ID, content });
   const response = await fetch(`${API}/v1/checks/${stage}`, {
     method: &quot;POST&quot;,
+    redirect: &quot;error&quot;,  // do not forward your key through redirects
     headers: {
       &quot;X-GuardOath-Key&quot;: KEY,
       &quot;Content-Type&quot;: &quot;application/json&quot;,

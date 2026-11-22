@@ -3,6 +3,7 @@ const {test, expect} = require("@playwright/test");
 // Actual Chrome browser and server UI: never mock the validation API.
 test("guided steps retain Input data without unlocking unchecked Output", async ({page}) => {
   await page.goto("/dashboard");
+  await page.locator("#guided-test-options > summary").click();
   const steps = ["wizard-input", "wizard-input-check", "wizard-output", "wizard-output-check"];
   await expect(page.locator("#wizard-status")).toContainText("All four steps visible");
   await expect(page.locator("#wizard-step-guidance")).toContainText("Start guided test");
@@ -34,6 +35,7 @@ test("guided steps retain Input data without unlocking unchecked Output", async 
 
 test("prepared-example shortcut expands all steps yet preserves the Input gate", async ({page}) => {
   await page.goto("/dashboard");
+  await page.locator("#guided-test-options > summary").click();
   await page.locator("#wizard-start").click();
   await expect(page.locator("#wizard-input-check")).toBeHidden();
   await page.locator("#batch-run > summary").click();

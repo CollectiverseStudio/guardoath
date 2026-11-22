@@ -2,6 +2,7 @@ const { test, expect } = require("@playwright/test");
 
 test("guided conversation preserves input content and never unlocks output before input passes", async ({ page }) => {
   await page.goto("/dashboard");
+  await page.locator("#guided-test-options > summary").click();
   const input = page.locator("#input-content");
   const original = "Please summarize the customer return policy.";
   await input.fill(original);
@@ -30,6 +31,7 @@ test("guided conversation preserves input content and never unlocks output befor
 
 test("selected example context explains all enabled checks can report separate findings", async ({ page }) => {
   await page.goto("/dashboard");
+  await page.locator("#guided-test-options > summary").click();
   await expect(page.locator("#wizard-finding-context")).toContainText("All enabled Input checks run");
   await expect(page.locator("#wizard-finding-context")).toContainText("unrelated integrity or safety findings are separate");
   await page.locator("#wizard-start").click();

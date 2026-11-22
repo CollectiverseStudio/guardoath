@@ -3,6 +3,8 @@ const $ = id => document.getElementById(id);
 // Keep session/API initialization behind the complete ordered asset startup.
 const dashboardStartup = window.guardoathDashboardStartup || Promise.resolve();
 let key = "", application = null, revision = 0, busy = false, tenantSaving = false, inputResult = null;
+// Ephemeral inspection only: never credentials, persistent history, or release authority.
+let apiInspection = {input: null, output: null}, apiPreview = null, inspectorSequence = 0;
 // Only Block stops a message or answer (Greg, 2026-11-04). The decision decides, not whether something was found: Allow
 // goes through; Flag goes through and its findings are reported for review; Redact goes through as the cleaned text once
 // it has been checked again (redaction ready). A check that did not finish gets the record's failure action, so it
@@ -134,6 +136,7 @@ function buttons() {
   $("output-attachments").disabled = busy || !application?.tenant || outputLocked();
   updateOutputField();
   refreshExamplePickers();
+  refreshWorkbench();
 }
 function updateOutputField() {
   const outputText = {
@@ -162,6 +165,10 @@ const currentPolicy = () => application?.policies.find(p => p.version === $("pol
 const groupLabels = {passed:"Passed", findings:"Findings", incomplete:"Incomplete", simulated:"Simulated", partial:"Partial coverage", disabled:"Disabled", not_applicable:"Not applicable", not_implemented:"Not implemented"};
 function reset(keepInput = false) {
   revision++;
+  if (!keepInput) apiInspection.input = null;
+  apiInspection.output = null;
+  apiPreview = null;
+  clearInspectionDisplay();
   if (!keepInput) inputResult = null;
   $("input-gate").textContent = gateText(inputResult);
   buttons();
@@ -186,7 +193,9 @@ async function bodyHash(text) {
 const BUSY_RETRIES = 4;
 async function send(url, options) {
   for (let attempt = 0; ; attempt++) {
-    const response = await fetch(url, options);
+    // API responses are JSON; never forward credentials through a redirect.
+    // OAuth and Stripe navigation use their separate explicit navigation paths.
+    const response = await fetch(url, {...options, redirect: "error"});
     if (response.status !== 429 || attempt >= BUSY_RETRIES) return response;
     const text = await response.clone().text().catch(() => "");
     if (!text.includes("ConcurrentInvocationLimitExceeded")) return response;
@@ -201,8 +210,32 @@ async function requestHeaders(token, text) {
 }
 async function api(path, body, token = key) {
   const text = body ? JSON.stringify(body) : undefined;
-  const response = await send(path, {method: body ? "POST" : "GET", cache: "no-store",
-    headers: await requestHeaders(token, text), ...(body ? {body: text} : {})});
+  const inspectedStage = /^\/v1\/checks\/(input|output)(?:\/attachments)?$/.exec(path)?.[1];
+  const inspectionRevision = revision, started = performance.now();
+  const inspectionOwner = currentInspectionOwner(token);
+  let response;
+  try {
+    response = await send(path, {method: body ? "POST" : "GET", cache: "no-store",
+      headers: await requestHeaders(token, text), ...(body ? {body: text} : {})});
+  } catch (error) {
+    if (inspectedStage) {
+      if (inspectionRevision === revision && inspectionOwner())
+        recordApiInspection(inspectedStage, path, text, null, null,
+          performance.now() - started, token, "Network request failed; no HTTP response was received.", inspectionOwner);
+      else discardStaleInspection();
+    }
+    throw error;
+  }
+  if (inspectedStage) {
+    const raw = await response.clone().text().catch(() => null);
+    if (inspectionRevision === revision && inspectionOwner())
+      recordApiInspection(inspectedStage, path, text, response.status, raw,
+        performance.now() - started, token, raw === null ? "The response body could not be read." : "", inspectionOwner);
+    else {
+      discardStaleInspection();
+      throw new Error("The connection or request changed while the check was running. No result was accepted.");
+    }
+  }
   if (!response.ok && [429, 503].includes(response.status) && response.headers.has("Retry-After")) {
     const seconds = Number(response.headers.get("Retry-After"));
     throw new Error((response.status === 429 ? "Application limit reached." : "Service capacity reached.") + (Number.isSafeInteger(seconds) && seconds > 0 ? " Retry in " + seconds + (seconds === 1 ? " second." : " seconds.") : " Try again shortly."));
@@ -534,6 +567,7 @@ function renderTenant() {
   // function rebuilds the panel, so refresh them again now that the panel shows the record (Tests #673).
   refreshExamplePickers();
   for (const stage of ["input", "output"]) if (lastExample[stage]) exampleNote(stage, lastExample[stage]);
+  refreshWorkbench();
 }
 // The check row's In effect cell: whether it runs on each stage, and with what.
 function showCheckEffect(id) {
@@ -973,6 +1007,7 @@ function showUnsaved(prefix = "") {
   }
   refreshExamplePickers();
   for (const stage of ["input", "output"]) if (lastExample[stage]) exampleNote(stage, lastExample[stage]);
+  refreshWorkbench();
 }
 for (const stage of ["input", "output"]) {
   $("tenant-attachment-mode-" + stage).addEventListener("change", () => {
@@ -1066,7 +1101,13 @@ $("demo-key").addEventListener("click", async () => {
     $("api-key").value = ""; $("demo-key-value").value = "";
     if (await connectWithKey(demoToken, tenant)) $("demo-key-value").value = demoToken;
   } catch (error) { $("connection-status").textContent = (error.message || "The demo key could not be issued.") + " Select Get demo API key again to retry; no refresh is needed."; }
-  finally { $("demo-key").disabled = false; }
+  finally {
+    $("demo-key").disabled = false;
+    $("demo-key-value").type = "password";
+    $("demo-key-reveal").textContent = "Show demo key";
+    $("demo-key-reveal").setAttribute("aria-pressed", "false");
+    refreshWorkbench();
+  }
 });
 dashboardStartup.then(loadDemoUsers);
 // Tenant sign-in: the user pool's hosted sign-in page (authorization code with PKCE). The server trades the
@@ -2304,6 +2345,22 @@ async function selectedAttachmentBytes(stage) {
   }
   return encoded;
 }
+// The inspector and execute() use this one builder. Previewing never sends a request,
+// changes policy, fabricates a result, or bypasses the existing Input gate.
+async function buildCheckRequest(stage) {
+  if (!["input", "output"].includes(stage)) throw new Error("Choose Input or Output.");
+  if (!application) throw new Error("Connect an application to build an executable request.");
+  const context = $("request-context").value;
+  if (context.length > 8000) throw new Error("Request context must be at most 8,000 characters.");
+  const body = {application_id: application.application_id, policy_version: $("policy").value,
+    content: $(stage + "-content").value, content_format: $(stage + "-format").value,
+    language: "en"};
+  if (context) body.request_context = context;
+  const attachments = await selectedAttachmentBytes(stage);
+  if (attachments) body.attachments_b64 = attachments;
+  return {path: "/v1/checks/" + stage + (attachments ? "/attachments" : ""), body,
+    fileCount: attachments?.length || 0};
+}
 async function execute(target) {
   if (!application || busy || tenantSaving || (target === "output" && !canProceed(inputResult))) return;
   // Settings changed in the checks panel are saved before the check, so a check always runs what the panel shows.
@@ -2329,12 +2386,10 @@ async function execute(target) {
   try {
     const actualFileCounts = {input: 0, output: 0};
     const assess = async stage => {
-      const attachments_b64 = await selectedAttachmentBytes(stage);
-      actualFileCounts[stage] = attachments_b64?.length || 0;
-      const request = {application_id: app, policy_version: policy,
-        content: $(stage + "-content").value, content_format: $(stage + "-format").value};
-      if (attachments_b64) request.attachments_b64 = attachments_b64;
-      return api("/v1/checks/" + stage + (attachments_b64 ? "/attachments" : ""), request, token);
+      const request = await buildCheckRequest(stage);
+      if (attempt !== revision) return null;
+      actualFileCounts[stage] = request.fileCount;
+      return api(request.path, request.body, token);
     };
     if (target !== "output") {
       const checked = await assess("input");
@@ -2475,6 +2530,251 @@ $("billing-verify").addEventListener("click", async () => {
       $("account-status").textContent = "Subscription verification unavailable. Paid access remains unchanged.";
   } finally { button.disabled = false; }
 });
+
+// Inspection is presentation only. The original receipt and release checks above
+// remain authoritative; neither a displayed HTTP 200 nor copied JSON is a pass.
+function currentInspectionOwner(token = key) {
+  const ownerApplication = application, ownerId = application?.application_id;
+  const tenantId = application?.tenant?.tenant_id;
+  const ownerSession = sessionStorage.getItem("guardoath-session");
+  // Keep credentials in this private authorization closure, never in inspectable
+  // records, generated examples, DOM attributes, or persistent storage.
+  return () => key === token && application === ownerApplication
+    && application?.application_id === ownerId && application?.tenant?.tenant_id === tenantId
+    && sessionStorage.getItem("guardoath-session") === ownerSession
+    && (!token.startsWith(SESSION) || token.slice(SESSION.length) === ownerSession);
+}
+function clearInspectionDisplay(message = "No response yet.") {
+  if (!$("api-inspector")) return;
+  $("api-copy-request").disabled = $("api-copy-code").disabled = true;
+  $("api-inspection-state").textContent = "Connect or run a current request to inspect its response.";
+  $("api-request-json").textContent = "No executable request is available.";
+  $("api-response-json").textContent = message;
+  $("api-http-status").textContent = "Not sent";
+  $("api-browser-latency").textContent = $("api-engine-latency").textContent = "—";
+  $("api-code-example").textContent = "Connect and supply a valid request to generate an example.";
+  $("api-copy-status").textContent = "";
+}
+function discardStaleInspection() {
+  let discarded = false;
+  for (const stage of ["input", "output"]) {
+    if (apiInspection[stage] && !apiInspection[stage].isCurrent()) {
+      apiInspection[stage] = null; discarded = true;
+    }
+  }
+  if (apiPreview && !apiPreview.isCurrent()) { apiPreview = null; discarded = true; }
+  if (discarded && !apiPreview) clearInspectionDisplay("The connection changed. The previous response was discarded.");
+}
+function inspectionText(value, requestToken = "") {
+  const original = String(value ?? "");
+  const credentials = [requestToken, key, sessionStorage.getItem("guardoath-session"),
+    $("api-key").value, $("demo-key-value").value, $("key-new").value];
+  const tokens = [...new Set(credentials.flatMap(value =>
+    typeof value === "string" && value ? [value, value.startsWith(SESSION) ? value.slice(SESSION.length) : value] : []))]
+    .sort((a, b) => b.length - a.length);
+  const mask = text => {
+    for (const token of tokens) if (token)
+      text = text.split(token).join("[AUTHENTICATION_VALUE_REDACTED]");
+    return text;
+  };
+  const text = mask(original);
+  // JSON Unicode escapes can hide a credential from a raw-string comparison.
+  // Mask decoded string values and canonical keys before storing or displaying.
+  try {
+    let changed = text !== original;
+    const parsed = JSON.parse(text, (_name, value) => {
+      if (typeof value !== "string") return value;
+      const safe = mask(value);
+      if (safe !== value) changed = true;
+      return safe;
+    });
+    const canonical = JSON.stringify(parsed), safe = mask(canonical);
+    return changed || safe !== canonical ? safe : text;
+  } catch (_) { return text; }
+}
+function prettyInspection(text) {
+  try { return JSON.stringify(JSON.parse(text), null, 2); } catch (_) { return text; }
+}
+function shellLiteral(text) { return "'" + text.replaceAll("'", "'\\''") + "'"; }
+function integrationExample(language, preview) {
+  if (!preview) return "Connect to generate an example.";
+  const body = inspectionText(preview.bodyText), url = location.origin + preview.path;
+  if (language === "python") return [
+    "import hashlib", "import os", "import urllib.request", "",
+    "class NoRedirect(urllib.request.HTTPRedirectHandler):",
+    "    def redirect_request(self, req, fp, code, msg, headers, newurl):",
+    "        return None", "",
+    "body = " + JSON.stringify(body) + '.encode("utf-8")',
+    "request = urllib.request.Request(",
+    "    " + JSON.stringify(url) + ", data=body, method=\"POST\",",
+    "    headers={",
+    '        "X-GuardOath-Key": os.environ["GUARDOATH_API_KEY"],',
+    '        "Content-Type": "application/json",',
+    '        "x-amz-content-sha256": hashlib.sha256(body).hexdigest(),',
+    "    },", ")",
+    "opener = urllib.request.build_opener(NoRedirect())",
+    "with opener.open(request, timeout=30) as response:",
+    "    print(response.status)", '    print(response.read().decode("utf-8"))'
+  ].join("\n");
+  if (language === "node") return [
+    'import { createHash } from "node:crypto";', "",
+    'if (!process.env.GUARDOATH_API_KEY) throw new Error("Set GUARDOATH_API_KEY");',
+    "const body = " + JSON.stringify(body) + ";",
+    "const response = await fetch(" + JSON.stringify(url) + ", {",
+    '  method: "POST",', '  redirect: "error",', "  headers: {",
+    '    "X-GuardOath-Key": process.env.GUARDOATH_API_KEY,',
+    '    "Content-Type": "application/json",',
+    '    "x-amz-content-sha256": createHash("sha256").update(body, "utf8").digest("hex"),',
+    "  },", "  body,", "});",
+    "console.log(response.status);", "console.log(await response.text());"
+  ].join("\n");
+  return [
+    "# POSIX shell with sha256sum. Set GUARDOATH_API_KEY in your environment.",
+    "GUARDOATH_REQUEST_BODY=" + shellLiteral(body),
+    'GUARDOATH_BODY_SHA256="$(printf \'%s\' "$GUARDOATH_REQUEST_BODY" | sha256sum | cut -d \' \' -f1)"',
+    "curl --request POST " + shellLiteral(url) + " \\",
+    '  --header "X-GuardOath-Key: ' + '$' + '{GUARDOATH_API_KEY:?Set GUARDOATH_API_KEY}" \\',
+    '  --header "Content-Type: application/json" \\',
+    '  --header "x-amz-content-sha256: $GUARDOATH_BODY_SHA256" \\',
+    '  --data-binary "$GUARDOATH_REQUEST_BODY"'
+  ].join("\n");
+}
+function renderApiInspection(preview) {
+  if (!preview.isCurrent()) { discardStaleInspection(); return; }
+  apiPreview = preview;
+  const body = inspectionText(preview.bodyText);
+  const redacted = preview.redacted || body !== preview.bodyText;
+  $("api-endpoint").textContent = preview.path;
+  $("api-request-json").textContent = prettyInspection(body);
+  $("api-response-json").textContent = preview.responseText === null
+    ? (preview.error || "No response yet.") : prettyInspection(inspectionText(preview.responseText));
+  $("api-http-status").textContent = preview.sent
+    ? (preview.status === null ? "No response" : String(preview.status)) : "Not sent";
+  $("api-browser-latency").textContent = Number.isFinite(preview.elapsed)
+    ? preview.elapsed.toFixed(1) + " ms" : "—";
+  $("api-engine-latency").textContent = Number.isFinite(preview.engine)
+    ? preview.engine.toFixed(1) + " ms" : "—";
+  $("api-inspection-state").textContent = (preview.sent
+    ? "Actual " + stageNames[preview.stage] + " request. HTTP success alone does not establish a validation pass."
+    : "Request preview — not sent. Running a check uses this same request builder.") +
+    (redacted ? " Authentication values were masked: displayed or copied JSON and examples differ from the original body." : "");
+  $("api-code-example").textContent = integrationExample($("api-code-language").value, preview);
+  $("api-copy-request").disabled = $("api-copy-code").disabled = false;
+}
+function recordApiInspection(stage, path, bodyText, status, raw, elapsed, token, error, isCurrent) {
+  if (!isCurrent()) { discardStaleInspection(); return; }
+  let engine = null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (Number.isFinite(parsed?.total_latency_ms) && parsed.total_latency_ms >= 0) engine = parsed.total_latency_ms;
+  } catch (_) { /* HTTP errors and non-JSON responses remain inspectable. */ }
+  const safeBody = inspectionText(bodyText, token);
+  const record = {stage, path, bodyText: safeBody, redacted: safeBody !== bodyText, status, isCurrent,
+    responseText: raw === null ? null : inspectionText(raw, token),
+    elapsed, engine, error, sent: true};
+  apiInspection[stage] = record;
+  $("inspector-stage").value = stage;
+  inspectorSequence++;
+  renderApiInspection(record);
+}
+async function refreshRequestInspector() {
+  const sequence = ++inspectorSequence, stage = $("inspector-stage").value;
+  discardStaleInspection();
+  $("api-copy-status").textContent = "";
+  if (application && apiInspection[stage]) { renderApiInspection(apiInspection[stage]); return; }
+  apiPreview = null;
+  clearInspectionDisplay();
+  $("api-copy-request").disabled = $("api-copy-code").disabled = true;
+  const isCurrent = currentInspectionOwner();
+  try {
+    if (!isCurrent()) throw new Error("Sign in or reconnect before inspecting this request.");
+    const request = await buildCheckRequest(stage);
+    if (sequence !== inspectorSequence || !isCurrent()) { discardStaleInspection(); return; }
+    const bodyText = JSON.stringify(request.body), safeBody = inspectionText(bodyText);
+    renderApiInspection({stage, path: request.path, bodyText: safeBody, redacted: safeBody !== bodyText, isCurrent,
+      status: null, responseText: null, elapsed: null, engine: null, error: "", sent: false});
+  } catch (error) {
+    if (sequence !== inspectorSequence) return;
+    $("api-endpoint").textContent = "/v1/checks/" + stage;
+    $("api-inspection-state").textContent = error.message || "Request unavailable.";
+    $("api-request-json").textContent = "No executable request is available.";
+    $("api-response-json").textContent = "No response yet.";
+    $("api-http-status").textContent = "Not sent";
+    $("api-browser-latency").textContent = $("api-engine-latency").textContent = "—";
+    $("api-code-example").textContent = "Connect and supply a valid request to generate an example.";
+  }
+}
+function refreshWorkbench() {
+  if (!$("api-inspector")) return;
+  const changes = pendingChanges(), pending = Object.keys(changes).length > 0;
+  $("workbench-pending").hidden = !pending;
+  $("workbench-pending-detail").textContent = pending
+    ? "Running a check first saves all pending Input and Output changes on this tenant, including hidden settings." : "";
+  $("run-input").textContent = pending ? "Save changes and run input checks →" : "Run input checks →";
+  $("run-output").textContent = pending ? "Save changes and run both stages →" : "Run output checks →";
+  $("run").textContent = pending ? "Save changes and run both stages →" : "Run input and output checks →";
+  $("context-application").textContent = application?.application_id || "Not connected";
+  $("context-policy").textContent = application
+    ? $("policy").value + (Number.isInteger(application.tenant?.revision) ? " · loaded revision " + application.tenant.revision : "")
+    : "Connect to load";
+  $("context-auth").textContent = !key ? "No credentials" : key.startsWith(SESSION)
+    ? "Customer session" : application?.tenant?.demo ? "Demo API key" : "Application API key";
+  $("demo-key-reveal").disabled = $("demo-key-copy").disabled = !$("demo-key-value").value;
+  refreshRequestInspector();
+}
+async function copyInspection(kind) {
+  if (!apiPreview) return;
+  if (!apiPreview.isCurrent()) {
+    discardStaleInspection();
+    $("api-copy-status").textContent = "The connection changed. No previous request or example was copied.";
+    return;
+  }
+  const text = kind === "request" ? inspectionText(apiPreview.bodyText)
+    : integrationExample($("api-code-language").value, apiPreview);
+  try {
+    await navigator.clipboard.writeText(text);
+    $("api-copy-status").textContent = kind === "request"
+      ? "Request JSON copied. Authentication values are not included." : "Example copied with an environment-variable key placeholder.";
+  } catch (_) { $("api-copy-status").textContent = "Clipboard access is unavailable. Select the displayed text to copy it."; }
+}
+for (const link of document.querySelectorAll(".workbench-nav a")) {
+  link.addEventListener("click", () => {
+    document.querySelectorAll(".workbench-nav a").forEach(item => item.removeAttribute("aria-current"));
+    link.setAttribute("aria-current", "location");
+    const section = document.querySelector(link.getAttribute("href"));
+    if (section) {
+      section.setAttribute("tabindex", "-1");
+      section.focus({preventScroll: true});
+    }
+  });
+}
+for (const id of ["input-content", "output-content", "input-format", "output-format",
+  "input-attachments", "output-attachments"]) {
+  $(id).addEventListener("input", refreshRequestInspector);
+  $(id).addEventListener("change", refreshRequestInspector);
+}
+$("request-context").addEventListener("input", () => { reset(); refreshRequestInspector(); });
+$("inspector-stage").addEventListener("change", refreshRequestInspector);
+$("api-code-language").addEventListener("change", () => {
+  if (apiPreview && !apiPreview.isCurrent()) { discardStaleInspection(); return; }
+  $("api-code-example").textContent = integrationExample($("api-code-language").value, apiPreview);
+});
+$("api-copy-request").addEventListener("click", () => copyInspection("request"));
+$("api-copy-code").addEventListener("click", () => copyInspection("code"));
+$("demo-key-reveal").addEventListener("click", () => {
+  const revealed = $("demo-key-value").type === "password";
+  $("demo-key-value").type = revealed ? "text" : "password";
+  $("demo-key-reveal").textContent = revealed ? "Hide demo key" : "Show demo key";
+  $("demo-key-reveal").setAttribute("aria-pressed", String(revealed));
+});
+$("demo-key-copy").addEventListener("click", async () => {
+  if (!$("demo-key-value").value) return;
+  try {
+    await navigator.clipboard.writeText($("demo-key-value").value);
+    $("demo-key-message").textContent = "Demo key copied by your explicit request. Integration examples still use a placeholder.";
+  } catch (_) { $("demo-key-message").textContent = "Clipboard access is unavailable. Select Show demo key to copy it manually."; }
+});
+refreshWorkbench();
 
 // The bootstrap exposes controls only after this entire module initialized.
 window.guardoathDashboardInitialized = true;

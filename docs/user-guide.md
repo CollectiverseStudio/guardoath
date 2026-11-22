@@ -9,6 +9,54 @@ case does not mean its content is safe: the expected outcome can be a finding or
 an incomplete evaluation. Internal API/engine tests verify the machinery; they
 are not additional content detectors.
 
+## Start with the hosted API test console
+
+Open [the API test console](https://guardoath.com/dashboard). Its primary task is
+to send a real customer API request and show what happened. Connect to your
+application or a public shared demo, enter a message and run Input checks.
+Inspect the endpoint, request JSON, actual HTTP status, elapsed request
+time and structured response. Server-reported checker time is shown separately
+from the full request duration. Generated cURL, Python and Node examples use an
+API-key placeholder and hash the same serialized body they send.
+The inspector masks any current credential found in displayed content. When
+masking changes a request preview, a notice explains that the copied example
+contains replacement text rather than the original credential-bearing bytes.
+
+The available calls are `POST /v1/checks/input` and
+`POST /v1/checks/output`, plus their attachment variants. Both require a
+credential-bound `application_id` and supplied `content`; optional fields and
+their real restrictions are documented in [the API contract](api-contract.md).
+On guardoath.com, use `X-GuardOath-Key`, `Content-Type: application/json` and
+`x-amz-content-sha256` for JSON POST bodies. HTTP 200 means a check produced a
+result; it does not mean the content was allowed. Inspect the decision,
+evaluation status, findings and any verified redaction before using content.
+
+The console separates testing from **Policy**, **Agent diagnostics**,
+**API access** and **Help**. Saved tenant policy decides which checks run.
+Pending policy edits and any save-before-run behavior must be visible before a
+test; a sample chooses content, not an alternate tenant policy. Examples and
+uploaded files use the same API and Engine as customer integrations.
+
+Your application still makes its own model or agent call between the current
+Input and Output endpoints. You supply the proposed output in the console.
+The endpoints do not accept model/provider/agent selectors, invoke an AI, bind
+an input/output pair, or retain a durable interaction timeline. The intended
+provider-neutral `/v1/interactions` gateway and source-of-record requirements
+are documented in [the AI/agent contract](ai-agent-activity-system-of-record.md),
+but are not hosted capabilities yet. Agent report comparison remains an
+unverified diagnostic and never grants execution authority.
+The [provider adapter design](provider-adapter-design.md) explains the proposed
+AWS Bedrock/Boto3, OpenAI, Microsoft and Anthropic connections and the distinct
+requirements for hosted agents. Those proposed fields are not current API
+parameters.
+
+Customer registration supports the configured Cognito email/password flow;
+Google is optional. A verified active subscription is required for paid
+validation and customer API-key issuance. The demo has shared settings and a
+shared allowance; use synthetic examples. Customer keys and sign-in sessions
+must never be inserted into generated integration examples or retained as check
+history.
+
 ## Start here on your Windows computer
 
 In your `guardoath-latest` folder:
@@ -58,25 +106,28 @@ The normal demo selects **Conversation — combined general text checks** for yo
 You do not need to choose a policy before entering a question.
 
 1. **Input data:** enter the user's message.
-2. **Input test:** select **Run input checks**. The message runs through all three
-   implemented general text checkers: supported sensitive identifiers, secrets
-   (including quoted assignments, encoded scanning and example confidential
-   terms), and bounded text-security signals.
+2. **Input test:** select **Run input checks**. The message runs through the
+   enabled Input checks in the saved application policy. Inspect the returned
+   checker IDs and coverage; selecting an example does not select the sole check.
 3. **Output (AI) data:** once input passes, your real application would call its
    AI model. In this local demo, paste the proposed answer or use a sample;
    GuardOath does not generate an answer or call Tokatlas here.
 4. **Output test:** select **Run output checks**. The proposed answer runs through
-   those same three checkers. A preview appears only after the sequence completes
-   without findings, required-check failures or simulation.
+   the saved Output checks. The answer preview follows the returned actions and
+   verified receipt; the Input and Output policies may differ.
 
-Input findings hold the sequence **even in observe mode**. Correct the message
-and rerun input. Editing the input or profile invalidates both stages; editing
-only the proposed answer preserves the completed input test and clears output.
-Failed, incomplete, simulated or skipped input checks cannot unlock output.
-The prepared-example shortcut runs the same sequence, stopping before the output
-API request if input is held. This conservative demo gate is distinct from the
-API's observe-mode `effective_action: allow`: integrating applications remain
-responsible for enforcing their decisions and ordering model calls.
+The returned decision controls the sequence. Allow and Flag can proceed; Flag
+retains findings for review. Redact proceeds only with the verified cleaned text
+and complete matching recheck evidence. A Block in either the recommended or
+effective decision holds the sequence, including an observed Block. Malformed
+or simulated receipts are never a pass. A valid incomplete non-privacy result
+follows the saved failure action; mandatory privacy, secret and attachment
+inspection failures retain their stronger fail-closed behavior.
+Editing the input or profile invalidates both stages; editing only the proposed
+answer preserves the completed input result and clears output. The prepared
+example uses the same sequence and cannot bypass the input gate. Integrating
+applications remain responsible for enforcing decisions and ordering model calls:
+the standalone Output API does not itself require an earlier Input receipt.
 
 A **policy** is the application's saved bundle of checks, thresholds and actions.
 It remains part of each API request so different applications can have different

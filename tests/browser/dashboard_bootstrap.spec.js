@@ -72,6 +72,7 @@ test("serial startup recovers a throttled editor and initializes controls after 
   await connectDemo(page);
   await page.locator("#tenant-tab-output").click();
   await expect(page.locator("#tenant-panel")).toHaveAttribute("data-stage-focus", "output");
+  await page.locator("#guided-test-options > summary").click();
   await page.locator("#wizard-start").click();
   await expect(page.locator("#wizard-status")).toHaveText("Step 1 of 4");
   await page.locator("#wizard-next").click();

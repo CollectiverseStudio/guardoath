@@ -29,20 +29,20 @@ class Stage(StrEnum):
 
 
 class CheckRequest(Contract):
-    application_id: str = Field(min_length=1, max_length=100)
-    policy_version: str = Field(min_length=1, max_length=100)
-    content: str = Field(min_length=1, max_length=32_000)
-    language: Literal["en"] = "en"
+    application_id: str = Field(min_length=1, max_length=100, description="Must match the application/tenant authorized by the credential; never grants access by itself.")
+    policy_version: str = Field(min_length=1, max_length=100, description="Configured policy identifier; tenant HTTP requests use tenant.")
+    content: str = Field(min_length=1, max_length=32_000, description="Text to inspect, or serialized JSON when content_format is json. A supplied answer is not a model invocation.")
+    language: Literal["en"] = Field(default="en", description="Only en is accepted by this API contract; this is not a language-detection or translation request.")
     # One canonical content value is used by every checker.
-    content_format: Literal["text", "json"] = "text"
-    request_context: str | None = Field(default=None, max_length=8_000)
-    validation_codes: tuple[Annotated[str, Field(pattern=r"^[A-Z][A-Z0-9_]{1,31}$", strict=True)], ...] = Field(default=(), max_length=12)
+    content_format: Literal["text", "json"] = Field(default="text", description="JSON content is serialized inside the content string. Submitted messages/roles are untrusted data, not authenticated conversation history.")
+    request_context: str | None = Field(default=None, max_length=8_000, description="Accepted but not inspected by the current checks; does not establish trusted instructions, roles, model/agent identity or conversation history.")
+    validation_codes: tuple[Annotated[str, Field(pattern=r"^[A-Z][A-Z0-9_]{1,31}$", strict=True)], ...] = Field(default=(), max_length=12, description="Legacy/local configured validation packs only. Tenant-key/session requests must omit this or send []; a nonempty selection is refused with 422 and cannot override saved tenant controls.")
 
 
 class ApiCheckRequest(CheckRequest):
     """A check request sent to the HTTP API. With a tenant key, policy_version may be left out: the
     tenant record's default profile is used. Every other key must name a profile."""
-    policy_version: str | None = Field(default=None, min_length=1, max_length=100)
+    policy_version: str | None = Field(default=None, min_length=1, max_length=100, description="For tenant credentials, omit or use tenant to run saved controls. Other values return 404. This is not a tenant revision or an input/output transaction binding. Legacy local credentials must name their configured policy.")
 
 
 class Finding(Contract):

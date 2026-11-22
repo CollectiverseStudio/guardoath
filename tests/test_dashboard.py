@@ -11,7 +11,7 @@ def test_dashboard_and_local_assets_load():
     client = TestClient(create_app(credentials={"test-key": "demo"}))
     response = client.get("/dashboard")
     assert response.status_code == 200
-    assert "Check playground" in response.text
+    assert "API test console" in response.text
     assert "default-src 'self'" in response.headers["content-security-policy"]
     assert response.headers["cache-control"] == "no-store"
     for asset in ["dashboard.css", "dashboard.js"]:
@@ -153,19 +153,39 @@ def test_dashboard_shows_the_logo_motto_and_product_message():
     logo = client.get("/assets/guardoath-shield.png")
     assert logo.status_code == 200 and logo.headers["content-type"] == "image/png"
     assert logo.content.startswith(b"\x89PNG\r\n\x1a\n")
-    # The video sits right after the hero, ahead of the playground.
-    assert page.index('id="hero-title"') < page.index('id="demo-video"') < page.index('id="connect-title"')
+    # The working API precedes secondary education and video content.
+    assert page.index('id="connect-title"') < page.index('id="api-test"')
+    assert page.index('id="api-test"') < page.index('id="policy-workspace"')
+    assert page.index('id="policy-workspace"') < page.index('id="console-help"')
+    assert page.index('id="console-help"') < page.index('id="hero-title"') < page.index('id="demo-video"')
 
 
 def test_conversation_box_holds_every_step_and_advanced_is_open():
     page = TestClient(create_app(credentials={"test-key": "demo"})).get("/dashboard").text
-    start = page.index('<section class="workspace panel" aria-labelledby="conversation-title">')
-    end = page.index("</section><footer>")
+    start = page.index('<section id="api-test" class="workspace panel"')
+    end = page.index('<section id="policy-workspace"')
     box = page[start:end]
     for marker in ['id="advanced" open', 'id="input-title"', 'id="input-check-title"', 'id="output-title"',
                    'id="output-check-title"', 'id="answer-title"', 'id="policy-help"']:
         assert marker in box, marker
     assert box.count('class="panel flow-step"') == 4
+
+
+def test_api_workbench_exposes_the_real_validation_contract_and_no_fake_model_selection():
+    page = TestClient(create_app(credentials={"test-key": "demo"})).get("/dashboard").text
+    for section in ["api-test", "policy-workspace", "agent-activity-panel", "api-access", "console-help"]:
+        assert f'href="#{section}"' in page
+    for field in ["api-endpoint", "api-request-json", "api-response-json", "api-http-status",
+                  "api-browser-latency", "api-engine-latency", "api-code-language",
+                  "api-copy-request", "api-copy-code", "workbench-pending"]:
+        assert f'id="{field}"' in page
+    assert 'id="request-language" value="en" readonly' in page
+    assert 'id="request-context" rows="3" maxlength="8000"' in page
+    assert "Accepted by the API but not inspected" in page
+    assert "Model and agent execution are not connected to this API" in page
+    assert "not a durable interaction history or execution record" in page
+    assert 'id="demo-key-value" type="password"' in page
+    assert 'id="model"' not in page and 'id="provider"' not in page
 
 
 def test_tenant_panel_explains_every_action():
@@ -500,16 +520,24 @@ def test_the_guides_python_example_works_against_the_api(monkeypatch):
         def __exit__(self, *exc):
             return False
 
-    def fake_urlopen(request, timeout=None):
+    def fake_open(opener, request, timeout=None):
+        redirects = [handler for handler in opener.handlers
+                     if isinstance(handler, urllib.request.HTTPRedirectHandler)]
+        assert len(redirects) == 1
+        assert redirects[0].redirect_request(
+            request, None, 302, "Found", {}, "https://example.invalid/credential-sink"
+        ) is None
         headers = {k.lower(): v for k, v in request.header_items()}
         sent.append(headers)
         response = client.post(request.full_url.replace("https://guardoath.com", ""), content=request.data, headers=headers)
         assert response.status_code == 200, response.text
         return Reply(response.content)
 
-    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setenv("GUARDOATH_API_KEY", demo_key("demo1", secret))
+    monkeypatch.setenv("GUARDOATH_APPLICATION_ID", "demo1")
+    monkeypatch.setattr(urllib.request.OpenerDirector, "open", fake_open)
     namespace = {}
-    exec(compile(example.replace('"gok_demo1_..."', repr(demo_key("demo1", secret))), "guide-example", "exec"), namespace)
+    exec(compile(example, "guide-example", "exec"), namespace)
     exec(compile(decide, "guide-decide", "exec"), namespace)
     import hashlib
     assert sent[0]["x-amz-content-sha256"] == hashlib.sha256(json.dumps({"application_id": "demo1", "content": "Please email jane@example.com about my order."}).encode()).hexdigest()

@@ -40,6 +40,7 @@ from guardoath.record_rules import record_rules
 from guardoath.trusted_reference import reference_is_trusted
 from guardoath.sigma_site import catalog_payload as sigma_catalog_payload, evaluate_fixture as sigma_evaluate_fixture
 from guardoath.agent_activity import compare_actions, InvalidAction
+from guardoath.api_contract import AGENT_ACTIVITY_RESPONSES, ATTACHMENT_RESPONSES, install_api_contract
 from guardoath.tenant_sessions import SESSION_HEADER, CognitoSessions, SignInBusy
 
 
@@ -372,7 +373,7 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 raise HTTPException(503, "Sigma synthetic evaluation could not complete") from None
         return JSONResponse(result, headers={"Cache-Control": "no-store"})
 
-    @api.post("/v1/agent-activity/compare")
+    @api.post("/v1/agent-activity/compare", responses=AGENT_ACTIVITY_RESPONSES)
     async def compare_agent_activity(
         request: AgentActivityRequest,
         principal: Annotated[str | TenantRecord, Depends(authenticate)],
@@ -1088,7 +1089,7 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
     async def check_output(request: ApiCheckRequest, principal: Annotated[str | TenantRecord, Depends(authenticate)]):
         return await assess(request, principal, Stage.OUTPUT)
 
-    @api.post("/v1/checks/input/attachments")
+    @api.post("/v1/checks/input/attachments", responses=ATTACHMENT_RESPONSES)
     async def check_input_attachments(
         request: AttachmentCheckRequest,
         principal: Annotated[str | TenantRecord, Depends(authenticate)],
@@ -1097,7 +1098,7 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             raise HTTPException(403, "Attachments require an authenticated tenant")
         return await assess_tenant(request, principal, Stage.INPUT, request.attachment_bytes())
 
-    @api.post("/v1/checks/output/attachments")
+    @api.post("/v1/checks/output/attachments", responses=ATTACHMENT_RESPONSES)
     async def check_output_attachments(
         request: AttachmentCheckRequest,
         principal: Annotated[str | TenantRecord, Depends(authenticate)],
@@ -1106,6 +1107,7 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
             raise HTTPException(403, "Attachments require an authenticated tenant")
         return await assess_tenant(request, principal, Stage.OUTPUT, request.attachment_bytes())
 
+    install_api_contract(api)
     return api
 
 
