@@ -160,8 +160,9 @@ Create a Google OAuth 2.0 Web application and configure the Google authorized re
 `https://<SignInDomainPrefix>.auth.us-east-1.amazoncognito.com/oauth2/idpresponse`
 
 Supply its client ID and secret as secure stack parameters; do not commit or log secrets.
-Cognito must map Google's verified-email attribute, and the app client must permit the
-mapped `email` and `email_verified` attributes. The custom tenant binding remains non-writable.
+Cognito must map Google's verified-email attribute. The app client explicitly writes
+only `email` and can read `email`/`email_verified`; Cognito forbids granting app-client
+write access to verification attributes. The custom tenant binding remains non-writable.
 The Google configuration preflight is:
 
 `python -m tools.verify_google_registration --profile collectiverse-prod`

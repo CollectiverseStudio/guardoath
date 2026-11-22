@@ -42,14 +42,20 @@ def setup(tmp_path: Path):
         tag = hashlib.sha256(body).hexdigest()[:12]
         tags[name] = tag
         responses[BASE + "/assets/" + name + "?v=" + tag] = body
+    def asset_link(name, suffix=""):
+        url = "/assets/" + name + suffix
+        if name.endswith(".css"):
+            return '<link rel="stylesheet" href="' + url + '">'
+        if name == "dashboard_bootstrap.js":
+            return '<script src="' + url + '" defer></script>'
+        return '<script type="application/guardoath-script" data-src="' + url + '"></script>'
+
     template = "<!doctype html><title>GuardOath</title>" + "".join(
-        '<script src="/assets/' + name + '"></script>'
-        for name in sorted(REQUIRED)
+        asset_link(name) for name in sorted(REQUIRED)
     )
     (tmp_path / "dashboard.html").write_text(template, encoding="utf-8")
     html = "<!doctype html><title>GuardOath</title>" + "".join(
-        '<script src="/assets/' + name + "?v=" + tags[name] + '"></script>'
-        for name in sorted(REQUIRED)
+        asset_link(name, "?v=" + tags[name]) for name in sorted(REQUIRED)
     )
     responses[BASE + "/dashboard"] = html.encode()
     return responses, tags
@@ -124,6 +130,18 @@ def test_dashboard_missing_new_editor_never_passes(tmp_path):
     result = verify(BASE, tmp_path, opener(responses))
     assert result["dashboard_ui_matches_local_source"] is False
     assert "missing_dashboard_assets:conversion_editor.js" in result["issues"][0]
+
+
+def test_missing_bootstrap_never_certifies_dashboard_even_with_all_dependency_bytes(tmp_path):
+    responses, tags = setup(tmp_path)
+    assert "dashboard_bootstrap.js" in REQUIRED
+    responses[BASE + "/dashboard"] = responses[BASE + "/dashboard"].replace(
+        ('<script src="/assets/dashboard_bootstrap.js?v=' + tags["dashboard_bootstrap.js"]
+         + '" defer></script>').encode(), b"")
+    report = verify(BASE, tmp_path, opener(responses))
+    assert not report["dashboard_ui_matches_local_source"]
+    assert "missing_dashboard_assets:dashboard_bootstrap.js" in report["issues"]
+    assert report["mutated_records"] == 0
 
 
 def test_missing_tenant_stage_tabs_never_certifies_production_dashboard(tmp_path):

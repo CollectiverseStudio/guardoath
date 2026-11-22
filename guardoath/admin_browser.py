@@ -137,10 +137,13 @@ class BoundExchange:
 
 def create_browser_router(config: BrowserAuthConfig, exchange: BoundExchange,
                           verify_owner: Callable[[str], VerifiedAdmin | None],
-                          native_auth: CognitoNativeMfa | None = None) -> APIRouter:
+                          native_auth: CognitoNativeMfa | None = None,
+                          native_enrollment=None) -> APIRouter:
     """Add the public shell/config and a fail-closed owner-only code exchange."""
     if exchange.config != config or not callable(verify_owner):
         raise ValueError("Browser auth services must match")
+    if native_enrollment is not None and native_auth is None:
+        raise ValueError("Owner enrollment requires the existing native MFA login")
     router = APIRouter()
 
     @router.get("/admin/login", include_in_schema=False)
@@ -160,7 +163,8 @@ def create_browser_router(config: BrowserAuthConfig, exchange: BoundExchange,
     def public_config():
         return JSONResponse({"domain": config.domain, "client_id": config.client_id,
                              "redirect_uri": config.redirect_uri,
-                             "native_mfa_enabled": native_auth is not None},
+                             "native_mfa_enabled": native_auth is not None,
+                             "native_enrollment_enabled": native_enrollment is not None},
                             headers={"Cache-Control": "no-store"})
 
     @router.post("/v1/admin/auth/exchange")
@@ -227,6 +231,9 @@ def create_browser_router(config: BrowserAuthConfig, exchange: BoundExchange,
                                          "Referrer-Policy": "no-referrer",
                                          "X-Content-Type-Options": "nosniff"})
 
+    if native_enrollment is not None:
+        from guardoath.admin_enrollment_browser import create_enrollment_router
+        router.include_router(create_enrollment_router(native_enrollment))
     return router
 
 
@@ -247,7 +254,19 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <button id="native-start" type="button">Continue to authenticator</button>
 <div id="native-challenge" hidden><label for="native-code">Authenticator code</label>
 <input id="native-code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code">
-<button id="native-finish" type="button">Verify administrator</button></div></div>
+<button id="native-finish" type="button">Verify administrator</button></div>
+<div id="enrollment-entry" hidden><p>First administrator sign-in? An approved owner with no existing authenticator can set one up here.</p>
+<button id="enrollment-start" class="secondary" type="button">Set up first authenticator</button></div>
+<p id="enrollment-unavailable" class="muted" hidden>First authenticator setup is unavailable. Ask the operator to authorize first-time setup for your account. Existing authenticator sign-in is still available.</p>
+<section id="enrollment-setup" hidden aria-labelledby="enrollment-title"><h3 id="enrollment-title">Set up your authenticator</h3>
+<p>Add a time-based code in your authenticator app for GuardOath. Copy the setup key into the app, then enter its six-digit code below. Keep the key private.</p>
+<label for="enrollment-key">Setup key</label><input id="enrollment-key" type="password" readonly autocomplete="off" spellcheck="false" aria-describedby="enrollment-help">
+<button id="enrollment-copy" class="secondary" type="button" disabled>Copy setup key</button>
+<p id="enrollment-help" class="muted">Setup expires after three minutes. This is for an approved owner's first authenticator. A lost or previously disabled authenticator needs operator recovery.</p>
+<label for="enrollment-code">Code from your new authenticator</label><input id="enrollment-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6">
+<button id="enrollment-finish" type="button" disabled>Save authenticator</button>
+<button id="enrollment-cancel" class="secondary" type="button">Cancel setup</button>
+<p id="enrollment-message" role="status" aria-live="polite"></p></section></div>
 <p id="login-message" role="status"></p></section>
 <div id="app" hidden class="admin-layout"><aside class="sidebar"><p class="sidebar-heading">Manage GuardOath</p><nav id="admin-navigation" aria-label="Administration sections">
 <button type="button" class="section-link" id="nav-overview" data-section="overview" aria-controls="section-overview" aria-current="page"><span class="nav-index" aria-hidden="true">01</span>Overview</button>
@@ -300,6 +319,10 @@ _JS = r'''"use strict";
   let token = null;
   let config = null;
   let nativeTicket = null;
+  let enrollmentTicket = null;
+  let enrollmentEpoch = 0;
+  let enrollmentTimer = null;
+  let enrollmentVerifying = false;
   let nextCursor = null;
   let nextUserCursor = null;
   let previewSelection = null;
@@ -403,6 +426,7 @@ _JS = r'''"use strict";
     el("native-password").value = "";
     el("native-code").value = "";
     el("native-challenge").hidden = true;
+    void cancelEnrollment(false);
     clearAdminData();
     setLoggedIn(false);
     say("login-message", message);
@@ -1388,6 +1412,10 @@ _JS = r'''"use strict";
     } catch(err) { if (token && epoch === authEpoch) say("tenant-status", err.message); }
   }
   async function beginLogin() {
+    if (enrollmentVerifying) return;
+    const epoch = ++authEpoch;
+    await cancelEnrollment(false);
+    if (epoch !== authEpoch) return;
     try {
       config = await request("/v1/admin/auth/config");
       if (!crypto?.subtle || !crypto.getRandomValues) throw new Error("Secure browser context required");
@@ -1416,29 +1444,36 @@ _JS = r'''"use strict";
     const result = await request("/v1/admin/auth/exchange",{method:"POST",body:JSON.stringify({code:params.get("code"),code_verifier:pending.verifier})});
     if (typeof result.access_token !== "string" || !result.access_token) throw new Error("Administrator sign-in rejected");
     authEpoch += 1;
+    clearEnrollment();
     token = result.access_token;
     clearAdminData();
     setLoggedIn(true);
     try { await load(); } catch(err) { say("status", err.message); }
   }
   async function beginNative() {
+    if (enrollmentVerifying) return;
     const email = el("native-email").value.trim();
     const password = el("native-password").value;
     el("native-password").value = "";
+    const epoch = ++authEpoch;
+    await cancelEnrollment(false);
+    if (epoch !== authEpoch) return;
     nativeTicket = null;
     el("native-challenge").hidden = true;
     try {
       const challenge = await request("/v1/admin/auth/native/start", {
         method:"POST",body:JSON.stringify({email,password})
       });
+      if (epoch !== authEpoch) return;
       if (challenge.challenge !== "software_token_mfa" ||
           typeof challenge.challenge_ticket !== "string") throw new Error("Administrator sign-in rejected");
       nativeTicket = challenge.challenge_ticket;
       el("native-challenge").hidden = false;
       say("login-message", "Enter the code from your authenticator app");
-    } catch(err) {say("login-message", err.message);}
+    } catch(err) {if (epoch === authEpoch) say("login-message", err.message);}
   }
   async function finishNative() {
+    const epoch = authEpoch;
     const ticket = nativeTicket;
     nativeTicket = null;
     const otp = el("native-code").value;
@@ -1449,19 +1484,156 @@ _JS = r'''"use strict";
       const result = await request("/v1/admin/auth/native/finish", {
         method:"POST",body:JSON.stringify({ticket,otp})
       });
+      if (epoch !== authEpoch) return;
       if (typeof result.access_token !== "string" || !result.access_token)
         throw new Error("Administrator sign-in rejected");
       authEpoch += 1;
+      clearEnrollment();
       token = result.access_token;
       el("native-email").value = "";
       clearAdminData();
       setLoggedIn(true);
       await load();
-    } catch(err) {say(token ? "status" : "login-message", err.message);}
+    } catch(err) {if (epoch === authEpoch || token) say(token ? "status" : "login-message", err.message);}
+  }
+  async function enrollmentRequest(action, payload) {
+    const response = await fetch("/v1/admin/auth/enrollment/" + action, {
+      method:"POST", headers:{"Accept":"application/json", "Content-Type":"application/json"},
+      body:JSON.stringify(payload), cache:"no-store", credentials:"omit"
+    });
+    let value; try {value = await response.json();} catch {value = null;}
+    if (!response.ok) {
+      const retryCode = response.status === 400 && value?.code === "code_mismatch";
+      const message = retryCode ? "That code was not accepted. Use the current code from your app, or cancel setup." :
+        response.status === 401 || response.status === 403 ? "Setup was not authorized. Check your owner account and password, or sign in if you already have an authenticator." :
+        "Setup could not be confirmed. Try administrator sign-in; if setup is incomplete, contact the operator before trying setup again.";
+      const error = new Error(message); error.retryCode = retryCode; throw error;
+    }
+    return value;
+  }
+  function clearEnrollment() {
+    const ticket = enrollmentTicket;
+    enrollmentTicket = null;
+    enrollmentEpoch += 1;
+    enrollmentVerifying = false;
+    clearTimeout(enrollmentTimer); enrollmentTimer = null;
+    el("enrollment-key").value = "";
+    el("enrollment-code").value = "";
+    el("native-password").value = "";
+    el("enrollment-setup").hidden = true;
+    el("enrollment-copy").disabled = true;
+    el("enrollment-finish").disabled = true;
+    el("enrollment-cancel").disabled = false;
+    for (const id of ["enrollment-start", "native-start", "login-start"]) el(id).disabled = false;
+    say("enrollment-message", "");
+    return ticket;
+  }
+  async function cancelEnrollment(announce = true) {
+    const wasVerifying = enrollmentVerifying;
+    const wasStarting = !el("enrollment-setup").hidden && !enrollmentTicket && !wasVerifying;
+    const ticket = clearEnrollment();
+    const epoch = enrollmentEpoch;
+    if (announce) say("login-message", wasStarting ? "Setup cleared from this tab. Wait for the pending setup to finish or expire before starting again." :
+      "Setup cleared from this tab. Sign in with your existing authenticator, or start first-time setup again.");
+    if (ticket && !wasVerifying) {
+      try {await enrollmentRequest("cancel", {ticket});}
+      catch {if (announce && epoch === enrollmentEpoch) say("login-message", "Setup cleared from this tab. Cancellation could not be confirmed; wait for setup to expire before starting again.");}
+    }
+  }
+  async function beginEnrollment() {
+    if (enrollmentVerifying || !config?.native_enrollment_enabled) return;
+    const email = el("native-email").value.trim();
+    const password = el("native-password").value;
+    const auth = ++authEpoch;
+    await cancelEnrollment(false);
+    if (auth !== authEpoch) return;
+    nativeTicket = null;
+    el("native-code").value = "";
+    el("native-challenge").hidden = true;
+    const epoch = enrollmentEpoch;
+    el("enrollment-setup").hidden = false;
+    for (const id of ["enrollment-start", "native-start", "login-start"]) el(id).disabled = true;
+    say("enrollment-message", "Checking your approved owner account…");
+    say("login-message", "");
+    try {
+      const result = await enrollmentRequest("start", {email,password});
+      if (epoch !== enrollmentEpoch) {
+        if (typeof result?.enrollment_ticket === "string")
+          void enrollmentRequest("cancel", {ticket:result.enrollment_ticket}).catch(() => {});
+        return;
+      }
+      if (!/^[A-Z2-7]{16,128}$/.test(result?.setup_key || "") ||
+          typeof result?.enrollment_ticket !== "string" || !result.enrollment_ticket.startsWith("e1.") ||
+          !Number.isInteger(result.expires_in) || result.expires_in <= 0 || result.expires_in > 180)
+        throw new Error("Setup could not be confirmed. Contact the operator before trying again.");
+      enrollmentTicket = result.enrollment_ticket;
+      el("enrollment-key").value = result.setup_key;
+      el("enrollment-copy").disabled = false;
+      el("enrollment-finish").disabled = false;
+      say("enrollment-message", "Copy the setup key to your authenticator app, then enter its current code. You are not signed in yet.");
+      enrollmentTimer = setTimeout(() => {
+        if (epoch !== enrollmentEpoch) return;
+        const wasVerifying = enrollmentVerifying;
+        clearEnrollment();
+        say("login-message", wasVerifying ? "Setup timed out while saving. Try administrator sign-in; if setup is incomplete, contact the operator." :
+          "Setup expired and the key was cleared. Enter your password to start again.");
+      }, result.expires_in * 1000);
+      el("enrollment-code").focus();
+    } catch(err) {
+      if (epoch === enrollmentEpoch) {clearEnrollment(); say("login-message", err.message);}
+    }
+  }
+  async function finishEnrollment() {
+    if (!enrollmentTicket || enrollmentVerifying) return;
+    const code = el("enrollment-code").value;
+    el("enrollment-code").value = "";
+    if (!/^[0-9]{6}$/.test(code)) {say("enrollment-message", "Enter the six-digit code from your authenticator app.");return;}
+    const ticket = enrollmentTicket, epoch = enrollmentEpoch;
+    enrollmentVerifying = true;
+    el("enrollment-finish").disabled = true;
+    el("enrollment-cancel").disabled = true;
+    el("enrollment-copy").disabled = true;
+    say("enrollment-message", "Saving your authenticator…");
+    try {
+      const result = await enrollmentRequest("finish", {ticket,code});
+      if (epoch !== enrollmentEpoch) return;
+      if (result?.status !== "completed" || result.sign_in_required !== true)
+        throw new Error("Setup could not be confirmed. Contact the operator before trying again.");
+      clearEnrollment();
+      say("login-message", "Authenticator saved. Enter your password again, choose Continue to authenticator, then sign in with a new code from your app.");
+      el("native-password").focus();
+    } catch(err) {
+      if (epoch !== enrollmentEpoch) return;
+      if (err.retryCode) {
+        enrollmentVerifying = false;
+        el("enrollment-finish").disabled = false;
+        el("enrollment-cancel").disabled = false;
+        el("enrollment-copy").disabled = false;
+        say("enrollment-message", err.message);
+      } else {clearEnrollment();say("login-message", err.message);}
+    }
+  }
+  async function copyEnrollmentKey() {
+    if (!enrollmentTicket || enrollmentVerifying) return;
+    const epoch = enrollmentEpoch;
+    try {
+      await navigator.clipboard.writeText(el("enrollment-key").value);
+      if (epoch === enrollmentEpoch) say("enrollment-message", "Setup key copied. Paste it into your authenticator app, then clear it from your clipboard.");
+    } catch {
+      if (epoch === enrollmentEpoch) say("enrollment-message", "Clipboard access was unavailable. Allow clipboard copying for this page and try Copy setup key again.");
+    }
   }
   request("/v1/admin/auth/config").then(value => {
+    config = value;
     if (value.native_mfa_enabled === true) el("native-auth").hidden = false;
+    if (value.native_mfa_enabled === true && value.native_enrollment_enabled === true) el("enrollment-entry").hidden = false;
+    if (value.native_mfa_enabled === true && value.native_enrollment_enabled !== true) el("enrollment-unavailable").hidden = false;
   }).catch(() => {});
+  el("enrollment-start").addEventListener("click", beginEnrollment);
+  el("enrollment-finish").addEventListener("click", finishEnrollment);
+  el("enrollment-cancel").addEventListener("click", () => cancelEnrollment());
+  el("enrollment-copy").addEventListener("click", copyEnrollmentKey);
+  window.addEventListener("pagehide", () => clearEnrollment());
   el("native-start").addEventListener("click", beginNative);
   for (const button of document.querySelectorAll("[data-section]")) {
     button.addEventListener("click", () => showSection(button.dataset.section, true));

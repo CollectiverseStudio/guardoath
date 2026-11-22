@@ -114,3 +114,9 @@
 }
 #checks-wizard-comparison-summary { line-height: 1.55; font-weight: 600; }
 #checks-wizard-open-comparisons { min-height: 42px; margin: 4px 0; }
+
+/* Keep all application controls unavailable until ordered startup completes. */
+.dashboard-startup{max-width:760px;margin:38px auto;padding:24px}
+.dashboard-startup h1{font-size:24px}
+#dashboard-app[hidden],#dashboard-startup[hidden]{display:none!important}
+@media(max-width:800px){.dashboard-startup{margin:24px}}

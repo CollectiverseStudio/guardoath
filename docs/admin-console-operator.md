@@ -25,12 +25,12 @@ The owner-only UI and \`GET /v1/admin/users\` page existing Cognito users throug
 ## Persistent audit infrastructure (opt-in, default disabled)
 `EnableAdminMutations=0` creates **no** additional resources. Explicitly setting it to `1` requires `EnableAdminConsole=1` and provisions a **separate** DynamoDB `AdminAuditTable` with 1 provisioned read and 1 write capacity unit, stable `event_id` partition key, deletion protection and Retain policies. CloudFormation rejects this configuration when the existing tenant table is at 25 RCUs or WCUs. This option consumes additional AWS capacity: do not enable without reviewing the stack change set, current account free allowance, cost budget and deletion/restore procedure.
 
-The conditional Lambda environment variable `GUARDOATH_ADMIN_AUDIT_TABLE` and an IAM permission limited to `dynamodb:PutItem` on the dedicated audit table activate the existing atomic tenant revision + audit transaction pathway. The runtime is not authorized to update/delete/scan audit items. No Cognito user-account mutation, refund or catalog publishing route is enabled by this infrastructure. Replaying transactions, partial provider failures and independent read-access auditing require separate acceptance before exposing more operations.
+The conditional Lambda environment variable `GUARDOATH_ADMIN_AUDIT_TABLE` and permissions limited to the dedicated audit table activate the signed audit pathways. Genuine audit receipts remain immutable and use conditional append. First-authenticator enrollment, described below, also uses explicitly separate signed **control records** in that table; those records are mutable through conditional `PutItem` with a full-document compare-and-set. The runtime does not use `UpdateItem`, `DeleteItem` or table scans for this workflow. The table alone grants no owner membership, Cognito account creation, refund or catalog publishing capability. Replaying transactions, partial provider failures and independent read-access auditing require separate acceptance before exposing more operations.
 
 ## MFA provenance and sign-in freshness
 Owner authorization requires a **signed** Cognito access-token `amr` array containing the explicit `mfa` marker, plus an integer signed `auth_time` no older than 15 minutes (30 seconds of forward clock skew). A single `otp`, `totp` or `software_token` marker is **not** proof of multi-factor sign-in. Refresh tokens retain the original `auth_time`, so a refreshed token cannot renew the original 15-minute administrative authentication window. The owner group, enabled account, subject and live token validity are independently checked on every request.
 
-**Current AWS configuration limit:** The existing `UserPoolTier=LITE` and `UserPoolDomain.ManagedLoginVersion=1` use Cognito's classic hosted UI. AWS documents that classic hosted UI does not support reliable per-login ACR/AMR MFA evidence (its values are defaults even after MFA), and managed login requires Essentials or Plus. Consequently, a properly hardened admin server may deny an otherwise enrolled owner on this tier. Do not synthesize `amr`, accept MFA enrollment as proof, or silently move the customer pool to a paid feature plan. Production activation needs a separately reviewed, compatible MFA attestation mechanism and its AWS cost/migration impact.
+**Current AWS configuration limit:** The existing `UserPoolTier=LITE` and `UserPoolDomain.ManagedLoginVersion=1` use Cognito's classic hosted UI, whose default claims are unsuitable for this strict MFA check. The separate native password + `SOFTWARE_TOKEN_MFA` API flow can receive signed MFA claims without requesting paid-tier step-up. AWS documents a gradual rollout, so a real signed access token from the actual pool must still prove the required claims before activation. Requesting a target step-up level or custom ACR configuration is separate and requires Essentials/Plus; this feature requests neither. Do not synthesize `amr`, accept enrollment as proof of sign-in, or change the customer pool's tier or hosted UI. See [AWS authentication-level documentation](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-step-up-authentication.html).
 
 ## Directory identifier privacy
 Provider usernames that are not email addresses are now displayed as stable, key-dependent opaque `user-...` labels rather than unmasked Cognito usernames or arbitrary truncated identifiers. The labels are HMAC-SHA256-derived with a dedicated domain separator and do not grant account-selection or mutation privileges. Email-like usernames continue to use masked email hints. The raw provider usernames remain server-side, and the signing secret is never returned to the browser.
@@ -273,7 +273,7 @@ python -m tools.verify_admin_activation --profile collectiverse-prod
 
 The tool reads the existing stack parameters/outputs, Lambda feature flags, and Cognito MFA/group configuration without changing any AWS resource. It prints only predetermined booleans, never account identifiers, client IDs, user data or credentials. Exit code 2 means **not authorized for activation**; the tool always reports `signed_current_login_mfa_verified=false` because static configuration cannot attest to a real recent MFA login. Even when the admin infrastructure is provisioned, this is an inventory, not proof of authenticated admin access or a substitute for 15 live checks.
 
-For a legacy stack that lacks `EnableAdminConsole`, treat a missing parameter as unavailable rather than assuming the admin application is broken. Preserve `EnableSelfRegistration=1` in any future CloudFormation preview, and verify all unrelated modifications and conditional replacements before executing it. The currently documented Cognito Lite/classic UI cannot provide trustworthy proof of current-login MFA for the strict GuardOath admin verifier. Do not fake `amr`, treat user MFA enrollment as recent authentication, or silently upgrade to a potentially billable tier.
+For a legacy stack that lacks `EnableAdminConsole`, treat a missing parameter as unavailable rather than assuming the admin application is broken. Preserve `EnableSelfRegistration=1` in any future CloudFormation preview, and verify all unrelated modifications and conditional replacements before executing it. Classic hosted UI claims remain insufficient; use the separately enabled native flow only after actual pool evidence passes the unchanged verifier. Do not fake `amr`, treat user MFA enrollment as recent authentication, or upgrade to a potentially billable tier.
 
 ## Optional Cognito Lite API software-token administrator sign-in
 
@@ -294,8 +294,9 @@ challenge ticket remains in transient browser memory (never local storage);
 it contains a Cognito challenge session and must be treated as sensitive.
 The password and OTP are cleared immediately in the browser and never
 stored in a tenant or audit record. Same-origin, limited Cognito calls and
-content-free errors apply. MFA setup must be completed through an already
-trusted enrollment flow first; this login does not enroll a factor.
+content-free errors apply. This login does not enroll a factor. An approved
+owner without an authenticator can use the separate first-time workflow
+below when independent audit storage is configured.
 
 On successful Cognito TOTP completion, the original live admin authorization
 still independently requires a **signed** access token whose `amr` includes
@@ -313,6 +314,163 @@ existing Cognito pool/customer Lambda/CloudFront resource may unexpectedly
 be replaced, no paid tier change is authorized, and all exact-source CI and
 15 live post-deployment checks remain required. The new source alone does
 not enable `/admin` or provision an owner account.
+
+## First authenticator enrollment for an existing owner
+
+The actual `/admin/login` page offers **Set up first authenticator** only when
+`GUARDOATH_ADMIN_ENABLED=1`, `GUARDOATH_ADMIN_NATIVE_MFA_ENABLED=1`, and a separate
+`GUARDOATH_ADMIN_AUDIT_TABLE` are configured, and the operator has explicitly set
+`GUARDOATH_ADMIN_ENROLLMENT_SUBJECT` to the one intended owner's immutable Cognito
+`sub`. The corresponding CloudFormation parameter `AdminEnrollmentSubject`
+defaults to an empty value, is NoEcho, and accepts one canonical UUID only.
+Never use an email, wildcard, group name or comma-separated list. The verified
+signed subject must exactly match this designation before live-owner checks,
+state reservation or association. The designation grants neither owner membership
+nor an administrator session and is not exposed by public configuration.
+There is no extra resource or
+automatic activation. An unavailable control store fails closed. With no audit
+table, already-enrolled owners can still attempt existing native sign-in, but
+enrollment is absent and protected owner data reads remain unavailable.
+An unset/empty designation also removes the enrollment routes and displays setup
+unavailable guidance while preserving existing native MFA sign-in. A malformed
+designation fails enabled-admin startup before routes mount.
+
+The account must already be enabled, `CONFIRMED`, have matching verified email
+attributes, and belong to the live `GuardOathOwners` group. Customer sessions,
+API keys, subscriptions and token group claims do not grant this capability.
+The server performs fresh `USER_PASSWORD_AUTH` against the independent admin
+client itself, then verifies the real RS256 access token's pool, client, scope,
+expiry and signed `auth_time`. The browser cannot supply its own access token.
+`MFA_SETUP`, existing TOTP challenges, reset-required accounts and other
+authentication results are refused by this specific bootstrap workflow. It
+requires a pool that permits a not-yet-enrolled owner to receive a password
+authentication result; it does not change pool MFA configuration to obtain one.
+
+Both `GetUser` and `AdminGetUser` must agree on subject, username, verified email
+and absence of active MFA/preference/legacy SMS settings. Malformed or duplicate
+attributes, revoked tokens, disabled accounts and incomplete group pages deny.
+The live identity is rechecked before association, verification, preference
+activation and final confirmation. Cognito's MFA lists report **activated**
+factors; they do not prove that a legacy account never registered a subsequently
+deactivated factor. The exact-subject designation is an explicit operator
+authorization, not proof of that historical absence. Only designate an established
+first-time owner. Historical/reset cases require separately authorized operator recovery;
+do not infer first-ever enrollment from an empty MFA list alone. See
+[GetUser](https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_GetUser.html)
+and [SetUserMFAPreference](https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_SetUserMFAPreference.html).
+
+### What the owner sees
+
+Enter the account email and password, then choose **Set up first authenticator**.
+The password is immediately cleared. The returned key stays in a read-only,
+password-masked field; **Copy setup key** copies it only on an explicit click.
+Add a time-based code for GuardOath in an authenticator app, then enter its
+six-digit code and choose **Save authenticator**. No external QR service,
+analytics call or third-party script receives the key. Clear the clipboard after
+pasting; this page cannot promise to erase a system clipboard or clipboard history.
+
+The setup key, code and sealed ticket are transient. Completion, cancellation,
+expiry, sign-out and page exit clear them from the page. A late response cannot
+restore a cancelled setup. Nothing is placed in localStorage/sessionStorage.
+A confirmed code mismatch allows a retry of the same pending flow, up to five
+provider verification attempts within the original three-minute deadline. Any
+other uncertain result clears the local setup and advises operator investigation.
+
+Successful setup returns only `completed` and `sign_in_required`, with no token
+or admin session. The owner must enter the password again and complete the
+existing native TOTP sign-in. The unchanged verifier still requires signed
+`amr` containing `mfa`, recent `auth_time`, enabled identity and live owner
+membership. A password-only token remains unusable for every admin data route.
+
+### Encrypted ticket and durable control state
+
+The three-minute AES-GCM ticket binds purpose, pool, client, subject, username,
+verified email, original signed authentication time, access token and random
+control nonce. A random 96-bit GCM nonce and purpose-specific key derivation
+separate it from existing cursor/audit/challenge keys. It contains no password,
+OTP or setup key. The access token is encrypted and never returned in plaintext.
+`AssociateSoftwareToken(AccessToken=...)` can return only `SecretCode`; a provider
+Session is neither required nor invented. `VerifySoftwareToken` uses the same
+sealed access token and the user's code. AWS documents these separate token and
+challenge authorization paths in
+[AssociateSoftwareToken](https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_AssociateSoftwareToken.html)
+and [VerifySoftwareToken](https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_VerifySoftwareToken.html).
+
+Control keys begin `enrollment-control:` and then a context-bound HMAC. They
+cannot be accepted as the 64-hex IDs of genuine audit receipts. Exact signed
+control documents contain only version/kind, subject, nonce, issue/expiry times,
+state/phase, attempt count and revision. No email, password, code, bearer token,
+setup key or provider session is stored in DynamoDB. Strong reads and conditional
+full-document replacement protect the complete prior nonce and signed state.
+
+| State/phase | Authorized next action | Expiry or cancellation |
+| --- | --- | --- |
+| `PENDING / ASSOCIATING` | Claimed before association; change to READY only after a valid provider reply | Never automatically reclaimed or cancelled |
+| `PENDING / READY` | Matching sealed ticket may claim verification | May cancel, or be replaced after expiry by a fresh password-authenticated eligible owner |
+| `VERIFYING / READY` | One winning instance may verify, independently recheck identity, activate preference and prove the final live state | Never automatically reclaimed or cancelled |
+| `COMPLETE / READY` | Terminal first-setup record | No reset/replacement through enrollment |
+| `BLOCKED` | Operator investigation | No automatic retry |
+| `CANCELLED / READY` | Fresh password authentication may claim a new nonce | Old tickets always fail CAS |
+
+Only a definitive Cognito `CodeMismatchException` may return VERIFYING to READY,
+keeping the same nonce and expiry. Unknown provider or persistence outcomes never
+trigger automatic write retries or report success. Production uses a separate
+bounded Cognito SDK client with `total_max_attempts=1`; existing login/read SDK
+behavior is unchanged. The service permits two concurrent requests and twelve
+requests per minute per warm instance; these are not fleet-wide limits. Cognito
+quotas and any existing edge controls remain relevant. A persisted five-attempt
+cap applies across instances to each pending nonce.
+
+### Capacity, recovery and rollback
+
+A normal successful setup performs four control writes and three strong control
+reads in the already-approved independent audit table, plus the bounded Cognito
+calls. Existing receipt traffic shares this capacity. Do not add a table, raise
+capacity or rely on member-account free-tier arithmetic without the actual payer
+allowance/budget evidence. This change adds no AWS resource, tier, concurrency,
+memory or timeout setting. Audit-table enablement still requires the production
+cost and release gates.
+
+The existing Lambda timeout remains unchanged. A timeout or lost response after
+association/verification can leave a blocked control record even when a provider
+operation succeeded. Preserve that record and ordinary audit receipts. First
+try a fresh existing password+TOTP login if the owner saved the authenticator.
+An authorized operator must independently check the exact identity, live factor
+state and signed control state before deciding any recovery. There is no public
+reset/delete/unlock endpoint. Do not delete a control row, rotate its key/client
+namespace, disable a factor, or launch a new enrollment to bypass an ambiguous
+ASSOCIATING/VERIFYING outcome. Do not run external factor mutations concurrently
+with this workflow; Cognito does not expose an atomic factor-state precondition.
+
+Immediately after successful setup **and a fresh verified MFA sign-in**, clear
+`AdminEnrollmentSubject`/`GUARDOATH_ADMIN_ENROLLMENT_SUBJECT`. Native MFA login
+stays enabled; the setup capability and its public endpoints disappear. Also
+clear the designation before any audit-HMAC key rotation or recovery work.
+Preserve all existing terminal/ambiguous control records. Re-enabling a subject
+does not override COMPLETE or unknown-outcome state in its current namespace.
+
+Rollback restores the previously verified application ZIP and its environment
+snapshot, preserving Stripe values and all existing resource identities. It
+must preserve audit/control records and any authenticator already registered.
+Clearing the enrollment designation disables setup independently. Turning off
+the native MFA flag also disables native sign-in. A rollback never removes owner membership,
+disables an authenticator or rewrites the customer's pool. Review and run the
+exact-source CI and the existing 15 live checks before claiming activation.
+
+`cryptography==50.0.2` is pinned in the AWS and test extras. Its CPython ABI3
+manylinux2014 wheel and cffi/pycparser dependencies resolve under the unchanged
+CPython 3.13 builder; CPython 3.11, 3.14 and 3.15 binary resolutions also pass,
+and the local suite runs on 3.12. The resolved 3.13 wheel set totals 5,004,265
+compressed bytes. This is dependency-resolution evidence, not the final Lambda
+ZIP size: the exact committed production build must still satisfy the
+52,428,800-byte upload limit. See the [official release](https://pypi.org/project/cryptography/50.0.2/).
+
+Both CloudFormation app clients explicitly retain `WriteAttributes: [email]`
+and read access to `email_verified`. AWS forbids granting app-client write
+access to verification attributes; omitting the write list would broaden
+defaults. The read-only Google registration preflight now checks the same narrow
+write list and readable verified-email assertions. These source corrections
+change no live/customer client and do not enable Google sign-in.
 
 
 ## Owner workspace navigation and visible results

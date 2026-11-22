@@ -38,6 +38,8 @@
         button.disabled = false;
       }
     });
+    window.guardoathAgentActivityInitialized = true;
   }
-  document.addEventListener("DOMContentLoaded", start);
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
+  else start();
 })();

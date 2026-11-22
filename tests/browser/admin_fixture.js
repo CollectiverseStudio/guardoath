@@ -22,6 +22,8 @@ function loadAdminSource() {
 
 function createAdminFixture(options = {}) {
   const calls = [];
+  let enrollmentPending = null;
+  let enrollmentSequence = 0;
   const source = options.source || loadAdminSource();
   const tenants = [
     {tenant_id:"sample-studio", display_name:"Example Studio (sample)", status:"active", demo:false,
@@ -77,7 +79,8 @@ function createAdminFixture(options = {}) {
         return {status:200, contentType:"text/javascript", body:source._JS};
       if (pathname === "/v1/admin/auth/config") return json({
         domain:"example.auth.us-east-1.amazoncognito.com", client_id:"fixtureclient123",
-        redirect_uri:"http://127.0.0.1:8777/admin/login", native_mfa_enabled:options.nativeMfa === true});
+        redirect_uri:"http://127.0.0.1:8777/admin/login", native_mfa_enabled:options.nativeMfa === true,
+        native_enrollment_enabled:options.nativeMfa === true && options.nativeEnrollment === true});
       if (pathname === "/v1/admin/auth/exchange" && method === "POST") {
         return body?.code === "fixture-code" && typeof body?.code_verifier === "string"
           ? json({access_token:TOKEN,token_type:"Bearer"}) : json({detail:"Fixture exchange denied"},401);
@@ -86,6 +89,25 @@ function createAdminFixture(options = {}) {
         return json({challenge:"software_token_mfa", challenge_ticket:"synthetic-mfa-ticket-".repeat(4)});
       if (pathname === "/v1/admin/auth/native/finish" && method === "POST" && options.nativeMfa === true)
         return body?.otp === "123456" ? json({access_token:TOKEN,token_type:"Bearer"}) : json({detail:"Fixture OTP denied"},401);
+      // Only synthetic state for exercising the actual UI. Security/CAS/token
+      // behavior is independently tested against the Python implementation.
+      if (options.nativeMfa === true && options.nativeEnrollment === true && method === "POST") {
+        if (pathname === "/v1/admin/auth/enrollment/start") {
+          enrollmentPending = "e1.synthetic-enrollment-ticket-" + (++enrollmentSequence);
+          return json({setup_key:"A".repeat(32), enrollment_ticket:enrollmentPending, expires_in:180});
+        }
+        if (pathname === "/v1/admin/auth/enrollment/cancel") {
+          if (!enrollmentPending || body?.ticket !== enrollmentPending) return json({detail:"Fixture setup denied"},401);
+          enrollmentPending = null;
+          return json({status:"cancelled"});
+        }
+        if (pathname === "/v1/admin/auth/enrollment/finish") {
+          if (!enrollmentPending || body?.ticket !== enrollmentPending) return json({detail:"Fixture setup denied"},401);
+          if (body?.code !== "123456") return json({detail:"Fixture code mismatch",code:"code_mismatch"},400);
+          enrollmentPending = null;
+          return json({status:"completed",sign_in_required:true});
+        }
+      }
       if (!pathname.startsWith("/v1/admin/")) return json({detail:"No fixture route"},404);
       if (headers["x-guardoath-admin-session"] !== TOKEN) return json({detail:"Fixture owner session required"},401);
       if (pathname === "/v1/admin/overview") return json(withReceipt({status:"read_only", metrics:{

@@ -47,6 +47,13 @@ Use `--no-browser` to print the report location. Mac/Linux users can use
 
 ## Test a conversation in four steps
 
+The dashboard loads its controls before enabling connections or checks. A temporary
+loading failure is retried automatically up to three times. If loading still fails,
+select **Retry loading dashboard**; this resumes loading without changing your saved
+checks, including settings explicitly saved as Off. If the page requests a reload,
+use **Reload dashboard**. The reload link also remains available while loading.
+The introductory video downloads only when you choose to play it.
+
 The normal demo selects **Conversation — combined general text checks** for you.
 You do not need to choose a policy before entering a question.
 
@@ -3602,10 +3609,41 @@ password, then the current six-digit software-token code. The UI never
 stores the password, code or challenge ticket across page loads; it releases
 a session only after the server verifies Cognito's signed current-login MFA
 evidence and live `GuardOathOwners` membership. MFA setup-required and
-password-only accounts are refused. Customer sign-in or a paid subscription
+password-only results cannot sign in to the admin console. Customer sign-in or a paid subscription
 does not grant admin privileges. No credentials, MFA codes or tokens should
 be sent to GuardOath support. This operator feature is disabled by default,
 and no enabled admin UI or production readiness is implied by source code.
+
+### Set up your first administrator authenticator
+
+An operator-approved owner with a verified email and no existing authenticator
+can use **Set up first authenticator** on `/admin/login` when the owner has enabled
+native MFA and independent audit storage, and explicitly designated that one
+account for initial setup. A missing button and **setup unavailable** message
+mean that the operator has not enabled this workflow. This does not create an account, approve an owner, grant a paid
+subscription or reset a lost authenticator.
+
+1. Enter the administrator email and password, then choose **Set up first authenticator**.
+2. In your authenticator app, add a time-based code for **GuardOath**. Use **Copy setup key** to paste the masked key into the app. Keep it private and clear your clipboard after pasting.
+3. Enter the app's current six-digit code and choose **Save authenticator**. Setup expires after three minutes. A rejected code can be retried within the same setup; the server limits attempts.
+4. After **Authenticator saved**, enter your password again, choose **Continue to authenticator**, and sign in with a new code. Saving an authenticator does not sign you in.
+
+The password, entered code and setup key are cleared from this page when the
+flow finishes, is cancelled, expires, or the page closes. No QR website receives
+the key. The setup ticket stays only in the tab's memory. The page cannot erase
+a key you copied into your system clipboard or saved elsewhere.
+
+For example, an existing approved owner signing into the console for the first
+time can enroll an authenticator and then perform a fresh password+code login.
+An ordinary customer, a disabled/unconfirmed owner, an unverified email, an
+already configured factor, or expired setup is denied. If setup reports that
+the result **could not be confirmed**, try the ordinary password+authenticator
+sign-in if you saved the key. Otherwise ask the operator to investigate before
+trying setup again. Do not send passwords, codes, setup keys or tickets to
+support. Accounts with a lost or previously disabled authenticator need the
+operator's separate recovery procedure.
+After you confirm a fresh MFA sign-in, the operator removes the temporary setup
+designation. Your ordinary password+authenticator sign-in remains available.
 
 
 ## Owner console navigation

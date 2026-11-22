@@ -21,12 +21,12 @@ from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "guardoath" / "static"
-LINK = re.compile(r"""(?:src|href)=["']/assets/([a-z0-9_-]+\.(?:js|css))\?v=([0-9a-f]{12})["']""")
+LINK = re.compile(r"""(?<![a-zA-Z0-9_-])(?:data-src|src|href)=["']/assets/([a-z0-9_-]+\.(?:js|css))\?v=([0-9a-f]{12})["']""")
 # Match the same static asset rewriting contract as create_app.versioned_page.
 # Verifying only JavaScript/CSS bytes misses stale or modified dashboard HTML.
-SOURCE_LINK = re.compile(r'(?P<attr>(?:src|href)=")/assets/(?P<name>[a-z0-9][a-z0-9_-]{0,63}\.(?:js|css))"')
+SOURCE_LINK = re.compile(r'(?P<attr>(?<![a-zA-Z0-9_-])(?:data-src|src|href)=")/assets/(?P<name>[a-z0-9][a-z0-9_-]{0,63}\.(?:js|css))"')
 REQUIRED = frozenset({
-    "dashboard.css", "sigma.css", "dashboard.js", "sigma_tenant.js",
+    "dashboard.css", "sigma.css", "dashboard_bootstrap.js", "dashboard.js", "sigma_tenant.js",
     "comparison_editor.js", "arithmetic_editor.js",
     "identity_editor.js", "conversion_editor.js", "statistical_drift_editor.js", "agent_activity.js",
     "conversation_wizard.js", "tenant_stage_tabs.js",
@@ -88,7 +88,7 @@ def verify(base_url: str, static_root: Path = ASSETS, open_url=urlopen) -> dict:
     if missing:
         failures.append("missing_dashboard_assets:" + ",".join(missing))
     # Non-versioned local links risk a stale CloudFront response.
-    if re.search(r"""(?:src|href)=["']/assets/[a-z0-9_-]+\.(?:js|css)["']""", html):
+    if re.search(r"""(?<![a-zA-Z0-9_-])(?:data-src|src|href)=["']/assets/[a-z0-9_-]+\.(?:js|css)["']""", html):
         failures.append("unversioned_asset_link")
     # The dashboard markup contains the customer-facing controls, stage labels,
     # forms and accessibility state. Matching only linked assets cannot attest it.

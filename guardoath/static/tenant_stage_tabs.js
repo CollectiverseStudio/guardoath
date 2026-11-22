@@ -139,6 +139,7 @@
     });
     select("both");
     renderWizard();
+    window.guardoathTenantStageTabsInitialized = true;
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();

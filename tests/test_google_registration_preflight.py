@@ -58,7 +58,8 @@ class Cognito:
             "AllowedOAuthFlows": ["code"],
             "AllowedOAuthScopes": ["openid", "email", "aws.cognito.signin.user.admin"],
             "ClientSecret": self.client_secret,
-            "WriteAttributes": ["email", "email_verified"] if self.email_writable else ["email"],
+            "WriteAttributes": ["email"] if self.email_writable else [],
+            "ReadAttributes": ["email", "email_verified", "custom:tenant_id"],
         }}
 
 
@@ -133,3 +134,17 @@ def test_unreachable_aws_is_source_free_and_incomplete():
     assert result["ready_for_live_google_browser_test"] is False
     assert not any(result[k] for k in CHECKS)
     assert "PRIVATE_" not in json.dumps(result)
+
+
+def test_preflight_rejects_forbidden_or_omitted_write_permissions():
+    for attributes in (None, ["email", "email_verified"], ["email", "phone_number_verified"],
+                       ["email", "custom:tenant_id"]):
+        class Invalid(Cognito):
+            def describe_user_pool_client(self, **kwargs):
+                response = super().describe_user_pool_client(**kwargs)
+                if attributes is None: response["UserPoolClient"].pop("WriteAttributes")
+                else: response["UserPoolClient"]["WriteAttributes"] = attributes
+                return response
+        result = verify(CloudFormation(), Invalid(), Lambda(), get_public=public)
+        assert result["cognito_attribute_permissions"] is False
+        assert result["ready_for_live_google_browser_test"] is False

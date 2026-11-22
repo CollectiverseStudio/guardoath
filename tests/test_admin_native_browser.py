@@ -50,6 +50,7 @@ def test_native_flow_not_registered_without_explicit_opt_in():
     assert config.json() == {
         "domain": CONFIG.domain, "client_id": CONFIG.client_id,
         "redirect_uri": CONFIG.redirect_uri, "native_mfa_enabled": False,
+        "native_enrollment_enabled": False,
     }
     assert config.headers["cache-control"] == "no-store"
     assert c.post("/v1/admin/auth/native/start", json={
@@ -65,6 +66,7 @@ def test_owner_mfa_challenge_is_required_before_releasing_signed_session():
     assert config.json() == {
         "domain": CONFIG.domain, "client_id": CONFIG.client_id,
         "redirect_uri": CONFIG.redirect_uri, "native_mfa_enabled": True,
+        "native_enrollment_enabled": False,
     }
     assert config.headers["cache-control"] == "no-store"
     assert native.calls == []

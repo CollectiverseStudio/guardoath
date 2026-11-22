@@ -127,6 +127,14 @@
         "1"
       ],
       "Description": "Opt-in admin password plus Cognito SOFTWARE_TOKEN_MFA API sign-in; requires admin enabled and signed AMR evidence."
+    },
+    "AdminEnrollmentSubject": {
+      "Type": "String",
+      "Default": "",
+      "NoEcho": true,
+      "MaxLength": 36,
+      "AllowedPattern": "^$|^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "Description": "Optional one-subject operator grant for first authenticator setup. Empty disables enrollment; requires native admin MFA and independent audit storage. Not an email, owner grant, or factor-reset authorization."
     }
   },
   "Rules": {
@@ -296,6 +304,19 @@
             ]
           },
           "AssertDescription": "Admin native MFA cannot be enabled without the isolated admin console."
+        }
+      ]
+    },
+    "AdminEnrollmentRequiresNativeAudit": {
+      "RuleCondition": {"Fn::Not": [{"Fn::Equals": [{"Ref": "AdminEnrollmentSubject"}, ""]}]},
+      "Assertions": [
+        {
+          "Assert": {"Fn::And": [
+            {"Fn::Equals": [{"Ref": "EnableAdminConsole"}, "1"]},
+            {"Fn::Equals": [{"Ref": "EnableAdminNativeMfa"}, "1"]},
+            {"Fn::Equals": [{"Ref": "EnableAdminMutations"}, "1"]}
+          ]},
+          "AssertDescription": "An operator-designated enrollment subject requires native admin sign-in and approved independent audit storage."
         }
       ]
     }
@@ -561,6 +582,9 @@
             },
             "GUARDOATH_ADMIN_NATIVE_MFA_ENABLED": {
               "Ref": "EnableAdminNativeMfa"
+            },
+            "GUARDOATH_ADMIN_ENROLLMENT_SUBJECT": {
+              "Fn::If": ["AdminEnrollmentEnabled", {"Ref": "AdminEnrollmentSubject"}, {"Ref": "AWS::NoValue"}]
             }
           }
         }
@@ -1198,8 +1222,7 @@
           "custom:tenant_id"
         ],
         "WriteAttributes": [
-          "email",
-          "email_verified"
+          "email"
         ]
       }
     },
@@ -1297,8 +1320,7 @@
           "custom:tenant_id"
         ],
         "WriteAttributes": [
-          "email",
-          "email_verified"
+          "email"
         ]
       }
     },
@@ -1460,6 +1482,14 @@
           "Ref": "EnableAdminNativeMfa"
         },
         "1"
+      ]
+    },
+    "AdminEnrollmentEnabled": {
+      "Fn::And": [
+        {"Condition": "AdminConsoleEnabled"},
+        {"Condition": "AdminNativeMfaEnabled"},
+        {"Condition": "AdminMutationsEnabled"},
+        {"Fn::Not": [{"Fn::Equals": [{"Ref": "AdminEnrollmentSubject"}, ""]}]}
       ]
     }
   }

@@ -353,13 +353,21 @@ def test_the_dashboard_client_has_no_secret_and_cannot_change_its_tenant(templat
     assert client["AllowedOAuthScopes"] == ["openid", "email", "aws.cognito.signin.user.admin"]
     assert client["CallbackURLs"] == client["LogoutURLs"] == [{"Fn::Sub": "https://${DomainName}/dashboard"}]
     assert "custom:tenant_id" in client["ReadAttributes"] and "custom:tenant_id" not in client["WriteAttributes"]
-    # Google email verification is required before creating a new tenant.
-    # A mapped IdP attribute must be writable by the Cognito app client,
-    # otherwise Cognito omits it and registration always fails closed.
-    assert set(client["WriteAttributes"]) == {"email", "email_verified"}
+    # Verification attributes are readable provider assertions. Cognito forbids
+    # app clients from granting write access to email_verified/phone_number_verified.
+    assert client["WriteAttributes"] == ["email"]
     assert client["SupportedIdentityProviders"] == {"Fn::If": [
         "GoogleLoginEnabled", ["COGNITO", {"Ref": "GoogleIdentityProvider"}], ["COGNITO"]
     ]} and client["PreventUserExistenceErrors"] == "ENABLED"
+
+
+def test_both_clients_keep_verification_attributes_read_only(template):
+    for logical_id in ("UserPoolClient", "AdminUserPoolClient"):
+        client = template["Resources"][logical_id]["Properties"]
+        # An omitted list grants broad defaults; keep the explicit narrow list.
+        assert client["WriteAttributes"] == ["email"]
+        assert "email_verified" in client["ReadAttributes"]
+        assert not {"email_verified", "phone_number_verified", "custom:tenant_id"}.intersection(client["WriteAttributes"])
 
 
 def test_the_site_function_gets_the_sign_in_settings(template):

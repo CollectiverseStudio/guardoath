@@ -1,5 +1,7 @@
 "use strict";
 const $ = id => document.getElementById(id);
+// Keep session/API initialization behind the complete ordered asset startup.
+const dashboardStartup = window.guardoathDashboardStartup || Promise.resolve();
 let key = "", application = null, revision = 0, busy = false, tenantSaving = false, inputResult = null;
 // Only Block stops a message or answer (Greg, 2026-11-04). The decision decides, not whether something was found: Allow
 // goes through; Flag goes through and its findings are reported for review; Redact goes through as the cleaned text once
@@ -1066,7 +1068,7 @@ $("demo-key").addEventListener("click", async () => {
   } catch (error) { $("connection-status").textContent = (error.message || "The demo key could not be issued.") + " Select Get demo API key again to retry; no refresh is needed."; }
   finally { $("demo-key").disabled = false; }
 });
-loadDemoUsers();
+dashboardStartup.then(loadDemoUsers);
 // Tenant sign-in: the user pool's hosted sign-in page (authorization code with PKCE). The server trades the
 // code for a session; the session stays in this tab (sessionStorage) and is sent only to this server.
 let signIn = null;
@@ -1368,7 +1370,7 @@ async function keyAction(path, body, done) {
   await loadKeys();
 }
 $("key-create").addEventListener("click", () => keyAction("/v1/tenants/current/keys", {}, "New API key, shown once: copy it now and keep it on your server."));
-loadSignIn();
+dashboardStartup.then(loadSignIn);
 $("policy").addEventListener("change", () => { reset(); coverage(); renderTenant(); });
 for (const id of ["input-content", "input-format", "api-key"]) $(id).addEventListener("input", () => reset());
 for (const id of ["output-content", "output-format"]) $(id).addEventListener("input", () => reset(true));
@@ -2042,7 +2044,7 @@ function refreshExamplePickers() {
   }
   updatePolicyScopeNotes();
 }
-loadExampleCatalog().then(list => { for (const stage of ["input", "output"]) buildExamplePicker(stage, list); refreshExamplePickers(); })
+dashboardStartup.then(loadExampleCatalog).then(list => { for (const stage of ["input", "output"]) buildExamplePicker(stage, list); refreshExamplePickers(); })
   .catch(() => { for (const stage of ["input", "output"]) { const note = document.createElement("p"); note.className = "hint"; note.textContent = "The full example list could not be loaded right now. Reload the page to try again."; $(stage + "-samples").after(note); } });
 // Results must lead to actionable tenant settings, not only descriptions.
 // Never automatically alter rules; the user explicitly chooses and saves changes.
@@ -2473,3 +2475,6 @@ $("billing-verify").addEventListener("click", async () => {
       $("account-status").textContent = "Subscription verification unavailable. Paid access remains unchanged.";
   } finally { button.disabled = false; }
 });
+
+// The bootstrap exposes controls only after this entire module initialized.
+window.guardoathDashboardInitialized = true;

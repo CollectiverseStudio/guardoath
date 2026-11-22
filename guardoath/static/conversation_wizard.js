@@ -91,6 +91,7 @@
     document.getElementById("input-samples")?.addEventListener("change", explain);
     explain();
     showAll();
+    window.guardoathConversationWizardInitialized = true;
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();

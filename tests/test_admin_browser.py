@@ -113,7 +113,7 @@ def test_public_config_contains_only_oauth_metadata_and_native_capability():
     assert result.status_code == 200
     assert result.json() == {"domain": CFG.domain, "client_id": CFG.client_id,
                              "redirect_uri": CFG.redirect_uri,
-                             "native_mfa_enabled": False}
+                             "native_mfa_enabled": False, "native_enrollment_enabled": False}
     assert result.headers["Cache-Control"] == "no-store"
     # A public capability read cannot authenticate or disclose private session state.
     assert calls == []

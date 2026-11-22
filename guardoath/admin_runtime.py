@@ -42,6 +42,10 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
     native_enabled = os.getenv("GUARDOATH_ADMIN_NATIVE_MFA_ENABLED", "0")
     if native_enabled not in {"0", "1"}:
         raise AdminConfigurationError("GUARDOATH_ADMIN_NATIVE_MFA_ENABLED must be 0 or 1")
+    from guardoath.admin_enrollment import ENROLLMENT_SUBJECT
+    enrollment_subject = os.getenv("GUARDOATH_ADMIN_ENROLLMENT_SUBJECT", "")
+    if enrollment_subject and not ENROLLMENT_SUBJECT.fullmatch(enrollment_subject):
+        raise AdminConfigurationError("Owner enrollment requires one explicit immutable Cognito subject")
     pool = os.getenv("GUARDOATH_COGNITO_POOL_ID", "")
     domain = os.getenv("GUARDOATH_ADMIN_COGNITO_DOMAIN", "")
     client_id = os.getenv("GUARDOATH_ADMIN_CLIENT_ID", "")
@@ -66,6 +70,7 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
             getattr(admin_sessions, "client_id", None) != client_id or
             getattr(admin_sessions, "domain", None) != domain):
         raise AdminConfigurationError("Admin token verifier must match the configured pool and client")
+    create_enrollment_client = cognito_client is None
     if cognito_client is None:
         try:
             import boto3
@@ -88,6 +93,7 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
     audit_reader = None
     read_auditor = None
     catalog_drafts = None
+    native_enrollment = None
     if audit_table:
         if audit_table == getattr(tenants.store, "table_name", None):
             raise AdminConfigurationError("Admin audit table must be independent")
@@ -98,6 +104,22 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
         mutator = AdminTenantActions(tenants.store._client, tenants.store.table_name,
                                      audit_table, audit_key=audit_signing_key)
         catalog_drafts = AdminCatalogDrafts(tenants.store._client, audit_table, audit_signing_key)
+        if native_enabled == "1" and enrollment_subject:
+            from guardoath.admin_enrollment import CognitoNativeEnrollment
+            from guardoath.admin_enrollment_state import DynamoEnrollmentState
+            # Association and verification must never be retried invisibly by
+            # the SDK after an ambiguous response. Existing sign-in/read client
+            # settings remain unchanged. Injected providers are for isolated tests.
+            enrollment_cognito = (boto3.client(
+                "cognito-idp", region_name=pool.rsplit("_", 1)[0],
+                config=Config(connect_timeout=1, read_timeout=2,
+                              retries={"total_max_attempts": 1}))
+                if create_enrollment_client else cognito_client)
+            enrollment_state = DynamoEnrollmentState(
+                tenants.store._client, audit_table, bytes.fromhex(key_hex), pool, client_id)
+            native_enrollment = CognitoNativeEnrollment(
+                enrollment_cognito, admin_sessions, enrollment_state, bytes.fromhex(key_hex),
+                enrollment_subject=enrollment_subject)
     billing_reporter = None
     billing_invoices = None
     if os.getenv("GUARDOATH_STRIPE_SECRET_KEY", ""):
@@ -133,6 +155,7 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
     mount_admin_console(app, sessions=admin_sessions, tenants=tenants, cognito=cognito_client,
                         cursor_signing_key=bytes.fromhex(key_hex), browser_config=config,
                         browser_exchange=BoundExchange(config), native_auth=native_auth,
+                        native_enrollment=native_enrollment,
                         admin_mutator=mutator,
                         audit_reader=audit_reader, read_auditor=read_auditor,
                         catalog_drafts=catalog_drafts,

@@ -199,7 +199,7 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
                 for pattern in ("*.js", "*.css") for path in static_dir.glob(pattern)}
 
     versions = asset_versions()
-    asset_link = re.compile(r'(?P<attr>(?:src|href)=")/assets/(?P<name>[a-z0-9][a-z0-9_-]{0,63}\.(?:js|css))"')
+    asset_link = re.compile(r'(?P<attr>(?<![a-zA-Z0-9_-])(?:data-src|src|href)=")/assets/(?P<name>[a-z0-9][a-z0-9_-]{0,63}\.(?:js|css))"')
 
     def versioned_page(name: str) -> str:
         page = (static_dir / name).read_text(encoding="utf-8")

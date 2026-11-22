@@ -677,11 +677,11 @@ def test_pages_name_scripts_and_stylesheets_by_content_version_and_they_are_cach
     from pathlib import Path
     static = Path(__file__).resolve().parents[1] / "guardoath" / "static"
     client = TestClient(create_app(credentials={"test-key": "demo"}))
-    for page, names in (("/dashboard", {"dashboard.css", "sigma.css", "arithmetic_editor.js", "identity_editor.js", "conversion_editor.js", "comparison_editor.js", "statistical_drift_editor.js", "dashboard.js", "sigma_tenant.js", "agent_activity.js", "conversation_wizard.js", "tenant_stage_tabs.js"}), ("/sigma", {"dashboard.css", "sigma.css", "sigma.js"}), ("/guide", {"dashboard.css", "guide.css"})):
+    for page, names in (("/dashboard", {"dashboard.css", "sigma.css", "dashboard_bootstrap.js", "arithmetic_editor.js", "identity_editor.js", "conversion_editor.js", "comparison_editor.js", "statistical_drift_editor.js", "dashboard.js", "sigma_tenant.js", "agent_activity.js", "conversation_wizard.js", "tenant_stage_tabs.js"}), ("/sigma", {"dashboard.css", "sigma.css", "sigma.js"}), ("/guide", {"dashboard.css", "guide.css"})):
         text = client.get(page).text
-        linked = dict(re.findall(r'(?:src|href)="/assets/([a-z0-9_-]+\.(?:js|css))\?v=([0-9a-f]{12})"', text))
+        linked = dict(re.findall(r'(?<![a-zA-Z0-9_-])(?:data-src|src|href)="/assets/([a-z0-9_-]+\.(?:js|css))\?v=([0-9a-f]{12})"', text))
         assert set(linked) == names, page
-        assert not re.search(r'(?:src|href)="/assets/[a-z0-9_-]+\.(?:js|css)"', text), page
+        assert not re.search(r'(?<![a-zA-Z0-9_-])(?:data-src|src|href)="/assets/[a-z0-9_-]+\.(?:js|css)"', text), page
         for name, version in linked.items():
             body = (static / name).read_bytes()
             assert version == hashlib.sha256(body).hexdigest()[:12], name
@@ -693,3 +693,45 @@ def test_pages_name_scripts_and_stylesheets_by_content_version_and_they_are_cach
     assert client.get("/assets/guardoath_ai_final.mp4", headers={"Range": "bytes=0-9"}).status_code == 206
     assert client.get("/assets/missing.js").status_code == 404
     assert client.get("/assets/..%2Fapp.py").status_code == 404
+
+
+def test_dashboard_uses_one_executable_loader_and_keeps_controls_locked_during_startup():
+    """The browser preload scanner must not fan out ten Lambda asset requests."""
+    from html.parser import HTMLParser
+
+    class Elements(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.items = []
+
+        def handle_starttag(self, tag, attrs):
+            self.items.append((tag, dict(attrs)))
+
+    response = TestClient(create_app(credentials={"test-key": "demo"})).get("/dashboard")
+    parsed = Elements()
+    parsed.feed(response.text)
+    scripts = [attrs for tag, attrs in parsed.items if tag == "script"]
+    executable = [attrs for attrs in scripts if "src" in attrs]
+    assert len(executable) == 1
+    assert executable[0]["src"].startswith("/assets/dashboard_bootstrap.js?v=")
+    assert "defer" in executable[0]
+    dependencies = [attrs for attrs in scripts if "data-src" in attrs]
+    assert len(dependencies) == 10
+    assert all(attrs.get("type") == "application/guardoath-script" for attrs in dependencies)
+    assert all("?v=" in attrs["data-src"] and "src" not in attrs for attrs in dependencies)
+    assert all(attrs.get("data-export") for attrs in dependencies)
+    assert {attrs["data-export"] for attrs in dependencies if attrs.get("data-export", "").endswith("Editor")} == {
+        "statisticalDriftEditor", "arithmeticEditor", "identityEditor", "conversionEditor", "comparisonEditor",
+    }
+    assert [attrs["data-export"] for attrs in dependencies if attrs.get("data-optional") == "true"] == ["sigmaTenant"]
+    assert {attrs["data-export"] for attrs in dependencies if attrs.get("data-export-type") == "ready"} == {
+        "guardoathDashboardInitialized", "guardoathConversationWizardInitialized",
+        "guardoathTenantStageTabsInitialized", "guardoathAgentActivityInitialized",
+    }
+    main = next(attrs for tag, attrs in parsed.items if tag == "main")
+    assert main["id"] == "dashboard-app" and "hidden" in main and "inert" in main
+    video = next(attrs for tag, attrs in parsed.items if tag == "video")
+    assert video["preload"] == "none"
+    assert "Retry loading dashboard" in response.text and 'href="/dashboard"' in response.text
+    assert "script-src 'self'" in response.headers["content-security-policy"]
+    assert "'unsafe-inline'" not in response.headers["content-security-policy"]

@@ -1,13 +1,33 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GuardOath — Check playground</title><link rel="stylesheet" href="/assets/dashboard.css"><link rel="stylesheet" href="/assets/sigma.css"><script src="/assets/statistical_drift_editor.js" defer></script><script src="/assets/arithmetic_editor.js" defer></script><script src="/assets/identity_editor.js" defer></script><script src="/assets/conversion_editor.js" defer></script><script src="/assets/comparison_editor.js" defer></script><script src="/assets/sigma_tenant.js" defer></script><script src="/assets/dashboard.js" defer></script><script src="/assets/conversation_wizard.js" defer></script><script src="/assets/tenant_stage_tabs.js" defer></script><script src="/assets/agent_activity.js" defer></script></head>
+<title>GuardOath — Check playground</title>
+<link rel="stylesheet" href="/assets/dashboard.css">
+<link rel="stylesheet" href="/assets/sigma.css">
+<script type="application/guardoath-script" data-src="/assets/statistical_drift_editor.js" data-export="statisticalDriftEditor"></script>
+<script type="application/guardoath-script" data-src="/assets/arithmetic_editor.js" data-export="arithmeticEditor"></script>
+<script type="application/guardoath-script" data-src="/assets/identity_editor.js" data-export="identityEditor"></script>
+<script type="application/guardoath-script" data-src="/assets/conversion_editor.js" data-export="conversionEditor"></script>
+<script type="application/guardoath-script" data-src="/assets/comparison_editor.js" data-export="comparisonEditor"></script>
+<script type="application/guardoath-script" data-src="/assets/sigma_tenant.js" data-export="sigmaTenant" data-optional="true"></script>
+<script type="application/guardoath-script" data-src="/assets/dashboard.js" data-export="guardoathDashboardInitialized" data-export-type="ready"></script>
+<script type="application/guardoath-script" data-src="/assets/conversation_wizard.js" data-export="guardoathConversationWizardInitialized" data-export-type="ready"></script>
+<script type="application/guardoath-script" data-src="/assets/tenant_stage_tabs.js" data-export="guardoathTenantStageTabsInitialized" data-export-type="ready"></script>
+<script type="application/guardoath-script" data-src="/assets/agent_activity.js" data-export="guardoathAgentActivityInitialized" data-export-type="ready"></script>
+<script src="/assets/dashboard_bootstrap.js" defer></script></head>
 <body>
 <header><div class="brand"><img class="logo" src="/assets/guardoath-shield.png" alt="" width="40" height="40"><span class="brand-text"><span class="brand-name">GuardOath</span><span class="motto">Building Confidence Into AI.</span></span><span class="tag">DEVELOPMENT PREVIEW</span></div><a href="/guide" target="_blank" rel="noopener noreferrer">Developer guide ↗</a><a href="/docs">API reference ↗</a></header>
-<main>
+<section id="dashboard-startup" class="dashboard-startup panel" aria-labelledby="dashboard-startup-title">
+<h1 id="dashboard-startup-title">Loading your dashboard</h1>
+<p id="dashboard-startup-message" role="status" aria-live="polite">Loading the controls needed to connect and check your application.</p>
+<button id="dashboard-startup-retry" type="button" hidden>Retry loading dashboard</button>
+<p class="hint">If the dashboard does not open, <a href="/dashboard">reload this page</a>.</p>
+<noscript><p>JavaScript is required to use the dashboard. Enable it, then reload this page.</p></noscript>
+</section>
+<main id="dashboard-app" hidden inert>
 <section class="hero" aria-labelledby="hero-title"><div class="eyebrow">GUARDOATH · AI SECURITY &amp; VALIDATION</div><h1 id="hero-title">AI is powerful. Every interaction deserves validation.</h1>
 <p class="value">Validate Inputs. Protect Data. Govern AI Actions.</p>
 <p class="intro">An API-first platform that checks AI inputs and outputs against configurable policies: before a message reaches your model, and before an answer reaches your user.</p></section>
-<section class="panel video-panel" aria-labelledby="video-title"><h2 id="video-title">Watch GuardOath in 2 minutes</h2><p class="hint">An AI narrator explains GuardOath’s approach to input and output validation and configurable policies. Development preview: some capabilities shown are planned or in progress.</p><video id="demo-video" controls preload="metadata" playsinline width="1280" height="720" src="/assets/guardoath_ai_final.mp4">Your browser cannot play this video.</video></section>
+<section class="panel video-panel" aria-labelledby="video-title"><h2 id="video-title">Watch GuardOath in 2 minutes</h2><p class="hint">An AI narrator explains GuardOath’s approach to input and output validation and configurable policies. Development preview: some capabilities shown are planned or in progress.</p><video id="demo-video" controls preload="none" playsinline width="1280" height="720" src="/assets/guardoath_ai_final.mp4">Your browser cannot play this video.</video></section>
 <div class="eyebrow">CHECK PLAYGROUND</div><h2 class="playground-title">See what your AI checks catch.</h2>
 <p class="intro">Follow the conversation: enter a message, check it, paste your AI’s answer, then check the answer before releasing it.</p>
 <div class="notice"><strong>This playground checks content. It does not generate an AI answer.</strong> The default conversation profile runs all implemented general text checks: sensitive identifiers, secrets and text-security signals. Other groups need application-specific rules or are not implemented.</div>

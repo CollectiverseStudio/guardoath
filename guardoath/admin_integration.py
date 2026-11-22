@@ -45,6 +45,7 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
                         browser_config: BrowserAuthConfig | None = None,
                         browser_exchange: BoundExchange | None = None,
                         native_auth: CognitoNativeMfa | None = None,
+                        native_enrollment=None,
                         admin_mutator=None, audit_reader=None, read_auditor=None, catalog_drafts=None,
                         require_persistent_read_audit: bool = False,
                         billing_reporter=None, billing_downgrade=None, billing_invoices=None,
@@ -88,6 +89,16 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
     if (native_auth is not None and browser_config is not None and
             getattr(native_auth, "client_id", None) != browser_config.client_id):
         raise AdminConfigurationError("Native admin challenge client must match the signed token verifier")
+    if native_enrollment is not None:
+        from guardoath.admin_enrollment import CognitoNativeEnrollment
+        if (not isinstance(native_enrollment, CognitoNativeEnrollment)
+                or native_auth is None or browser_config is None
+                or getattr(native_enrollment, "client_id", None) != browser_config.client_id
+                or getattr(native_enrollment, "pool_id", None) != sessions.pool_id
+                or native_enrollment._sessions is not sessions
+                or native_enrollment._state._client is not store._client
+                or getattr(getattr(native_enrollment, "_state", None), "table_name", None) == store.table_name):
+            raise AdminConfigurationError("Owner enrollment requires native sign-in and independent bound state")
     if browser_config is not None:
         if (getattr(sessions, "client_id", None) != browser_config.client_id or
                 getattr(sessions, "domain", None) != browser_config.domain or
@@ -119,6 +130,7 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
     ))
     if browser_config is not None and browser_exchange is not None:
         app.include_router(create_browser_router(browser_config, browser_exchange, verifier,
-                                                 native_auth=native_auth))
+                                                 native_auth=native_auth,
+                                                 native_enrollment=native_enrollment))
 
     app.state.guardoath_admin_mounted = True
