@@ -41,26 +41,63 @@ def test_list_is_one_bounded_page_masked_and_paginates():
     assert f.calls[-1]["PaginationToken"]=="next-provider"
 
 
-def test_cursor_hides_verified_owner_subject_and_personal_email_prefix():
+def test_cursor_seals_provider_token_and_owner_filter_without_exposing_plaintext():
     provider = Fake()
     service = directory(provider)
     query = "someone@example.com"
     cursor = service.page(owner_sub=OWNER, limit=5, query=query)["next_cursor"]
-    raw = cursor.split(".", 1)[0]
-    payload = json.loads(base64.urlsafe_b64decode(raw + "=" * (-len(raw) % 4)))
-    assert payload["v"] == 3
-    assert payload["owner"] != OWNER and payload["q"] != query
-    assert OWNER not in json.dumps(payload) and query not in json.dumps(payload)
-    assert OWNER not in cursor and query not in cursor
-    assert payload["token"] == "next-provider"
-    assert service.page(owner_sub=OWNER, limit=5, query=query, cursor=cursor)["status"] == "ok"
+    assert cursor.startswith("v4.")
+    raw = cursor.split(".", 1)[1]
+    ciphertext = base64.urlsafe_b64decode(raw + "=" * (-len(raw) % 4))
+    assert ciphertext and b"next-provider" not in ciphertext
+    assert OWNER.encode() not in ciphertext and query.encode() not in ciphertext
+    assert "next-provider" not in cursor and OWNER not in cursor and query not in cursor
+    # Independent encryptions use unpredictable nonces, never repeat a bearer
+    # provider token's browser-visible representation.
+    other = service.page(owner_sub=OWNER, limit=5, query=query)["next_cursor"]
+    assert cursor != other
+    resumed = directory(provider).page(owner_sub=OWNER, limit=5, query=query, cursor=cursor)
+    assert resumed["status"] == "ok"
     assert provider.calls[-1]["PaginationToken"] == "next-provider"
 
 
-def test_legacy_signed_but_cleartext_cursors_fail_closed_before_provider_read():
+def test_cursor_ciphertext_tamper_and_key_rotation_fail_before_provider_read():
     provider = Fake()
     service = directory(provider)
-    payload = {"v": 2, "pool": "us-east-1_Example", "owner": OWNER, "q": "some", "n": 5,
+    cursor = service.page(owner_sub=OWNER, limit=5)["next_cursor"]
+    raw = cursor.split(".", 1)[1]
+    sealed = bytearray(base64.urlsafe_b64decode(raw + "=" * (-len(raw) % 4)))
+    for offset in (0, 12, len(sealed) - 1):
+        altered = bytearray(sealed)
+        altered[offset] ^= 1
+        forged = "v4." + base64.urlsafe_b64encode(altered).rstrip(b"=").decode()
+        with pytest.raises(InvalidUserCursor):
+            service.page(owner_sub=OWNER, limit=5, cursor=forged)
+    rotated = CognitoUserDirectory(provider, "us-east-1_Example", b"b"*32, lambda: 100)
+    with pytest.raises(InvalidUserCursor):
+        rotated.page(owner_sub=OWNER, limit=5, cursor=cursor)
+    assert len(provider.calls) == 1
+
+
+def test_long_provider_continuation_fits_bounded_encrypted_cursor():
+    class LongToken(Fake):
+        def list_users(self, **kw):
+            self.calls.append(kw)
+            return {"Users": [], "PaginationToken": "T" * 2048} if "PaginationToken" not in kw else {"Users": []}
+    provider = LongToken()
+    service = directory(provider)
+    cursor = service.page(owner_sub=OWNER, limit=5)["next_cursor"]
+    assert cursor.startswith("v4.") and len(cursor) < 4096
+    assert "T" * 64 not in cursor
+    assert service.page(owner_sub=OWNER, limit=5, cursor=cursor)["next_cursor"] is None
+    assert provider.calls[-1]["PaginationToken"] == "T" * 2048
+
+
+@pytest.mark.parametrize("legacy_version", [2, 3])
+def test_legacy_signed_but_cleartext_cursors_fail_closed_before_provider_read(legacy_version):
+    provider = Fake()
+    service = directory(provider)
+    payload = {"v": legacy_version, "pool": "us-east-1_Example", "owner": OWNER, "q": "some", "n": 5,
                "token": "next-provider", "exp": 1000}
     data = base64.urlsafe_b64encode(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()

@@ -8,8 +8,12 @@ import hashlib
 import hmac
 import json
 import re
+import secrets
 import time
 from datetime import datetime, timezone
+
+from cryptography.exceptions import InvalidTag
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 class InvalidUserCursor(ValueError):
     pass
@@ -77,32 +81,50 @@ class CognitoUserDirectory:
         return _b64(hmac.new(self.key, message, hashlib.sha256).digest())
 
     def _cursor(self, token, query, limit, owner_sub):
-        payload = {"v": 3, "pool": self.pool_id,
+        # Cognito continuation tokens are provider data. A signed base64 JSON
+        # envelope exposes those bytes to every browser: encrypt AND authenticate
+        # the whole short-lived, owner/filter/page-bound cursor instead.
+        payload = {"v": 4, "pool": self.pool_id,
                    "owner": self._cursor_binding("owner", owner_sub),
                    "q": self._cursor_binding("filter", query), "n": limit,
                    "token": token, "exp": int(self.clock()) + 900}
-        data = _b64(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode())
-        signature = _b64(hmac.new(self.key, b"guardoath-user-directory:" + data.encode(), hashlib.sha256).digest())
-        return data + "." + signature
+        data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        nonce = secrets.token_bytes(12)
+        cipher_key = hmac.new(self.key, b"guardoath-user-directory-cursor-key-v4",
+                              hashlib.sha256).digest()
+        sealed = AESGCM(cipher_key).encrypt(
+            nonce, data, b"guardoath-cognito-list-users-cursor-v4")
+        return "v4." + _b64(nonce + sealed)
 
     def _verify(self, value, query, limit, owner_sub):
-        if not isinstance(value, str) or len(value) > 4096 or not value.isascii() or value.count(".") != 1:
-            raise InvalidUserCursor("Invalid user cursor")
-        data, supplied = value.split(".")
-        expected = _b64(hmac.new(self.key, b"guardoath-user-directory:" + data.encode(), hashlib.sha256).digest())
-        if not hmac.compare_digest(supplied, expected):
+        if (not isinstance(value, str) or len(value) > 4096 or
+                not value.isascii() or not value.startswith("v4.") or
+                value.count(".") != 1):
             raise InvalidUserCursor("Invalid user cursor")
         try:
-            payload = json.loads(_unb64(data))
-        except (ValueError, UnicodeDecodeError) as exc:
+            sealed = _unb64(value[3:])
+            # A 2048-byte provider token plus bounded metadata fits below this.
+            if not 28 <= len(sealed) <= 3072:
+                raise InvalidUserCursor("Invalid user cursor")
+            cipher_key = hmac.new(self.key, b"guardoath-user-directory-cursor-key-v4",
+                                  hashlib.sha256).digest()
+            data = AESGCM(cipher_key).decrypt(
+                sealed[:12], sealed[12:],
+                b"guardoath-cognito-list-users-cursor-v4")
+            payload = json.loads(data)
+        except (InvalidTag, TypeError, ValueError, UnicodeError, OverflowError) as exc:
             raise InvalidUserCursor("Invalid user cursor") from exc
-        if (not isinstance(payload, dict) or payload.get("v") != 3 or payload.get("pool") != self.pool_id
-                or payload.get("owner") != self._cursor_binding("owner", owner_sub)
-                or payload.get("q") != self._cursor_binding("filter", query)
-                or type(payload.get("n")) is not int
-                or payload["n"] != limit or type(payload.get("exp")) is not int
-                or payload["exp"] <= self.clock() or not isinstance(payload.get("token"), str)
-                or not 1 <= len(payload["token"]) <= 2048):
+        if (not isinstance(payload, dict) or
+                set(payload) != {"v", "pool", "owner", "q", "n", "token", "exp"} or
+                type(payload.get("v")) is not int or payload["v"] != 4 or
+                payload["pool"] != self.pool_id or
+                payload["owner"] != self._cursor_binding("owner", owner_sub) or
+                payload["q"] != self._cursor_binding("filter", query) or
+                type(payload["n"]) is not int or payload["n"] != limit or
+                type(payload["exp"]) is not int or
+                payload["exp"] <= self.clock() or
+                not isinstance(payload["token"], str) or
+                not 1 <= len(payload["token"]) <= 2048):
             raise InvalidUserCursor("Invalid user cursor")
         return payload["token"]
 
