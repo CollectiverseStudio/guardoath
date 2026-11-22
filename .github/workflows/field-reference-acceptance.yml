@@ -2,43 +2,8 @@ name: Trusted Reference Acceptance
 on:
   workflow_dispatch:
   push:
+    # Every deployable main SHA needs its own complete release evidence.
     branches: [main]
-    paths:
-      # Admin API or security changes must run this exact-SHA release gate.
-      - "guardoath/admin_*.py"
-      - "tests/test_admin_*.py"
-      # Deployment guard changes need a complete exact-SHA release receipt.
-      - "deploy/aws/Deploy-Verified.ps1"
-      - "guardoath/advanced_trusted_reference.py"
-      - "guardoath/trusted_reference.py"
-      - "guardoath/json_data.py"
-      - "guardoath/models.py"
-      - "guardoath/tenant_record.py"
-      - "guardoath/app.py"
-      - "guardoath/hosted.py"
-      - "guardoath/static/identity_editor.js"
-      - "guardoath/static/conversion_editor.js"
-      - "guardoath/static/dashboard.js"
-      - "guardoath/static/dashboard.html"
-      - "guardoath/business.py"
-      - "guardoath/engine.py"
-      - "guardoath/record_rules.py"
-      - "tools/sign_trusted_reference.py"
-      - "tests/test_advanced_trusted_reference.py"
-      - "tests/test_trusted_reference_value_validity.py"
-      - "tests/test_trusted_reference_signing_cli.py"
-      - "tests/test_field_comparison_reference_isolation.py"
-      - "tests/test_identity_dashboard_tenant.py"
-      - "tests/test_conversion_dashboard_tenant.py"
-      - "tests/browser/identity_editor.spec.js"
-      - "tests/browser/conversion_editor.spec.js"
-      - "tests/browser/trusted_reference_status.spec.js"
-      - "tests/test_trusted_reference_interval_bounds.py"
-      - "tests/test_signed_reference_tenant_replay.py"
-      - "guardoath/advanced_conversion_time.py"
-      - "tests/test_field_comparison_timestamp_offsets.py"
-      - "tests/test_fx_reference_timestamp_admission.py"
-      - ".github/workflows/field-reference-acceptance.yml"
 permissions:
   contents: read
 jobs:

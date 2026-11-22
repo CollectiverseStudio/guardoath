@@ -1,44 +1,34 @@
-"""P0 contract: shipped privacy gate follows ALL runtime checker and policy edits.
+"""P0 contract: every deployable main SHA receives all release gates.
 
 This is a workflow source contract; it does not replace full CI or repeated
-real-Engine scans. Keep the privacy gate narrowly path-scoped to avoid unrelated
-changes running expensive platform-wide PII probes.
+real-Engine scans. Documentation and browser-test-only commits need their own
+exact-SHA evidence, including the unchanged platform-wide privacy probes.
 """
 from pathlib import Path
 
+import pytest
 
-def test_reliability_gate_cannot_omit_shipped_privacy_paths():
+
+@pytest.mark.parametrize("workflow_name", (
+    "field-comparison-evidence.yml",
+    "field-reference-acceptance.yml",
+    "pii-reliability-gate.yml",
+    "stripe-reconciliation-acceptance.yml",
+    "deploy-script-acceptance.yml",
+))
+def test_release_gates_run_for_every_main_commit(workflow_name):
     workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows"
-                / "pii-reliability-gate.yml").read_text(encoding="utf-8")
-    # Exact indented YAML path lines, never a prose mention.
-    required_paths = (
-        "guardoath/pii.py",
-        "guardoath/engine.py",
-        "guardoath/checkers.py",
-        "guardoath/secrets_check.py",
-        "guardoath/encoded_pii.py",
-        "guardoath/text_security.py",
-        "guardoath/privacy_catalog.py",
-        "guardoath/sensitive_fields.py",
-        "guardoath/privacy_patterns/**",
-        "policies/playground.json",
-        "tests/test_dashboard.py",
-        "tests/test_pii_deadline_diagnostics.py",
-        "tests/test_checker_completion_deadline.py",
-        "tests/test_pii_context_window.py",
-        "tests/test_pii_redaction_assembly.py",
-        "tests/test_pii_core_validation_cache.py",
-        "tools/conversation_privacy_release.py",
-        "tools/conversation_privacy_contention.py",
-        "tests/test_conversation_privacy_release.py",
-        "tests/test_conversation_privacy_contention.py",
-        "tests/test_privacy_workflow_trigger_contract.py",
-        ".github/workflows/pii-reliability-gate.yml",
-    )
-    for path in required_paths:
-        assert '      - "' + path + '"' in workflow, path
-    assert "branches: [main]" in workflow
-    assert "workflow_dispatch:" in workflow
+                / workflow_name).read_text(encoding="utf-8")
+    events = workflow.split("\non:\n", 1)[1].split("\npermissions:", 1)[0]
+    # Check the entire event block: paths/paths-ignore or branch exclusions must
+    # not silently omit a required gate for a docs-only or browser-only commit.
+    event_lines = [line.rstrip() for line in events.splitlines()
+                   if line.strip() and not line.lstrip().startswith("#")]
+    assert event_lines == [
+        "  workflow_dispatch:",
+        "  push:",
+        "    branches: [main]",
+    ], workflow_name
 
 
 def test_reliability_gate_runs_all_required_real_engine_checks():

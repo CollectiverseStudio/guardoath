@@ -2,13 +2,8 @@ name: Deploy Script Acceptance
 on:
   workflow_dispatch:
   push:
+    # Every deployable main SHA needs its own complete release evidence.
     branches: [main]
-    paths:
-      # Admin API or security changes must run this exact-SHA release gate.
-      - "guardoath/admin_*.py"
-      - "tests/test_admin_*.py"
-      - "deploy/aws/Deploy-Verified.ps1"
-      - ".github/workflows/deploy-script-acceptance.yml"
 permissions:
   contents: read
 jobs:

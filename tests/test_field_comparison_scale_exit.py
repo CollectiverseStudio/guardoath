@@ -92,20 +92,16 @@ def test_field_comparison_evidence_requires_real_customer_browser_gate():
     """Strict portfolio green must not substitute for authenticated UI acceptance."""
     workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" /
                 "field-comparison-evidence.yml").read_text(encoding="utf-8")
-    assert "workflow_dispatch:" in workflow
-    assert 'branches: [main]' in workflow
-    assert '      - "guardoath/static/comparison_editor.js"' in workflow
-    for path in (
-        "guardoath/static/arithmetic_editor.js",
-        "guardoath/static/identity_editor.js",
-        "guardoath/static/conversion_editor.js",
-        "tests/browser/*editor.spec.js",
-        "tests/browser/arithmetic_500.spec.js",
-        "tests/browser/protected_reference_editors.spec.js",
-        "tests/browser/field_comparison_mixed_family_scale.spec.js",
-        "tests/browser/field_comparisons_500.spec.js",
-    ):
-        assert '      - "' + path + '"' in workflow, path
+    events = workflow.split("\non:\n", 1)[1].split("\npermissions:", 1)[0]
+    # Every main commit needs this exact-SHA browser gate, including changes to
+    # documentation or a browser spec outside the former hand-maintained list.
+    event_lines = [line.rstrip() for line in events.splitlines()
+                   if line.strip() and not line.lstrip().startswith("#")]
+    assert event_lines == [
+        "  workflow_dispatch:",
+        "  push:",
+        "    branches: [main]",
+    ]
     assert "strict-portfolio-and-scale:" in workflow
     browser = workflow.split("  customer-browser-acceptance:", 1)
     assert len(browser) == 2

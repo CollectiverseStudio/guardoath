@@ -2,27 +2,8 @@ name: Stripe Reconciliation Acceptance
 on:
   workflow_dispatch:
   push:
+    # Every deployable main SHA needs its own complete release evidence.
     branches: [main]
-    paths:
-      # Admin API or security changes must run this exact-SHA release gate.
-      - "guardoath/admin_*.py"
-      - "tests/test_admin_*.py"
-      - "guardoath/stripe_provider.py"
-      - "guardoath/subscription_reconciliation.py"
-      - "guardoath/stripe_checkout.py"
-      - "guardoath/stripe_portal.py"
-      - "guardoath/stripe_customer.py"
-      - "guardoath/tenant_record.py"
-      - "guardoath/tenant_store.py"
-      - "guardoath/dynamodb_store.py"
-      - "guardoath/app.py"
-      - "guardoath/static/dashboard.js"
-      - "guardoath/static/dashboard.html"
-      - "tests/test_stripe_*.py"
-      - "tests/test_verified_subscription_store.py"
-      - "tests/test_account_registration_entitlement.py"
-      - "tests/browser/customer_registration_status.spec.js"
-      - ".github/workflows/stripe-reconciliation-acceptance.yml"
 permissions:
   contents: read
 jobs:

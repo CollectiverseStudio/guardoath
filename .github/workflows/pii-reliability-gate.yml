@@ -2,49 +2,8 @@ name: PII Reliability Gate
 on:
   workflow_dispatch:
   push:
+    # Every deployable main SHA needs its own complete release evidence.
     branches: [main]
-    paths:
-      # Admin API or security changes must run this exact-SHA release gate.
-      - "guardoath/admin_*.py"
-      - "tests/test_admin_*.py"
-      # Deployment guard changes need a complete exact-SHA release receipt.
-      - "deploy/aws/Deploy-Verified.ps1"
-      - "guardoath/pii.py"
-      - "guardoath/privacy_digit_prefilter.py"
-      - "tests/test_privacy_digit_prefilter.py"
-      - "tests/test_pii.py"
-      - "tests/test_pii_deadline_diagnostics.py"
-      - "tests/test_checker_completion_deadline.py"
-      - "tests/test_pii_context_window.py"
-      - "tests/test_privacy_overlaps.py"
-      - "tests/test_pii_overlap_deadline.py"
-      - "tests/test_pii_redaction_assembly.py"
-      - "tests/test_pii_core_validation_cache.py"
-      - "guardoath/privacy_patterns/url_recognizer.py"
-      - "guardoath/privacy_patterns/pattern_recognizer.py"
-      - "tests/privacy_patterns/test_url_recognizer.py"
-      - "guardoath/engine.py"
-      - "guardoath/checkers.py"
-      - "guardoath/secrets_check.py"
-      - "guardoath/encoded_pii.py"
-      - "guardoath/text_security.py"
-      - "guardoath/privacy_catalog.py"
-      - "guardoath/sensitive_fields.py"
-      - "guardoath/privacy_patterns/**"
-      - "policies/playground.json"
-      - "tests/test_dashboard.py"
-      - "tools/pii_reliability_probe.py"
-      - "tools/pii_release_matrix.py"
-      - "tools/conversation_privacy_release.py"
-      - "tools/conversation_privacy_contention.py"
-      - "tests/test_conversation_privacy_contention.py"
-      - "tests/test_conversation_privacy_release.py"
-      - "tests/test_privacy_workflow_trigger_contract.py"
-      - "tools/pii_latency_probe.py"
-      - "tests/test_pii_latency_probe.py"
-      - "tests/test_pii_regex_concurrency.py"
-      - "tests/test_pii_release_matrix.py"
-      - ".github/workflows/pii-reliability-gate.yml"
 
 permissions:
   contents: read

@@ -2,78 +2,8 @@ name: Field Comparisons Evidence
 on:
   workflow_dispatch:
   push:
+    # Every deployable main SHA needs its own complete release evidence.
     branches: [main]
-    paths:
-      # Admin API or security changes must run this exact-SHA release gate.
-      - "guardoath/admin_*.py"
-      - "tests/test_admin_*.py"
-      # Deployment guard changes need a complete exact-SHA release receipt.
-      - "deploy/aws/Deploy-Verified.ps1"
-      - "guardoath/business.py"
-      - "guardoath/models.py"
-      - "guardoath/record_rules.py"
-      # FC-031–050 use the same tenant Engine but live in advanced-family modules.
-      # Their source and customer regression edits must re-run strict original
-      # FC-001–030 witnesses plus 30/51/100/250/500 mixed-family evidence.
-      - "guardoath/advanced_*.py"
-      - "tests/test_fc*.py"
-      - "tests/browser/fc*.spec.js"
-      # Also gate customer workflows named field_comparison_* and
-      # advanced_field_comparison_* (real tenant/browser coverage).
-      - "tests/browser/*field_comparison*.spec.js"
-      # Guided arithmetic, identity and conversion tenant customer journeys
-      # are mandatory FC regression sources even if only a browser spec changes.
-      - "tests/browser/*guided_example.spec.js"
-      - "tests/browser/*editor.spec.js"
-      # Single-family 500-rule arithmetic bulk import must not evade Chrome acceptance.
-      - "tests/browser/arithmetic_500.spec.js"
-      - "tests/browser/protected_reference_editors.spec.js"
-      - "tests/test_*field_comparison*.py"
-      - "guardoath/engine.py"
-      - "guardoath/tenant_record.py"
-      - "tools/field_comparison_portfolio.py"
-      - "tools/field_comparison_scale.py"
-      - "guardoath/app.py"
-      - "guardoath/hosted.py"
-      - "guardoath/static/dashboard.js"
-      - "guardoath/static/dashboard.html"
-      # Stage-focused tenant settings also control FC Input/Output authority.
-      - "guardoath/static/tenant_stage_tabs.js"
-      - "guardoath/static/dashboard.css"
-      - "tests/browser/tenant_stage_tabs.spec.js"
-      - "tests/browser/checks_setup_wizard.spec.js"
-      - "tests/test_tenant_stage_tabs.py"
-      - "guardoath/static/comparison_editor.js"
-      - "guardoath/static/arithmetic_editor.js"
-      - "guardoath/static/identity_editor.js"
-      # Protected FC-048 subset and FC-040 serial boundaries are covered by
-      # real Engine/tenant tests and a customer authenticated browser test.
-      - "tests/test_advanced_identity.py"
-      - "tests/test_field_comparison_reference_isolation.py"
-      - "tests/browser/identity_editor.spec.js"
-      - "guardoath/static/conversion_editor.js"
-      # Signed FC-044/045/047/049 are part of the same cross_field Engine,
-      # and customer host-reference status/action changes must not avoid scale gates.
-      - "guardoath/trusted_reference.py"
-      - "tools/sign_trusted_reference.py"
-      - "tests/test_advanced_trusted_reference.py"
-      - "tests/test_trusted_reference_value_validity.py"
-      - "tests/test_trusted_reference_signing_cli.py"
-      # Time-window/identity replay and tenant-scoped FX reference admission
-      # are release-critical even when only their test contract changes.
-      - "tests/test_trusted_reference_interval_bounds.py"
-      - "tests/test_signed_reference_tenant_replay.py"
-      - "tests/test_fx_reference_timestamp_admission.py"
-      - "tests/browser/trusted_reference_end_to_end.spec.js"
-      - "tests/browser/trusted_reference_status.spec.js"
-      - "tests/browser/field_comparison_unsaved_examples.spec.js"
-      - "tests/test_field_comparison_large_tenant_api.py"
-      - "tests/test_field_comparison_mixed_family_scale.py"
-      - "tests/browser/field_comparison_mixed_family_scale.spec.js"
-      - "tests/browser/field_comparisons_500.spec.js"
-      - "docs/field-comparisons-rule-inventory.json"
-      - "tests/test_field_comparison_scale_exit.py"
-      - ".github/workflows/field-comparison-evidence.yml"
 
 permissions:
   contents: read
