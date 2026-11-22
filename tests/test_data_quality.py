@@ -61,6 +61,19 @@ def test_non_json_ledger_skip_does_not_depend_on_checker_deadline(stage, monkeyp
 
 
 @pytest.mark.parametrize('stage', list(Stage))
+def test_builtin_json_ledger_identity_is_bound_for_all_formats(stage):
+    """Regression: a local import in execute() must not shadow ledger_check on JSON."""
+    policy = load_policies(ROOT / 'policies' / 'ledger-batch.json')[0]
+    case = next(case for name, case in CASES
+                if name == 'ledger' and case['expected']['checker_statuses']['ledger'] == 'passed')
+    response = asyncio.run(Engine([policy], default_checkers()).check(
+        CheckRequest(**case['request']), stage))
+    assert response.evaluation_status == 'complete'
+    assert response.checker_results[0].status == 'passed'
+    assert response.checker_results[0].error_code is None
+
+
+@pytest.mark.parametrize('stage', list(Stage))
 def test_builtin_json_ledger_avoids_redundant_timer_but_blocks_late_results(stage, monkeypatch):
     """Only the exact non-yielding ledger checker skips timer setup, not its deadline."""
     import guardoath.engine as engine_module

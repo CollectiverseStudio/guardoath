@@ -161,7 +161,6 @@ class Engine:
             # request into a spurious checker_timeout. Do not bypass custom
             # checkers, JSON ledger validation, or privacy/redaction deadlines.
             if checker_id == "ledger" and content_request.content_format != "json":
-                from guardoath.data_quality import ledger_check
                 if checker is ledger_check:
                     return CheckerResult(
                         checker_id="ledger", checker_version="1", status="skipped",
