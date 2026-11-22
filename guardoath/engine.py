@@ -8,7 +8,7 @@ from uuid import uuid4
 from jsonschema import Draft202012Validator
 
 from guardoath.checkers import Checker, schema_check, cross_field_check
-from guardoath.data_quality import timestamps_check
+from guardoath.data_quality import ledger_check, timestamps_check
 from guardoath.matched_outcomes import matched_outcomes_check
 from guardoath.config import validate_local_schema
 from guardoath.formats import validate_schema_formats
@@ -174,7 +174,7 @@ class Engine:
                 # another task and an avoidable event-loop scheduling hop on
                 # every call. The timeout context keeps the same deadline;
                 # monotonic post-completion enforcement still rejects late work.
-                # The exact built-in schema, cross-field, timestamp and matched-outcome checkers
+                # The exact built-in schema, cross-field, ledger, timestamp and matched-outcome checkers
                 # are non-yielding local CPU coroutines. Their timeout context
                 # only schedules an event-loop timer that cannot interrupt
                 # a non-yielding operation. Avoid that scheduling cost;
@@ -182,6 +182,7 @@ class Engine:
                 # rejects every verdict returned after the original deadline.
                 # Custom/replaced/async checkers keep asyncio.timeout.
                 if (checker is schema_check or checker is cross_field_check or
+                        (checker_id == "ledger" and checker is ledger_check) or
                         (checker_id == "timestamps" and checker is timestamps_check) or
                         (checker_id == "matched_outcomes" and checker is matched_outcomes_check)):
                     result = await checker(content_request, policy, stage)

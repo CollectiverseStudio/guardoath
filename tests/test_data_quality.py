@@ -59,6 +59,66 @@ def test_non_json_ledger_skip_does_not_depend_on_checker_deadline(stage, monkeyp
     assert response.checker_results[0].error_code == 'ledger_json_required'
 
 
+
+@pytest.mark.parametrize('stage', list(Stage))
+def test_builtin_json_ledger_avoids_redundant_timer_but_blocks_late_results(stage, monkeypatch):
+    """Only the exact non-yielding ledger checker skips timer setup, not its deadline."""
+    import guardoath.engine as engine_module
+    from guardoath.data_quality import ledger_check
+
+    policy = load_policies(ROOT / 'policies' / 'ledger-batch.json')[0]
+    case = next(case for name, case in CASES
+                if name == 'ledger' and case['expected']['checker_statuses']['ledger'] == 'passed')
+    request = CheckRequest(**case['request'])
+    checker_engine = Engine([policy], {'ledger': ledger_check})
+
+    def forbid_timer(_seconds):
+        raise AssertionError('Built-in non-yielding ledger must not schedule a timer')
+
+    monkeypatch.setattr(engine_module.asyncio, 'timeout', forbid_timer)
+    monkeypatch.setattr(engine_module, 'perf_counter', lambda: 0.0)
+    normal = asyncio.run(checker_engine.check(request, stage))
+    assert normal.evaluation_status == 'complete'
+    assert normal.checker_results[0].status == 'passed'
+
+    ticks = [0]
+    def late_clock():
+        ticks[0] += 1
+        return 0.0 if ticks[0] <= 2 else 0.601
+
+    monkeypatch.setattr(engine_module, 'perf_counter', late_clock)
+    late = asyncio.run(checker_engine.check(request, stage))
+    assert late.evaluation_status == 'incomplete'
+    assert late.checker_results[0].status == 'error'
+    assert late.checker_results[0].error_code == 'checker_timeout'
+    assert late.checker_results[0].latency_ms == 601.0
+
+
+@pytest.mark.parametrize('stage', list(Stage))
+def test_replacement_json_ledger_retains_cancellable_timeout(stage, monkeypatch):
+    """User-provided async adapters cannot inherit the built-in shortcut."""
+    import guardoath.engine as engine_module
+    from guardoath.data_quality import ledger_check
+
+    policy = load_policies(ROOT / 'policies' / 'ledger-batch.json')[0]
+    case = next(case for name, case in CASES
+                if name == 'ledger' and case['expected']['checker_statuses']['ledger'] == 'passed')
+    seen = []
+    original_timeout = engine_module.asyncio.timeout
+    def observed_timeout(seconds):
+        seen.append(seconds)
+        return original_timeout(seconds)
+    monkeypatch.setattr(engine_module.asyncio, 'timeout', observed_timeout)
+
+    async def replacement(request, policy, current_stage):
+        return await ledger_check(request, policy, current_stage)
+
+    response = asyncio.run(Engine([policy], {'ledger': replacement}).check(
+        CheckRequest(**case['request']), stage))
+    assert response.evaluation_status == 'complete'
+    assert response.checker_results[0].status == 'passed'
+    assert seen == [policy.timeout_ms / 1000]
+
 @pytest.mark.parametrize('name',NAMES)
 @pytest.mark.parametrize('stage',list(Stage))
 def test_checks_never_need_a_network_connection(name,stage,monkeypatch):
