@@ -432,3 +432,74 @@ def test_one_owner_origin_policy_for_every_sensitive_admin_post():
             }).status_code == 403
     assert directory.calls == 3
     assert len(actions.calls) == 9
+
+
+def test_tenant_detail_and_legacy_directory_reject_ambiguous_authoritative_records():
+    """Admin detail must not stringify private/corrupt account data into a paid state."""
+    from datetime import datetime, timezone
+    import pytest
+
+    month = datetime.now(timezone.utc).strftime("%Y-%m")
+    cases = [
+        ("tenant_id", "beta"), ("demo", "false"), ("demo", 0),
+        ("demo", None), ("status", "pending"), ("status", None),
+        ("subscription_status", "paid"), ("subscription_status", True),
+        ("subscription_status", {"private": "cus_INTERNAL"}),
+        ("display_name", {"private": "cus_INTERNAL"}),
+        ("updated_at", {"private": "cus_INTERNAL"}),
+        ("revision", True), ("revision", -1), ("revision", 10**19),
+        ("usage", {month: "cus_INTERNAL"}),
+        ("usage", {month: True}),
+        ("usage", {"2026-13": 7}),
+        ("usage", {month: {"private": "cus_INTERNAL"}}),
+        ("usage", ["cus_INTERNAL"]),
+    ]
+    for field, malformed in cases:
+        class BrokenStore(Store):
+            def get(self, name):
+                record = Record()
+                setattr(record, field, malformed)
+                return record
+
+        c = client(verified, BrokenStore())
+        for path in ("/v1/admin/tenants/alpha", "/v1/admin/tenants"):
+            assert c.get(path).status_code == 401
+            response = c.get(path, headers=auth())
+            assert response.status_code == 503, (field, malformed, response.text)
+            assert "cus_INTERNAL" not in response.text
+            assert "private" not in response.text
+
+
+def test_detail_legacy_unknown_allowance_and_key_metadata_do_not_fabricate_zero():
+    class LegacyStore(Store):
+        def get(self, name):
+            record = Record()
+            record.monthly_allowance = "unavailable"
+            record.key_hashes = {"private": "NEVER_EXPOSE"}
+            record.subscription_status = None
+            return record
+
+    c = client(verified, LegacyStore())
+    for path in ("/v1/admin/tenants/alpha", "/v1/admin/tenants"):
+        result = c.get(path, headers=auth())
+        assert result.status_code == 200, result.text
+        tenant = result.json().get("tenant") or result.json()["tenants"][0]
+        assert tenant["monthly_allowance"] is None
+        assert tenant["api_key_count"] is None
+        assert tenant["subscription_status"] is None
+        assert "NEVER_EXPOSE" not in result.text
+
+
+def test_legacy_tenant_directory_rejects_duplicates_missing_and_broken_ids():
+    for ids, missing in [
+        (("alpha", "alpha"), False), (("alpha", "../bad"), False),
+        (("alpha", "beta"), True), (("alpha", True), False),
+    ]:
+        class InvalidStore(Store):
+            def tenant_ids(self):
+                return ids
+            def get(self, name):
+                return None if missing and name == "beta" else Record()
+        c = client(verified, InvalidStore())
+        response = c.get("/v1/admin/tenants", headers=auth())
+        assert response.status_code == 503, (ids, response.text)

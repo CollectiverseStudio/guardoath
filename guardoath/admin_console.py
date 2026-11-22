@@ -178,24 +178,60 @@ def _require_admin_origin(request: Request) -> None:
 
 
 def _safe_record(record) -> dict:
-    """Strict field allowlist; never serializes API key hashes, raw data or secrets."""
-    return {
-        "tenant_id": str(record.tenant_id),
-        "display_name": str(record.display_name),
-        "status": str(getattr(record.status, "value", record.status)),
-        "demo": bool(record.demo),
-        "subscription_status": str(getattr(record, "subscription_status", "unknown")),
-        "monthly_allowance": int(record.monthly_allowance),
-        # Count only; plaintext keys, hashes and identifiers never leave the tenant store.
-        "api_key_count": (len(record.key_hashes) if isinstance(getattr(record, "key_hashes", None), (tuple, list))
-                          and len(record.key_hashes) <= 2 else None),
-        "subscription_source": "persisted tenant record; not live Stripe verification",
-        "usage_month": datetime.now(timezone.utc).strftime("%Y-%m"),
-        "usage_month_count": getattr(record, "usage", {}).get(datetime.now(timezone.utc).strftime("%Y-%m")),
-        "revision": int(record.revision),
-        "updated_at": str(record.updated_at),
-    }
+    """Strict tenant detail projection; never stringify corrupt identity or billing data.
 
+    The DynamoDB directory validates raw pages independently. This path covers
+    authoritative single-tenant detail and the non-DynamoDB directory fallback.
+    An ambiguous account must never look like a valid paid customer.
+    """
+    tenant_id = getattr(record, "tenant_id", None)
+    name = getattr(record, "display_name", None)
+    status_obj = getattr(record, "status", None)
+    status = getattr(status_obj, "value", status_obj)
+    demo = getattr(record, "demo", None)
+    subscription_obj = getattr(record, "subscription_status", None)
+    subscription = getattr(subscription_obj, "value", subscription_obj)
+    revision = getattr(record, "revision", None)
+    updated = getattr(record, "updated_at", None)
+    if (not isinstance(tenant_id, str) or not TENANT_ID.fullmatch(tenant_id)
+            or not isinstance(name, str) or not 1 <= len(name) <= 100
+            or status not in ("active", "disabled")
+            or type(demo) is not bool
+            or subscription not in (None, "inactive", "active", "past_due", "canceled")
+            or type(revision) is not int or not 0 <= revision <= 10**18
+            or (updated is not None and
+                (not isinstance(updated, str) or len(updated) > 40))):
+        raise ValueError("Ambiguous saved tenant identity or entitlement")
+
+    month = datetime.now(timezone.utc).strftime("%Y-%m")
+    usage = getattr(record, "usage", None)
+    usage_count = None
+    if usage is not None:
+        if not isinstance(usage, dict) or len(usage) > 120:
+            raise ValueError("Malformed tenant usage")
+        for period, count in usage.items():
+            if (not isinstance(period, str)
+                    or not re.fullmatch(r"[0-9]{4}-(0[1-9]|1[0-2])", period)
+                    or type(count) is not int or not 0 <= count <= 10**18):
+                raise ValueError("Malformed tenant usage")
+        usage_count = usage.get(month)
+
+    allowance = getattr(record, "monthly_allowance", None)
+    if type(allowance) is not int or not 0 <= allowance <= 1_000_000_000:
+        allowance = None  # Unknown legacy allowance must not become zero.
+
+    hashes = getattr(record, "key_hashes", None)
+    key_count = (len(hashes) if isinstance(hashes, (tuple, list))
+                 and len(hashes) <= 2
+                 and all(isinstance(item, str) for item in hashes) else None)
+    return {
+        "tenant_id": tenant_id, "display_name": name, "status": status,
+        "demo": demo, "subscription_status": subscription,
+        "monthly_allowance": allowance, "api_key_count": key_count,
+        "subscription_source": "persisted tenant record; not live Stripe verification",
+        "usage_month": month, "usage_month_count": usage_count,
+        "revision": revision, "updated_at": updated,
+    }
 
 def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                         tenant_store: TenantStore | None = None,
@@ -455,9 +491,22 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             raise HTTPException(status_code=422, detail="Invalid tenant filter")
         read_event = audit_sensitive_read(principal, "tenant.directory")
         try:
-            ids = sorted(tid for tid in tenant_store.tenant_ids() if not search or search.lower() in tid.lower())
-            selected = [_safe_record(record) for tid in ids[offset:offset + limit]
-                        if (record := tenant_store.get(tid)) is not None]
+            source_ids = tenant_store.tenant_ids()
+            if (not isinstance(source_ids, (tuple, list)) or len(source_ids) > 100_000
+                    or len(set(source_ids)) != len(source_ids)
+                    or any(not isinstance(tid, str) or not TENANT_ID.fullmatch(tid)
+                           for tid in source_ids)):
+                raise ValueError("Ambiguous tenant directory identifiers")
+            ids = sorted(tid for tid in source_ids if not search or search.lower() in tid.lower())
+            selected = []
+            for tid in ids[offset:offset + limit]:
+                record = tenant_store.get(tid)
+                if record is None:
+                    raise ValueError("Tenant directory changed during projection")
+                item = _safe_record(record)
+                if item["tenant_id"] != tid:
+                    raise ValueError("Tenant directory identity mismatch")
+                selected.append(item)
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Tenant directory unavailable") from exc
         return admin_json({"status": "ok", "source": "tenant store", "tenants": selected,
@@ -473,11 +522,16 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         read_event = audit_sensitive_read(principal, "tenant.detail", tenant_id)
         try:
             record = tenant_store.get(tenant_id)
+            if record is None:
+                raise HTTPException(status_code=404, detail="Tenant not found")
+            projected = _safe_record(record)
+            if projected["tenant_id"] != tenant_id:
+                raise ValueError("Tenant detail identity mismatch")
+        except HTTPException:
+            raise
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Tenant directory unavailable") from exc
-        if record is None:
-            raise HTTPException(status_code=404, detail="Tenant not found")
-        return admin_json({"tenant": _safe_record(record), "source": "tenant store",
+        return admin_json({"tenant": projected, "source": "tenant store",
                            **({"read_audit_event_id": read_event} if read_event else {})})
 
     @router.get("/v1/admin/tenants/{tenant_id}/usage")
