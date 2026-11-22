@@ -7,7 +7,9 @@ from guardoath.admin_catalog import read_catalog
 from guardoath.admin_catalog_preview import _fingerprint, preview_rule_description
 from guardoath.catalog_metadata import (
     apply_rule_releases, published_version, validate_release_history)
-from guardoath.catalog_source_release import candidate_release, SourceReleaseConflict
+from guardoath.catalog_source_release import (
+    candidate_release, candidate_rollback_release, SourceReleaseConflict)
+from guardoath.admin_catalog_history import verified_catalog_history
 
 BASE = {"base_registry_version": "3", "releases": []}
 SOURCE = {"registry_version": "3", "domains": [{
@@ -35,7 +37,7 @@ class FakeRule:
     severity: str = "high"
 
 
-def export_plan(source=SOURCE, proposal=PROPOSAL):
+def export_plan(source=SOURCE, proposal=PROPOSAL, *, review_id="a"*64, draft_id="b"*64):
     preview = preview_rule_description(lambda: deepcopy(source), **proposal)
     base = read_catalog(lambda: deepcopy(source))
     candidate = deepcopy(base)
@@ -47,14 +49,14 @@ def export_plan(source=SOURCE, proposal=PROPOSAL):
     changes = preview["changes"]
     return {
         "format": "guardoath.reviewed-catalog-metadata-source-plan.v1",
-        "status": "review_only_not_published", "review_id": "a"*64,
-        "draft_id": "b"*64, "registry_version": "3",
-        "candidate_registry_version": "4",
+        "status": "review_only_not_published", "review_id": review_id,
+        "draft_id": draft_id, "registry_version": proposal["expected_registry_version"],
+        "candidate_registry_version": proposal["proposed_registry_version"],
         "reviewed_source_sha256": preview["baseline_sha256"],
         "reviewed_proposal_sha256": preview["proposal_sha256"],
         "candidate_metadata_sha256": next_sha,
         "rollback_source_sha256": preview["baseline_sha256"],
-        "target": {"category_id": "privacy", "check_id": "pii", "rule_id": "pii.email"},
+        "target": {key: proposal[key] for key in ("category_id", "check_id", "rule_id")},
         "changed_fields": sorted(changes),
         "changed_metadata": deepcopy(changes),
         "forward": {
@@ -164,3 +166,114 @@ def test_release_history_rejects_policy_fields_noops_and_control_text(change):
     record["releases"][0]["changes"]=change
     with pytest.raises(ValueError):
         validate_release_history(record)
+
+
+def _current_after_first_release():
+    """The raw registry the next source build would publish, not an old fixture."""
+    source = deepcopy(SOURCE)
+    source["registry_version"] = "4"
+    source["domains"][0]["controls"][0]["rules"][0]["title"] = "Safer email rule"
+    history = candidate_release(export_plan(), lambda: deepcopy(SOURCE), deepcopy(BASE))
+    return source, history
+
+
+def _reviewed_inverse(source):
+    return export_plan(
+        source=source,
+        proposal={**PROPOSAL, "expected_registry_version": "4",
+                  "proposed_registry_version": "5", "title": "Email rule"},
+        review_id="c"*64, draft_id="d"*64)
+
+
+def test_fresh_reviewed_inverse_appends_not_erases_version_and_preserves_tenant_neutrality():
+    source, history = _current_after_first_release()
+    before_source, before_history = deepcopy(source), deepcopy(history)
+    inverse = _reviewed_inverse(source)
+    rollback = candidate_rollback_release(inverse, lambda: deepcopy(source), history)
+    assert source == before_source and history == before_history
+    assert published_version(rollback) == "5"
+    assert len(rollback["releases"]) == 2
+    first, second = rollback["releases"]
+    assert second["baseline_sha256"] == first["candidate_sha256"]
+    assert second["candidate_sha256"] == inverse["candidate_metadata_sha256"]
+    assert second["changes"]["title"] == {"before": "Safer email rule", "after": "Email rule"}
+    original = FakeRule("pii.email", "pii", "Email rule",
+                        "Turn this on to protect personal emails")
+    restored = apply_rule_releases({"pii.email": original}, rollback)["pii.email"]
+    assert restored == original
+    published = read_catalog(lambda: deepcopy(source))
+    published["registry_version"] = "5"
+    published["categories"][0]["checks"][0]["rules"][0]["title"] = "Email rule"
+    inspected = verified_catalog_history(published, rollback)
+    assert inspected["source_chain_verified"] is True
+    assert inspected["release_count"] == 2
+    assert [entry["registry_version"] for entry in inspected["releases"]] == ["5", "4"]
+
+
+def test_rollback_requires_existing_publication_exact_inverse_and_fresh_review():
+    source, history = _current_after_first_release()
+    inverse = _reviewed_inverse(source)
+    with pytest.raises(SourceReleaseConflict):
+        candidate_rollback_release(export_plan(), lambda: deepcopy(SOURCE), BASE)
+    for mutated in (
+        {**inverse, "review_id": "a"*64},
+        {**inverse, "draft_id": "b"*64},
+        {**inverse, "reviewed_source_sha256": "f"*64},
+        {**inverse, "target": {**inverse["target"], "rule_id": "pii.phone"}},
+        {**inverse, "changed_fields": []},
+        {**inverse, "forward": {**inverse["forward"], "changes": {
+            "title": {"before": "Safer email rule", "after": "Another email rule"}}},
+    ):
+        with pytest.raises(SourceReleaseConflict):
+            candidate_rollback_release(mutated, lambda: deepcopy(source), history)
+    # A new source reviewer is not allowed to reuse a previously shipped
+    # review or draft, even when the rest of the payload is self-consistent.
+    replay_review = export_plan(source=source,
+        proposal={**PROPOSAL, "expected_registry_version": "4",
+                  "proposed_registry_version": "5", "title": "Email rule"},
+        review_id="a"*64, draft_id="d"*64)
+    with pytest.raises(SourceReleaseConflict):
+        candidate_release(replay_review, lambda: deepcopy(source), history)
+    replay_draft = _reviewed_inverse(source)
+    replay_draft["draft_id"] = "b"*64
+    with pytest.raises(SourceReleaseConflict):
+        candidate_release(replay_draft, lambda: deepcopy(source), history)
+    assert len(history["releases"]) == 1
+
+
+def test_forged_source_history_reusing_review_or_draft_id_is_rejected():
+    source, history = _current_after_first_release()
+    inverse = _reviewed_inverse(source)
+    rollback = candidate_rollback_release(inverse, lambda: deepcopy(source), history)
+    for field in ("review_id", "draft_id"):
+        damaged = deepcopy(rollback)
+        damaged["releases"][1][field] = damaged["releases"][0][field]
+        with pytest.raises(ValueError):
+            validate_release_history(damaged)
+
+
+def test_rollback_does_not_approve_unrelated_new_description_or_partial_inverse():
+    source, history = _current_after_first_release()
+    arbitrary = export_plan(
+        source=source,
+        proposal={**PROPOSAL, "expected_registry_version": "4",
+                  "proposed_registry_version": "5", "title": "Another email rule"},
+        review_id="c"*64, draft_id="d"*64)
+    # An ordinary new metadata release remains possible, but it cannot be
+    # misrepresented as a rollback of the most recent published release.
+    assert published_version(candidate_release(
+        arbitrary, lambda: deepcopy(source), history)) == "5"
+    with pytest.raises(SourceReleaseConflict):
+        candidate_rollback_release(arbitrary, lambda: deepcopy(source), history)
+    dual = {**PROPOSAL, "title": "Safer email rule",
+            "use_case": "Turn this on to detect submitted email addresses"}
+    first = candidate_release(export_plan(proposal=dual),
+                              lambda: deepcopy(SOURCE), deepcopy(BASE))
+    dual_source = deepcopy(SOURCE)
+    dual_source["registry_version"] = "4"
+    rule = dual_source["domains"][0]["controls"][0]["rules"][0]
+    rule["title"] = dual["title"]
+    rule["use_case"] = dual["use_case"]
+    partial = _reviewed_inverse(dual_source)
+    with pytest.raises(SourceReleaseConflict):
+        candidate_rollback_release(partial, lambda: deepcopy(dual_source), first)

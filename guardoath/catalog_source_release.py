@@ -159,6 +159,10 @@ def candidate_release(export: dict, provider, history: dict) -> dict:
         candidate["registry_version"] = current
         if candidate != catalog:
             raise SourceReleaseConflict("Rollback is not exact")
+        if any(entry["review_id"] == export["review_id"] or
+               entry["draft_id"] == export["draft_id"]
+               for entry in history["releases"]):
+            raise SourceReleaseConflict("Review or draft already used by a published release")
         record = {
             "registry_version": export["candidate_registry_version"],
             **target, "review_id": export["review_id"],
@@ -176,19 +180,58 @@ def candidate_release(export: dict, provider, history: dict) -> dict:
         raise SourceReleaseConflict("Catalog source release unavailable") from exc
 
 
+def candidate_rollback_release(export: dict, provider, history: dict) -> dict:
+    """Append a NEW reviewed version reversing exactly the latest metadata release.
+
+    Rollback is intentionally another source-controlled forward publication, not
+    deletion of history or an in-place mutation of a deployed registry. A fresh
+    owner-reviewed inverse export is required; this never approves deployment.
+    """
+    try:
+        validate_release_history(history)
+        if not history["releases"]:
+            raise SourceReleaseConflict("No published metadata release to reverse")
+        last = history["releases"][-1]
+        if (not isinstance(export, dict)
+                or export.get("reviewed_source_sha256") != last["candidate_sha256"]
+                or export.get("target") != {
+                    "category_id": last["category_id"],
+                    "check_id": last["check_id"],
+                    "rule_id": last["rule_id"],
+                }
+                or not isinstance(export.get("forward"), dict)):
+            raise SourceReleaseConflict("Reversal is not bound to latest published source")
+        expected_inverse = {
+            field: {"before": delta["after"], "after": delta["before"]}
+            for field, delta in last["changes"].items()
+        }
+        if (export["forward"].get("changes") != expected_inverse
+                or export.get("changed_metadata") != expected_inverse
+                or export.get("changed_fields") != sorted(expected_inverse)):
+            raise SourceReleaseConflict("Reversal must restore every field of latest release")
+        return candidate_release(export, provider, history)
+    except SourceReleaseConflict:
+        raise
+    except Exception as exc:
+        raise SourceReleaseConflict("Reviewed source reversal unavailable") from exc
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Propose a source-only GuardOath catalog metadata release")
     parser.add_argument("--plan", type=Path, required=True,
                         help="Reviewed owner Catalog JSON export (not a signature)")
     parser.add_argument("--write", action="store_true",
                         help="Atomically update the tracked source release file; never deploy")
+    parser.add_argument("--revert-last", action="store_true",
+                        help="Require a fresh reviewed export that exactly reverses the latest shipped metadata release")
     parser.add_argument("--confirm-registry-version", default="",
                         help="Required version to prevent accidental source modifications")
     args = parser.parse_args(argv)
     if args.plan.stat().st_size > 65536:
         parser.error("Oversized review export")
     export = json.loads(args.plan.read_text(encoding="utf-8"))
-    updated = candidate_release(export, published_catalog, load_release_history())
+    prepare = candidate_rollback_release if args.revert_last else candidate_release
+    updated = prepare(export, published_catalog, load_release_history())
     version = published_version(updated)
     if args.write:
         if args.confirm_registry_version != version:

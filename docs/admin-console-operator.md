@@ -806,3 +806,28 @@ reviewed next-version source change; deleting release history is not rollback.
 
 ## Owner Overview: bounded saved subscription flags and read timing (2026-11-22)
 The authenticated Overview reuses the same first, bounded DynamoDB tenant directory page already loaded for Tenants. Only when that one page is the **entire scanned population**, all identities are unique, and every non-demo tenant has a recognized saved subscription status, it shows **saved active subscription flags**. This is a count of records whose *saved* `subscription_status` equals `active`, **not** a number of provider-verified paying subscribers, current invoice customers, or confirmed revenue. Disabled tenants can still have stale active flags, and any unknown legacy status, duplicate, failed read, incomplete scan or continuation makes this metric **Unavailable**, never zero by assumption. The API now includes the UTC instant of the successful bounded DynamoDB read; it is not the tenant's last activity or a Stripe freshness attestation. The Overview labels read times only when the provider returned a valid UTC timestamp. No additional AWS read or Stripe call is made and the authoritative record is not mutated.
+
+
+### Reviewed source metadata rollback (offline; never automatic)
+
+A rollback of a **shipped** category/check/rule description is a new, monotonically
+versioned source publication, not deletion of an old release, a live tenant
+override or an immediate change on the website. In the owner Catalog, prepare
+and independently review a fresh metadata-only draft reversing the latest
+shipped source release's *entire* title/use-case diff. Export its reviewed
+forward/rollback plan. After verifying the Git checkout matches the active
+source registry, preview the guarded inverse:
+
+```bash
+python -m guardoath.catalog_source_release --plan reviewed-inverse.json --revert-last
+```
+
+Only after reviewing the proposed version and the approval/release checklist,
+generate the tracked versioned source change with
+`--write --confirm-registry-version <next-version>`. The command rejects
+missing history, stale fingerprints, nonlatest targets, partial inversions,
+reused review/draft identifiers and unrelated edits. It does **not** deploy,
+sign the review, alter customer saved Off/actions, delete history or mark live
+acceptance complete. Changes still require a reviewed non-forced commit, exact
+source-SHA Tests/CodeQL/browser/security gates, rollback plan, and the 15
+production checks; no AWS or Stripe operation is performed by the CLI.

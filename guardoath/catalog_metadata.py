@@ -39,6 +39,7 @@ def validate_release_history(data: dict) -> dict:
             or len(data["releases"]) > 100):
         raise ValueError("Invalid published catalog release history")
     version = int(BASE_REGISTRY_VERSION)
+    seen_reviews, seen_drafts = set(), set()
     for entry in data["releases"]:
         if (not isinstance(entry, dict) or set(entry) != {
                 "registry_version", "category_id", "check_id", "rule_id",
@@ -56,6 +57,8 @@ def validate_release_history(data: dict) -> dict:
                 or any(not isinstance(entry[key], str)
                        or not _SHA.fullmatch(entry[key])
                        for key in ("review_id", "draft_id", "baseline_sha256", "candidate_sha256"))
+                or entry["review_id"] in seen_reviews
+                or entry["draft_id"] in seen_drafts
                 or not isinstance(entry["changes"], dict)
                 or not entry["changes"] or set(entry["changes"]) - _FIELDS):
             raise ValueError("Invalid catalog source release")
@@ -68,6 +71,8 @@ def validate_release_history(data: dict) -> dict:
                     or (field == "use_case" and
                         not delta["after"].startswith("Turn this on"))):
                 raise ValueError("Invalid metadata-only source change")
+        seen_reviews.add(entry["review_id"])
+        seen_drafts.add(entry["draft_id"])
         version += 1
     return data
 
