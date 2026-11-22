@@ -105,7 +105,10 @@ def test_authenticated_sensitive_api_reads_audit_first_and_deny_on_audit_failure
     class Store:
         def get(self, tenant_id):
             calls.append(("store", tenant_id))
-            return object()
+            # Billing reads require exact identity from the authoritative tenant record.
+            # An anonymous object is deliberately rejected before provider access.
+            from types import SimpleNamespace
+            return SimpleNamespace(tenant_id=tenant_id)
     class Billing:
         def read(self, record):
             calls.append(("billing", None))
