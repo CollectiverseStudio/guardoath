@@ -485,19 +485,41 @@ _JS = r'''"use strict";
     };
     const userCount = completePageCount(users, "users");
     const tenantCount = completePageCount(tenants, "tenants");
+    // This is a count of saved ACTIVE flags only, not verified Stripe
+    // subscriptions, billable accounts, current entitlements or revenue.
+    // Require one complete, unambiguous page; never manufacture zero from
+    // unknown legacy billing flags, duplicates or a stale partial scan.
+    const savedStatesComplete = tenantCount !== null &&
+      tenants.tenants.every(t => t && typeof t.tenant_id === "string" &&
+        t.tenant_id.length > 0 && (t.demo === true || t.demo === false) &&
+        (t.demo === true || ["active","inactive","past_due","canceled"].includes(t.subscription_status))) &&
+      new Set(tenants.tenants.map(t => t.tenant_id)).size === tenantCount;
+    const savedActiveFlags = savedStatesComplete ?
+      tenants.tenants.filter(t => t.demo === false && t.subscription_status === "active").length : null;
+    const sourceTime = page =>
+      typeof page?.retrieved_utc === "string" &&
+      /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$/.test(page.retrieved_utc) ?
+        " · read at " + page.retrieved_utc + " (not activity freshness)" :
+        " · read time unavailable";
     const metrics = {...(overview.metrics || {})};
     // These counts are only the complete directory pages observed on refresh.
     // Saved subscription_status is never counted as a verified paid subscriber.
     if (metrics.users?.value == null) {
       metrics.users = {value:userCount,
         source:userCount === null ? "Cognito · total unavailable (partial or failed read)" :
-          "Cognito ListUsers · complete bounded page",
+          "Cognito ListUsers · complete bounded page" + sourceTime(users),
         status:userCount === null ? "unavailable" : "complete_single_page"};
     }
     metrics.tenant_records = {value:tenantCount,
       source:tenantCount === null ? "DynamoDB · total unavailable (partial or failed read)" :
-        "DynamoDB tenant table · complete bounded page (includes demos)",
+        "DynamoDB tenant table · complete bounded page (includes demos)" + sourceTime(tenants),
       status:tenantCount === null ? "unavailable" : "complete_single_page"};
+    metrics.saved_active_subscription_flags = {value:savedActiveFlags,
+      source:savedActiveFlags === null ?
+        "DynamoDB · incomplete, partial or ambiguous saved subscription flags" :
+        "DynamoDB saved subscription_status=active" + sourceTime(tenants) +
+        " · NOT Stripe-verified paid subscribers or revenue",
+      status:savedActiveFlags === null ? "unavailable" : "complete_single_page_saved_flags_only"};
     el("metrics").replaceChildren();
     for (const [name, metric] of Object.entries(metrics)) {
       const card = document.createElement("div"); card.className = "metric";

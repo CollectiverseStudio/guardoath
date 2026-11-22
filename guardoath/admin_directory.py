@@ -212,6 +212,7 @@ class DynamoAdminDirectory:
         except Exception as exc:
             raise DirectoryUnavailable("Tenant directory source unavailable") from exc
         return {"status": "ok", "source": "DynamoDB tenant table", "tenants": tenants,
+                "retrieved_utc": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
                 "returned": len(tenants), "scanned": len(result["Items"]),
                 "total": None, "next_cursor": next_cursor, "limit": limit,
                 "note": "Scanned only one bounded page; total count unavailable"}

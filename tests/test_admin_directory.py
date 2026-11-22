@@ -46,6 +46,8 @@ def test_bounded_cursor_pagination_avoids_full_scan():
     assert [t["tenant_id"] for t in two["tenants"]] == ["beta"]
     assert len(fake.calls) == 2 and all(c["Limit"] == 1 for c in fake.calls)
     assert one["total"] is None
+    from datetime import datetime, timezone
+    assert datetime.fromisoformat(one["retrieved_utc"].replace("Z", "+00:00")).tzinfo == timezone.utc
     assert one["tenants"][0]["api_key_count"] == 1
     assert "HIDDEN_SECRET" not in str(one)
     assert "cus_SECRET" not in str(two)

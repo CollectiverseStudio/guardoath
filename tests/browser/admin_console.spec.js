@@ -27,7 +27,7 @@ async function selectCatalogDescription(page) {
 
 test("owner workspace navigates every section and retains honest unavailable totals", async ({page}) => {
   const fixture = await signedIn(page);
-  await expect(page.locator("#metrics .metric strong")).toHaveText(["Unavailable","Unavailable","Unavailable","Unavailable","2"]);
+  await expect(page.locator("#metrics .metric strong")).toHaveText(["Unavailable","Unavailable","Unavailable","Unavailable","2","1"]);
   for (const section of sections) {
     await page.locator("#nav-" + section).click();
     await expect(page.locator("#section-" + section)).toBeVisible();
@@ -51,9 +51,25 @@ test("owner overview counts complete authenticated pages and withdraws totals on
       status:"ok",source:"Cognito ListUsers",users:[{username:"a"},{username:"b"}],
       returned:2,next_cursor:null,retrieved_utc:"2026-11-22T12:00:00Z"})} : null});
   await expect(page.locator("#metrics .metric strong")).toHaveText(
-    ["2","Unavailable","Unavailable","Unavailable","2"]);
+    ["2","Unavailable","Unavailable","Unavailable","2","1"]);
   await expect(page.locator("#metrics")).toContainText("Cognito ListUsers · complete bounded page");
   await expect(page.locator("#metrics")).toContainText("DynamoDB tenant table · complete bounded page (includes demos)");
+  await expect(page.locator("#metrics")).toContainText("NOT Stripe-verified paid subscribers or revenue");
+  await expect(page.locator("#metrics")).toContainText("read at 2026-11-22T12:00:00Z");
+  // A complete scan with unknown legacy status must never manufacture a
+  // saved active total; tenant-record count is still independently valid.
+  fixture.override = request => request.path === "/v1/admin/tenants"
+    ? {status:200,contentType:"application/json",body:JSON.stringify({
+      status:"ok",tenants:[
+        {tenant_id:"sample-studio",display_name:"Studio",status:"active",demo:false,
+          subscription_status:"active",revision:4,monthly_allowance:10000},
+        {tenant_id:"sample-labs",display_name:"Labs",status:"active",demo:false,
+          subscription_status:null,revision:6,monthly_allowance:0}],
+      returned:2,scanned:2,next_cursor:null,
+      retrieved_utc:"2026-11-22T12:01:00Z"})} : null;
+  await page.locator("#refresh").click();
+  await expect(page.locator("#metrics .metric strong")).toHaveText(
+    ["Unavailable","Unavailable","Unavailable","Unavailable","2","Unavailable"]);
   // A continuation is a lower bound, not a pool total; a Dynamo page
   // missing scanned entries is not a complete tenant population.
   fixture.override = request => request.path === "/v1/admin/users"
@@ -65,7 +81,7 @@ test("owner overview counts complete authenticated pages and withdraws totals on
       scanned:2,next_cursor:null})} : null;
   await page.locator("#refresh").click();
   await expect(page.locator("#metrics .metric strong")).toHaveText(
-    ["Unavailable","Unavailable","Unavailable","Unavailable","Unavailable"]);
+    ["Unavailable","Unavailable","Unavailable","Unavailable","Unavailable","Unavailable"]);
   // Unavailable Cognito and a not-yet-exhausted empty Dynamo page must
   // never appear as zero or retain an earlier observed value.
   fixture.override = request => request.path === "/v1/admin/users"
@@ -75,7 +91,7 @@ test("owner overview counts complete authenticated pages and withdraws totals on
       status:"ok",tenants:[],returned:0,scanned:0,next_cursor:"more"})} : null;
   await page.locator("#refresh").click();
   await expect(page.locator("#metrics .metric strong")).toHaveText(
-    ["Unavailable","Unavailable","Unavailable","Unavailable","Unavailable"]);
+    ["Unavailable","Unavailable","Unavailable","Unavailable","Unavailable","Unavailable"]);
 });
 
 test("owner catalog shows safe source evidence counts and eligibility without deployment claims", async ({page}) => {

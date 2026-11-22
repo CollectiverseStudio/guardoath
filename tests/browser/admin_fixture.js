@@ -122,7 +122,8 @@ function createAdminFixture(options = {}) {
       if (pathname === "/v1/admin/tenants") {
         const filtered = tenants.filter(t => t.tenant_id.includes(url.searchParams.get("search") || ""));
         return json(withReceipt({status:"ok",tenants:filtered,source:"Synthetic tenant fixtures",
-          next_cursor:null,total:null,returned:filtered.length,scanned:filtered.length}));
+          next_cursor:null,total:null,returned:filtered.length,scanned:filtered.length,
+          retrieved_utc:FIXTURE_TIME}));
       }
       if (pathname === "/v1/admin/users") {
         let selected = users;
