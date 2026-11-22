@@ -157,7 +157,7 @@ def test_dual_field_metadata_release_and_strict_inverse():
     {"title": {"before":"Email rule", "after":"Safer email rule"},
      "severity": {"before":"high","after":"low"}},
     {"title": {"before":"Email rule", "after":"Email rule"}},
-    {"title": {"before":"Email rule", "after":"A\\u202ebad"}},
+    {"title": {"before":"Email rule", "after":"A\u202ebad"}},
 ])
 def test_release_history_rejects_policy_fields_noops_and_control_text(change):
     record=candidate_release(export_plan(),lambda:deepcopy(SOURCE),deepcopy(BASE))
