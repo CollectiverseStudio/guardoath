@@ -222,7 +222,7 @@ def test_rollback_requires_existing_publication_exact_inverse_and_fresh_review()
         {**inverse, "target": {**inverse["target"], "rule_id": "pii.phone"}},
         {**inverse, "changed_fields": []},
         {**inverse, "forward": {**inverse["forward"], "changes": {
-            "title": {"before": "Safer email rule", "after": "Another email rule"}}},
+            "title": {"before": "Safer email rule", "after": "Another email rule"}}}},
     ):
         with pytest.raises(SourceReleaseConflict):
             candidate_rollback_release(mutated, lambda: deepcopy(source), history)
