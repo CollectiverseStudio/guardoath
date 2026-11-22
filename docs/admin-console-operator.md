@@ -831,3 +831,6 @@ sign the review, alter customer saved Off/actions, delete history or mark live
 acceptance complete. Changes still require a reviewed non-forced commit, exact
 source-SHA Tests/CodeQL/browser/security gates, rollback plan, and the 15
 production checks; no AWS or Stripe operation is performed by the CLI.
+
+## Concurrent owner tenant inspection (2026-11-22)
+The authenticated **Usage**, **Verify Stripe**, and **Invoices** inspection actions now bind each pending display update to the latest tenant/action selection in the current owner session. If an earlier tenant read or provider error completes after a later selection, the obsolete success/failure cannot overwrite the newer result. Selecting invoices clears a prior tenant's subscription summary; selecting subscription verification clears prior invoice detail, so data for two different tenants cannot appear together as if reconciled. Sign-out continues to invalidate all pending display updates. These are browser protections, not additional server permissions: every underlying request remains independently Cognito/MFA-authorized and persistently audited according to the existing backend. No cost, provider write, entitlement grant or additional request is introduced.

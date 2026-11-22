@@ -333,6 +333,9 @@ _JS = r'''"use strict";
   let reviewReadyForManifest = null;
   let exportableManifest = null;
   let authEpoch = 0;
+  // A late response from an earlier tenant must not replace the latest owner selection.
+  let usageSelection = 0;
+  let billingSelection = 0;
   let features = {tenant_status_changes:false};
   const el = id => document.getElementById(id);
   const say = (id, value) => { el(id).textContent = value; };
@@ -1227,11 +1230,12 @@ _JS = r'''"use strict";
   async function inspectUsage(tenant) {
     if (!token) return;
     const epoch = authEpoch;
+    const selection = ++usageSelection;
     showSection("usage", true);
     say("usage-details", "Inspecting recorded usage for " + tenant.tenant_id + "...");
     try {
       const result = await request("/v1/admin/tenants/" + encodeURIComponent(tenant.tenant_id) + "/usage");
-      if (!token || epoch !== authEpoch) return;
+      if (!token || epoch !== authEpoch || selection !== usageSelection) return;
       const usage = result.usage || {};
       const count = usage.requests_recorded;
       const remaining = usage.remaining_before_allowance;
@@ -1285,17 +1289,19 @@ _JS = r'''"use strict";
         " · Record updated: " + (usage.record_updated_at || "Unavailable") +
         " · AWS costs: Unavailable · Stripe invoices: Unavailable · Source: " + (usage.source || "unknown") + readAuditLabel(result));
     } catch (err) {
-      if (token && epoch === authEpoch) say("usage-details", err.message);
+      if (token && epoch === authEpoch && selection === usageSelection) say("usage-details", err.message);
     }
   }
   async function verifyBilling(tenant) {
     if (!token || !features.billing_verify) return;
     const epoch = authEpoch;
+    const selection = ++billingSelection;
     showSection("billing", true);
+    say("invoice-details", "No invoice history selected for this subscription inspection.");
     say("billing-details", "Verifying subscription for " + tenant.tenant_id + "...");
     try {
       const result = await request("/v1/admin/subscriptions/" + encodeURIComponent(tenant.tenant_id));
-      if (token && epoch === authEpoch) {
+      if (token && epoch === authEpoch && selection === billingSelection) {
         const state = result.subscription || {};
         const assessment = state.reconciliation || {};
         const level = ["critical","review","consistent","unavailable"].includes(assessment.level) ?
@@ -1313,7 +1319,7 @@ _JS = r'''"use strict";
           " · UTC provider read: " + (state.verified_at || "Unavailable") + readAuditLabel(result));
         say("status", tenant.tenant_id + ": subscription reviewed; no entitlement change");
       }
-    } catch(err) { if (token && epoch === authEpoch) {
+    } catch(err) { if (token && epoch === authEpoch && selection === billingSelection) {
       say("billing-details", tenant.tenant_id + ": Stripe verification unavailable; no entitlement change");
       say("status", err.message);
     }}
@@ -1321,12 +1327,14 @@ _JS = r'''"use strict";
   async function inspectInvoices(tenant) {
     if (!token || !features.billing_invoices) return;
     const epoch = authEpoch;
+    const selection = ++billingSelection;
     showSection("billing", true);
+    say("billing-details", "No subscription verification selected for this invoice inspection.");
     say("invoice-details", "Inspecting verified Stripe history...");
     try {
       const result = await request("/v1/admin/subscriptions/" +
         encodeURIComponent(tenant.tenant_id) + "/invoices");
-      if (!token || epoch !== authEpoch) return;
+      if (!token || epoch !== authEpoch || selection !== billingSelection) return;
       const history = result.history || {};
       if (history.verified === false && history.status === "unbound") {
         say("invoice-details", tenant.tenant_id +
@@ -1401,7 +1409,7 @@ _JS = r'''"use strict";
         " · Direct Stripe, not revenue or overdue determination · UTC " + (history.read_at_utc || "unknown") +
         readAuditLabel(result));
     } catch (err) {
-      if (token && epoch === authEpoch)
+      if (token && epoch === authEpoch && selection === billingSelection)
         say("invoice-details", tenant.tenant_id + " · Invoice verification unavailable; no billing changes");
     }
   }

@@ -129,6 +129,91 @@ test("tenant actions reveal usage, subscription and invoice results immediately"
   }
 });
 
+test("later tenant Usage selection wins over a delayed earlier successful read", async ({page}) => {
+  await signedIn(page);
+  let releaseOld;
+  const holdOld = new Promise(resolve => { releaseOld = resolve; });
+  let signalOld;
+  const oldStarted = new Promise(resolve => { signalOld = resolve; });
+  await page.route("**/v1/admin/tenants/*/usage", async route => {
+    const path = new URL(route.request().url()).pathname;
+    const old = path.includes("/sample-studio/");
+    if (old) {
+      signalOld();
+      await holdOld;
+    }
+    const count = old ? 901 : 7;
+    await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+      usage:{period_utc:"2026-11",requests_recorded:count,monthly_allowance:1000,
+        remaining_before_allowance:1000-count,overage_policy:"block",
+        usage_threshold:{state:"within_limit",utilization_percent_floor:0,policy:"blocks_at_saved_cap"},
+        quota_pacing:{state:"stale_or_unknown_metadata",projected_month_end_requests_floor:null,
+          record_metadata_freshness:"unavailable"},
+        historical_volume:{state:"unavailable"},record_updated_at:null,
+        source:"Synthetic tenant usage"},
+      read_audit_event_id:"a".repeat(64)})});
+  });
+  await page.locator("#nav-tenants").click();
+  await page.locator("#tenant-rows tr").filter({hasText:"sample-studio"})
+    .getByRole("button",{name:"Usage",exact:true}).click();
+  await oldStarted;
+  await page.locator("#nav-tenants").click();
+  await page.locator("#tenant-rows tr").filter({hasText:"sample-labs"})
+    .getByRole("button",{name:"Usage",exact:true}).click();
+  await expect(page.locator("#usage-details")).toContainText("sample-labs · UTC 2026-11 · Recorded: 7");
+  const lateResponse = page.waitForResponse(response =>
+    response.url().includes("/sample-studio/usage"));
+  releaseOld();
+  await lateResponse;
+  await page.waitForTimeout(80);
+  await expect(page.locator("#usage-details")).toContainText("sample-labs · UTC 2026-11 · Recorded: 7");
+  await expect(page.locator("#usage-details")).not.toContainText("901");
+});
+
+test("late failed Stripe check cannot replace newer tenant invoice view", async ({page}) => {
+  await signedIn(page);
+  let releaseOld;
+  const holdOld = new Promise(resolve => { releaseOld = resolve; });
+  let signalOld;
+  const oldStarted = new Promise(resolve => { signalOld = resolve; });
+  await page.route("**/v1/admin/subscriptions/*", async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/v1/admin/subscriptions/sample-studio") {
+      signalOld();
+      await holdOld;
+      await route.fulfill({status:503,contentType:"application/json",
+        body:JSON.stringify({detail:"Synthetic Stripe outage"})});
+    } else if (path === "/v1/admin/subscriptions/sample-labs/invoices") {
+      await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+        history:{verified:true,status:"verified",count:1,has_more:false,
+          invoices:[{status:"paid",currency:"usd",created_utc:"2026-11-20T12:00:00Z",
+            amount_due_minor:700,amount_paid_minor:700,amount_remaining_minor:0,
+            collection_method:"charge_automatically",attempted:true,
+            attempt_count:1,next_payment_attempt_utc:null}]},
+        read_audit_event_id:"a".repeat(64)})});
+    } else {
+      await route.fallback();
+    }
+  });
+  await page.locator("#nav-tenants").click();
+  await page.locator("#tenant-rows tr").filter({hasText:"sample-studio"})
+    .getByRole("button",{name:"Verify Stripe",exact:true}).click();
+  await oldStarted;
+  await page.locator("#nav-tenants").click();
+  await page.locator("#tenant-rows tr").filter({hasText:"sample-labs"})
+    .getByRole("button",{name:"Invoices",exact:true}).click();
+  await expect(page.locator("#invoice-details")).toContainText("sample-labs");
+  await expect(page.locator("#invoice-details")).toContainText("paid USD due 700");
+  const lateResponse = page.waitForResponse(response =>
+    response.url().endsWith("/v1/admin/subscriptions/sample-studio"));
+  releaseOld();
+  await lateResponse;
+  await page.waitForTimeout(80);
+  await expect(page.locator("#billing-details")).not.toContainText("sample-studio");
+  await expect(page.locator("#status")).not.toContainText("503");
+  await expect(page.locator("#invoice-details")).toContainText("sample-labs");
+});
+
 test("owner Usage displays an actual saved cap breach even when metadata is stale", async ({page}) => {
   const fixture = await signedIn(page, {override: request =>
     /^\/v1\/admin\/tenants\/[^/]+\/usage$/.test(request.path)
