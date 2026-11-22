@@ -20,6 +20,7 @@ from guardoath.admin_billing_reconcile import AdminBillingDowngrade, BillingDown
 from guardoath.admin_invoices import AdminInvoiceHistory
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from guardoath.admin_catalog import CatalogProvider, read_catalog
+from guardoath.admin_catalog_history import verified_catalog_history, CatalogHistoryUnavailable
 from guardoath.admin_catalog_drafts import AdminCatalogDrafts, DraftConflict, DraftUnavailable
 from guardoath.admin_catalog_preview import (
     CatalogPreviewConflict, CatalogPreviewUnavailable, preview_rule_description)
@@ -238,6 +239,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                         admin_directory: DynamoAdminDirectory | None = None,
                         admin_user_directory: CognitoUserDirectory | None = None,
                         catalog_provider: CatalogProvider | None = None,
+                        catalog_history_provider: Callable[[], dict] | None = None,
                         admin_mutator: AdminTenantActions | None = None,
                         audit_reader: AdminAuditReader | None = None,
                         read_auditor: AdminSensitiveReadAuditor | None = None,
@@ -637,6 +639,17 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         read_event = audit_sensitive_read(principal, "catalog.registry")
         try:
             result = read_catalog(catalog_provider, domain_id=category_id)
+            if catalog_history_provider is None:
+                result["metadata_releases"] = {"status": "unavailable", "release_count": None,
+                                               "source": "Source history not configured"}
+            elif category_id is None:
+                result["metadata_releases"] = verified_catalog_history(
+                    result, catalog_history_provider())
+            else:
+                # A filtered projection cannot verify whole-registry source fingerprints.
+                whole = read_catalog(catalog_provider)
+                result["metadata_releases"] = verified_catalog_history(
+                    whole, catalog_history_provider())
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Published catalog unavailable") from exc
         return admin_json({"status": "ok", **result,

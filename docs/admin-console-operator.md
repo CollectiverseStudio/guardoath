@@ -786,3 +786,20 @@ SHA CI/CodeQL/Playwright, provenance, guarded deployment, rollback and 15 live
 acceptance checks are mandatory. Source release records alone never grant
 publishing permission through the API. The protected admin Catalog API remains
 read-only with respect to published definitions.
+
+
+## Shipped catalog source history in owner Catalog
+The existing owner-only, signed-read-audited \`GET /v1/admin/catalog\` now also
+returns \`metadata_releases\` from the **shipped**, source-controlled
+\`guardoath/catalog_metadata_releases.json\`. This adds no AWS/Stripe/provider
+lookup, extra DynamoDB read, or separate audit receipt. The existing Cognito/MFA
+authorization and protected read audit still apply. The current catalog source
+and every recorded version must match full-registry forward and inverse SHA-256
+fingerprints; a malformed, altered or stale chain fails closed as HTTP 503.
+History is never inferred as zero when its provider is absent. The Catalog UI
+shows the newest 20 version/target/changed-field entries, total count, and
+the distinction between shipped source evidence and a signed approval or live
+release check. A zero count is displayed only after verifying the baseline
+source version. Signing, CI, deployment, rollback, financial and tenant changes
+remain completely separate. Reversing a rule description requires a *new*
+reviewed next-version source change; deleting release history is not rollback.

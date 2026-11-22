@@ -38,6 +38,9 @@ function createAdminFixture(options = {}) {
       enabled:false, status:"UNCONFIRMED", created_utc:FIXTURE_TIME, updated_utc:FIXTURE_TIME},
   ];
   const catalog = {registry_version:"3", source:"Synthetic browser catalog sample", read_only:true,
+    metadata_releases:{status:"verified_source_history", source:"Synthetic shipped history sample",
+      registry_version:"3", release_count:0, has_older_releases:false,
+      source_chain_verified:true, live_acceptance_verified:null, releases:[]},
     total_categories:2, total_checks:2, total_rules:2, categories:[
       {category_id:"privacy", name:"Privacy and personal data", status:"active", checks:[
         {check_id:"pii", name:"Personal data", rule_count:1,

@@ -297,6 +297,7 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 </section><section id="section-usage" data-admin-section class="panel" hidden tabindex="-1" aria-label="Usage"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
 <section id="section-audit" data-admin-section class="panel" hidden tabindex="-1" aria-label="Audit"><h2>Audit receipt lookup</h2><p class="muted">Read one stored administrative event by its exact event ID. No exports or audit enumeration.</p><label for="audit-id">Audit event ID</label> <input id="audit-id" maxlength="64" autocomplete="off" spellcheck="false"> <button type="button" id="audit-go">Verify receipt</button><p id="audit-result" role="status"></p></section>
 <section id="section-catalog" data-admin-section class="panel" hidden tabindex="-1" aria-label="Catalog"><h2>Categories and checks</h2><p id="catalog-summary"></p><div id="categories"></div>
+<h3>Versioned source history</h3><p id="catalog-release-summary" role="status"></p><ol id="catalog-release-entries"></ol><p class="muted">Read-only shipped description history. Fingerprint consistency is not an approval signature, live deployment evidence or permission to override tenant checks. Rollback is a separately reviewed next-version source release.</p>
 <h3>Preview a versioned catalog description proposal</h3><p class="muted">Select Preview description beside a published rule. This checks the change against the live registry version; it does not save, publish, enable or change any rule. Review fingerprints are not signatures or approvals.</p>
 <p id="proposal-target">No rule selected.</p>
 <label for="proposal-title">Proposed rule title</label><p><input id="proposal-title" maxlength="120" disabled></p>
@@ -419,7 +420,8 @@ _JS = r'''"use strict";
     el("tenant-rows").replaceChildren();
     el("user-rows").replaceChildren();
     el("categories").replaceChildren();
-    for (const id of ["status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "user-action-result", "usage-details", "billing-details", "invoice-details", "audit-result", "proposal-result", "draft-result", "review-manifest-result"]) say(id, "");
+    el("catalog-release-entries").replaceChildren();
+    for (const id of ["catalog-release-summary", "status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "user-action-result", "usage-details", "billing-details", "invoice-details", "audit-result", "proposal-result", "draft-result", "review-manifest-result"]) say(id, "");
     previewSelection = null;
     previewReady = null;
     draftReadyForReview = null;
@@ -522,6 +524,36 @@ _JS = r'''"use strict";
       " · " + categories.length + " categories · " + (catalog.total_checks ?? "unknown") +
       " checks · " + (catalog.total_rules ?? "unknown") + " rules" + readAuditLabel(catalog));
     el("categories").replaceChildren();
+    const history = catalog.metadata_releases;
+    el("catalog-release-entries").replaceChildren();
+    const validHistory = history && history.status === "verified_source_history" &&
+      history.source_chain_verified === true &&
+      history.registry_version === catalog.registry_version &&
+      Number.isSafeInteger(history.release_count) && history.release_count >= 0 &&
+      Array.isArray(history.releases) &&
+      history.releases.length === Math.min(history.release_count, 20) &&
+      history.releases.every(item =>
+        item && typeof item.registry_version === "string" &&
+        /^[1-9][0-9]{0,8}$/.test(item.registry_version) &&
+        ["category_id", "check_id", "rule_id"].every(key =>
+          typeof item[key] === "string" && item[key].length < 101) &&
+        Array.isArray(item.changed_fields) && item.changed_fields.length >= 1 &&
+        item.changed_fields.length <= 2 && item.changed_fields.every(
+          field => field === "title" || field === "use_case"));
+    if (!validHistory) {
+      say("catalog-release-summary", "Source release history unavailable or failed verification; no zero assumed.");
+    } else {
+      say("catalog-release-summary", "Source-controlled metadata history: " +
+        history.release_count + " shipped releases; chain checked against registry " +
+        history.registry_version + ". Not a deployment acceptance or signed approval." +
+        (history.has_older_releases ? " Showing newest 20." : ""));
+      for (const item of history.releases) {
+        el("catalog-release-entries").append(textNode("li",
+          "Version " + item.registry_version + " · " + item.category_id + "/" +
+          item.check_id + "/" + item.rule_id +
+          " · reviewed source fields: " + item.changed_fields.join(", ")));
+      }
+    }
     for (const category of categories) {
       const container = document.createElement("details");
       const heading = document.createElement("summary");

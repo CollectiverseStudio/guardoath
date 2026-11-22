@@ -493,3 +493,42 @@ test("signed action live comparison uses owner-bound POST and clears email on si
   await expect(page.locator("#user-action-email")).toHaveValue("");
   await expect(page.locator("#user-action-result")).toBeEmpty();
 });
+
+
+test("catalog exposes only verified source history and clears it on sign-out", async ({page}) => {
+  const fixture = await signedIn(page, {
+    override: (request, local) => {
+      if (request.path !== "/v1/admin/catalog") return null;
+      return {status:200,contentType:"application/json",body:JSON.stringify({
+        ...local.catalog,
+        metadata_releases:{
+          status:"verified_source_history",source:"Synthetic shipped source",
+          registry_version:"4",release_count:1,has_older_releases:false,
+          source_chain_verified:true,live_acceptance_verified:null,
+          releases:[{registry_version:"4",category_id:"privacy",check_id:"pii",
+            rule_id:"pii.email",changed_fields:["title"]}]},
+        registry_version:"4"
+      })};
+    }
+  });
+  await page.locator("#nav-catalog").click();
+  await expect(page.locator("#catalog-release-summary")).toContainText("1 shipped releases");
+  await expect(page.locator("#catalog-release-entries li")).toHaveCount(1);
+  await expect(page.locator("#catalog-release-entries")).toContainText("pii.email");
+  await page.locator("#logout").click();
+  await expect(page.locator("#catalog-release-entries li")).toHaveCount(0);
+  await expect(page.locator("#catalog-release-summary")).toBeEmpty();
+  expect(fixture.calls.filter(x => x.path === "/v1/admin/catalog")).toHaveLength(1);
+});
+
+test("catalog does not label unverified history as zero releases", async ({page}) => {
+  await signedIn(page, {override: (request, local) =>
+    request.path === "/v1/admin/catalog"
+      ? {status:200,contentType:"application/json",
+          body:JSON.stringify({...local.catalog,
+            metadata_releases:{status:"unavailable",release_count:null}})}
+      : null});
+  await page.locator("#nav-catalog").click();
+  await expect(page.locator("#catalog-release-summary")).toContainText("unavailable");
+  await expect(page.locator("#catalog-release-entries li")).toHaveCount(0);
+});

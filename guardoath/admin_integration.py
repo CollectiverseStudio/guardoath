@@ -10,6 +10,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from guardoath.admin_catalog import published_catalog
+from guardoath.catalog_metadata import load_release_history
 from guardoath.admin_browser import BrowserAuthConfig, BoundExchange, create_browser_router
 from guardoath.admin_native_mfa import CognitoNativeMfa
 from guardoath.admin_cognito import make_verifier
@@ -116,6 +117,7 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
         admin_directory=directory,
         admin_user_directory=users,
         catalog_provider=published_catalog,
+        catalog_history_provider=load_release_history,
         admin_mutator=admin_mutator,
         audit_reader=audit_reader,
         read_auditor=read_auditor,
