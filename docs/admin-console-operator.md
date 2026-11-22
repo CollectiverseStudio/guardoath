@@ -655,3 +655,6 @@ format characters; this guard does not detect every form of Unicode spoofing.
 This is metadata review integrity, not a detector,
 catalog publication, tenant policy change, Stripe operation, or proof of live
 production activation.
+
+## Cognito group-list integrity on owner account changes
+Before any owner-directed enable/disable operation, the existing signed-audit-backed Cognito workflow now refuses malformed, duplicated, oversized, or paginated group listings, including empty continuation tokens. The server requires a complete and unambiguous current membership list before creating an action intent or issuing a Cognito mutation. This adds no provider calls, does not permit owner-account changes, and never grants subscriptions or customer access. A successful account action still requires an independently verified Cognito outcome and persistent signed intent/outcome receipts. Cognito cannot provide an atomic cross-service account-and-membership compare-and-set; subsequent membership changes remain an operational race and must never be described as eliminated.

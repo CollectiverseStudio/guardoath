@@ -226,6 +226,43 @@ def test_rejects_self_and_any_owner_group_or_ambiguous_directory():
         assert not any(r["operation"]["S"].endswith(".intent") for r in db.rows.values())
 
 
+@pytest.mark.parametrize("provider_groups", [
+    None,
+    {"Groups": "not-a-list"},
+    {"Groups": [{"GroupName": "TenantUsers"}] * 61},
+    {"Groups": [{"GroupName": "TenantUsers"}, {"GroupName": "TenantUsers"}]},
+    {"Groups": [{"GroupName": ""}]},
+    {"Groups": [{"GroupName": "x" * 129}]},
+    {"Groups": [{"GroupName": 7}]},
+    {"Groups": [{"GroupName": "TenantUsers"}], "NextToken": ""},
+    {"Groups": [{"GroupName": "TenantUsers"}], "NextToken": "another-page"},
+])
+def test_incomplete_or_ambiguous_cognito_membership_fails_closed_before_audited_intent(provider_groups):
+    class InvalidMembership(Cognito):
+        def admin_list_groups_for_user(self, **kw):
+            super().admin_list_groups_for_user(**kw)
+            return provider_groups
+
+    client, db, provider = make(provider=InvalidMembership())
+    result = client.post(URL, json=body(), headers=HEADERS)
+    assert result.status_code == 503, result.text
+    assert provider.calls == ["list", "get", "groups"]
+    assert provider.enabled is True
+    assert not any(row["operation"]["S"].endswith(".intent") for row in db.rows.values())
+    assert not any(row["operation"]["S"].endswith(".outcome") for row in db.rows.values())
+
+
+def test_distinct_nonowner_cognito_groups_allow_verified_access_change():
+    provider = Cognito()
+    provider.groups = ["TenantUsers", "SupportReadOnly"]
+    client, db, provider = make(provider=provider)
+    result = client.post(URL, json=body(), headers=HEADERS)
+    assert result.status_code == 200, result.text
+    assert provider.enabled is False
+    assert verify_audit(db.rows[result.json()["intent_event_id"]], KEY)
+    assert verify_audit(db.rows[result.json()["audit_event_id"]], KEY)
+
+
 def test_audit_outage_fails_before_cognito_preflight_and_never_mutates():
     db = DDB(); db.fail_writes = True
     client, _, provider = make(db=db)

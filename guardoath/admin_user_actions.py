@@ -265,12 +265,18 @@ class AdminCognitoUserActions:
                 raise UserActionConflict("Account state changed; inspect again")
             groups = self.cognito.admin_list_groups_for_user(
                 UserPoolId=self.pool_id, Username=username, Limit=60)
-            if (not isinstance(groups, dict) or groups.get("NextToken")
-                    or not isinstance(groups.get("Groups"), list)
-                    or any(not isinstance(g, dict) or not isinstance(g.get("GroupName"), str)
-                           for g in groups["Groups"])):
+            memberships = groups.get("Groups") if isinstance(groups, dict) else None
+            if (not isinstance(memberships, list) or len(memberships) > 60
+                    or groups.get("NextToken") is not None
+                    or any(not isinstance(group, dict)
+                           or not isinstance(group.get("GroupName"), str)
+                           or not 1 <= len(group["GroupName"]) <= 128
+                           for group in memberships)):
                 raise UserActionUnavailable("Account membership unverified")
-            if any(g["GroupName"] == ADMIN_GROUP for g in groups["Groups"]):
+            group_names = [group["GroupName"] for group in memberships]
+            if len(group_names) != len(set(group_names)):
+                raise UserActionUnavailable("Ambiguous Cognito group membership")
+            if ADMIN_GROUP in group_names:
                 raise UserActionConflict("Owner accounts cannot be changed here")
         except (UserActionConflict, UserActionUnavailable):
             raise
