@@ -49,6 +49,29 @@ def _has_recent_mfa(claims: dict) -> bool:
     return -ADMIN_CLOCK_SKEW_SECONDS <= elapsed <= ADMIN_MFA_MAX_AGE_SECONDS
 
 
+def _verified_owner_groups(response: Any) -> bool:
+    """Require one complete, internally consistent Cognito membership page.
+
+    A matching owner entry in an otherwise malformed or paginated response is
+    not sufficient authorization. The caller must never trust token group claims.
+    """
+    if (not isinstance(response, dict) or
+            ("NextToken" in response and response["NextToken"] is not None) or
+            not isinstance(response.get("Groups"), list) or
+            len(response["Groups"]) > 60):
+        return False
+    names: set[str] = set()
+    for group in response["Groups"]:
+        if not isinstance(group, dict):
+            return False
+        name = group.get("GroupName")
+        if (not isinstance(name, str) or not 1 <= len(name) <= 128 or
+                name in names):
+            return False
+        names.add(name)
+    return ADMIN_GROUP in names
+
+
 def verify_admin(token: str, sessions: SessionValidator, cognito: CognitoAdminClient) -> VerifiedAdmin | None:
     """Verify owner role from trusted provider, not user-supplied claims.
 
@@ -82,12 +105,7 @@ def verify_admin(token: str, sessions: SessionValidator, cognito: CognitoAdminCl
     # Bound group list to one provider page. Any truncation is denied, rather
     # than accepting a partial administrative membership view.
     groups = cognito.admin_list_groups_for_user(UserPoolId=sessions.pool_id, Username=username, Limit=60)
-    if not isinstance(groups, dict) or groups.get("NextToken"):
-        return None
-    members = groups.get("Groups")
-    if not isinstance(members, list) or not any(
-        isinstance(g, dict) and g.get("GroupName") == ADMIN_GROUP for g in members
-    ):
+    if not _verified_owner_groups(groups):
         return None
     return VerifiedAdmin(subject=subject, roles=frozenset({"owner"}), mfa_verified=True)
 

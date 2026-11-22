@@ -131,3 +131,43 @@ def test_refreshed_token_cannot_extend_original_mfa_age(monkeypatch):
     monkeypatch.setattr(module, "time", lambda: 81_000)
     assert verify_admin("real-signed-token", s, provider) is None
     assert provider.calls == []
+
+
+@pytest.mark.parametrize("response", [
+    {"Groups": [{"GroupName": "GuardOathOwners"}], "NextToken": ""},
+    {"Groups": [{"GroupName": "GuardOathOwners"}], "NextToken": "more"},
+    {"Groups": [{"GroupName": "GuardOathOwners"}], "NextToken": False},
+    {"Groups": [{"GroupName": "GuardOathOwners"}], "NextToken": []},
+    {"Groups": [{"GroupName": "GuardOathOwners"}, {"GroupName": "GuardOathOwners"}]},
+    {"Groups": [{"GroupName": "GuardOathOwners"}, {"GroupName": "Viewer"},
+                {"GroupName": "Viewer"}]},
+    {"Groups": [{"GroupName": "GuardOathOwners"}, None]},
+    {"Groups": [{"GroupName": "GuardOathOwners"}, {"Name": "MissingGroupName"}]},
+    {"Groups": [{"GroupName": "GuardOathOwners"}, {"GroupName": 5}]},
+    {"Groups": [{"GroupName": "GuardOathOwners"}, {"GroupName": "x" * 129}]},
+    {"Groups": [{"GroupName": "GuardOathOwners"}] * 61},
+    {"Groups": "GuardOathOwners"},
+    {"Groups": []},
+    {"Groups": None},
+    {},
+])
+def test_owner_membership_must_be_complete_unique_and_well_formed(response):
+    sessions, provider = fixture()
+    provider.admin_list_groups_for_user = lambda **kwargs: response
+    assert verify_admin("real-signed-token", sessions, provider) is None
+    app = FastAPI()
+    app.include_router(create_admin_router(verify_cognito_admin=make_verifier(sessions, provider)))
+    client = TestClient(app)
+    headers = {"Authorization": "Bearer real-signed-token"}
+    assert client.get("/admin", headers=headers).status_code == 401
+    assert client.get("/v1/admin/tenants", headers=headers).status_code == 401
+
+
+def test_owner_with_distinct_additional_groups_remains_authorized():
+    sessions, provider = fixture()
+    provider.groups = [{"GroupName": "BillingReaders"},
+                       {"GroupName": "GuardOathOwners"},
+                       {"GroupName": "Customers"}]
+    principal = verify_admin("real-signed-token", sessions, provider)
+    assert principal is not None
+    assert principal.roles == frozenset({"owner"}) and principal.mfa_verified
