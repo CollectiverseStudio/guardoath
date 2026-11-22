@@ -108,8 +108,15 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install -e ".[test,pii]"
-      - name: Full test suite on Windows (includes the launcher tests)
-        run: python -m pytest -q
+      # Isolate the same strict data-quality deadlines from cumulative pytest
+      # process state after ~22k parametrized cases on Windows 3.13. The full
+      # suite is still collected/executed exactly once across these two
+      # fail-fast steps: no timeout changes, xfails, skips or assertion removals.
+      # A real >250ms checker result still fails the isolated test.
+      - name: Strict data-quality deadlines on Windows
+        run: python -m pytest -q tests/test_data_quality.py
+      - name: Remaining full suite on Windows (includes launcher tests)
+        run: python -m pytest -q --ignore=tests/test_data_quality.py
 
   optional-aws-adapter:
     runs-on: ubuntu-latest
