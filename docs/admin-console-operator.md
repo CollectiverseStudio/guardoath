@@ -673,3 +673,16 @@ This is **only a reversible metadata projection plan**, not executable `control_
 ## Sealed owner directory pagination (2026-11-22)
 
 The authenticated Users directory now returns a version-4, short-lived AEAD-encrypted pagination cursor instead of a signed but readable base64 document. The server binds it to the independently verified Cognito owner subject, source pool, search filter, page size and expiry; the upstream Cognito continuation token is not exposed in browser-readable plaintext. The cursor remains an opaque bearer continuation hint, **not** admin authentication, a tenant ID, a permission grant, or a cross-owner share link. Refresh the Users list after a deployment because earlier plaintext cursor versions are deliberately rejected. Unmodified per-owner provider-read budgets, MFA/RBAC, independent read auditing and provider-data minimization remain in effect. Cryptography comes from the existing pinned AWS/test dependency; no provider calls, AWS resources, subscription billing or tenant policy change are introduced by this sealing mechanism.
+
+## Exact tenant-source binding for owner usage and Stripe reads (2026-11-22)
+
+Every owner detail, usage, subscription-verification and invoice-history request
+must resolve to the **same exact authoritative saved tenant ID** as the URL.
+If a stale index or corrupted store returns a different customer, the API
+returns sanitized **503 unavailable** after its existing protected-read audit;
+it does not display that customer's usage, call Stripe under the wrong binding,
+or assert a payment or subscription state. A missing account remains 404.
+The existing owner-only Cognito/MFA authorization, provider verification,
+tenant entitlement and audit-before-read behavior are unchanged. This guard
+does not grant payments, change tenant state, add provider spend, or establish
+that the live site has been updated.

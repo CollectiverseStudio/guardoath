@@ -545,6 +545,10 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             record = tenant_store.get(tenant_id)
             if record is None:
                 raise HTTPException(status_code=404, detail="Tenant not found")
+            # The requested path is not an authoritative account identity. A
+            # misindexed or stale store must never return another tenant's usage.
+            if getattr(record, "tenant_id", None) != tenant_id:
+                raise ValueError("Tenant usage source identity mismatch")
             report = tenant_usage_report(record)
         except HTTPException:
             raise
@@ -564,6 +568,10 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             record = tenant_store.get(tenant_id)
             if record is None:
                 raise HTTPException(status_code=404, detail="Tenant not found")
+            # Validate the saved key before any external Stripe read or
+            # entitlement projection. Provider bindings alone are insufficient.
+            if getattr(record, "tenant_id", None) != tenant_id:
+                raise ValueError("Subscription source identity mismatch")
             result = billing_reporter.read(record)
         except HTTPException:
             raise
@@ -586,6 +594,10 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             record = tenant_store.get(tenant_id)
             if record is None:
                 raise HTTPException(status_code=404, detail="Tenant not found")
+            # Do not request invoice data under an alias for another account,
+            # even if the provider would otherwise accept its saved binding.
+            if getattr(record, "tenant_id", None) != tenant_id:
+                raise ValueError("Invoice source identity mismatch")
             result = billing_invoices.read(record)
         except HTTPException:
             raise
