@@ -25,7 +25,7 @@ import secrets
 from threading import BoundedSemaphore, Lock
 from time import monotonic, time
 
-from guardoath.admin_cognito import SUBJECT
+from guardoath.admin_cognito import SUBJECT, _verified_owner_groups
 from guardoath.admin_enrollment_state import (
     DynamoEnrollmentState, provider_code,
 )
@@ -167,11 +167,7 @@ class CognitoNativeEnrollment:
                 or current.get("Username") != username or admin.get("Username") != username
                 or admin.get("Enabled") is not True or admin.get("UserStatus") != "CONFIRMED"
                 or not isinstance(groups, dict) or "NextToken" in groups
-                or not isinstance(groups.get("Groups"), list)
-                or len(groups["Groups"]) > 60
-                or not all(isinstance(group, dict) and isinstance(group.get("GroupName"), str)
-                           for group in groups["Groups"])
-                or not any(group["GroupName"] == "GuardOathOwners" for group in groups["Groups"])
+                or not _verified_owner_groups(groups)
                 or not all(self._factor_state(result, mode) for result in (current, admin))):
             return None
         first, second = self._attributes(current), self._attributes(admin)

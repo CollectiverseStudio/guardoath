@@ -686,3 +686,7 @@ The existing owner-only Cognito/MFA authorization, provider verification,
 tenant entitlement and audit-before-read behavior are unchanged. This guard
 does not grant payments, change tenant state, add provider spend, or establish
 that the live site has been updated.
+
+## Live owner membership integrity during first-TOTP enrollment (2026-11-22)
+
+The first-authenticator enrollment endpoint requires the same verified **complete, unique, well-formed Cognito group membership** as the protected owner-admin session: duplicate owner or other-group entries, invalid names, oversized pages and malformed group documents deny eligibility before associating an authenticator. The enrollment path still rejects every presence of a pagination continuation marker (even null), since a partial membership listing cannot establish authorization. Distinct valid additional groups are permitted only alongside a verified `GuardOathOwners` membership. Membership is independently rechecked before associating a TOTP factor and before verifying a submitted code; corrupt replies fail closed without the next Cognito mutation. This uses the existing Cognito reads, no new provider calls or AWS resources, and does not create an admin session or confer paid access.

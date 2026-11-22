@@ -283,7 +283,9 @@ def test_untrusted_password_result_denied_before_provider_mutation(h, shape):
 @pytest.mark.parametrize("problem", [
     "nonowner", "disabled", "unconfirmed", "external", "revoked", "email_false", "email_missing",
     "email_mismatch", "subject_mismatch", "duplicate", "current_username", "admin_username",
-    "paged_groups", "malformed_groups", "totp", "sms", "preferred", "null_factors", "string_factors",
+    "paged_groups", "malformed_groups", "duplicate_owner_groups", "duplicate_other_groups",
+    "empty_owner_group", "oversized_groups", "invalid_group_name", "overlong_group_name",
+    "null_next_token", "totp", "sms", "preferred", "null_factors", "string_factors",
     "legacy_sms", "null_legacy", "null_preferred",
 ])
 def test_only_a_live_verified_owner_with_no_factor_can_associate(h, problem):
@@ -301,6 +303,18 @@ def test_only_a_live_verified_owner_with_no_factor_can_associate(h, problem):
     elif problem == "null_preferred": p.preferred = None
     elif problem == "paged_groups": p.groups = {"Groups": p.groups, "NextToken": "uninspected"}
     elif problem == "malformed_groups": p.groups = [{"GroupName": "GuardOathOwners"}, None]
+    elif problem == "duplicate_owner_groups": p.groups = [{"GroupName": "GuardOathOwners"}] * 2
+    elif problem == "duplicate_other_groups":
+        p.groups = [{"GroupName": "GuardOathOwners"}, {"GroupName": "Billing"}, {"GroupName": "Billing"}]
+    elif problem == "empty_owner_group": p.groups = [{"GroupName": "GuardOathOwners"}, {"GroupName": ""}]
+    elif problem == "oversized_groups":
+        p.groups = [{"GroupName": "GuardOathOwners"}] + [
+            {"GroupName": f"group-{i}"} for i in range(60)]
+    elif problem == "invalid_group_name": p.groups = [{"GroupName": "GuardOathOwners"}, {"GroupName": 5}]
+    elif problem == "overlong_group_name": p.groups = [
+        {"GroupName": "GuardOathOwners"}, {"GroupName": "x" * 129}]
+    elif problem == "null_next_token":
+        p.groups = {"Groups": [{"GroupName": "GuardOathOwners"}], "NextToken": None}
     else:
         p.current = p.identity()
         if problem == "email_false": p.current["UserAttributes"][2]["Value"] = "false"
@@ -315,6 +329,17 @@ def test_only_a_live_verified_owner_with_no_factor_can_associate(h, problem):
         elif problem == "null_legacy": p.current["MFAOptions"] = None
     assert h.begin() is None
     assert "associate" not in p.calls and not h.db.items
+
+
+def test_distinct_extra_cognito_groups_allow_enrollment_but_not_password_only_admin(h):
+    # A legitimate group mix is not a second owner role or an MFA bypass.
+    h.provider.groups = [{"GroupName": "SupportReadOnly"}, {"GroupName": "GuardOathOwners"}]
+    result = h.begin()
+    assert result is not None and result["setup_key"] == SEED
+    assert h.provider.calls.count("associate") == 1
+    assert verify_admin(h.token, h.sessions, h.provider) is None
+    assert h.service.finish(result["enrollment_ticket"], "123456") is True
+    assert h.provider.calls.count("verify") == h.provider.calls.count("prefer") == 1
 
 
 def test_bootstrap_rereads_live_owner_after_claim_before_association(h):
@@ -374,6 +399,20 @@ def test_live_eligibility_is_rechecked_at_finish(h, change):
         h.provider.current["UserAttributes"][2 if change == "verified_email" else 1]["Value"] = "false" if change == "verified_email" else "changed@example.invalid"
     assert h.service.finish(ticket, "123456") is False
     assert "verify" not in h.provider.calls
+    assert h.record()["state"] == "PENDING"
+
+
+@pytest.mark.parametrize("groups", [
+    [{"GroupName": "GuardOathOwners"}] * 2,
+    [{"GroupName": "GuardOathOwners"}, {"GroupName": "Support"}, {"GroupName": "Support"}],
+    {"Groups": [{"GroupName": "GuardOathOwners"}], "NextToken": None},
+])
+def test_corrupt_group_memberships_at_finish_deny_before_otp_verification(h, groups):
+    ticket = h.begin()["enrollment_ticket"]
+    h.provider.groups = deepcopy(groups)
+    assert h.service.finish(ticket, "123456") is False
+    assert "verify" not in h.provider.calls
+    assert "prefer" not in h.provider.calls
     assert h.record()["state"] == "PENDING"
 
 
