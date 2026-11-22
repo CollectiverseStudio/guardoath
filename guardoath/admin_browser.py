@@ -309,6 +309,7 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <button id="draft-inspect" type="button">Inspect draft</button>
 <button id="draft-review" type="button" disabled>Record signed review</button>
 <button id="review-manifest" type="button" disabled>Preview reviewed metadata manifest</button>
+<button id="manifest-export" type="button" disabled>Export reviewed forward/rollback JSON (not published)</button>
 <p id="draft-result" role="status"></p>
 <p id="review-manifest-result" role="status"></p></section></div></div>
 </main><script src="/admin/client.js" defer></script></body></html>"""
@@ -329,6 +330,7 @@ _JS = r'''"use strict";
   let previewReady = null;
   let draftReadyForReview = null;
   let reviewReadyForManifest = null;
+  let exportableManifest = null;
   let authEpoch = 0;
   let features = {tenant_status_changes:false};
   const el = id => document.getElementById(id);
@@ -384,7 +386,35 @@ _JS = r'''"use strict";
     if (logged) showSection("overview");
     else document.title = "GuardOath Admin";
   };
+  const invalidateCatalogExport = () => {
+    exportableManifest = null;
+    el("manifest-export").disabled = true;
+  };
+  function exportReviewedManifest() {
+    if (!token || !exportableManifest ||
+        el("draft-id").value.trim() !== exportableManifest.draft_id) {
+      invalidateCatalogExport();
+      return;
+    }
+    // The existing authenticated, audited manifest has already been verified.
+    // Export only the bounded allowlisted source-plan fields; never a session,
+    // customer record, audit secret or executable source file.
+    const body = JSON.stringify(exportableManifest, null, 2) + "\n";
+    const blob = new Blob([body], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    try {
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "guardoath-catalog-plan-" + exportableManifest.review_id.slice(0, 12) + ".json";
+      document.body.append(link);
+      link.click();
+      link.remove();
+    } finally {
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+    }
+  }
   const clearAdminData = () => {
+    invalidateCatalogExport();
     el("metrics").replaceChildren();
     el("tenant-rows").replaceChildren();
     el("user-rows").replaceChildren();
@@ -532,6 +562,7 @@ _JS = r'''"use strict";
   }
   const unsafeCatalogText = value => /[\p{Cc}\p{Cf}\p{Cs}\p{Zl}\p{Zp}]/u.test(value);
   async function previewCatalogRule() {
+    invalidateCatalogExport();
     if (!token || !features.catalog_preview || !previewSelection) return;
     const selection = {...previewSelection};
     const epoch = authEpoch;
@@ -577,6 +608,7 @@ _JS = r'''"use strict";
   }
 
   async function saveCatalogDraft() {
+    invalidateCatalogExport();
     if (!token || !features.catalog_drafts || !previewReady) return;
     const proposed = {...previewReady};
     if (el("proposal-title").value !== proposed.title ||
@@ -613,6 +645,7 @@ _JS = r'''"use strict";
     } catch (err) {if (token && epoch === authEpoch) say("proposal-result", err.message);}
   }
   async function inspectCatalogDraft() {
+    invalidateCatalogExport();
     draftReadyForReview = null;
     reviewReadyForManifest = null;
     el("review-manifest").disabled = true;
@@ -644,6 +677,7 @@ _JS = r'''"use strict";
     } catch (err) {if (token && epoch === authEpoch) say("draft-result", err.message);}
   }
   async function reviewCatalogDraft() {
+    invalidateCatalogExport();
     if (!token || !features.catalog_review_receipts || !draftReadyForReview) return;
     reviewReadyForManifest = null;
     el("review-manifest").disabled = true;
@@ -711,6 +745,7 @@ _JS = r'''"use strict";
   }
 
   async function inspectReviewManifest() {
+    invalidateCatalogExport();
     if (!token || !features.catalog_review_receipts || !reviewReadyForManifest) return;
     const selected = {...reviewReadyForManifest};
     reviewReadyForManifest = null;
@@ -756,6 +791,67 @@ _JS = r'''"use strict";
           !result.changed_fields.length || !result.changed_fields.every(
             field => field === "title" || field === "use_case"))
         throw new Error("Reviewed metadata manifest integrity unavailable");
+      // A SHA-256 metadata plan is not a cryptographic publication receipt.
+      // Reject mismatched/extra fields before letting the owner export a
+      // source-change candidate, even if a response has plausible fingerprints.
+      const fields = result.changed_fields;
+      const forward = result.reversible_patch.forward.changes;
+      const rollback = result.reversible_patch.rollback.changes;
+      const described = result.changed_metadata;
+      const keysMatch = obj => obj && typeof obj === "object" && !Array.isArray(obj) &&
+        JSON.stringify(Object.keys(obj).sort()) === JSON.stringify([...fields].sort());
+      if (fields.length > 2 || new Set(fields).size !== fields.length ||
+          !keysMatch(forward) || !keysMatch(rollback) || !keysMatch(described))
+        throw new Error("Reviewed metadata change attribution unavailable");
+      for (const field of fields) {
+        const pair = forward[field], inverse = rollback[field], actual = described[field];
+        const validPair = item => item && typeof item === "object" && !Array.isArray(item) &&
+          Object.keys(item).sort().join(",") === "after,before" &&
+          typeof item.before === "string" && typeof item.after === "string" &&
+          item.before.length <= 4096 && item.after.length <= 4096 &&
+          !unsafeCatalogText(item.before) && !unsafeCatalogText(item.after);
+        if (!validPair(pair) || !validPair(inverse) || !validPair(actual) ||
+            pair.before === pair.after ||
+            inverse.before !== pair.after || inverse.after !== pair.before ||
+            actual.before !== pair.before || actual.after !== pair.after)
+          throw new Error("Reviewed metadata change attribution unavailable");
+      }
+      exportableManifest = {
+        format:"guardoath.reviewed-catalog-metadata-source-plan.v1",
+        status:"review_only_not_published",
+        review_id:result.review_id, draft_id:result.draft_id,
+        registry_version:result.registry_version,
+        candidate_registry_version:result.candidate_registry_version,
+        reviewed_source_sha256:result.reviewed_source_sha256,
+        reviewed_proposal_sha256:result.reviewed_proposal_sha256,
+        candidate_metadata_sha256:result.candidate_metadata_sha256,
+        rollback_source_sha256:result.rollback_source_sha256,
+        target:{category_id:result.category_id,check_id:result.check_id,rule_id:result.rule_id},
+        changed_fields:[...fields],
+        changed_metadata:Object.fromEntries(fields.map(field=>[field, {
+          before:forward[field].before,after:forward[field].after}])),
+        forward:{
+          expected_registry_version:result.reversible_patch.forward.expected_registry_version,
+          candidate_registry_version:result.reversible_patch.forward.candidate_registry_version,
+          expected_metadata_sha256:result.reversible_patch.forward.expected_metadata_sha256,
+          candidate_metadata_sha256:result.reversible_patch.forward.candidate_metadata_sha256,
+          changes:Object.fromEntries(fields.map(field=>[field, {
+            before:forward[field].before,after:forward[field].after}]))
+        },
+        rollback:{
+          expected_registry_version:result.reversible_patch.rollback.expected_registry_version,
+          candidate_registry_version:result.reversible_patch.rollback.candidate_registry_version,
+          expected_metadata_sha256:result.reversible_patch.rollback.expected_metadata_sha256,
+          candidate_metadata_sha256:result.reversible_patch.rollback.candidate_metadata_sha256,
+          changes:Object.fromEntries(fields.map(field=>[field, {
+            before:rollback[field].before,after:rollback[field].after}]))
+        },
+        round_trip_verified:true, hashes_are_not_signatures:true,
+        executable_source_committed:false, published:false,
+        tenant_policies_changed:false, detector_behavior_changed:false,
+        acceptance_tests_run:false
+      };
+      el("manifest-export").disabled = false;
       say("review-manifest-result", "Reviewed catalog metadata manifest · version " +
         result.registry_version + " → " + result.candidate_registry_version +
         " · " + result.category_id + "/" + result.check_id + "/" + result.rule_id +
@@ -1674,7 +1770,9 @@ _JS = r'''"use strict";
   el("draft-inspect").addEventListener("click", inspectCatalogDraft);
   el("draft-review").addEventListener("click", reviewCatalogDraft);
   el("review-manifest").addEventListener("click", inspectReviewManifest);
-  el("refresh").addEventListener("click", () => load().catch(e => say("status", e.message)));
+  el("manifest-export").addEventListener("click", exportReviewedManifest);
+  el("draft-id").addEventListener("input", invalidateCatalogExport);
+  el("refresh").addEventListener("click", () => {invalidateCatalogExport();load().catch(e => say("status", e.message));});
   el("logout").addEventListener("click", () => signOut());
   el("search-go").addEventListener("click", () => {nextCursor=null;page();});
   el("user-search-go").addEventListener("click", () => {nextUserCursor=null;pageUsers();});

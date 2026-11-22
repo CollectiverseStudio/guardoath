@@ -347,17 +347,21 @@ test("owner reviewed catalog metadata manifest is visible only after signed revi
           reviewed_source_sha256:baseline,reviewed_proposal_sha256:proposal,
           candidate_metadata_sha256:candidate,rollback_source_sha256:baseline,
           registry_version:"3",candidate_registry_version:"4",category_id:"privacy",
-          check_id:"pii",rule_id:"pii.email",changed_fields:["title"],published:false,
+          check_id:"pii",rule_id:"pii.email",changed_fields:["title"],
+          changed_metadata:{title:{before:"Email rule",after:"Revised email rule"}},
+          published:false,
           ready_to_publish:false,tenant_policies_changed:false,detector_behavior_changed:false,
           source_current:true,acceptance_tests_run:false,
           reversible_patch:{
             kind:"reviewed_metadata_source_plan_only",
             target:{category_id:"privacy",check_id:"pii",rule_id:"pii.email"},
             forward:{expected_registry_version:"3",candidate_registry_version:"4",
-              expected_metadata_sha256:baseline,candidate_metadata_sha256:candidate},
+              expected_metadata_sha256:baseline,candidate_metadata_sha256:candidate,
+              changes:{title:{before:"Email rule",after:"Revised email rule"}}},
             rollback:{expected_registry_version:"4",candidate_registry_version:"3",
               expected_metadata_sha256:candidate,
-              candidate_metadata_sha256:corruptRollback ? "0".repeat(64) : baseline},
+              candidate_metadata_sha256:corruptRollback ? "0".repeat(64) : baseline,
+              changes:{title:{before:"Revised email rule",after:"Email rule"}}},
             round_trip_verified:true,executable_source_committed:false,
             published:false,tenant_policies_changed:false
           },
@@ -367,6 +371,7 @@ test("owner reviewed catalog metadata manifest is visible only after signed revi
   });
   await page.locator("#nav-catalog").click();
   await expect(page.locator("#review-manifest")).toBeDisabled();
+  await expect(page.locator("#manifest-export")).toBeDisabled();
   await page.locator("#draft-id").fill(draftId);
   await page.locator("#draft-inspect").click();
   await expect(page.locator("#draft-review")).toBeEnabled();
@@ -390,6 +395,27 @@ test("owner reviewed catalog metadata manifest is visible only after signed revi
   await expect(page.locator("#review-manifest-result")).toContainText("NOT published or executable");
   await expect(page.locator("#review-manifest-result")).toContainText(candidate);
   await expect(page.locator("#review-manifest-result")).toContainText("forward/rollback round-trip verified");
+  await expect(page.locator("#manifest-export")).toBeEnabled();
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.locator("#manifest-export").click()
+  ]);
+  expect(download.suggestedFilename()).toBe("guardoath-catalog-plan-"+reviewId.slice(0,12)+".json");
+  const chunks = [];
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+  const artifact = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  expect(artifact).toMatchObject({
+    format:"guardoath.reviewed-catalog-metadata-source-plan.v1",
+    status:"review_only_not_published", review_id:reviewId,draft_id:draftId,
+    reviewed_source_sha256:baseline,candidate_metadata_sha256:candidate,
+    rollback_source_sha256:baseline,
+    published:false, executable_source_committed:false,
+    acceptance_tests_run:false, hashes_are_not_signatures:true
+  });
+  expect(artifact.forward.changes.title).toEqual({before:"Email rule",after:"Revised email rule"});
+  expect(artifact.rollback.changes.title).toEqual({before:"Revised email rule",after:"Email rule"});
+  expect(JSON.stringify(artifact)).not.toContain(fixture.token);
+  expect(JSON.stringify(artifact)).not.toContain("read_audit_event_id");
   corruptRollback = true;
   await page.locator("#draft-inspect").click();
   await expect(page.locator("#draft-review")).toBeEnabled();
@@ -397,11 +423,13 @@ test("owner reviewed catalog metadata manifest is visible only after signed revi
   await expect(page.locator("#review-manifest")).toBeEnabled();
   await page.locator("#review-manifest").click();
   await expect(page.locator("#review-manifest-result")).toContainText("integrity unavailable");
+  await expect(page.locator("#manifest-export")).toBeDisabled();
   expect(fixture.calls.some(c => c.path.endsWith("/manifest") &&
     c.headers["x-guardoath-admin-session"] === fixture.token)).toBe(true);
   await expect(page.locator("#review-manifest")).toBeDisabled();
   await page.locator("#logout").click();
   await expect(page.locator("#review-manifest-result")).toBeEmpty();
+  await expect(page.locator("#manifest-export")).toBeDisabled();
 });
 
 

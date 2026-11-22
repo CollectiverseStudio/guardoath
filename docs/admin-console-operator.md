@@ -694,3 +694,22 @@ The first-authenticator enrollment endpoint requires the same verified **complet
 ### Saved-cap signal versus forecast freshness (2026-11-22)
 
 In **Usage and costs**, a saved current-month request count already above the authoritative monthly allowance is reported as **already over limit**, even in the first six calendar days or when record update metadata is stale. An exact saved at-limit count is likewise reported as **already at limit**. These are observations of persisted request counters, not cost calculations or proof the counter is complete. A month-end request projection remains **Unavailable** unless the separate freshness and minimum-observation gates pass. The page continues to show whether the saved overage policy blocks or merely records excess requests; no extra AWS or Stripe read, paid entitlement, hard-cap change, or persisted alert is created.
+
+## Exporting a reviewed catalog source plan (not publication; 2026-11-22)
+
+The owner Catalog screen can now **Export reviewed forward/rollback JSON** only after
+the current, signed, owner-bound review is rechecked by the protected API and
+its versioned metadata manifest passes UI source/target/fingerprint and
+forward/inverse field-attribution checks. The exported JSON contains only
+allowlisted rule metadata, draft and review references, source version and
+fingerprints, and the reversible before/after description changes. It cannot
+contain the Cognito session token, customer records, private audit credentials
+or detector implementation paths. A changed draft selection, refresh,
+inconsistent manifest or sign-out disables the export and clears its
+in-memory copy. The download never calls a provider or changes a tenant.
+
+This JSON is **an unsigned, non-executable source-review artifact**. Its hashes
+are fingerprints, not cryptographic signatures or release authorization. It
+does not update `rule_catalog.py`, `control_registry.py`, any deployment or
+tenant policy; a source implementation, exact-SHA tests, live 15-check
+acceptance and a verified rollback are still needed for issue #42.
