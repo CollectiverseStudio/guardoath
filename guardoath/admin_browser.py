@@ -530,7 +530,7 @@ _JS = r'''"use strict";
       " · Capabilities" + readAuditLabel(available) +
       (features.sensitive_read_audit ? "" : " · Persistent read auditing not configured"));
   }
-  const unsafeCatalogText = value => /[\\p{Cc}\\p{Cf}\\p{Cs}\\p{Zl}\\p{Zp}]/u.test(value);
+  const unsafeCatalogText = value => /[\p{Cc}\p{Cf}\p{Cs}\p{Zl}\p{Zp}]/u.test(value);
   async function previewCatalogRule() {
     if (!token || !features.catalog_preview || !previewSelection) return;
     const selection = {...previewSelection};

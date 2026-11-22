@@ -14,6 +14,17 @@ async function signedIn(page, options) {
   return fixture;
 }
 
+async function selectCatalogDescription(page) {
+  await page.locator("#nav-catalog").click();
+  // The rule action becomes visible only after the real category/check disclosures.
+  const category = page.locator("#categories > details").first();
+  await category.locator(":scope > summary").click();
+  const check = category.locator(":scope > details").first();
+  await check.locator(":scope > summary").click();
+  await check.getByRole("button", {name:"Preview description", exact:true}).click();
+  await expect(page.locator("#proposal-go")).toBeEnabled();
+}
+
 test("owner workspace navigates every section and retains honest unavailable totals", async ({page}) => {
   const fixture = await signedIn(page);
   await expect(page.locator("#metrics .metric strong")).toHaveText(["Unavailable","Unavailable","Unavailable","Unavailable"]);
@@ -221,13 +232,63 @@ test("provider text remains text and explicit logout clears all private panels",
 
 test("catalog editor refuses invisible title before any authenticated preview request", async ({page}) => {
   const fixture = await signedIn(page,{features:{catalog_preview:true,catalog_drafts:true}});
-  await page.locator("#nav-catalog").click();
-  await page.getByRole("button",{name:"Preview description",exact:true}).first().click();
-  await page.locator("#proposal-title").fill("Legitimate\u202edisguised title");
+  await selectCatalogDescription(page);
+  for (const control of ["\u0007", "\u0085", "\u202e", "\u200b", "\u2028", "\u2029"]) {
+    for (const field of ["#proposal-title", "#proposal-use-case"]) {
+      await page.locator("#proposal-title").fill("AAA BBB");
+      await page.locator("#proposal-use-case").fill("AAA BBB");
+      const value = "AAA" + control + "BBB";
+      await page.locator(field).fill(value);
+      await expect(page.locator(field)).toHaveValue(value);
+      await page.locator("#proposal-go").click();
+      await expect(page.locator("#proposal-result")).toContainText("invisible or bidirectional control characters");
+      await expect(page.locator("#proposal-save")).toBeDisabled();
+      expect(fixture.calls.filter(call => call.path === "/v1/admin/catalog/preview")).toHaveLength(0);
+    }
+  }
+});
+
+test("catalog preview and draft accept visible international text after rejecting an invisible reason", async ({page}) => {
+  const draftId = "d".repeat(64);
+  const fixture = await signedIn(page, {
+    features:{catalog_drafts:true},
+    override: request => request.method === "POST" && request.path === "/v1/admin/catalog/drafts"
+      ? {status:200,contentType:"application/json",body:JSON.stringify({
+          status:"draft_saved",persisted:true,published:false,
+          tenant_policies_changed:false,draft_id:draftId})} : null
+  });
+  await selectCatalogDescription(page);
+  const title = "Privacy review — Café 東京 🔒";
+  const useCase = "Vérifier les données — مرحبًا — שלום — e\u0301";
+  await page.locator("#proposal-title").fill(title);
+  await page.locator("#proposal-use-case").fill(useCase);
   await page.locator("#proposal-go").click();
-  await expect(page.locator("#proposal-result")).toContainText("invisible or bidirectional control characters");
+  await expect(page.locator("#proposal-result")).toContainText("Preview only — NOT saved or published");
+  await expect(page.locator("#proposal-save")).toBeEnabled();
+  const previews = fixture.calls.filter(call => call.path === "/v1/admin/catalog/preview");
+  expect(previews).toHaveLength(1);
+  expect(previews[0].body).toMatchObject({title,use_case:useCase,rule_id:"pii.email"});
+  expect(previews[0].headers["x-guardoath-admin-session"]).toBe(fixture.token);
+
+  let reason = "AAAAA\u202eBBBBB";
+  page.on("dialog", async dialog => {
+    if (dialog.type() === "prompt") await dialog.accept(reason);
+    else await dialog.accept();
+  });
+  await page.locator("#proposal-save").click();
+  await expect(page.locator("#proposal-result")).toContainText("Draft reason cannot contain invisible or bidirectional control characters");
+  expect(fixture.calls.filter(call => call.path === "/v1/admin/catalog/drafts")).toHaveLength(0);
+
+  reason = "Reviewed visible metadata — Café 東京 مرحبًا שלום 🔒";
+  await page.locator("#proposal-save").click();
+  await expect(page.locator("#proposal-result")).toContainText("Signed draft saved");
+  await expect(page.locator("#proposal-result")).toContainText("NOT reviewed or published");
   await expect(page.locator("#proposal-save")).toBeDisabled();
-  expect(fixture.calls.filter(call => call.path === "/v1/admin/catalog/preview")).toHaveLength(0);
+  await expect(page.locator("#draft-id")).toHaveValue(draftId);
+  const drafts = fixture.calls.filter(call => call.path === "/v1/admin/catalog/drafts");
+  expect(drafts).toHaveLength(1);
+  expect(drafts[0].body).toMatchObject({title,use_case:useCase,reason,rule_id:"pii.email"});
+  expect(drafts[0].headers["x-guardoath-admin-session"]).toBe(fixture.token);
 });
 
 test("owner reviewed catalog metadata manifest is visible only after signed review", async ({page}) => {
@@ -266,12 +327,19 @@ test("owner reviewed catalog metadata manifest is visible only after signed revi
   await page.locator("#draft-inspect").click();
   await expect(page.locator("#draft-review")).toBeEnabled();
   await expect(page.locator("#review-manifest")).toBeDisabled();
+  let reviewReason = "AAAAA\u200bBBBBB";
   page.on("dialog", async dialog => {
     if (dialog.type() === "prompt") {
       if (dialog.message().includes("type REVIEW")) await dialog.accept("REVIEW "+draftId.slice(-8));
-      else await dialog.accept("Reviewed the current documented metadata");
+      else await dialog.accept(reviewReason);
     } else await dialog.accept();
   });
+  await page.locator("#draft-review").click();
+  await expect(page.locator("#draft-result")).toContainText("Review reason cannot contain invisible or bidirectional control characters");
+  await expect(page.locator("#review-manifest")).toBeDisabled();
+  expect(fixture.calls.filter(call => call.method === "POST" &&
+    call.path === "/v1/admin/catalog/drafts/"+draftId+"/review")).toHaveLength(0);
+  reviewReason = "Reviewed the current documented metadata";
   await page.locator("#draft-review").click();
   await expect(page.locator("#review-manifest")).toBeEnabled();
   await page.locator("#review-manifest").click();

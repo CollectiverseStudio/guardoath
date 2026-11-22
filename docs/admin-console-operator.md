@@ -641,12 +641,17 @@ Owner Billing and Invoices verify the saved customer identity, exact customer/su
 An owner catalog draft now persists only the complete title/use-case values that the server's current-registry metadata preview actually returned. Edited or omitted preview values, forged change fields, malformed before/after descriptions and mismatched visible text fail before any audit-table write. Surrounding whitespace is normalized, and identical idempotent replay still returns the existing signed receipt. This is strictly metadata review; no published check/category/rule, tenant Off action, trusted reference, subscription or detector changes. The built-in, local, non-yielding timestamp checker no longer schedules an uninterruptible event-loop timer; it retains the original monotonic completion deadline and fail-closed late verdict handling. Custom asynchronous timestamp checkers retain cancellation. The intermittent Python 3.12 CI timestamp timeout remains a disclosed scheduling risk until independent sustained validation; no deadline was raised or test skipped. Exact source CI and the 15 production acceptance checks remain mandatory.
 
 ## Catalog description and review spoofing guard
+In **Catalog**, expand the category and check, then select **Preview description**
+beside the rule. Edit its title/use case and select **Preview description change**.
 Catalog projections and owner-authored metadata drafts/reviews now refuse
 invisible Unicode format characters (including bidirectional overrides and
 zero-width text), C0/C1 controls, surrogates, and Unicode line/paragraph
 separators. The authenticated admin UI shows a visible rejection before
 sending invalid descriptions or review reasons. Server-side validation remains
-authoritative if the browser is modified or bypassed; visible international
-text remains allowed. This is metadata review integrity, not a detector,
+authoritative if the browser is modified or bypassed. Visible Latin, Arabic,
+Hebrew and CJK text, combining accents and standalone emoji remain eligible
+under the existing length/content rules. Zero-width joiners remain forbidden
+format characters; this guard does not detect every form of Unicode spoofing.
+This is metadata review integrity, not a detector,
 catalog publication, tenant policy change, Stripe operation, or proof of live
 production activation.
