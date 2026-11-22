@@ -242,21 +242,38 @@ test("a delayed actual invocation cannot disclose an old tenant answer after ses
   await connect(page);
   const before = (await observed(request)).calls.length;
   await page.locator("#invocation-message").fill("fixture:slow private previous tenant text");
-  const responsePromise = page.waitForResponse(response => response.url().endsWith("/v1/interactions") && response.request().method() === "POST");
+  const submitted = JSON.parse(await page.locator("#invocation-request-json").textContent());
+  const responsePromise = page.waitForResponse(response => response.url().endsWith("/v1/interactions")
+    && response.request().method() === "POST" && response.request().postDataJSON()?.request_id === submitted.request_id);
   await page.locator("#invocation-run").click();
   await expect.poll(async () => (await observed(request)).calls.length).toBe(before + 1);
   await page.evaluate(token => sessionStorage.setItem("guardoath-session", token), BETA);
-  const result = await (await responsePromise).json();
+  expect((await responsePromise).status()).toBe(200);
+  // The dashboard deliberately discards an old owner's fetch before consuming
+  // its body. Do not wait on Playwright response.json() for that unused stream;
+  // verify completion independently through the original tenant's durable API.
+  let receipt;
+  await expect.poll(async () => {
+    const response = await request.get("/v1/interactions/by-request/" + submitted.request_id, {headers: headers()});
+    if (response.status() !== 200) return "HTTP " + response.status();
+    receipt = await response.json();
+    return receipt.status;
+  }).toBe("completed");
+  expect(receipt.application_id).toBe(APP);
+  expect(receipt.request_id).toBe(submitted.request_id);
   await expect(page.locator("#invocation-answer-panel")).toBeHidden();
+  await expect(page.locator("#invocation-answer")).toHaveText("");
   await expect(page.locator("#invocation-request-json")).not.toContainText("private previous tenant text");
-  await expect(page.locator("#invocation-receipt-json")).not.toContainText(result.receipt.interaction_id);
+  await expect(page.locator("#invocation-receipt-json")).not.toContainText(receipt.interaction_id);
   await expect(page.locator("#invocation-connection option")).not.toHaveText(["Approved Alpha connection"]);
+  expect(await page.evaluate(() => sessionStorage.getItem("guardoath-session"))).toBe(BETA);
   await page.reload();
   await expect(page.locator("#connection-status")).toContainText("usr-invocation-beta");
   await expect(page.locator("#invocation-availability")).toHaveText("Ready to invoke");
   await expect(page.locator("#invocation-connection option")).toHaveText(["Approved Beta connection"]);
-  const forbidden = await request.get("/v1/interactions/" + result.receipt.interaction_id, {headers: headers(BETA)});
+  const forbidden = await request.get("/v1/interactions/" + receipt.interaction_id, {headers: headers(BETA)});
   expect(forbidden.status()).toBe(404);
+  expect((await observed(request)).calls.length).toBe(before + 1);
   await page.locator("#disconnect").click();
   await expect(page.locator("#invocation-message")).toHaveValue("");
   await expect(page.locator("#invocation-answer-panel")).toBeHidden();
