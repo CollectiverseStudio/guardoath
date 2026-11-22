@@ -42,7 +42,12 @@ def check(value,kind='string',stage=Stage.INPUT,mode='observe',configured=None,f
 def test_whole_bias_group_matches_explicit_expectations():
     engine=Engine(load_policies(ROOT/'policies/bias-batch.json'),default_checkers())
     report=asyncio.run(evaluate(load_suite(ROOT/'evals/bias.json'),engine))
-    assert report['summary']=={'total':100,'matched':100,'mismatched':0,'incomplete':50,'simulated':0}
+    # Preserve every expectation; report safe case IDs, checker errors and timing
+    # on any mismatch, never customer scenarios or private decision factors.
+    assert report['summary']=={'total':100,'matched':100,'mismatched':0,'incomplete':50,'simulated':0}, [
+        {key: row[key] for key in ('case_id','differences','checker_diagnostics','latency_ms')}
+        for row in report['cases'] if not row['matched']
+    ]
     assert 'qualification' not in json.dumps(report) and 'private-unscanned-context' not in json.dumps(report)
 
 

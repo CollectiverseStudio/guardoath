@@ -212,3 +212,75 @@ def test_replaced_timestamp_checker_retains_cancellable_timeout(monkeypatch, sta
     assert result.evaluation_status == 'complete'
     assert result.checker_results[0].status == 'passed'
     assert seen == [policies[1].timeout_ms / 1000]
+
+
+@pytest.mark.parametrize('stage', [Stage.INPUT, Stage.OUTPUT])
+def test_builtin_matched_outcomes_does_not_schedule_uninterruptible_timer(monkeypatch, stage):
+    """The exact local coroutine has no awaits, but keeps its 500-ms deadline."""
+    from pathlib import Path
+    from guardoath.config import load_policies
+    from guardoath.matched_outcomes import matched_outcomes_check
+
+    policies = load_policies(Path(__file__).resolve().parents[1] / 'policies' / 'bias-batch.json')
+    selected = next(p for p in policies if p.version == 'bias-matched-string-enforce-v1')
+    checker_engine = Engine([selected], {'matched_outcomes': matched_outcomes_check})
+    request = CheckRequest(
+        application_id='demo', policy_version=selected.version, content_format='json',
+        content=('{"scenarios":[{"factors":{"qualification":"same"},'
+                 '"attributes":{"group":"A"},"decision":"approve"},'
+                 '{"factors":{"qualification":"same"},'
+                 '"attributes":{"group":"B"},"decision":"approve"}]}'),
+    )
+
+    def forbid_timer(_seconds):
+        raise AssertionError('Built-in non-yielding matched-outcomes checker should not schedule a timer')
+
+    monkeypatch.setattr(engine_module.asyncio, 'timeout', forbid_timer)
+    normal = asyncio.run(checker_engine.check(request, stage))
+    assert normal.evaluation_status == 'complete'
+    assert normal.checker_results[0].status == 'passed'
+    assert normal.recommended_action == normal.effective_action == Action.ALLOW
+
+    ticks = [0]
+    def late_clock():
+        ticks[0] += 1
+        return 0.0 if ticks[0] <= 2 else 0.601
+
+    monkeypatch.setattr(engine_module, 'perf_counter', late_clock)
+    late = asyncio.run(checker_engine.check(request, stage))
+    assert late.evaluation_status == 'incomplete'
+    assert late.checker_results[0].error_code == 'checker_timeout'
+    assert late.checker_results[0].latency_ms == 601.0
+    assert late.recommended_action == late.effective_action == Action.BLOCK
+
+
+@pytest.mark.parametrize('stage', [Stage.INPUT, Stage.OUTPUT])
+def test_replaced_matched_outcomes_checker_keeps_cancellable_timer(monkeypatch, stage):
+    """Custom adapters still receive the original asyncio timeout."""
+    from pathlib import Path
+    from guardoath.config import load_policies
+    from guardoath.matched_outcomes import matched_outcomes_check
+
+    seen = []
+    original_timeout = engine_module.asyncio.timeout
+    def observed_timeout(seconds):
+        seen.append(seconds)
+        return original_timeout(seconds)
+    monkeypatch.setattr(engine_module.asyncio, 'timeout', observed_timeout)
+
+    async def replacement(request, policy, current_stage):
+        return await matched_outcomes_check(request, policy, current_stage)
+
+    policies = load_policies(Path(__file__).resolve().parents[1] / 'policies' / 'bias-batch.json')
+    selected = next(p for p in policies if p.version == 'bias-matched-string-enforce-v1')
+    checker_engine = Engine([selected], {'matched_outcomes': replacement})
+    request = CheckRequest(application_id='demo', policy_version=selected.version,
+        content=('{"scenarios":[{"factors":{"qualification":"same"},'
+                 '"attributes":{"group":"A"},"decision":"approve"},'
+                 '{"factors":{"qualification":"same"},'
+                 '"attributes":{"group":"B"},"decision":"approve"}]}'),
+        content_format='json')
+    result = asyncio.run(checker_engine.check(request, stage))
+    assert result.evaluation_status == 'complete'
+    assert result.checker_results[0].status == 'passed'
+    assert seen == [selected.timeout_ms / 1000]
