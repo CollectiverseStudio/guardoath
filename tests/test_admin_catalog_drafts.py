@@ -338,3 +338,49 @@ def test_catalog_review_read_requires_signed_draft_and_available_published_regis
     del db.items[draft["draft_id"]]
     assert client.get(url, headers=headers).status_code == 503
     assert db.writes == 2
+
+
+@pytest.mark.parametrize("tamper", [
+    "title", "use_case", "preview_title", "preview_use_case",
+    "missing_title", "unapproved_field", "changed_after", "malformed_delta",
+    "missing_changes", "empty_title", "empty_use_case",
+])
+def test_immutable_catalog_draft_rejects_unreviewed_description_or_corrupt_preview(tamper):
+    """Only the exact server-previewed title/use case may enter the signed receipt."""
+    db, store = make_store()
+    args = saving_args()
+    args["preview"] = deepcopy(args["preview"])
+    if tamper == "title":
+        args["title"] = "Unpreviewed replacement title"
+    elif tamper == "use_case":
+        args["use_case"] = "Unpreviewed replacement use case"
+    elif tamper == "preview_title":
+        args["preview"]["proposed_title"] = "Forged title"
+    elif tamper == "preview_use_case":
+        args["preview"]["proposed_use_case"] = "Forged use case"
+    elif tamper == "missing_title":
+        del args["preview"]["proposed_title"]
+    elif tamper == "unapproved_field":
+        args["preview"]["changes"]["severity"] = {"before": "low", "after": "critical"}
+    elif tamper == "changed_after":
+        args["preview"]["changes"]["title"]["after"] = "Mismatched signed metadata"
+    elif tamper == "malformed_delta":
+        args["preview"]["changes"]["title"] = ["not", "a", "change"]
+    elif tamper == "missing_changes":
+        del args["preview"]["changes"]
+    elif tamper == "empty_title":
+        args["title"] = "   "
+    elif tamper == "empty_use_case":
+        args["use_case"] = "   "
+    with pytest.raises(ValueError):
+        store.save(**args)
+    assert db.writes == 0
+
+
+def test_catalog_draft_whitespace_normalization_preserves_verified_identity_and_replay():
+    db, store = make_store()
+    args = saving_args()
+    first = store.save(**{**args, "title": " " + args["title"] + " ",
+                           "use_case": " " + args["use_case"] + " "})
+    assert first["title"] == args["title"] and first["use_case"] == args["use_case"]
+    assert store.save(**args) == first and db.writes == 1

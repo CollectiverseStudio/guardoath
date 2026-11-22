@@ -140,3 +140,75 @@ def test_authenticated_tenant_api_blocks_late_privacy_verdict(monkeypatch, stage
     assert result['checker_results'][0]['latency_ms'] == 600
     assert store.get(tenant.tenant_id).used(usage_month()) == 1
     assert store.get(tenant.tenant_id).timeout_ms == 500
+
+
+@pytest.mark.parametrize('stage', [Stage.INPUT, Stage.OUTPUT])
+def test_builtin_timestamp_check_avoids_uninterruptible_timer_and_still_blocks_late_result(monkeypatch, stage):
+    """Only the exact local non-yielding timestamp checker may omit timer setup.
+
+    The original monotonic completion deadline remains mandatory; this test
+    makes a late 200-sample valid verdict fail closed without sleeping.
+    """
+    import json
+    from pathlib import Path
+
+    from guardoath.config import load_policies
+    from guardoath.data_quality import timestamps_check
+
+    policies = load_policies(Path(__file__).resolve().parents[1] / 'policies' / 'timestamps-batch.json')
+    checker_engine = Engine(policies, {'timestamps': timestamps_check})
+    request = CheckRequest(application_id='demo', policy_version='timestamps-enforce-v1',
+        content=json.dumps({'samples': [
+            {'timestamp': f'2026-11-04T00:{i // 60:02d}:{i % 60:02d}Z', 'value': i}
+            for i in range(200)]}), content_format='json')
+
+    def forbid_timer(_seconds):
+        raise AssertionError('Non-yielding built-in timestamp checker must not schedule a timer')
+
+    monkeypatch.setattr(engine_module.asyncio, 'timeout', forbid_timer)
+    normal = asyncio.run(checker_engine.check(request, stage))
+    assert normal.evaluation_status == 'complete'
+    assert normal.checker_results[0].status == 'passed'
+    assert normal.recommended_action == normal.effective_action == Action.ALLOW
+
+    ticks = [0]
+    def late_clock():
+        ticks[0] += 1
+        return 0.0 if ticks[0] <= 2 else 0.601
+
+    monkeypatch.setattr(engine_module, 'perf_counter', late_clock)
+    late = asyncio.run(checker_engine.check(request, stage))
+    assert late.evaluation_status == 'incomplete'
+    assert late.checker_results[0].status == 'error'
+    assert late.checker_results[0].error_code == 'checker_timeout'
+    assert late.checker_results[0].latency_ms == 601.0
+    assert late.recommended_action == late.effective_action == Action.BLOCK
+
+
+@pytest.mark.parametrize('stage', [Stage.INPUT, Stage.OUTPUT])
+def test_replaced_timestamp_checker_retains_cancellable_timeout(monkeypatch, stage):
+    """An asynchronous customer adapter must not inherit the local fast path."""
+    from pathlib import Path
+
+    from guardoath.config import load_policies
+    from guardoath.data_quality import timestamps_check
+
+    seen = []
+    original_timeout = engine_module.asyncio.timeout
+    def observed_timeout(seconds):
+        seen.append(seconds)
+        return original_timeout(seconds)
+    monkeypatch.setattr(engine_module.asyncio, 'timeout', observed_timeout)
+
+    async def replacement(request, policy, current_stage):
+        return await timestamps_check(request, policy, current_stage)
+
+    policies = load_policies(Path(__file__).resolve().parents[1] / 'policies' / 'timestamps-batch.json')
+    checker_engine = Engine(policies, {'timestamps': replacement})
+    request = CheckRequest(application_id='demo', policy_version='timestamps-enforce-v1',
+        content='{"samples":[{"timestamp":"2026-11-04T00:00:00Z","value":1},'
+                '{"timestamp":"2026-11-04T00:00:01Z","value":2}]}', content_format='json')
+    result = asyncio.run(checker_engine.check(request, stage))
+    assert result.evaluation_status == 'complete'
+    assert result.checker_results[0].status == 'passed'
+    assert seen == [policies[1].timeout_ms / 1000]

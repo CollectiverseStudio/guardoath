@@ -33,6 +33,8 @@ def test_preview_only_and_no_source_mutation():
     assert len(out["baseline_sha256"]) == len(out["proposal_sha256"]) == 64
     assert all(c in "0123456789abcdef" for c in out["proposal_sha256"])
     assert out["changes"] == {"title": {"before": "Email rule", "after": "Better email rule"}}
+    assert out["proposed_title"] == "Better email rule"
+    assert out["proposed_use_case"] == "Protect personal email addresses"
     assert BASE == saved
 
 

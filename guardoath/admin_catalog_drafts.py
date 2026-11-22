@@ -105,9 +105,23 @@ class AdminCatalogDrafts:
             raise ValueError("A verified catalog proposal and audit reason are required")
         properties = ("registry_version", "candidate_registry_version", "category_id",
                       "check_id", "rule_id", "changes", "baseline_sha256", "proposal_sha256")
-        selected = {name: preview[name] for name in properties}
-        if not isinstance(selected["changes"], dict) or not selected["changes"]:
-            raise ValueError("A changed catalog description is required")
+        try:
+            selected = {name: preview[name] for name in properties}
+        except KeyError as exc:
+            raise ValueError("A complete catalog preview is required") from exc
+        changes = selected["changes"]
+        if (not isinstance(changes, dict) or not changes or
+                set(changes) - {"title", "use_case"} or
+                preview.get("proposed_title") != title.strip() or
+                preview.get("proposed_use_case") != use_case.strip()):
+            raise ValueError("Catalog draft must match its verified description preview")
+        for name, delta in changes.items():
+            if (not isinstance(delta, dict) or set(delta) != {"before", "after"} or
+                    not isinstance(delta["before"], str) or
+                    not isinstance(delta["after"], str) or
+                    delta["before"] == delta["after"] or
+                    delta["after"] != (title.strip() if name == "title" else use_case.strip())):
+                raise ValueError("Catalog draft changes differ from verified preview")
         now = self.clock()
         if not isinstance(now, datetime) or now.tzinfo is None:
             raise DraftUnavailable("Catalog draft clock unavailable")

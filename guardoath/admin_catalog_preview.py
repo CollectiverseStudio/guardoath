@@ -105,6 +105,7 @@ def preview_rule_description(provider: CatalogProvider, *, expected_registry_ver
     return {"status": "preview_only", "published": False, "persisted": False,
             "source": "server-side published GuardOath registry",
             "registry_version": current_version,
+            "proposed_title": new_title, "proposed_use_case": new_use_case,
             "baseline_sha256": baseline_sha, "proposal_sha256": proposal_sha,
             "fingerprint_kind": "review_only_untrusted_sha256_not_signature",
             "candidate_registry_version": proposed_registry_version,
