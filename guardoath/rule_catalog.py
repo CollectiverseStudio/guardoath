@@ -509,7 +509,9 @@ def _build() -> dict[str, RuleInfo]:
     return by_id
 
 
-RULES: dict[str, RuleInfo] = _build()
+from guardoath.catalog_metadata import RELEASE_DATA, apply_rule_releases
+
+RULES: dict[str, RuleInfo] = apply_rule_releases(_build(), RELEASE_DATA)
 
 
 def rules_for(control_id: str) -> tuple[RuleInfo, ...]:

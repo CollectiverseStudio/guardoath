@@ -1,0 +1,217 @@
+"""Turn a reviewed owner UI export into a proposed, source-shipped metadata release.
+
+This is an offline SOURCE action, never a /v1/admin write or a live publisher.
+An unsigned UI export cannot authorize deployment or bypass independent review,
+exact-source CI, a non-forced commit, rollback and 15 live acceptance checks.
+"""
+from __future__ import annotations
+
+import argparse
+from copy import deepcopy
+import json
+import os
+from pathlib import Path
+import re
+import tempfile
+
+from guardoath.admin_catalog import read_catalog, published_catalog
+from guardoath.admin_catalog_preview import _fingerprint
+from guardoath.catalog_metadata import (
+    FILE, _safe_text, published_version, load_release_history,
+    validate_release_history,
+)
+
+FORMAT = "guardoath.reviewed-catalog-metadata-source-plan.v1"
+_SHA = re.compile(r"^[0-9a-f]{64}$")
+_FIELDS = frozenset({"title", "use_case"})
+_EXPORT = frozenset({
+    "format", "status", "review_id", "draft_id",
+    "registry_version", "candidate_registry_version",
+    "reviewed_source_sha256", "reviewed_proposal_sha256",
+    "candidate_metadata_sha256", "rollback_source_sha256",
+    "target", "changed_fields", "changed_metadata",
+    "forward", "rollback", "round_trip_verified",
+    "hashes_are_not_signatures", "executable_source_committed",
+    "published", "tenant_policies_changed", "detector_behavior_changed",
+    "acceptance_tests_run",
+})
+
+
+class SourceReleaseConflict(ValueError):
+    """Review export is stale, forged, ambiguous or not source-reproducible."""
+
+
+def candidate_release(export: dict, provider, history: dict) -> dict:
+    """Recompute the ENTIRE source fingerprint; no export field is trusted."""
+    try:
+        validate_release_history(history)
+        if (not isinstance(export, dict) or set(export) != _EXPORT
+                or export["format"] != FORMAT
+                or export["status"] != "review_only_not_published"
+                or export["round_trip_verified"] is not True
+                or export["hashes_are_not_signatures"] is not True
+                or any(export[k] is not False for k in (
+                    "executable_source_committed", "published",
+                    "tenant_policies_changed", "detector_behavior_changed",
+                    "acceptance_tests_run"))
+                or any(not isinstance(export[k], str) or not _SHA.fullmatch(export[k])
+                       for k in ("review_id", "draft_id", "reviewed_source_sha256",
+                                 "reviewed_proposal_sha256", "candidate_metadata_sha256",
+                                 "rollback_source_sha256"))):
+            raise SourceReleaseConflict("Unverified owner source export")
+        # Use exactly one independently read and copied source snapshot.
+        catalog = read_catalog(lambda: deepcopy(provider()))
+        current = catalog["registry_version"]
+        if (current != published_version(history)
+                or export["registry_version"] != current
+                or export["candidate_registry_version"] != str(int(current) + 1)):
+            raise SourceReleaseConflict("Source registry version is stale")
+        baseline = _fingerprint("guardoath-admin-catalog-source-v1", catalog)
+        if (export["reviewed_source_sha256"] != baseline
+                or export["rollback_source_sha256"] != baseline):
+            raise SourceReleaseConflict("Source catalog differs from reviewed snapshot")
+        target = export["target"]
+        if (not isinstance(target, dict) or
+                set(target) != {"category_id", "check_id", "rule_id"} or
+                not all(isinstance(v, str) for v in target.values())):
+            raise SourceReleaseConflict("Reviewed target unavailable")
+        rules = [
+            rule for category in catalog["categories"]
+            if category["category_id"] == target["category_id"]
+            for check in category["checks"]
+            if check["check_id"] == target["check_id"]
+            for rule in check["rules"] if rule["rule_id"] == target["rule_id"]
+        ]
+        if len(rules) != 1:
+            raise SourceReleaseConflict("Reviewed source target ambiguous")
+        fields = export["changed_fields"]
+        changed = export["changed_metadata"]
+        forward = export["forward"]
+        rollback = export["rollback"]
+        if (not isinstance(fields, list) or not fields
+                or len(fields) > 2 or len(set(fields)) != len(fields)
+                or any(field not in _FIELDS for field in fields)
+                or not isinstance(changed, dict)
+                or set(changed) != set(fields)
+                or not isinstance(forward, dict) or not isinstance(rollback, dict)
+                or set(forward) != {"expected_registry_version", "candidate_registry_version",
+                                   "expected_metadata_sha256", "candidate_metadata_sha256", "changes"}
+                or set(rollback) != set(forward)
+                or forward["expected_registry_version"] != current
+                or forward["candidate_registry_version"] != export["candidate_registry_version"]
+                or rollback["expected_registry_version"] != export["candidate_registry_version"]
+                or rollback["candidate_registry_version"] != current
+                or forward["expected_metadata_sha256"] != baseline
+                or rollback["candidate_metadata_sha256"] != baseline
+                or forward["candidate_metadata_sha256"] != export["candidate_metadata_sha256"]
+                or rollback["expected_metadata_sha256"] != export["candidate_metadata_sha256"]
+                or not isinstance(forward["changes"], dict)
+                or not isinstance(rollback["changes"], dict)
+                or set(forward["changes"]) != set(fields)
+                or set(rollback["changes"]) != set(fields)):
+            raise SourceReleaseConflict("Source and rollback plan disagree")
+        changes = {}
+        for field in fields:
+            change = forward["changes"][field]
+            inverse = rollback["changes"][field]
+            if (not isinstance(change, dict) or set(change) != {"before", "after"}
+                    or not isinstance(inverse, dict) or set(inverse) != {"before", "after"}
+                    or change != changed[field]
+                    or inverse != {"before": change["after"], "after": change["before"]}
+                    or change["before"] != rules[0][field]
+                    or not _safe_text(change["before"], 120 if field == "title" else 500)
+                    or not _safe_text(change["after"], 120 if field == "title" else 500)
+                    or (field == "use_case" and
+                        not change["after"].startswith("Turn this on"))):
+                raise SourceReleaseConflict("Source description would not reproduce")
+            changes[field] = change
+        proposal = {
+            "source_catalog_sha256": baseline,
+            "expected_registry_version": current,
+            "candidate_registry_version": export["candidate_registry_version"],
+            **target, "changes": changes,
+        }
+        if _fingerprint("guardoath-admin-catalog-proposal-v1", proposal) != export["reviewed_proposal_sha256"]:
+            raise SourceReleaseConflict("Export does not match reviewed proposal")
+        candidate = deepcopy(catalog)
+        for category in candidate["categories"]:
+            if category["category_id"] != target["category_id"]:
+                continue
+            for check in category["checks"]:
+                if check["check_id"] != target["check_id"]:
+                    continue
+                for rule in check["rules"]:
+                    if rule["rule_id"] == target["rule_id"]:
+                        for field, delta in changes.items():
+                            rule[field] = delta["after"]
+        candidate["registry_version"] = export["candidate_registry_version"]
+        if _fingerprint("guardoath-admin-catalog-source-v1", candidate) != export["candidate_metadata_sha256"]:
+            raise SourceReleaseConflict("Export candidate fingerprint mismatch")
+        # Reverse it and prove full source projection, not just local field parity.
+        for category in candidate["categories"]:
+            for check in category["checks"]:
+                for rule in check["rules"]:
+                    if (category["category_id"] == target["category_id"]
+                            and check["check_id"] == target["check_id"]
+                            and rule["rule_id"] == target["rule_id"]):
+                        for field, delta in changes.items():
+                            rule[field] = delta["before"]
+        candidate["registry_version"] = current
+        if candidate != catalog:
+            raise SourceReleaseConflict("Rollback is not exact")
+        record = {
+            "registry_version": export["candidate_registry_version"],
+            **target, "review_id": export["review_id"],
+            "draft_id": export["draft_id"],
+            "baseline_sha256": baseline,
+            "candidate_sha256": export["candidate_metadata_sha256"],
+            "changes": deepcopy(changes),
+        }
+        next_history = deepcopy(history)
+        next_history["releases"].append(record)
+        return validate_release_history(next_history)
+    except SourceReleaseConflict:
+        raise
+    except Exception as exc:
+        raise SourceReleaseConflict("Catalog source release unavailable") from exc
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Propose a source-only GuardOath catalog metadata release")
+    parser.add_argument("--plan", type=Path, required=True,
+                        help="Reviewed owner Catalog JSON export (not a signature)")
+    parser.add_argument("--write", action="store_true",
+                        help="Atomically update the tracked source release file; never deploy")
+    parser.add_argument("--confirm-registry-version", default="",
+                        help="Required version to prevent accidental source modifications")
+    args = parser.parse_args(argv)
+    if args.plan.stat().st_size > 65536:
+        parser.error("Oversized review export")
+    export = json.loads(args.plan.read_text(encoding="utf-8"))
+    updated = candidate_release(export, published_catalog, load_release_history())
+    version = published_version(updated)
+    if args.write:
+        if args.confirm_registry_version != version:
+            parser.error("Explicit proposed registry version required for source write")
+        encoded = json.dumps(updated, indent=2, ensure_ascii=True, sort_keys=True) + "\n"
+        temp = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                    mode="w", encoding="utf-8", dir=FILE.parent,
+                    prefix=".catalog-release-", delete=False) as f:
+                temp = Path(f.name)
+                f.write(encoded)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temp, FILE)
+        finally:
+            if temp is not None and temp.exists():
+                temp.unlink()
+    print("Catalog source proposal version", version,
+          "- source file", str(FILE),
+          "- written" if args.write else "- DRY RUN; no file changed",
+          "- NOT approved or deployed")
+
+
+if __name__ == "__main__":
+    main()

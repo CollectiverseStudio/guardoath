@@ -29,7 +29,10 @@ from typing import Literal
 from guardoath.rule_catalog import RULES, rule_payload, rules_for
 from guardoath.tenant_record import CHECK_IDS
 
-REGISTRY_VERSION = "3"  # 3 (2026-11-05): outside-provider checks removed; prompt_attack and harmful_content added
+from guardoath.catalog_metadata import RELEASE_DATA, published_version
+
+# Versioned source metadata releases are applied by rule_catalog, never by tenant requests.
+REGISTRY_VERSION = published_version(RELEASE_DATA)
 ROOT = Path(__file__).resolve().parents[1]
 Stage = Literal["input", "output"]
 

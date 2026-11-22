@@ -750,3 +750,39 @@ keeps unsourced global financial totals unavailable. Counts are calculated
 from the independently owner/MFA-authorized `/v1/admin/users` and
 `/v1/admin/tenants` responses already in the same UI refresh. Exact-SHA
 browser acceptance and live administrator verification remain required.
+
+## Versioned source catalog publication preparation (2026-11-22)
+
+The owner Catalog export is still a **non-publishing review document**. A distinct
+offline source-release operation now validates it against the complete current
+shipped catalog, independently recomputes the baseline, proposal, candidate and
+inverse fingerprints, and rejects stale versions, unknown targets, extra fields,
+tampered before/after values, changed detector metadata and unsafe descriptions.
+No browser token, HMAC key or customer record is included in the source file.
+
+From an approved checkout, after independently reviewing the export and source
+diff, run:
+
+```sh
+python -m guardoath.catalog_source_release --plan /secure/path/reviewed-plan.json
+python -m guardoath.catalog_source_release --plan /secure/path/reviewed-plan.json --write --confirm-registry-version 4
+```
+
+Replace `4` with the *new* reviewed version. The second command only writes
+`guardoath/catalog_metadata_releases.json` in the local checkout, atomically.
+The tracked release history is source-controlled, append-only and metadata-only.
+When code is built from a reviewed new version, its `registry_payload()`,
+admin Catalog and customer rule descriptions display the shipped title/use case
+and monotonically incremented registry version; all rule IDs, examples, detector
+implementations, saved tenant actions and entitlements stay unchanged.
+The previous release record and field before-values provide a reproducible
+inverse, but a rollback must itself be separately reviewed and shipped as a
+**higher** version, not a silent production version decrease.
+
+This does NOT commit, merge, deploy, publish to live AWS, run remote acceptance,
+write an admin-audit receipt or independently establish that the owner review was
+authorized. An exported SHA-256 is not a signature: source review and the exact
+SHA CI/CodeQL/Playwright, provenance, guarded deployment, rollback and 15 live
+acceptance checks are mandatory. Source release records alone never grant
+publishing permission through the API. The protected admin Catalog API remains
+read-only with respect to published definitions.
