@@ -802,7 +802,7 @@ test("rule inspection outage or cross-tenant response prevents every owner rule 
   await check.locator(":scope > summary").click();
   const change = check.getByRole("button",{name:"Set tenant rule"});
   await change.click();
-  await expect(page.locator("#status")).toContainText("Policy unavailable");
+  await expect(page.locator("#status")).toContainText("Request failed (503)");
   wrongTenant = true;
   await change.click();
   await expect(page.locator("#status")).toContainText("inspection could not be verified");
