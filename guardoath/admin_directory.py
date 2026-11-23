@@ -9,6 +9,7 @@ import base64
 import hashlib
 import hmac
 import json
+import math
 import re
 import time
 from datetime import datetime, timezone
@@ -46,6 +47,37 @@ def _number_attribute(value: object) -> int:
     return result
 
 
+def _strict_record_json(raw: str) -> object:
+    """Reject ambiguous saved tenant JSON before showing any owner controls.
+
+    A standard JSON decoder silently keeps the last of repeated keys, and
+    accepts NaN/Infinity, including overflowed scientific-notation numbers.
+    Neither behavior is acceptable for authoritative account metadata.
+    """
+    def unique(pairs):
+        result = {}
+        for name, value in pairs:
+            if name in result:
+                raise DirectoryUnavailable("Ambiguous tenant record JSON")
+            result[name] = value
+        return result
+
+    def finite_float(raw_number):
+        number = float(raw_number)
+        if not math.isfinite(number):
+            raise DirectoryUnavailable("Nonfinite tenant record JSON number")
+        return number
+
+    def reject_constant(_value):
+        raise DirectoryUnavailable("Nonfinite tenant record JSON number")
+
+    try:
+        return json.loads(raw, object_pairs_hook=unique,
+                          parse_constant=reject_constant, parse_float=finite_float)
+    except (ValueError, TypeError, OverflowError) as exc:
+        raise DirectoryUnavailable("Malformed tenant directory record") from exc
+
+
 def _project_item(item: object, month: str) -> dict:
     """Validate source identity before presenting administrative controls.
 
@@ -63,7 +95,7 @@ def _project_item(item: object, month: str) -> dict:
             or len(record["S"].encode("utf-8")) > 350_000):
         raise DirectoryUnavailable("Malformed tenant directory record")
     try:
-        doc = json.loads(record["S"])
+        doc = _strict_record_json(record["S"])
     except (ValueError, TypeError) as exc:
         raise DirectoryUnavailable("Malformed tenant directory record") from exc
     if not isinstance(doc, dict) or doc.get("tenant_id") != key["S"]:

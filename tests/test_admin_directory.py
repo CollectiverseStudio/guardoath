@@ -339,3 +339,50 @@ def test_filter_cannot_hide_malformed_provider_account_within_one_scanned_page()
             return {"Items": [row]}
     with pytest.raises(DirectoryUnavailable):
         directory(Corrupt()).page(owner_sub=OWNER, limit=1, search="alpha")
+
+
+@pytest.mark.parametrize("corruption", [
+    "duplicate_tenant_id", "duplicate_demo", "duplicate_subscription",
+    "nested_duplicate", "nonfinite_nan", "nonfinite_infinity", "overflow_float",
+])
+def test_admin_directory_rejects_ambiguous_saved_tenant_json(corruption):
+    class Ambiguous:
+        def scan(self, **kwargs):
+            row = item("alpha")
+            raw = row["record"]["S"]
+            suffixes = {
+                "duplicate_tenant_id": ',"tenant_id":"beta"}',
+                "duplicate_demo": ',"demo":true}',
+                "duplicate_subscription": ',"subscription_status":"active"}',
+                "nested_duplicate": ',"unrelated":{"counter":1,"counter":2}}',
+                "nonfinite_nan": ',"unrelated":NaN}',
+                "nonfinite_infinity": ',"unrelated":-Infinity}',
+                "overflow_float": ',"unrelated":1e999}',
+            }
+            row["record"]["S"] = raw[:-1] + suffixes[corruption]
+            return {"Items": [row]}
+
+    with pytest.raises(DirectoryUnavailable):
+        directory(Ambiguous()).page(owner_sub=OWNER, limit=2)
+
+
+def test_ambiguous_saved_tenant_json_is_unavailable_at_authenticated_api_without_secrets():
+    class Ambiguous:
+        def scan(self, **kwargs):
+            row = item("alpha")
+            raw = row["record"]["S"]
+            row["record"]["S"] = raw[:-1] + ',"demo":true,"private_value":"cus_PRIVATE_TOKEN"}'
+            return {"Items": [row]}
+
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        verify_cognito_admin=lambda token: VerifiedAdmin(
+            OWNER, frozenset({"owner"}), True) if token == "owner" else None,
+        admin_directory=directory(Ambiguous())))
+    client = TestClient(app)
+    assert client.get("/v1/admin/tenants").status_code == 401
+    response = client.get("/v1/admin/tenants",
+                          headers={"Authorization": "Bearer owner"})
+    assert response.status_code == 503
+    assert "cus_PRIVATE_TOKEN" not in response.text
+    assert "demo" not in response.text

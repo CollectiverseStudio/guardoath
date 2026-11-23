@@ -1045,3 +1045,15 @@ the independent review, exact-source CI, rollback and 15 live checks remain mand
 ## Owner detail source parity (2026-11-23)
 
 The authenticated owner browser rejects a Usage response without the exact selected `usage.tenant_id`, and Stripe subscription or invoice responses without the selected envelope `tenant_id`. Even HTTP 200 with a missing or different ID displays unavailable information rather than another tenant's request counters, paid state or invoice. The server already independently binds source tenant records before provider reads. This extra browser invariant makes no Stripe/AWS writes or requests, changes no entitlement and does not replace the owner Cognito/MFA check. Authenticated browser regressions include matching, cross-tenant and missing-ID responses; live source parity and exact-SHA release gates are still required.
+
+
+## Tenant-directory source integrity (November 23, 2026)
+
+The owner Users & Tenants directory reads the authoritative DynamoDB tenant record,
+rather than trusting a client-supplied account or subscription status. An account
+record containing duplicate JSON keys at any depth, nonstandard NaN/Infinity,
+or a floating-point literal that overflows to infinity now fails the entire
+bounded page with provider-unavailable status. It does not silently choose the
+last copy of `demo`, `tenant_id`, or `subscription_status`. Successful
+pages still show only redacted metadata and identify subscription state as
+persisted, not freshly reconciled with Stripe. No tenant policies are changed.
