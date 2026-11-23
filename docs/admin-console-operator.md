@@ -985,3 +985,15 @@ still take precedence. The current verified subscription can remain active
 until Stripe actually reconciles its status. No entitlement, invoice, customer
 account, catalog, tenant record or provider is mutated. No extra Stripe call or
 charge, AWS spend, original deadline, or MFA gate is changed.
+
+
+Stripe's `cancel_at` is independent of `cancel_at_period_end`: a verified
+future cancellation may be scheduled for a custom date while
+`cancel_at_period_end` is false. The owner view distinguishes **Scheduled for
+provider date** from **Scheduled at current period end** and emits a separate
+read-only review finding. **Not scheduled** requires explicit false
+`cancel_at_period_end` and explicit null `cancel_at`; an omitted field is
+**Unavailable**, not evidence that a subscription will renew. Malformed
+`cancel_at` blocks the advisory read; a disagreement between period-end and
+direct cancellation timestamps hides the effective date. All provider binding
+and existing entitlement checks still run first.

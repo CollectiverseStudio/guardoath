@@ -225,18 +225,39 @@ class AdminSubscriptionReporter:
         # without currently losing their saved entitlement. Surface the
         # impending cancellation separately; never infer a renewal, invoice
         # charge or early customer-access revocation from this advisory.
-        cancellation_status = (
-            "scheduled_for_period_end" if cancel_flag is True else
-            "not_scheduled" if cancel_flag is False else "unavailable")
-        cancellation_effective_utc = (
-            period_end_utc if cancellation_status == "scheduled_for_period_end"
-            else None)
-        if (state == "active" and cancellation_status == "scheduled_for_period_end"
+        # A custom future cancel_at can be set even when Stripe reports
+        # cancel_at_period_end=False. Do not call it "not scheduled" unless
+        # the provider explicitly returned null for that independent field.
+        cancel_at = snapshot.get("cancel_at", _MISSING)
+        if (cancel_at is not _MISSING and cancel_at is not None
+                and not valid_period(cancel_at)):
+            raise BillingUnavailable("Invalid Stripe scheduled cancellation date")
+        if cancel_flag is True:
+            cancellation_status = "scheduled_for_period_end"
+            cancellation_effective_utc = (
+                period_end_utc if (cancel_at is _MISSING or cancel_at is None or
+                                   cancel_at == period_end) else None)
+        elif cancel_flag is False and valid_period(cancel_at):
+            cancellation_status = "scheduled_for_date"
+            cancellation_effective_utc = datetime.fromtimestamp(
+                cancel_at, timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+        elif cancel_flag is False and cancel_at is None:
+            cancellation_status, cancellation_effective_utc = "not_scheduled", None
+        else:
+            cancellation_status, cancellation_effective_utc = "unavailable", None
+        if (state == "active" and cancellation_status in
+                ("scheduled_for_period_end", "scheduled_for_date")
                 and assessment["level"] == "consistent"):
             assessment = {
                 "level": "review",
-                "code": "stripe_period_end_cancellation_scheduled",
-                "next_step": "Subscription is scheduled to end at the current period boundary; verify future access and renewal expectations without changing saved entitlement",
+                "code": "stripe_period_end_cancellation_scheduled"
+                        if cancellation_status == "scheduled_for_period_end"
+                        else "stripe_custom_date_cancellation_scheduled",
+                "next_step": ("Subscription is scheduled to end at the current period boundary; "
+                              "verify future access and renewal expectations without changing saved entitlement")
+                             if cancellation_status == "scheduled_for_period_end" else
+                             ("Subscription has a Stripe-verified scheduled cancellation date; "
+                              "review future access without changing saved entitlement"),
             }
         return {
             "status": state, "provider": "Stripe", "verified": True,

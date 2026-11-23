@@ -471,7 +471,7 @@ def test_verified_active_period_end_cancellation_requires_review_without_changin
 ])
 def test_cancellation_schedule_never_fabricates_missing_or_malformed_provider_dates(
         flag, status, effective):
-    result = reporter(lambda *_: snapshot(cancel_at_period_end=flag)).read(Tenant())
+    result = reporter(lambda *_: snapshot(cancel_at_period_end=flag, cancel_at=None)).read(Tenant())
     assert result["cancellation_status"] == status
     assert result["cancellation_effective_utc"] == effective
     assert result["subscription_entitlement"] is True
@@ -520,3 +520,33 @@ def test_authenticated_owner_cancellation_advisory_is_masked_and_customer_denied
     assert response.json()["subscription"]["cancellation_status"] == "scheduled_for_period_end"
     for private in ("cus_test1234", "sub_test1234", "pm_private", "secret@example.com"):
         assert private not in response.text
+
+
+def test_custom_stripe_cancellation_date_has_own_review_not_false_not_scheduled():
+    stamp = 1796169600
+    result = reporter(lambda *_: snapshot(
+        cancel_at_period_end=False, cancel_at=stamp)).read(Tenant())
+    assert result["cancellation_status"] == "scheduled_for_date"
+    assert result["cancellation_effective_utc"] == "2026-12-02T00:00:00Z"
+    assert result["reconciliation"]["code"] == "stripe_custom_date_cancellation_scheduled"
+    assert result["reconciliation"]["level"] == "review"
+    assert result["subscription_entitlement"] is True
+    absent = reporter(lambda *_: snapshot(cancel_at_period_end=False)).read(Tenant())
+    assert absent["cancellation_status"] == "unavailable"
+    assert absent["cancellation_effective_utc"] is None
+
+
+@pytest.mark.parametrize("bad", [True, False, -1, 4102444801, "1796169600", [], {}])
+def test_malformed_stripe_custom_cancel_at_fails_closed(bad):
+    with pytest.raises(BillingUnavailable):
+        reporter(lambda *_: snapshot(
+            cancel_at_period_end=False, cancel_at=bad)).read(Tenant())
+
+
+def test_conflicting_period_end_cancellation_timestamp_does_not_invent_effective_date():
+    result = reporter(lambda *_: snapshot(
+        cancel_at_period_end=True,
+        current_period_end=1796083200, cancel_at=1796169600)).read(Tenant())
+    assert result["cancellation_status"] == "scheduled_for_period_end"
+    assert result["cancellation_effective_utc"] is None
+    assert result["reconciliation"]["code"] == "stripe_period_end_cancellation_scheduled"

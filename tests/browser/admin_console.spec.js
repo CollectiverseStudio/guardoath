@@ -1057,3 +1057,24 @@ test("owner Billing distinguishes unknown cancellation from an explicit not-sche
   await action.click();
   await expect(page.locator("#billing-details")).toContainText("Cancellation schedule: Not scheduled");
 });
+
+
+test("owner Billing exposes custom Stripe cancellation date without calling it a renewal", async ({page}) => {
+  await signedIn(page,{override: request =>
+    request.path === "/v1/admin/subscriptions/sample-studio"
+      ? {status:200,contentType:"application/json",body:JSON.stringify({
+          subscription:{verified:true,status:"active",verified_at:"2026-11-23T08:00:00Z",
+            cancel_at_period_end:false,cancellation_status:"scheduled_for_date",
+            cancellation_effective_utc:"2026-12-02T00:00:00Z",
+            reconciliation:{level:"review",code:"stripe_custom_date_cancellation_scheduled",
+              next_step:"Subscription has a Stripe-verified scheduled cancellation date; review future access without changing saved entitlement"}},
+          read_audit_event_id:"a".repeat(64)})} : null});
+  await page.locator("#nav-tenants").click();
+  await page.locator("#tenant-rows tr").filter({hasText:"sample-studio"})
+    .getByRole("button",{name:"Verify Stripe",exact:true}).click();
+  const output = page.locator("#billing-details");
+  await expect(output).toContainText("Reconciliation: review (stripe_custom_date_cancellation_scheduled)");
+  await expect(output).toContainText("Cancellation schedule: Scheduled for provider date (UTC: 2026-12-02T00:00:00Z)");
+  await expect(output).toContainText("Cancel at period end: No");
+  await expect(output).toContainText("Next invoice amount: Unavailable");
+});

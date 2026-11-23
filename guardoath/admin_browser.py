@@ -1382,6 +1382,10 @@ _JS = r'''"use strict";
             ? "Scheduled at current period end (UTC: " +
               (typeof state.cancellation_effective_utc === "string" ?
                 state.cancellation_effective_utc : "Unavailable") + ")" :
+           state.verified && state.cancellation_status === "scheduled_for_date"
+            ? "Scheduled for provider date (UTC: " +
+              (typeof state.cancellation_effective_utc === "string" ?
+                state.cancellation_effective_utc : "Unavailable") + ")" :
            state.verified && state.cancellation_status === "not_scheduled"
             ? "Not scheduled" : "Unavailable") +
           " · Invoice collection method: " +
