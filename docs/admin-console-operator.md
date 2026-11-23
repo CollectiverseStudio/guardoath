@@ -1101,3 +1101,7 @@ paid invoice, refunds, collected revenue, or complete billing administration.
 ## Owner twelve-month recorded-usage history (2026-11-23)
 
 The authenticated Tenants → Usage workspace now displays twelve consecutive UTC calendar months from the same authoritative record, newest first. The current month is partial; a missing month is explicitly Unknown, not zero. A saved zero remains zero. Future-dated and out-of-window entries are excluded from this display without changing the saved record. The API retains the existing sparse history field for compatibility and adds `calendar_usage_months`. The browser validates the full bounded sequence and current-month counter consistency before displaying it; malformed history is unavailable. No additional provider or database reads are introduced. This is recorded request history, not a bill, cost allocation, or proof of complete historical traffic. AWS financial data remains unavailable until verified.
+
+
+### Account and audit selection consistency (November 23, 2026)
+Exact Cognito account inspection, signed account-action receipt lookup, and audit receipt lookup are bound to the latest operator selection in the authenticated browser. Editing the selected input or refreshing the workspace invalidates older pending reads. A late result or failure cannot overwrite the current account or receipt; a new Cognito action also invalidates earlier account/receipt inspections. Server authentication and persistent audit remain authoritative. No extra provider read is introduced.

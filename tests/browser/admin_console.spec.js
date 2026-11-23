@@ -1344,3 +1344,73 @@ test("usage history distinguishes recorded zero from missing months and refuses 
   await expect(page.locator("#usage-details")).toContainText("unknown is not zero): Unavailable");
   await expect(page.locator("#usage-details")).not.toContainText("2026-10: 0");
 });
+
+
+test("older Cognito exact lookup cannot replace the newly selected account", async ({page}) => {
+  await signedIn(page);
+  await page.locator("#nav-users").click();
+  let release, started, done;
+  const hold = new Promise(r => release=r), ready = new Promise(r => started=r),
+    delivered = new Promise(r => done=r);
+  await page.route("**/v1/admin/users/lookup", async route => {
+    const email = route.request().postDataJSON().email;
+    if (email === "old@example.com") {started(); await hold;}
+    await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+      status:"ok",user:{username:email === "old@example.com" ? "old-account" : "new-account",
+        email_hint:"x***@example.com",status:"CONFIRMED",enabled:true,email_verified:true},
+      source:"Synthetic Cognito"})});
+    if (email === "old@example.com") done();
+  });
+  await page.locator("#user-exact-email").fill("old@example.com");
+  await page.locator("#user-inspect").click();
+  await ready;
+  await page.locator("#user-exact-email").fill("new@example.com");
+  await page.locator("#user-inspect").click();
+  await expect(page.locator("#user-inspect-result")).toContainText("new-account");
+  release(); await delivered; await page.waitForTimeout(50);
+  await expect(page.locator("#user-inspect-result")).toContainText("new-account");
+  await expect(page.locator("#user-inspect-result")).not.toContainText("old-account");
+});
+
+test("editing a receipt selection invalidates an in-flight historical read", async ({page}) => {
+  await signedIn(page,{features:{cognito_action_receipts:true}});
+  await page.locator("#nav-users").click();
+  let release, started, done;
+  const hold = new Promise(r => release=r), ready = new Promise(r => started=r),
+    delivered = new Promise(r => done=r);
+  await page.route("**/v1/admin/users/status/receipt", async route => {
+    started(); await hold;
+    await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+      status:"not_found",intent_event_id:null,outcome_event_id:null,current_provider_state_verified:false})});
+    done();
+  });
+  await page.locator("#user-action-key").fill("first_action_reference");
+  await page.locator("#user-action-inspect").click();
+  await ready;
+  await page.locator("#user-action-key").fill("second_action_reference");
+  release(); await delivered; await page.waitForTimeout(50);
+  await expect(page.locator("#user-action-result")).toContainText("Action selection changed");
+  await expect(page.locator("#user-action-result")).not.toContainText("No signed intent");
+});
+
+test("older audit failure cannot replace the newly verified receipt", async ({page}) => {
+  const fixture = await signedIn(page);
+  await page.locator("#nav-audit").click();
+  let release, started, done;
+  const hold = new Promise(r => release=r), ready = new Promise(r => started=r),
+    delivered = new Promise(r => done=r);
+  const old = "f".repeat(64);
+  await page.route("**/v1/admin/audit/"+old, async route => {
+    started(); await hold;
+    await route.fulfill({status:503,contentType:"application/json",body:'{"detail":"old read failed"}'});
+    done();
+  });
+  await page.locator("#audit-id").fill(old);
+  await page.locator("#audit-go").click();
+  await ready;
+  await page.locator("#audit-id").fill(fixture.receipt);
+  await page.locator("#audit-go").click();
+  await expect(page.locator("#audit-result")).toContainText("HMAC integrity verified");
+  release(); await delivered; await page.waitForTimeout(50);
+  await expect(page.locator("#audit-result")).toContainText("HMAC integrity verified");
+});

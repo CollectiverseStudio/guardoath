@@ -330,6 +330,9 @@ _JS = r'''"use strict";
   // Bind each directory response to its latest initiated view.
   let tenantPageSelection = 0;
   let userPageSelection = 0;
+  let exactUserSelection = 0;
+  let userReceiptSelection = 0;
+  let auditSelection = 0;
   // One browser-initiated Cognito mutation at a time; server remains authoritative.
   let activeUserStatus = null;
   let previewSelection = null;
@@ -512,7 +515,8 @@ _JS = r'''"use strict";
     el("review-manifest").disabled = true;
     say("proposal-target", "No verified rule selection.");
     for (const id of ["catalog-summary","catalog-release-summary","tenant-status",
-        "user-status","usage-details","billing-details","invoice-details"]) {
+        "user-status","usage-details","billing-details","invoice-details",
+        "user-inspect-result","user-action-result","audit-result"]) {
       say(id, message);
     }
   }
@@ -522,7 +526,10 @@ _JS = r'''"use strict";
     const readSelection = ++workspaceReadSelection;
     const tenantSelection = ++tenantPageSelection;
     const userSelection = ++userPageSelection;
-    // Invalidate older tenant-specific detail reads while refreshing the workspace.
+    // Invalidate older account and tenant-specific detail reads on refresh.
+    ++exactUserSelection;
+    ++userReceiptSelection;
+    ++auditSelection;
     ++usageSelection;
     ++billingSelection;
     withdrawWorkspaceSnapshot("Refreshing verified owner data; no previous snapshot is current.");
@@ -1118,6 +1125,7 @@ _JS = r'''"use strict";
   }
   async function inspectUser() {
     if (!token) return;
+    const selection = ++exactUserSelection;
     const email = el("user-exact-email").value.trim();
     // The address is transient; no raw email is displayed or saved after lookup.
     el("user-exact-email").value = "";
@@ -1132,7 +1140,7 @@ _JS = r'''"use strict";
       const result = await request("/v1/admin/users/lookup", {
         method: "POST", body: JSON.stringify({email})
       });
-      if (!token || epoch !== authEpoch) return;
+      if (!token || epoch !== authEpoch || selection !== exactUserSelection) return;
       if (result.status === "not_found") {
         say("user-inspect-result", "Cognito has no exact email match; no account changes made" + readAuditLabel(result));
       } else if (result.status === "ok" && result.user &&
@@ -1150,7 +1158,7 @@ _JS = r'''"use strict";
         say("user-inspect-result", "Cognito identity inspection unavailable");
       }
     } catch (err) {
-      if (token && epoch === authEpoch) say("user-inspect-result", err.message);
+      if (token && epoch === authEpoch && selection === exactUserSelection) say("user-inspect-result", err.message);
     }
   }
   async function changeUserStatus() {
@@ -1185,6 +1193,9 @@ _JS = r'''"use strict";
       if (!reason || reason.length < 10 || reason.length > 240) return;
       if (!confirm("Change Cognito sign-in access for this exact account? This does NOT change Stripe or paid entitlement.")) return;
       const actionKey = crypto.randomUUID().replaceAll("-","");
+      ++userReceiptSelection;
+      ++exactUserSelection;
+      say("user-inspect-result", "Account access change requested; inspect again for current state.");
       el("user-action-key").value = actionKey;
       el("user-action-email").value = email;
       say("user-action-result", "Retain action reference: " + actionKey);
@@ -1229,6 +1240,7 @@ _JS = r'''"use strict";
 
   async function inspectUserActionReceipt() {
     if (!token || !features.cognito_action_receipts) return;
+    const selection = ++userReceiptSelection;
     const key = el("user-action-key").value.trim();
     if (!/^[A-Za-z0-9_-]{16,96}$/.test(key)) {
       say("user-action-result", "Enter the original 16–96 character action reference.");
@@ -1247,7 +1259,7 @@ _JS = r'''"use strict";
       const result = await request("/v1/admin/users/status/receipt", {
         method:"POST", body:JSON.stringify(email ? {idempotency_key:key,email} : {idempotency_key:key})
       });
-      if (!token || epoch !== authEpoch) return;
+      if (!token || epoch !== authEpoch || selection !== userReceiptSelection) return;
       if (!["not_found","indeterminate","outcome_recorded"].includes(result.status) ||
           result.current_provider_state_verified !== (email !== "" && result.status !== "not_found"))
         throw new Error("Action receipt verification response invalid");
@@ -1289,7 +1301,7 @@ _JS = r'''"use strict";
             " · current enabled state DIFFERS from historical snapshot") :
             " · current Cognito status NOT checked. Inspect exact account before another action.") + readAuditLabel(result));
     } catch (err) {
-      if (token && epoch === authEpoch) say("user-action-result", err.message);
+      if (token && epoch === authEpoch && selection === userReceiptSelection) say("user-action-result", err.message);
     }
   }
 
@@ -1655,15 +1667,17 @@ _JS = r'''"use strict";
       say("audit-result", "Persistent audit lookup unavailable");
       return;
     }
+    const selection = ++auditSelection;
     const event = el("audit-id").value.trim();
     if (!/^[a-f0-9]{64}$/.test(event)) {
       say("audit-result", "Enter a valid 64-character audit event ID");
       return;
     }
     const epoch = authEpoch;
+    say("audit-result", "Verifying persisted audit receipt...");
     try {
       const response = await request("/v1/admin/audit/" + encodeURIComponent(event));
-      if (!token || epoch !== authEpoch) return;
+      if (!token || epoch !== authEpoch || selection !== auditSelection) return;
       const receipt = response.audit || {};
       if (receipt.event_id !== event || receipt.status !== "ok")
         throw new Error("Audit receipt verification unavailable");
@@ -1708,7 +1722,7 @@ _JS = r'''"use strict";
         " · revision " + receipt.new_revision + " · UTC " + (receipt.when_utc || "unknown") +
         readAuditLabel(response));
     } catch (err) {
-      if (token && epoch === authEpoch) say("audit-result", err.message);
+      if (token && epoch === authEpoch && selection === auditSelection) say("audit-result", err.message);
     }
   }
   function auditReceipt(result, tenantId, priorRevision) {
@@ -2153,6 +2167,20 @@ _JS = r'''"use strict";
   el("search-go").addEventListener("click", () => {nextCursor=null;page();});
   el("user-search-go").addEventListener("click", () => {nextUserCursor=null;pageUsers();});
   el("user-next").addEventListener("click", pageUsers);
+  el("user-exact-email").addEventListener("input", () => {
+    ++exactUserSelection;
+    say("user-inspect-result", "Account selection changed; inspect the exact email.");
+  });
+  for (const id of ["user-action-key","user-action-email"]) {
+    el(id).addEventListener("input", () => {
+      ++userReceiptSelection;
+      say("user-action-result", "Action selection changed; inspect signed history.");
+    });
+  }
+  el("audit-id").addEventListener("input", () => {
+    ++auditSelection;
+    say("audit-result", "Receipt selection changed; verify the exact event.");
+  });
   el("user-inspect").addEventListener("click", inspectUser);
   el("user-change").addEventListener("click", changeUserStatus);
   el("user-action-inspect").addEventListener("click", inspectUserActionReceipt);
