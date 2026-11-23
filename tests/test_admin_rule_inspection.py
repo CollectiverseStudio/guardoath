@@ -36,6 +36,7 @@ def setup():
     store = MemoryTenantStore((tenant("usr-one", input_check_secrets="block",
                                      input_rule_actions={"secrets.credential_assignment": "flag"}),
                                tenant("usr-two", input_check_secrets=None,
+                                      output_check_secrets="block",
                                       input_rule_actions={"secrets.credential_assignment": "block"})))
     def verify(token):
         if token == "owner":

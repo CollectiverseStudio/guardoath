@@ -1658,8 +1658,8 @@ _JS = r'''"use strict";
           stage,rule_id:ruleId,action,confirmation,reason,
           idempotency_key:crypto.randomUUID().replaceAll("-", "")})
       });
-      const receipt=auditReceipt(outcome,tenantId,current.revision);
-      if (token && epoch===authEpoch) {await load();say("status","Tenant rule saved · "+receipt);}
+      const receipt = auditReceipt(outcome, tenantId, current.revision);
+      if (token && epoch===authEpoch) {await load();say("status","Tenant rule saved · " + receipt);}
     } catch(err) {if(token && epoch===authEpoch) say("status",err.message);}
   }
   async function changeStatus(tenant) {
