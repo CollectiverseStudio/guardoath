@@ -44,7 +44,12 @@ def test_invalid_offset_minutes_keep_finding_on_each_stage(kind, stage, offset):
 @pytest.mark.parametrize("timestamp", ["2026-11-01T09:00:00Z", "2026-11-01T09:00:00+01:59", "2026-11-01T09:00:00-00:59"])
 def test_valid_offset_boundary_controls_remain_benign(kind, stage, timestamp):
     result = evaluate(kind, stage, timestamp)
-    assert result.evaluation_status == "complete"
+    # Diagnostics contain only stable public checker IDs and machine codes,
+    # never the request payload or the raw comparison values.
+    assert result.evaluation_status == "complete", [
+        (check.checker_id, check.status, check.error_code, check.latency_ms)
+        for check in result.checker_results
+    ]
     assert result.effective_action == Action.ALLOW and result.findings == ()
 
 
