@@ -1616,24 +1616,50 @@ _JS = r'''"use strict";
     if (!tenantId || !/^[a-z][a-z0-9-]{1,39}$/.test(tenantId)) return;
     const stage=prompt("Stage: input or output", "input");
     if (!(["input","output"].includes(stage))) return;
-    const action=prompt("Action: off, allow, flag, block, or same_as_check", "block");
-    if (!(["off","allow","flag","block","same_as_check"].includes(action))) return;
-    const confirmation=prompt("Type tenant ID exactly: " + tenantId);
-    if (confirmation !== tenantId) return;
-    const reason=prompt("Audit reason (10–240 characters; no sensitive data):");
-    if (!reason || reason.length < 10 || reason.length > 240) return;
-    if (!confirm("Change " + stage + " rule " + ruleId + " to " + action + " on " + tenantId + "?")) return;
     const epoch=authEpoch;
     try {
-      const current=await request("/v1/admin/tenants/"+encodeURIComponent(tenantId));
-      if (!token || epoch!==authEpoch || !Number.isInteger(current.tenant?.revision)) return;
-      const outcome = await request("/v1/admin/tenants/"+encodeURIComponent(tenantId)+"/rule-action", {
-        method:"POST",body:JSON.stringify({expected_revision:current.tenant.revision,
+      // Inspect the exact authoritative saved stage and override BEFORE asking
+      // for a mutation. The inspection revision is the subsequent CAS token.
+      const current=await request("/v1/admin/tenants/"+encodeURIComponent(tenantId)+
+        "/rule-action?"+new URLSearchParams({stage,rule_id:ruleId}));
+      if (!token || epoch!==authEpoch) return;
+      if (current.tenant_id !== tenantId || current.rule_id !== ruleId ||
+          current.stage !== stage ||
+          !Number.isSafeInteger(current.revision) || current.revision < 1 ||
+          !["block","flag","allow","redact",null].includes(current.check_action) ||
+          !["same_as_check","off","allow","flag","block"].includes(current.rule_action) ||
+          !["check_off","rule_off","configured_not_execution_evidence"].includes(current.eligibility) ||
+          (current.check_action === null) !== (current.eligibility === "check_off") ||
+          (current.check_action !== null && current.rule_action === "off") !==
+            (current.eligibility === "rule_off"))
+        throw new Error("Saved tenant rule inspection could not be verified; no mutation");
+      const warning = current.eligibility === "check_off"
+        ? " The check itself is OFF on this stage; an override cannot enable it."
+        : current.eligibility === "rule_off"
+        ? " This rule is currently OFF on this stage."
+        : " Configured actions do not prove execution.";
+      say("status", "Saved "+tenantId+" "+stage+" "+ruleId+": check "+
+        (current.check_action || "OFF")+", override "+current.rule_action+"."+warning+
+        readAuditLabel(current));
+      const action=prompt("Action: off, allow, flag, block, or same_as_check. Saved override: "+
+        current.rule_action+"; check action: "+(current.check_action || "OFF")+"."+warning,
+        current.rule_action);
+      if (!["off","allow","flag","block","same_as_check"].includes(action) ||
+          action === current.rule_action) return;
+      const confirmation=prompt("Type tenant ID exactly: " + tenantId);
+      if (confirmation !== tenantId) return;
+      const reason=prompt("Audit reason (10–240 characters; no sensitive data):");
+      if (!reason || reason.length < 10 || reason.length > 240) return;
+      if (!confirm("Change "+stage+" rule "+ruleId+" on "+tenantId+
+        " from "+current.rule_action+" to "+action+"?"+warning)) return;
+      if (!token || epoch!==authEpoch) return;
+      const outcome=await request("/v1/admin/tenants/"+encodeURIComponent(tenantId)+"/rule-action", {
+        method:"POST",body:JSON.stringify({expected_revision:current.revision,
           stage,rule_id:ruleId,action,confirmation,reason,
           idempotency_key:crypto.randomUUID().replaceAll("-", "")})
       });
-      const receipt = auditReceipt(outcome, tenantId, current.tenant.revision);
-      if (token && epoch===authEpoch) {await load();say("status","Tenant rule saved · " + receipt);}
+      const receipt=auditReceipt(outcome,tenantId,current.revision);
+      if (token && epoch===authEpoch) {await load();say("status","Tenant rule saved · "+receipt);}
     } catch(err) {if(token && epoch===authEpoch) say("status",err.message);}
   }
   async function changeStatus(tenant) {

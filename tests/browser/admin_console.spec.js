@@ -725,3 +725,87 @@ test("catalog does not label unverified history as zero releases", async ({page}
   await expect(page.locator("#catalog-release-summary")).toContainText("unavailable");
   await expect(page.locator("#catalog-release-entries li")).toHaveCount(0);
 });
+
+test("owner rule editor reads saved stage and override before a revision-conditional write", async ({page}) => {
+  const receipt = "a".repeat(64);
+  const fixture = await signedIn(page, {
+    features:{tenant_rule_changes:true},
+    override: request => {
+      if (request.path === "/v1/admin/tenants/sample-studio/rule-action" &&
+          request.method === "GET")
+        return {status:200,contentType:"application/json",body:JSON.stringify({
+          tenant_id:"sample-studio",revision:4,rule_id:"pii.email",check_id:"pii",
+          stage:"input",check_action:null,rule_action:"off",eligibility:"check_off",
+          read_audit_event_id:receipt})};
+      if (request.path === "/v1/admin/tenants/sample-studio/rule-action" &&
+          request.method === "POST")
+        return {status:200,contentType:"application/json",body:JSON.stringify({
+          tenant_id:"sample-studio",revision:5,stage:"input",
+          rule_id:"pii.email",action:"block",audit_event_id:receipt})};
+      return null;
+    }
+  });
+  const prompts = [];
+  page.on("dialog", async dialog => {
+    prompts.push(dialog.message());
+    if (dialog.type() === "confirm") return dialog.accept();
+    const message = dialog.message();
+    return dialog.accept(
+      message.startsWith("Tenant ID") ? "sample-studio" :
+      message.startsWith("Stage:") ? "input" :
+      message.startsWith("Action:") ? "block" :
+      message.startsWith("Type tenant") ? "sample-studio" :
+      message.startsWith("Audit reason") ? "Reviewed tenant policy with known Off check" : "");
+  });
+  await page.locator("#nav-catalog").click();
+  const category = page.locator("#categories > details").first();
+  await category.locator(":scope > summary").click();
+  const check = category.locator(":scope > details").first();
+  await check.locator(":scope > summary").click();
+  await check.getByRole("button",{name:"Set tenant rule"}).click();
+  await expect(page.locator("#status")).toContainText("Tenant rule saved");
+  const reads = fixture.calls.filter(c => c.path ===
+    "/v1/admin/tenants/sample-studio/rule-action" && c.method === "GET");
+  const writes = fixture.calls.filter(c => c.path ===
+    "/v1/admin/tenants/sample-studio/rule-action" && c.method === "POST");
+  expect(reads).toHaveLength(1);
+  expect(reads[0].url.searchParams.get("stage")).toBe("input");
+  expect(reads[0].url.searchParams.get("rule_id")).toBe("pii.email");
+  expect(writes).toHaveLength(1);
+  expect(writes[0].body).toMatchObject({expected_revision:4,stage:"input",
+    rule_id:"pii.email",action:"block"});
+  expect(prompts.join(" ")).toContain("The check itself is OFF");
+  expect(fixture.calls.some(c => c.path === "/v1/admin/tenants/sample-studio" &&
+    c.method === "GET")).toBe(false);
+});
+
+test("rule inspection outage or cross-tenant response prevents every owner rule mutation", async ({page}) => {
+  let wrongTenant = false;
+  const fixture = await signedIn(page,{features:{tenant_rule_changes:true},
+    override: request => request.path === "/v1/admin/tenants/sample-studio/rule-action" &&
+      request.method === "GET"
+      ? wrongTenant
+        ? {status:200,contentType:"application/json",body:JSON.stringify({
+          tenant_id:"usr-other",revision:7,rule_id:"pii.email",stage:"input",
+          check_action:"block",rule_action:"same_as_check",
+          eligibility:"configured_not_execution_evidence"})}
+        : {status:503,contentType:"application/json",body:JSON.stringify({
+          detail:"Policy unavailable"})}
+      : null});
+  page.on("dialog", async dialog => dialog.type() === "prompt"
+    ? dialog.accept(dialog.message().startsWith("Stage:") ? "input" : "sample-studio")
+    : dialog.accept());
+  await page.locator("#nav-catalog").click();
+  const category = page.locator("#categories > details").first();
+  await category.locator(":scope > summary").click();
+  const check = category.locator(":scope > details").first();
+  await check.locator(":scope > summary").click();
+  const change = check.getByRole("button",{name:"Set tenant rule"});
+  await change.click();
+  await expect(page.locator("#status")).toContainText("Policy unavailable");
+  wrongTenant = true;
+  await change.click();
+  await expect(page.locator("#status")).toContainText("inspection could not be verified");
+  expect(fixture.calls.filter(c => c.method === "POST" &&
+    c.path.endsWith("/rule-action"))).toHaveLength(0);
+});

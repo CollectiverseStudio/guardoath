@@ -28,6 +28,8 @@ from guardoath.admin_catalog_manifest import (
     CatalogManifestConflict, CatalogManifestUnavailable, reviewed_metadata_manifest)
 from guardoath.admin_directory import DynamoAdminDirectory, DirectoryUnavailable, InvalidCursor
 from guardoath.admin_usage import tenant_usage_report
+from guardoath.admin_rule_inspection import (
+    inspect_tenant_rule_action, RuleSelectionInvalid, RuleInspectionUnavailable)
 from guardoath.admin_user_actions import (AdminCognitoUserActions, UserActionConflict, UserActionUnavailable)
 from guardoath.admin_users import (CognitoUserDirectory, InvalidUserCursor,
                                   InvalidUserLookup, CognitoDirectoryUnavailable, CognitoLookupRateLimited)
@@ -534,6 +536,33 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Tenant directory unavailable") from exc
         return admin_json({"tenant": projected, "source": "tenant store",
+                           **({"read_audit_event_id": read_event} if read_event else {})})
+
+    @router.get("/v1/admin/tenants/{tenant_id}/rule-action")
+    def read_tenant_rule_action(tenant_id: str,
+                                stage: str = Query(pattern=r"^(input|output)$"),
+                                rule_id: str = Query(min_length=3, max_length=100,
+                                                     pattern=r"^[a-z][a-z0-9_]*(?:\\.[a-z0-9_]+)+$"),
+                                principal: VerifiedAdmin = Depends(require_admin)):
+        if not TENANT_ID.fullmatch(tenant_id):
+            raise HTTPException(status_code=404, detail="Tenant not found")
+        if tenant_store is None:
+            raise HTTPException(status_code=503, detail="Tenant rule inspection unavailable")
+        # Existing signed tenant-detail audit precedes the actual record read.
+        read_event = audit_sensitive_read(principal, "tenant.detail", tenant_id)
+        try:
+            record = tenant_store.get(tenant_id)
+            if record is None:
+                raise HTTPException(status_code=404, detail="Tenant not found")
+            result = inspect_tenant_rule_action(
+                record, tenant_id=tenant_id, stage=stage, rule_id=rule_id)
+        except HTTPException:
+            raise
+        except RuleSelectionInvalid as exc:
+            raise HTTPException(status_code=404, detail="Published rule unavailable") from exc
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="Tenant rule inspection unavailable") from exc
+        return admin_json({**result,
                            **({"read_audit_event_id": read_event} if read_event else {})})
 
     @router.get("/v1/admin/tenants/{tenant_id}/usage")
