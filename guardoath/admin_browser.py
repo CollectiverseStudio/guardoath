@@ -1377,6 +1377,12 @@ _JS = r'''"use strict";
           " · Cancel at period end: " +
           (state.verified && state.cancel_at_period_end === true ? "Yes" :
            state.verified && state.cancel_at_period_end === false ? "No" : "Unavailable") +
+          " · Payment collection: " +
+          (state.verified && state.collection_status === "paused"
+            ? "Paused (" + (["keep_as_draft","mark_uncollectible","void"].includes(state.collection_behavior) ?
+                state.collection_behavior : "behavior unavailable") +
+              "; resume UTC: " + (state.collection_resumes_at_utc || "Not scheduled") + ")"
+            : state.verified && state.collection_status === "collecting" ? "Not paused" : "Unavailable") +
           " · Next invoice amount: Unavailable" +
           " · UTC provider read: " + (state.verified_at || "Unavailable") + readAuditLabel(result));
         say("status", tenant.tenant_id + ": subscription reviewed; no entitlement change");

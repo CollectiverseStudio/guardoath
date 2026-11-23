@@ -16,6 +16,8 @@ SUBSCRIPTION = re.compile(r"^sub_[A-Za-z0-9_]{1,96}$")
 PRICE = re.compile(r"^price_[A-Za-z0-9_]{1,96}$")
 STATES = frozenset({"active", "past_due", "canceled", "unpaid", "incomplete",
                     "incomplete_expired", "trialing", "paused"})
+COLLECTION_BEHAVIORS = frozenset({"keep_as_draft", "mark_uncollectible", "void"})
+_MISSING = object()
 
 
 class BillingUnavailable(Exception):
@@ -142,6 +144,39 @@ class AdminSubscriptionReporter:
         # unhashable values as unavailable, never an exception or entitlement.
         if not isinstance(state, str) or state not in STATES:
             raise BillingUnavailable("Unrecognized Stripe subscription status")
+
+        # Stripe pause_collection is independent of subscription.status. A
+        # subscription can remain "active" while collecting no payments.
+        # Missing fields stay unknown rather than being called "not paused".
+        pause = snapshot.get("pause_collection", _MISSING)
+        collection_status, collection_behavior, collection_resumes_at_utc = (
+            "unavailable", None, None)
+        if pause is None:
+            collection_status = "collecting"
+        elif pause is not _MISSING:
+            if not isinstance(pause, dict):
+                raise BillingUnavailable("Invalid Stripe payment collection state")
+            behavior = pause.get("behavior")
+            resumes_at = pause.get("resumes_at")
+            if (not isinstance(behavior, str) or behavior not in COLLECTION_BEHAVIORS
+                    or (resumes_at is not None and
+                        (type(resumes_at) is not int or
+                         not 946684800 <= resumes_at <= 4102444800))):
+                raise BillingUnavailable("Invalid Stripe payment collection state")
+            collection_status = "paused"
+            collection_behavior = behavior
+            if resumes_at is not None:
+                collection_resumes_at_utc = (
+                    datetime.fromtimestamp(resumes_at, timezone.utc)
+                    .isoformat(timespec="seconds").replace("+00:00", "Z"))
+        assessment = _reconciliation_assessment(
+            state, stored_status, tenant_status, billing_mode)
+        if collection_status == "paused" and assessment["level"] == "consistent":
+            assessment = {
+                "level": "review",
+                "code": "stripe_payment_collection_paused",
+                "next_step": "Review Stripe payment collection pause; active subscription status does not prove payments are collecting",
+            }
         # An admin display never grants entitlement. Only show a concordant
         # active entitlement after independent provider AND saved-state checks.
         concordant = (state == "active" and stored_status == "active"
@@ -161,13 +196,15 @@ class AdminSubscriptionReporter:
             "cancel_at_period_end": cancel_flag,
             "current_period_end_utc": period_end_utc,
             "billing_cycle_source": "same verified Stripe subscription (not an invoice)",
+            "collection_status": collection_status,
+            "collection_behavior": collection_behavior,
+            "collection_resumes_at_utc": collection_resumes_at_utc,
             "price_verified": True, "provider_active": state == "active",
             "subscription_entitlement": concordant,
             "stored_status": stored_status if stored_status in
                 {"active", "inactive", "past_due", "canceled"} else "unknown",
             "entitlement_source": "direct Stripe subscription plus persisted tenant state",
-            "reconciliation": _reconciliation_assessment(
-                state, stored_status, tenant_status, billing_mode),
+            "reconciliation": assessment,
             "verified_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "note": "Read-only verification; no Stripe or tenant entitlement was modified",
+            "note": "Read-only verification; payment collection is separate from subscription status; no Stripe or tenant entitlement was modified",
         }

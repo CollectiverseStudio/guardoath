@@ -930,3 +930,21 @@ revision limits are unchanged and remain stricter to allow exact increments.
 The UTC-month metadata and unknown-cost semantics are unchanged. No additional
 provider calls, cloud expenditure, tenant writes, check timeouts or entitlements
 are introduced. These source/API regressions do not prove live /admin deployment.
+
+
+## Provider-verified Stripe payment collection pause (2026-11-23)
+
+The owner **Verify Stripe** inspection now distinguishes a provider subscription
+that is `active` from its separate `pause_collection` setting. A verified
+non-null pause displays **Payment collection: Paused**, its recognized Stripe
+behavior (`keep_as_draft`, `mark_uncollectible` or `void`), and the recorded
+resume time or **Not scheduled**. A verified explicit null displays **Not
+paused**; an omitted field is **Unavailable**, never a fabricated assertion
+that Stripe is collecting payment. An otherwise consistent saved/provider
+status receives a **review** finding when collection is paused; existing
+critical billing-state disagreements keep their precedence. Malformed pause
+metadata makes subscription verification unavailable. This uses the same
+existing one owner-authorized, audited subscription read; it does not fetch
+invoices, alter paid entitlement, resume collection, charge/refund anyone,
+or change tenant source-of-truth settings. Active subscription status is not
+proof of payments received or of live revenue.

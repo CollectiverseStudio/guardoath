@@ -433,6 +433,28 @@ test("verified inactive Stripe disagreement appears in owner Billing without inv
   expect((await output.textContent())).not.toContain("subscription_entitlement: true");
 });
 
+test("owner billing reveals Stripe collection pause even while subscription status is active", async ({page}) => {
+  const fixture = await signedIn(page,{override: request =>
+    request.path === "/v1/admin/subscriptions/sample-studio"
+      ? {status:200,contentType:"application/json",body:JSON.stringify({
+          subscription:{verified:true,status:"active",verified_at:"2026-11-23T08:00:00Z",
+            collection_status:"paused",collection_behavior:"keep_as_draft",
+            collection_resumes_at_utc:null,
+            reconciliation:{level:"review",code:"stripe_payment_collection_paused",
+              next_step:"Review Stripe payment collection pause; active subscription status does not prove payments are collecting"}},
+          read_audit_event_id:"a".repeat(64)})} : null});
+  await page.locator("#nav-tenants").click();
+  const row = page.locator("#tenant-rows tr").filter({hasText:"sample-studio"});
+  await row.getByRole("button",{name:"Verify Stripe",exact:true}).click();
+  const output = page.locator("#billing-details");
+  await expect(output).toContainText("Provider: active");
+  await expect(output).toContainText("Reconciliation: review (stripe_payment_collection_paused)");
+  await expect(output).toContainText("Payment collection: Paused (keep_as_draft; resume UTC: Not scheduled)");
+  await expect(output).toContainText("Next invoice amount: Unavailable");
+  expect(fixture.calls.some(call => call.path === "/v1/admin/subscriptions/sample-studio"
+    && call.headers["x-guardoath-admin-session"] === fixture.token)).toBe(true);
+});
+
 test("unavailable verified Stripe read is visible and never claims paid entitlement", async ({page}) => {
   const fixture = await signedIn(page,{override: request =>
     request.path === "/v1/admin/subscriptions/sample-studio"

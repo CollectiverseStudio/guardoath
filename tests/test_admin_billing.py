@@ -28,6 +28,7 @@ def snapshot(**updates):
     return {"id": "sub_test1234", "customer": "cus_test1234", "object": "subscription",
             "status": "active", "livemode": False,
             "items": {"data": [{"price": {"id": PRICE}, "quantity": 1}], "has_more": False},
+            "pause_collection": None,
             "customer_email": "secret@example.com", "payment_method": "pm_private", **updates}
 
 
@@ -285,4 +286,74 @@ def test_authenticated_owner_provider_shape_failure_is_sanitized_503():
     assert response.json()["detail"] == "Subscription verification unavailable"
     assert len(reads) == 1
     for private in ("secret@example.com", "cus_test1234", "sub_test1234", "pm_private"):
+        assert private not in response.text
+
+
+
+@pytest.mark.parametrize("behavior", ["keep_as_draft", "mark_uncollectible", "void"])
+def test_verified_active_subscription_with_paused_collection_requires_review(behavior):
+    from datetime import datetime, timezone
+    record = Tenant()
+    before = dict(record.__dict__)
+    stamp = 1796083200
+    result = reporter(lambda *_: snapshot(
+        pause_collection={"behavior": behavior, "resumes_at": stamp})).read(record)
+    assert result["verified"] is True and result["provider_active"] is True
+    assert result["subscription_entitlement"] is True  # Reporting never revokes/grants access.
+    assert result["collection_status"] == "paused"
+    assert result["collection_behavior"] == behavior
+    assert result["collection_resumes_at_utc"] == datetime.fromtimestamp(
+        stamp, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    assert result["reconciliation"]["level"] == "review"
+    assert result["reconciliation"]["code"] == "stripe_payment_collection_paused"
+    assert record.__dict__ == before
+    for private in ("cus_test1234", "sub_test1234", "secret@example.com", "pm_private"):
+        assert private not in str(result)
+
+
+def test_indefinite_pause_and_absent_collection_field_remain_distinct():
+    paused = reporter(lambda *_: snapshot(
+        pause_collection={"behavior": "void", "resumes_at": None})).read(Tenant())
+    assert paused["collection_status"] == "paused"
+    assert paused["collection_resumes_at_utc"] is None
+    assert paused["reconciliation"]["level"] == "review"
+    absent = snapshot()
+    del absent["pause_collection"]
+    unknown = reporter(lambda *_: absent).read(Tenant())
+    assert unknown["collection_status"] == "unavailable"
+    assert unknown["collection_behavior"] is None
+    assert unknown["collection_resumes_at_utc"] is None
+    assert reporter(lambda *_: snapshot()).read(Tenant())["collection_status"] == "collecting"
+
+
+@pytest.mark.parametrize("bad", [
+    False, [], "", 17, {},
+    {"behavior": None}, {"behavior": ["void"]}, {"behavior": "unknown"},
+    {"behavior": "void", "resumes_at": True},
+    {"behavior": "void", "resumes_at": "1796083200"},
+    {"behavior": "void", "resumes_at": -1},
+    {"behavior": "void", "resumes_at": 4102444801},
+])
+def test_malformed_collection_pause_fails_closed_without_claiming_consistency(bad):
+    with pytest.raises(BillingUnavailable):
+        reporter(lambda *_: snapshot(pause_collection=bad)).read(Tenant())
+
+
+def test_authenticated_owner_sees_collection_pause_risk_without_provider_secrets():
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        verify_cognito_admin=lambda token: VerifiedAdmin(
+            "trusted-subject", frozenset({"owner"}), True) if token == "admin" else None,
+        tenant_store=Store(), billing_reporter=reporter(lambda *_: snapshot(
+            pause_collection={"behavior": "keep_as_draft", "resumes_at": None}))))
+    endpoint = "/v1/admin/subscriptions/usr-billing"
+    client = TestClient(app)
+    assert client.get(endpoint).status_code == 401
+    assert client.get(endpoint, headers={"X-GuardOath-Key": "admin"}).status_code == 401
+    response = client.get(endpoint, headers={"X-GuardOath-Admin-Session": "admin"})
+    assert response.status_code == 200
+    subscription = response.json()["subscription"]
+    assert subscription["collection_status"] == "paused"
+    assert subscription["reconciliation"]["level"] == "review"
+    for private in ("cus_test1234", "sub_test1234", "secret@example.com", "pm_private"):
         assert private not in response.text
