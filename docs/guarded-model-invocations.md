@@ -118,6 +118,43 @@ input cannot dispatch. Redaction forwards/releases only transformed text that
 the Engine rechecked. A changed tenant revision or entitlement prevents release
 under stale authority.
 
+### Employee chat and human-safety routing
+
+An application or chat interface can submit its message to this endpoint without
+an AI agent. The selected model returns text; the same saved tenant policy checks
+that text before the original POST can release it. This covers requests routed
+through the endpoint, not unrelated conversations in external chat products.
+
+The existing **Human safety** and **Harmful content (wording)** controls apply to
+invocations exactly as they do to manual checks. Their Input and Output actions
+and individual rule overrides remain tenant-owned. The following is an example
+policy to configure deliberately, not a new default applied to customer records:
+
+| Situation | Example saved action | Endpoint behavior |
+| --- | --- | --- |
+| A person asks for help and matches a crisis indicator | Human safety Input **Flag** | Records the finding and can invoke the approved model; the answer still must pass Output checks. |
+| A known method-seeking or violent request matches a rule configured to block | That individual Input rule **Block** | Returns `input_blocked`, no answer and zero model dispatches. |
+| The model returns known self-harm encouragement or encouragement to hurt another person | Human safety and Harmful content Output **Block** | Returns `output_blocked` and no model answer. Matching rule IDs remain in the receipt. |
+| A saved check or individual rule is Off | **Off** on that stage/rule | Does not enforce that disabled control; other enabled controls still run. |
+
+Configure these actions in the existing Policy section before using **Run a model
+through GuardOath**. A Flag is a recorded finding that permits continuation. It
+does not notify a person, arrange assistance, or guarantee a supportive model
+answer. When output is withheld or generation fails, the customer's chat must
+provide its own reviewed supportive message and appropriate local help options;
+this API currently returns `response: null`, not an automatic crisis response.
+
+`tests/test_invocation_human_safety.py` exercises actual hosted authentication,
+tenant policy, both production wording checkers, the shared Engine and durable
+SQLite receipts with an offline model fixture. It covers flagged help requests,
+explicit Input blocks with no dispatch, harmful Output withholding, simultaneous
+findings, benign support examples, saved Off, and content-free receipt recovery.
+It does not establish live inference, semantic or multilingual accuracy, clinical
+assessment, reliable intent detection, or protection for every paraphrase. These
+checks match known wording; quoted or educational material can also match.
+
+### Durable dispatch and receipt accounting
+
 An atomic durable transaction records dispatch intent and reserves one call plus
 the requested maximum output tokens against the connection's monthly quota.
 Credential/version rotation does not reset that counter. Each completed input

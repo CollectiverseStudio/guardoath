@@ -31,6 +31,12 @@ charged for success, rejection, withheld output and unknown outcomes. There is
 no refund, usage settlement or dollar-budget claim. Reported usage is separate
 evidence and remains unknown when the provider supplies none.
 
+The [hosted acceptance verifier](model-invocation-live-acceptance.md) checks an
+already-configured connection without spending model tokens by default. Its
+explicit one-call mode sends a synthetic greeting once and verifies the same
+durable receipt by request ID. It does not provision this store or grant approval
+for the costs below.
+
 The supported state graph is admission, input check, dispatch intent, observed
 provider result and a terminal receipt. Blocked, simulated or incomplete input
 cannot reach dispatch. Terminal receipts cannot be edited. The target, original
@@ -120,6 +126,15 @@ size. Thus even the hypothetical all-items-under-1-KB case requires at least
 receipt sizes can require more. The template's 1/1 default is a review placeholder,
 not tested production sizing. See
 [AWS transaction capacity guidance](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html#transaction-capacity-handling).
+
+The proposed 5/5 pilot also requires live capacity acceptance. Run pilot calls
+sequentially with pauses; do not equate a low monthly infrastructure estimate
+with fast request completion. Receipt and event documents can exceed 1 KB, and
+transactional writes can exhaust the provisioned rate or available burst capacity.
+The existing ten-second invocation deadline and one-attempt SDK policy remain
+unchanged. In particular, throttling on the final receipt write withholds the
+answer even if generation and validation succeeded. Preserve the request ID and
+read its receipt; do not generate again to recover a withheld answer.
 
 Before enabling, choose the region/table name, verify aggregate allowances and
 cost limits, measure bounded receipt sizes and concurrency, provision sufficient

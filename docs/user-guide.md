@@ -56,6 +56,19 @@ Microsoft/Anthropic integrations remain unavailable. Ready means configured for
 testing, not proof that provider access has succeeded. See the
 [exact invocation contract](guarded-model-invocations.md).
 
+For employee chat, the same saved Human safety and Harmful content controls
+apply before and after the model. A deliberately configured Input Flag can keep
+requests for help accessible, while specific method-seeking Input rules and
+harmful Output rules can Block. See the
+[employee-chat example and coverage limits](guarded-model-invocations.md#employee-chat-and-human-safety-routing).
+A blocked model answer is withheld; your chat must supply its reviewed supportive
+fallback. The endpoint does not automatically notify another person.
+
+Operators can use the [hosted model acceptance check](model-invocation-live-acceptance.md)
+to inspect an existing connection without generating text, then perform one
+explicitly approved synthetic call and correlate its durable receipt. Reusing a
+request ID does not create another model generation.
+
 Your application can still call its own AI/agent between the independent Input
 and Output validation endpoints, where you supply proposed output. Those
 endpoints do not accept provider/model/agent selectors or bind an interaction.
