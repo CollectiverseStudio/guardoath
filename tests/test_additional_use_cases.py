@@ -27,7 +27,29 @@ def assert_schema(client,stage,data,valid):
     response=post(client,stage,data)
     assert response.status_code==200
     result=response.json()
-    assert result['evaluation_status']=='complete'
+    # Keep the strict completeness assertion. Report only allowlisted machine
+    # error codes, checker status and rounded duration on a failure. Never emit
+    # request/response content or findings from a customer's validation.
+    diagnostic = ""
+    if result['evaluation_status'] != 'complete':
+        from math import isfinite
+        from guardoath.evaluate import SAFE_CHECKER_ERROR_CODES
+        receipts = []
+        for check in result.get('checker_results', []):
+            if not isinstance(check, dict):
+                receipts.append('malformed-receipt')
+                continue
+            checker = 'schema' if check.get('checker_id') == 'schema' else 'other'
+            status = check.get('status')
+            status = status if status in ('passed', 'flagged', 'error', 'skipped', 'unsupported') else 'other'
+            error = check.get('error_code')
+            error = error if isinstance(error, str) and error in SAFE_CHECKER_ERROR_CODES else 'other'
+            duration = check.get('latency_ms')
+            duration = (round(duration, 1) if type(duration) in (int, float)
+                        and isfinite(duration) and duration >= 0 else 'unknown')
+            receipts.append(f"{checker}:{status}:{error}@{duration}ms")
+        diagnostic = f"stage={stage} schema receipts={','.join(receipts[:10])}"
+    assert result['evaluation_status']=='complete', diagnostic
     assert (not result['findings']) is valid
     assert result['effective_action']==('allow' if valid else 'block')
     return result

@@ -48,8 +48,13 @@ jobs:
         run: python -m pytest -q tests/test_timestamp_order_regression.py
       - name: Documented field-comparison templates (isolated strict deadlines)
         run: python -m pytest -q tests/test_field_comparisons_inventory.py
+      # The JSON-schema use-case suite also exercises the unchanged bounded
+      # checker budget. Keep all cases in a fresh process rather than following
+      # thousands of unrelated tests, retaining strict complete/block results.
+      - name: Additional schema use cases (isolated strict deadlines)
+        run: python -m pytest -q tests/test_additional_use_cases.py
       - name: Remaining full Python suite (same tests, no duplicates)
-        run: python -m pytest -q --ignore=tests/test_evaluate_all.py --ignore=tests/test_field_comparison_timestamp_offsets.py --ignore=tests/test_timestamp_order_regression.py --ignore=tests/test_field_comparisons_inventory.py
+        run: python -m pytest -q --ignore=tests/test_evaluate_all.py --ignore=tests/test_field_comparison_timestamp_offsets.py --ignore=tests/test_timestamp_order_regression.py --ignore=tests/test_field_comparisons_inventory.py --ignore=tests/test_additional_use_cases.py
       - name: Secrets group - 100 expectations
         run: python -m guardoath.evaluate --cases evals/secrets.json --policies policies/secrets-batch.json
       - name: Structure group - 100 expectations
@@ -106,8 +111,13 @@ jobs:
         run: python -m pytest -q tests/test_timestamp_order_regression.py
       - name: Documented field-comparison templates (isolated strict deadlines)
         run: python -m pytest -q tests/test_field_comparisons_inventory.py
+      # The JSON-schema use-case suite also exercises the unchanged bounded
+      # checker budget. Keep all cases in a fresh process rather than following
+      # thousands of unrelated tests, retaining strict complete/block results.
+      - name: Additional schema use cases (isolated strict deadlines)
+        run: python -m pytest -q tests/test_additional_use_cases.py
       - name: Remaining full Python suite (same tests, no duplicates)
-        run: python -m pytest -q --ignore=tests/test_evaluate_all.py --ignore=tests/test_field_comparison_timestamp_offsets.py --ignore=tests/test_timestamp_order_regression.py --ignore=tests/test_field_comparisons_inventory.py
+        run: python -m pytest -q --ignore=tests/test_evaluate_all.py --ignore=tests/test_field_comparison_timestamp_offsets.py --ignore=tests/test_timestamp_order_regression.py --ignore=tests/test_field_comparisons_inventory.py --ignore=tests/test_additional_use_cases.py
       - name: Privacy group - 100 expectations
         run: python -m guardoath.evaluate --pii --cases evals/privacy.json --policies policies/privacy-batch.json
       - name: Encoded sensitive data - 100 expectations
@@ -187,8 +197,10 @@ jobs:
       # ~22k-case sweep; a real timeout continues to fail this isolated step.
       - name: Catalog JSON boundary deadlines (isolated strict deadlines)
         run: python -m pytest -q tests/test_catalog_partial_boundaries.py
+      - name: Additional schema use cases (isolated strict deadlines)
+        run: python -m pytest -q tests/test_additional_use_cases.py
       - name: Remaining full suite on Windows (includes launcher tests)
-        run: python -m pytest -q --ignore=tests/test_data_quality.py --ignore=tests/test_field_comparisons_inventory.py --ignore=tests/test_statistical_drift_tenant.py --ignore=tests/test_catalog_partial_boundaries.py
+        run: python -m pytest -q --ignore=tests/test_data_quality.py --ignore=tests/test_field_comparisons_inventory.py --ignore=tests/test_statistical_drift_tenant.py --ignore=tests/test_catalog_partial_boundaries.py --ignore=tests/test_additional_use_cases.py
 
   optional-aws-adapter:
     runs-on: ubuntu-latest
