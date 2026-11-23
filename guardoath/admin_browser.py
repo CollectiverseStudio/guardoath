@@ -291,7 +291,7 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <label for="user-action-key">Action reference</label> <input id="user-action-key" maxlength="96" autocomplete="off" spellcheck="false">
 <label for="user-action-email">Optional exact account email for live comparison</label> <input id="user-action-email" type="email" maxlength="254" autocomplete="off" spellcheck="false">
 <button id="user-action-inspect" type="button" disabled>Inspect signed action</button><p id="user-action-result" role="status"></p></section>
-<section id="section-tenants" data-admin-section class="panel" hidden tabindex="-1" aria-label="Tenants"><h2>Tenants</h2><p class="muted">API key counts are sourced from the persisted tenant record; actual key material is never displayed. Unknown counts remain unavailable.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
+<section id="section-tenants" data-admin-section class="panel" hidden tabindex="-1" aria-label="Tenants"><h2>Tenants</h2><p class="muted">API key counts and saved overage policies come from persisted tenant records; Allow and record is not a hard cap. Key material is never displayed. Unknown values remain unavailable.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>Overage policy</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
 <section id="section-billing" data-admin-section class="section-stack" hidden tabindex="-1" aria-label="Billing"><section class="panel"><h2>Verified recent invoices</h2><p class="muted">Up to five Stripe invoice summaries for an independently verified customer subscription. Amounts are in minor currency units, not a revenue total or forecast.</p><p id="invoice-details" role="status">No invoice history selected.</p></section>
 <section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Select Verify Stripe beside a tenant to compare the current provider status with its saved tenant entitlement. Discrepancies are advisory: no paid access or billing state is modified here.</p><p id="billing-details" role="status">No subscription selected.</p></section>
 </section><section id="section-usage" data-admin-section class="panel" hidden tabindex="-1" aria-label="Usage"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
@@ -525,6 +525,15 @@ _JS = r'''"use strict";
     const savedCapReachedTenants = savedCapsComplete ?
       tenants.tenants.filter(t => t.demo === false &&
         t.usage_month_count >= t.monthly_allowance).length : null;
+    // A saved allow-and-record overage policy is not a hard cap. Only count
+    // this exposure from a complete and unambiguous recorded tenant snapshot.
+    const softPoliciesComplete = savedCapsComplete &&
+      tenants.tenants.every(t => t.demo === true ||
+        t.overage_policy === "block" || t.overage_policy === "allow_and_record");
+    const softCapReachedTenants = softPoliciesComplete ?
+      tenants.tenants.filter(t => t.demo === false &&
+        t.overage_policy === "allow_and_record" &&
+        t.usage_month_count >= t.monthly_allowance).length : null;
     const sourceTime = page =>
       typeof page?.retrieved_utc === "string" &&
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(page.retrieved_utc) ?
@@ -564,6 +573,14 @@ _JS = r'''"use strict";
         " · count at/above allowance; NOT AWS cost, active alerts or proof of blocking overages",
       status:savedCapReachedTenants === null ? "unavailable" :
         "complete_single_page_saved_allowance_signal"};
+    metrics.saved_soft_cap_reached_tenants = {value:softCapReachedTenants,
+      source:softCapReachedTenants === null ?
+        "DynamoDB · unknown policy, cap, UTC counter or incomplete tenant population" :
+        "DynamoDB saved allow_and_record policy at/above saved cap · UTC " + usagePeriod +
+        sourceTime(tenants) +
+        " · all non-demo tenants; NOT hard blocking, billed overages, live activity or alerts",
+      status:softCapReachedTenants === null ? "unavailable" :
+        "complete_single_page_saved_soft_cap_signal"};
     el("metrics").replaceChildren();
     for (const [name, metric] of Object.entries(metrics)) {
       const card = document.createElement("div"); card.className = "metric";
@@ -1206,7 +1223,10 @@ _JS = r'''"use strict";
     el("tenant-rows").replaceChildren();
     for (const tenant of data.tenants || []) {
       const row = document.createElement("tr");
-      for (const field of ["tenant_id", "display_name", "status", "subscription_status", "monthly_allowance", "usage_month_count", "api_key_count"]) row.append(textNode("td", tenant[field]));
+      for (const field of ["tenant_id", "display_name", "status", "subscription_status", "monthly_allowance", "usage_month_count"]) row.append(textNode("td", tenant[field]));
+      row.append(textNode("td", tenant.overage_policy === "block" ? "Block at saved cap" :
+        tenant.overage_policy === "allow_and_record" ? "Allow and record overage" : "Unavailable"));
+      row.append(textNode("td", tenant.api_key_count));
       const actions = document.createElement("td");
       const usage = document.createElement("button");
       usage.type = "button";

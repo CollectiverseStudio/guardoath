@@ -856,3 +856,16 @@ modify the authoritative tenant record, overage policy or PII deadlines.
 
 ## Owner inspection before tenant rule action changes
 The authenticated owner Catalog's **Set tenant rule** action now reads the selected tenant's current saved per-stage check action and that catalog rule's override **before** prompting for a write. The guarded `GET /v1/admin/tenants/{tenant_id}/rule-action?stage=input&rule_id=pii.email` returns only the exact saved revision, catalog rule/check ID, stage, check action, override, and a configuration eligibility label. It never returns tenant schemas, comparison payloads, secrets, key hashes or Stripe bindings. This is a signed-read-audited, Cognito-owner-and-MFA-only inspection using the same authoritative tenant record as the existing tenant management API. Missing, corrupt, mismatched or unvalidated tenant records return unavailable; disabled checks remain Off even if the per-rule override is Block. A configured rule is not proof of actual detector execution or provider availability. Owner UI refuses to mutate on unavailable or inconsistent inspection, explains the saved state and Off precedence, and uses that exact revision as the conditional audit-transaction write precondition. A race still fails closed with HTTP 409. No global catalog, tenant default, billing, detector or provider setting is changed by the read; the existing explicitly confirmed and audited POST remains the sole mutation path. This is not live AWS or 15-check acceptance evidence.
+
+## Owner saved soft-cap exposure (2026-11-22)
+The Tenants table now distinguishes **Block at saved cap** from **Allow and
+record overage** using the existing persisted policy. A missing or invalid
+saved setting is **Unavailable**, not a fabricated hard cap. The owner Overview
+counts non-demo accounts at or above their allowance where the saved overage
+policy still allows additional requests. It requires one complete, unique,
+UTC-month-aligned bounded scan with valid caps, counters and policies. A single
+unknown non-demo policy, partial page, invalid count or missing UTC read
+returns **Unavailable**, not zero. A complete empty population may show zero.
+This is saved policy exposure, not proof of actual blocking, bills, provider
+requests, or a delivered alert. No new paid service, extra provider read,
+customer policy change or Stripe write is introduced.

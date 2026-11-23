@@ -12,6 +12,7 @@ class Record:
     demo: bool = False
     subscription_status: str = "inactive"
     monthly_allowance: int = 10000
+    overage: str = "block"
     revision: int = 2
     updated_at: str = "2026-11-16T00:00:00Z"
     key_hashes: tuple = ("SUPER_SECRET_HASH_SHOULD_NOT_LEAK",)
@@ -79,6 +80,7 @@ def test_owner_read_only_tenant_directory_masks_keys_and_billing_bindings():
     assert r.json()["total"] == 1
     assert r.json()["tenants"][0]["tenant_id"] == "alpha"
     assert r.json()["tenants"][0]["api_key_count"] == 1
+    assert r.json()["tenants"][0]["overage_policy"] == "block"
     assert c.get("/v1/admin/tenants/alpha", headers=auth()).json()["tenant"]["api_key_count"] == 1
     for sensitive in ("SUPER_SECRET", "cus_PRIVATE", "key_hashes", "payer_id"):
         assert sensitive not in r.text
@@ -468,6 +470,25 @@ def test_tenant_detail_and_legacy_directory_reject_ambiguous_authoritative_recor
             assert response.status_code == 503, (field, malformed, response.text)
             assert "cus_INTERNAL" not in response.text
             assert "private" not in response.text
+
+
+def test_owner_saved_overage_projection_never_infers_a_hard_cap():
+    for saved, expected in (("block", "block"),
+                            ("allow_and_record", "allow_and_record"),
+                            ("invalid", None), (None, None)):
+        class Saved(Store):
+            def get(self, name):
+                row = Record()
+                row.overage = saved
+                return row
+        c = client(verified, Saved())
+        assert c.get("/v1/admin/tenants/alpha").status_code == 401
+        for path in ("/v1/admin/tenants/alpha", "/v1/admin/tenants"):
+            response = c.get(path, headers=auth())
+            assert response.status_code == 200
+            row = response.json().get("tenant") or response.json()["tenants"][0]
+            assert row["overage_policy"] == expected
+            assert "cus_PRIVATE" not in response.text
 
 
 def test_detail_legacy_unknown_allowance_and_key_metadata_do_not_fabricate_zero():

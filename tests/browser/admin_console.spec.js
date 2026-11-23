@@ -27,7 +27,7 @@ async function selectCatalogDescription(page) {
 
 test("owner workspace navigates every section and retains honest unavailable totals", async ({page}) => {
   const fixture = await signedIn(page);
-  await expect(page.locator("#metrics .metric strong")).toHaveText(["Unavailable","Unavailable","Unavailable","Unavailable","2","1","Unavailable","Unavailable"]);
+  await expect(page.locator("#metrics .metric strong")).toHaveText(["Unavailable","Unavailable","Unavailable","Unavailable","2","1","Unavailable","Unavailable","Unavailable"]);
   for (const section of sections) {
     await page.locator("#nav-" + section).click();
     await expect(page.locator("#section-" + section)).toBeVisible();
@@ -51,7 +51,7 @@ test("owner overview counts complete authenticated pages and withdraws totals on
       status:"ok",source:"Cognito ListUsers",users:[{username:"a"},{username:"b"}],
       returned:2,next_cursor:null,retrieved_utc:"2026-11-22T12:00:00Z"})} : null});
   await expect(page.locator("#metrics .metric strong")).toHaveText(
-    ["2","Unavailable","Unavailable","Unavailable","2","1","Unavailable","Unavailable"]);
+    ["2","Unavailable","Unavailable","Unavailable","2","1","Unavailable","Unavailable","Unavailable"]);
   await expect(page.locator("#metrics")).toContainText("Cognito ListUsers · complete bounded page");
   await expect(page.locator("#metrics")).toContainText("DynamoDB tenant table · complete bounded page (includes demos)");
   await expect(page.locator("#metrics")).toContainText("NOT Stripe-verified paid subscribers or revenue");
@@ -69,7 +69,7 @@ test("owner overview counts complete authenticated pages and withdraws totals on
       retrieved_utc:"2026-11-22T12:01:00Z"})} : null;
   await page.locator("#refresh").click();
   await expect(page.locator("#metrics .metric strong")).toHaveText(
-    ["Unavailable","Unavailable","Unavailable","Unavailable","2","Unavailable","Unavailable","Unavailable"]);
+    ["Unavailable","Unavailable","Unavailable","Unavailable","2","Unavailable","Unavailable","Unavailable","Unavailable"]);
   // A continuation is a lower bound, not a pool total; a Dynamo page
   // missing scanned entries is not a complete tenant population.
   fixture.override = request => request.path === "/v1/admin/users"
@@ -81,7 +81,7 @@ test("owner overview counts complete authenticated pages and withdraws totals on
       scanned:2,next_cursor:null})} : null;
   await page.locator("#refresh").click();
   await expect(page.locator("#metrics .metric strong")).toHaveText(
-    ["Unavailable","Unavailable","Unavailable","Unavailable","Unavailable","Unavailable","Unavailable","Unavailable"]);
+    ["Unavailable","Unavailable","Unavailable","Unavailable","Unavailable","Unavailable","Unavailable","Unavailable","Unavailable"]);
   // Unavailable Cognito and a not-yet-exhausted empty Dynamo page must
   // never appear as zero or retain an earlier observed value.
   fixture.override = request => request.path === "/v1/admin/users"
@@ -91,7 +91,7 @@ test("owner overview counts complete authenticated pages and withdraws totals on
       status:"ok",tenants:[],returned:0,scanned:0,next_cursor:"more"})} : null;
   await page.locator("#refresh").click();
   await expect(page.locator("#metrics .metric strong")).toHaveText(
-    ["Unavailable","Unavailable","Unavailable","Unavailable","Unavailable","Unavailable","Unavailable","Unavailable"]);
+    ["Unavailable","Unavailable","Unavailable","Unavailable","Unavailable","Unavailable","Unavailable","Unavailable","Unavailable"]);
 });
 
 test("owner Overview totals recorded UTC-month validation counts only from complete unambiguous pages", async ({page}) => {
@@ -184,6 +184,54 @@ test("owner Overview saved allowance risk counts only verified full UTC-month te
   await page.locator("#logout").click();
   await expect(page.locator("#metrics .metric")).toHaveCount(0);
   expect(fixture.calls.filter(c => c.path === "/v1/admin/tenants").length).toBeGreaterThanOrEqual(7);
+});
+
+
+test("owner saved soft-cap exposure stays unknown until all non-demo policies are verified", async ({page}) => {
+  let cursor = null;
+  let rows = [
+    {tenant_id:"sample-studio",display_name:"Studio",status:"active",demo:false,
+      subscription_status:"active",revision:4,monthly_allowance:100,
+      overage_policy:"allow_and_record",usage_month:"2026-11",usage_month_count:100},
+    {tenant_id:"sample-labs",display_name:"Labs",status:"disabled",demo:false,
+      subscription_status:"past_due",revision:7,monthly_allowance:0,
+      overage_policy:"block",usage_month:"2026-11",usage_month_count:0},
+    {tenant_id:"demo",display_name:"Demo",status:"active",demo:true,
+      subscription_status:"inactive",revision:1,monthly_allowance:0,
+      overage_policy:null,usage_month:"2026-11",usage_month_count:10}
+  ];
+  const fixture = await signedIn(page,{override:request =>
+    request.path === "/v1/admin/tenants"
+    ? {status:200,contentType:"application/json",body:JSON.stringify({
+      status:"ok",tenants:rows,returned:rows.length,scanned:rows.length,
+      next_cursor:cursor,retrieved_utc:"2026-11-22T12:00:00Z"})} : null});
+  const risk = page.locator("#metrics .metric").filter({hasText:"saved soft cap reached tenants"});
+  await expect(risk.locator("strong")).toHaveText("1");
+  await expect(risk).toContainText("NOT hard blocking, billed overages, live activity or alerts");
+  await page.locator("#nav-tenants").click();
+  await expect(page.locator("#tenant-rows tr").filter({hasText:"sample-studio"}))
+    .toContainText("Allow and record overage");
+  await expect(page.locator("#tenant-rows tr").filter({hasText:"sample-labs"}))
+    .toContainText("Block at saved cap");
+  rows = [{...rows[0],overage_policy:null},rows[1],rows[2]];
+  await page.locator("#refresh").click();
+  await expect(risk.locator("strong")).toHaveText("Unavailable");
+  await expect(page.locator("#tenant-rows tr").filter({hasText:"sample-studio"}))
+    .toContainText("Unavailable");
+  rows = [{...rows[0],overage_policy:"allow_and_record",usage_month_count:99},rows[1],rows[2]];
+  await page.locator("#refresh").click();
+  await expect(risk.locator("strong")).toHaveText("0");
+  rows = [{...rows[0],usage_month_count:100},rows[1],rows[2]];
+  cursor = "more";
+  await page.locator("#refresh").click();
+  await expect(risk.locator("strong")).toHaveText("Unavailable");
+  cursor = null;
+  rows = [];
+  await page.locator("#refresh").click();
+  await expect(risk.locator("strong")).toHaveText("0");
+  await page.locator("#logout").click();
+  await expect(page.locator("#metrics .metric")).toHaveCount(0);
+  expect(fixture.calls.filter(c => c.path === "/v1/admin/tenants").length).toBeGreaterThanOrEqual(5);
 });
 
 test("owner catalog shows safe source evidence counts and eligibility without deployment claims", async ({page}) => {

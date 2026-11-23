@@ -15,7 +15,8 @@ def item(tid):
     return {"tenant_id": {"S": tid}, "revision": {"N": "3"},
             "record": {"S": json.dumps({"tenant_id": tid, "display_name": "Tenant " + tid,
                                     "status": "active", "demo": False, "subscription_status": "inactive",
-                                    "monthly_allowance": 10000, "updated_at": "2026-11-16T00:00:00Z",
+                                    "monthly_allowance": 10000, "overage": "block",
+                                    "updated_at": "2026-11-16T00:00:00Z",
                                     "key_hashes": ["HIDDEN_SECRET"], "payer_id": "cus_SECRET"})}}
 
 
@@ -49,6 +50,7 @@ def test_bounded_cursor_pagination_avoids_full_scan():
     from datetime import datetime, timezone
     assert datetime.fromisoformat(one["retrieved_utc"].replace("Z", "+00:00")).tzinfo == timezone.utc
     assert one["tenants"][0]["api_key_count"] == 1
+    assert one["tenants"][0]["overage_policy"] == "block"
     assert "HIDDEN_SECRET" not in str(one)
     assert "cus_SECRET" not in str(two)
 
@@ -132,6 +134,26 @@ def test_missing_or_malformed_legacy_key_metadata_is_unknown_not_zero():
             row["record"]["S"] = json.dumps(doc)
             return {"Items": [row]}
     assert directory(Malformed()).page(owner_sub=OWNER, limit=5)["tenants"][0]["api_key_count"] is None
+
+
+@pytest.mark.parametrize("saved,expected", [
+    ("block", "block"), ("allow_and_record", "allow_and_record"),
+    (None, None), ("bogus", None), (True, None), ([], None)])
+def test_directory_overage_policy_only_shows_verified_saved_action(saved, expected):
+    class Source:
+        def scan(self, **kwargs):
+            row = item("alpha")
+            doc = json.loads(row["record"]["S"])
+            if saved is None:
+                doc.pop("overage", None)
+            else:
+                doc["overage"] = saved
+            doc["payer_id"] = "cus_PRIVATE_PROVIDER"
+            row["record"]["S"] = json.dumps(doc)
+            return {"Items": [row]}
+    projected = directory(Source()).page(owner_sub=OWNER, limit=1)["tenants"][0]
+    assert projected["overage_policy"] == expected
+    assert "cus_PRIVATE_PROVIDER" not in str(projected)
 
 
 def test_directory_cursor_owner_filter_size_binding_and_no_extra_scan():

@@ -223,6 +223,9 @@ def _safe_record(record) -> dict:
     if type(allowance) is not int or not 0 <= allowance <= 1_000_000_000:
         allowance = None  # Unknown legacy allowance must not become zero.
 
+    overage = getattr(record, "overage", None)
+    if type(overage) is not str or overage not in ("block", "allow_and_record"):
+        overage = None
     hashes = getattr(record, "key_hashes", None)
     key_count = (len(hashes) if isinstance(hashes, (tuple, list))
                  and len(hashes) <= 2
@@ -230,7 +233,8 @@ def _safe_record(record) -> dict:
     return {
         "tenant_id": tenant_id, "display_name": name, "status": status,
         "demo": demo, "subscription_status": subscription,
-        "monthly_allowance": allowance, "api_key_count": key_count,
+        "monthly_allowance": allowance, "overage_policy": overage,
+        "api_key_count": key_count,
         "subscription_source": "persisted tenant record; not live Stripe verification",
         "usage_month": month, "usage_month_count": usage_count,
         "revision": revision, "updated_at": updated,

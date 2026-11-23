@@ -91,6 +91,10 @@ def _project_item(item: object, month: str) -> dict:
     allowance = doc.get("monthly_allowance")
     if type(allowance) is not int or not 0 <= allowance <= 1_000_000_000:
         allowance = None  # Legacy/invalid allowance is unknown, not zero.
+    # A saved soft cap can still permit further requests; never infer Block.
+    overage = doc.get("overage")
+    if type(overage) is not str or overage not in ("block", "allow_and_record"):
+        overage = None
     hashes = doc.get("key_hashes")
     key_count = (len(hashes) if isinstance(hashes, list) and len(hashes) <= 2
                  and all(isinstance(value, str) for value in hashes) else None)
@@ -101,6 +105,7 @@ def _project_item(item: object, month: str) -> dict:
         "demo": demo,
         "subscription_status": subscription,  # None = unverified legacy state.
         "monthly_allowance": allowance,
+        "overage_policy": overage,
         "api_key_count": key_count,
         "usage_month": month,
         "usage_month_count": usage_count,
