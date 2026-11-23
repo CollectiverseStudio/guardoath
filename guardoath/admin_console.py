@@ -542,7 +542,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
     def read_tenant_rule_action(tenant_id: str,
                                 stage: str = Query(pattern=r"^(input|output)$"),
                                 rule_id: str = Query(min_length=3, max_length=100,
-                                                     pattern=r"^[a-z][a-z0-9_]*(?:\\.[a-z0-9_]+)+$"),
+                                                     pattern=r"^[a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+$"),
                                 principal: VerifiedAdmin = Depends(require_admin)):
         if not TENANT_ID.fullmatch(tenant_id):
             raise HTTPException(status_code=404, detail="Tenant not found")
