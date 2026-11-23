@@ -309,8 +309,14 @@ def test_historical_ratio_over_browser_integer_limit_is_not_falsely_precise():
              "2026-09": 31, "2026-08": 32}
     record = Tenant(usage=saved, monthly_allowance=1_000_000_000,
                     updated_at="2026-11-19T17:00:00Z")
-    report = tenant_usage_report(record, clock=NOW)
-    assert report["quota_pacing"]["projected_month_end_requests_floor"] is not None
+    # The fixed midnight NOW clock predates this record's 17:00Z update.
+    # Use a fresh, deterministic read to exercise the historical ratio bound,
+    # rather than silently exercising the separate future-metadata guard.
+    read_at = lambda: datetime(2026, 11, 19, 18, tzinfo=timezone.utc)
+    report = tenant_usage_report(record, clock=read_at)
+    assert report["quota_pacing"]["record_metadata_freshness"] == "recent_record_metadata"
+    assert report["quota_pacing"]["projected_month_end_requests_floor"] == (saved["2026-11"] * 30 // 19)
+    assert report["quota_pacing"]["state"] == "already_over_limit"
     assert report["historical_volume"]["state"] == "projection_out_of_range"
     assert report["historical_volume"]["projected_vs_history_percent_floor"] is None
     assert report["requests_recorded"] == saved["2026-11"]
