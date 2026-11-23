@@ -380,3 +380,35 @@ def test_offline_catalog_release_cli_bounds_actual_plan_read_before_source_write
         release.main(["--plan", str(plan), "--write", "--confirm-registry-version", "4"])
     assert source.read_bytes() == original
     assert not lock.exists()
+
+
+def test_offline_catalog_release_cli_refuses_oversized_tracked_history(monkeypatch, tmp_path):
+    release, source, plan, lock = _offline_release_cli(monkeypatch, tmp_path)
+    oversized = b" " * 262145
+    source.write_bytes(oversized)
+    with pytest.raises(SourceReleaseConflict, match="Oversized catalog source history"):
+        release.main(["--plan", str(plan), "--write",
+                      "--confirm-registry-version", "4"])
+    assert source.read_bytes() == oversized
+    assert not lock.exists()
+    assert not list(tmp_path.glob(".catalog-release-*"))
+
+
+def test_offline_catalog_release_cli_refuses_concurrent_oversized_append(monkeypatch, tmp_path):
+    release, source, plan, lock = _offline_release_cli(monkeypatch, tmp_path)
+    competing = None
+
+    def append_during_review():
+        nonlocal competing
+        with source.open("ab") as f:
+            f.write(b" " * 300000)
+        competing = source.read_bytes()
+        return deepcopy(SOURCE)
+
+    monkeypatch.setattr(release, "published_catalog", append_during_review)
+    with pytest.raises(SourceReleaseConflict, match="changed during release"):
+        release.main(["--plan", str(plan), "--write",
+                      "--confirm-registry-version", "4"])
+    assert competing is not None and source.read_bytes() == competing
+    assert not lock.exists()
+    assert not list(tmp_path.glob(".catalog-release-*"))

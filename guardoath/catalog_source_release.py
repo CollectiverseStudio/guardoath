@@ -242,7 +242,10 @@ def _source_write_lock(path: Path):
 def _source_snapshot(path: Path) -> tuple[bytes, dict]:
     if path.is_symlink():
         raise SourceReleaseConflict("Tracked catalog source file unavailable")
-    raw = path.read_bytes()
+    # Read at most the accepted source length plus one byte. A corrupt or
+    # adversarially enlarged tracked file must not be loaded into memory.
+    with path.open("rb") as source_file:
+        raw = source_file.read(262145)
     if len(raw) > 262144:
         raise SourceReleaseConflict("Oversized catalog source history")
     try:
@@ -290,7 +293,11 @@ def main(argv=None):
                     os.fsync(f.fileno())
                 # Refuse an out-of-band source edit rather than overwriting
                 # another writer's review, even when its version stayed equal.
-                if FILE.read_bytes() != original_bytes or FILE.is_symlink():
+                # Recheck the complete old snapshot with one bounded read:
+                # a concurrent append must fail without allocating its size.
+                with FILE.open("rb") as current_file:
+                    current_bytes = current_file.read(len(original_bytes) + 1)
+                if current_bytes != original_bytes or FILE.is_symlink():
                     raise SourceReleaseConflict("Catalog source changed during release; no write")
                 os.replace(temp, FILE)
             finally:
