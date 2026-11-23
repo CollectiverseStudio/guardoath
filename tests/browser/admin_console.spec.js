@@ -1323,3 +1323,24 @@ test("owner invoices reject a different or missing tenant despite HTTP 200 with 
   }
   expect(fixture.calls.filter(x=>x.path.endsWith("/invoices")&&x.method!=="GET")).toHaveLength(0);
 });
+
+
+test("usage history distinguishes recorded zero from missing months and refuses malformed history", async ({page}) => {
+  const fixture = await signedIn(page);
+  const select = async () => {
+    await page.locator("#nav-tenants").click();
+    await page.locator("#tenant-rows tr").filter({hasText:"sample-studio"})
+      .getByRole("button",{name:"Usage",exact:true}).click();
+  };
+  await select();
+  await expect(page.locator("#usage-details")).toContainText("2026-11: 1460; 2026-10: 0; 2026-09: Unknown; 2026-08: 2300");
+  await expect(page.locator("#usage-details")).toContainText("current month partial; unknown is not zero");
+  fixture.override = request => request.path.endsWith("/sample-studio/usage")
+    ? {status:200,contentType:"application/json",body:JSON.stringify({usage:{
+        tenant_id:"sample-studio",period_utc:"2026-11",requests_recorded:7,
+        calendar_usage_months:Array.from({length:12},()=>({month_utc:"2026-11",requests:7}))
+      }})} : null;
+  await select();
+  await expect(page.locator("#usage-details")).toContainText("unknown is not zero): Unavailable");
+  await expect(page.locator("#usage-details")).not.toContainText("2026-10: 0");
+});

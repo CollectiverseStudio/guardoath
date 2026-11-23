@@ -1363,6 +1363,27 @@ _JS = r'''"use strict";
     el("next").disabled = !nextCursor;
     say("tenant-status", (data.tenants || []).length + " tenants on this page; source: " + (data.source || "unknown") + readAuditLabel(data));
   }
+  function calendarUsageLabel(usage) {
+    const rows = usage.calendar_usage_months;
+    if (typeof usage.period_utc !== "string" || !/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(usage.period_utc))
+      return "Unavailable";
+    const year = Number(usage.period_utc.slice(0,4)), month = Number(usage.period_utc.slice(5));
+    const index = year * 12 + month - 1;
+    if (year < 1 || !Array.isArray(rows) || rows.length !== Math.min(12, index - 11))
+      return "Unavailable";
+    if (rows[0]?.requests !== usage.requests_recorded) return "Unavailable";
+    const labels = [];
+    for (let offset = 0; offset < rows.length; offset++) {
+      const row = rows[offset], previous = index - offset;
+      const expected = String(Math.floor(previous / 12)).padStart(4,"0") + "-" +
+        String(previous % 12 + 1).padStart(2,"0");
+      if (!row || row.month_utc !== expected ||
+          !(row.requests === null || (Number.isSafeInteger(row.requests) && row.requests >= 0)))
+        return "Unavailable";
+      labels.push(expected + ": " + (row.requests === null ? "Unknown" : row.requests));
+    }
+    return labels.join("; ");
+  }
   async function inspectUsage(tenant) {
     if (!token) return;
     const epoch = authEpoch;
@@ -1423,6 +1444,7 @@ _JS = r'''"use strict";
         " · Prior 3-month median: " + historyMedian +
         " · Projected vs prior median: " + historyRatio +
         " · Volume comparison is advisory; historical records may be incomplete" +
+        " · Last 12 UTC calendar months (current month partial; unknown is not zero): " + calendarUsageLabel(usage) +
         " · Record updated: " + (usage.record_updated_at || "Unavailable") +
         " · AWS costs: Unavailable · Stripe invoices: Unavailable · Source: " + (usage.source || "unknown") + readAuditLabel(result));
     } catch (err) {

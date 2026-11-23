@@ -342,3 +342,53 @@ def test_owner_usage_exact_max_revision_and_overflow_unavailable():
     refused = c.get(endpoint, headers={"X-GuardOath-Admin-Session": "owner-token"})
     assert refused.status_code == 503
     assert str(max_safe + 1) not in refused.text
+
+
+def test_calendar_usage_window_keeps_gaps_zero_and_year_boundary_distinct():
+    saved = {"2027-01": 41, "2026-12": 0, "2026-10": 100,
+             "2027-02": 99, "2025-12": 7}
+    record = Tenant(usage=saved)
+    result = tenant_usage_report(record, clock=lambda: datetime(2027, 1, 19, tzinfo=timezone.utc))
+    rows = result["calendar_usage_months"]
+    assert len(rows) == 12
+    assert rows[:4] == [
+        {"month_utc": "2027-01", "requests": 41},
+        {"month_utc": "2026-12", "requests": 0},
+        {"month_utc": "2026-11", "requests": None},
+        {"month_utc": "2026-10", "requests": 100},
+    ]
+    assert rows[-1] == {"month_utc": "2026-02", "requests": None}
+    assert record.usage == saved
+    assert result["aws_cost_usd"] is None
+
+
+def test_calendar_usage_empty_record_has_twelve_unknown_not_zero_counters():
+    result = tenant_usage_report(Tenant(usage={}), clock=NOW)
+    assert len(result["calendar_usage_months"]) == 12
+    assert all(row["requests"] is None for row in result["calendar_usage_months"])
+    assert result["requests_recorded"] is None
+
+
+def test_authenticated_calendar_history_is_audited_and_uses_saved_counters():
+    month = datetime.now(timezone.utc).strftime("%Y-%m")
+    events = []
+    class Auditor:
+        def log(self, **kwargs):
+            events.append(kwargs)
+            return "a" * 64
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        tenant_store=Store(Tenant(usage={month: 0})),
+        verify_cognito_admin=lambda token: VerifiedAdmin(
+            "trusted-subject", frozenset({"owner"}), True) if token == "owner-token" else None,
+        read_auditor=Auditor(), require_persistent_read_audit=True,
+    ))
+    client = TestClient(app)
+    url = "/v1/admin/tenants/usr-usage/usage"
+    assert client.get(url).status_code == 401
+    assert events == []
+    response = client.get(url, headers={"X-GuardOath-Admin-Session": "owner-token"})
+    assert response.status_code == 200
+    assert response.json()["read_audit_event_id"] == "a" * 64
+    assert response.json()["usage"]["calendar_usage_months"][0] == {"month_utc": month, "requests": 0}
+    assert len(events) == 1 and events[0]["resource"] == "tenant.usage"

@@ -140,6 +140,11 @@ function createAdminFixture(options = {}) {
       if (/^\/v1\/admin\/tenants\/[^/]+\/usage$/.test(pathname)) return json(withReceipt({usage:{
         tenant_id:pathname.split("/")[4],period_utc:"2026-11", requests_recorded:1460, monthly_allowance:10000,
         remaining_before_allowance:8540, overage_policy:"block", record_updated_at:FIXTURE_TIME,
+        calendar_usage_months:Array.from({length:12},(_,i)=>{
+          const index=2026*12+10-i;
+          return {month_utc:String(Math.floor(index/12)).padStart(4,"0")+"-"+String(index%12+1).padStart(2,"0"),
+            requests:i===0 ? 1460 : i===1 ? 0 : i===3 ? 2300 : null};
+        }),
         usage_threshold:{state:"within_limit",utilization_percent_floor:14,policy:"blocks_at_saved_cap"},
         quota_pacing:{state:"projected_within_limit",projected_month_end_requests_floor:2190,
           record_metadata_freshness:"recent_record_metadata",calendar_days_elapsed:20,

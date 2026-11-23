@@ -134,6 +134,17 @@ def _historical_volume_signal(usage: dict, now: datetime, pacing: dict) -> dict:
     return result
 
 
+def _calendar_usage(usage: dict, now: datetime) -> list[dict]:
+    """Bounded UTC calendar history; missing counters remain explicitly unknown."""
+    index = now.year * 12 + now.month - 1
+    return [
+        {"month_utc": period, "requests": usage.get(period)}
+        for offset in range(min(12, index - 11))
+        for previous in (index - offset,)
+        for period in (f"{previous // 12:04d}-{previous % 12 + 1:02d}",)
+    ]
+
+
 def tenant_usage_report(record, *, clock: Callable[[], datetime] | None = None) -> dict:
     now = (clock or (lambda: datetime.now(timezone.utc)))()
     if not isinstance(now, datetime) or now.tzinfo is None:
@@ -196,6 +207,7 @@ def tenant_usage_report(record, *, clock: Callable[[], datetime] | None = None) 
         "quota_pacing": pacing,
         "historical_volume": history,
         "recent_recorded_months": recent,
+        "calendar_usage_months": _calendar_usage(usage, now),
         "source": "authoritative GuardOath tenant usage record",
         "record_revision": revision,
         "record_updated_at": getattr(record, "updated_at", None),
