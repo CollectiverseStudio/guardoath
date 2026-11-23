@@ -94,6 +94,61 @@ def test_subscription_mismatch_prevents_invoice_fetch():
                 sub_fetch=lambda *_: subscription(customer="cus_wrong")).read(Tenant())
     assert not calls
 
+
+@pytest.mark.parametrize("raw", [
+    b'{"object":"list","object":"charge","has_more":false,"data":[]}',
+    b'{"object":"list","has_more":false,"data":[{"id":"in_one","id":"in_two"}]}',
+    b'{"object":"list","has_more":false,"data":[],"unused":NaN}',
+    b'{"object":"list","has_more":false,"data":[],"unused":Infinity}',
+    b'{"object":"list","has_more":false,"data":[],"unused":-Infinity}',
+    b'{"object":"list","has_more":false,"data":[],"unused":1e9999}',
+])
+def test_provider_invoice_json_rejects_ambiguous_keys_and_nonfinite_numbers(raw):
+    class Response(io.BytesIO):
+        status = 200
+
+    binding = StripeBinding("usr-invoices", "cus_owner123", "sub_owner123")
+    with pytest.raises(InvoiceHistoryUnavailable):
+        fetch_invoice_list(binding, "sk_test_" + "x"*24,
+                           opener=lambda *_args, **_kw: Response(raw))
+
+
+def test_provider_invoice_json_accepts_valid_float_in_unrelated_stripe_metadata():
+    class Response(io.BytesIO):
+        status = 200
+
+    raw = b'{"object":"list","data":[],"has_more":false,"debug_ratio":1.25}'
+    binding = StripeBinding("usr-invoices", "cus_owner123", "sub_owner123")
+    result = fetch_invoice_list(binding, "sk_test_" + "x"*24,
+                                opener=lambda *_args, **_kw: Response(raw))
+    assert result["object"] == "list" and result["debug_ratio"] == 1.25
+
+
+def test_authenticated_invoice_api_fails_closed_on_conflicting_provider_json():
+    class Response(io.BytesIO):
+        status = 200
+
+    raw = (b'{"object":"list","has_more":false,"data":[{"status":"paid",'
+           b'"status":"open","customer_email":"private@example.com"}]}')
+    binding = StripeBinding("usr-invoices", "cus_owner123", "sub_owner123")
+    def provider(*_):
+        return fetch_invoice_list(binding, "sk_test_" + "x"*24,
+                                  opener=lambda *_args, **_kw: Response(raw))
+
+    auth = lambda token: (VerifiedAdmin("trusted-subject", frozenset({"owner"}), True)
+                          if token == "admin" else None)
+    app = FastAPI()
+    app.include_router(create_admin_router(verify_cognito_admin=auth,
+        tenant_store=Store(), billing_invoices=history(fetch=provider)))
+    cli = TestClient(app)
+    path = "/v1/admin/subscriptions/usr-invoices/invoices"
+    assert cli.get(path).status_code == 401
+    result = cli.get(path, headers={"X-GuardOath-Admin-Session":"admin"})
+    assert result.status_code == 503
+    assert "private@example.com" not in result.text
+    assert "paid" not in result.text and "open" not in result.text
+
+
 def test_provider_fetch_is_scoped_and_no_secret_in_url():
     class Response(io.BytesIO):
         status = 200

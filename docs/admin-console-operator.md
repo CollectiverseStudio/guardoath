@@ -1057,3 +1057,16 @@ bounded page with provider-unavailable status. It does not silently choose the
 last copy of `demo`, `tenant_id`, or `subscription_status`. Successful
 pages still show only redacted metadata and identify subscription state as
 persisted, not freshly reconciled with Stripe. No tenant policies are changed.
+
+
+## Provider invoice JSON integrity (2026-11-23)
+The owner Tenants → Invoices provider adapter now rejects duplicate keys anywhere
+in the Stripe invoice response, non-finite JSON constants, and floating-point
+overflows before projecting subscription-linked payment information. Previously,
+Python's permissive JSON decoder could silently use the last of two conflicting
+invoice statuses or amounts. Ordinary finite decimal provider metadata remains
+accepted; actual financial fields still require bounded integer minor units.
+An ambiguous provider result yields Unavailable/503, not fabricated paid
+status, a balance, a refund, or entitlement. The browser continues to use its
+existing owner-authenticated invoice view; no Stripe write or additional read is
+introduced. This is a source safeguard, not live provider reconciliation evidence.

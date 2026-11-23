@@ -23,6 +23,28 @@ class InvoiceHistoryUnavailable(ValueError):
     pass
 
 
+def _unique_provider_keys(pairs):
+    """Stripe JSON objects must never contain competing values for one key."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise InvoiceHistoryUnavailable("Ambiguous invoice provider JSON")
+        result[key] = value
+    return result
+
+
+def _reject_nonfinite_constant(value):
+    raise InvoiceHistoryUnavailable("Nonfinite invoice provider value")
+
+
+def _finite_provider_float(value):
+    """Allow ordinary unrelated Stripe decimals, reject numeric overflow."""
+    parsed = float(value)
+    if not math.isfinite(parsed):
+        raise InvoiceHistoryUnavailable("Nonfinite invoice provider value")
+    return parsed
+
+
 def fetch_invoice_list(binding: StripeBinding, api_key: str, *, opener=None,
                        timeout: float = 5.0) -> dict:
     """Only server-owned IDs; bounded read, pinned Stripe API, no redirects."""
@@ -48,7 +70,9 @@ def fetch_invoice_list(binding: StripeBinding, api_key: str, *, opener=None,
             data = response.read(262145)
         if len(data) > 262144:
             raise InvoiceHistoryUnavailable("Oversized invoice response")
-        result = json.loads(data)
+        result = json.loads(data, object_pairs_hook=_unique_provider_keys,
+                            parse_constant=_reject_nonfinite_constant,
+                            parse_float=_finite_provider_float)
         if not isinstance(result, dict):
             raise InvoiceHistoryUnavailable("Invalid invoice response")
         return result
