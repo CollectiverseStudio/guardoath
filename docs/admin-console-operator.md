@@ -1081,3 +1081,18 @@ fractional timestamps, alternative offsets, and incorrect types. A missing
 legacy timestamp remains explicitly unknown; no recent/fresh claim is inferred.
 A malformed present timestamp fails the protected read rather than displaying
 false freshness. This is separate from Stripe verification or AWS live costs.
+
+
+### Strict Stripe subscription source decoding (November 23, 2026)
+
+The shared server-side Stripe subscription adapter used by owner Verify Stripe,
+audited entitlement reconciliation and customer discovery now rejects duplicate
+JSON keys at any depth, non-finite numeric constants, overflowed decimals, and
+non-object responses. Ordinary finite provider decimals remain acceptable.
+Subscription discovery also rejects malformed status types; its independent GET
+must confirm the same test/live environment as the server credential. An
+ambiguous or mismatched response cannot authorize activation or an owner
+downgrade, and the authenticated owner UI reports verification unavailable.
+This adds no provider calls, financial mutations, credentials, AWS cost, or
+customer policy changes. A verified subscription is still not evidence of a
+paid invoice, refunds, collected revenue, or complete billing administration.

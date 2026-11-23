@@ -550,3 +550,57 @@ def test_conflicting_period_end_cancellation_timestamp_does_not_invent_effective
     assert result["cancellation_status"] == "scheduled_for_period_end"
     assert result["cancellation_effective_utc"] is None
     assert result["reconciliation"]["code"] == "stripe_period_end_cancellation_scheduled"
+
+
+def test_authenticated_subscription_rejects_conflicting_provider_status_and_redacts():
+    """Exercise the production provider decoder through the audited owner API."""
+    import json
+    from guardoath.stripe_provider import fetch_subscription_snapshot
+    from guardoath.subscription_reconciliation import StripeBinding
+
+    payload = json.dumps(snapshot(status="unpaid")).encode()[:-1] + b',"status":"active"}'
+    operations = []
+
+    class Response:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def read(self, limit):
+            return payload[:limit]
+
+    class Auditor:
+        def log(self, **kwargs):
+            operations.append(("audit", kwargs["resource"], kwargs["tenant_id"]))
+            return "a" * 64
+
+    def open_provider(request, timeout):
+        operations.append(("provider",))
+        return Response()
+
+    def fetch(tenant_id, customer_id, subscription_id):
+        return fetch_subscription_snapshot(
+            StripeBinding(tenant_id, customer_id, subscription_id),
+            "sk_test_" + "a" * 32, opener=open_provider)
+
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        verify_cognito_admin=lambda token: VerifiedAdmin(
+            "trusted-subject", frozenset({"owner"}), True) if token == "admin" else None,
+        tenant_store=Store(), billing_reporter=reporter(fetch),
+        read_auditor=Auditor(), require_persistent_read_audit=True))
+    cli = TestClient(app)
+    path = "/v1/admin/subscriptions/usr-billing"
+    assert cli.get(path).status_code == 401
+    assert cli.get(path, headers={"X-GuardOath-Key": "admin"}).status_code == 401
+    assert operations == []
+    result = cli.get(path, headers={"X-GuardOath-Admin-Session": "admin"})
+    assert result.status_code == 503
+    assert operations == [("audit", "stripe.subscription", "usr-billing"), ("provider",)]
+    for private in ("cus_test1234", "sub_test1234", "pm_private", "secret@example.com",
+                    "subscription_entitlement"):
+        assert private not in result.text

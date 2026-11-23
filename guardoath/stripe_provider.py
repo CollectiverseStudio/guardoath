@@ -5,6 +5,7 @@ after loading a server-owned StripeBinding from persistent tenant billing state.
 """
 import base64
 import json
+import math
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -13,6 +14,35 @@ from guardoath.subscription_reconciliation import (
     EntitlementDecision, StripeBinding, SubscriptionReconciliationError,
     reconcile_subscription,
 )
+
+
+def _strict_provider_json(raw: bytes):
+    """Never choose one of conflicting provider keys or accept nonfinite values."""
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise SubscriptionReconciliationError("Ambiguous Stripe provider JSON")
+            result[key] = value
+        return result
+
+    def reject_constant(_value):
+        raise SubscriptionReconciliationError("Nonfinite Stripe provider JSON")
+
+    def finite_float(value):
+        parsed = float(value)
+        if not math.isfinite(parsed):
+            raise SubscriptionReconciliationError("Nonfinite Stripe provider JSON")
+        return parsed
+
+    try:
+        decoded = json.loads(raw, object_pairs_hook=unique,
+                             parse_constant=reject_constant, parse_float=finite_float)
+        if not isinstance(decoded, dict):
+            raise SubscriptionReconciliationError("Invalid Stripe provider object")
+        return decoded
+    except (ValueError, RecursionError, OverflowError) as exc:
+        raise SubscriptionReconciliationError("Invalid Stripe provider JSON") from exc
 
 
 def fetch_subscription_snapshot(binding: StripeBinding, api_key: str, *,
@@ -25,7 +55,6 @@ def fetch_subscription_snapshot(binding: StripeBinding, api_key: str, *,
         raise SubscriptionReconciliationError("Stripe API credential is not configured")
     # A bool is an int in Python, but True is not a deliberate 1s timeout.
     # NaN and infinity are also invalid, without accepting non-numeric values.
-    import math
     if (isinstance(timeout, bool) or not isinstance(timeout, (int, float))
             or not math.isfinite(timeout) or not 0 < timeout <= 10):
         raise SubscriptionReconciliationError("Invalid Stripe request timeout")
@@ -54,7 +83,7 @@ def fetch_subscription_snapshot(binding: StripeBinding, api_key: str, *,
             payload = response.read(262145)
         if len(payload) > 262144:
             raise SubscriptionReconciliationError("Oversized Stripe response")
-        subscription = json.loads(payload)
+        subscription = _strict_provider_json(payload)
     except (OSError, ValueError, UnicodeError, urllib.error.HTTPError) as exc:
         raise SubscriptionReconciliationError("Unable to verify Stripe subscription") from exc
     # Validate the authoritative binding before a caller may persist the snapshot.
@@ -77,7 +106,6 @@ def discover_subscription(*, tenant_id: str, customer_id: str, price_id: str,
     the browser. An ambiguous, truncated, malformed or missing result fails
     closed, rather than activating the first matching subscription.
     """
-    import math
     if (not isinstance(tenant_id, str) or not tenant_id.startswith("usr-")
             or len(tenant_id) > 40 or not isinstance(customer_id, str)
             or not customer_id.startswith("cus_")
@@ -114,7 +142,7 @@ def discover_subscription(*, tenant_id: str, customer_id: str, price_id: str,
             raw = response.read(262145)
         if len(raw) > 262144:
             raise SubscriptionReconciliationError("Oversized Stripe subscription list")
-        result = json.loads(raw)
+        result = _strict_provider_json(raw)
     except (OSError, ValueError, UnicodeError, urllib.error.HTTPError) as exc:
         raise SubscriptionReconciliationError("Stripe discovery unavailable") from exc
     if (not isinstance(result, dict) or result.get("object") != "list"
@@ -144,7 +172,10 @@ def discover_subscription(*, tenant_id: str, customer_id: str, price_id: str,
                 found_price = True
             elif isinstance(price, str) and price == price_id:
                 found_price = True
-        if found_price and subscription.get("status") in {"active", "past_due", "unpaid", "canceled"}:
+        state = subscription.get("status")
+        if not isinstance(state, str):
+            raise SubscriptionReconciliationError("Invalid Stripe subscription status")
+        if found_price and state in {"active", "past_due", "unpaid", "canceled"}:
             sub_id = subscription.get("id")
             if (not isinstance(sub_id, str) or not sub_id.startswith("sub_")
                     or not sub_id[4:].replace("_", "").isalnum()
@@ -165,6 +196,8 @@ def verified_subscription_snapshot(*, tenant_id: str, customer_id: str,
         tenant_id=tenant_id, customer_id=customer_id, price_id=price_id,
         api_key=api_key, opener=opener, timeout=timeout)
     direct = fetch_subscription_snapshot(binding, api_key, opener=opener, timeout=timeout)
+    if direct.get("livemode") is not api_key.startswith("sk_live_"):
+        raise SubscriptionReconciliationError("Stripe direct subscription environment mismatch")
     if (reconcile_subscription(binding, direct).status !=
             reconcile_subscription(binding, list_snapshot).status):
         raise SubscriptionReconciliationError("Subscription changed during verification")
