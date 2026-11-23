@@ -915,3 +915,18 @@ Signed audit revisions now accept the exact safe browser integer range
 11–16 digit revisions. Larger/noncanonical DynamoDB numbers remain unavailable;
 the owner mutation request already refuses any increment that would exceed
 the browser-exact range. The prior per-operation limit/count bounds remain.
+
+
+## Owner tenant detail and usage precision parity (2026-11-23)
+
+The authenticated single-tenant Detail and Usage API paths now apply the same
+JavaScript-exact integer bound (2^53 - 1) already enforced by the bounded
+DynamoDB directory. This applies to stored tenant revisions and every persisted
+usage-month counter, not only the current period. The exact upper bound remains
+readable; a larger or malformed value makes the entire requested view unavailable
+(HTTP 503) instead of returning rounded revisions or counters that could mislead
+the browser, selected-tenant controls or signed audit reconciliation. Mutation
+revision limits are unchanged and remain stricter to allow exact increments.
+The UTC-month metadata and unknown-cost semantics are unchanged. No additional
+provider calls, cloud expenditure, tenant writes, check timeouts or entitlements
+are introduced. These source/API regressions do not prove live /admin deployment.

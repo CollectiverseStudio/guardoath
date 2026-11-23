@@ -148,7 +148,7 @@ def tenant_usage_report(record, *, clock: Callable[[], datetime] | None = None) 
     if (not isinstance(tenant_id, str) or not re.fullmatch(r"[a-z][a-z0-9-]{1,39}", tenant_id)
             or not isinstance(usage, dict) or len(usage) > 120
             or type(allowance) is not int or allowance < 0
-            or type(revision) is not int or revision < 0
+            or type(revision) is not int or not 0 <= revision <= _JSON_SAFE_INTEGER
             or overage not in ("block", "allow_and_record")):
         raise UsageUnavailable("Invalid authoritative usage record")
     if any(not isinstance(key, str) or not MONTH.fullmatch(key)

@@ -176,8 +176,14 @@ jobs:
         run: python -m pytest -q tests/test_data_quality.py
       - name: Documented field-comparison templates (isolated strict deadlines)
         run: python -m pytest -q tests/test_field_comparisons_inventory.py
+      # The statistical drift Input/Output tenant integration has the same
+      # unchanged strict checker deadline. Avoid putting its second-stage
+      # finding assertion after ~22k unrelated Windows pytest cases; the
+      # test still fails if its actual evaluation remains incomplete.
+      - name: Statistical drift two-stage acceptance (isolated strict deadlines)
+        run: python -m pytest -q tests/test_statistical_drift_tenant.py
       - name: Remaining full suite on Windows (includes launcher tests)
-        run: python -m pytest -q --ignore=tests/test_data_quality.py --ignore=tests/test_field_comparisons_inventory.py
+        run: python -m pytest -q --ignore=tests/test_data_quality.py --ignore=tests/test_field_comparisons_inventory.py --ignore=tests/test_statistical_drift_tenant.py
 
   optional-aws-adapter:
     runs-on: ubuntu-latest

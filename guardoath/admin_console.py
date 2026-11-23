@@ -55,6 +55,8 @@ class TenantStore(Protocol):
 
 # The browser and signed audit receipt must represent BOTH current and next revision exactly.
 MAX_MUTABLE_REVISION = (1 << 53) - 2
+# The owner browser must also read tenant revisions and usage without rounding.
+MAX_BROWSER_SAFE_INTEGER = (1 << 53) - 1
 
 
 class TenantRuleChange(BaseModel):
@@ -205,7 +207,7 @@ def _safe_record(record) -> dict:
             or status not in ("active", "disabled")
             or type(demo) is not bool
             or subscription not in (None, "inactive", "active", "past_due", "canceled")
-            or type(revision) is not int or not 0 <= revision <= 10**18
+            or type(revision) is not int or not 0 <= revision <= MAX_BROWSER_SAFE_INTEGER
             or (updated is not None and
                 (not isinstance(updated, str) or len(updated) > 40))):
         raise ValueError("Ambiguous saved tenant identity or entitlement")
@@ -219,7 +221,7 @@ def _safe_record(record) -> dict:
         for period, count in usage.items():
             if (not isinstance(period, str)
                     or not re.fullmatch(r"[0-9]{4}-(0[1-9]|1[0-2])", period)
-                    or type(count) is not int or not 0 <= count <= 10**18):
+                    or type(count) is not int or not 0 <= count <= MAX_BROWSER_SAFE_INTEGER):
                 raise ValueError("Malformed tenant usage")
         usage_count = usage.get(month)
 

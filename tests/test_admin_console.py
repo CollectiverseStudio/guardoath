@@ -585,3 +585,34 @@ def test_owner_revision_above_exact_audit_range_is_rejected_before_backend_write
     }, headers={**auth(), "Origin": "https://guardoath.com"})
     assert response.status_code == 422
     assert actions.calls == 0
+
+
+@pytest.mark.parametrize("overflow", ["revision", "usage"])
+def test_owner_tenant_detail_and_fallback_directory_refuse_rounded_source_numbers(overflow):
+    """A full single-tenant read must enforce the directory's browser precision bound."""
+    from datetime import datetime, timezone
+
+    current = datetime.now(timezone.utc).strftime("%Y-%m")
+    record = Record(revision=(1 << 53) - 1)
+    record.usage = {current: (1 << 53) - 1}
+    class SingleRecordStore:
+        def tenant_ids(self): return ("alpha",)
+        def get(self, tid): return record if tid == "alpha" else None
+
+    c = client(verified, SingleRecordStore())
+    detail = c.get("/v1/admin/tenants/alpha", headers=auth())
+    assert detail.status_code == 200
+    assert detail.json()["tenant"]["revision"] == (1 << 53) - 1
+    assert detail.json()["tenant"]["usage_month_count"] == (1 << 53) - 1
+
+    if overflow == "revision":
+        record.revision = 1 << 53
+    else:
+        record.usage[current] = 1 << 53
+
+    for path in ("/v1/admin/tenants/alpha", "/v1/admin/tenants"):
+        refused = c.get(path, headers=auth())
+        assert refused.status_code == 503
+        assert str(1 << 53) not in refused.text
+        assert "SUPER_SECRET" not in refused.text
+    assert c.get("/v1/admin/tenants/alpha", headers=auth("customer")).status_code == 401

@@ -49,7 +49,7 @@ def test_overage_policy_cannot_be_misreported_as_hard_cap():
     {"usage": {"2026-11": -1}}, {"usage": {"2026-13": 1}},
     {"usage": {"2026-11": True}}, {"usage": {"2026-11": "43"}},
     {"usage": {"2026-11": 1 << 53}},
-    {"monthly_allowance": -1}, {"revision": True}, {"overage": "open"},
+    {"monthly_allowance": -1}, {"revision": True}, {"revision": 1 << 53}, {"overage": "open"},
     {"tenant_id": "../../etc/passwd"},
 ])
 def test_malformed_record_fails_closed(changes):
@@ -321,3 +321,24 @@ def test_historical_ratio_over_browser_integer_limit_is_not_falsely_precise():
     assert report["historical_volume"]["projected_vs_history_percent_floor"] is None
     assert report["requests_recorded"] == saved["2026-11"]
     assert report["aws_cost_usd"] is None and report["stripe_invoice_usd"] is None
+
+
+def test_owner_usage_exact_max_revision_and_overflow_unavailable():
+    max_safe = (1 << 53) - 1
+    report = tenant_usage_report(Tenant(revision=max_safe), clock=NOW)
+    assert report["record_revision"] == max_safe
+    with pytest.raises(UsageUnavailable):
+        tenant_usage_report(Tenant(revision=max_safe + 1), clock=NOW)
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        tenant_store=Store(Tenant(revision=max_safe + 1)),
+        verify_cognito_admin=lambda tok: VerifiedAdmin(
+            "trusted-subject", frozenset({"owner"}), True)
+        if tok == "owner-token" else None,
+    ))
+    endpoint = "/v1/admin/tenants/usr-usage/usage"
+    c = TestClient(app)
+    assert c.get(endpoint).status_code == 401
+    refused = c.get(endpoint, headers={"X-GuardOath-Admin-Session": "owner-token"})
+    assert refused.status_code == 503
+    assert str(max_safe + 1) not in refused.text
