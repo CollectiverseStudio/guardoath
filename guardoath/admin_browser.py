@@ -1226,7 +1226,7 @@ _JS = r'''"use strict";
       for (const field of ["tenant_id", "display_name", "status", "subscription_status", "monthly_allowance", "usage_month_count"]) row.append(textNode("td", tenant[field]));
       row.append(textNode("td", tenant.overage_policy === "block" ? "Block at saved cap" :
         tenant.overage_policy === "allow_and_record" ? "Allow and record overage" : "Unavailable"));
-      row.append(textNode("td", tenant.api_key_count));
+      row.append(textNode("td", tenant["api_key_count"]));
       const actions = document.createElement("td");
       const usage = document.createElement("button");
       usage.type = "button";
