@@ -45,6 +45,62 @@ test("owner workspace navigates every section and retains honest unavailable tot
   expect(await page.evaluate(() => Object.values(localStorage).join(" "))).not.toContain(fixture.token);
 });
 
+test("failed core owner refresh withdraws old views and recovers without inventing totals", async ({page}) => {
+  const fixture = await signedIn(page);
+  await expect(page.locator("#metrics .metric")).toHaveCount(9);
+  await expect(page.locator("#tenant-rows tr")).toHaveCount(2);
+  await expect(page.locator("#categories details")).not.toHaveCount(0);
+  fixture.override = request => request.path === "/v1/admin/catalog"
+    ? {status:503,contentType:"application/json",body:'{"detail":"provider unavailable"}'} : null;
+  await page.locator("#refresh").click();
+  await expect(page.locator("#status")).toContainText("Request failed (503)");
+  await expect(page.locator("#metrics .metric")).toHaveCount(0);
+  await expect(page.locator("#tenant-rows tr")).toHaveCount(0);
+  await expect(page.locator("#user-rows tr")).toHaveCount(0);
+  await expect(page.locator("#categories details")).toHaveCount(0);
+  await expect(page.locator("#catalog-release-summary")).toContainText("Unavailable");
+  await expect(page.locator("#proposal-go")).toBeDisabled();
+  await expect(page.locator("#user-change")).toBeDisabled();
+  await expect(page.locator("#next")).toBeDisabled();
+  fixture.override = null;
+  await page.locator("#refresh").click();
+  await expect(page.locator("#status")).toContainText("Administration loaded");
+  await expect(page.locator("#metrics .metric")).toHaveCount(9);
+  await expect(page.locator("#tenant-rows tr")).toHaveCount(2);
+  await expect(page.locator("#categories details")).not.toHaveCount(0);
+});
+
+test("older failed workspace refresh cannot erase a newer verified snapshot", async ({page}) => {
+  await signedIn(page);
+  let releaseOlder, startedOlder, deliveredOlder;
+  const held = new Promise(resolve => releaseOlder=resolve);
+  const started = new Promise(resolve => startedOlder=resolve);
+  const delivered = new Promise(resolve => deliveredOlder=resolve);
+  let heldOnce = false;
+  await page.route("**/v1/admin/catalog", async route => {
+    if (!heldOnce) {
+      heldOnce = true;
+      startedOlder();
+      await held;
+      await route.fulfill({status:503,contentType:"application/json",
+        body:'{"detail":"old catalog error"}'});
+      deliveredOlder();
+    } else await route.fallback();
+  });
+  await page.locator("#refresh").click();
+  await started;
+  await page.locator("#refresh").click();
+  await expect(page.locator("#status")).toContainText("Administration loaded");
+  await expect(page.locator("#metrics .metric")).toHaveCount(9);
+  releaseOlder();
+  await delivered;
+  await page.waitForTimeout(50);
+  await expect(page.locator("#status")).toContainText("Administration loaded");
+  await expect(page.locator("#metrics .metric")).toHaveCount(9);
+  await expect(page.locator("#tenant-rows tr")).toHaveCount(2);
+  await expect(page.locator("#catalog-summary")).toContainText("Published registry");
+});
+
 test("owner overview counts complete authenticated pages and withdraws totals on stale or partial reads", async ({page}) => {
   const fixture = await signedIn(page,{override:request => request.path === "/v1/admin/users"
     ? {status:200,contentType:"application/json",body:JSON.stringify({

@@ -1026,3 +1026,8 @@ Git main-SHA synchronization, independent source review, or an AWS transaction.
 ### Owner directory out-of-order response protection (November 23, 2026)
 
 The authenticated Users and Tenants lists now bind provider replies to the selected filter and newest request within the current owner session. Editing a filter withdraws displayed rows and continuation tokens; older successes or failures cannot supersede a newer selection, including during Refresh. A failed current tenant page clears its previously shown rows. The Cognito disable/enable UI permits only one action in flight through exact-account preflight and immutable signed outcome verification. Server-side owner/MFA authorization, signed audit, provider idempotency and tenant source of truth are unchanged. This additional browser guard does not prove live Cognito behavior or production deployment.
+
+
+## Owner refresh failure and concurrent reads (2026-11-23)
+
+The authenticated /admin workspace withdraws its preceding overview metrics, user and tenant rows, catalog data, navigation cursors and unverified mutation affordances as soon as a new full refresh begins. A failed core overview, tenant, catalog or capabilities read leaves **Unavailable** source labels and refuses to show the older snapshot as current. A later successful owner read restores the real source-backed views. A delayed older refresh, whether successful or failed, cannot erase a newer response; any independently pending Cognito user status mutation retains its single-flight guard. No tenant, billing, provider, AWS resource or validation policy is changed. Playwright covers failure, recovery and response reordering; exact-source CI and protected production MFA acceptance remain required.

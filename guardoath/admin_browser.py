@@ -338,6 +338,8 @@ _JS = r'''"use strict";
   let reviewReadyForManifest = null;
   let exportableManifest = null;
   let authEpoch = 0;
+  // Invalidate stale whole-workspace refreshes separately from filtered directory reads.
+  let workspaceReadSelection = 0;
   // A late response from an earlier tenant must not replace the latest owner selection.
   let usageSelection = 0;
   let billingSelection = 0;
@@ -474,16 +476,61 @@ _JS = r'''"use strict";
     setLoggedIn(false);
     say("login-message", message);
   };
+  function withdrawWorkspaceSnapshot(message) {
+    // A failed core read must not leave yesterday's account or rule metadata
+    // looking current. Do not clear activeUserStatus: an independent Cognito
+    // mutation may still be in progress and must remain single-flight.
+    el("metrics").replaceChildren();
+    el("tenant-rows").replaceChildren();
+    el("user-rows").replaceChildren();
+    el("categories").replaceChildren();
+    el("catalog-release-entries").replaceChildren();
+    nextCursor = null;
+    nextUserCursor = null;
+    el("next").disabled = true;
+    el("user-next").disabled = true;
+    features = {tenant_status_changes:false};
+    el("user-change").disabled = true;
+    el("user-action-inspect").disabled = true;
+    previewSelection = null;
+    previewReady = null;
+    draftReadyForReview = null;
+    reviewReadyForManifest = null;
+    invalidateCatalogExport();
+    el("proposal-save").disabled = true;
+    el("proposal-go").disabled = true;
+    el("proposal-title").disabled = true;
+    el("proposal-use-case").disabled = true;
+    el("draft-review").disabled = true;
+    el("review-manifest").disabled = true;
+    say("proposal-target", "No verified rule selection.");
+    for (const id of ["catalog-summary","catalog-release-summary","tenant-status",
+        "user-status","usage-details","billing-details","invoice-details"]) {
+      say(id, message);
+    }
+  }
   async function load() {
     if (!token) return;
     const epoch = authEpoch;
+    const readSelection = ++workspaceReadSelection;
     const tenantSelection = ++tenantPageSelection;
     const userSelection = ++userPageSelection;
-    const [overview, tenants, catalog, available, users] = await Promise.all([
-      request("/v1/admin/overview"), request("/v1/admin/tenants?limit=20"),
-      request("/v1/admin/catalog"), request("/v1/admin/features"),
-      request("/v1/admin/users?limit=20").catch(() => ({status:"unavailable",users:[]}))]);
-    if (!token || epoch !== authEpoch) return;
+    // Invalidate older tenant-specific detail reads while refreshing the workspace.
+    ++usageSelection;
+    ++billingSelection;
+    withdrawWorkspaceSnapshot("Refreshing verified owner data; no previous snapshot is current.");
+    let overview, tenants, catalog, available, users;
+    try {
+      [overview, tenants, catalog, available, users] = await Promise.all([
+        request("/v1/admin/overview"), request("/v1/admin/tenants?limit=20"),
+        request("/v1/admin/catalog"), request("/v1/admin/features"),
+        request("/v1/admin/users?limit=20").catch(() => ({status:"unavailable",users:[]}))]);
+    } catch (err) {
+      if (!token || epoch !== authEpoch || readSelection !== workspaceReadSelection) return;
+      withdrawWorkspaceSnapshot("Unavailable: one or more protected owner sources failed.");
+      throw err;
+    }
+    if (!token || epoch !== authEpoch || readSelection !== workspaceReadSelection) return;
     // Reuse existing authenticated, bounded directory pages; never add a
     // provider read for the Overview. A partial page is not a population total.
     const completePageCount = (page, field) => {
