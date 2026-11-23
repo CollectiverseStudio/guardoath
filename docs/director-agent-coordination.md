@@ -2118,3 +2118,10 @@ FIRST re-read this file's governing Atlas-only #28/#31 override, then AGENTS.md,
 - The offline versioned catalog source writer now bounds the actual tracked-history read to 256 KiB + 1 byte and bounds the pre-replace compare-and-swap re-read to the original snapshot length + 1. This preserves detection of concurrent edits or oversized appends without reading unbounded attacker-controlled content. No change to tenant authority, catalog runtime, signing, publication approval, PII latency or provider spend.
 - Added negative regression cases for an oversized tracked source and an out-of-band 300-KiB append during review; both must reject without overwriting the competing file, leaving a lock, or leaking a temp file.
 - Exact-new-SHA CI, release parity, rollback and 15 live checks remain required. No AWS deployment or live catalog activation. Issues #39–#42 remain open.
+
+
+## 2026-11-23 — strict reviewed catalog JSON decoding (#42)
+- Re-read main coordination and November 19 override, AGENTS.md, open #39–#42, main and current exact-SHA workflows; no failed completed job observed (some still in progress). No competing claim found.
+- The existing offline catalog source writer now rejects duplicate object keys at any depth and non-finite numbers in both reviewed-plan JSON and tracked version history; Python's default last-key-wins JSON parsing could previously silently reinterpret either. No unsigned input can authorize a release.
+- Added six negative pytest cases for duplicate top-level/nested keys and NaN in both sources, asserting no tracked write and lock cleanup; updated operator guide. No deployed registry, tenant configuration, Stripe/Cognito provider, AWS resource, 500-ms PII deadline or customer rule was changed.
+- Full new-SHA CI, signed review/approval, source parity, rollback and all 15 live checks still required. Issues #39–#42 remain open.

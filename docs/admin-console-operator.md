@@ -1031,3 +1031,13 @@ The authenticated Users and Tenants lists now bind provider replies to the selec
 ## Owner refresh failure and concurrent reads (2026-11-23)
 
 The authenticated /admin workspace withdraws its preceding overview metrics, user and tenant rows, catalog data, navigation cursors and unverified mutation affordances as soon as a new full refresh begins. A failed core overview, tenant, catalog or capabilities read leaves **Unavailable** source labels and refuses to show the older snapshot as current. A later successful owner read restores the real source-backed views. A delayed older refresh, whether successful or failed, cannot erase a newer response; any independently pending Cognito user status mutation retains its single-flight guard. No tenant, billing, provider, AWS resource or validation policy is changed. Playwright covers failure, recovery and response reordering; exact-source CI and protected production MFA acceptance remain required.
+
+
+### Source release JSON ambiguity protection (November 23, 2026)
+
+The offline reviewed-plan reader and tracked catalog release-history reader reject duplicate
+JSON object keys at every nesting level and non-finite JSON numbers (NaN or Infinity).
+The ordinary Python JSON decoder would otherwise accept these ambiguous inputs and silently
+keep only the last duplicate field. Such input now fails before catalog-provider inspection
+or any source write. This does not make an unsigned exported review an authorization;
+the independent review, exact-source CI, rollback and 15 live checks remain mandatory.

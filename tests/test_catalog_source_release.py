@@ -412,3 +412,45 @@ def test_offline_catalog_release_cli_refuses_concurrent_oversized_append(monkeyp
     assert competing is not None and source.read_bytes() == competing
     assert not lock.exists()
     assert not list(tmp_path.glob(".catalog-release-*"))
+
+
+@pytest.mark.parametrize("raw", [
+    b'{"base_registry_version":"3","releases":[],"releases":[]}',
+    b'{"base_registry_version":"3","releases":[{"registry_version":"4",'
+    b'"registry_version":"5"}]}',
+    b'{"base_registry_version":"3","releases":[],"extra":NaN}',
+])
+def test_source_release_rejects_ambiguous_tracked_json_before_provider(monkeypatch, tmp_path, raw):
+    release, source, plan, lock = _offline_release_cli(monkeypatch, tmp_path)
+    source.write_bytes(raw)
+
+    def must_not_read_provider():
+        raise AssertionError("Invalid source must be rejected before reading provider")
+
+    monkeypatch.setattr(release, "published_catalog", must_not_read_provider)
+    with pytest.raises(SourceReleaseConflict):
+        release.main(["--plan", str(plan), "--write",
+                      "--confirm-registry-version", "4"])
+    assert source.read_bytes() == raw
+    assert not lock.exists()
+
+
+@pytest.mark.parametrize("mutate", [
+    lambda raw: raw.replace(b'"published": false',
+                            b'"published": false, "published": false', 1),
+    lambda raw: raw.replace(b'"rule_id": "pii.email"',
+                            b'"rule_id": "pii.email", "rule_id": "pii.email"', 1),
+    lambda raw: raw.replace(b'"published": false',
+                            b'"published": NaN', 1),
+])
+def test_source_release_rejects_ambiguous_review_export_before_write(monkeypatch, tmp_path, mutate):
+    release, source, plan, lock = _offline_release_cli(monkeypatch, tmp_path)
+    original = source.read_bytes()
+    mutated = mutate(plan.read_bytes())
+    assert mutated != plan.read_bytes()
+    plan.write_bytes(mutated)
+    with pytest.raises(SourceReleaseConflict):
+        release.main(["--plan", str(plan), "--write",
+                      "--confirm-registry-version", "4"])
+    assert source.read_bytes() == original
+    assert not lock.exists()

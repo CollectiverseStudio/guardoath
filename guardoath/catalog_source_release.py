@@ -41,6 +41,29 @@ class SourceReleaseConflict(ValueError):
     """Review export is stale, forged, ambiguous or not source-reproducible."""
 
 
+def _reject_duplicate_keys(pairs):
+    """Fail closed on ambiguous JSON, including duplicates nested in a review."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise SourceReleaseConflict("Duplicate source release JSON key")
+        result[key] = value
+    return result
+
+
+def _reject_nonfinite(value):
+    raise SourceReleaseConflict("Nonfinite source release JSON number")
+
+
+def _strict_json(raw):
+    """Python's default JSON decoder silently replaces duplicate object keys."""
+    try:
+        return json.loads(raw, object_pairs_hook=_reject_duplicate_keys,
+                          parse_constant=_reject_nonfinite)
+    except (ValueError, UnicodeError, TypeError) as exc:
+        raise SourceReleaseConflict("Invalid source release JSON") from exc
+
+
 def candidate_release(export: dict, provider, history: dict) -> dict:
     """Recompute the ENTIRE source fingerprint; no export field is trusted."""
     try:
@@ -249,7 +272,7 @@ def _source_snapshot(path: Path) -> tuple[bytes, dict]:
     if len(raw) > 262144:
         raise SourceReleaseConflict("Oversized catalog source history")
     try:
-        history = validate_release_history(json.loads(raw))
+        history = validate_release_history(_strict_json(raw))
     except (ValueError, UnicodeError, TypeError) as exc:
         raise SourceReleaseConflict("Published source history unavailable") from exc
     return raw, history
@@ -272,7 +295,7 @@ def main(argv=None):
         plan_bytes = plan_file.read(65537)
     if len(plan_bytes) > 65536:
         parser.error("Oversized review export")
-    export = json.loads(plan_bytes)
+    export = _strict_json(plan_bytes)
     prepare = candidate_rollback_release if args.revert_last else candidate_release
     with (_source_write_lock(FILE) if args.write else nullcontext()):
         original_bytes, history = _source_snapshot(FILE)
