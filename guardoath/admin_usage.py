@@ -13,6 +13,7 @@ from typing import Callable
 
 MONTH = re.compile(r"^\d{4}-(?:0[1-9]|1[0-2])$")
 UTC_RECORD = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
+_JSON_SAFE_INTEGER = (1 << 53) - 1
 
 
 class UsageUnavailable(ValueError):
@@ -39,10 +40,13 @@ def _quota_pacing(count: int | None, allowance: int, overage: str,
     # A recorded cap breach is a fact about the saved counter, not a
     # forecast. Do not hide it behind early-month or stale-metadata gates.
     # Keep the projection unavailable until its own freshness gate passes.
-    estimate = (count * total_days // now.day
-                if count is not None and allowance > 0 and
-                freshness == "recent_record_metadata" and now.day >= 7
-                else None)
+    raw_estimate = (count * total_days // now.day
+                    if count is not None and allowance > 0 and
+                    freshness == "recent_record_metadata" and now.day >= 7
+                    else None)
+    # Preserve exact integer semantics in the browser, including overflow.
+    estimate = (raw_estimate if raw_estimate is None or
+                raw_estimate <= _JSON_SAFE_INTEGER else None)
     if count is None:
         state = "unknown_counter"
     elif count > allowance:
@@ -55,6 +59,8 @@ def _quota_pacing(count: int | None, allowance: int, overage: str,
         state = "stale_or_unknown_metadata"
     elif now.day < 7:
         state = "insufficient_observation"
+    elif estimate is None:
+        state = "projection_out_of_range"
     elif estimate > allowance:
         state = "projected_over_limit"
     elif estimate * 100 >= allowance * 95:
@@ -113,6 +119,9 @@ def _historical_volume_signal(usage: dict, now: datetime, pacing: dict) -> dict:
         result["state"] = "low_volume_history"
         return result
     ratio = projection * 100 // baseline
+    if ratio > _JSON_SAFE_INTEGER:
+        result["state"] = "projection_out_of_range"
+        return result
     result["projected_vs_history_percent_floor"] = ratio
     if ratio >= 200:
         result["state"] = "possible_request_surge"
@@ -143,7 +152,7 @@ def tenant_usage_report(record, *, clock: Callable[[], datetime] | None = None) 
             or overage not in ("block", "allow_and_record")):
         raise UsageUnavailable("Invalid authoritative usage record")
     if any(not isinstance(key, str) or not MONTH.fullmatch(key)
-           or type(value) is not int or value < 0
+           or type(value) is not int or not 0 <= value <= _JSON_SAFE_INTEGER
            for key, value in usage.items()):
         raise UsageUnavailable("Invalid stored usage counter")
     recent = [{"month_utc": key, "requests": usage[key]} for key in sorted(usage, reverse=True)[:12]]
@@ -162,9 +171,12 @@ def tenant_usage_report(record, *, clock: Callable[[], datetime] | None = None) 
         signal = "watch"
     else:
         signal = "within_limit"
+    percent = count * 100 // allowance if count is not None and allowance else None
+    if percent is not None and percent > _JSON_SAFE_INTEGER:
+        percent = None
     threshold = {
         "state": signal,
-        "utilization_percent_floor": count * 100 // allowance if count is not None and allowance else None,
+        "utilization_percent_floor": percent,
         "policy": "blocks_at_saved_cap" if overage == "block" else "records_overage",
         "basis": "recorded current-month requests vs saved monthly allowance",
         "persisted_alert": False,

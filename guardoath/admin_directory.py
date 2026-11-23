@@ -31,6 +31,8 @@ class DirectoryUnavailable(RuntimeError):
 _TENANT = re.compile(r"^[a-z][a-z0-9-]{1,39}$")
 _MONTH = re.compile(r"^[0-9]{4}-(0[1-9]|1[0-2])$")
 _NONNEGATIVE = re.compile(r"^(0|[1-9][0-9]{0,17})$")
+# Prevent JSON number rounding of authoritative usage counts and revisions.
+_JSON_SAFE_INTEGER = (1 << 53) - 1
 
 
 def _number_attribute(value: object) -> int:
@@ -38,7 +40,10 @@ def _number_attribute(value: object) -> int:
     if (not isinstance(value, dict) or set(value) != {"N"}
             or not isinstance(value["N"], str) or not _NONNEGATIVE.fullmatch(value["N"])):
         raise DirectoryUnavailable("Malformed tenant directory record")
-    return int(value["N"])
+    result = int(value["N"])
+    if result > _JSON_SAFE_INTEGER:
+        raise DirectoryUnavailable("Tenant directory number exceeds browser precision")
+    return result
 
 
 def _project_item(item: object, month: str) -> dict:

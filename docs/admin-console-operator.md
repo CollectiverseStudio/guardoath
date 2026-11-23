@@ -869,3 +869,20 @@ returns **Unavailable**, not zero. A complete empty population may show zero.
 This is saved policy exposure, not proof of actual blocking, bills, provider
 requests, or a delivered alert. No new paid service, extra provider read,
 customer policy change or Stripe write is introduced.
+
+
+## Administrative usage integer precision boundary (2026-11-23)
+
+DynamoDB records and authoritative tenant usage counters can contain Python
+integers larger than a JavaScript client can represent exactly. The admin
+DynamoDB directory now refuses pages containing a revision or usage counter
+above 2^53−1 instead of displaying a rounded value or enabling an action with
+ambiguous source revisions. Owner Usage similarly rejects such stored counts;
+when a valid stored counter produces a larger *derived* pacing estimate,
+utilization percentage or historical ratio, that derived number is unavailable
+rather than rounded, while recorded over-limit status remains visible. These
+are metadata/reporting safeguards; no tenant usage enforcement, provider call,
+Cognito policy, Stripe data, stored record or 500-ms checker deadline changes.
+Existing signed owner-authenticated API routes and browser integration continue
+to display unavailable states for missing/untrusted projections. Full exact-SHA
+CI, live /admin and production acceptance are separate requirements.

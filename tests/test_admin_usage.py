@@ -48,6 +48,7 @@ def test_overage_policy_cannot_be_misreported_as_hard_cap():
 @pytest.mark.parametrize("changes", [
     {"usage": {"2026-11": -1}}, {"usage": {"2026-13": 1}},
     {"usage": {"2026-11": True}}, {"usage": {"2026-11": "43"}},
+    {"usage": {"2026-11": 1 << 53}},
     {"monthly_allowance": -1}, {"revision": True}, {"overage": "open"},
     {"tenant_id": "../../etc/passwd"},
 ])
@@ -288,3 +289,29 @@ def test_authenticated_usage_exposes_recorded_breach_without_fake_live_costs():
     assert usage["quota_pacing"]["record_metadata_freshness"] == "stale_record_metadata"
     assert usage["aws_cost_usd"] is None and usage["stripe_invoice_usd"] is None
     assert "key_hash" not in response.text and "payer_id" not in response.text
+
+
+def test_large_safe_recorded_counter_is_not_rounded_into_browser_metrics():
+    value = (1 << 53) - 1
+    record = Tenant(usage={"2026-11": value}, monthly_allowance=1,
+                    updated_at="2026-11-19T17:00:00Z")
+    report = tenant_usage_report(record, clock=NOW)
+    assert report["requests_recorded"] == value
+    assert report["usage_threshold"]["state"] == "over_limit"
+    assert report["usage_threshold"]["utilization_percent_floor"] is None
+    assert report["quota_pacing"]["state"] == "already_over_limit"
+    assert report["quota_pacing"]["projected_month_end_requests_floor"] is None
+    assert report["aws_cost_usd"] is None and report["stripe_invoice_usd"] is None
+
+
+def test_historical_ratio_over_browser_integer_limit_is_not_falsely_precise():
+    saved = {"2026-11": 4_000_000_000_000_000, "2026-10": 30,
+             "2026-09": 31, "2026-08": 32}
+    record = Tenant(usage=saved, monthly_allowance=1_000_000_000,
+                    updated_at="2026-11-19T17:00:00Z")
+    report = tenant_usage_report(record, clock=NOW)
+    assert report["quota_pacing"]["projected_month_end_requests_floor"] is not None
+    assert report["historical_volume"]["state"] == "projection_out_of_range"
+    assert report["historical_volume"]["projected_vs_history_percent_floor"] is None
+    assert report["requests_recorded"] == saved["2026-11"]
+    assert report["aws_cost_usd"] is None and report["stripe_invoice_usd"] is None

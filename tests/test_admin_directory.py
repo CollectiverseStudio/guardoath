@@ -107,6 +107,20 @@ def test_usage_is_real_month_counter_and_missing_usage_is_unknown():
     assert response["total"] is None  # bounded scan is not global total
 
 
+@pytest.mark.parametrize("location", ["revision", "usage"])
+def test_unsafe_browser_integer_is_rejected_before_tenant_projection(location):
+    class Unsafe:
+        def scan(self, **kw):
+            row = item("alpha")
+            if location == "revision":
+                row["revision"] = {"N": str(1 << 53)}
+            else:
+                row["usage"] = {"M": {"2026-11": {"N": str(1 << 53)}}}
+            return {"Items": [row]}
+    with pytest.raises(DirectoryUnavailable):
+        directory(Unsafe()).page(owner_sub=OWNER, limit=2)
+
+
 def test_invalid_usage_record_rejected_not_silently_zeroed():
     from datetime import datetime, timezone
     current = datetime.now(timezone.utc).strftime("%Y-%m")
