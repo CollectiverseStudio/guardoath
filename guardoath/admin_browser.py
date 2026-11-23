@@ -1470,12 +1470,17 @@ _JS = r'''"use strict";
         const open = history.invoices.filter(row =>
           row.status === "open" && row.amount_remaining_minor > 0);
         const uncollectible = history.invoices.filter(row => row.status === "uncollectible");
+        const recordedNextAttempts = open.filter(row =>
+          row.collection_method === "charge_automatically" &&
+          row.attempted === true && Number.isSafeInteger(row.attempt_count) &&
+          row.attempt_count > 0 && typeof row.next_payment_attempt_utc === "string").length;
         const expectedBalances = Object.create(null);
         for (const row of open)
           expectedBalances[row.currency] = (expectedBalances[row.currency] || 0) + row.amount_remaining_minor;
         const reported = review.open_balance_by_currency_minor;
         if (review.scope !== "verified_first_page_only" ||
             review.open_with_balance_count !== open.length ||
+            review.open_with_recorded_next_attempt_count !== recordedNextAttempts ||
             review.uncollectible_count !== uncollectible.length ||
             review.complete_history !== !history.has_more ||
             !reported || typeof reported !== "object" || Array.isArray(reported) ||
@@ -1483,6 +1488,8 @@ _JS = r'''"use strict";
             Object.entries(expectedBalances).some(([currency, amount]) => reported[currency] !== amount))
           throw new Error("Invoice review summary mismatch");
         reviewLabel = " · Open with balance (shown page): " + open.length +
+          " · Recorded next automatic-payment attempts (shown page): " +
+          recordedNextAttempts + " (not proof of failed payment or future retry)" +
           " · Uncollectible (shown page): " + uncollectible.length +
           " · Open remaining by currency: " +
           (Object.keys(expectedBalances).length

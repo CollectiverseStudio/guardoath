@@ -152,6 +152,7 @@ def test_payment_review_is_only_for_verified_first_page_and_keeps_currencies_sep
     review = result["payment_review"]
     assert review["scope"] == "verified_first_page_only"
     assert review["open_with_balance_count"] == 2
+    assert review["open_with_recorded_next_attempt_count"] == 0
     assert review["uncollectible_count"] == 1
     assert review["open_balance_by_currency_minor"] == {"eur": 2000, "usd": 1500}
     assert review["complete_history"] is False
@@ -178,6 +179,7 @@ def test_verified_invoice_collection_attempts_are_redacted_and_not_failure_claim
     assert manual["attempted"] is False and manual["attempt_count"] == 0
     assert manual["next_payment_attempt_utc"] is None
     assert result["payment_review"]["open_with_balance_count"] == 2
+    assert result["payment_review"]["open_with_recorded_next_attempt_count"] == 1
     assert "not proof of failed payment" in result["note"]
     assert "in_open_attempts" not in str(result) and "cus_owner" not in str(result)
     assert "secret@example.com" not in str(result)
@@ -194,6 +196,7 @@ def test_payment_review_zero_means_zero_in_verified_page_only():
                                         "has_more": False}).read(Tenant())
     assert result["verified"] is True
     assert result["payment_review"]["open_with_balance_count"] == 0
+    assert result["payment_review"]["open_with_recorded_next_attempt_count"] == 0
     assert result["payment_review"]["uncollectible_count"] == 0
     assert result["payment_review"]["open_balance_by_currency_minor"] == {}
     assert result["payment_review"]["complete_history"] is True
@@ -207,3 +210,21 @@ def test_open_invoice_with_no_remaining_balance_is_not_payment_attention():
         ]}).read(Tenant())
     assert result["payment_review"]["open_with_balance_count"] == 0
     assert result["payment_review"]["open_balance_by_currency_minor"] == {}
+
+@pytest.mark.parametrize("changes,expected", [
+    ({}, 1), ({"collection_method": "send_invoice"}, 0),
+    ({"collection_method": None}, 0), ({"attempted": False}, 0),
+    ({"attempted": None}, 0), ({"attempt_count": 0}, 0),
+    ({"attempt_count": None}, 0), ({"next_payment_attempt": None}, 0),
+    ({"amount_remaining": 0}, 0), ({"status": "paid"}, 0),
+])
+def test_next_attempt_review_requires_verified_open_auto_collection(changes, expected):
+    row = dict(status="open", amount_due=2500, amount_paid=0, amount_remaining=2500,
+               collection_method="charge_automatically", attempted=True,
+               attempt_count=2, next_payment_attempt=1795435200)
+    row.update(changes)
+    result = history(fetch=lambda *_: {"object": "list", "has_more": False,
+                                        "data": [invoice(**row)]}).read(Tenant())
+    assert result["payment_review"]["open_with_recorded_next_attempt_count"] == expected
+    assert "future retry" in result["payment_review"]["note"]
+    assert "cus_owner" not in str(result) and "in_owner" not in str(result)

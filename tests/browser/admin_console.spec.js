@@ -395,7 +395,11 @@ test("owner Billing shows verified collection attempt metadata without claiming 
               status:"open",currency:"usd",created_utc:"2026-11-20T12:00:00Z",
               amount_due_minor:2500,amount_paid_minor:0,amount_remaining_minor:2500,
               collection_method:"charge_automatically",attempted:true,attempt_count:2,
-              next_payment_attempt_utc:"2026-11-23T12:00:00Z"}]},
+              next_payment_attempt_utc:"2026-11-23T12:00:00Z"}],
+            payment_review:{scope:"verified_first_page_only",
+              open_with_balance_count:1,open_with_recorded_next_attempt_count:1,
+              uncollectible_count:0,open_balance_by_currency_minor:{usd:2500},
+              complete_history:true}},
           read_audit_event_id:"a".repeat(64)})} : null});
   await page.locator("#nav-tenants").click();
   const row = page.locator("#tenant-rows tr").filter({hasText:"sample-studio"});
@@ -406,9 +410,34 @@ test("owner Billing shows verified collection attempt metadata without claiming 
   await expect(output).toContainText("Attempted: Yes");
   await expect(output).toContainText("attempts recorded: 2");
   await expect(output).toContainText("next attempt recorded: 2026-11-23T12:00:00Z");
+  await expect(output).toContainText("Recorded next automatic-payment attempts (shown page): 1");
   await expect(output).toContainText("not proof of payment failure");
   expect(fixture.calls.some(call => call.path.endsWith("/invoices") &&
     call.headers["x-guardoath-admin-session"] === fixture.token)).toBe(true);
+});
+
+test("owner rejects inconsistent verified invoice next-attempt count", async ({page}) => {
+  const fixture = await signedIn(page, {override: request =>
+    request.path === "/v1/admin/subscriptions/sample-studio/invoices"
+      ? {status:200,contentType:"application/json",body:JSON.stringify({
+          history:{verified:true,status:"verified",count:1,has_more:false,
+            read_at_utc:"2026-11-23T12:00:00Z",
+            invoices:[{status:"open",currency:"usd",created_utc:"2026-11-20T12:00:00Z",
+              amount_due_minor:2500,amount_paid_minor:0,amount_remaining_minor:2500,
+              collection_method:"charge_automatically",attempted:true,attempt_count:2,
+              next_payment_attempt_utc:"2026-11-24T12:00:00Z"}],
+            payment_review:{scope:"verified_first_page_only",
+              open_with_balance_count:1,open_with_recorded_next_attempt_count:2,
+              uncollectible_count:0,open_balance_by_currency_minor:{usd:2500},
+              complete_history:true}},
+          read_audit_event_id:"a".repeat(64)})} : null});
+  await page.locator("#nav-tenants").click();
+  await page.locator("#tenant-rows tr").filter({hasText:"sample-studio"})
+    .getByRole("button",{name:"Invoices",exact:true}).click();
+  await expect(page.locator("#invoice-details")).toContainText(
+    "Invoice verification unavailable; no billing changes");
+  expect(fixture.calls.filter(call => call.path.startsWith("/v1/admin/subscriptions/") &&
+    call.method !== "GET")).toHaveLength(0);
 });
 
 test("verified inactive Stripe disagreement appears in owner Billing without inventing paid access", async ({page}) => {

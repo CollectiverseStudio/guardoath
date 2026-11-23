@@ -89,7 +89,7 @@ class AdminInvoiceHistory:
             raise InvoiceHistoryUnavailable("Incomplete invoice page")
         rows, seen = [], set()
         # Bounded page-review signals, not full accounts receivable.
-        open_balances, open_count, uncollectible_count = {}, 0, 0
+        open_balances, open_count, uncollectible_count, recorded_retry_count = {}, 0, 0, 0
         for item in snapshot["data"]:
             if not isinstance(item, dict):
                 raise InvoiceHistoryUnavailable("Invalid invoice")
@@ -140,6 +140,11 @@ class AdminInvoiceHistory:
                 open_count += 1
                 currency = item["currency"]
                 open_balances[currency] = open_balances.get(currency, 0) + values[2]
+                # Recorded next attempt is NOT proof of a failed payment or future retry.
+                if (collection_method == "charge_automatically"
+                        and attempted is True and attempt_count is not None
+                        and attempt_count > 0 and next_attempt is not None):
+                    recorded_retry_count += 1
             if item["status"] == "uncollectible":
                 uncollectible_count += 1
         return {"status": "verified", "verified": True, "invoices": rows, "count": len(rows),
@@ -147,11 +152,13 @@ class AdminInvoiceHistory:
                 "payment_review": {
                     "scope": "verified_first_page_only",
                     "open_with_balance_count": open_count,
+                    "open_with_recorded_next_attempt_count": recorded_retry_count,
                     "uncollectible_count": uncollectible_count,
                     "open_balance_by_currency_minor": dict(sorted(open_balances.items())),
                     "complete_history": not snapshot["has_more"],
-                    "note": "Open balances are not proof of overdue or failed payment; "
-                            "uncollectible is a provider status, not a refund or owner action",
+                    "note": "Next-attempt timestamps and open balances do not prove failed payment, "
+                            "overdue debt or a future retry; uncollectible is a provider status, "
+                            "not a refund or owner action",
                 },
                 "read_at_utc":
                 datetime.now(timezone.utc).isoformat(timespec="seconds"),

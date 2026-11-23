@@ -997,3 +997,7 @@ read-only review finding. **Not scheduled** requires explicit false
 `cancel_at` blocks the advisory read; a disagreement between period-end and
 direct cancellation timestamps hides the effective date. All provider binding
 and existing entitlement checks still run first.
+
+
+## Verified invoice next-attempt observations
+Owner **Tenants → Invoices** now shows a first-page-only count of open positive-balance automatic-collection invoices with a provider-recorded earlier attempt and next-attempt timestamp. It never infers payment failure, overdue debt, a future retry or recognized revenue from this signal. Missing attempt metadata and manually invoiced or paid rows do not qualify. The browser independently recomputes and fails closed on inconsistent count data. No new Stripe call, financial write or AWS spend.

@@ -427,6 +427,7 @@ def test_invoice_browser_verifies_page_scoped_payment_review_without_claiming_fa
     assert "history.payment_review" in script
     assert 'review.scope !== "verified_first_page_only"' in script
     assert "review.open_with_balance_count !== open.length" in script
+    assert "review.open_with_recorded_next_attempt_count !== recordedNextAttempts" in script
     assert "review.uncollectible_count !== uncollectible.length" in script
     assert "review.complete_history !== !history.has_more" in script
     assert "Invoice review summary mismatch" in script
