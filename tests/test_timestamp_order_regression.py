@@ -133,7 +133,10 @@ def test_configured_sample_budget_has_exact_boundary(stage, count, expected_stat
     assert response.effective_action == ("allow" if expected_error is None else "block")
     assert not response.findings
     assert any(c.checker_id == "timestamps" and c.status == expected_status
-               and c.error_code == expected_error for c in response.checker_results)
+               and c.error_code == expected_error for c in response.checker_results), [
+        (c.checker_id, c.status, c.error_code, c.latency_ms)
+        for c in response.checker_results
+    ]
 
 
 @pytest.mark.parametrize("stage", [Stage.INPUT, Stage.OUTPUT])
