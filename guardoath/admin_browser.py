@@ -1377,6 +1377,16 @@ _JS = r'''"use strict";
           " · Cancel at period end: " +
           (state.verified && state.cancel_at_period_end === true ? "Yes" :
            state.verified && state.cancel_at_period_end === false ? "No" : "Unavailable") +
+          " · Invoice collection method: " +
+          (state.verified && state.collection_method === "send_invoice"
+            ? "Send invoice (payment unverified)" :
+           state.verified && state.collection_method === "charge_automatically"
+            ? "Automatic charge (payment unverified)" : "Unavailable") +
+          " · Billing period source: " +
+          (state.verified && state.current_period_source === "subscription_item"
+            ? "Verified subscription item" :
+           state.verified && state.current_period_source === "subscription"
+            ? "Verified subscription" : "Unavailable") +
           " · Payment collection: " +
           (state.verified && state.collection_status === "paused"
             ? "Paused (" + (["keep_as_draft","mark_uncollectible","void"].includes(state.collection_behavior) ?

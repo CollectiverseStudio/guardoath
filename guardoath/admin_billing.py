@@ -17,6 +17,7 @@ PRICE = re.compile(r"^price_[A-Za-z0-9_]{1,96}$")
 STATES = frozenset({"active", "past_due", "canceled", "unpaid", "incomplete",
                     "incomplete_expired", "trialing", "paused"})
 COLLECTION_BEHAVIORS = frozenset({"keep_as_draft", "mark_uncollectible", "void"})
+COLLECTION_METHODS = frozenset({"charge_automatically", "send_invoice"})
 _MISSING = object()
 
 
@@ -169,6 +170,15 @@ class AdminSubscriptionReporter:
                 collection_resumes_at_utc = (
                     datetime.fromtimestamp(resumes_at, timezone.utc)
                     .isoformat(timespec="seconds").replace("+00:00", "Z"))
+        # Stripe can mark a manually invoiced subscription active before an
+        # invoice is paid. Neither collection method nor pause proves revenue.
+        collection_method = snapshot.get("collection_method", _MISSING)
+        if collection_method is _MISSING:
+            method_status = "unavailable"
+        elif isinstance(collection_method, str) and collection_method in COLLECTION_METHODS:
+            method_status = collection_method
+        else:
+            raise BillingUnavailable("Invalid Stripe invoice collection method")
         assessment = _reconciliation_assessment(
             state, stored_status, tenant_status, billing_mode)
         if collection_status == "paused" and assessment["level"] == "consistent":
@@ -176,6 +186,12 @@ class AdminSubscriptionReporter:
                 "level": "review",
                 "code": "stripe_payment_collection_paused",
                 "next_step": "Review Stripe payment collection pause; active subscription status does not prove payments are collecting",
+            }
+        elif method_status == "send_invoice" and assessment["level"] == "consistent":
+            assessment = {
+                "level": "review",
+                "code": "stripe_manual_invoice_collection",
+                "next_step": "Stripe sends invoices rather than charging automatically; inspect verified invoices before treating an active subscription as collected revenue",
             }
         # An admin display never grants entitlement. Only show a concordant
         # active entitlement after independent provider AND saved-state checks.
@@ -186,17 +202,33 @@ class AdminSubscriptionReporter:
         # projected invoice amount or authorization to grant paid access.
         cancel_flag = snapshot.get("cancel_at_period_end")
         cancel_flag = cancel_flag if type(cancel_flag) is bool else None
-        period_end = snapshot.get("current_period_end")
+        # The pinned Stripe API still supports subscription-level periods.
+        # Newer versions use item periods; accept only our single verified item.
+        # Malformed or disagreeing periods remain explicitly unavailable.
+        legacy_period = snapshot.get("current_period_end", _MISSING)
+        item_period = entries[0].get("current_period_end", _MISSING)
+        def valid_period(value):
+            return type(value) is int and 946684800 <= value <= 4102444800
+        if item_period is not _MISSING:
+            period_end = (item_period if valid_period(item_period) and
+                          (legacy_period is _MISSING or legacy_period == item_period)
+                          else None)
+            period_source = "subscription_item" if period_end is not None else "unavailable"
+        elif valid_period(legacy_period):
+            period_end, period_source = legacy_period, "subscription"
+        else:
+            period_end, period_source = None, "unavailable"
         period_end_utc = (datetime.fromtimestamp(period_end, tz=timezone.utc)
                           .isoformat(timespec="seconds").replace("+00:00", "Z")
-                          if type(period_end) is int and 946684800 <= period_end <= 4102444800
-                          else None)
+                          if period_end is not None else None)
         return {
             "status": state, "provider": "Stripe", "verified": True,
             "cancel_at_period_end": cancel_flag,
             "current_period_end_utc": period_end_utc,
+            "current_period_source": period_source,
             "billing_cycle_source": "same verified Stripe subscription (not an invoice)",
             "collection_status": collection_status,
+            "collection_method": method_status,
             "collection_behavior": collection_behavior,
             "collection_resumes_at_utc": collection_resumes_at_utc,
             "price_verified": True, "provider_active": state == "active",

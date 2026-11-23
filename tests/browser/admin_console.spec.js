@@ -991,3 +991,27 @@ test("owner hides unpaid reconciliation when signed evidence or saved quota is u
   await expect(page.getByRole("button",{name:"Reconcile unpaid",exact:true})).toHaveCount(0);
   expect(fixture.calls.filter(c => c.path.endsWith("/downgrade"))).toHaveLength(0);
 });
+
+
+test("owner billing distinguishes manual invoice collection and verified period source", async ({page}) => {
+  const fixture = await signedIn(page,{override: request =>
+    request.path === "/v1/admin/subscriptions/sample-studio"
+      ? {status:200,contentType:"application/json",body:JSON.stringify({
+          subscription:{verified:true,status:"active",verified_at:"2026-11-23T08:00:00Z",
+            collection_status:"collecting",collection_method:"send_invoice",
+            current_period_end_utc:"2026-12-01T00:00:00Z",current_period_source:"subscription_item",
+            reconciliation:{level:"review",code:"stripe_manual_invoice_collection",
+              next_step:"Stripe sends invoices rather than charging automatically; inspect verified invoices before treating an active subscription as collected revenue"}},
+          read_audit_event_id:"a".repeat(64)})} : null});
+  await page.locator("#nav-tenants").click();
+  await page.locator("#tenant-rows tr").filter({hasText:"sample-studio"})
+    .getByRole("button",{name:"Verify Stripe",exact:true}).click();
+  const output = page.locator("#billing-details");
+  await expect(output).toContainText("Reconciliation: review (stripe_manual_invoice_collection)");
+  await expect(output).toContainText("Invoice collection method: Send invoice (payment unverified)");
+  await expect(output).toContainText("Billing period source: Verified subscription item");
+  await expect(output).toContainText("Current period ends (UTC): 2026-12-01T00:00:00Z");
+  await expect(output).toContainText("Next invoice amount: Unavailable");
+  expect(fixture.calls.some(call => call.path === "/v1/admin/subscriptions/sample-studio"
+    && call.headers["x-guardoath-admin-session"] === fixture.token)).toBe(true);
+});

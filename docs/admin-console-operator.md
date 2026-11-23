@@ -948,3 +948,23 @@ existing one owner-authorized, audited subscription read; it does not fetch
 invoices, alter paid entitlement, resume collection, charge/refund anyone,
 or change tenant source-of-truth settings. Active subscription status is not
 proof of payments received or of live revenue.
+
+
+## Provider-verified collection method and versioned billing period (2026-11-23)
+
+The authenticated **Verify Stripe** action now labels the independently verified
+subscription's invoice collection method as **Automatic charge**, **Send invoice**,
+or **Unavailable**. Sending an invoice does not prove that it was paid: when the
+saved and provider entitlement statuses otherwise agree, manual invoicing is a
+**review** finding. Existing critical provider drift and payment pause findings
+retain precedence. Missing method is unknown; an invalid provider value makes
+the read unavailable. Neither collection method is a revenue or entitlement
+write, nor proof of money collected.
+
+For the pinned Stripe 2025-02-24 API, the subscription-level current period
+end remains supported. A newer Stripe representation can place it on the sole
+verified subscription item. The owner panel accepts the single item date or
+falls back to a valid subscription-level date, labels the source, and shows
+**Unavailable** for malformed, ambiguous, conflicting or absent dates. This
+does not change the application's pinned provider API version, billing
+entitlements, tenant records, Stripe costs, invoices or 500-ms validation limit.

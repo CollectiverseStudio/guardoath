@@ -357,3 +357,91 @@ def test_authenticated_owner_sees_collection_pause_risk_without_provider_secrets
     assert subscription["reconciliation"]["level"] == "review"
     for private in ("cus_test1234", "sub_test1234", "secret@example.com", "pm_private"):
         assert private not in response.text
+
+
+@pytest.mark.parametrize("method,level,code", [
+    ("charge_automatically", "consistent", "states_agree"),
+    ("send_invoice", "review", "stripe_manual_invoice_collection"),
+])
+def test_verified_collection_method_never_claims_paid_invoice(method, level, code):
+    tenant = Tenant()
+    previous = dict(tenant.__dict__)
+    result = reporter(lambda *_: snapshot(collection_method=method)).read(tenant)
+    assert result["verified"] is True and result["collection_method"] == method
+    assert result["reconciliation"]["level"] == level
+    assert result["reconciliation"]["code"] == code
+    assert result["subscription_entitlement"] is True  # Observation, not authorization.
+    assert tenant.__dict__ == previous
+    for secret in ("cus_test1234", "sub_test1234", "pm_private", "secret@example.com"):
+        assert secret not in str(result)
+
+
+def test_manual_invoice_does_not_replace_higher_priority_billing_drift():
+    result = reporter(lambda *_: snapshot(
+        status="past_due", collection_method="send_invoice")).read(Tenant())
+    assert result["reconciliation"]["level"] == "critical"
+    assert result["reconciliation"]["code"] == "saved_active_without_verified_provider"
+    paused = reporter(lambda *_: snapshot(collection_method="send_invoice",
+        pause_collection={"behavior": "void"})).read(Tenant())
+    assert paused["reconciliation"]["code"] == "stripe_payment_collection_paused"
+
+
+@pytest.mark.parametrize("bad", [None, True, False, 42, [], {}, "", "invoice", "Send_Invoice"])
+def test_malformed_collection_method_is_unavailable_not_paid_evidence(bad):
+    with pytest.raises(BillingUnavailable):
+        reporter(lambda *_: snapshot(collection_method=bad)).read(Tenant())
+
+
+def test_missing_collection_method_is_unknown_not_automatic_collection():
+    report = reporter(lambda *_: snapshot()).read(Tenant())
+    assert report["collection_method"] == "unavailable"
+
+
+@pytest.mark.parametrize("changes,expected,source", [
+    ({"current_period_end": 1796083200}, 1796083200, "subscription"),
+    ({"items": {"data": [{"price": {"id": PRICE}, "quantity": 1,
+                          "current_period_end": 1796083200}], "has_more": False}},
+     1796083200, "subscription_item"),
+    ({"current_period_end": 1796083200,
+      "items": {"data": [{"price": {"id": PRICE}, "quantity": 1,
+                         "current_period_end": 1796083200}], "has_more": False}},
+     1796083200, "subscription_item"),
+    ({"current_period_end": 1796083200,
+      "items": {"data": [{"price": {"id": PRICE}, "quantity": 1,
+                         "current_period_end": 1796169600}], "has_more": False}},
+     None, "unavailable"),
+    ({"current_period_end": "1796083200"}, None, "unavailable"),
+    ({"items": {"data": [{"price": {"id": PRICE}, "quantity": 1,
+                          "current_period_end": True}], "has_more": False}},
+     None, "unavailable"),
+])
+def test_stripe_version_period_is_scoped_to_one_verified_item(changes, expected, source):
+    from datetime import datetime, timezone
+    result = reporter(lambda *_: snapshot(**changes)).read(Tenant())
+    assert result["current_period_source"] == source
+    assert result["current_period_end_utc"] == (
+        datetime.fromtimestamp(expected, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        if expected is not None else None)
+    assert result["verified"] is True
+    assert result["reconciliation"]["code"] == "states_agree"
+
+
+def test_owner_api_exposes_only_safe_manual_invoice_metadata():
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        verify_cognito_admin=lambda token: VerifiedAdmin(
+            "trusted-subject", frozenset({"owner"}), True) if token == "admin" else None,
+        tenant_store=Store(), billing_reporter=reporter(lambda *_: snapshot(
+            collection_method="send_invoice", current_period_end=1796083200))))
+    client = TestClient(app)
+    endpoint = "/v1/admin/subscriptions/usr-billing"
+    assert client.get(endpoint).status_code == 401
+    assert client.get(endpoint, headers={"X-GuardOath-Key": "admin"}).status_code == 401
+    response = client.get(endpoint, headers={"X-GuardOath-Admin-Session": "admin"})
+    assert response.status_code == 200
+    data = response.json()["subscription"]
+    assert data["collection_method"] == "send_invoice"
+    assert data["current_period_source"] == "subscription"
+    assert data["reconciliation"]["code"] == "stripe_manual_invoice_collection"
+    for private in ("cus_test1234", "sub_test1234", "pm_private", "secret@example.com"):
+        assert private not in response.text
