@@ -34,7 +34,23 @@ def test_formats_are_enforced(fmt, bad, good):
     policy = Policy(application_id="demo", version="v1", rules=(Rule(checker_id="schema"),),
                     input_schema={"type": "string", "format": fmt})
     assert evaluate(policy, json.dumps(bad)).checker_results[0].status == "flagged"
-    assert evaluate(policy, json.dumps(good)).checker_results[0].status == "passed"
+    result = evaluate(policy, json.dumps(good))
+    receipt = result.checker_results[0]
+    diagnostic = ""
+    if receipt.status != "passed":
+        # Only bounded allowlisted checker metadata, never request contents,
+        # findings, provider messages or private validation values.
+        from math import isfinite
+        from guardoath.evaluate import SAFE_CHECKER_ERROR_CODES
+        code = (receipt.error_code if isinstance(receipt.error_code, str)
+                and receipt.error_code in SAFE_CHECKER_ERROR_CODES else "other")
+        duration = receipt.latency_ms
+        duration = (round(duration, 1) if type(duration) in (int, float)
+                    and isfinite(duration) and duration >= 0 else "unknown")
+        status = receipt.status if receipt.status in (
+            "passed", "flagged", "error", "skipped", "unsupported") else "other"
+        diagnostic = f"schema:{status}:{code}@{duration}ms"
+    assert receipt.status == "passed", diagnostic
 
 
 def test_unknown_schema_format_cannot_silently_pass():
