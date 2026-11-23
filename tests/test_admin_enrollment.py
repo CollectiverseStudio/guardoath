@@ -7,6 +7,7 @@ import base64
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 import json
+import re
 from threading import Barrier, Lock
 
 from cryptography.hazmat.primitives import hashes
@@ -242,9 +243,32 @@ def test_real_signed_bootstrap_enrolls_but_never_authorizes_admin(h, monkeypatch
     assert h.service.finish(result["enrollment_ticket"], "123456") is False
     assert h.begin() is None
     saved = json.dumps(h.db.items)
-    assert all(value not in saved for value in (SEED, h.token, EMAIL, PASSWORD, "123456"))
+    # Cryptographic nonces, HMACs and event IDs are hex. A six-digit OTP-shaped
+    # substring can naturally occur in their random bytes without storing an OTP.
+    # Assert confidentiality on the signed document's typed, complete schema.
+    assert all(value not in saved for value in (SEED, h.token, EMAIL, PASSWORD))
     assert all(set(item) == {"event_id", "enrollment_control"} for item in h.db.items.values())
+    for item in h.db.items.values():
+        assert item["event_id"]["S"].startswith("enrollment-control:")
+        control = json.loads(item["enrollment_control"]["S"])
+        assert set(control) == DynamoEnrollmentState.FIELDS
+        assert control["kind"] == DynamoEnrollmentState.KIND
+        assert control["subject"] == SUB
+        assert re.fullmatch(r"[a-f0-9]{32}", control["nonce"])
+        assert re.fullmatch(r"[a-f0-9]{64}", control["signature"])
+        assert all("123456" not in str(value) for name, value in control.items()
+                   if name not in {"nonce", "signature"})
 
+
+def test_signed_nonce_can_contain_otp_shaped_digits_without_persisting_an_otp(h):
+    # Force the rare entropy collision behind a raw six-character substring
+    # assertion. The signed control stores a nonce, never the verification code.
+    record = h.service._state.reserve(SUB, "123456" + "a" * 26, h.now[0])
+    assert record is not None
+    assert h.record() == record
+    assert "123456" in json.dumps(h.db.items)
+    assert set(record) == DynamoEnrollmentState.FIELDS
+    assert all(name not in record for name in ("otp", "code", "password", "token", "email", "setup_key"))
 
 @pytest.mark.parametrize("changes", [
     {"client_id": "customerclient"}, {"iss": "https://wrong-pool.invalid"},
