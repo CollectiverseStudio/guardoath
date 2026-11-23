@@ -182,8 +182,13 @@ jobs:
       # test still fails if its actual evaluation remains incomplete.
       - name: Statistical drift two-stage acceptance (isolated strict deadlines)
         run: python -m pytest -q tests/test_statistical_drift_tenant.py
+      # Catalog JSON-schema boundaries still enforce the same checker budget.
+      # Run the unchanged module in a clean Windows pytest process before the
+      # ~22k-case sweep; a real timeout continues to fail this isolated step.
+      - name: Catalog JSON boundary deadlines (isolated strict deadlines)
+        run: python -m pytest -q tests/test_catalog_partial_boundaries.py
       - name: Remaining full suite on Windows (includes launcher tests)
-        run: python -m pytest -q --ignore=tests/test_data_quality.py --ignore=tests/test_field_comparisons_inventory.py --ignore=tests/test_statistical_drift_tenant.py
+        run: python -m pytest -q --ignore=tests/test_data_quality.py --ignore=tests/test_field_comparisons_inventory.py --ignore=tests/test_statistical_drift_tenant.py --ignore=tests/test_catalog_partial_boundaries.py
 
   optional-aws-adapter:
     runs-on: ubuntu-latest

@@ -1053,7 +1053,12 @@ test("owner Billing distinguishes unknown cancellation from an explicit not-sche
   const action = page.locator("#tenant-rows tr").filter({hasText:"sample-studio"})
     .getByRole("button",{name:"Verify Stripe",exact:true});
   await action.click();
+  await expect(page.locator("#section-billing")).toBeVisible();
   await expect(page.locator("#billing-details")).toContainText("Cancellation schedule: Unavailable");
+  // Verify Stripe opens the Billing section; return to Tenants to inspect again.
+  // Do not click an action in a hidden table or weaken the provider assertion.
+  await page.locator("#nav-tenants").click();
+  await expect(page.locator("#section-tenants")).toBeVisible();
   await action.click();
   await expect(page.locator("#billing-details")).toContainText("Cancellation schedule: Not scheduled");
 });
