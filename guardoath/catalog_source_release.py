@@ -7,6 +7,7 @@ exact-source CI, a non-forced commit, rollback and 15 live acceptance checks.
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager, nullcontext
 from copy import deepcopy
 import json
 import os
@@ -17,8 +18,7 @@ import tempfile
 from guardoath.admin_catalog import read_catalog, published_catalog
 from guardoath.admin_catalog_preview import _fingerprint
 from guardoath.catalog_metadata import (
-    FILE, _safe_text, published_version, load_release_history,
-    validate_release_history,
+    FILE, _safe_text, published_version, validate_release_history,
 )
 
 FORMAT = "guardoath.reviewed-catalog-metadata-source-plan.v1"
@@ -216,45 +216,90 @@ def candidate_rollback_release(export: dict, provider, history: dict) -> dict:
         raise SourceReleaseConflict("Reviewed source reversal unavailable") from exc
 
 
+@contextmanager
+def _source_write_lock(path: Path):
+    """Cooperative same-directory exclusive writer reservation, never stolen.
+
+    Non-cooperating source edits are additionally detected by comparing the
+    initial bytes immediately before publication. An abandoned lock requires
+    operator inspection; silently removing it could race another writer.
+    """
+    if path.is_symlink() or not path.is_file():
+        raise SourceReleaseConflict("Tracked catalog source file unavailable")
+    lock = path.with_name("." + path.name + ".write.lock")
+    try:
+        fd = os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except OSError as exc:
+        raise SourceReleaseConflict("Catalog source writer lock unavailable") from exc
+    try:
+        os.close(fd)
+        yield
+    finally:
+        # Do not auto-recover a pre-existing lock; it may belong to a live writer.
+        lock.unlink()
+
+
+def _source_snapshot(path: Path) -> tuple[bytes, dict]:
+    if path.is_symlink():
+        raise SourceReleaseConflict("Tracked catalog source file unavailable")
+    raw = path.read_bytes()
+    if len(raw) > 262144:
+        raise SourceReleaseConflict("Oversized catalog source history")
+    try:
+        history = validate_release_history(json.loads(raw))
+    except (ValueError, UnicodeError, TypeError) as exc:
+        raise SourceReleaseConflict("Published source history unavailable") from exc
+    return raw, history
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Propose a source-only GuardOath catalog metadata release")
     parser.add_argument("--plan", type=Path, required=True,
                         help="Reviewed owner Catalog JSON export (not a signature)")
     parser.add_argument("--write", action="store_true",
-                        help="Atomically update the tracked source release file; never deploy")
+                        help="Compare-and-swap the tracked source release file under an exclusive lock; never deploy")
     parser.add_argument("--revert-last", action="store_true",
                         help="Require a fresh reviewed export that exactly reverses the latest shipped metadata release")
     parser.add_argument("--confirm-registry-version", default="",
                         help="Required version to prevent accidental source modifications")
     args = parser.parse_args(argv)
-    if args.plan.stat().st_size > 65536:
+    # Bound the actual read, not just a racing stat result; never load an
+    # arbitrarily large untrusted source plan into the operator process.
+    with args.plan.open("rb") as plan_file:
+        plan_bytes = plan_file.read(65537)
+    if len(plan_bytes) > 65536:
         parser.error("Oversized review export")
-    export = json.loads(args.plan.read_text(encoding="utf-8"))
+    export = json.loads(plan_bytes)
     prepare = candidate_rollback_release if args.revert_last else candidate_release
-    updated = prepare(export, published_catalog, load_release_history())
-    version = published_version(updated)
-    if args.write:
-        if args.confirm_registry_version != version:
-            parser.error("Explicit proposed registry version required for source write")
-        encoded = json.dumps(updated, indent=2, ensure_ascii=True, sort_keys=True) + "\n"
-        temp = None
-        try:
-            with tempfile.NamedTemporaryFile(
-                    mode="w", encoding="utf-8", dir=FILE.parent,
-                    prefix=".catalog-release-", delete=False) as f:
-                temp = Path(f.name)
-                f.write(encoded)
-                f.flush()
-                os.fsync(f.fileno())
-            os.replace(temp, FILE)
-        finally:
-            if temp is not None and temp.exists():
-                temp.unlink()
+    with (_source_write_lock(FILE) if args.write else nullcontext()):
+        original_bytes, history = _source_snapshot(FILE)
+        updated = prepare(export, published_catalog, history)
+        version = published_version(updated)
+        if args.write:
+            if args.confirm_registry_version != version:
+                parser.error("Explicit proposed registry version required for source write")
+            encoded = json.dumps(updated, indent=2, ensure_ascii=True, sort_keys=True) + "\n"
+            temp = None
+            try:
+                with tempfile.NamedTemporaryFile(
+                        mode="w", encoding="utf-8", dir=FILE.parent,
+                        prefix=".catalog-release-", delete=False) as f:
+                    temp = Path(f.name)
+                    f.write(encoded)
+                    f.flush()
+                    os.fsync(f.fileno())
+                # Refuse an out-of-band source edit rather than overwriting
+                # another writer's review, even when its version stayed equal.
+                if FILE.read_bytes() != original_bytes or FILE.is_symlink():
+                    raise SourceReleaseConflict("Catalog source changed during release; no write")
+                os.replace(temp, FILE)
+            finally:
+                if temp is not None and temp.exists():
+                    temp.unlink()
     print("Catalog source proposal version", version,
           "- source file", str(FILE),
           "- written" if args.write else "- DRY RUN; no file changed",
           "- NOT approved or deployed")
-
 
 if __name__ == "__main__":
     main()

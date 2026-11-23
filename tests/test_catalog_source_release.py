@@ -294,3 +294,89 @@ def test_rollback_does_not_approve_unrelated_new_description_or_partial_inverse(
     assert set(first["releases"][0]["changes"]) == {"title", "use_case"}
     with pytest.raises(SourceReleaseConflict):
         candidate_rollback_release(partial, lambda: deepcopy(dual_source), first)
+
+
+def _offline_release_cli(monkeypatch, tmp_path):
+    """Use the real source tool with an isolated tracked-history file."""
+    import json
+    import guardoath.catalog_source_release as release
+
+    source = tmp_path / "catalog_metadata_releases.json"
+    source.write_text(json.dumps(BASE, indent=2) + "\n", encoding="utf-8")
+    plan = tmp_path / "reviewed-plan.json"
+    plan.write_text(json.dumps(export_plan()), encoding="utf-8")
+    monkeypatch.setattr(release, "FILE", source)
+    monkeypatch.setattr(release, "published_catalog", lambda: deepcopy(SOURCE))
+    lock = source.with_name("." + source.name + ".write.lock")
+    return release, source, plan, lock
+
+
+def test_offline_catalog_release_cli_dry_run_and_exclusive_atomic_write(monkeypatch, tmp_path):
+    import json
+
+    release, source, plan, lock = _offline_release_cli(monkeypatch, tmp_path)
+    original = source.read_bytes()
+    args = ["--plan", str(plan), "--confirm-registry-version", "4"]
+    release.main(args)
+    assert source.read_bytes() == original
+    assert not lock.exists()
+    release.main([*args, "--write"])
+    written = json.loads(source.read_text(encoding="utf-8"))
+    assert written == candidate_release(export_plan(), lambda: deepcopy(SOURCE), deepcopy(BASE))
+    assert written["releases"][0]["registry_version"] == "4"
+    assert not lock.exists()
+    assert not list(tmp_path.glob(".catalog-release-*"))
+
+
+def test_offline_catalog_release_cli_refuses_concurrent_writer_without_edit(monkeypatch, tmp_path):
+    release, source, plan, lock = _offline_release_cli(monkeypatch, tmp_path)
+    original = source.read_bytes()
+    lock.write_text("another-writer", encoding="ascii")
+    with pytest.raises(SourceReleaseConflict, match="lock unavailable"):
+        release.main(["--plan", str(plan), "--write", "--confirm-registry-version", "4"])
+    assert source.read_bytes() == original
+    assert lock.read_text(encoding="ascii") == "another-writer"
+    assert not list(tmp_path.glob(".catalog-release-*"))
+
+
+def test_offline_catalog_release_cli_rejects_out_of_band_change_without_overwrite(monkeypatch, tmp_path):
+    release, source, plan, lock = _offline_release_cli(monkeypatch, tmp_path)
+    initial = source.read_bytes()
+    competing_bytes = b'{  "base_registry_version": "3", "releases": [] }\n'
+    assert competing_bytes != initial
+
+    def concurrent_source():
+        source.write_bytes(competing_bytes)
+        return deepcopy(SOURCE)
+
+    monkeypatch.setattr(release, "published_catalog", concurrent_source)
+    with pytest.raises(SourceReleaseConflict, match="changed during release"):
+        release.main(["--plan", str(plan), "--write", "--confirm-registry-version", "4"])
+    assert source.read_bytes() == competing_bytes
+    assert not lock.exists()
+    assert not list(tmp_path.glob(".catalog-release-*"))
+
+
+def test_offline_catalog_release_cli_cleans_lock_and_temp_on_publish_failure(monkeypatch, tmp_path):
+    release, source, plan, lock = _offline_release_cli(monkeypatch, tmp_path)
+    original = source.read_bytes()
+
+    def refused_replace(*args):
+        raise OSError("injected source publish failure")
+
+    monkeypatch.setattr(release.os, "replace", refused_replace)
+    with pytest.raises(OSError, match="injected"):
+        release.main(["--plan", str(plan), "--write", "--confirm-registry-version", "4"])
+    assert source.read_bytes() == original
+    assert not lock.exists()
+    assert not list(tmp_path.glob(".catalog-release-*"))
+
+
+def test_offline_catalog_release_cli_bounds_actual_plan_read_before_source_write(monkeypatch, tmp_path):
+    release, source, plan, lock = _offline_release_cli(monkeypatch, tmp_path)
+    original = source.read_bytes()
+    plan.write_bytes(b"x" * 65537)
+    with pytest.raises(SystemExit):
+        release.main(["--plan", str(plan), "--write", "--confirm-registry-version", "4"])
+    assert source.read_bytes() == original
+    assert not lock.exists()

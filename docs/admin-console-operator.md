@@ -1001,3 +1001,24 @@ and existing entitlement checks still run first.
 
 ## Verified invoice next-attempt observations
 Owner **Tenants → Invoices** now shows a first-page-only count of open positive-balance automatic-collection invoices with a provider-recorded earlier attempt and next-attempt timestamp. It never infers payment failure, overdue debt, a future retry or recognized revenue from this signal. Missing attempt metadata and manually invoiced or paid rows do not qualify. The browser independently recomputes and fails closed on inconsistent count data. No new Stripe call, financial write or AWS spend.
+
+
+## Concurrent-safe source-controlled catalog metadata release
+
+The owner Catalog review UI produces a metadata-only source plan after a signed
+draft, signed review, source fingerprint check and inverse/rollback preview.
+Run python -m guardoath.catalog_source_release --plan reviewed-plan.json as a
+read-only dry run. A source candidate may be written only with --write and
+--confirm-registry-version NEXT_VERSION, followed by independent source review,
+benign/adversarial/timeout tests, exact-SHA CI, guarded deployment and the
+15 live checks. The command does not publish to production or authorize a reviewer.
+
+The offline source writer now acquires an exclusive same-directory lock before
+reading the tracked release history and computing the next version. A second
+cooperating writer fails closed. It compares the exact original history bytes
+again before atomic replacement, refusing even a same-version out-of-band edit
+rather than overwriting other work. Failures clean up its temporary source file
+and its lock. A pre-existing lock is never stolen or automatically removed:
+first confirm no writer remains active and inspect the source state before any
+manual cleanup. This cooperative source-code guard is not a substitute for
+Git main-SHA synchronization, independent source review, or an AWS transaction.
