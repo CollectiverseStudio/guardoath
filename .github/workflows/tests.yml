@@ -99,9 +99,19 @@ jobs:
         env:
           PLAYWRIGHT_CHANNEL: chrome
       - name: Authenticated guarded model invocation browser acceptance
-        run: npx playwright test --config playwright.invocations.config.js
+        run: |
+          mkdir -p .guardoath-reports/invocation-guidance
+          npx playwright test --config playwright.invocations.config.js
         env:
           PLAYWRIGHT_CHANNEL: chrome
+          GUARDOATH_INVOCATION_SCREENSHOTS: .guardoath-reports/invocation-guidance
+      - name: Retain synthetic model-guidance visual acceptance
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: model-guidance-visual-${{ github.sha }}
+          path: .guardoath-reports/invocation-guidance/*.png
+          if-no-files-found: error
+          retention-days: 7
       - name: Retain exact browser failure context without customer secrets
         if: failure()
         uses: actions/upload-artifact@v4.6.2

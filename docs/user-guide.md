@@ -61,13 +61,23 @@ apply before and after the model. A deliberately configured Input Flag can keep
 requests for help accessible, while specific method-seeking Input rules and
 harmful Output rules can Block. See the
 [employee-chat example and coverage limits](guarded-model-invocations.md#employee-chat-and-human-safety-routing).
-A blocked model answer is withheld; your chat must supply its reviewed supportive
-fallback. The endpoint does not automatically notify another person.
+A blocked model answer is withheld. The Models panel now shows fixed
+**GuardOath guidance** separately from **Released answer**: relevant recorded
+safety findings can select conditional support guidance, while incomplete
+validation, exhausted limits and uncertain outcomes get their own clear status
+messages. The API supplies the same optional `notice` on invocation responses.
+This guidance is not generated model text, a new risk assessment or a notification
+to another person. Your chat can display it and add reviewed local help options.
+Receipt refresh remains a metadata-only read and cannot recover a lost answer or
+generate another one. See [notice kinds and integration behavior](guarded-model-invocations.md#static-application-guidance).
 
 Operators can use the [hosted model acceptance check](model-invocation-live-acceptance.md)
 to inspect an existing connection without generating text, then perform one
 explicitly approved synthetic call and correlate its durable receipt. Reusing a
 request ID does not create another model generation.
+The [numbered production acceptance manifest](production-live-acceptance.md)
+defines the fifteen live release areas and distinguishes source/configuration
+checks from actual customer, owner-MFA and provider execution evidence.
 
 Your application can still call its own AI/agent between the independent Input
 and Output validation endpoints, where you supply proposed output. Those

@@ -19,6 +19,7 @@ from guardoath.checkers import default_checkers
 from guardoath.hosted import TenantService
 from guardoath.invocations.adapters import ProviderResult
 from guardoath.invocations.contracts import ConnectionInfo, ModelInfo
+from guardoath.invocations.notices import NOTICE_MESSAGES
 from guardoath.invocations.service import ConnectionBinding, InvocationGateway
 from guardoath.invocations.store import SQLiteInvocationStore
 from guardoath.tenant_record import TenantRecord, new_key, usage_month
@@ -147,7 +148,8 @@ def test_flagged_risk_reaches_support_and_keeps_real_findings(safety_application
     assert application.tenants.store.get(APPLICATION).used(usage_month()) == 2
     application.assert_private_receipts(result, message, caplog)
     replay = application.invoke(message)
-    assert replay == {"receipt": receipt, "response": None, "replayed": True}
+    assert replay == {"receipt": receipt, "response": None, "replayed": True,
+                      "notice": {"kind": "receipt_only", "message": NOTICE_MESSAGES["receipt_only"]}}
     assert len(application.provider.calls) == 1
 
 

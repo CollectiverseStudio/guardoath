@@ -13,6 +13,7 @@ from guardoath.tenant_record import TenantRecord, new_key, usage_month
 from guardoath.tenant_store import MemoryTenantStore
 from guardoath.invocations.adapters import ProviderResult
 from guardoath.invocations.contracts import ConnectionInfo, ModelInfo
+from guardoath.invocations.notices import NOTICE_MESSAGES
 from guardoath.invocations.service import ConnectionBinding, InvocationGateway
 from guardoath.invocations.store import SQLiteInvocationStore, InvocationStoreUnavailable
 
@@ -122,7 +123,8 @@ def test_original_releases_checked_text_and_restart_replays_only_durable_receipt
     assert client.get("/v1/interactions", headers={"X-GuardOath-Key": key}).json()["items"] == [receipt]
     second, _, other_provider, _, _, key2, _ = setup()
     replay = post(second, key2).json()
-    assert replay == {"receipt": receipt, "response": None, "replayed": True}
+    assert replay == {"receipt": receipt, "response": None, "replayed": True,
+                      "notice": {"kind": "receipt_only", "message": NOTICE_MESSAGES["receipt_only"]}}
     assert other_provider.calls == []
     raw = (tmp_path / "interactions.sqlite3").read_bytes()
     for private in (b"Synthetic request", b"Approved answer", key.encode()):

@@ -69,8 +69,9 @@ bounded catalog/receipt status values. It omits credentials, application/request
 IDs, provider identifiers, prompt, answer and raw exception bodies. A reported
 `post_attempted` is an HTTP attempt, not proof that a model ran.
 
-This is one focused operational check. It does not complete the 15 production
-acceptance checks, demonstrate broad safety coverage, prove tenant isolation
+This is one focused operational check. It supplies part of LIVE-13 in the
+[numbered production acceptance manifest](production-live-acceptance.md).
+It does not complete the 15 production acceptance checks, demonstrate broad safety coverage, prove tenant isolation
 across live accounts, test agents/tools/streaming, verify financial charges or
 authorize resource changes. It requires an already approved customer connection;
 the tool does not create one or enable provider spending.

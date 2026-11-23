@@ -11,6 +11,7 @@ from typing import Literal
 from pydantic import Field, field_validator, model_validator
 
 from guardoath.models import Action, Contract
+from .notices import NOTICE_MESSAGES, NoticeKind, notice_payload
 
 
 ID_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$"
@@ -133,16 +134,37 @@ class InvocationReceipt(Contract):
         return self
 
 
+class InvocationNotice(Contract):
+    kind: NoticeKind
+    message: str = Field(min_length=1, max_length=600, strict=True,
+                         description="Static GuardOath application guidance, not model text or a clinical assessment.")
+
+    @model_validator(mode="after")
+    def canonical_message(self):
+        if self.message != NOTICE_MESSAGES[self.kind]:
+            raise ValueError("Invocation notice must use its canonical static message")
+        return self
+
+
 class InvocationResponse(Contract):
     receipt: InvocationReceipt
     response: str | None = Field(default=None, max_length=MAX_OUTPUT_BYTES, strict=True,
                                  description="Only checked text from this original request. Receipts and retries never retain or regenerate it.")
     replayed: bool = Field(default=False, strict=True)
+    notice: InvocationNotice | None = Field(default=None,
+        description="Optional static GuardOath guidance derived from the receipt; never a substitute for approved model output.")
 
     @model_validator(mode="after")
     def released_only_when_complete(self):
         if self.response is not None and (self.replayed or self.receipt.status != "completed"):
             raise ValueError("A response is available only with an original completed invocation")
+        payload = notice_payload(self.receipt, replayed=self.replayed, response_available=self.response is not None)
+        expected = InvocationNotice.model_validate(payload) if payload is not None else None
+        if self.notice is not None and self.notice != expected:
+            raise ValueError("Invocation notice does not match the recorded response state")
+        # Populate the presentation field once during frozen-model construction.
+        # The stored receipt and the existing model-answer release rule are unchanged.
+        object.__setattr__(self, "notice", expected)
         return self
 
 

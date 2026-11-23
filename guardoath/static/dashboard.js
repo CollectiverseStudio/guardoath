@@ -2786,6 +2786,99 @@ const isInvocationId = value => typeof value === "string" && invocationIdPattern
 const invocationStatuses = new Set(["admitted", "input_checked", "dispatch_intent", "provider_result",
   "completed", "input_blocked", "input_incomplete", "output_blocked", "output_incomplete",
   "provider_withheld", "provider_rejected", "outcome_unknown", "quota_exceeded", "unavailable"]);
+const invocationNoticeKinds = new Set(["safety_support", "input_blocked", "output_blocked", "validation_incomplete",
+  "unavailable", "outcome_unknown", "quota_exceeded", "receipt_only", "not_completed"]);
+const invocationNoticeMessages = Object.freeze({
+  "safety_support": "No model answer is being shown. If this relates to a real concern about your safety or someone else's, reach out to someone you trust or an appropriate local support service. If there is immediate danger, contact local emergency services. GuardOath has not contacted anyone.",
+  "input_blocked": "Your saved Input policy blocked this request before a model was called. No model answer is available. Review the receipt for the applicable checks.",
+  "output_blocked": "Your saved Output policy withheld the model's answer. No rejected model text is shown. Review the receipt for the applicable checks.",
+  "validation_incomplete": "GuardOath could not complete the required validation, so no model answer is being shown. Keep this request ID and refresh its receipt before starting a separate request.",
+  "unavailable": "No model answer could be released for this request. Keep this request ID and review the receipt for its status. Do not retry generation automatically.",
+  "outcome_unknown": "The model's outcome is uncertain. It may have run and consumed quota. Keep this request ID and refresh its receipt; do not start another generation to recover this answer.",
+  "quota_exceeded": "This request could not finish within the configured allowance. No model answer is being shown. Review the receipt and the application's usage limits.",
+  "receipt_only": "Stored receipts contain no model answer. Viewing or replaying this receipt does not start another model call. Keep the request ID and inspect the recorded status before starting a separate request.",
+  "not_completed": "No completed, checked model answer is available. Keep this request ID and refresh its receipt before starting another request."
+});
+const invocationSupportFindings = Object.freeze({
+  "human_safety": [
+    "human_safety.intent_to_hurt_someone",
+    "human_safety.lethal_dose_request",
+    "human_safety.output_attack_planning",
+    "human_safety.output_discourages_crisis_help",
+    "human_safety.output_encourages_self_harm",
+    "human_safety.output_lethal_dose",
+    "human_safety.output_self_harm_method",
+    "human_safety.self_harm_method_request",
+    "human_safety.self_harm_statement",
+    "human_safety.suicidal_statement",
+    "human_safety.weapon_to_hurt"
+  ],
+  "harmful_content": [
+    "harmful_content.bomb_threat",
+    "harmful_content.hire_violence",
+    "harmful_content.mass_shooting_threat",
+    "harmful_content.output_violent_encouragement",
+    "harmful_content.output_weapon_instructions",
+    "harmful_content.poison_a_person",
+    "harmful_content.threat_to_family",
+    "harmful_content.threat_to_hurt_you"
+  ]
+});
+function fallbackInvocationNotice(receipt) {
+  // Receipt recovery does not include presentation fields. Rebuild the same
+  // preset from recorded evidence; never inspect or classify prompt text here.
+  let kind;
+  const status = receipt.status;
+  if (status === "completed") kind = "receipt_only";
+  else if (["input_blocked", "output_blocked", "input_incomplete", "output_incomplete"].includes(status)) {
+    const support = [receipt.input_check, receipt.output_check].some(check => check && check.simulated === false
+      && Object.entries(invocationSupportFindings).some(([checker, findings]) =>
+        Array.isArray(check.checker_ids) && check.checker_ids.includes(checker)
+        && Array.isArray(check.checker_results) && check.checker_results.some(result =>
+          result && result.checker_id === checker && result.status === "flagged")
+        && Array.isArray(check.finding_ids) && check.finding_ids.some(id => findings.includes(id))));
+    kind = support ? "safety_support" : status.endsWith("incomplete") ? "validation_incomplete" : status;
+  } else if (status === "outcome_unknown" || status === "quota_exceeded") kind = status;
+  else if (["provider_withheld", "provider_rejected", "unavailable"].includes(status)) kind = "unavailable";
+  else kind = "not_completed";
+  return {kind, message: invocationNoticeMessages[kind]};
+}
+function validInvocationNotice(notice, receipt = null, response = null, replayed = false) {
+  if (notice === undefined || notice === null) return true;
+  const valid = typeof notice === "object" && !Array.isArray(notice)
+    && Object.keys(notice).length === 2 && Object.hasOwn(notice, "kind") && Object.hasOwn(notice, "message")
+    && invocationNoticeKinds.has(notice.kind) && typeof notice.message === "string"
+    && notice.message.trim().length > 0 && notice.message.length <= 600
+    && notice.message === invocationNoticeMessages[notice.kind];
+  if (!valid || !receipt) return valid;
+  return !(response !== null && !replayed && releasableInvocation(receipt))
+    && notice.kind === fallbackInvocationNotice(receipt).kind;
+}
+function clearInvocationNotice() {
+  $("invocation-notice").hidden = true;
+  delete $("invocation-notice").dataset.kind;
+  $("invocation-notice-message").textContent = "";
+}
+function displayInvocationNotice(notice) {
+  clearInvocationNotice();
+  if (!notice || !validInvocationNotice(notice)) return;
+  // A server-defined preset is not a model answer. Never interpret its text as
+  // markup or place it in the checked model-output or receipt evidence fields.
+  $("invocation-notice-message").textContent = inspectionText(notice.message);
+  $("invocation-notice").dataset.kind = notice.kind;
+  $("invocation-notice").hidden = false;
+}
+const invocationLocalNoticeMessages = Object.freeze({
+  not_sent: "No model request was sent. Review the request and saved policy settings before trying again.",
+  receipt_unavailable: "This refresh could not verify the stored receipt. Keep the original request ID and check again or contact your operator. The refresh made no model call and cannot recover a lost answer. Do not automatically start a new generation."
+});
+function displayInvocationLocalNotice(kind) {
+  clearInvocationNotice();
+  if (!Object.hasOwn(invocationLocalNoticeMessages, kind)) return;
+  $("invocation-notice-message").textContent = invocationLocalNoticeMessages[kind];
+  $("invocation-notice").dataset.kind = kind;
+  $("invocation-notice").hidden = false;
+}
 const invocationReadiness = {
   ready: "Approved connections are configured. Availability at the provider is confirmed only by a successful call. GuardOath checks the message and answer using this tenant’s saved policy.",
   runtime_unconfigured: "Model invocation is not configured on this deployment. An operator must configure provider connections and durable receipt storage before a model can run. Manual validation below is available independently.",
@@ -2804,6 +2897,7 @@ function invocationPrincipal() {
 }
 function clearInvocationReceipt() {
   invocation.receipt = null; invocation.receiptOwner = null;
+  clearInvocationNotice();
   $("invocation-answer-panel").hidden = true; $("invocation-answer").textContent = "";
   $("invocation-receipt-summary").hidden = true;
   for (const id of ["interaction-id", "request-id", "target", "check-decisions", "dispatch", "policy", "usage"])
@@ -3052,7 +3146,7 @@ function releasableInvocation(receipt) {
     && [receipt.input_check, receipt.output_check].every(check => check && check.simulated === false
       && check.evaluation_status === "complete" && ["allow", "flag", "redact"].includes(check.decision));
 }
-function displayInvocationReceipt(receipt, isCurrent, response = null, replayed = false) {
+function displayInvocationReceipt(receipt, isCurrent, response = null, replayed = false, notice = null) {
   if (!isCurrent() || !validInvocationReceipt(receipt)) throw new Error("Invalid interaction receipt.");
   clearInvocationReceipt();
   const safe = JSON.parse(inspectionText(JSON.stringify(receipt)));
@@ -3083,7 +3177,7 @@ function displayInvocationReceipt(receipt, isCurrent, response = null, replayed 
   if (response !== null && !replayed && releasableInvocation(receipt)) {
     $("invocation-answer").textContent = inspectionText(response);
     $("invocation-answer-panel").hidden = false;
-  }
+  } else displayInvocationNotice(notice || fallbackInvocationNotice(receipt));
 }
 async function invokeSelectedModel() {
   if (!synchronizeInvocationOwner() || invocation.busy || busy || tenantSaving || invocation.sent) return;
@@ -3121,9 +3215,10 @@ async function invokeSelectedModel() {
         || data.receipt.target.connection_version !== connection.version || data.receipt.target.provider !== connection.provider
         || data.receipt.target.provider_model_id !== model.provider_model_id || data.receipt.target.region !== connection.region
         || !(data.response === null || typeof data.response === "string" && new TextEncoder().encode(data.response).length <= 32000)
-        || data.response !== null && (data.replayed || !releasableInvocation(data.receipt)))
+        || data.response !== null && (data.replayed || !releasableInvocation(data.receipt))
+        || !validInvocationNotice(data.notice, data.receipt, data.response, data.replayed))
       throw new Error("The invocation response did not match this request or its release requirements. No answer was displayed. Refresh the stored receipt.");
-    displayInvocationReceipt(data.receipt, owner, data.response, data.replayed);
+    displayInvocationReceipt(data.receipt, owner, data.response, data.replayed, data.notice);
   } catch (error) {
     if (invocation !== work || !principal()) return;
     $("invocation-error").textContent = work.sent
@@ -3132,6 +3227,8 @@ async function invokeSelectedModel() {
     invocationStatus(work.sent ? "Receipt needed" : "Not sent", work.sent
       ? "The provider may have received this request. Its identifier is preserved; Refresh receipt performs a read without another model call."
       : error.message || "No invocation was sent.", work.sent ? "unknown" : "");
+    if (work.sent) displayInvocationNotice({kind: "outcome_unknown", message: invocationNoticeMessages.outcome_unknown});
+    else displayInvocationLocalNotice("not_sent");
   } finally {
     if (invocation === work) { work.busy = false; buttons(); }
     else refreshInvocationControls();
@@ -3163,8 +3260,11 @@ async function refreshInvocationReceipt(interactionId = null) {
     }
     displayInvocationReceipt(receipt, owner);
   } catch (error) {
-    if (invocation === work && owner()) $("invocation-error").textContent = error instanceof InvocationDisplayError
-      ? error.message : "The receipt could not be retrieved. No model call was made by this refresh.";
+    if (invocation === work && owner()) {
+      $("invocation-error").textContent = error instanceof InvocationDisplayError
+        ? error.message : "The receipt could not be retrieved. No model call was made by this refresh.";
+      displayInvocationLocalNotice("receipt_unavailable");
+    }
   } finally { if (invocation === work) { work.busy = false; buttons(); } else refreshInvocationControls(); }
 }
 async function loadInvocationHistory() {

@@ -140,9 +140,11 @@ policy to configure deliberately, not a new default applied to customer records:
 Configure these actions in the existing Policy section before using **Run a model
 through GuardOath**. A Flag is a recorded finding that permits continuation. It
 does not notify a person, arrange assistance, or guarantee a supportive model
-answer. When output is withheld or generation fails, the customer's chat must
-provide its own reviewed supportive message and appropriate local help options;
-this API currently returns `response: null`, not an automatic crisis response.
+answer. When output is withheld or generation fails, `response` remains `null`.
+The response now also supplies static GuardOath `notice` guidance as described
+below. A customer's chat can display that notice separately and supply its own
+reviewed, appropriate local help options; the notice is not a generated crisis
+response, clinical assessment or human escalation.
 
 `tests/test_invocation_human_safety.py` exercises actual hosted authentication,
 tenant policy, both production wording checkers, the shared Engine and durable
@@ -152,6 +154,52 @@ findings, benign support examples, saved Off, and content-free receipt recovery.
 It does not establish live inference, semantic or multilingual accuracy, clinical
 assessment, reliable intent detection, or protection for every paraphrase. These
 checks match known wording; quoted or educational material can also match.
+
+### Static application guidance
+
+An invocation POST response includes optional `notice: {kind, message}` alongside
+`receipt`, `response` and `replayed`. `message` is one of GuardOath's fixed,
+bounded plain-text messages. Its selection uses recorded receipt status and
+specific actual checker findings; it never reads or interpolates the submitted
+message, withheld answer, provider error, credential or arbitrary metadata.
+An original successful checked answer has `notice: null`.
+
+| Notice kind | When it applies | Application behavior |
+| --- | --- | --- |
+| `safety_support` | A blocked/incomplete Input or Output result includes a recorded, non-simulated, flagged self-harm/violence indicator from the supported rule list. | Show conditional support guidance separately from model text. It suggests trusted/local support and emergency services for immediate danger, and states GuardOath has contacted nobody. It does not conclude that the person is at risk. |
+| `input_blocked` | Input was blocked without those recorded support indicators. | Explain that the saved policy stopped the request before model execution. |
+| `output_blocked` | Output was blocked without those recorded support indicators. | Explain that the answer was withheld; do not show rejected text. |
+| `validation_incomplete` | Required validation did not finish and no supported recorded safety indicator selects the conditional notice. | Explain that no answer is released; retain the request ID and inspect its receipt. |
+| `outcome_unknown` | The provider outcome is uncertain. | Explain that the provider may have run and consumed quota. Recover metadata without a new generation. |
+| `quota_exceeded` | The request could not finish within its configured allowance. | Direct the application owner to the receipt and usage limits. |
+| `unavailable` | Provider rejection/withholding or another unavailable outcome. | Explain that no answer could be released and automatic regeneration is inappropriate. |
+| `receipt_only` | A completed interaction is viewed without its original answer, including replay. | Explain that receipts retain no answer and viewing them does not generate again. |
+| `not_completed` | Other nonterminal interaction states. | Preserve the ID and inspect the receipt before a separate request. |
+
+The **GuardOath guidance** panel renders this text separately from **Released
+answer**, using text content rather than HTML. The browser checks canonical
+message/state consistency and clears guidance on a new request or a changed
+tenant/session. Local preflight failure and failed receipt refresh have their
+own fixed application messages; raw exception strings do not become guidance.
+An unverified or malformed response never becomes an accepted model answer.
+
+Receipt GETs and durable ledger documents are unchanged and contain no `notice`.
+The dashboard reconstructs the same fixed guidance from verified receipt
+metadata during recovery, with parity tests against the server's message and
+finding lists. The guidance is presentation, not an additional signed finding,
+policy action, detector, stored conversation or authorization to release text.
+Clients that permit additional response fields can ignore the optional field;
+strict response decoders must add `notice` to their accepted schema. A client
+displaying it must continue to treat `response`, completion status and replay
+rules as authoritative for model output. Keep the original request ID after a
+transport error; a new ID can cause another billable generation.
+
+The support wording is conditional and deliberately omits a universal telephone
+number because deployment locale is unknown. Organizations can review local help
+options using authoritative resources such as
+[SAMHSA's crisis-help guidance](https://www.samhsa.gov/find-support/in-crisis) and
+[988 Lifeline's guidance for helping someone else](https://988lifeline.org/Help%20Someone%20Else/).
+This product does not contact those services or transfer an employee's message.
 
 ### Durable dispatch and receipt accounting
 

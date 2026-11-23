@@ -231,6 +231,11 @@ a:focus-visible,summary:focus-visible,.api-code:focus-visible{outline:3px solid 
 .invocation-outcome h3{font-size:16px;margin:0}
 .invocation-outcome .section-top{gap:10px;flex-wrap:wrap}
 .invocation-outcome>p{line-height:1.6}
+.invocation-notice{margin:16px 0;padding:14px;border:1px solid #cbd9eb;border-left:4px solid #52759d;border-radius:7px;background:#f0f5fc;overflow-wrap:anywhere}
+.invocation-notice[data-kind="safety_support"]{background:#f0f8f5;border-color:#b9d9cd;border-left-color:#357b69}
+.invocation-notice h3{font-size:14px;margin:0 0 8px}
+.invocation-notice p{font-size:14px;line-height:1.65;margin:8px 0;white-space:pre-wrap}
+.invocation-notice .hint{font-size:12px;margin-bottom:0;color:#4e617b}
 .invocation-receipt-summary{margin:14px 0}
 .invocation-receipt-summary>div{display:grid;grid-template-columns:125px minmax(0,1fr);gap:10px;padding:6px 0;border-bottom:1px solid #e4ebf5;font-size:13px}
 .invocation-receipt-summary dt{color:#53647e}

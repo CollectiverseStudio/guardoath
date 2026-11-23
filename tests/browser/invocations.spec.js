@@ -51,7 +51,9 @@ test.beforeEach(async ({request}) => {
     expect(response.status()).toBe(200);
     const current = await response.json();
     const saved = await post(request, "/v1/tenants/current/checks", {revision: current.tenant.revision,
-      changes: {input_check_text_security: "block", output_check_text_security: "block", mode: "enforce"}}, token);
+      changes: {input_check_text_security: "block", output_check_text_security: "block",
+        input_check_human_safety: null, output_check_human_safety: null,
+        input_check_harmful_content: null, output_check_harmful_content: null, mode: "enforce"}}, token);
     expect(saved.status()).toBe(200);
   }
 });
@@ -83,6 +85,9 @@ test("an unconfigured deployment explains the actual missing runtime while keepi
   await connect(page, ALPHA, "http://127.0.0.1:8779/dashboard", false);
   await expect(page.locator("#invocation-configuration")).toContainText("not configured on this deployment");
   await expect(page.locator("#invocation-configuration")).toContainText("durable receipt storage");
+  await expect(page.locator("#invocation-guidance-explainer")).toBeVisible();
+  await expect(page.locator("#invocation-guidance-explainer")).toContainText("preset GuardOath guidance appears separately");
+  await expect(page.locator("#invocation-guidance-explainer")).toContainText("cannot retrieve a lost answer or generate another one");
   await expect(page.locator("#invocation-run")).toBeDisabled();
   await expect(page.locator("#invocation-connection option")).toHaveText(["No available connection"]);
   await expect(page.locator("#run-input")).toBeEnabled();
@@ -102,6 +107,8 @@ test("one actual authenticated invocation hashes exact bytes and releases only c
   expect(result.receipt.output_check.decision).toBe("allow");
   await expect(page.locator("#invocation-answer")).toHaveText("A checked answer from the fixture model.");
   await expect(page.locator("#invocation-answer-panel")).toBeVisible();
+  await expect(page.locator("#invocation-notice")).toBeHidden();
+  await expect(page.locator("#invocation-notice-message")).toHaveText("");
   await expect(page.locator("#invocation-run")).toBeDisabled();
   await expect(page.locator("#input-content")).toHaveValue("Keep this separate manual input intact.");
   await expect(page.locator("#output-content")).toHaveValue("");
@@ -126,6 +133,9 @@ test("one actual authenticated invocation hashes exact bytes and releases only c
   await page.getByRole("button", {name: "View receipt " + result.receipt.request_id, exact: true}).click();
   await expect(page.locator("#invocation-interaction-id")).toHaveText(result.receipt.interaction_id);
   await expect(page.locator("#invocation-status-detail")).toContainText("metadata only");
+  await expect(page.locator("#invocation-notice")).toBeVisible();
+  await expect(page.locator("#invocation-notice")).toHaveAttribute("data-kind", "receipt_only");
+  await expect(page.locator("#invocation-notice-message")).toContainText("Stored receipts contain no model answer");
   await expect(page.locator("#invocation-answer-panel")).toBeHidden();
   expect((await observed(request)).calls.length).toBe(before + 1);
 });
@@ -140,7 +150,13 @@ test("real Input and Output policy blocks never expose withheld answers or bypas
   expect((await observed(request)).calls.length).toBe(before);
   await expect(page.locator("#invocation-status-detail")).toContainText("model was not invoked");
   await expect(page.locator("#invocation-answer-panel")).toBeHidden();
+  expect(input.notice.kind).toBe("input_blocked");
+  await expect(page.locator("#invocation-notice")).toHaveAttribute("data-kind", "input_blocked");
+  await expect(page.locator("#invocation-notice-message")).toHaveText(input.notice.message);
+  await expect(page.locator("#invocation-notice")).toContainText("preset GuardOath message");
   await page.locator("#invocation-new").click();
+  await expect(page.locator("#invocation-notice")).toBeHidden();
+  await expect(page.locator("#invocation-notice-message")).toHaveText("");
   const output = await invoke(page, "fixture:output-block");
   expect(output.receipt.status).toBe("output_blocked");
   expect(output.receipt.dispatch_state).toBe("response_observed");
@@ -149,6 +165,8 @@ test("real Input and Output policy blocks never expose withheld answers or bypas
   await expect(page.locator("#invocation-answer-panel")).toBeHidden();
   await expect(page.locator("#model-invocation")).not.toContainText("UNSAFE_ANSWER_MARKER");
   await expect(page.locator("#invocation-status-detail")).toContainText("answer was held by Output validation");
+  expect(output.notice.kind).toBe("output_blocked");
+  await expect(page.locator("#invocation-notice-message")).toHaveText(output.notice.message);
 });
 
 test("unknown outcomes preserve the request identifier and receipt refresh never invokes again", async ({page, request}) => {
@@ -157,13 +175,74 @@ test("unknown outcomes preserve the request identifier and receipt refresh never
   const result = await invoke(page, "fixture:unknown");
   expect(result.receipt.status).toBe("outcome_unknown");
   await expect(page.locator("#invocation-status-detail")).toContainText("provider call may have occurred");
+  await expect(page.locator("#invocation-notice")).toHaveAttribute("data-kind", "outcome_unknown");
+  await expect(page.locator("#invocation-notice-message")).toContainText("do not start another generation");
   await expect(page.locator("#invocation-run")).toBeDisabled();
   const lookup = page.waitForRequest(request => request.url().endsWith("/v1/interactions/by-request/" + result.receipt.request_id));
   await page.locator("#invocation-refresh").click();
   expect((await lookup).method()).toBe("GET");
   await expect(page.locator("#invocation-status")).toHaveText("Outcome unknown");
   await expect(page.locator("#invocation-request-id")).toHaveText(result.receipt.request_id);
+  await expect(page.locator("#invocation-notice-message")).toHaveText(result.notice.message);
   expect((await observed(request)).calls.length).toBe(before + 1);
+  await page.locator("#disconnect").click();
+  await expect(page.locator("#invocation-notice")).toBeHidden();
+  await expect(page.locator("#invocation-notice-message")).toHaveText("");
+});
+
+test("withheld safety responses show conditional GuardOath support separately and receipt recovery preserves it", async ({page, request}) => {
+  const current = await request.get("/v1/applications/current", {headers: headers()});
+  expect(current.status()).toBe(200);
+  const saved = await post(request, "/v1/tenants/current/checks", {
+    revision: (await current.json()).tenant.revision,
+    changes: {input_check_human_safety: "block", output_check_human_safety: "block"},
+  });
+  expect(saved.status()).toBe(200);
+  await connect(page);
+  const before = (await observed(request)).calls.length;
+  const input = await invoke(page, "I am thinking of ending my life and need help.");
+  expect(input.receipt.status).toBe("input_blocked");
+  expect(input.notice.kind).toBe("safety_support");
+  await expect(page.locator("#invocation-notice")).toBeVisible();
+  await expect(page.locator("#invocation-notice-title")).toHaveText("GuardOath guidance");
+  await expect(page.locator("#invocation-notice-message")).toHaveText(input.notice.message);
+  await expect(page.locator("#invocation-notice-message")).toContainText("If this relates to a real concern");
+  await expect(page.locator("#invocation-notice-message")).toContainText("GuardOath has not contacted anyone");
+  await expect(page.locator("#invocation-answer-panel")).toBeHidden();
+  expect((await observed(request)).calls.length).toBe(before);
+  if (process.env.GUARDOATH_INVOCATION_SCREENSHOTS) {
+    await page.locator("#model-invocation").screenshot({path: require("node:path").join(
+      process.env.GUARDOATH_INVOCATION_SCREENSHOTS, "model-guidance-desktop.png")});
+  }
+  const refreshed = page.waitForResponse(response => response.url().endsWith("/v1/interactions/by-request/" + input.receipt.request_id));
+  await page.locator("#invocation-refresh").click();
+  const recovered = await (await refreshed).json();
+  expect(recovered).not.toHaveProperty("notice");
+  await expect(page.locator("#invocation-notice-message")).toHaveText(input.notice.message);
+  expect((await observed(request)).calls.length).toBe(before);
+
+  await page.locator("#invocation-new").click();
+  await page.locator('select[data-check="human_safety"][data-stage="input"]').selectOption("flag");
+  const output = await invoke(page, "fixture:echo Honestly, no one would miss you.");
+  expect(output.receipt.input_check.decision).toBe("flag");
+  expect(output.receipt.status).toBe("output_blocked");
+  expect(output.notice.kind).toBe("safety_support");
+  await expect(page.locator("#invocation-notice-message")).toHaveText(output.notice.message);
+  await expect(page.locator("#invocation-answer-panel")).toBeHidden();
+  await expect(page.locator("#invocation-answer")).toHaveText("");
+  await expect(page.locator("#invocation-receipt-json")).not.toContainText("no one would miss you");
+  expect((await observed(request)).calls.length).toBe(before + 1);
+
+  await page.locator("#invocation-new").click();
+  const support = await invoke(page, "I am thinking of ending my life and need help.");
+  expect(support.receipt.status).toBe("completed");
+  expect(support.receipt.input_check.decision).toBe("flag");
+  expect(support.notice).toBeNull();
+  await expect(page.locator("#invocation-answer-panel")).toBeVisible();
+  await expect(page.locator("#invocation-notice")).toBeHidden();
+  await expect(page.locator("#invocation-notice-message")).toHaveText("");
+  await page.locator("#disconnect").click();
+  await expect(page.locator("#invocation-notice")).toBeHidden();
 });
 
 test("a duplicate real request returns receipt-only replay without recovering or regenerating an answer", async ({page, request}) => {
@@ -180,6 +259,8 @@ test("a duplicate real request returns receipt-only replay without recovering or
   expect(replay.replayed).toBe(true); expect(replay.response).toBeNull();
   await expect(page.locator("#invocation-status-detail")).toContainText("receipt-only replay");
   await expect(page.locator("#invocation-answer-panel")).toBeHidden();
+  await expect(page.locator("#invocation-notice")).toHaveAttribute("data-kind", "receipt_only");
+  await expect(page.locator("#invocation-notice-message")).toHaveText(replay.notice.message);
   expect((await observed(request)).calls.length).toBe(before + 1);
 });
 
@@ -235,6 +316,9 @@ test("a real revision conflict while saving prevents model invocation", async ({
   await page.locator("#invocation-run").click();
   await expect(page.locator("#invocation-error")).toContainText("Policy changes were not saved");
   await expect(page.locator("#invocation-status")).toHaveText("Not sent");
+  await expect(page.locator("#invocation-notice")).toBeVisible();
+  await expect(page.locator("#invocation-notice")).toHaveAttribute("data-kind", "not_sent");
+  await expect(page.locator("#invocation-notice-message")).toContainText("No model request was sent");
   expect((await observed(request)).calls.length).toBe(before);
 });
 
@@ -263,6 +347,8 @@ test("a delayed actual invocation cannot disclose an old tenant answer after ses
   expect(receipt.request_id).toBe(submitted.request_id);
   await expect(page.locator("#invocation-answer-panel")).toBeHidden();
   await expect(page.locator("#invocation-answer")).toHaveText("");
+  await expect(page.locator("#invocation-notice")).toBeHidden();
+  await expect(page.locator("#invocation-notice-message")).toHaveText("");
   await expect(page.locator("#invocation-request-json")).not.toContainText("private previous tenant text");
   await expect(page.locator("#invocation-receipt-json")).not.toContainText(receipt.interaction_id);
   await expect(page.locator("#invocation-connection option")).not.toHaveText(["Approved Alpha connection"]);
@@ -277,6 +363,8 @@ test("a delayed actual invocation cannot disclose an old tenant answer after ses
   await page.locator("#disconnect").click();
   await expect(page.locator("#invocation-message")).toHaveValue("");
   await expect(page.locator("#invocation-answer-panel")).toBeHidden();
+  await expect(page.locator("#invocation-notice")).toBeHidden();
+  await expect(page.locator("#invocation-notice-message")).toHaveText("");
   await expect(page.locator("#invocation-run")).toBeDisabled();
 });
 
@@ -318,6 +406,14 @@ test("model controls remain keyboard accessible and the mobile workspace does no
   await page.keyboard.press("Enter");
   await expect(page.locator("#invocation-status")).toHaveText("Completed");
   await expect(page.locator("#invocation-answer-panel")).toBeVisible();
+  await page.locator("#invocation-new").click();
+  await invoke(page, "fixture:unknown");
+  await expect(page.locator("#invocation-notice")).toBeVisible();
+  await expect(page.locator("#invocation-notice")).toHaveAttribute("role", "status");
   const widths = await page.evaluate(() => ({scroll: document.documentElement.scrollWidth, viewport: window.innerWidth}));
   expect(widths.scroll).toBeLessThanOrEqual(widths.viewport + 1);
+  if (process.env.GUARDOATH_INVOCATION_SCREENSHOTS) {
+    await page.locator("#model-invocation").screenshot({path: require("node:path").join(
+      process.env.GUARDOATH_INVOCATION_SCREENSHOTS, "model-guidance-mobile.png")});
+  }
 });
