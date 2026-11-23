@@ -1041,3 +1041,7 @@ The ordinary Python JSON decoder would otherwise accept these ambiguous inputs a
 keep only the last duplicate field. Such input now fails before catalog-provider inspection
 or any source write. This does not make an unsigned exported review an authorization;
 the independent review, exact-source CI, rollback and 15 live checks remain mandatory.
+
+## Owner detail source parity (2026-11-23)
+
+The authenticated owner browser rejects a Usage response without the exact selected `usage.tenant_id`, and Stripe subscription or invoice responses without the selected envelope `tenant_id`. Even HTTP 200 with a missing or different ID displays unavailable information rather than another tenant's request counters, paid state or invoice. The server already independently binds source tenant records before provider reads. This extra browser invariant makes no Stripe/AWS writes or requests, changes no entitlement and does not replace the owner Cognito/MFA check. Authenticated browser regressions include matching, cross-tenant and missing-ID responses; live source parity and exact-SHA release gates are still required.

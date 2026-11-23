@@ -390,6 +390,13 @@ _JS = r'''"use strict";
     }
     return result.json();
   }
+  // A directory selection does not prove that a provider or saved-counter
+  // response belongs to the selected tenant. Fail closed on absent or
+  // mismatched identity before rendering financial or quota information.
+  function requireTenantSource(actual, selected) {
+    if (typeof actual !== "string" || actual !== selected)
+      throw new Error("Verified tenant source does not match the selected account");
+  }
   const textNode = (tag, value) => { const item = document.createElement(tag); item.textContent = String(value ?? "Unavailable"); return item; };
   const setLoggedIn = logged => {
     el("login").hidden = logged;
@@ -1365,6 +1372,7 @@ _JS = r'''"use strict";
     try {
       const result = await request("/v1/admin/tenants/" + encodeURIComponent(tenant.tenant_id) + "/usage");
       if (!token || epoch !== authEpoch || selection !== usageSelection) return;
+      requireTenantSource(result?.usage?.tenant_id, tenant.tenant_id);
       const usage = result.usage || {};
       const count = usage.requests_recorded;
       const remaining = usage.remaining_before_allowance;
@@ -1431,6 +1439,7 @@ _JS = r'''"use strict";
     try {
       const result = await request("/v1/admin/subscriptions/" + encodeURIComponent(tenant.tenant_id));
       if (token && epoch === authEpoch && selection === billingSelection) {
+        requireTenantSource(result?.tenant_id, tenant.tenant_id);
         const state = result.subscription || {};
         const assessment = state.reconciliation || {};
         const level = ["critical","review","consistent","unavailable"].includes(assessment.level) ?
@@ -1491,6 +1500,7 @@ _JS = r'''"use strict";
       const result = await request("/v1/admin/subscriptions/" +
         encodeURIComponent(tenant.tenant_id) + "/invoices");
       if (!token || epoch !== authEpoch || selection !== billingSelection) return;
+      requireTenantSource(result?.tenant_id, tenant.tenant_id);
       const history = result.history || {};
       if (history.verified === false && history.status === "unbound") {
         say("invoice-details", tenant.tenant_id +

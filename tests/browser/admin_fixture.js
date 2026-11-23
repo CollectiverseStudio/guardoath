@@ -138,7 +138,7 @@ function createAdminFixture(options = {}) {
         status:"ok",user:users[0],source:"Synthetic Cognito exact lookup"}));
       if (pathname === "/v1/admin/catalog") return json(withReceipt(catalog));
       if (/^\/v1\/admin\/tenants\/[^/]+\/usage$/.test(pathname)) return json(withReceipt({usage:{
-        period_utc:"2026-11", requests_recorded:1460, monthly_allowance:10000,
+        tenant_id:pathname.split("/")[4],period_utc:"2026-11", requests_recorded:1460, monthly_allowance:10000,
         remaining_before_allowance:8540, overage_policy:"block", record_updated_at:FIXTURE_TIME,
         usage_threshold:{state:"within_limit",utilization_percent_floor:14,policy:"blocks_at_saved_cap"},
         quota_pacing:{state:"projected_within_limit",projected_month_end_requests_floor:2190,
@@ -148,13 +148,13 @@ function createAdminFixture(options = {}) {
           history_median_monthly_requests:2300,projected_vs_history_percent_floor:95,
           persisted_alert:false},
         source:"Synthetic saved tenant record"}}));
-      if (/^\/v1\/admin\/subscriptions\/[^/]+\/invoices$/.test(pathname)) return json(withReceipt({history:{
+      if (/^\/v1\/admin\/subscriptions\/[^/]+\/invoices$/.test(pathname)) return json(withReceipt({tenant_id:pathname.split("/")[4],history:{
         verified:true,status:"verified",count:1,has_more:false,read_at_utc:FIXTURE_TIME,
         invoices:[{status:"paid",currency:"usd",created_utc:FIXTURE_TIME,
           amount_due_minor:2900,amount_paid_minor:2900,amount_remaining_minor:0,
           collection_method:"charge_automatically",attempted:true,attempt_count:1,
           next_payment_attempt_utc:null}]}}));
-      if (/^\/v1\/admin\/subscriptions\/[^/]+$/.test(pathname)) return json(withReceipt({subscription:{
+      if (/^\/v1\/admin\/subscriptions\/[^/]+$/.test(pathname)) return json(withReceipt({tenant_id:pathname.split("/")[4],subscription:{
         verified:true,status:"active",verified_at:FIXTURE_TIME,current_period_end_utc:"2026-12-20T12:00:00Z",
         cancel_at_period_end:false,reconciliation:{level:"consistent",code:"agreement",
           next_step:"Synthetic saved entitlement agrees with sample provider state"}}}));

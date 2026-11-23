@@ -340,7 +340,7 @@ test("later tenant Usage selection wins over a delayed earlier successful read",
     }
     const count = old ? 901 : 7;
     await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
-      usage:{period_utc:"2026-11",requests_recorded:count,monthly_allowance:1000,
+      usage:{tenant_id:old ? "sample-studio" : "sample-labs",period_utc:"2026-11",requests_recorded:count,monthly_allowance:1000,
         remaining_before_allowance:1000-count,overage_policy:"block",
         usage_threshold:{state:"within_limit",utilization_percent_floor:0,policy:"blocks_at_saved_cap"},
         quota_pacing:{state:"stale_or_unknown_metadata",projected_month_end_requests_floor:null,
@@ -381,7 +381,7 @@ test("late failed Stripe check cannot replace newer tenant invoice view", async 
         body:JSON.stringify({detail:"Synthetic Stripe outage"})});
     } else if (path === "/v1/admin/subscriptions/sample-labs/invoices") {
       await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
-        history:{verified:true,status:"verified",count:1,has_more:false,
+        tenant_id:"sample-labs",history:{verified:true,status:"verified",count:1,has_more:false,
           invoices:[{status:"paid",currency:"usd",created_utc:"2026-11-20T12:00:00Z",
             amount_due_minor:700,amount_paid_minor:700,amount_remaining_minor:0,
             collection_method:"charge_automatically",attempted:true,
@@ -414,7 +414,7 @@ test("owner Usage displays an actual saved cap breach even when metadata is stal
   const fixture = await signedIn(page, {override: request =>
     /^\/v1\/admin\/tenants\/[^/]+\/usage$/.test(request.path)
       ? {status:200, contentType:"application/json", body:JSON.stringify({
-          usage:{
+          usage:{tenant_id:"sample-studio",
             period_utc:"2026-11", requests_recorded:105, monthly_allowance:100,
             remaining_before_allowance:0, overage_policy:"block",
             usage_threshold:{state:"over_limit",utilization_percent_floor:105,
@@ -446,7 +446,7 @@ test("owner Billing shows verified collection attempt metadata without claiming 
   const fixture = await signedIn(page, {override: request =>
     /^\/v1\/admin\/subscriptions\/[^/]+\/invoices$/.test(request.path)
       ? {status:200, contentType:"application/json", body:JSON.stringify({
-          history:{verified:true,status:"verified",count:1,has_more:false,
+          tenant_id:"sample-studio",history:{verified:true,status:"verified",count:1,has_more:false,
             read_at_utc:"2026-11-21T12:00:00Z",invoices:[{
               status:"open",currency:"usd",created_utc:"2026-11-20T12:00:00Z",
               amount_due_minor:2500,amount_paid_minor:0,amount_remaining_minor:2500,
@@ -476,7 +476,7 @@ test("owner rejects inconsistent verified invoice next-attempt count", async ({p
   const fixture = await signedIn(page, {override: request =>
     request.path === "/v1/admin/subscriptions/sample-studio/invoices"
       ? {status:200,contentType:"application/json",body:JSON.stringify({
-          history:{verified:true,status:"verified",count:1,has_more:false,
+          tenant_id:"sample-studio",history:{verified:true,status:"verified",count:1,has_more:false,
             read_at_utc:"2026-11-23T12:00:00Z",
             invoices:[{status:"open",currency:"usd",created_utc:"2026-11-20T12:00:00Z",
               amount_due_minor:2500,amount_paid_minor:0,amount_remaining_minor:2500,
@@ -500,7 +500,7 @@ test("verified inactive Stripe disagreement appears in owner Billing without inv
   const fixture = await signedIn(page,{override: request =>
     /^\/v1\/admin\/subscriptions\/[^/]+$/.test(request.path)
       ? {status:200,contentType:"application/json",body:JSON.stringify({
-          subscription:{verified:true,status:"canceled",verified_at:"2026-11-21T12:00:00Z",
+          tenant_id:"sample-studio",subscription:{verified:true,status:"canceled",verified_at:"2026-11-21T12:00:00Z",
             reconciliation:{level:"review",code:"saved_nonactive_state_differs_from_provider",
               next_step:"Review trusted Stripe reconciliation; do not grant access or rewrite saved billing state"}},
           read_audit_event_id:"a".repeat(64)})} : null});
@@ -522,7 +522,7 @@ test("owner billing reveals Stripe collection pause even while subscription stat
   const fixture = await signedIn(page,{override: request =>
     request.path === "/v1/admin/subscriptions/sample-studio"
       ? {status:200,contentType:"application/json",body:JSON.stringify({
-          subscription:{verified:true,status:"active",verified_at:"2026-11-23T08:00:00Z",
+          tenant_id:"sample-studio",subscription:{verified:true,status:"active",verified_at:"2026-11-23T08:00:00Z",
             collection_status:"paused",collection_behavior:"keep_as_draft",
             collection_resumes_at_utc:null,
             reconciliation:{level:"review",code:"stripe_payment_collection_paused",
@@ -1183,7 +1183,7 @@ test("owner billing distinguishes manual invoice collection and verified period 
   const fixture = await signedIn(page,{override: request =>
     request.path === "/v1/admin/subscriptions/sample-studio"
       ? {status:200,contentType:"application/json",body:JSON.stringify({
-          subscription:{verified:true,status:"active",verified_at:"2026-11-23T08:00:00Z",
+          tenant_id:"sample-studio",subscription:{verified:true,status:"active",verified_at:"2026-11-23T08:00:00Z",
             collection_status:"collecting",collection_method:"send_invoice",
             current_period_end_utc:"2026-12-01T00:00:00Z",current_period_source:"subscription_item",
             reconciliation:{level:"review",code:"stripe_manual_invoice_collection",
@@ -1207,7 +1207,7 @@ test("owner Billing warns of verified period-end cancellation without inventing 
   const fixture = await signedIn(page,{override: request =>
     request.path === "/v1/admin/subscriptions/sample-studio"
       ? {status:200,contentType:"application/json",body:JSON.stringify({
-          subscription:{verified:true,status:"active",verified_at:"2026-11-23T08:00:00Z",
+          tenant_id:"sample-studio",subscription:{verified:true,status:"active",verified_at:"2026-11-23T08:00:00Z",
             cancel_at_period_end:true,cancellation_status:"scheduled_for_period_end",
             cancellation_effective_utc:"2026-12-01T00:00:00Z",
             current_period_end_utc:"2026-12-01T00:00:00Z",
@@ -1231,7 +1231,7 @@ test("owner Billing distinguishes unknown cancellation from an explicit not-sche
   await signedIn(page,{override: request =>
     request.path === "/v1/admin/subscriptions/sample-studio"
       ? {status:200,contentType:"application/json",body:JSON.stringify({
-          subscription:{verified:true,status:"active",verified_at:"2026-11-23T08:00:00Z",
+          tenant_id:"sample-studio",subscription:{verified:true,status:"active",verified_at:"2026-11-23T08:00:00Z",
             cancellation_status:(++calls === 1 ? "unavailable" : "not_scheduled"),
             reconciliation:{level:"consistent",code:"states_agree",next_step:"No billing mutation performed"}},
           read_audit_event_id:"a".repeat(64)})} : null});
@@ -1254,7 +1254,7 @@ test("owner Billing exposes custom Stripe cancellation date without calling it a
   await signedIn(page,{override: request =>
     request.path === "/v1/admin/subscriptions/sample-studio"
       ? {status:200,contentType:"application/json",body:JSON.stringify({
-          subscription:{verified:true,status:"active",verified_at:"2026-11-23T08:00:00Z",
+          tenant_id:"sample-studio",subscription:{verified:true,status:"active",verified_at:"2026-11-23T08:00:00Z",
             cancel_at_period_end:false,cancellation_status:"scheduled_for_date",
             cancellation_effective_utc:"2026-12-02T00:00:00Z",
             reconciliation:{level:"review",code:"stripe_custom_date_cancellation_scheduled",
@@ -1268,4 +1268,58 @@ test("owner Billing exposes custom Stripe cancellation date without calling it a
   await expect(output).toContainText("Cancellation schedule: Scheduled for provider date (UTC: 2026-12-02T00:00:00Z)");
   await expect(output).toContainText("Cancel at period end: No");
   await expect(output).toContainText("Next invoice amount: Unavailable");
+});
+
+test("owner Usage rejects cross-tenant and missing identities before displaying recorded quotas",async ({page}) => {
+  const fixture=await signedIn(page);
+  for (const identity of ["sample-labs",null]) {
+    fixture.override=req=>req.path==="/v1/admin/tenants/sample-studio/usage" ?
+      {status:200,contentType:"application/json",body:JSON.stringify({
+        status:"ok",usage:{tenant_id:identity,requests_recorded:999999},
+        read_audit_event_id:"a".repeat(64)})}:null;
+    await page.locator("#nav-tenants").click();
+    await page.locator("#tenant-rows tr").filter({hasText:"sample-studio"})
+      .getByRole("button",{name:"Usage",exact:true}).click();
+    await expect(page.locator("#usage-details")).toContainText("Verified tenant source does not match");
+    await expect(page.locator("#usage-details")).not.toContainText("999999");
+  }
+  expect(fixture.calls.filter(x=>x.path.endsWith("/usage")&&x.method!=="GET")).toHaveLength(0);
+});
+
+test("owner Stripe review rejects a misbound or missing account from successful provider reads",async ({page}) => {
+  const fixture=await signedIn(page);
+  for (const identity of ["sample-labs",null]) {
+    fixture.override=req=>req.path==="/v1/admin/subscriptions/sample-studio" ?
+      {status:200,contentType:"application/json",body:JSON.stringify({
+        tenant_id:identity,subscription:{verified:true,status:"active",
+          reconciliation:{level:"consistent",code:"states_agree"}},
+        read_audit_event_id:"a".repeat(64)})}:null;
+    await page.locator("#nav-tenants").click();
+    await page.locator("#tenant-rows tr").filter({hasText:"sample-studio"})
+      .getByRole("button",{name:"Verify Stripe",exact:true}).click();
+    await expect(page.locator("#billing-details")).toContainText("Stripe verification unavailable; no entitlement change");
+    await expect(page.locator("#billing-details")).not.toContainText("Provider: active");
+    await expect(page.locator("#status")).toContainText("Verified tenant source does not match");
+  }
+  expect(fixture.calls.filter(x=>x.path.startsWith("/v1/admin/subscriptions/")&&x.method!=="GET")).toHaveLength(0);
+});
+
+test("owner invoices reject a different or missing tenant despite HTTP 200 with apparent payment",async ({page}) => {
+  const fixture=await signedIn(page);
+  for (const identity of ["sample-labs",null]) {
+    fixture.override=req=>req.path==="/v1/admin/subscriptions/sample-studio/invoices" ?
+      {status:200,contentType:"application/json",body:JSON.stringify({
+        tenant_id:identity,history:{verified:true,status:"verified",count:1,has_more:false,
+          invoices:[{status:"paid",currency:"usd",created_utc:"2026-11-20T12:00:00Z",
+            amount_due_minor:999999,amount_paid_minor:999999,amount_remaining_minor:0,
+            collection_method:"charge_automatically",attempted:true,attempt_count:1,
+            next_payment_attempt_utc:null}]},
+        read_audit_event_id:"a".repeat(64)})}:null;
+    await page.locator("#nav-tenants").click();
+    await page.locator("#tenant-rows tr").filter({hasText:"sample-studio"})
+      .getByRole("button",{name:"Invoices",exact:true}).click();
+    await expect(page.locator("#invoice-details")).toContainText("Invoice verification unavailable; no billing changes");
+    await expect(page.locator("#invoice-details")).not.toContainText("paid USD");
+  }
+  expect(fixture.calls.filter(x=>x.path.endsWith("/invoices")&&x.method!=="GET")).toHaveLength(0);
 });
