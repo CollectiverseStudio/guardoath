@@ -1414,3 +1414,43 @@ test("older audit failure cannot replace the newly verified receipt", async ({pa
   release(); await delivered; await page.waitForTimeout(50);
   await expect(page.locator("#audit-result")).toContainText("HMAC integrity verified");
 });
+
+
+test("owner tenant directory identifies actionable saved quota risk on bounded partial pages", async ({page}) => {
+  const base = {display_name:"Saved account",status:"active",demo:false,
+    subscription_status:"inactive",revision:2,monthly_allowance:100,
+    overage_policy:"allow_and_record",usage_month:"2026-11"};
+  let rows = [
+    {...base,tenant_id:"quota-watch",usage_month_count:80},
+    {...base,tenant_id:"quota-near",usage_month_count:95},
+    {...base,tenant_id:"quota-over",usage_month_count:101},
+    {...base,tenant_id:"quota-zero",monthly_allowance:0,usage_month_count:0},
+    {...base,tenant_id:"quota-missing",usage_month_count:null},
+    {...base,tenant_id:"quota-old",usage_month:"2026-10",usage_month_count:100},
+    {...base,tenant_id:"quota-low",usage_month_count:79}
+  ];
+  let stamp = "2026-11-23T12:00:00Z";
+  await signedIn(page,{override:request => request.path === "/v1/admin/tenants" ?
+    {status:200,contentType:"application/json",body:JSON.stringify({
+      status:"ok",tenants:rows,returned:rows.length,scanned:rows.length,
+      next_cursor:"more",retrieved_utc:stamp})} : null});
+  await page.locator("#nav-tenants").click();
+  const risk = id => page.locator("#tenant-rows tr").filter({hasText:id}).locator("td").nth(6);
+  await expect(risk("quota-watch")).toHaveText("Watch (80%+) · 2026-11");
+  await expect(risk("quota-near")).toHaveText("Near allowance (95%+) · 2026-11");
+  await expect(risk("quota-over")).toHaveText("Above allowance · 2026-11");
+  await expect(risk("quota-zero")).toHaveText("At allowance · 2026-11");
+  await expect(risk("quota-low")).toHaveText("Below 80% · 2026-11");
+  await expect(risk("quota-missing")).toHaveText("Unavailable");
+  await expect(risk("quota-old")).toHaveText("Unavailable");
+  await expect(page.locator("#next")).toBeEnabled();
+  await expect(page.locator("#tenant-rows tr").filter({hasText:"quota-over"}))
+    .toContainText("Allow and record overage");
+  stamp = "2026-11-31T12:00:00Z";
+  await page.locator("#refresh").click();
+  await expect(risk("quota-over")).toHaveText("Unavailable");
+  stamp = "2026-11-23T12:00:00Z";
+  rows = [{...base,tenant_id:"quota-over",usage_month_count:Number.MAX_SAFE_INTEGER+1}];
+  await page.locator("#refresh").click();
+  await expect(risk("quota-over")).toHaveText("Unavailable");
+});

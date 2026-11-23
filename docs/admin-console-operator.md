@@ -1105,3 +1105,16 @@ The authenticated Tenants → Usage workspace now displays twelve consecutive UT
 
 ### Account and audit selection consistency (November 23, 2026)
 Exact Cognito account inspection, signed account-action receipt lookup, and audit receipt lookup are bound to the latest operator selection in the authenticated browser. Editing the selected input or refreshing the workspace invalidates older pending reads. A late result or failure cannot overwrite the current account or receipt; a new Cognito action also invalidates earlier account/receipt inspections. Server authentication and persistent audit remain authoritative. No extra provider read is introduced.
+
+
+### Tenant directory quota triage (November 23, 2026)
+
+The authenticated Tenants table now shows a per-record **Saved quota risk (UTC)**
+column next to usage and the saved overage policy. It classifies below 80%, watch
+at 80%, near at 95%, at allowance, and above allowance using the authoritative
+saved request counter and allowance in the directory's own UTC read month.
+Rows with an unknown, malformed, mixed-month or unsafe counter/cap are unavailable.
+A bounded partial page can still show individual valid records; it does not
+establish population totals. The column is advisory, not a persistent alert,
+live traffic, invoice or AWS cost; allow-and-record is not hard blocking.
+No new database or provider requests are made.

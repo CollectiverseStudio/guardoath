@@ -291,7 +291,7 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <label for="user-action-key">Action reference</label> <input id="user-action-key" maxlength="96" autocomplete="off" spellcheck="false">
 <label for="user-action-email">Optional exact account email for live comparison</label> <input id="user-action-email" type="email" maxlength="254" autocomplete="off" spellcheck="false">
 <button id="user-action-inspect" type="button" disabled>Inspect signed action</button><p id="user-action-result" role="status"></p></section>
-<section id="section-tenants" data-admin-section class="panel" hidden tabindex="-1" aria-label="Tenants"><h2>Tenants</h2><p class="muted">API key counts and saved overage policies come from persisted tenant records; Allow and record is not a hard cap. Key material is never displayed. Unknown values remain unavailable.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>Overage policy</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
+<section id="section-tenants" data-admin-section class="panel" hidden tabindex="-1" aria-label="Tenants"><h2>Tenants</h2><p class="muted">API key counts and saved overage policies come from persisted tenant records; Allow and record is not a hard cap. Key material is never displayed. Unknown values remain unavailable. Quota risk is advisory, derived from each saved counter and allowance for the UTC read month, not live activity, financial cost, or a persistent alert.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>Saved quota risk (UTC)</th><th>Overage policy</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
 <section id="section-billing" data-admin-section class="section-stack" hidden tabindex="-1" aria-label="Billing"><section class="panel"><h2>Verified recent invoices</h2><p class="muted">Up to five Stripe invoice summaries for an independently verified customer subscription. Amounts are in minor currency units, not a revenue total or forecast.</p><p id="invoice-details" role="status">No invoice history selected.</p></section>
 <section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Select Verify Stripe beside a tenant to compare the current provider status with its saved tenant entitlement. Discrepancies are advisory: no paid access or billing state is modified here.</p><p id="billing-details" role="status">No subscription selected.</p></section>
 </section><section id="section-usage" data-admin-section class="panel" hidden tabindex="-1" aria-label="Usage"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
@@ -1305,11 +1305,34 @@ _JS = r'''"use strict";
     }
   }
 
+  function savedQuotaRisk(tenant, page) {
+    // Scope this triage label to a single saved record and the directory's
+    // own UTC read period. A partial directory may still contain valid rows.
+    const time = page?.retrieved_utc;
+    if (page?.status !== "ok" || typeof time !== "string" ||
+        !/^[0-9]{4}-(0[1-9]|1[0-2])-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/.test(time) ||
+        !Number.isFinite(Date.parse(time)) ||
+        new Date(time).toISOString() !== time.slice(0,-1) + ".000Z" ||
+        tenant?.usage_month !== time.slice(0,7) ||
+        !Number.isSafeInteger(tenant.usage_month_count) || tenant.usage_month_count < 0 ||
+        !Number.isSafeInteger(tenant.monthly_allowance) ||
+        tenant.monthly_allowance < 0 || tenant.monthly_allowance > 1_000_000_000)
+      return "Unavailable";
+    const used = tenant.usage_month_count, cap = tenant.monthly_allowance;
+    let state;
+    if (used > cap) state = "Above allowance";
+    else if (used === cap) state = "At allowance";
+    else if (used >= Math.ceil(cap * 95 / 100)) state = "Near allowance (95%+)";
+    else if (used >= Math.ceil(cap * 80 / 100)) state = "Watch (80%+)";
+    else state = "Below 80%";
+    return state + " · " + tenant.usage_month;
+  }
   function showTenants(data) {
     el("tenant-rows").replaceChildren();
     for (const tenant of data.tenants || []) {
       const row = document.createElement("tr");
       for (const field of ["tenant_id", "display_name", "status", "subscription_status", "monthly_allowance", "usage_month_count"]) row.append(textNode("td", tenant[field]));
+      row.append(textNode("td", savedQuotaRisk(tenant, data)));
       row.append(textNode("td", tenant.overage_policy === "block" ? "Block at saved cap" :
         tenant.overage_policy === "allow_and_record" ? "Allow and record overage" : "Unavailable"));
       row.append(textNode("td", tenant["api_key_count"]));
