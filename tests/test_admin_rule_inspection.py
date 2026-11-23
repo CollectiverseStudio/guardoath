@@ -33,10 +33,10 @@ def tenant(name, **kwargs):
 
 def setup():
     db = Audit()
-    store = MemoryTenantStore((tenant("usr-one", input_check_pii="block",
-                                     input_rule_actions={"pii.email": "flag"}),
-                               tenant("usr-two", input_check_pii=None,
-                                      input_rule_actions={"pii.email": "block"})))
+    store = MemoryTenantStore((tenant("usr-one", input_check_secrets="block",
+                                     input_rule_actions={"secrets.credential_assignment": "flag"}),
+                               tenant("usr-two", input_check_secrets=None,
+                                      input_rule_actions={"secrets.credential_assignment": "block"})))
     def verify(token):
         if token == "owner":
             return VerifiedAdmin(OWNER, frozenset({"owner"}), True)
@@ -53,7 +53,7 @@ def setup():
     return TestClient(app), db, store
 
 
-def target(tenant_id="usr-one", stage="input", rule_id="pii.email"):
+def target(tenant_id="usr-one", stage="input", rule_id="secrets.credential_assignment"):
     return "/v1/admin/tenants/" + tenant_id + "/rule-action?stage=" + stage + "&rule_id=" + rule_id
 
 
@@ -63,7 +63,7 @@ def test_read_inspection_is_revision_bound_redacted_and_audited():
     assert response.status_code == 200, response.text
     result = response.json()
     assert result["tenant_id"] == "usr-one" and result["revision"] == 1
-    assert result["check_id"] == "pii" and result["check_action"] == "block"
+    assert result["check_id"] == "secrets" and result["check_action"] == "block"
     assert result["rule_action"] == "flag" and result["eligibility"] == "configured_not_execution_evidence"
     assert result["tenant_policies_changed"] is False
     assert len(result["read_audit_event_id"]) == 64
@@ -100,7 +100,7 @@ def test_invalid_selection_and_missing_tenant_never_expose_other_account():
     client, db, _ = setup()
     headers = {"X-GuardOath-Admin-Session": "owner"}
     assert client.get(target("usr-missing"), headers=headers).status_code == 404
-    assert client.get(target(rule_id="pii.unknown"), headers=headers).status_code == 404
+    assert client.get(target(rule_id="secrets.unknown"), headers=headers).status_code == 404
     assert client.get(target(stage="other"),headers=headers).status_code == 422
     assert client.get(target(rule_id="weird..id"),headers=headers).status_code == 422
     assert len(db.events) == 2  # Missing tenant and unknown published rule audited
@@ -116,8 +116,8 @@ def test_bad_tenant_record_and_audit_outage_fail_closed_without_leaking():
     db.fail = True
     assert client.get(target(), headers=headers).status_code == 503
     assert len(db.events) == 1
-    invalid = tenant("usr-three",input_check_pii="block").model_copy(update={
-        "input_rule_actions": {"pii.email": "invalid"}
+    invalid = tenant("usr-three",input_check_secrets="block").model_copy(update={
+        "input_rule_actions": {"secrets.credential_assignment": "invalid"}
     })
     with pytest.raises(RuleInspectionUnavailable):
-        inspect_tenant_rule_action(invalid, tenant_id="usr-three", stage="input",rule_id="pii.email")
+        inspect_tenant_rule_action(invalid, tenant_id="usr-three", stage="input",rule_id="secrets.credential_assignment")

@@ -1971,3 +1971,6 @@ FIRST re-read this file's governing Atlas-only #28/#31 override, then AGENTS.md,
 
 ## 2026-11-22 Atlas — correct admin rule-lookup query validation
 - Corrected the new `GET /v1/admin/tenants/{tenant_id}/rule-action` rule ID regex from a double-escaped dot to the literal catalog separator. A double slash in a Python raw regex would reject ordinary IDs such as `pii.email` with HTTP 422 before the owner inspection. Existing positive API tests enforce this case. No test was removed or weakened, and owner MFA/audit, stored-rule invariants and downstream mutation logic are unchanged. Exact new-SHA CI and live verification remain required; no AWS deployment claimed.
+
+## 2026-11-22 Atlas — use actual shipped catalog ID in owner rule inspection acceptance
+- Replaced the new backend rule-inspection test's synthetic `pii.email` with the actual shipped `secrets.credential_assignment` catalog rule; the typed tenant's saved check is `input_check_secrets`. This ensures the 200/Off/override, cross-tenant and signed-audit assertions exercise a rule that truly exists in the authoritative `RULES` registry. Negative unknown-ID checks remain negative. No runtime behavior, security deadline or provider call changed. Exact-new-SHA acceptance remains required.
