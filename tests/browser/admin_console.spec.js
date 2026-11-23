@@ -913,3 +913,59 @@ test("rule inspection outage or cross-tenant response prevents every owner rule 
   expect(fixture.calls.filter(c => c.method === "POST" &&
     c.path.endsWith("/rule-action"))).toHaveLength(0);
 });
+
+test("owner unpaid reconciliation requires a fully matching signed audit read-back before success", async ({page}) => {
+  const eventId = "b".repeat(64);
+  let tamper = true;
+  const fixture = await signedIn(page, {
+    features:{billing_downgrade:true,audit_receipt_lookup:true},
+    override:request => {
+      if (request.path === "/v1/admin/subscriptions/sample-studio/downgrade" &&
+          request.method === "POST") return {status:200,contentType:"application/json",body:JSON.stringify({
+            tenant_id:"sample-studio",revision:5,subscription_status:"past_due",
+            monthly_allowance:0,overage:"block",provider_status:"past_due",
+            audit_event_id:eventId
+          })};
+      if (request.path === "/v1/admin/audit/" + eventId) return {
+        status:200,contentType:"application/json",body:JSON.stringify({audit:{
+          status:"ok",integrity_status:"signed_verified",
+          event_id:tamper ? "c".repeat(64) : eventId,
+          operation:"billing.downgrade",tenant_id:"sample-studio",
+          prior_revision:4,new_revision:5,
+          change:{field:"subscription_status",before:"active",after:"past_due",
+            provider_status:"past_due",allowance_before:10000,allowance_after:0}
+        }})};
+      return null;
+    }
+  });
+  page.on("dialog", dialog => dialog.accept(
+    dialog.type() === "prompt" ?
+      (dialog.message().startsWith("Only REVOKES") ?
+        "RECONCILE sample-studio" : "Verified provider delinquency") : undefined));
+  const button = page.locator("#tenant-rows tr").filter({hasText:"sample-studio"})
+    .getByRole("button",{name:"Reconcile unpaid",exact:true});
+  await page.locator("#nav-tenants").click();
+  await button.click();
+  await expect(page.locator("#status")).toContainText("Billing outcome audit unverified");
+  await expect(page.locator("#status")).not.toContainText("Verified unpaid downgrade saved");
+  expect(fixture.calls.filter(c => c.path.endsWith("/downgrade") && c.method === "POST")).toHaveLength(1);
+  tamper = false;
+  await button.click();
+  await expect(page.locator("#status")).toContainText("Verified unpaid downgrade saved");
+  expect(fixture.calls.filter(c => c.path.endsWith("/downgrade") && c.method === "POST")).toHaveLength(2);
+  for (const call of fixture.calls.filter(c => c.path.endsWith("/downgrade"))) {
+    expect(call.headers["x-guardoath-admin-session"]).toBe(fixture.token);
+    expect(call.headers["x-guardoath-key"]).toBeUndefined();
+  }
+});
+
+test("owner hides unpaid reconciliation when signed evidence or saved quota is unavailable", async ({page}) => {
+  const fixture = await signedIn(page,{features:{billing_downgrade:true,audit_receipt_lookup:false}});
+  await page.locator("#nav-tenants").click();
+  await expect(page.getByRole("button",{name:"Reconcile unpaid",exact:true})).toHaveCount(0);
+  fixture.features.audit_receipt_lookup = true;
+  fixture.tenants[0].monthly_allowance = null;
+  await page.locator("#refresh").click();
+  await expect(page.getByRole("button",{name:"Reconcile unpaid",exact:true})).toHaveCount(0);
+  expect(fixture.calls.filter(c => c.path.endsWith("/downgrade"))).toHaveLength(0);
+});

@@ -114,3 +114,37 @@ def test_signed_audit_verifier_rejects_unsigned_extra_fields_in_full_receipts():
     with pytest.raises(AdminAuditUnavailable):
         AdminAuditReader(Provider(extra), "audit-table", verify_key=key).read(EVENT)
     assert verify_audit(original, key)  # original immutable record still valid
+
+@pytest.mark.parametrize("previous,next_revision", [
+    (9_999_999_999, 10_000_000_000),
+    ((1 << 53) - 2, (1 << 53) - 1),
+])
+def test_signed_audit_revision_round_trips_at_browser_exact_integer_boundary(previous, next_revision):
+    from guardoath.admin_audit_integrity import seal_audit
+    key = b"k" * 32
+    item = row()
+    item["prior_revision"] = {"N": str(previous)}
+    item["new_revision"] = {"N": str(next_revision)}
+    verified = AdminAuditReader(Provider(seal_audit(item, key)), "audit-table",
+                                verify_key=key).read(EVENT)
+    assert verified["integrity_status"] == "signed_verified"
+    assert verified["prior_revision"] == previous
+    assert verified["new_revision"] == next_revision
+
+
+@pytest.mark.parametrize("previous,next_revision", [
+    ((1 << 53) - 1, 1 << 53),
+    (1 << 53, (1 << 53) + 1),
+    ("01", "2"),
+    ("1e1", "11"),
+    ("-1", "0"),
+])
+def test_signed_audit_rejects_inexact_or_noncanonical_revision(previous, next_revision):
+    from guardoath.admin_audit_integrity import seal_audit
+    key = b"k" * 32
+    item = row()
+    item["prior_revision"] = {"N": str(previous)}
+    item["new_revision"] = {"N": str(next_revision)}
+    signed = seal_audit(item, key)
+    with pytest.raises(AdminAuditUnavailable):
+        AdminAuditReader(Provider(signed), "audit-table", verify_key=key).read(EVENT)

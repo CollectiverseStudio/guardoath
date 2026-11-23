@@ -898,3 +898,20 @@ resulting incremented revision are exactly representable by the browser
 before a DynamoDB or provider mutation; do not round or retry them.
 This affects no ordinary tenant checks, deadlines, subscription entitlements
 or provider charges.
+
+## Exact signed billing receipt correlation
+
+The owner Reconcile unpaid action requires a confirmed, currently saved integer
+allowance and an available signed-audit read-back. The UI only reports a verified
+downgrade after independently reading the HMAC-verified audit event and matching
+its exact event ID, tenant, prior/new revisions, provider state, original
+allowance, zero new allowance and saved subscription state. Any mismatch is an
+**indeterminate result**; no automatic reattempt is permitted. This does not
+make Stripe state customer-editable, authorize refunds, or change entitlements
+based on a browser return value.
+
+Signed audit revisions now accept the exact safe browser integer range
+(through 9,007,199,254,740,991) rather than rejecting otherwise valid
+11–16 digit revisions. Larger/noncanonical DynamoDB numbers remain unavailable;
+the owner mutation request already refuses any increment that would exceed
+the browser-exact range. The prior per-operation limit/count bounds remain.

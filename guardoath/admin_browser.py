@@ -1247,8 +1247,9 @@ _JS = r'''"use strict";
         invoices.addEventListener("click", () => inspectInvoices(tenant));
         actions.append(invoices);
       }
-      if (features.billing_downgrade && tenant.demo === false &&
-          tenant.subscription_status === "active" && Number.isSafeInteger(tenant.revision)) {
+      if (features.billing_downgrade && features.audit_receipt_lookup && tenant.demo === false &&
+          tenant.subscription_status === "active" && Number.isSafeInteger(tenant.revision) &&
+          Number.isSafeInteger(tenant.monthly_allowance) && tenant.monthly_allowance >= 0) {
         const downgrade = document.createElement("button");
         downgrade.type = "button";
         downgrade.textContent = "Reconcile unpaid";
@@ -1476,8 +1477,9 @@ _JS = r'''"use strict";
   }
 
   async function reconcileUnpaid(tenant) {
-    if (!token || !features.billing_downgrade ||
-        tenant.subscription_status !== "active" || !Number.isSafeInteger(tenant.revision)) return;
+    if (!token || !features.billing_downgrade || !features.audit_receipt_lookup ||
+        tenant.subscription_status !== "active" || !Number.isSafeInteger(tenant.revision) ||
+        !Number.isSafeInteger(tenant.monthly_allowance) || tenant.monthly_allowance < 0) return;
     const confirmation = prompt("Only REVOKES paid entitlement after verified Stripe delinquency. Type RECONCILE " + tenant.tenant_id);
     if (confirmation !== "RECONCILE " + tenant.tenant_id) return;
     const reason = prompt("Reason for verified billing downgrade (10–240 characters; no sensitive data):");
@@ -1499,12 +1501,15 @@ _JS = r'''"use strict";
       if (!token || epoch !== authEpoch) return;
       const change = receipt.audit?.change;
       if (receipt.audit?.integrity_status !== "signed_verified" ||
+          receipt.audit?.event_id !== result.audit_event_id ||
           receipt.audit?.operation !== "billing.downgrade" ||
           receipt.audit?.tenant_id !== tenant.tenant_id ||
+          receipt.audit?.prior_revision !== tenant.revision ||
           receipt.audit?.new_revision !== result.revision ||
           change?.field !== "subscription_status" || change?.before !== "active" ||
           change?.after !== result.subscription_status ||
           change?.provider_status !== result.provider_status ||
+          change?.allowance_before !== tenant.monthly_allowance ||
           change?.allowance_after !== 0)
         throw new Error("Billing outcome audit unverified; inspect before retry");
       nextCursor = null;

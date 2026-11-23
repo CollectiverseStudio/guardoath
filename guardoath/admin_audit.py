@@ -99,9 +99,16 @@ class AdminAuditReader:
             def number(key):
                 value = item.get(key)
                 raw = value.get("N") if isinstance(value, dict) else None
-                if not isinstance(raw, str) or not re.fullmatch(r"(?:0|[1-9][0-9]{0,9})", raw):
+                # DynamoDB revisions must be exactly representable in the
+                # browser that verifies the immutable signed audit receipt.
+                # Keep canonical decimal numerals, reject unsafe integers,
+                # and preserve the operation-specific allowance/count bounds.
+                if not isinstance(raw, str) or not re.fullmatch(r"(?:0|[1-9][0-9]{0,15})", raw):
                     raise AdminAuditUnavailable("Invalid numeric audit field")
-                return int(raw)
+                parsed = int(raw)
+                if parsed > (1 << 53) - 1:
+                    raise AdminAuditUnavailable("Inexact numeric audit field")
+                return parsed
 
             tenant, actor, operation, when, reason = (string(k) for k in
                 ("tenant_id", "actor_sub", "operation", "when_utc", "reason"))
