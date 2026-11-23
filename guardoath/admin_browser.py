@@ -514,6 +514,17 @@ _JS = r'''"use strict";
       const sum = tenants.tenants.reduce((total, t) => total + t.usage_month_count, 0);
       if (Number.isSafeInteger(sum)) recordedMonthRequests = sum;
     }
+    // Cost-control signal from saved tenant caps, never AWS spend or an
+    // assertion that a soft overage policy actually blocked requests.
+    // The same complete, UTC-aligned, numerically safe population required
+    // for request totals is mandatory. Legacy/partial allowances are unknown.
+    const savedCapsComplete = recordedMonthRequests !== null &&
+      tenants.tenants.every(t => (t.demo === true || t.demo === false) &&
+        Number.isSafeInteger(t.monthly_allowance) &&
+        0 <= t.monthly_allowance && t.monthly_allowance <= 1_000_000_000);
+    const savedCapReachedTenants = savedCapsComplete ?
+      tenants.tenants.filter(t => t.demo === false &&
+        t.usage_month_count >= t.monthly_allowance).length : null;
     const sourceTime = page =>
       typeof page?.retrieved_utc === "string" &&
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(page.retrieved_utc) ?
@@ -545,6 +556,14 @@ _JS = r'''"use strict";
         " · complete bounded scan (includes demos)" + sourceTime(tenants) +
         " · recorded validations only; NOT live traffic, billable usage, AWS cost or Stripe revenue",
       status:recordedMonthRequests === null ? "unavailable" : "complete_single_page_recorded_usage"};
+    metrics.saved_allowance_reached_tenants = {value:savedCapReachedTenants,
+      source:savedCapReachedTenants === null ?
+        "DynamoDB · unavailable (partial page, unknown cap, invalid identity or UTC counter)" :
+        "DynamoDB saved tenant allowances · UTC " + usagePeriod +
+        " · complete bounded scan of non-demo accounts" + sourceTime(tenants) +
+        " · count at/above allowance; NOT AWS cost, active alerts or proof of blocking overages",
+      status:savedCapReachedTenants === null ? "unavailable" :
+        "complete_single_page_saved_allowance_signal"};
     el("metrics").replaceChildren();
     for (const [name, metric] of Object.entries(metrics)) {
       const card = document.createElement("div"); card.className = "metric";

@@ -837,3 +837,19 @@ The authenticated **Usage**, **Verify Stripe**, and **Invoices** inspection acti
 
 ## Owner Overview: recorded month-to-date validation volume (2026-11-22)
 The Overview adds a recorded month-to-date requests value derived from the **already fetched** authenticated/audited DynamoDB tenant-directory response. A total is displayed only when the bounded scan covers the entire population, tenant IDs are unique/valid, every record has a nonnegative safe-integer current-month counter, and all usage months match the UTC read date. Overflow, omitted counters, mixed months, missing read time, duplication or pagination produce **Unavailable**; a completely verified empty population may legitimately total zero. The metric includes demos, and represents persisted validation request counts, **not** live traffic, billable Stripe usage, AWS costs or verified invoices. No new provider request, tenant mutation, policy, quota or financial-entitlement change is introduced.
+
+## Owner Overview: saved allowance reached accounts (2026-11-22)
+The Overview now counts non-demo tenant records whose saved UTC-month request
+counter is at or above their stored monthly allowance, including accounts that
+are currently disabled. This is a read-only advisory cost-control inventory,
+not proof that usage was blocked, an AWS bill, an alert, a paid subscriber count
+or a Stripe entitlement check. A stored zero allowance with zero recorded
+requests is *at* its saved limit. The metric is shown only when the existing
+bounded and audited tenant scan is the complete population, all record IDs
+are unique and valid, every record has a current UTC-month safe-integer request
+counter, and every saved allowance is a valid nonnegative integer at most
+1,000,000,000. Missing legacy caps, malformed data, mixed months, partial
+pages and scan failures show **Unavailable** rather than zero. The count is
+recomputed on refresh and cleared on sign-out. It reuses the current DynamoDB
+read with no extra Cognito/Stripe/AWS request or provider spend. It does not
+modify the authoritative tenant record, overage policy or PII deadlines.
