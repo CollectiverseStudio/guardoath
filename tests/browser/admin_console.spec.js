@@ -790,6 +790,13 @@ test("owner rule editor reads saved stage and override before a revision-conditi
         return {status:200,contentType:"application/json",body:JSON.stringify({
           tenant_id:"sample-studio",revision:5,stage:"input",
           rule_id:"pii.email",action:"block",audit_event_id:receipt})};
+      if (request.path === "/v1/admin/audit/" + receipt)
+        return {status:200,contentType:"application/json",body:JSON.stringify({audit:{
+          status:"ok",integrity_status:"signed_verified",event_id:receipt,
+          operation:"tenant.rule_action",tenant_id:"sample-studio",
+          prior_revision:4,new_revision:5,
+          change:{field:"rule_action",rule_id:"pii.email",stage:"input",
+            before:"off",after:"block"}}})};
       return null;
     }
   });
@@ -825,6 +832,55 @@ test("owner rule editor reads saved stage and override before a revision-conditi
   expect(prompts.join(" ")).toContain("The check itself is OFF");
   expect(fixture.calls.some(c => c.path === "/v1/admin/tenants/sample-studio" &&
     c.method === "GET")).toBe(false);
+});
+
+test("wrong tenant and unavailable signed rule audit never report owner mutation complete", async ({page}) => {
+  const id = "b".repeat(64);
+  let auditMode = "wrong_tenant";
+  const fixture = await signedIn(page, {
+    features:{tenant_rule_changes:true},
+    override: request => {
+      if (request.path === "/v1/admin/tenants/sample-studio/rule-action" && request.method === "GET")
+        return {status:200,contentType:"application/json",body:JSON.stringify({
+          tenant_id:"sample-studio",revision:4,rule_id:"pii.email",stage:"input",
+          check_action:null,rule_action:"off",eligibility:"check_off"})};
+      if (request.path === "/v1/admin/tenants/sample-studio/rule-action" && request.method === "POST")
+        return {status:200,contentType:"application/json",body:JSON.stringify({
+          tenant_id:"sample-studio",revision:5,stage:"input",
+          rule_id:"pii.email",action:"block",audit_event_id:id})};
+      if (request.path === "/v1/admin/audit/" + id)
+        return auditMode === "outage"
+          ? {status:503,contentType:"application/json",body:JSON.stringify({detail:"Unavailable"})}
+          : {status:200,contentType:"application/json",body:JSON.stringify({audit:{
+            status:"ok",integrity_status:"signed_verified",event_id:id,
+            operation:"tenant.rule_action",tenant_id:"sample-labs",
+            prior_revision:4,new_revision:5,
+            change:{field:"rule_action",rule_id:"pii.email",stage:"input",
+              before:"off",after:"block"}}})};
+      return null;
+    }
+  });
+  page.on("dialog", async dialog => dialog.type() === "confirm" ? dialog.accept()
+    : dialog.accept(dialog.message().startsWith("Tenant ID") ? "sample-studio" :
+        dialog.message().startsWith("Stage:") ? "input" :
+        dialog.message().startsWith("Action:") ? "block" :
+        dialog.message().startsWith("Type tenant") ? "sample-studio" :
+        dialog.message().startsWith("Audit reason") ? "Reviewed existing saved Off rule" : ""));
+  await page.locator("#nav-catalog").click();
+  const category = page.locator("#categories > details").first();
+  await category.locator(":scope > summary").click();
+  const check = category.locator(":scope > details").first();
+  await check.locator(":scope > summary").click();
+  const change = check.getByRole("button",{name:"Set tenant rule"});
+  await change.click();
+  await expect(page.locator("#status")).toContainText("Signed mutation audit unverified");
+  await expect(page.locator("#status")).not.toContainText("Tenant rule saved");
+  auditMode = "outage";
+  await change.click();
+  await expect(page.locator("#status")).toContainText("Request failed (503)");
+  await expect(page.locator("#status")).not.toContainText("Tenant rule saved");
+  expect(fixture.calls.filter(c => c.path.endsWith("/rule-action") && c.method === "POST")).toHaveLength(2);
+  expect(fixture.calls.filter(c => c.path === "/v1/admin/audit/" + id)).toHaveLength(2);
 });
 
 test("rule inspection outage or cross-tenant response prevents every owner rule mutation", async ({page}) => {

@@ -1585,8 +1585,27 @@ _JS = r'''"use strict";
     }
     return "Audit event " + result.audit_event_id + " · saved tenant revision " + result.revision;
   }
+
+  // Backend verification establishes the HMAC of the durable audit row.
+  // A successful mutation response is not itself proof of signed persistence.
+  async function verifyTenantMutationAudit(outcome, tenantId, priorRevision, expected) {
+    if (!features.audit_receipt_lookup)
+      throw new Error("Signed audit lookup unavailable; outcome may have applied. Inspect before retrying");
+    const response = await request("/v1/admin/audit/" + encodeURIComponent(outcome.audit_event_id));
+    const receipt = response?.audit, change = receipt?.change;
+    if (!receipt || receipt.status !== "ok" ||
+        receipt.integrity_status !== "signed_verified" ||
+        receipt.event_id !== outcome.audit_event_id ||
+        receipt.operation !== expected.operation ||
+        receipt.tenant_id !== tenantId ||
+        receipt.prior_revision !== priorRevision ||
+        receipt.new_revision !== outcome.revision ||
+        !change || Object.entries(expected.change).some(([key, value]) => change[key] !== value))
+      throw new Error("Signed mutation audit unverified; outcome may have applied. Inspect before retrying");
+  }
   async function capUsage(tenant) {
     if (!token || !features.monthly_cost_caps) return;
+    if (!features.audit_receipt_lookup) {say("status","Signed audit lookup unavailable; no change attempted");return;}
     if (!Number.isSafeInteger(tenant.monthly_allowance) || tenant.monthly_allowance < 0) return;
     const input = prompt("New monthly request cap for " + tenant.tenant_id +
       ". This may ONLY reduce the existing allowance, and will BLOCK overages.");
@@ -1605,12 +1624,17 @@ _JS = r'''"use strict";
           confirmation,reason,idempotency_key:crypto.randomUUID().replaceAll("-", "")})
       });
       const receipt = auditReceipt(outcome, tenant.tenant_id, tenant.revision);
+      await verifyTenantMutationAudit(outcome, tenant.tenant_id, tenant.revision, {
+        operation:"tenant.allowance_cap",
+        change:{field:"monthly_allowance",before:tenant.monthly_allowance,after:limit}
+      });
       if (token && epoch === authEpoch) {await load();say("status","Cost cap saved · " + receipt);}
     } catch(err) {if(token && epoch===authEpoch) say("status",err.message);}
   }
   async function revokeTenantKeys(tenant) {
     if (!token || !features.tenant_key_revocation || !Number.isSafeInteger(tenant.revision) ||
         !Number.isInteger(tenant.api_key_count) || tenant.api_key_count < 1) return;
+    if (!features.audit_receipt_lookup) {say("status","Signed audit lookup unavailable; no change attempted");return;}
     const confirmation = prompt("This immediately revokes ALL application API keys for " +
       tenant.tenant_id + ". Type the tenant ID exactly:");
     if (confirmation !== tenant.tenant_id) return;
@@ -1627,11 +1651,16 @@ _JS = r'''"use strict";
       });
       const receipt = auditReceipt(outcome, tenant.tenant_id, tenant.revision);
       if (outcome.api_key_count !== 0) throw new Error("Revocation response is unverified; refresh before retry");
+      await verifyTenantMutationAudit(outcome, tenant.tenant_id, tenant.revision, {
+        operation:"tenant.keys_revoke",
+        change:{field:"api_keys",before_count:tenant.api_key_count,after_count:0}
+      });
       if (token && epoch===authEpoch) {await load();say("status","Application keys revoked · " + receipt);}
     } catch (err) {if (token && epoch===authEpoch) say("status",err.message);}
   }
   async function setTenantRule(ruleId) {
     if (!token || !features.tenant_rule_changes) return;
+    if (!features.audit_receipt_lookup) {say("status","Signed audit lookup unavailable; no change attempted");return;}
     const tenantId=prompt("Tenant ID whose saved rule action should change:");
     if (!tenantId || !/^[a-z][a-z0-9-]{1,39}$/.test(tenantId)) return;
     const stage=prompt("Stage: input or output", "input");
@@ -1679,11 +1708,16 @@ _JS = r'''"use strict";
           idempotency_key:crypto.randomUUID().replaceAll("-", "")})
       });
       const receipt = auditReceipt(outcome, tenantId, current.revision);
+      await verifyTenantMutationAudit(outcome, tenantId, current.revision, {
+        operation:"tenant.rule_action",
+        change:{field:"rule_action",rule_id:ruleId,stage,before:current.rule_action,after:action}
+      });
       if (token && epoch===authEpoch) {await load();say("status","Tenant rule saved · " + receipt);}
     } catch(err) {if(token && epoch===authEpoch) say("status",err.message);}
   }
   async function changeStatus(tenant) {
     if (!token || !features.tenant_status_changes) return;
+    if (!features.audit_receipt_lookup) {say("status","Signed audit lookup unavailable; no change attempted");return;}
     const nextStatus = tenant.status === "active" ? "disabled" : "active";
     const confirmation = prompt("To " + (nextStatus === "disabled" ? "suspend" : "reactivate") +
       " this account, type its tenant ID exactly: " + tenant.tenant_id);
@@ -1698,6 +1732,10 @@ _JS = r'''"use strict";
           expected_revision:tenant.revision, idempotency_key: crypto.randomUUID().replaceAll("-", "")})
       });
       const receipt = auditReceipt(outcome, tenant.tenant_id, tenant.revision);
+      await verifyTenantMutationAudit(outcome, tenant.tenant_id, tenant.revision, {
+        operation:"tenant.status",
+        change:{field:"status",before:tenant.status,after:nextStatus}
+      });
       if (token && epoch === authEpoch) {
         nextCursor = null;
         await load();
