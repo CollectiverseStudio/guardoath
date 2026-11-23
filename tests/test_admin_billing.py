@@ -445,3 +445,78 @@ def test_owner_api_exposes_only_safe_manual_invoice_metadata():
     assert data["reconciliation"]["code"] == "stripe_manual_invoice_collection"
     for private in ("cus_test1234", "sub_test1234", "pm_private", "secret@example.com"):
         assert private not in response.text
+
+
+def test_verified_active_period_end_cancellation_requires_review_without_changing_entitlement():
+    from datetime import datetime, timezone
+    stamp = 1796083200
+    tenant = Tenant()
+    before = dict(tenant.__dict__)
+    result = reporter(lambda *_: snapshot(
+        current_period_end=stamp, cancel_at_period_end=True,
+        collection_method="charge_automatically")).read(tenant)
+    assert result["cancellation_status"] == "scheduled_for_period_end"
+    assert result["cancellation_effective_utc"] == datetime.fromtimestamp(
+        stamp, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    assert result["reconciliation"]["level"] == "review"
+    assert result["reconciliation"]["code"] == "stripe_period_end_cancellation_scheduled"
+    assert result["subscription_entitlement"] is True
+    assert before == tenant.__dict__
+    assert "cus_" not in str(result) and "pm_private" not in str(result)
+
+
+@pytest.mark.parametrize("flag,status,effective", [
+    (False, "not_scheduled", None), (None, "unavailable", None),
+    ("false", "unavailable", None), (True, "scheduled_for_period_end", None),
+])
+def test_cancellation_schedule_never_fabricates_missing_or_malformed_provider_dates(
+        flag, status, effective):
+    result = reporter(lambda *_: snapshot(cancel_at_period_end=flag)).read(Tenant())
+    assert result["cancellation_status"] == status
+    assert result["cancellation_effective_utc"] == effective
+    assert result["subscription_entitlement"] is True
+    if status != "scheduled_for_period_end":
+        assert result["reconciliation"]["code"] == "states_agree"
+
+
+def test_cancellation_review_does_not_replace_critical_drift_or_collection_findings():
+    critical = reporter(lambda *_: snapshot(
+        status="canceled", cancel_at_period_end=True,
+        current_period_end=1796083200)).read(Tenant())
+    assert critical["reconciliation"]["code"] == "saved_active_without_verified_provider"
+    paused = reporter(lambda *_: snapshot(
+        cancel_at_period_end=True, current_period_end=1796083200,
+        pause_collection={"behavior": "void"})).read(Tenant())
+    assert paused["reconciliation"]["code"] == "stripe_payment_collection_paused"
+    manual = reporter(lambda *_: snapshot(
+        cancel_at_period_end=True, current_period_end=1796083200,
+        collection_method="send_invoice")).read(Tenant())
+    assert manual["reconciliation"]["code"] == "stripe_manual_invoice_collection"
+    conflicted = reporter(lambda *_: snapshot(
+        cancel_at_period_end=True, current_period_end=1796083200,
+        items={"data":[{"price":{"id": PRICE}, "quantity":1,
+                        "current_period_end":1796169600}], "has_more":False})).read(Tenant())
+    assert conflicted["cancellation_status"] == "scheduled_for_period_end"
+    assert conflicted["cancellation_effective_utc"] is None
+    assert conflicted["reconciliation"]["code"] == "stripe_period_end_cancellation_scheduled"
+
+
+def test_authenticated_owner_cancellation_advisory_is_masked_and_customer_denied():
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        verify_cognito_admin=lambda token: VerifiedAdmin(
+            "trusted-subject", frozenset({"owner"}), True) if token == "admin" else None,
+        tenant_store=Store(),
+        billing_reporter=reporter(lambda *_: snapshot(
+            cancel_at_period_end=True, current_period_end=1796083200))))
+    client = TestClient(app)
+    endpoint = "/v1/admin/subscriptions/usr-billing"
+    assert client.get(endpoint, headers={"X-GuardOath-Key":"admin"}).status_code == 401
+    assert client.get(endpoint).status_code == 401
+    response = client.get(endpoint, headers={"X-GuardOath-Admin-Session":"admin"})
+    assert response.status_code == 200
+    assert response.json()["subscription"]["reconciliation"]["code"] == (
+        "stripe_period_end_cancellation_scheduled")
+    assert response.json()["subscription"]["cancellation_status"] == "scheduled_for_period_end"
+    for private in ("cus_test1234", "sub_test1234", "pm_private", "secret@example.com"):
+        assert private not in response.text

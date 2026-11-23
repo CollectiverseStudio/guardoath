@@ -1377,6 +1377,13 @@ _JS = r'''"use strict";
           " · Cancel at period end: " +
           (state.verified && state.cancel_at_period_end === true ? "Yes" :
            state.verified && state.cancel_at_period_end === false ? "No" : "Unavailable") +
+          " · Cancellation schedule: " +
+          (state.verified && state.cancellation_status === "scheduled_for_period_end"
+            ? "Scheduled at current period end (UTC: " +
+              (typeof state.cancellation_effective_utc === "string" ?
+                state.cancellation_effective_utc : "Unavailable") + ")" :
+           state.verified && state.cancellation_status === "not_scheduled"
+            ? "Not scheduled" : "Unavailable") +
           " · Invoice collection method: " +
           (state.verified && state.collection_method === "send_invoice"
             ? "Send invoice (payment unverified)" :

@@ -221,9 +221,28 @@ class AdminSubscriptionReporter:
         period_end_utc = (datetime.fromtimestamp(period_end, tz=timezone.utc)
                           .isoformat(timespec="seconds").replace("+00:00", "Z")
                           if period_end is not None else None)
+        # Provider-verified active subscriptions can be scheduled to end
+        # without currently losing their saved entitlement. Surface the
+        # impending cancellation separately; never infer a renewal, invoice
+        # charge or early customer-access revocation from this advisory.
+        cancellation_status = (
+            "scheduled_for_period_end" if cancel_flag is True else
+            "not_scheduled" if cancel_flag is False else "unavailable")
+        cancellation_effective_utc = (
+            period_end_utc if cancellation_status == "scheduled_for_period_end"
+            else None)
+        if (state == "active" and cancellation_status == "scheduled_for_period_end"
+                and assessment["level"] == "consistent"):
+            assessment = {
+                "level": "review",
+                "code": "stripe_period_end_cancellation_scheduled",
+                "next_step": "Subscription is scheduled to end at the current period boundary; verify future access and renewal expectations without changing saved entitlement",
+            }
         return {
             "status": state, "provider": "Stripe", "verified": True,
             "cancel_at_period_end": cancel_flag,
+            "cancellation_status": cancellation_status,
+            "cancellation_effective_utc": cancellation_effective_utc,
             "current_period_end_utc": period_end_utc,
             "current_period_source": period_source,
             "billing_cycle_source": "same verified Stripe subscription (not an invoice)",

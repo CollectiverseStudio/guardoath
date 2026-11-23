@@ -1015,3 +1015,45 @@ test("owner billing distinguishes manual invoice collection and verified period 
   expect(fixture.calls.some(call => call.path === "/v1/admin/subscriptions/sample-studio"
     && call.headers["x-guardoath-admin-session"] === fixture.token)).toBe(true);
 });
+
+
+test("owner Billing warns of verified period-end cancellation without inventing a renewal", async ({page}) => {
+  const fixture = await signedIn(page,{override: request =>
+    request.path === "/v1/admin/subscriptions/sample-studio"
+      ? {status:200,contentType:"application/json",body:JSON.stringify({
+          subscription:{verified:true,status:"active",verified_at:"2026-11-23T08:00:00Z",
+            cancel_at_period_end:true,cancellation_status:"scheduled_for_period_end",
+            cancellation_effective_utc:"2026-12-01T00:00:00Z",
+            current_period_end_utc:"2026-12-01T00:00:00Z",
+            collection_method:"charge_automatically",
+            reconciliation:{level:"review",code:"stripe_period_end_cancellation_scheduled",
+              next_step:"Subscription is scheduled to end at the current period boundary; verify future access and renewal expectations without changing saved entitlement"}},
+          read_audit_event_id:"a".repeat(64)})} : null});
+  await page.locator("#nav-tenants").click();
+  await page.locator("#tenant-rows tr").filter({hasText:"sample-studio"})
+    .getByRole("button",{name:"Verify Stripe",exact:true}).click();
+  const output = page.locator("#billing-details");
+  await expect(output).toContainText("Reconciliation: review (stripe_period_end_cancellation_scheduled)");
+  await expect(output).toContainText("Cancellation schedule: Scheduled at current period end (UTC: 2026-12-01T00:00:00Z)");
+  await expect(output).toContainText("Next invoice amount: Unavailable");
+  expect(fixture.calls.some(call => call.path === "/v1/admin/subscriptions/sample-studio" &&
+    call.headers["x-guardoath-admin-session"] === fixture.token)).toBe(true);
+});
+
+test("owner Billing distinguishes unknown cancellation from an explicit not-scheduled status", async ({page}) => {
+  let calls = 0;
+  await signedIn(page,{override: request =>
+    request.path === "/v1/admin/subscriptions/sample-studio"
+      ? {status:200,contentType:"application/json",body:JSON.stringify({
+          subscription:{verified:true,status:"active",verified_at:"2026-11-23T08:00:00Z",
+            cancellation_status:(++calls === 1 ? "unavailable" : "not_scheduled"),
+            reconciliation:{level:"consistent",code:"states_agree",next_step:"No billing mutation performed"}},
+          read_audit_event_id:"a".repeat(64)})} : null});
+  await page.locator("#nav-tenants").click();
+  const action = page.locator("#tenant-rows tr").filter({hasText:"sample-studio"})
+    .getByRole("button",{name:"Verify Stripe",exact:true});
+  await action.click();
+  await expect(page.locator("#billing-details")).toContainText("Cancellation schedule: Unavailable");
+  await action.click();
+  await expect(page.locator("#billing-details")).toContainText("Cancellation schedule: Not scheduled");
+});

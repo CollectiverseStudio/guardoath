@@ -968,3 +968,20 @@ falls back to a valid subscription-level date, labels the source, and shows
 **Unavailable** for malformed, ambiguous, conflicting or absent dates. This
 does not change the application's pinned provider API version, billing
 entitlements, tenant records, Stripe costs, invoices or 500-ms validation limit.
+
+
+## Provider-verified scheduled subscription cancellation (2026-11-23)
+
+Owner **Verify Stripe** now surfaces an active subscription's independently
+verified `cancel_at_period_end` flag as **Scheduled at current period end**,
+**Not scheduled**, or **Unavailable**. A UTC effective date is displayed only
+when the same bound provider snapshot contains a valid, nonconflicting
+subscription/subscription-item period end. An absent, malformed or contradictory
+period produces **Unavailable** for the effective date, never a fabricated
+renewal or automatic access-revocation date. When the verified active provider
+and saved entitlement otherwise agree, the scheduled end is a **review**
+finding; critical provider drift, payment pause and manual invoice review
+still take precedence. The current verified subscription can remain active
+until Stripe actually reconciles its status. No entitlement, invoice, customer
+account, catalog, tenant record or provider is mutated. No extra Stripe call or
+charge, AWS spend, original deadline, or MFA gate is changed.
