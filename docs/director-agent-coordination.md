@@ -2142,3 +2142,9 @@ FIRST re-read this file's governing Atlas-only #28/#31 override, then AGENTS.md,
 - Owner Invoices' real server-side Stripe JSON adapter now rejects duplicate keys at any depth, NaN/Infinity constants and decimal overflows. Otherwise a last-key-wins provider parser might misstate a paid status or balance. Finite optional Stripe decimal fields remain supported; subscription price/binding, amounts, owner MFA, persistent read auditing, and authenticated browser remain unchanged.
 - Eight cases added: six corrupt-provider payloads, a valid finite-decimal fixture and an authenticated invoices API 503/redaction denial for conflicting paid/open status. Existing UI displays unavailable on 503. Updated operator guide; no provider mutation or AWS spend.
 - New exact-SHA Python/Playwright/CodeQL/specialized CI, source parity, rollback and 15 live checks remain required. Issues #39–#42 still open; no AWS deployment, financial readiness or live admin verification.
+
+
+## 2026-11-23 — consistent authoritative tenant timestamp validation (#39/#40)
+- Re-read governing coordination and November 19 override, AGENTS.md, exact main, completed seven-workflow CI (green), and open #39–#42. Added one shared strict saved UTC timestamp validator to the DynamoDB owner directory and individual detail projection, rejecting impossible calendar dates and noncanonical/ambiguous timestamps; absent legacy metadata remains unknown.
+- Added negative and leap-day tests for both authenticated detail and directory paths, updated operator guidance. Saved tenant records, read audit, Cognito/Stripe, PII 500-ms deadline and AWS resources are unchanged.
+- Full new-SHA CI, live source parity/rollback and 15 acceptance checks remain outstanding. No deployment, provider write or spend. Issues #39–#42 remain open.

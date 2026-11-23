@@ -26,7 +26,7 @@ from guardoath.admin_catalog_preview import (
     CatalogPreviewConflict, CatalogPreviewUnavailable, preview_rule_description)
 from guardoath.admin_catalog_manifest import (
     CatalogManifestConflict, CatalogManifestUnavailable, reviewed_metadata_manifest)
-from guardoath.admin_directory import DynamoAdminDirectory, DirectoryUnavailable, InvalidCursor
+from guardoath.admin_directory import DynamoAdminDirectory, DirectoryUnavailable, InvalidCursor, saved_utc_timestamp
 from guardoath.admin_usage import tenant_usage_report
 from guardoath.admin_rule_inspection import (
     inspect_tenant_rule_action, RuleSelectionInvalid, RuleInspectionUnavailable)
@@ -208,8 +208,7 @@ def _safe_record(record) -> dict:
             or type(demo) is not bool
             or subscription not in (None, "inactive", "active", "past_due", "canceled")
             or type(revision) is not int or not 0 <= revision <= MAX_BROWSER_SAFE_INTEGER
-            or (updated is not None and
-                (not isinstance(updated, str) or len(updated) > 40))):
+            or not saved_utc_timestamp(updated)):
         raise ValueError("Ambiguous saved tenant identity or entitlement")
 
     month = datetime.now(timezone.utc).strftime("%Y-%m")

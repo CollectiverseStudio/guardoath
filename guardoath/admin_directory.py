@@ -35,6 +35,26 @@ _NONNEGATIVE = re.compile(r"^(0|[1-9][0-9]{0,17})$")
 # Prevent JSON number rounding of authoritative usage counts and revisions.
 _JSON_SAFE_INTEGER = (1 << 53) - 1
 
+_SAVED_UTC = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")
+
+
+def saved_utc_timestamp(value: object) -> bool:
+    """Validate authoritative updated_at before showing apparent freshness.
+
+    Unknown legacy timestamps may be absent; malformed present values must
+    not appear as verified source metadata.
+    """
+    if value is None:
+        return True
+    if not isinstance(value, str) or not _SAVED_UTC.fullmatch(value):
+        return False
+    try:
+        datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+        return True
+    except ValueError:
+        return False
+
+
 
 def _number_attribute(value: object) -> int:
     """Read only canonical, bounded DynamoDB nonnegative Number attributes."""
@@ -109,8 +129,7 @@ def _project_item(item: object, month: str) -> dict:
             or status not in ("active", "disabled")
             or type(demo) is not bool
             or subscription not in (None, "inactive", "active", "past_due", "canceled")
-            or (updated is not None and
-                (not isinstance(updated, str) or len(updated) > 40))):
+            or not saved_utc_timestamp(updated)):
         raise DirectoryUnavailable("Ambiguous tenant account or subscription metadata")
     revision = _number_attribute(item.get("revision"))
     usage_count = None

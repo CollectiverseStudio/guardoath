@@ -616,3 +616,19 @@ def test_owner_tenant_detail_and_fallback_directory_refuse_rounded_source_number
         assert str(1 << 53) not in refused.text
         assert "SUPER_SECRET" not in refused.text
     assert c.get("/v1/admin/tenants/alpha", headers=auth("customer")).status_code == 401
+
+
+@pytest.mark.parametrize("invalid", [
+    "2026-02-30T09:00:00Z", "2026-11-23T24:00:00Z",
+    "2026-11-23T09:00:00+00:00", "2026-11-23T09:00:00.001Z",
+    12345, True,
+])
+def test_owner_detail_rejects_invalid_saved_update_time(invalid):
+    class InvalidStore:
+        def get(self, tenant_id):
+            entry = Record()
+            entry.updated_at = invalid
+            return entry
+    response = client(verified, InvalidStore()).get("/v1/admin/tenants/alpha", headers=auth())
+    assert response.status_code == 503
+    assert "updated_at" not in response.text

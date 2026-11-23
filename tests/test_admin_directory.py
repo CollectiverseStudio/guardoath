@@ -386,3 +386,27 @@ def test_ambiguous_saved_tenant_json_is_unavailable_at_authenticated_api_without
     assert response.status_code == 503
     assert "cus_PRIVATE_TOKEN" not in response.text
     assert "demo" not in response.text
+
+
+@pytest.mark.parametrize("invalid", [
+    "2026-02-30T09:00:00Z", "2026-11-23T24:00:00Z",
+    "2026-11-23T09:00:00+00:00", "2026-11-23T09:00:00.001Z",
+    "2026-11-23", 12345, True, {"value": "2026-11-23T09:00:00Z"},
+])
+def test_owner_directory_rejects_invalid_saved_update_time(invalid):
+    class InvalidTimestamp:
+        def scan(self, **kwargs):
+            row = item("alpha")
+            doc = json.loads(row["record"]["S"])
+            doc["updated_at"] = invalid
+            row["record"]["S"] = json.dumps(doc)
+            return {"Items": [row]}
+    with pytest.raises(DirectoryUnavailable):
+        directory(InvalidTimestamp()).page(owner_sub=OWNER, limit=1)
+
+
+def test_owner_directory_accepts_valid_leap_date_and_missing_legacy_timestamp():
+    from guardoath.admin_directory import saved_utc_timestamp
+    assert saved_utc_timestamp("2024-02-29T23:59:59Z")
+    assert saved_utc_timestamp(None)
+    assert not saved_utc_timestamp("2025-02-29T23:59:59Z")

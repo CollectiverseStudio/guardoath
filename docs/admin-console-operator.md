@@ -1070,3 +1070,14 @@ An ambiguous provider result yields Unavailable/503, not fabricated paid
 status, a balance, a refund, or entitlement. The browser continues to use its
 existing owner-authenticated invoice view; no Stripe write or additional read is
 introduced. This is a source safeguard, not live provider reconciliation evidence.
+
+
+### Strict saved tenant metadata timestamps (November 23, 2026)
+
+Both the authenticated tenant directory and individual tenant detail now validate a
+present authoritative `updated_at` as a real calendar UTC timestamp in
+`YYYY-MM-DDTHH:MM:SSZ` format, rejecting impossible days, hour 24,
+fractional timestamps, alternative offsets, and incorrect types. A missing
+legacy timestamp remains explicitly unknown; no recent/fresh claim is inferred.
+A malformed present timestamp fails the protected read rather than displaying
+false freshness. This is separate from Stripe verification or AWS live costs.
