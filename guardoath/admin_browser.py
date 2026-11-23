@@ -327,6 +327,11 @@ _JS = r'''"use strict";
   let enrollmentVerifying = false;
   let nextCursor = null;
   let nextUserCursor = null;
+  // Bind each directory response to its latest initiated view.
+  let tenantPageSelection = 0;
+  let userPageSelection = 0;
+  // One browser-initiated Cognito mutation at a time; server remains authoritative.
+  let activeUserStatus = null;
   let previewSelection = null;
   let previewReady = null;
   let draftReadyForReview = null;
@@ -418,6 +423,9 @@ _JS = r'''"use strict";
     }
   }
   const clearAdminData = () => {
+    ++tenantPageSelection;
+    ++userPageSelection;
+    activeUserStatus = null;
     invalidateCatalogExport();
     el("metrics").replaceChildren();
     el("tenant-rows").replaceChildren();
@@ -469,6 +477,8 @@ _JS = r'''"use strict";
   async function load() {
     if (!token) return;
     const epoch = authEpoch;
+    const tenantSelection = ++tenantPageSelection;
+    const userSelection = ++userPageSelection;
     const [overview, tenants, catalog, available, users] = await Promise.all([
       request("/v1/admin/overview"), request("/v1/admin/tenants?limit=20"),
       request("/v1/admin/catalog"), request("/v1/admin/features"),
@@ -590,7 +600,7 @@ _JS = r'''"use strict";
       el("metrics").append(card);
     }
     features = available;
-    el("user-change").disabled = !features.cognito_user_status_changes;
+    el("user-change").disabled = !features.cognito_user_status_changes || !!activeUserStatus;
     el("user-action-inspect").disabled = !features.cognito_action_receipts;
     previewSelection = null;
     previewReady = null;
@@ -600,8 +610,8 @@ _JS = r'''"use strict";
     el("proposal-go").disabled = true;
     el("proposal-title").disabled = true;
     el("proposal-use-case").disabled = true;
-    showUsers(users);
-    showTenants(tenants);
+    if (userSelection === userPageSelection) showUsers(users);
+    if (tenantSelection === tenantPageSelection) showTenants(tenants);
     const categories = Array.isArray(catalog.categories) ? catalog.categories : [];
     say("catalog-summary", "Published registry: " + (catalog.registry_version ?? "unknown") +
       " · " + categories.length + " categories · " + (catalog.total_checks ?? "unknown") +
@@ -1032,13 +1042,14 @@ _JS = r'''"use strict";
   async function pageUsers() {
     if (!token) return;
     const epoch = authEpoch;
+    const selection = ++userPageSelection;
     const qs = new URLSearchParams({limit:"20",query:el("user-search").value});
     if (nextUserCursor) qs.set("cursor", nextUserCursor);
     try {
       const result = await request("/v1/admin/users?" + qs);
-      if (token && epoch === authEpoch) showUsers(result);
+      if (token && epoch === authEpoch && selection === userPageSelection) showUsers(result);
     } catch (err) {
-      if (token && epoch === authEpoch) {
+      if (token && epoch === authEpoch && selection === userPageSelection) {
         el("user-rows").replaceChildren();
         nextUserCursor = null;
         el("user-next").disabled = true;
@@ -1089,7 +1100,7 @@ _JS = r'''"use strict";
     }
   }
   async function changeUserStatus() {
-    if (!token || !features.cognito_user_status_changes) return;
+    if (!token || !features.cognito_user_status_changes || activeUserStatus) return;
     const email = el("user-change-email").value.trim();
     const action = el("user-change-action").value;
     el("user-change-email").value = "";
@@ -1100,6 +1111,9 @@ _JS = r'''"use strict";
       return;
     }
     const epoch = authEpoch;
+    const mutation = {};
+    activeUserStatus = mutation;
+    el("user-change").disabled = true;
     say("user-change-result", "Rechecking account state before any change...");
     try {
       const inspected = await request("/v1/admin/users/lookup", {
@@ -1150,6 +1164,12 @@ _JS = r'''"use strict";
     } catch (err) {
       if (token && epoch === authEpoch)
         say("user-change-result", err.message + " · inspect account and audit before another change");
+    } finally {
+      if (activeUserStatus === mutation) {
+        activeUserStatus = null;
+        if (token && epoch === authEpoch)
+          el("user-change").disabled = !features.cognito_user_status_changes;
+      }
     }
   }
 
@@ -1785,12 +1805,20 @@ _JS = r'''"use strict";
   async function page() {
     const epoch = authEpoch;
     if (!token) return;
+    const selection = ++tenantPageSelection;
     const qs = new URLSearchParams({limit:"20",search:el("search").value});
     if (nextCursor) qs.set("cursor", nextCursor);
     try {
       const result = await request("/v1/admin/tenants?" + qs);
-      if (token && epoch === authEpoch) showTenants(result);
-    } catch(err) { if (token && epoch === authEpoch) say("tenant-status", err.message); }
+      if (token && epoch === authEpoch && selection === tenantPageSelection) showTenants(result);
+    } catch(err) {
+      if (token && epoch === authEpoch && selection === tenantPageSelection) {
+        el("tenant-rows").replaceChildren();
+        nextCursor = null;
+        el("next").disabled = true;
+        say("tenant-status", err.message);
+      }
+    }
   }
   async function beginLogin() {
     if (enrollmentVerifying) return;
@@ -2029,6 +2057,20 @@ _JS = r'''"use strict";
   el("draft-id").addEventListener("input", invalidateCatalogExport);
   el("refresh").addEventListener("click", () => {invalidateCatalogExport();load().catch(e => say("status", e.message));});
   el("logout").addEventListener("click", () => signOut());
+  el("search").addEventListener("input", () => {
+    ++tenantPageSelection;
+    nextCursor = null;
+    el("tenant-rows").replaceChildren();
+    el("next").disabled = true;
+    say("tenant-status", "Filter changed; search to read matching tenants.");
+  });
+  el("user-search").addEventListener("input", () => {
+    ++userPageSelection;
+    nextUserCursor = null;
+    el("user-rows").replaceChildren();
+    el("user-next").disabled = true;
+    say("user-status", "Filter changed; search to read matching Cognito accounts.");
+  });
   el("search-go").addEventListener("click", () => {nextCursor=null;page();});
   el("user-search-go").addEventListener("click", () => {nextUserCursor=null;pageUsers();});
   el("user-next").addEventListener("click", pageUsers);

@@ -1022,3 +1022,7 @@ and its lock. A pre-existing lock is never stolen or automatically removed:
 first confirm no writer remains active and inspect the source state before any
 manual cleanup. This cooperative source-code guard is not a substitute for
 Git main-SHA synchronization, independent source review, or an AWS transaction.
+
+### Owner directory out-of-order response protection (November 23, 2026)
+
+The authenticated Users and Tenants lists now bind provider replies to the selected filter and newest request within the current owner session. Editing a filter withdraws displayed rows and continuation tokens; older successes or failures cannot supersede a newer selection, including during Refresh. A failed current tenant page clears its previously shown rows. The Cognito disable/enable UI permits only one action in flight through exact-account preflight and immutable signed outcome verification. Server-side owner/MFA authorization, signed audit, provider idempotency and tenant source of truth are unchanged. This additional browser guard does not prove live Cognito behavior or production deployment.

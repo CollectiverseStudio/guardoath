@@ -549,6 +549,107 @@ test("directory paging, filtering and rate failure do not leave stale users", as
   await expect(page.locator("#user-next")).toBeDisabled();
 });
 
+
+test("owner directory ignores out-of-order Cognito success from an older filter", async ({page}) => {
+  await signedIn(page);
+  await page.locator("#nav-users").click();
+  let releaseOlder, startedOlder, deliveredOlder;
+  const hold = new Promise(resolve => releaseOlder=resolve);
+  const started = new Promise(resolve => startedOlder=resolve);
+  const delivered = new Promise(resolve => deliveredOlder=resolve);
+  const response = name => ({status:200,contentType:"application/json",body:JSON.stringify({
+    status:"ok",users:[{username:name,email_hint:name+"***@example.invalid",status:"CONFIRMED"}],
+    returned:1,next_cursor:null,source:"synthetic Cognito page"})});
+  await page.route("**/v1/admin/users?*", async route => {
+    const q = new URL(route.request().url()).searchParams.get("query");
+    if (q === "a") {
+      startedOlder();
+      await hold;
+      await route.fulfill(response("a"));
+      deliveredOlder();
+    } else if (q === "b") await route.fulfill(response("b"));
+    else await route.fallback();
+  });
+  await page.locator("#user-search").fill("a");
+  await page.locator("#user-search-go").click();
+  await started;
+  await page.locator("#user-search").fill("b");
+  await page.locator("#user-search-go").click();
+  await expect(page.locator("#user-rows")).toContainText("b***@example.invalid");
+  releaseOlder();
+  await delivered;
+  await page.waitForTimeout(50);
+  await expect(page.locator("#user-rows")).toContainText("b***@example.invalid");
+  await expect(page.locator("#user-rows")).not.toContainText("a***@example.invalid");
+  await expect(page.locator("#user-next")).toBeDisabled();
+});
+
+test("tenant directory ignores a late failed filter and clears rows on a current failure", async ({page}) => {
+  const fixture = await signedIn(page);
+  await page.locator("#nav-tenants").click();
+  let releaseOlder, startedOlder, deliveredOlder;
+  const hold = new Promise(resolve => releaseOlder=resolve);
+  const started = new Promise(resolve => startedOlder=resolve);
+  const delivered = new Promise(resolve => deliveredOlder=resolve);
+  await page.route("**/v1/admin/tenants?*", async route => {
+    const q = new URL(route.request().url()).searchParams.get("search");
+    if (q === "studio") {
+      startedOlder();
+      await hold;
+      await route.fulfill({status:503,contentType:"application/json",body:'{"detail":"stale provider error"}'});
+      deliveredOlder();
+    } else if (q === "labs") await route.fulfill({
+      status:200,contentType:"application/json",body:JSON.stringify({
+        status:"ok",tenants:[fixture.tenants[1]],returned:1,scanned:1,
+        next_cursor:null,source:"synthetic tenant records"})});
+    else if (q === "unknown") await route.fulfill({
+      status:503,contentType:"application/json",body:'{"detail":"current provider error"}'});
+    else await route.fallback();
+  });
+  await page.locator("#search").fill("studio");
+  await page.locator("#search-go").click();
+  await started;
+  await page.locator("#search").fill("labs");
+  await page.locator("#search-go").click();
+  await expect(page.locator("#tenant-rows")).toContainText("sample-labs");
+  releaseOlder();
+  await delivered;
+  await page.waitForTimeout(50);
+  await expect(page.locator("#tenant-rows")).toContainText("sample-labs");
+  await expect(page.locator("#tenant-status")).not.toContainText("Request failed");
+  await page.locator("#search").fill("unknown");
+  await page.locator("#search-go").click();
+  await expect(page.locator("#tenant-status")).toContainText("Request failed (503)");
+  await expect(page.locator("#tenant-rows tr")).toHaveCount(0);
+  await expect(page.locator("#next")).toBeDisabled();
+});
+
+test("Cognito account status disables repeat submission during independent identity preflight", async ({page}) => {
+  const fixture = await signedIn(page,{features:{cognito_user_status_changes:true}});
+  await page.locator("#nav-users").click();
+  let releaseLookup, signalLookup;
+  const held = new Promise(resolve => releaseLookup=resolve);
+  const started = new Promise(resolve => signalLookup=resolve);
+  let calls = 0;
+  await page.route("**/v1/admin/users/lookup", async route => {
+    calls += 1;
+    signalLookup();
+    await held;
+    await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+      status:"ok",user:{username:"user-fixture",enabled:true,status:"CONFIRMED"}})});
+  });
+  page.on("dialog", dialog => dialog.dismiss());
+  await page.locator("#user-change-email").fill("someone@example.invalid");
+  await page.locator("#user-change").click();
+  await started;
+  await expect(page.locator("#user-change")).toBeDisabled();
+  await page.locator("#user-change").evaluate(button => button.click());
+  expect(calls).toBe(1);
+  releaseLookup();
+  await expect(page.locator("#user-change")).toBeEnabled();
+  expect(fixture.calls.filter(c => c.path === "/v1/admin/users/status")).toHaveLength(0);
+});
+
 for (const status of [401,403]) test(`revoked owner response ${status} clears private UI and returns to login`, async ({page}) => {
   const fixture = await signedIn(page);
   await page.locator("#nav-users").click();
