@@ -886,3 +886,15 @@ Cognito policy, Stripe data, stored record or 500-ms checker deadline changes.
 Existing signed owner-authenticated API routes and browser integration continue
 to display unavailable states for missing/untrusted projections. Full exact-SHA
 CI, live /admin and production acceptance are separate requirements.
+
+
+## Exact owner-mutation revisions
+
+The authenticated owner API rejects unsafe tenant revisions for status, rule-action,
+allowance-cap, API-key revocation and unpaid-subscription reconciliation requests.
+A saved revision may be submitted only while both its integer value and the
+resulting incremented revision are exactly representable by the browser
+(`1` through `2^53 - 2`). Unrepresentable revisions fail validation
+before a DynamoDB or provider mutation; do not round or retry them.
+This affects no ordinary tenant checks, deadlines, subscription entitlements
+or provider charges.

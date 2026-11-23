@@ -53,9 +53,13 @@ class TenantStore(Protocol):
     def get(self, tenant_id: str): ...
 
 
+# The browser and signed audit receipt must represent BOTH current and next revision exactly.
+MAX_MUTABLE_REVISION = (1 << 53) - 2
+
+
 class TenantRuleChange(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    expected_revision: int = Field(ge=1,strict=True)
+    expected_revision: int = Field(ge=1, le=MAX_MUTABLE_REVISION, strict=True)
     stage: str = Field(pattern=r"^(input|output)$")
     rule_id: str = Field(min_length=3,max_length=100)
     action: str = Field(pattern=r"^(off|allow|flag|block|same_as_check)$")
@@ -66,7 +70,7 @@ class TenantRuleChange(BaseModel):
 
 class AllowanceCap(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    expected_revision: int = Field(ge=1,strict=True)
+    expected_revision: int = Field(ge=1, le=MAX_MUTABLE_REVISION, strict=True)
     new_limit: int = Field(ge=0,le=1_000_000_000,strict=True)
     confirmation: str = Field(min_length=2,max_length=40)
     reason: str = Field(min_length=10,max_length=240)
@@ -75,7 +79,7 @@ class AllowanceCap(BaseModel):
 
 class RevokeTenantKeys(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    expected_revision: int = Field(ge=1, strict=True)
+    expected_revision: int = Field(ge=1, le=MAX_MUTABLE_REVISION, strict=True)
     confirmation: str = Field(min_length=2, max_length=40)
     reason: str = Field(min_length=10, max_length=240)
     idempotency_key: str = Field(min_length=16, max_length=96)
@@ -83,7 +87,7 @@ class RevokeTenantKeys(BaseModel):
 
 class ReconcileUnpaidSubscription(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    expected_revision: int = Field(ge=1, strict=True)
+    expected_revision: int = Field(ge=1, le=MAX_MUTABLE_REVISION, strict=True)
     confirmation: str = Field(min_length=12, max_length=55)
     reason: str = Field(min_length=10, max_length=240)
     idempotency_key: str = Field(pattern=r"^[A-Za-z0-9_-]{16,96}$", max_length=96)
@@ -136,7 +140,7 @@ class CognitoStatusChange(BaseModel):
 
 class StatusChange(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    expected_revision: int = Field(ge=1, strict=True)
+    expected_revision: int = Field(ge=1, le=MAX_MUTABLE_REVISION, strict=True)
     status: str = Field(pattern=r"^(active|disabled)$")
     confirmation: str = Field(min_length=2, max_length=40)
     reason: str = Field(min_length=10, max_length=240)

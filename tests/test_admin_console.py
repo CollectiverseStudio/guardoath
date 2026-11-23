@@ -1,7 +1,13 @@
 from dataclasses import dataclass
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from guardoath.admin_console import VerifiedAdmin, create_admin_router
+import pytest
+from pydantic import ValidationError
+from guardoath.admin_console import (
+    VerifiedAdmin, create_admin_router, MAX_MUTABLE_REVISION,
+    TenantRuleChange, AllowanceCap, RevokeTenantKeys,
+    ReconcileUnpaidSubscription, StatusChange,
+)
 
 
 @dataclass
@@ -524,3 +530,58 @@ def test_legacy_tenant_directory_rejects_duplicates_missing_and_broken_ids():
         c = client(verified, InvalidStore())
         response = c.get("/v1/admin/tenants", headers=auth())
         assert response.status_code == 503, (ids, response.text)
+
+
+@pytest.mark.parametrize("model,fields", [
+    (StatusChange, {
+        "status": "disabled", "confirmation": "alpha",
+        "reason": "Operator verified account suspension",
+        "idempotency_key": "revisionbounds123456"}),
+    (TenantRuleChange, {
+        "stage": "input", "rule_id": "pii.email", "action": "block",
+        "confirmation": "alpha", "reason": "Operator verified rule action",
+        "idempotency_key": "revisionbounds123456"}),
+    (AllowanceCap, {
+        "new_limit": 100, "confirmation": "alpha",
+        "reason": "Operator verified request cap",
+        "idempotency_key": "revisionbounds123456"}),
+    (RevokeTenantKeys, {
+        "confirmation": "alpha", "reason": "Operator verified key exposure",
+        "idempotency_key": "revisionbounds123456"}),
+    (ReconcileUnpaidSubscription, {
+        "confirmation": "RECONCILE alpha", "reason": "Operator verified unpaid billing",
+        "idempotency_key": "revisionbounds123456"}),
+])
+def test_all_owner_mutation_models_preserve_exact_current_and_next_revisions(model, fields):
+    # A successful mutation increments the saved revision and publishes the
+    # result to JavaScript and the signed owner audit receipt.
+    assert model.model_validate({
+        **fields, "expected_revision": MAX_MUTABLE_REVISION,
+    }).expected_revision == MAX_MUTABLE_REVISION
+    for unsafe in (MAX_MUTABLE_REVISION + 1, 1 << 53, True, 0, -1,
+                   str(MAX_MUTABLE_REVISION)):
+        with pytest.raises(ValidationError):
+            model.model_validate({**fields, "expected_revision": unsafe})
+
+
+def test_owner_revision_above_exact_audit_range_is_rejected_before_backend_write():
+    class NoWrite:
+        def __init__(self):
+            self.calls = 0
+
+        def change_status(self, **kwargs):
+            self.calls += 1
+            raise AssertionError("Unrepresentable revision reached tenant mutation")
+
+    actions = NoWrite()
+    app = FastAPI()
+    app.include_router(create_admin_router(
+        verify_cognito_admin=verified, admin_mutator=actions))
+    response = TestClient(app).post("/v1/admin/tenants/alpha/status", json={
+        "expected_revision": MAX_MUTABLE_REVISION + 1,
+        "status": "disabled", "confirmation": "alpha",
+        "reason": "Operator verified account suspension",
+        "idempotency_key": "revisionbounds123456",
+    }, headers={**auth(), "Origin": "https://guardoath.com"})
+    assert response.status_code == 422
+    assert actions.calls == 0
