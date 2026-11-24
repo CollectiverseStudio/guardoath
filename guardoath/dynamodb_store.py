@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 import json
 import os
 
-from guardoath.tenant_record import EDITABLE_FIELDS, TenantRecord, stored_record_fields, usage_month
+from guardoath.tenant_record import EDITABLE_FIELDS, TenantRecord, require_new_subscription_state_allowed, stored_record_fields, usage_month
 from guardoath.tenant_store import TenantConflict, TenantNotFound, UsageLimitReached
 
 # Every expression this store sends. The test double in tests/test_dynamodb_store.py implements
@@ -95,6 +95,7 @@ class DynamoDBTenantStore:
                 return tuple(sorted(ids))
 
     def create(self, record: TenantRecord) -> TenantRecord:
+        require_new_subscription_state_allowed(record)
         stored = record.model_copy(update={"revision": 1, "updated_at": _now()})
         try:
             self._client.put_item(TableName=self.table_name, Item=to_item(stored), ConditionExpression=CREATE_CONDITION)

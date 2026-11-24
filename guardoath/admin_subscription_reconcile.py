@@ -89,6 +89,9 @@ class AdminSubscriptionReconciliation:
             previous = self._prior(event_id, fingerprint)
             if previous is not None:
                 return previous
+            from guardoath.state_contracts import new_subscription_state_enabled
+            if not new_subscription_state_enabled():
+                raise SubscriptionUnavailable("New reconciliation requires an accepted compatibility release")
             reply = self.ddb.get_item(TableName=self.tenant_table,
                 Key={"tenant_id": {"S": tenant_id}}, ConsistentRead=True)
             item = reply.get("Item") if isinstance(reply, dict) else None

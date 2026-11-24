@@ -51,13 +51,25 @@ def test_legacy_can_accept_reader_baseline_but_never_new_provenance_writers(tmp_
     assert verify(writer,baseline)["status"] == "compatible"
 
 
-def test_current_writer_is_declared_in_actual_build_metadata(tmp_path):
+def test_current_baseline_has_actual_build_metadata_compatible_with_legacy_backup(tmp_path):
     spec = importlib.util.spec_from_file_location("build_lambda",ROOT / "deploy/aws/build_lambda.py")
     build = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(build)
     actual = build.release_metadata(SHA)
     assert actual == release_metadata(SHA)
-    assert CONTRACT in actual["introduced_state_contracts"] and CONTRACT in actual["supported_state_contracts"]
+    assert actual["introduced_state_contracts"] == [] and CONTRACT in actual["supported_state_contracts"]
+    old = archive(tmp_path / "old.zip")
+    candidate = archive(tmp_path / "candidate.zip",actual)
+    assert verify(candidate,old)["status"] == "compatible"
+    writer = archive(tmp_path / "writer.zip",metadata(OLD))
+    assert verify(candidate,writer)["status"] == "compatible"
+
+
+def test_enabling_actual_writer_code_also_declares_incompatible_new_writes(tmp_path,monkeypatch):
+    from guardoath import state_contracts
+    monkeypatch.setattr(state_contracts,"ENABLE_NEW_SUBSCRIPTION_STATE",True)
+    actual = release_metadata(SHA)
+    assert actual["introduced_state_contracts"] == [CONTRACT]
     old = archive(tmp_path / "old.zip")
     candidate = archive(tmp_path / "candidate.zip",actual)
     with pytest.raises(ValueError,match="Rollback image cannot preserve"):

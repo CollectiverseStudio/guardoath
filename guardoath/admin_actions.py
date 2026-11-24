@@ -26,6 +26,10 @@ class AdminActionConflict(Exception):
     pass
 
 
+class AdminUnboundZeroCap(AdminActionConflict):
+    """A baseline cannot represent an unbound zero cap without new state."""
+
+
 class AdminActionUnavailable(Exception):
     pass
 
@@ -226,9 +230,16 @@ class AdminTenantActions:
             old=doc.get("monthly_allowance")
             if type(old) is not int or new_limit>old or (new_limit==old and doc.get("overage")=="block"):
                 raise AdminActionConflict("Cost cap may only reduce current allowance or enforce blocking")
+            from guardoath.state_contracts import new_subscription_state_enabled
+            existing_provenance = (doc.get("admin_monthly_allowance_cap") is not None
+                                   or doc.get("stripe_plan_monthly_allowance") is not None)
+            if (not new_subscription_state_enabled() and not existing_provenance
+                    and doc.get("stripe_subscription_id") is None and new_limit == 0):
+                raise AdminUnboundZeroCap("Unbound zero caps require durable subscription provenance")
             now=self.clock().astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00","Z")
-            updated={**doc,"monthly_allowance":new_limit,"admin_monthly_allowance_cap":new_limit,
-                     "overage":"block","updated_at":now}
+            updated={**doc,"monthly_allowance":new_limit,"overage":"block","updated_at":now}
+            if new_subscription_state_enabled() or existing_provenance:
+                updated["admin_monthly_allowance_cap"] = new_limit
             validated=validate_record({**updated,"revision":expected_revision+1})
             if not callable(getattr(validated,"model_dump",None)):
                 raise ValueError("Invalid record validation result")

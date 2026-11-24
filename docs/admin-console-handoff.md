@@ -5,6 +5,64 @@ record for a new chat. The append-only engineering history remains in
 [director-agent-coordination.md](director-agent-coordination.md); the complete
 47-target product discussion is preserved in [product-roadmap.md](product-roadmap.md).
 
+## Current release phase: implemented compatibility baseline
+
+The current source supports `subscription-cap-provenance-v1` while introducing
+none of that state. `ENABLE_NEW_SUBSCRIPTION_STATE=False` in
+`guardoath/state_contracts.py` governs both artifact declarations and actual
+production writers. There is no environment or build-argument override.
+
+Both stores preserve and enforce existing caps and plan provenance, including
+zero and later writer receipts. Legacy customer activation, positive request
+caps, existing delinquency downgrade, user/tenant controls and catalog review
+remain available without adding new fields. Full owner reconciliation is retained
+and tested but is not mounted in this baseline. New provenance-bearing records
+and new full-reconciliation receipts are refused before a write/provider call.
+
+The first-activation regression is also fixed: a positive blocking allowance
+retains its limit even before a Stripe subscription is bound. An unbound zero-cap
+mutation without provenance is specifically refused in the baseline, with a
+clear instruction to use the existing Suspend action. This prevents a new zero
+cap from becoming indistinguishable from registration. Historical unbound zero
+records cannot prove which history occurred; do not claim their provenance was
+recovered. Legacy bound zero remains conservative during recovery.
+
+**Do not enable the writer source until this actual baseline is deployed and
+accepted as the compatible rollback.** A later source commit can then enable
+creation; its artifact will automatically declare the contract introduced and
+the gate will require that verified compatible backup. No baseline deployment
+or live acceptance is established in this workspace.
+
+Current batch evidence before publication: **1,555 Python 3.12 tests passed** in
+the broad admin/Stripe/tenant/release run, with the existing opt-in real-AWS test
+unavailable without credentials; **210 Python 3.13 targeted tests passed** after
+the unbound-cap correction. Actual signed-owner ASGI smoke saved a 4,000-request
+legacy-shaped cap, left full reconciliation unmounted (404), and isolated an
+inherited Cognito redirect setting. Syntax/whitespace passed. New baseline
+browser acceptance still requires exact-new-SHA CI; it is not a local Chrome pass.
+
+### Preceding writer source is fully CI verified
+
+All **25 individual jobs** at
+[`e17baba1a7ee325878b68dc9460f21fcfbfae11e`](https://github.com/CollectiverseStudio/guardoath/commit/e17baba1a7ee325878b68dc9460f21fcfbfae11e)
+were inspected and passed. This accepts that source's CI, not the new baseline
+or a production deployment.
+
+| Exact-SHA workflow | Jobs | Evidence |
+| --- | ---: | --- |
+| Tests | 13 | [45305824684](https://github.com/CollectiverseStudio/guardoath/actions/runs/45305824684) |
+| CodeQL / Push on main | 3 | [45305824483](https://github.com/CollectiverseStudio/guardoath/actions/runs/45305824483) |
+| Field Comparisons Evidence | 2 | [45305824632](https://github.com/CollectiverseStudio/guardoath/actions/runs/45305824632) |
+| Trusted Reference Acceptance | 1 | [45305824638](https://github.com/CollectiverseStudio/guardoath/actions/runs/45305824638) |
+| PII Reliability Gate | 3 | [45305824625](https://github.com/CollectiverseStudio/guardoath/actions/runs/45305824625) |
+| Stripe Reconciliation Acceptance | 2 | [45305824620](https://github.com/CollectiverseStudio/guardoath/actions/runs/45305824620) |
+| Deploy Script Acceptance | 1 | [45305824528](https://github.com/CollectiverseStudio/guardoath/actions/runs/45305824528) |
+
+The dashboard job executed **7 owner real-application tests, 19 guarded-invocation
+tests and 437 default browser tests**, all passed. The PowerShell expected-refusal
+exit correction is verified. These are offline external-service boundaries;
+live Cognito/AWS/Stripe behavior and all 15 live checks remain unverified.
+
 ## Start here in a new session
 
 1. Fetch current `main` and read the coordination file's top override, then
@@ -28,7 +86,7 @@ The latest authorization is owner-only Cognito/MFA administration. Older issue
 text proposing billing/support/publisher roles does not authorize exposing
 delegated privileges. Current server enforcement deliberately permits only owner.
 
-## Latest concrete batch
+## Preserved full owner reconciliation implementation
 
 The introducing commit of this handoff builds on
 `af911757950f52f7dbf43789d619ab1e6cb45538`. Use
@@ -95,10 +153,10 @@ commit; never infer acceptance from a nearby SHA.
   rechecks the backup digest before restoration. Release acceptance now requires
   all seven workflows / 25 individual jobs, including Stripe and deployment
   script acceptance.
-- **This source introduces cap provenance. It must not deploy over a legacy
-  rollback image. A compatible baseline must first be implemented, tested,
-  deployed and accepted. That baseline is not implemented or deployed in this
-  batch.** Do not remove the gate, strip saved caps, or claim schema compatibility
+- The original writer introduced cap provenance and correctly refused a legacy
+  rollback. The current source now implements the actual reader/enforcement
+  baseline described above. It must be deployed and accepted before enabling the
+  later writer. Do not remove the gate, strip saved caps, or claim compatibility
   from a manifest declaration alone. See the operator guide for the contract.
 
 ## Verification actually obtained before publication
@@ -137,7 +195,7 @@ one. No AWS resource or paid provider was purchased or provisioned.
 1. Obtain the new commit's exact-SHA CI results, including actual Chrome and
    PowerShell execution. Diagnose and repair any failure before further release
    work. Do not count review or syntax checks as browser acceptance.
-2. Implement the compatible rollback baseline and establish real source parity,
+2. Deploy and accept the implemented compatible rollback baseline, establish real source parity,
    verified backup and all 15 live acceptance results when authenticated release
    access is available. Issue #30 remains an unresolved disclosed latency risk.
 3. Complete the real financial management operations required by #41, including

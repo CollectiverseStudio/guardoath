@@ -8,7 +8,17 @@ import re
 
 RELEASE_CONTRACT_VERSION = 1
 SUPPORTED_STATE_CONTRACTS = ("subscription-cap-provenance-v1",)
-INTRODUCED_STATE_CONTRACTS = ("subscription-cap-provenance-v1",)
+# First deploy and accept this compatibility source over the legacy image.
+# Only a later source commit may enable creation, after the deployed backup
+# actually supports the contract. There is deliberately no environment or
+# deployment-argument override: it would invalidate the artifact declaration.
+ENABLE_NEW_SUBSCRIPTION_STATE = False
+
+
+def new_subscription_state_enabled() -> bool:
+    if type(ENABLE_NEW_SUBSCRIPTION_STATE) is not bool:
+        raise ValueError("Subscription release phase must be source controlled")
+    return ENABLE_NEW_SUBSCRIPTION_STATE
 
 
 def release_metadata(source_sha: str) -> dict:
@@ -16,4 +26,4 @@ def release_metadata(source_sha: str) -> dict:
         raise ValueError("An exact committed source SHA is required")
     return {"source_sha":source_sha,"release_contract_version":RELEASE_CONTRACT_VERSION,
             "supported_state_contracts":list(SUPPORTED_STATE_CONTRACTS),
-            "introduced_state_contracts":list(INTRODUCED_STATE_CONTRACTS)}
+            "introduced_state_contracts":list(SUPPORTED_STATE_CONTRACTS) if new_subscription_state_enabled() else []}

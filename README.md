@@ -34,12 +34,15 @@ timeouts, errors, and review flags without calling any paid API. Every successfu
 simulator result is labelled `simulated: true`. An ordinary prompt receiving a
 simulated `passed` result has **not** received a safety or bias assessment.
 
-The prototype includes a local API-backed dashboard. It does not store prompt or
-response content and has no database or production deployment. The former optional
-Azure Prompt Shields and Amazon Bedrock Guardrails connectors were removed on 2026-11-05;
-the local `prompt_attack` and `harmful_content` checks do that work. See
-[cloud portability](docs/cloud-portability.md). Hosting implementation is handled
-separately by Greg; this batch contains no deployment resources.
+The repository includes local and hosted API/dashboard implementations, an
+optional DynamoDB tenant store, Cognito/Stripe integrations and AWS deployment
+resources. Owner-console requirements #39–#42 remain partially implemented. The
+current source is a compatibility release that preserves subscription safeguards
+before a later release enables new provenance writes. Executed tests, exact CI,
+deployment access and unfinished work are recorded in the
+[admin handoff](docs/admin-console-handoff.md). Source implementation is not
+evidence of AWS deployment or live acceptance; see also
+[cloud portability](docs/cloud-portability.md).
 
 An optional **real local detector** checks email addresses, credit-card candidates
 and selected U.S. SSN candidates, plus 90 more identifier types that are on by default

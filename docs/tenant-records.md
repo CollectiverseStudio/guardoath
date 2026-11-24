@@ -12,6 +12,21 @@ retains an existing cap. Legacy bound records with no provenance retain their
 saved restriction, including zero, until a separately audited restoration is
 implemented. Reconciliation never enables a suspended tenant.
 
+The current compatibility source does not create provenance on legacy records.
+It preserves and enforces any existing populated fields, while ordinary customer
+activation and positive owner caps keep their legacy JSON shape. Positive
+blocking allowances are retained even before a subscription binding, so checkout
+and first activation cannot erase a newly saved owner cap. Ordinary registration
+still starts at zero and receives the verified configured plan on first activation.
+
+During this phase, an owner cannot create an ambiguous zero cap on an unbound
+record without provenance; the API explains that **Suspend** remains available.
+Existing explicit zero caps and bound zero caps remain enforced. Historical
+unbound zero records cannot distinguish registration from an old cap using their
+shape alone; no reconstruction of that history is claimed. The source-controlled
+writer phase must stay disabled until the actual compatible baseline is deployed
+and accepted, and cannot be enabled through environment configuration.
+
 Null provenance is omitted from ordinary stored JSON; non-null values, including
 cap zero, survive unrelated policy/key/status edits. These fields introduce the
 `subscription-cap-provenance-v1` state contract and require a compatible rollback

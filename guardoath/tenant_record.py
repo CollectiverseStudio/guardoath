@@ -459,6 +459,20 @@ def stored_record_fields(record: TenantRecord) -> dict:
     return fields
 
 
+def require_new_subscription_state_allowed(record: TenantRecord) -> None:
+    """New records cannot introduce a contract before a compatible rollback.
+
+    This guard applies to creation only. Reads and unrelated updates must always
+    preserve existing provenance so the compatibility image remains a safe
+    rollback after a later writer release.
+    """
+    from guardoath.state_contracts import new_subscription_state_enabled
+    if (not new_subscription_state_enabled()
+            and (record.admin_monthly_allowance_cap is not None
+                 or record.stripe_plan_monthly_allowance is not None)):
+        raise ValueError("New subscription state requires an accepted compatibility release")
+
+
 def record_bytes(record: TenantRecord) -> int:
     """The size of the record's stored fields, exactly as guardoath.dynamodb_store.record_json writes them."""
     return len(json.dumps(stored_record_fields(record), separators=(",", ":"),

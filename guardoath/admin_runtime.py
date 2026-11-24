@@ -166,11 +166,13 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
                     return binding, fetch_subscription_snapshot(binding, secret)
                 return verified_subscription_snapshot(tenant_id=record.tenant_id,
                     customer_id=record.payer_id, price_id=price, api_key=secret)
-            billing_reconciler = AdminSubscriptionReconciliation(
-                tenants.store._client, tenants.store.table_name, audit_table,
-                signing_key=audit_signing_key, resolve_snapshot=resolve_snapshot,
-                expected_price_id=price, expected_livemode=secret.startswith("sk_live_"),
-                plan_monthly_allowance=int(raw_allowance))
+            from guardoath.state_contracts import new_subscription_state_enabled
+            if new_subscription_state_enabled():
+                billing_reconciler = AdminSubscriptionReconciliation(
+                    tenants.store._client, tenants.store.table_name, audit_table,
+                    signing_key=audit_signing_key, resolve_snapshot=resolve_snapshot,
+                    expected_price_id=price, expected_livemode=secret.startswith("sk_live_"),
+                    plan_monthly_allowance=int(raw_allowance))
     mount_admin_console(app, sessions=admin_sessions, tenants=tenants, cognito=cognito_client,
                         cursor_signing_key=bytes.fromhex(key_hex), browser_config=config,
                         browser_exchange=BoundExchange(config), native_auth=native_auth,

@@ -16,7 +16,7 @@ offline acceptance are not evidence of AWS deployment or live financial data.
 | Owner access | Separate Cognito client, signed tokens, fresh independent owner membership/account checks, recent MFA, same-origin mutations, memory-only browser tokens | Actual configured production login and all live acceptance |
 | User management | Bounded masked directory/exact lookup; confirmed Cognito enable/disable with signed intent and independently verified outcome, recoverable ambiguity | Live provider acceptance; no owner role grants or self-disable |
 | Tenant management | Existing tenant store, suspend/reactivate, key revocation, stage-specific rule actions, downward request caps, revision checks and signed atomic audit | Deployed customer safeguards and source parity |
-| Subscriptions | Read-only provider inspection and owner-requested full reconciliation from fresh server-side Stripe state; saved caps/suspension preserved; durable signed replay receipt | Live Stripe acceptance and supported provider subscription changes |
+| Subscriptions | Provider inspection and protective delinquency downgrade; compatibility baseline preserves existing caps and receipts; complete owner reconciliation implementation retained for the subsequent writer release | Deploy/accept the baseline before enabling new provenance and full owner reconciliation; live Stripe acceptance and provider subscription changes |
 | Billing and costs | Bounded verified invoice history, saved usage/allowance history and clearly labeled request-cap signals | Refunds/credits, verified infrastructure cost/revenue allocation and financial operations remain unavailable |
 | Catalog | Shared registry, signed immutable description drafts/reviews, reversible source-plan export and shipped metadata history | Authenticated source publication/rollback, behavior/schema authoring and deployment acceptance remain incomplete |
 
@@ -27,7 +27,13 @@ Tenant writes require typed confirmation, reason, expected revision and an
 atomic tenant-update/audit transaction. Cognito writes persist a signed intent
 before the provider action and record its independently checked outcome.
 
-### Provider-verified subscription reconciliation
+### Retained provider-verified subscription reconciliation
+
+The current source is the compatibility baseline described below. It does not
+mount the full owner reconciliation action or create `billing.reconcile` events.
+The following complete implementation remains under test for the subsequent
+writer release; its capability is not enabled merely by setting Stripe or admin
+environment variables.
 
 The owner **Reconcile subscription** action calls
 `POST /v1/admin/subscriptions/{tenant_id}/reconcile`. The backend accepts only
@@ -49,14 +55,16 @@ and [collection methods](https://docs.stripe.com/billing/collection-method).
 This is entitlement reconciliation, not a receipt proving money was collected.
 
 `GUARDOATH_PAID_MONTHLY_ALLOWANCE` must explicitly configure a positive plan
-allowance before the runtime exposes full owner reconciliation. Saved
+allowance, and a later source release must enable provenance creation, before
+the runtime exposes full owner reconciliation. Saved
 `admin_monthly_allowance_cap` and `stripe_plan_monthly_allowance` separate an
 operator restriction from the nominal provider plan. Both are server-controlled,
 not customer-editable. Delinquency sets effective allowance to zero without
 erasing a known cap; verified recovery still honors that cap. Account suspension,
 keys, usage, checks, Input/Output Off choices and unrelated tenants remain intact.
 Legacy bound records without provenance retain their saved restriction,
-including zero, rather than silently relaxing a potentially intentional limit.
+including zero. An unbound legacy account with a positive blocking allowance
+also retains that restriction through customer binding and first activation.
 An audited cap-restoration workflow remains separate future work.
 
 A byte-exact source compare-and-set and revision condition protect the update.
@@ -79,25 +87,49 @@ forbid unknown tenant fields, and deleting it would remove a safeguard. Ordinary
 records with neither field omit the absent fields; populated values, including
 zero, are always preserved.
 
-Lambda builds now declare supported and introduced persistent-state contracts
-in their generated source manifest. The current source introduces
-`subscription-cap-provenance-v1`. Before any Lambda update,
+Lambda builds declare supported and introduced persistent-state contracts
+in their generated source manifest. The current source **supports but does not
+introduce** `subscription-cap-provenance-v1`. Before any Lambda update,
 `Deploy-Verified.ps1` verifies the downloaded rollback archive against the
 actual deployed `CodeSha256`, checks the candidate's exact source SHA, requires
 the rollback image to support every introduced contract, and refuses loss of
 already-deployed support. Archive inspection does not extract or execute code.
 Rollback rechecks the same backup digest immediately before restoration.
 
-**A legacy rollback image blocks this writer release.** A separately tested
-compatibility baseline must first support reading, preserving and enforcing the
-new fields/receipts while introducing none. After that baseline is deployed and
-accepted, it can serve as the writer release's rollback. Do not fabricate a
-manifest, delete provenance, use the candidate as its own rollback, or bypass
-this gate. Neither a compatibility baseline nor its deployment is claimed here.
+The current baseline sets source-controlled `ENABLE_NEW_SUBSCRIPTION_STATE=False`.
+That same phase controls generated artifact metadata and all producers: owner
+full reconciliation, request-cap actions, both tenant stores' subscription updates
+and creation of records carrying provenance. There is no production environment
+override or builder switch. Existing populated fields and signed receipts remain
+readable, preserved and enforced, making this baseline capable of interpreting
+later writer data after rollback.
+
+Legacy customer activation and positive request caps remain usable without adding
+new fields. A legacy bound account that loses paid entitlement keeps zero on
+recovery until a later audited restoration can distinguish its prior restriction.
+An unbound zero-cap mutation is refused during the baseline when no provenance
+exists: otherwise it would be indistinguishable from a newly registered account
+awaiting its first subscription. The API explains this limitation and points to
+the existing **Suspend** control. Bound zero caps and existing explicit zero caps
+remain supported. Historical unbound zero records cannot reveal whether an old
+operator cap existed; this source does not claim to reconstruct that history.
+
+**Deploy and accept the baseline before enabling the writer source.** Once its
+actual deployed archive is the verified compatible backup, a separate source
+commit can enable new state and the full owner reconciliation action. The later
+artifact then declares the contract introduced, and the same gate rejects a
+legacy rollback. Do not fabricate a manifest, strip saved provenance, use the
+candidate as its own rollback, or bypass the gate. Baseline implementation and
+offline tests are not evidence that it has been deployed or accepted live.
 
 ### Offline acceptance
 
-`playwright.admin.config.js` runs actual browser HTML/JS against the mounted
+`playwright.admin-baseline.config.js` exercises the current source phase with
+real owner login, persisted legacy-shaped request caps, explicit unbound-zero
+refusal/suspension, unavailable future-writer route and mobile navigation.
+`playwright.admin.config.js` retains every full-reconciliation scenario under an
+explicit test-only future-phase override in the isolated test application.
+Both run actual browser HTML/JS against the mounted
 GuardOath application, RSA-signed Cognito token validation, owner/MFA verifier,
 tenant adapter, mutation services and signed audit readers. SQLite persists the
 typed DynamoDB boundary across independent process reads. External Cognito,

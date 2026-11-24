@@ -89,12 +89,15 @@ def reconciled_allowance(record, *, active: bool, plan_monthly_allowance: int | 
             (type(plan_monthly_allowance) is not int or
              not 1 <= plan_monthly_allowance <= 1_000_000_000)):
         raise ValueError("Invalid server-configured plan allowance")
+    from guardoath.state_contracts import new_subscription_state_enabled
     current = record.monthly_allowance
     cap = record.admin_monthly_allowance_cap
     prior_plan = record.stripe_plan_monthly_allowance
-    if plan_monthly_allowance is not None and record.stripe_subscription_id is not None:
+    preserve_provenance = new_subscription_state_enabled() or cap is not None or prior_plan is not None
+    if plan_monthly_allowance is not None:
         if prior_plan is None and cap is None:
-            cap = current
+            if record.stripe_subscription_id is not None or (current > 0 and record.overage == "block"):
+                cap = current
         elif (record.subscription_status == "active" and prior_plan is not None
               and current < prior_plan):
             # Also retain restrictions written by older operators after a
@@ -102,12 +105,16 @@ def reconciled_allowance(record, *, active: bool, plan_monthly_allowance: int | 
             cap = current if cap is None else min(cap, current)
     nominal = plan_monthly_allowance if plan_monthly_allowance is not None else current
     allowance = min(nominal, cap) if cap is not None else nominal
-    return {
+    quota = {
         "monthly_allowance": allowance if active else 0,
         "overage": "block" if not active or plan_monthly_allowance is not None or cap is not None else record.overage,
-        "admin_monthly_allowance_cap": cap,
-        "stripe_plan_monthly_allowance": plan_monthly_allowance if plan_monthly_allowance is not None else prior_plan,
     }
+    if preserve_provenance:
+        quota.update(admin_monthly_allowance_cap=cap,
+                     stripe_plan_monthly_allowance=plan_monthly_allowance if plan_monthly_allowance is not None else prior_plan)
+    # The baseline can enforce conservative legacy limits without introducing
+    # fields its legacy rollback cannot parse. Never remove existing provenance.
+    return quota
 
 
 def require_supported_entitlement(snapshot: dict, *, active: bool) -> None:

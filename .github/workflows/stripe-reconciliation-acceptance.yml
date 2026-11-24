@@ -27,6 +27,7 @@ jobs:
           tests/test_account_registration_entitlement.py
           tests/test_dynamodb_store.py
           tests/test_admin_subscription_reconcile.py
+          tests/test_subscription_compatibility_baseline.py
           tests/test_admin_runtime.py
   authenticated-billing-browser:
     runs-on: ubuntu-latest

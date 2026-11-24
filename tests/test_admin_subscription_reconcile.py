@@ -24,6 +24,18 @@ ACTOR = "12345678-1234-1234-1234-123456789012"
 TENANT = "usr-reconcile"
 
 
+@pytest.fixture(autouse=True)
+def future_writer_phase(monkeypatch):
+    """Retain every writer assertion while the production source is baseline.
+
+    This override exists only inside tests. The deployed application has no
+    phase override; test_subscription_compatibility_baseline exercises its
+    actual no-introduction behavior and rollback support separately.
+    """
+    from guardoath import state_contracts
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_SUBSCRIPTION_STATE", True)
+
+
 def tenant(**changes):
     return TenantRecord.model_validate({"tenant_id": TENANT, "display_name": "Synthetic account", "revision": 7,
         "demo": False, "status": "active", "billing_mode": "stripe", "payer_id": "cus_reconcile",

@@ -13,7 +13,7 @@ from typing import Callable, Protocol
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
-from guardoath.admin_actions import AdminActionConflict, AdminActionUnavailable, AdminTenantActions
+from guardoath.admin_actions import AdminActionConflict, AdminActionUnavailable, AdminTenantActions, AdminUnboundZeroCap
 from guardoath.admin_audit import AdminAuditReader, AdminSensitiveReadAuditor, AdminAuditUnavailable, EVENT
 from guardoath.admin_billing import AdminSubscriptionReporter, BillingUnavailable
 from guardoath.admin_billing_reconcile import AdminBillingDowngrade, BillingDowngradeConflict, BillingDowngradeUnavailable
@@ -272,6 +272,9 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
     """
     if type(require_persistent_read_audit) is not bool:
         raise ValueError("Persistent audit enforcement must be an explicit boolean")
+    from guardoath.state_contracts import new_subscription_state_enabled
+    if not new_subscription_state_enabled():
+        billing_reconciler = None
     router = APIRouter()
     user_actions = None
     if (isinstance(admin_user_directory, CognitoUserDirectory)
@@ -957,6 +960,8 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                     validate_record=record_validator)
             except ValueError as exc:
                 raise HTTPException(status_code=422,detail="Invalid cost cap request") from exc
+            except AdminUnboundZeroCap as exc:
+                raise HTTPException(status_code=409,detail="A zero cap for an unbound account is unavailable in this release. Use Suspend to block access.") from exc
             except AdminActionConflict as exc:
                 raise HTTPException(status_code=409,detail="Tenant state changed; refresh") from exc
             except AdminActionUnavailable as exc:

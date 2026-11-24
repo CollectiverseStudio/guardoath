@@ -146,10 +146,12 @@ def test_hosted_runtime_denies_admin_data_without_persistent_audit_table(monkeyp
 
 
 @pytest.mark.parametrize("allowance,enabled", [(None,False),("125",True),("1000000000",True)])
-def test_owner_reconciliation_needs_explicit_server_plan_and_mounts_without_provider_calls(monkeypatch, allowance, enabled):
+@pytest.mark.parametrize("writer_phase", [False,True])
+def test_owner_reconciliation_needs_explicit_server_plan_and_mounts_without_provider_calls(monkeypatch, allowance, enabled, writer_phase):
     from admin_test_support import AdminTestDynamo
     from guardoath.dynamodb_store import DynamoDBTenantStore
-    from guardoath import admin_runtime
+    from guardoath import admin_runtime, state_contracts
+    monkeypatch.setattr(state_contracts,"ENABLE_NEW_SUBSCRIPTION_STATE",writer_phase)
     configure(monkeypatch)
     monkeypatch.setenv("GUARDOATH_ADMIN_AUDIT_TABLE","audit_table")
     monkeypatch.setenv("GUARDOATH_STRIPE_SECRET_KEY","sk_test_" + "a" * 32)
@@ -162,7 +164,8 @@ def test_owner_reconciliation_needs_explicit_server_plan_and_mounts_without_prov
     try:
         assert configure_admin_from_environment(FastAPI(),tenants=Tenants(DynamoDBTenantStore("tenant_table",database)),
             admin_sessions=AdminSessions(),cognito_client=Cognito()) is True
-        assert (mounted[0]["billing_reconciler"] is not None) is enabled
+        assert (mounted[0]["billing_reconciler"] is not None) is (enabled and writer_phase)
+        assert mounted[0]["billing_reporter"] is not None and mounted[0]["billing_downgrade"] is not None
         assert database.transactions == 0 and not database.audit_items()
     finally: database.close()
 

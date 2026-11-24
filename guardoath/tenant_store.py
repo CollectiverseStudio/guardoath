@@ -4,7 +4,7 @@ revision, and usage counted on the record itself."""
 from datetime import datetime, timezone
 from threading import Lock
 
-from guardoath.tenant_record import EDITABLE_FIELDS, TenantRecord, usage_month
+from guardoath.tenant_record import EDITABLE_FIELDS, TenantRecord, require_new_subscription_state_allowed, usage_month
 
 
 class TenantNotFound(LookupError):
@@ -35,6 +35,7 @@ class MemoryTenantStore:
             return tuple(sorted(self._records))
 
     def create(self, record: TenantRecord) -> TenantRecord:
+        require_new_subscription_state_allowed(record)
         with self._lock:
             if record.tenant_id in self._records:
                 raise TenantConflict("Tenant already exists")

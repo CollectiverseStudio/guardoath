@@ -155,7 +155,11 @@ jobs:
           cache: npm
       - run: python -m pip install -e '.[test,pii]'
       - run: npm ci
-      - name: Authenticated owner browser and real API acceptance
+      - name: Compatibility baseline owner browser and real API acceptance
+        run: npx playwright test --config playwright.admin-baseline.config.js
+        env:
+          PLAYWRIGHT_CHANNEL: chrome
+      - name: Retained future writer browser and real API acceptance
         run: npx playwright test --config playwright.admin.config.js
         env:
           PLAYWRIGHT_CHANNEL: chrome

@@ -29,6 +29,7 @@ from admin_test_support import AdminTestDynamo, ADMIN_BROWSER_AUDIT_KEY
 from guardoath.admin_actions import AdminTenantActions
 from guardoath.admin_audit import AdminAuditReader, AdminSensitiveReadAuditor
 from guardoath.admin_billing import AdminSubscriptionReporter
+from guardoath.admin_billing_reconcile import AdminBillingDowngrade
 from guardoath.admin_browser import BrowserAuthConfig, BoundExchange
 from guardoath.admin_catalog_drafts import AdminCatalogDrafts
 from guardoath.admin_integration import mount_admin_console
@@ -41,10 +42,24 @@ from guardoath.rule_catalog import RULES
 from guardoath.subscription_reconciliation import StripeBinding
 from guardoath.tenant_record import TenantRecord
 from guardoath.tenant_sessions import CognitoSessions
+from guardoath import state_contracts
+
+# Only this isolated test application may select the retained future writer
+# code. Production has no environment phase switch. The baseline run uses the
+# source-controlled phase unchanged and separately verifies its real exposure.
+phase = os.environ.get("GUARDOATH_ADMIN_TEST_WRITER_PHASE", "0")
+if phase not in ("0", "1"):
+    raise RuntimeError("Invalid synthetic browser phase")
+if phase == "1":
+    state_contracts.ENABLE_NEW_SUBSCRIPTION_STATE = True
+elif state_contracts.new_subscription_state_enabled():
+    raise RuntimeError("Baseline browser acceptance requires baseline source")
 
 POOL, CLIENT = "us-east-1_Example", "syntheticownerclient"
 DOMAIN = "operators.auth.us-east-1.amazoncognito.com"
-ORIGIN = "http://127.0.0.1:8780"
+ORIGIN = os.environ.get("GUARDOATH_ADMIN_TEST_ORIGIN", "http://127.0.0.1:8780")
+if ORIGIN not in ("http://127.0.0.1:8780", "http://127.0.0.1:8781"):
+    raise RuntimeError("Browser acceptance must stay on its isolated loopback origin")
 OWNER = "12345678-1234-1234-1234-123456789012"
 CUSTOMER = "87654321-4321-4321-4321-210987654321"
 CURSOR_KEY = b"synthetic-owner-cursor-key-not-production-0123456789"
@@ -150,10 +165,12 @@ if path.exists(): raise RuntimeError("Browser acceptance requires a new isolated
 db = AdminTestDynamo(path)
 month = datetime.now(timezone.utc).strftime("%Y-%m")
 for suffix in ("alpha","beta"):
+    baseline_active = phase == "0" and suffix == "alpha"
     db.seed("tenant_table",to_item(TenantRecord(tenant_id="usr-admin-" + suffix,
         display_name="Synthetic " + suffix, demo=False, status="active", revision=7,
-        subscription_status="inactive",billing_mode="stripe",payer_id="cus_" + suffix,
-        monthly_allowance=0,overage="block",key_hashes=("a" * 64,),usage={month:10},
+        subscription_status="active" if baseline_active else "inactive",billing_mode="stripe",payer_id="cus_" + suffix,
+        stripe_subscription_id="sub_" + suffix if baseline_active else None,
+        monthly_allowance=10000 if phase == "0" else 0,overage="block",key_hashes=("a" * 64,),usage={month:10},
         input_check_pii="block",output_check_pii="block",input_check_text_security="block",
         input_rule_actions={"pii.email_address":"off"},input_attachment_csv_mode="off")))
 store = DynamoDBTenantStore("tenant_table",db)
@@ -177,12 +194,15 @@ def resolve_subscription(record):
 
 
 reader = AdminAuditReader(db,"audit_table",verify_key=ADMIN_BROWSER_AUDIT_KEY)
+reporter = AdminSubscriptionReporter(stripe_snapshot,expected_price_id="price_starter",expected_livemode=False)
 mount_admin_console(app,sessions=sessions,tenants=tenants,cognito=CognitoBoundary(),
     cursor_signing_key=CURSOR_KEY,browser_config=config,browser_exchange=BoundExchange(config,sender=exchange_code),
     admin_mutator=AdminTenantActions(db,"tenant_table","audit_table",audit_key=ADMIN_BROWSER_AUDIT_KEY),
     audit_reader=reader,read_auditor=AdminSensitiveReadAuditor(db,"audit_table",signing_key=ADMIN_BROWSER_AUDIT_KEY),
     catalog_drafts=AdminCatalogDrafts(db,"audit_table",ADMIN_BROWSER_AUDIT_KEY),require_persistent_read_audit=True,
-    billing_reporter=AdminSubscriptionReporter(stripe_snapshot,expected_price_id="price_starter",expected_livemode=False),
+    billing_reporter=reporter,
+    billing_downgrade=AdminBillingDowngrade(db,"tenant_table","audit_table",signing_key=ADMIN_BROWSER_AUDIT_KEY,
+        reporter=reporter,validate_record=TenantRecord.model_validate),
     billing_reconciler=AdminSubscriptionReconciliation(db,"tenant_table","audit_table",signing_key=ADMIN_BROWSER_AUDIT_KEY,
         resolve_snapshot=resolve_subscription,expected_price_id="price_starter",expected_livemode=False,plan_monthly_allowance=10000),
     record_validator=TenantRecord.model_validate,rule_exists=lambda rule_id:rule_id in RULES)
