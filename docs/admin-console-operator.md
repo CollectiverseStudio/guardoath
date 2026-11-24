@@ -1118,3 +1118,14 @@ A bounded partial page can still show individual valid records; it does not
 establish population totals. The column is advisory, not a persistent alert,
 live traffic, invoice or AWS cost; allow-and-record is not hard blocking.
 No new database or provider requests are made.
+
+
+### Saved quota risk triage (current page)
+
+In Tenants, choose **Saved quota risk (this page only)** to show Watch or
+higher, Near allowance or higher, At or above allowance, or Unavailable.
+The filter operates on the already authenticated, audited directory page;
+it issues no additional request, does not modify tenant records, and is not
+a global search or alert. Continue with Next page even when none of the
+current rows match. Unknown counters are not treated as zero or safe.
+The filter is reset on sign-out. AWS spend and live billing remain unavailable.

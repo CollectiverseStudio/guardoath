@@ -1454,3 +1454,50 @@ test("owner tenant directory identifies actionable saved quota risk on bounded p
   await page.locator("#refresh").click();
   await expect(risk("quota-over")).toHaveText("Unavailable");
 });
+
+
+test("owner quota triage filters only the loaded page and preserves provider pagination", async ({page}) => {
+  const base = {display_name:"Saved account",status:"active",demo:false,
+    subscription_status:"inactive",revision:2,monthly_allowance:100,
+    overage_policy:"allow_and_record",usage_month:"2026-11"};
+  const first = [
+    {...base,tenant_id:"quota-low",usage_month_count:79},
+    {...base,tenant_id:"quota-watch",usage_month_count:80},
+    {...base,tenant_id:"quota-near",usage_month_count:95},
+    {...base,tenant_id:"quota-at",usage_month_count:100},
+    {...base,tenant_id:"quota-over",usage_month_count:101},
+    {...base,tenant_id:"quota-unknown",usage_month_count:null}];
+  let calls = 0;
+  const fixture = await signedIn(page,{override:request => {
+    if (request.path !== "/v1/admin/tenants") return null;
+    calls++;
+    const rows = calls === 1 ? first : [{...base,tenant_id:"quota-next",usage_month_count:99}];
+    return {status:200,contentType:"application/json",body:JSON.stringify({
+      status:"ok",tenants:rows,returned:rows.length,scanned:rows.length,
+      next_cursor:calls === 1 ? "more" : null,retrieved_utc:"2026-11-23T12:00:00Z"})};
+  }});
+  await page.locator("#nav-tenants").click();
+  const filter = page.locator("#quota-risk-filter");
+  const visible = page.locator("#tenant-rows tr:visible");
+  await expect(visible).toHaveCount(6);
+  await filter.selectOption("watch");
+  await expect(visible).toHaveCount(4);
+  await filter.selectOption("near");
+  await expect(visible).toHaveCount(3);
+  await filter.selectOption("at");
+  await expect(visible).toHaveCount(2);
+  await filter.selectOption("unknown");
+  await expect(visible).toHaveCount(1);
+  await expect(visible).toContainText("quota-unknown");
+  expect(calls).toBe(1);
+  await expect(page.locator("#next")).toBeEnabled();
+  await page.locator("#next").click();
+  await expect(page.locator("#tenant-rows tr")).toHaveCount(1);
+  await expect(visible).toHaveCount(0);
+  await expect(page.locator("#next")).toBeDisabled();
+  await filter.selectOption("all");
+  await expect(visible).toHaveCount(1);
+  await expect(visible).toContainText("quota-next");
+  expect(calls).toBe(2);
+  expect(fixture.calls.filter(x=>x.path==="/v1/admin/tenants"&&x.method!=="GET")).toHaveLength(0);
+});

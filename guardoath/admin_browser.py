@@ -291,7 +291,7 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <label for="user-action-key">Action reference</label> <input id="user-action-key" maxlength="96" autocomplete="off" spellcheck="false">
 <label for="user-action-email">Optional exact account email for live comparison</label> <input id="user-action-email" type="email" maxlength="254" autocomplete="off" spellcheck="false">
 <button id="user-action-inspect" type="button" disabled>Inspect signed action</button><p id="user-action-result" role="status"></p></section>
-<section id="section-tenants" data-admin-section class="panel" hidden tabindex="-1" aria-label="Tenants"><h2>Tenants</h2><p class="muted">API key counts and saved overage policies come from persisted tenant records; Allow and record is not a hard cap. Key material is never displayed. Unknown values remain unavailable. Quota risk is advisory, derived from each saved counter and allowance for the UTC read month, not live activity, financial cost, or a persistent alert.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>Saved quota risk (UTC)</th><th>Overage policy</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
+<section id="section-tenants" data-admin-section class="panel" hidden tabindex="-1" aria-label="Tenants"><h2>Tenants</h2><p class="muted">API key counts and saved overage policies come from persisted tenant records; Allow and record is not a hard cap. Key material is never displayed. Unknown values remain unavailable. Quota risk is advisory, derived from each saved counter and allowance for the UTC read month, not live activity, financial cost, or a persistent alert.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button> <label for="quota-risk-filter">Saved quota risk (this page only)</label> <select id="quota-risk-filter"><option value="all">All risks</option><option value="watch">Watch or higher</option><option value="near">Near allowance or higher</option><option value="at">At or above allowance</option><option value="unknown">Unavailable</option></select><p class="muted">This filter only hides rows on the current bounded page. Next page continues the source scan even if no visible rows match.</p><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>Saved quota risk (UTC)</th><th>Overage policy</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
 <section id="section-billing" data-admin-section class="section-stack" hidden tabindex="-1" aria-label="Billing"><section class="panel"><h2>Verified recent invoices</h2><p class="muted">Up to five Stripe invoice summaries for an independently verified customer subscription. Amounts are in minor currency units, not a revenue total or forecast.</p><p id="invoice-details" role="status">No invoice history selected.</p></section>
 <section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Select Verify Stripe beside a tenant to compare the current provider status with its saved tenant entitlement. Discrepancies are advisory: no paid access or billing state is modified here.</p><p id="billing-details" role="status">No subscription selected.</p></section>
 </section><section id="section-usage" data-admin-section class="panel" hidden tabindex="-1" aria-label="Usage"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
@@ -461,6 +461,7 @@ _JS = r'''"use strict";
     el("proposal-go").disabled = true;
     el("audit-id").value = "";
     el("search").value = "";
+    el("quota-risk-filter").value = "all";
     el("user-search").value = "";
     el("user-exact-email").value = "";
     el("user-change-email").value = "";
@@ -1327,12 +1328,29 @@ _JS = r'''"use strict";
     else state = "Below 80%";
     return state + " · " + tenant.usage_month;
   }
+  function quotaRiskMatches(label, filter) {
+    if (filter === "all") return true;
+    const state = label.split(" · ")[0];
+    if (filter === "unknown") return state === "Unavailable";
+    const at = state === "At allowance" || state === "Above allowance";
+    const near = state === "Near allowance (95%+)";
+    if (filter === "at") return at;
+    if (filter === "near") return at || near;
+    if (filter === "watch") return at || near || state === "Watch (80%+)";
+    return false;
+  }
+  function applyQuotaFilter() {
+    const filter = el("quota-risk-filter").value;
+    for (const row of el("tenant-rows").children)
+      row.hidden = !quotaRiskMatches(row.dataset.quotaRisk, filter);
+  }
   function showTenants(data) {
     el("tenant-rows").replaceChildren();
     for (const tenant of data.tenants || []) {
       const row = document.createElement("tr");
       for (const field of ["tenant_id", "display_name", "status", "subscription_status", "monthly_allowance", "usage_month_count"]) row.append(textNode("td", tenant[field]));
-      row.append(textNode("td", savedQuotaRisk(tenant, data)));
+      row.dataset.quotaRisk = savedQuotaRisk(tenant, data);
+      row.append(textNode("td", row.dataset.quotaRisk));
       row.append(textNode("td", tenant.overage_policy === "block" ? "Block at saved cap" :
         tenant.overage_policy === "allow_and_record" ? "Allow and record overage" : "Unavailable"));
       row.append(textNode("td", tenant["api_key_count"]));
@@ -1394,6 +1412,7 @@ _JS = r'''"use strict";
       row.append(actions);
       el("tenant-rows").append(row);
     }
+    applyQuotaFilter();
     nextCursor = data.next_cursor || null;
     el("next").disabled = !nextCursor;
     say("tenant-status", (data.tenants || []).length + " tenants on this page; source: " + (data.source || "unknown") + readAuditLabel(data));
@@ -2187,6 +2206,7 @@ _JS = r'''"use strict";
     el("user-next").disabled = true;
     say("user-status", "Filter changed; search to read matching Cognito accounts.");
   });
+  el("quota-risk-filter").addEventListener("change", applyQuotaFilter);
   el("search-go").addEventListener("click", () => {nextCursor=null;page();});
   el("user-search-go").addEventListener("click", () => {nextUserCursor=null;pageUsers();});
   el("user-next").addEventListener("click", pageUsers);
