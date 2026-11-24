@@ -65,3 +65,8 @@ try {
 } finally {
     Remove-Item $directory -Recurse -Force
 }
+# The last negative case deliberately makes Python exit 1. PowerShell's GitHub
+# runner propagates LASTEXITCODE even after Expect-Refused verified that failure.
+# Reach success only after every assertion and cleanup completed; an uncaught
+# refusal/assertion still terminates above with ErrorActionPreference=Stop.
+exit 0

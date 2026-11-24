@@ -103,6 +103,17 @@ commit; never infer acceptance from a nearby SHA.
 
 ## Verification actually obtained before publication
 
+The implementation and roadmap were published at
+[`53399dd8058d79e1bb6953632192d5a0e14eeee4`](https://github.com/CollectiverseStudio/guardoath/commit/53399dd8058d79e1bb6953632192d5a0e14eeee4).
+Its actual owner browser/real API acceptance step passed in dashboard job
+138148102847, and both Stripe acceptance jobs passed. Deployment-script job
+138148102564 failed because the last deliberately rejected native Python test
+left PowerShell's process exit code at one, despite all assertions completing.
+The follow-up source corrects only that harness success exit after assertions
+and cleanup. All negative cases and the production gate remain intact. The
+follow-up commit still needs its own full exact-SHA CI; this predecessor's
+partial success is not release acceptance.
+
 | Evidence | Result and limits |
 | --- | --- |
 | Baseline `af911757950f52f7dbf43789d619ab1e6cb45538` | All seven workflows / 25 jobs passed; this does not accept the new batch |
