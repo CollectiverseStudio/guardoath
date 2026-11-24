@@ -18,7 +18,8 @@ import tempfile
 from guardoath.admin_catalog import read_catalog, published_catalog
 from guardoath.admin_catalog_preview import _fingerprint
 from guardoath.catalog_metadata import (
-    FILE, _safe_text, published_version, validate_release_history,
+    FILE, MAX_HISTORY_BYTES, _safe_text, published_version,
+    strict_catalog_json, validate_release_history,
 )
 
 FORMAT = "guardoath.reviewed-catalog-metadata-source-plan.v1"
@@ -41,25 +42,10 @@ class SourceReleaseConflict(ValueError):
     """Review export is stale, forged, ambiguous or not source-reproducible."""
 
 
-def _reject_duplicate_keys(pairs):
-    """Fail closed on ambiguous JSON, including duplicates nested in a review."""
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise SourceReleaseConflict("Duplicate source release JSON key")
-        result[key] = value
-    return result
-
-
-def _reject_nonfinite(value):
-    raise SourceReleaseConflict("Nonfinite source release JSON number")
-
-
 def _strict_json(raw):
-    """Python's default JSON decoder silently replaces duplicate object keys."""
+    """Apply exactly the shipped runtime decoder, preserving CLI error scope."""
     try:
-        return json.loads(raw, object_pairs_hook=_reject_duplicate_keys,
-                          parse_constant=_reject_nonfinite)
+        return strict_catalog_json(raw)
     except (ValueError, UnicodeError, TypeError) as exc:
         raise SourceReleaseConflict("Invalid source release JSON") from exc
 
@@ -268,8 +254,8 @@ def _source_snapshot(path: Path) -> tuple[bytes, dict]:
     # Read at most the accepted source length plus one byte. A corrupt or
     # adversarially enlarged tracked file must not be loaded into memory.
     with path.open("rb") as source_file:
-        raw = source_file.read(262145)
-    if len(raw) > 262144:
+        raw = source_file.read(MAX_HISTORY_BYTES + 1)
+    if len(raw) > MAX_HISTORY_BYTES:
         raise SourceReleaseConflict("Oversized catalog source history")
     try:
         history = validate_release_history(_strict_json(raw))

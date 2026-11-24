@@ -9,17 +9,42 @@ from __future__ import annotations
 
 from dataclasses import replace
 import json
+import math
 from pathlib import Path
 import re
 import unicodedata
 
 BASE_REGISTRY_VERSION = "3"
+MAX_HISTORY_BYTES = 262144
 FILE = Path(__file__).with_name("catalog_metadata_releases.json")
 _ID = re.compile(r"^[a-z][a-z0-9_]{0,59}$")
 _RULE = re.compile(r"^[A-Za-z0-9_.:-]{3,100}$")
 _SHA = re.compile(r"^[0-9a-f]{64}$")
 _VERSION = re.compile(r"^[1-9][0-9]{0,8}$")
 _FIELDS = frozenset({"title", "use_case"})
+
+
+def strict_catalog_json(raw: bytes | str):
+    """One unambiguous decoder for shipped history and reviewed source plans."""
+    def object_pairs(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("Duplicate catalog JSON key")
+            result[key] = value
+        return result
+
+    def finite_float(value):
+        parsed = float(value)
+        if not math.isfinite(parsed):
+            raise ValueError("Nonfinite catalog JSON number")
+        return parsed
+
+    def reject_constant(_value):
+        raise ValueError("Nonfinite catalog JSON number")
+
+    return json.loads(raw, object_pairs_hook=object_pairs,
+                      parse_float=finite_float, parse_constant=reject_constant)
 
 
 def _safe_text(text, limit: int) -> bool:
@@ -78,10 +103,12 @@ def validate_release_history(data: dict) -> dict:
 
 
 def load_release_history(path: Path = FILE) -> dict:
-    raw = path.read_bytes()
-    if len(raw) > 262144:
+    # Bound the allocation itself, including when the file grows during a read.
+    with path.open("rb") as source_file:
+        raw = source_file.read(MAX_HISTORY_BYTES + 1)
+    if len(raw) > MAX_HISTORY_BYTES:
         raise ValueError("Oversized catalog source history")
-    data = json.loads(raw)
+    data = strict_catalog_json(raw)
     return validate_release_history(data)
 
 

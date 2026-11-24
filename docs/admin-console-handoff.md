@@ -5,7 +5,42 @@ record for a new chat. The append-only engineering history remains in
 [director-agent-coordination.md](director-agent-coordination.md); the complete
 47-target product discussion is preserved in [product-roadmap.md](product-roadmap.md).
 
-## Current implementation batch: cancellation review and durable recovery
+## Current implementation batch: consistent catalog loading and real source reversal
+
+Catalog startup and the existing release CLI now share the same strict JSON
+decoder and source-size constant. Six regression cases failed before the fix:
+runtime accepted duplicate last-key-wins history and read the whole file before
+enforcing its limit. Startup now bounds its actual read to 256 KiB plus one,
+rejects duplicates at every depth, nonfinite/overflowed numbers and malformed
+UTF-8, and retains valid finite JSON/Unicode. No detector, shipped catalog
+content, tenant record, subscription writer flag or PII deadline changes.
+
+The new acceptance uses the entire real registry in an isolated application
+copy. Actual authenticated draft/review/manifest routes and independently
+reopened signed evidence feed the real CLI, which writes a candidate and then
+a freshly reviewed inverse at another higher version. Three fresh app starts
+verify customer `/v1/controls`, owner `/v1/admin/catalog`, all rule dataclasses,
+complete history and byte-for-byte persistent tenant preservation. Twelve real
+Engine cases at each stage prove both-stage positive/benign behavior, Input rule
+Off and Input parent Off overriding a saved rule Block. Candidate/restored
+boots cannot silently recreate missing tenants. No catalog provider or source
+file path is monkeypatched; the original checkout history remains unchanged.
+
+Local evidence: **1,303 Python 3.12 tests passed** across catalog/admin/real-rule
+examples; **57 Python 3.13 source/runtime tests passed**; the final persisted-row
+guard round trip passed again on Python 3.12. Identity-provider and database
+transports are synthetic. This proves source/app/API/Engine behavior, not a
+customer login, Chrome journey or live catalog publication. The batch still
+requires its own exact published-SHA CI.
+
+The concrete remaining owner-to-source publication request, trusted executor,
+receipt and reversal work is preserved in
+[admin-catalog-publication-design.md](admin-catalog-publication-design.md).
+It keeps the existing source-shipped catalog as authority; adding a second
+mutable admin-only registry would not update the actual app consistently.
+General category/check/rule authoring remains open.
+
+## Accepted cancellation compatibility release
 
 The existing owner Billing workspace now integrates period-end cancellation
 review, exact typed confirmation, reason, action reference and independently
@@ -56,8 +91,27 @@ left both saved tenants unchanged. All external transports were synthetic.
 JavaScript syntax and discovery passed: **42** new focused browser cases,
 **10** total actual baseline journeys and **8** total actual writer journeys.
 Discovery is not browser execution; local Chromium remains socket-blocked.
-This cancellation batch requires its own published exact-SHA CI and live release
-acceptance. No AWS deployment, live financial data or live `/admin` is established.
+Published cancellation source
+[`18127ec6214f49f1bd0d0947d775522e50841bbf`](https://github.com/CollectiverseStudio/guardoath/commit/18127ec6214f49f1bd0d0947d775522e50841bbf)
+passed all **seven workflows / 25 individually inspected jobs**. Tests
+[45320373489](https://github.com/CollectiverseStudio/guardoath/actions/runs/45320373489)
+(13), CodeQL 45320372981 (3), Field Comparisons 45320373500 (2), Trusted Reference
+45320373484 (1), PII 45320373442 (3), Stripe 45320373466 (2) and Deploy Script
+45320373436 (1) all passed with exact job SHA and complete enumeration. Dashboard
+job 138197193640's actual Chrome logs confirm **10 baseline owner, 8 writer owner,
+19 invocation and 537 default browser tests passed**. Stripe backend job
+138197193113 ran all four new cancellation modules: 591 passed, with the existing
+opt-in real-DynamoDB test unavailable. Deployment acceptance included 29 Python
+rollback cases and the actual PowerShell steps. No failed, missing, cancelled or
+skipped job. This accepts cancellation-source CI, not the later catalog batch.
+
+A clean Python 3.13 Lambda build for **18127ec only** contains all 651 tracked
+application/policy files byte-for-byte: 48,773,398 ZIP bytes / 130,524,192 unzipped
+bytes, CodeSha256 `1135tcRfkq3qQhhYClug3iDgLc8mSkU/O8ulnq8Sius=`. Its manifest
+names the exact source, supports both contracts and introduces none; no test
+harness is packaged. It was not uploaded and is not a later catalog-source or
+production artifact. No AWS deployment, live financial data or live `/admin`
+acceptance is established.
 
 The implemented contract, configuration and recovery limits are recorded in
 [the financial-operation design and implementation record](admin-financial-operations-design.md)
@@ -184,6 +238,8 @@ and 462 default browser tests. Source declarations shown inside the inspector
 are not executed-CI or live-deployment attestations.
 Authenticated publication/rollback and general definition authoring remain open.
 Python 3.13 focused catalog/API/browser-shell/source-history run: **315 passed**.
+The new full-registry source round trip and remaining publication bridge are
+recorded in the current batch and the linked catalog publication design above.
 
 ## Current release phase: implemented compatibility baseline
 

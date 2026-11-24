@@ -36,6 +36,12 @@ not mark CORE-04 delivered: compatible deployment, writer activation and live
 acceptance remain open. Keep all original targets and acceptance boundaries
 below until implementation and verification establish completion.
 
+For CORE-06, the [catalog publication record](admin-catalog-publication-design.md)
+preserves actual full-registry forward/reversal app and Engine acceptance and
+the remaining explicit owner request, trusted source executor and completion
+receipt connection. General category/check/rule authoring and live publication
+are still open; the original targets below remain unchanged.
+
 ## Phase 1 — Complete the core commercial platform
 
 | ID | Target | Type | Completion evidence |

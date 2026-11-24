@@ -1492,3 +1492,31 @@ tenant table under the existing admin-mutations policy condition. No new table,
 capacity or paid provider is added. All exact-source CI, source parity, compatible
 rollback and 15 live checks still apply. Local synthetic provider/database
 acceptance is not evidence of AWS deployment or live financial data.
+
+## Catalog startup and actual source-reversal acceptance (2026-11-24)
+
+The application now interprets shipped catalog history with the same strict JSON
+decoder as the existing source-release tool. Duplicate keys at any depth,
+nonfinite constants, overflowing numbers and malformed UTF-8 are refused at
+startup; the actual history read is bounded to 256 KiB plus one byte before size
+rejection. Valid finite JSON and Unicode remain supported. This closes a
+runtime/source-tool disagreement without changing any shipped definition or
+customer policy. Source locks, atomic replacement and version/reference checks
+remain intact.
+
+The source acceptance now materializes a real reviewed rule-title change and its
+freshly reviewed inverse in a copied application. Actual authenticated owner
+draft/review/manifest routes, reopened signed receipts, the real CLI, three fresh
+app starts and both customer/owner catalog projections are exercised. The real
+shared Engine verifies positive/benign Input/Output outcomes and saved per-rule
+and parent-check Off behavior at each stage; tenant records remain byte-for-byte
+unchanged. The original repository history is not edited by this acceptance.
+
+This is local source/app/API/Engine evidence with synthetic external transports,
+not a live publication action or a Chrome/customer-login result. The current
+owner UI still records and exports reviewed descriptions; it does not promote
+a review into publication authority. The remaining authenticated publication
+request, trusted source executor, verified completion receipts and monotonic
+reversal connection are preserved in
+[the catalog publication record](admin-catalog-publication-design.md). General
+category/check/rule authoring and production acceptance remain unfinished.

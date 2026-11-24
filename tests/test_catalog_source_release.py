@@ -80,14 +80,29 @@ def export_plan(source=SOURCE, proposal=PROPOSAL, *, review_id="a"*64, draft_id=
     }
 
 
-def test_current_shipped_history_is_inert_and_base_registry_unchanged():
-    from guardoath.catalog_metadata import RELEASE_DATA
-    assert published_version(RELEASE_DATA) == "3"
-    assert RELEASE_DATA == BASE
+def test_empty_history_is_inert_and_base_registry_unchanged():
+    # Keep the initial empty-history contract as an explicit fixture. A valid
+    # later source release must not fail merely because history is nonempty.
+    assert published_version(BASE) == "3"
     assert apply_rule_releases(
         {"pii.email": FakeRule("pii.email","pii","Email rule",
                                "Turn this on to protect personal emails")}, BASE
     )["pii.email"].title == "Email rule"
+
+
+def test_current_shipped_history_matches_the_full_actual_registry():
+    from guardoath.admin_catalog import published_catalog
+    from guardoath.catalog_metadata import RELEASE_DATA, load_release_history
+    from guardoath.control_registry import REGISTRY_VERSION
+
+    assert load_release_history() == RELEASE_DATA
+    assert published_version(RELEASE_DATA) == REGISTRY_VERSION
+    assert int(REGISTRY_VERSION) == int(RELEASE_DATA["base_registry_version"]) + len(RELEASE_DATA["releases"])
+    verified = verified_catalog_history(read_catalog(published_catalog), RELEASE_DATA)
+    assert verified["status"] == "verified_source_history"
+    assert verified["source_chain_verified"] is True
+    assert verified["release_count"] == len(RELEASE_DATA["releases"])
+    assert verified["registry_version"] == REGISTRY_VERSION
 
 
 def test_owner_export_produces_true_shippable_metadata_change_without_mutating_input():
