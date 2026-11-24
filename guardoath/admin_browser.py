@@ -293,7 +293,7 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <label for="user-action-email">Optional exact account email for live comparison</label> <input id="user-action-email" type="email" maxlength="254" autocomplete="off" spellcheck="false">
 <button id="user-action-inspect" type="button" disabled>Inspect signed action</button><p id="user-action-result" role="status"></p></section>
 <section id="section-tenants" data-admin-section class="panel" hidden tabindex="-1" aria-label="Tenants"><h2>Tenants</h2><p class="muted">API key counts and saved overage policies come from persisted tenant records; Allow and record is not a hard cap. Key material is never displayed. Unknown values remain unavailable. Quota risk is advisory, derived from each saved counter and allowance for the UTC read month, not live activity, financial cost, or a persistent alert.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button> <label for="quota-risk-filter">Saved quota risk (this page only)</label> <select id="quota-risk-filter"><option value="all">All risks</option><option value="watch">Watch or higher</option><option value="near">Near allowance or higher</option><option value="at">At or above allowance</option><option value="unknown">Unavailable</option></select><p class="muted">This filter only hides rows on the current bounded page. Next page continues the source scan even if no visible rows match.</p><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>Saved quota risk (UTC)</th><th>Overage policy</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
-<section id="section-billing" data-admin-section class="section-stack" hidden tabindex="-1" aria-label="Billing"><section class="panel"><h2>Verified recent invoices</h2><p class="muted">Up to five Stripe invoice summaries for an independently verified customer subscription. Amounts are in minor currency units, not a revenue total or forecast.</p><p id="invoice-details" role="status">No invoice history selected.</p></section>
+<section id="section-billing" data-admin-section class="section-stack" hidden tabindex="-1" aria-label="Billing"><section class="panel"><h2>Verified invoices</h2><p class="muted">Five Stripe invoice summaries per page for an independently verified customer subscription. Each page is a separate provider observation. Amounts are in minor currency units, not a revenue total or forecast.</p><label for="invoice-status-filter">Invoice status</label> <select id="invoice-status-filter" disabled><option value="">All statuses</option><option value="open">Open</option><option value="uncollectible">Uncollectible</option><option value="paid">Paid</option><option value="draft">Draft</option><option value="void">Void</option></select> <button id="invoice-restart" type="button" disabled>Restart invoice history</button> <button id="invoice-next" type="button" disabled>Older invoices</button><p id="invoice-page-status" class="muted"></p><p id="invoice-details" role="status">No invoice history selected.</p></section>
 <section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Verify Stripe compares provider state with saved entitlement. Reconcile subscription independently reads Stripe again and saves the verified entitlement with an audit receipt. Saved request caps and suspended accounts remain enforced. Reconciliation does not collect a payment or issue a refund.</p><p id="billing-details" role="status">No subscription selected.</p><p id="billing-action-result" role="status"></p><button id="billing-retry" type="button" hidden disabled>Retry same reconciliation</button></section>
 </section><section id="section-usage" data-admin-section class="panel" hidden tabindex="-1" aria-label="Usage"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
 <section id="section-audit" data-admin-section class="panel" hidden tabindex="-1" aria-label="Audit"><h2>Audit receipt lookup</h2><p class="muted">Read one stored administrative event by its exact event ID. No exports or audit enumeration.</p><label for="audit-id">Audit event ID</label> <input id="audit-id" maxlength="64" autocomplete="off" spellcheck="false"> <button type="button" id="audit-go">Verify receipt</button><p id="audit-result" role="status"></p></section>
@@ -352,6 +352,8 @@ _JS = r'''"use strict";
   // A late response from an earlier tenant must not replace the latest owner selection.
   let usageSelection = 0;
   let billingSelection = 0;
+  let invoiceTenant = null, invoiceCursor = null, invoicePage = 0, invoiceFilter = null;
+  let invoicePending = false;
   let features = {tenant_status_changes:false};
   const el = id => document.getElementById(id);
   const say = (id, value) => { el(id).textContent = value; };
@@ -389,11 +391,14 @@ _JS = r'''"use strict";
     }
   }
   async function request(path, options = {}) {
+    const requestEpoch = authEpoch, requestToken = token;
     const headers = {"Accept":"application/json", ...(options.body ? {"Content-Type":"application/json"} : {})};
-    if (token) headers["X-GuardOath-Admin-Session"] = token;
+    if (requestToken) headers["X-GuardOath-Admin-Session"] = requestToken;
     const result = await fetch(path, { ...options, headers, cache:"no-store", credentials:"omit" });
     if (!result.ok) {
-      if (token && (result.status === 401 || result.status === 403)) signOut("Administrator session expired or access revoked");
+      if (token && token === requestToken && authEpoch === requestEpoch &&
+          (result.status === 401 || result.status === 403))
+        signOut("Administrator session expired or access revoked");
       const error = new Error(result.status === 429
         ? "Cognito directory request limit reached (429); retry later"
         : "Request failed (" + result.status + ")");
@@ -451,6 +456,7 @@ _JS = r'''"use strict";
   }
   const clearAdminData = () => {
     clearCatalogInspection();
+    clearInvoiceBrowser();
     activeBillingReconcile = null;
     pendingBillingReconcile = null;
     say("billing-action-result", "");
@@ -510,6 +516,7 @@ _JS = r'''"use strict";
   };
   function withdrawWorkspaceSnapshot(message) {
     clearCatalogInspection();
+    clearInvoiceBrowser();
     // A failed core read must not leave yesterday's account or rule metadata
     // looking current. Do not clear activeUserStatus: an independent Cognito
     // mutation may still be in progress and must remain single-flight.
@@ -1684,6 +1691,7 @@ _JS = r'''"use strict";
     if (!token || !features.billing_verify) return;
     const epoch = authEpoch;
     const selection = ++billingSelection;
+    clearInvoiceBrowser();
     showSection("billing", true);
     say("invoice-details", "No invoice history selected for this subscription inspection.");
     say("billing-details", "Verifying subscription for " + tenant.tenant_id + "...");
@@ -1740,30 +1748,64 @@ _JS = r'''"use strict";
       say("status", err.message);
     }}
   }
-  async function inspectInvoices(tenant) {
+  function clearInvoiceBrowser() {
+    invoiceTenant = null; invoiceCursor = null; invoicePage = 0; invoiceFilter = null;
+    invoicePending = false;
+    el("invoice-status-filter").value = "";
+    el("invoice-status-filter").disabled = true;
+    el("invoice-next").disabled = true;
+    el("invoice-restart").disabled = true;
+    say("invoice-page-status", "");
+    say("invoice-details", "No invoice history selected.");
+  }
+  async function inspectInvoices(tenant, {cursor = null, status = null, pageNumber = 1} = {}) {
     if (!token || !features.billing_invoices) return;
+    if (invoicePending && invoiceTenant?.tenant_id === tenant.tenant_id) {
+      showSection("billing", true);
+      return;
+    }
     const epoch = authEpoch;
     const selection = ++billingSelection;
+    invoiceTenant = {tenant_id:tenant.tenant_id};
+    invoiceCursor = null; invoicePage = 0; invoiceFilter = status; invoicePending = true;
+    el("invoice-status-filter").value = status || "";
+    el("invoice-status-filter").disabled = true;
+    el("invoice-next").disabled = true;
+    el("invoice-restart").disabled = true;
+    say("invoice-page-status", "Loading verified invoice page...");
     showSection("billing", true);
     say("billing-details", "No subscription verification selected for this invoice inspection.");
     say("invoice-details", "Inspecting verified Stripe history...");
     try {
+      const query = new URLSearchParams();
+      if (cursor !== null) query.set("cursor", cursor);
+      if (status !== null) query.set("status", status);
       const result = await request("/v1/admin/subscriptions/" +
-        encodeURIComponent(tenant.tenant_id) + "/invoices");
+        encodeURIComponent(tenant.tenant_id) + "/invoices" + (query.size ? "?" + query.toString() : ""));
       if (!token || epoch !== authEpoch || selection !== billingSelection) return;
       requireTenantSource(result?.tenant_id, tenant.tenant_id);
       const history = result.history || {};
+      if (history.page_number !== pageNumber || history.status_filter !== status ||
+          !(history.next_cursor === null || (typeof history.next_cursor === "string" &&
+            /^ic1\.[A-Za-z0-9_-]{40,2044}$/.test(history.next_cursor) && history.next_cursor !== cursor)))
+        throw new Error("Invoice page selection mismatch");
       if (history.verified === false && history.status === "unbound") {
+        if (pageNumber !== 1 || history.next_cursor !== null || history.has_more !== null ||
+            history.count !== null || !Array.isArray(history.invoices) || history.invoices.length !== 0)
+          throw new Error("Invalid unbound invoice page");
+        say("invoice-page-status", "Invoice binding unavailable.");
         say("invoice-details", tenant.tenant_id +
           " · No verified Stripe binding; invoices unavailable" + readAuditLabel(result));
         return;
       }
       if (history.verified !== true || history.status !== "verified" ||
           !Array.isArray(history.invoices) || history.invoices.length > 5 ||
-          history.count !== history.invoices.length || typeof history.has_more !== "boolean")
+          history.count !== history.invoices.length || typeof history.has_more !== "boolean" ||
+          history.has_more !== (history.next_cursor !== null) || (history.has_more && history.count === 0))
         throw new Error("Verified invoice history unavailable");
       const rows = history.invoices.map(row => {
         if (!["draft","open","paid","uncollectible","void"].includes(row.status) ||
+            (status !== null && row.status !== status) ||
             !/^[a-z]{3}$/.test(row.currency) ||
             ![row.amount_due_minor,row.amount_paid_minor,row.amount_remaining_minor]
               .every(n => Number.isSafeInteger(n) && n >= 0) ||
@@ -1806,11 +1848,12 @@ _JS = r'''"use strict";
         for (const row of open)
           expectedBalances[row.currency] = (expectedBalances[row.currency] || 0) + row.amount_remaining_minor;
         const reported = review.open_balance_by_currency_minor;
-        if (review.scope !== "verified_first_page_only" ||
+        const firstUnfiltered = pageNumber === 1 && status === null;
+        if (review.scope !== (firstUnfiltered ? "verified_first_page_only" : "verified_selected_page_only") ||
             review.open_with_balance_count !== open.length ||
             review.open_with_recorded_next_attempt_count !== recordedNextAttempts ||
             review.uncollectible_count !== uncollectible.length ||
-            review.complete_history !== !history.has_more ||
+            review.complete_history !== (firstUnfiltered && !history.has_more) ||
             !reported || typeof reported !== "object" || Array.isArray(reported) ||
             Object.keys(reported).length !== Object.keys(expectedBalances).length ||
             Object.entries(expectedBalances).some(([currency, amount]) => reported[currency] !== amount))
@@ -1824,17 +1867,36 @@ _JS = r'''"use strict";
             ? Object.entries(expectedBalances).map(([currency, minor]) =>
                 currency.toUpperCase() + " " + minor + " minor units").join(", ")
             : "none") +
-          (history.has_more ? " · Partial invoice history" : " · Complete provider page");
+          (history.has_more ? " · Partial invoice history" : " · End of selected invoice pages") +
+          (!firstUnfiltered ? " · Shown page only; not complete invoice history" : "");
       }
+      invoiceCursor = history.next_cursor;
+      invoicePage = pageNumber;
+      say("invoice-page-status", "Page " + pageNumber + " · " +
+        (status === null ? "All statuses" : status) +
+        " · Separate provider observation; no accumulated financial total.");
       say("invoice-details", tenant.tenant_id + " · " +
         (rows.length ? rows.join(" · ") : "No invoices in provider page") +
-        (history.has_more ? " · More exist; only first five shown" : "") +
+        (history.has_more ? " · More invoices available; choose Older invoices" : "") +
         reviewLabel +
         " · Direct Stripe, not revenue or overdue determination · UTC " + (history.read_at_utc || "unknown") +
         readAuditLabel(result));
     } catch (err) {
-      if (token && epoch === authEpoch && selection === billingSelection)
+      if (token && epoch === authEpoch && selection === billingSelection) {
+        invoiceCursor = null;
+        say("invoice-page-status", err.status === 400
+          ? "Invoice page expired or selection changed. Restart invoice history."
+          : err.status === 429 ? "Invoice read limit reached. Wait briefly, then restart invoice history."
+          : "Invoice page unavailable. Restart to read a fresh provider page.");
         say("invoice-details", tenant.tenant_id + " · Invoice verification unavailable; no billing changes");
+      }
+    } finally {
+      if (token && epoch === authEpoch && selection === billingSelection) {
+        invoicePending = false;
+        el("invoice-status-filter").disabled = false;
+        el("invoice-restart").disabled = false;
+        el("invoice-next").disabled = invoiceCursor === null;
+      }
     }
   }
 
@@ -1863,6 +1925,7 @@ _JS = r'''"use strict";
     activeBillingReconcile = pending;
     const {tenant, payload, epoch} = pending;
     ++billingSelection;
+    clearInvoiceBrowser();
     showSection("billing", true);
     el("billing-retry").hidden = false;
     el("billing-retry").disabled = true;
@@ -1936,6 +1999,8 @@ _JS = r'''"use strict";
     if (!confirm("Recheck exact Stripe subscription and, if non-active, set saved allowance to zero and block overages for " +
         tenant.tenant_id + "? This cannot restore subscriptions.")) return;
     const epoch = authEpoch;
+    ++billingSelection;
+    clearInvoiceBrowser();
     try {
       const result = await request("/v1/admin/subscriptions/" +
         encodeURIComponent(tenant.tenant_id) + "/downgrade", {
@@ -2472,6 +2537,17 @@ _JS = r'''"use strict";
   });
   el("quota-risk-filter").addEventListener("change", applyQuotaFilter);
   el("billing-retry").addEventListener("click", submitSubscriptionReconciliation);
+  el("invoice-status-filter").addEventListener("change", () => {
+    if (invoiceTenant && !invoicePending)
+      inspectInvoices(invoiceTenant, {status:el("invoice-status-filter").value || null});
+  });
+  el("invoice-next").addEventListener("click", () => {
+    if (invoiceTenant && invoiceCursor && !invoicePending)
+      inspectInvoices(invoiceTenant, {cursor:invoiceCursor, status:invoiceFilter, pageNumber:invoicePage + 1});
+  });
+  el("invoice-restart").addEventListener("click", () => {
+    if (invoiceTenant && !invoicePending) inspectInvoices(invoiceTenant, {status:invoiceFilter});
+  });
   el("search-go").addEventListener("click", () => {nextCursor=null;page();});
   el("user-search-go").addEventListener("click", () => {nextUserCursor=null;pageUsers();});
   el("user-next").addEventListener("click", pageUsers);

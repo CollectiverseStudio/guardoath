@@ -19,7 +19,7 @@ from guardoath.admin_billing import AdminSubscriptionReporter, BillingUnavailabl
 from guardoath.admin_billing_reconcile import AdminBillingDowngrade, BillingDowngradeConflict, BillingDowngradeUnavailable
 from guardoath.admin_subscription_reconcile import (
     AdminSubscriptionReconciliation, SubscriptionConflict, SubscriptionUnavailable)
-from guardoath.admin_invoices import AdminInvoiceHistory
+from guardoath.admin_invoices import AdminInvoiceHistory, InvalidInvoiceCursor, InvoiceReadRateLimited
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from guardoath.admin_catalog import CatalogProvider, read_catalog
 from guardoath.admin_catalog_inspection import (
@@ -633,7 +633,10 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            **({"read_audit_event_id": read_event} if read_event else {})})
 
     @router.get("/v1/admin/subscriptions/{tenant_id}/invoices")
-    def verified_invoice_history(tenant_id: str, principal: VerifiedAdmin = Depends(require_admin)):
+    def verified_invoice_history(tenant_id: str,
+                                 cursor: str | None = Query(default=None, max_length=2048),
+                                 status: str | None = Query(default=None, max_length=13),
+                                 principal: VerifiedAdmin = Depends(require_admin)):
         if not TENANT_ID.fullmatch(tenant_id):
             raise HTTPException(status_code=404, detail="Tenant not found")
         if tenant_store is None or billing_invoices is None:
@@ -648,9 +651,14 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             # even if the provider would otherwise accept its saved binding.
             if getattr(record, "tenant_id", None) != tenant_id:
                 raise ValueError("Invoice source identity mismatch")
-            result = billing_invoices.read(record)
+            result = billing_invoices.read(record, owner_sub=principal.subject,
+                                           cursor=cursor, status=status)
         except HTTPException:
             raise
+        except InvalidInvoiceCursor as exc:
+            raise HTTPException(status_code=400, detail="Invoice page expired or selection changed; restart invoice history") from exc
+        except InvoiceReadRateLimited as exc:
+            raise HTTPException(status_code=429, detail="Invoice reads temporarily limited") from exc
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Invoice history unavailable") from exc
         return admin_json({"tenant_id": tenant_id, "history": result,

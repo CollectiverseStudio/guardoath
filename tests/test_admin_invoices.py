@@ -40,14 +40,14 @@ def invoice(**changes):
             "hosted_invoice_url": "https://secret", **changes}
 
 def history(fetch=None, sub_fetch=None):
-    reporter = AdminSubscriptionReporter(sub_fetch or (lambda *_: subscription()),
+    reporter = AdminSubscriptionReporter(sub_fetch or (lambda *_, **_kw: subscription()),
         expected_price_id="price_plan123", expected_livemode=False)
-    return AdminInvoiceHistory(fetch or (lambda *_: {
-        "object": "list", "data": [invoice()], "has_more": False}), reporter)
+    return AdminInvoiceHistory(fetch or (lambda *_, **_kw: {
+        "object": "list", "data": [invoice()], "has_more": False}), reporter, cursor_key=b"i" * 32)
 
 def test_verified_history_is_redacted_read_only_minor_units():
     record = Tenant()
-    result = history().read(record)
+    result = history().read(record, owner_sub="trusted-subject")
     assert result["count"] == 1 and result["verified"] and result["invoices"][0]["amount_paid_minor"] == 499
     assert "secret@example.com" not in str(result) and "https://secret" not in str(result)
     assert "cus_owner" not in str(result) and "in_owner" not in str(result)
@@ -55,9 +55,9 @@ def test_verified_history_is_redacted_read_only_minor_units():
 
 def test_unbound_and_demo_skip_invoice_provider():
     calls = []
-    h = history(fetch=lambda *_: calls.append(1))
-    assert not h.read(Tenant(payer_id=None))["verified"]
-    assert not h.read(Tenant(demo=True))["verified"]
+    h = history(fetch=lambda *_, **_kw: calls.append(1))
+    assert not h.read(Tenant(payer_id=None), owner_sub="trusted-subject")["verified"]
+    assert not h.read(Tenant(demo=True), owner_sub="trusted-subject")["verified"]
     assert not calls
 
 @pytest.mark.parametrize("changes", [
@@ -74,8 +74,8 @@ def test_unbound_and_demo_skip_invoice_provider():
 ])
 def test_mismatched_invoice_rejected(changes):
     with pytest.raises(InvoiceHistoryUnavailable):
-        history(fetch=lambda *_: {"object":"list","data":[invoice(**changes)],
-                                   "has_more":False}).read(Tenant())
+        history(fetch=lambda *_, **_kw: {"object":"list","data":[invoice(**changes)],
+                                   "has_more":False}).read(Tenant(), owner_sub="trusted-subject")
 
 @pytest.mark.parametrize("payload", [
     {"object":"charge","data":[],"has_more":False},
@@ -85,13 +85,13 @@ def test_mismatched_invoice_rejected(changes):
 ])
 def test_ambiguous_invoice_page_rejected(payload):
     with pytest.raises(InvoiceHistoryUnavailable):
-        history(fetch=lambda *_: payload).read(Tenant())
+        history(fetch=lambda *_, **_kw: payload).read(Tenant(), owner_sub="trusted-subject")
 
 def test_subscription_mismatch_prevents_invoice_fetch():
     calls = []
     with pytest.raises(InvoiceHistoryUnavailable):
-        history(fetch=lambda *_: calls.append(1),
-                sub_fetch=lambda *_: subscription(customer="cus_wrong")).read(Tenant())
+        history(fetch=lambda *_, **_kw: calls.append(1),
+                sub_fetch=lambda *_, **_kw: subscription(customer="cus_wrong")).read(Tenant(), owner_sub="trusted-subject")
     assert not calls
 
 
@@ -131,7 +131,7 @@ def test_authenticated_invoice_api_fails_closed_on_conflicting_provider_json():
     raw = (b'{"object":"list","has_more":false,"data":[{"status":"paid",'
            b'"status":"open","customer_email":"private@example.com"}]}')
     binding = StripeBinding("usr-invoices", "cus_owner123", "sub_owner123")
-    def provider(*_):
+    def provider(*_, **_kw):
         return fetch_invoice_list(binding, "sk_test_" + "x"*24,
                                   opener=lambda *_args, **_kw: Response(raw))
 
@@ -164,7 +164,7 @@ def test_provider_fetch_is_scoped_and_no_secret_in_url():
 
 def test_authorized_route_and_fail_closed_persistent_audit():
     calls = []
-    def provider(*_):
+    def provider(*_, **_kw):
         calls.append(1)
         return {"object":"list","data":[invoice()],"has_more":False}
     auth = lambda t: VerifiedAdmin("trusted-subject",frozenset({"owner"}),True) if t=="admin" else None
@@ -202,8 +202,8 @@ def test_payment_review_is_only_for_verified_first_page_and_keeps_currencies_sep
         invoice(id="in_us_paid", status="paid", amount_due=400,
                 amount_paid=400, amount_remaining=0),
     ]
-    result = history(fetch=lambda *_: {"object": "list", "data": invoices,
-                                        "has_more": True}).read(Tenant())
+    result = history(fetch=lambda *_, **_kw: {"object": "list", "data": invoices,
+                                        "has_more": True}).read(Tenant(), owner_sub="trusted-subject")
     review = result["payment_review"]
     assert review["scope"] == "verified_first_page_only"
     assert review["open_with_balance_count"] == 2
@@ -217,7 +217,7 @@ def test_payment_review_is_only_for_verified_first_page_and_keeps_currencies_sep
 
 
 def test_verified_invoice_collection_attempts_are_redacted_and_not_failure_claims():
-    result = history(fetch=lambda *_: {"object": "list", "has_more": False, "data": [
+    result = history(fetch=lambda *_, **_kw: {"object": "list", "has_more": False, "data": [
         invoice(id="in_open_attempts", status="open", amount_due=2500,
                 amount_paid=0, amount_remaining=2500,
                 collection_method="charge_automatically", attempted=True,
@@ -225,7 +225,7 @@ def test_verified_invoice_collection_attempts_are_redacted_and_not_failure_claim
         invoice(id="in_sent", status="open", amount_due=1000, amount_paid=0,
                 amount_remaining=1000, collection_method="send_invoice",
                 attempted=False, attempt_count=0, next_payment_attempt=None),
-    ]}).read(Tenant())
+    ]}).read(Tenant(), owner_sub="trusted-subject")
     recorded, manual = result["invoices"]
     assert recorded["collection_method"] == "charge_automatically"
     assert recorded["attempted"] is True and recorded["attempt_count"] == 2
@@ -241,28 +241,28 @@ def test_verified_invoice_collection_attempts_are_redacted_and_not_failure_claim
 
 
 def test_missing_collection_evidence_stays_unknown_not_zero():
-    row = history().read(Tenant())["invoices"][0]
+    row = history().read(Tenant(), owner_sub="trusted-subject")["invoices"][0]
     assert row["collection_method"] is None and row["attempted"] is None
     assert row["attempt_count"] is None and row["next_payment_attempt_utc"] is None
 
 
 def test_payment_review_zero_means_zero_in_verified_page_only():
-    result = history(fetch=lambda *_: {"object": "list", "data": [],
-                                        "has_more": False}).read(Tenant())
+    result = history(fetch=lambda *_, **_kw: {"object": "list", "data": [],
+                                        "has_more": False}).read(Tenant(), owner_sub="trusted-subject")
     assert result["verified"] is True
     assert result["payment_review"]["open_with_balance_count"] == 0
     assert result["payment_review"]["open_with_recorded_next_attempt_count"] == 0
     assert result["payment_review"]["uncollectible_count"] == 0
     assert result["payment_review"]["open_balance_by_currency_minor"] == {}
     assert result["payment_review"]["complete_history"] is True
-    assert history().read(Tenant(payer_id=None))["payment_review"] is None
+    assert history().read(Tenant(payer_id=None), owner_sub="trusted-subject")["payment_review"] is None
 
 
 def test_open_invoice_with_no_remaining_balance_is_not_payment_attention():
-    result = history(fetch=lambda *_: {
+    result = history(fetch=lambda *_, **_kw: {
         "object": "list", "has_more": False, "data": [
             invoice(status="open", amount_due=0, amount_paid=0, amount_remaining=0)
-        ]}).read(Tenant())
+        ]}).read(Tenant(), owner_sub="trusted-subject")
     assert result["payment_review"]["open_with_balance_count"] == 0
     assert result["payment_review"]["open_balance_by_currency_minor"] == {}
 
@@ -278,8 +278,8 @@ def test_next_attempt_review_requires_verified_open_auto_collection(changes, exp
                collection_method="charge_automatically", attempted=True,
                attempt_count=2, next_payment_attempt=1795435200)
     row.update(changes)
-    result = history(fetch=lambda *_: {"object": "list", "has_more": False,
-                                        "data": [invoice(**row)]}).read(Tenant())
+    result = history(fetch=lambda *_, **_kw: {"object": "list", "has_more": False,
+                                        "data": [invoice(**row)]}).read(Tenant(), owner_sub="trusted-subject")
     assert result["payment_review"]["open_with_recorded_next_attempt_count"] == expected
     assert "future retry" in result["payment_review"]["note"]
     assert "cus_owner" not in str(result) and "in_owner" not in str(result)

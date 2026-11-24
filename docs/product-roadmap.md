@@ -27,6 +27,12 @@ versioned category/check/rule publishing in
 [#42](https://github.com/CollectiverseStudio/guardoath/issues/42).
 These remain open until their actual acceptance criteria are met.
 
+The concise [admin handoff](admin-console-handoff.md) records implementation and
+exact-source evidence. The [financial-operation design](admin-financial-operations-design.md)
+preserves the next confirmed-action/recovery architecture for CORE-04. A design
+does not mark that target delivered; keep all original targets and acceptance
+boundaries below until implementation and verification establish completion.
+
 ## Phase 1 — Complete the core commercial platform
 
 | ID | Target | Type | Completion evidence |

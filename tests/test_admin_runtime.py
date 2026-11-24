@@ -187,3 +187,45 @@ def test_bad_owner_reconciliation_allowance_fails_before_mount(monkeypatch, allo
             configure_admin_from_environment(FastAPI(),tenants=Tenants(DynamoDBTenantStore("tenant_table",database)),
                 admin_sessions=AdminSessions(),cognito_client=Cognito())
     finally: database.close()
+
+
+def test_production_invoice_service_forwards_filtered_continuation_with_stable_key(monkeypatch):
+    from admin_test_support import AdminTestDynamo
+    from guardoath.dynamodb_store import DynamoDBTenantStore
+    from guardoath import admin_runtime, admin_invoices, stripe_provider
+    from test_admin_invoice_pagination import Provider, OWNER, record
+    configure(monkeypatch)
+    monkeypatch.setenv("GUARDOATH_ADMIN_AUDIT_TABLE", "audit_table")
+    monkeypatch.setenv("GUARDOATH_STRIPE_SECRET_KEY", "sk_test_" + "a" * 32)
+    monkeypatch.setenv("GUARDOATH_STRIPE_PRICE_ID", "price_plan")
+    monkeypatch.delenv("GUARDOATH_PAID_MONTHLY_ALLOWANCE", raising=False)
+    provider = Provider()
+    for row in provider.rows:
+        row.update(status="open", amount_paid=0, amount_remaining=row["amount_due"])
+    def subscription(binding, key):
+        assert key == "sk_test_" + "a" * 32
+        return provider.subscription(binding.tenant_id, binding.customer_id, binding.subscription_id)
+    def invoices(binding, key, *, starting_after=None, status=None):
+        assert key == "sk_test_" + "a" * 32
+        return provider.fetch(binding.tenant_id, binding.customer_id, binding.subscription_id,
+                              starting_after=starting_after, status=status)
+    monkeypatch.setattr(stripe_provider, "fetch_subscription_snapshot", subscription)
+    monkeypatch.setattr(admin_invoices, "fetch_invoice_list", invoices)
+    mounted = []
+    monkeypatch.setattr(admin_runtime, "mount_admin_console", lambda app, **kwargs: mounted.append(kwargs))
+    database = AdminTestDynamo()
+    try:
+        for _ in range(2):
+            assert configure_admin_from_environment(FastAPI(),
+                tenants=Tenants(DynamoDBTenantStore("tenant_table", database)),
+                admin_sessions=AdminSessions(), cognito_client=Cognito()) is True
+        assert provider.calls == []
+        first = mounted[0]["billing_invoices"].read(record(), owner_sub=OWNER, status="open")
+        # A new runtime instance uses the configured key, not a process-random key.
+        second = mounted[1]["billing_invoices"].read(record(), owner_sub=OWNER,
+            status="open", cursor=first["next_cursor"])
+        assert second["page_number"] == 2 and second["status_filter"] == "open"
+        assert provider.calls[-1][4:] == ("in_private_4", "open")
+        assert database.transactions == 0 and not database.audit_items()
+    finally:
+        database.close()

@@ -5,7 +5,56 @@ record for a new chat. The append-only engineering history remains in
 [director-agent-coordination.md](director-agent-coordination.md); the complete
 47-target product discussion is preserved in [product-roadmap.md](product-roadmap.md).
 
-## Current release safety batch: rollback revision ownership
+## Current implementation batch: protected invoice browsing
+
+The existing **Tenants → Invoices** workflow now offers status filtering,
+**Older invoices** and **Restart invoice history**. Each click performs one
+five-row Stripe invoice read after fresh owner/MFA authorization, signed
+persistent read intent, authoritative tenant lookup and independent subscription
+verification. The production runtime wires the real existing provider adapter.
+No provider mutation or tenant state field is introduced.
+
+Continuation tokens encrypt provider invoice IDs with AES-GCM and are bound to
+owner, tenant/customer/subscription, configured plan/environment, status filter
+and page size. Their original 15-minute expiry does not slide. Invalid, changed,
+cross-owner and expired selections fail before provider reads. A best-effort
+per-warm-instance budget permits 20 page requests per owner per minute; it is not
+a distributed limiter. Empty-more pages, repeated current anchors, newer/
+out-of-order records and inconsistent bindings/filter/amounts fail closed.
+Equal creation timestamps remain valid. This is not a frozen or globally
+deduplicated financial snapshot.
+
+Balances stay in integer minor units, separated by currency and limited to the
+shown page. Filtered or continuation pages never claim complete invoice history,
+including the last page. Sign-out, refresh, subscription inspection and confirmed
+reconciliation clear prior invoice selections and amounts. Another tenant can
+replace a pending selection; duplicate same-tenant activation cannot issue a
+second in-flight read. The shared request helper also prevents an old session's
+late 401/403 from signing out a newly authenticated owner.
+
+Local verification: **1,268 Python 3.12 tests passed**, **218 focused Python 3.13
+tests passed**, with no new skip or deadline change. The actual mounted ASGI app
+returned five then three redacted invoices, one status-filtered invoice, three
+independently verified signed read receipts and unchanged tenant data. Customer,
+owner without MFA, stale-MFA and forged signed-token attempts were denied before
+any invoice-provider boundary call. Filter/cursor mismatch returned 400 before
+another provider read. External boundaries were synthetic; this is not live
+Stripe or Cognito evidence.
+
+The real baseline owner browser suite now includes pagination/filter/audit and
+four denied-login cases; the default suite adds 33 fault, race, native-reauthentication,
+single-flight and mobile cases. JavaScript parsing/discovery is separate from
+browser execution. This invoice batch still needs its own exact-source CI;
+local Chromium remains unavailable under the workspace's socket restrictions.
+
+The complete financial-operation continuation decisions are preserved in
+[admin-financial-operations-design.md](admin-financial-operations-design.md):
+scheduled cancellation preview, exact confirmation, durable target serialization,
+single dispatch, independent verification and ambiguity-safe recovery. That
+document is a design, not a completed cancellation/refund/credit API. The original
+47-target roadmap remains intact.
+
+## Accepted release safety batch: rollback revision ownership
 
 The deployment script now binds automatic rollback to the candidate digest and
 the revision returned by **its own successful update response**. It cannot take
@@ -23,7 +72,24 @@ individual-job and issue-risk checks. The original negative archive tests now
 require their specific refusal reason. Python archive/build/template checks:
 **65 passed**. PowerShell 7.4.6 was obtained from the official release and its
 archive verified against the official checksum; no AWS/provider call occurred.
-This batch still needs its own exact-SHA CI and does not establish live rollback.
+Published source `2602cb50cdfe1b23163530e29192307c9027e3e7` passed all seven
+required workflows / 25 individually inspected jobs. Tests
+[45312551709](https://github.com/CollectiverseStudio/guardoath/actions/runs/45312551709)
+passed 13 jobs; CodeQL 45312551652 (3), Field Comparisons 45312551677 (2), Trusted
+Reference 45312551811 (1), PII 45312551787 (3), Stripe 45312551799 (2) and Deploy
+Script [45312551797](https://github.com/CollectiverseStudio/guardoath/actions/runs/45312551797)
+(1) all passed. No failed, cancelled, missing or skipped job. Actual dashboard
+job 138171592996 passed 4 baseline owner, 7 writer owner, 19 invocation and 462
+default browser tests. Deployment acceptance executed all six PowerShell steps,
+including actual revision-ownership functions, plus 28 Python archive cases.
+This accepts that source's CI, not the later invoice batch or a live rollback.
+
+A real clean Python 3.13 Lambda build for **2602cb5 only** produced 48,714,031 ZIP
+bytes / 130,346,420 unzipped bytes, digest
+`NCqstKbEEWXuF6wyvkaI3TpB+RdOFVwxPo+luJxrKms=`. Its manifest names the exact SHA,
+supports the cap contract and introduces none. Packaged source-phase bytes match;
+no test harness is included. The archive was not uploaded and is not parity
+evidence for later source or production.
 
 ## Catalog inspection implementation
 
@@ -297,7 +363,10 @@ one. No AWS resource or paid provider was purchased or provisioned.
 3. Complete the real financial management operations required by #41, including
    configured plan changes/cancellation and auditable, idempotent provider
    reconciliation. Current reconciliation is an entitlement refresh; it is not
-   an upgrade, charge, cancellation or refund API.
+   an upgrade, charge, cancellation or refund API. Continue from the preserved
+   [financial-operation design](admin-financial-operations-design.md); implement
+   durable provider-target control rather than relying only on a browser action
+   key or Stripe's expiring idempotency cache.
 4. Complete verified infrastructure cost ingestion, freshness/currency and
    defensible tenant attribution. Request counts and request caps are not AWS
    billing data or tenant profitability. Do not fill missing money values with

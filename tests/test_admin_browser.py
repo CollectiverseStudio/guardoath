@@ -102,7 +102,9 @@ def test_login_shell_is_public_but_contains_no_sensitive_information():
     assert "location.assign(uri.href)" in script.text
     assert "textContent =" in script.text  # no untrusted HTML insertion
     assert "innerHTML" not in script.text
-    assert 'headers["X-GuardOath-Admin-Session"] = token' in script.text
+    assert 'headers["X-GuardOath-Admin-Session"] = requestToken' in script.text
+    assert "requestEpoch = authEpoch, requestToken = token" in script.text
+    assert "token === requestToken && authEpoch === requestEpoch" in script.text
     assert 'headers.Authorization = "Bearer " + token' not in script.text
 
 
@@ -205,7 +207,8 @@ def test_cognito_user_table_and_owner_only_browser_request():
     script = app().get("/admin/client.js").text
     assert 'request("/v1/admin/users?limit=20")' in script
     assert "showUsers(users)" in script
-    assert 'headers["X-GuardOath-Admin-Session"] = token' in script
+    assert 'headers["X-GuardOath-Admin-Session"] = requestToken' in script
+    assert "token === requestToken && authEpoch === requestEpoch" in script
     assert "email_hint" in script and "user-rows" in script
     assert "innerHTML" not in script
 
@@ -393,7 +396,9 @@ def test_verified_invoice_history_is_an_authenticated_bounded_owner_browser_acti
     shell = app().get("/admin/login").text
     script = app().get("/admin/client.js").text
     assert 'id="invoice-details"' in shell
-    assert "Verified recent invoices" in shell
+    assert "Verified invoices" in shell
+    for control in ("invoice-status-filter", "invoice-next", "invoice-restart", "invoice-page-status"):
+        assert f'id="{control}"' in shell
     assert "features.billing_invoices" in script
     assert 'invoices.addEventListener("click", () => inspectInvoices(tenant))' in script
     assert 'encodeURIComponent(tenant.tenant_id) + "/invoices"' in script
@@ -425,11 +430,12 @@ def test_catalog_manifest_browser_requires_signed_fresh_review_and_never_calls_p
 def test_invoice_browser_verifies_page_scoped_payment_review_without_claiming_failed_charge():
     script = app().get("/admin/client.js").text
     assert "history.payment_review" in script
-    assert 'review.scope !== "verified_first_page_only"' in script
+    assert 'review.scope !== (firstUnfiltered ? "verified_first_page_only" : "verified_selected_page_only")' in script
     assert "review.open_with_balance_count !== open.length" in script
     assert "review.open_with_recorded_next_attempt_count !== recordedNextAttempts" in script
     assert "review.uncollectible_count !== uncollectible.length" in script
-    assert "review.complete_history !== !history.has_more" in script
+    assert "review.complete_history !== (firstUnfiltered && !history.has_more)" in script
+    assert "firstUnfiltered = pageNumber === 1 && status === null" in script
     assert "Invoice review summary mismatch" in script
     assert "Partial invoice history" in script
     assert "not revenue or overdue determination" in script

@@ -2,9 +2,17 @@
 
 const {test,expect} = require("@playwright/test");
 const {execFileSync} = require("node:child_process");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const TENANT = "usr-admin-alpha";
 const ORIGIN = "http://127.0.0.1:8781";
+
+function invoiceReads() {
+  const dbPath = path.parse(process.env.GUARDOATH_ADMIN_TEST_DB);
+  const evidence = path.join(dbPath.dir,dbPath.name+".invoice-reads.jsonl");
+  return fs.existsSync(evidence) ? fs.readFileSync(evidence,"utf8").trim().split("\n").filter(Boolean).map(JSON.parse) : [];
+}
 
 function saved() {
   const program = [
@@ -148,3 +156,71 @@ test("owner inspects actual published catalog schemas and examples with signed p
   await page.locator("#logout").click();
   await expect(page.locator("#catalog-inspector-content")).toBeEmpty();
 });
+
+test("owner browses older and filtered invoices through actual authenticated API and signed audit",async ({page,request})=>{
+  const before = saved().tenants;
+  const providerBefore = invoiceReads().length;
+  const headers = await login(page);
+  await page.locator("#nav-tenants").click();
+  const firstRead = page.waitForResponse(response=>new URL(response.url()).pathname===
+    `/v1/admin/subscriptions/${TENANT}/invoices`);
+  await page.locator("#tenant-rows tr").filter({hasText:TENANT}).getByRole("button",{name:"Invoices",exact:true}).click();
+  const firstResponse = await firstRead;
+  expect(firstResponse.status()).toBe(200);
+  const first = await firstResponse.json();
+  expect(first.history).toMatchObject({verified:true,page_number:1,status_filter:null,count:5,has_more:true});
+  expect(first.history.next_cursor).toMatch(/^ic1\.[A-Za-z0-9_-]+$/);
+  expect(JSON.stringify(first)).not.toMatch(/in_alpha|cus_alpha|sub_alpha|private-invoice/);
+  await expect(page.locator("#invoice-details")).toContainText("paid USD due 700");
+  const nextRead = page.waitForResponse(response=>new URL(response.url()).pathname===
+    `/v1/admin/subscriptions/${TENANT}/invoices`&&new URL(response.url()).searchParams.has("cursor"));
+  await page.locator("#invoice-next").click();
+  const second = await (await nextRead).json();
+  expect(second.history).toMatchObject({page_number:2,count:3,has_more:false,next_cursor:null,
+    payment_review:{complete_history:false,scope:"verified_selected_page_only"}});
+  await expect(page.locator("#invoice-details")).toContainText("open USD due 706");
+  await expect(page.locator("#invoice-details")).toContainText("uncollectible EUR due 707");
+  await expect(page.locator("#invoice-next")).toBeDisabled();
+  await page.locator("#invoice-status-filter").selectOption("uncollectible");
+  await expect(page.locator("#invoice-page-status")).toContainText("Page 1 · uncollectible");
+  await expect(page.locator("#invoice-details")).toContainText("uncollectible EUR due 707");
+  await expect(page.locator("#invoice-details")).not.toContainText("open USD due 706");
+  const reads = invoiceReads().slice(providerBefore);
+  expect(reads).toEqual([
+    {tenant_id:TENANT,starting_after:null,status:null},
+    {tenant_id:TENANT,starting_after:"in_alpha_4",status:null},
+    {tenant_id:TENANT,starting_after:null,status:"uncollectible"},
+  ]);
+  const mismatched = await request.get(`/v1/admin/subscriptions/${TENANT}/invoices`,{headers,
+    params:{cursor:first.history.next_cursor,status:"open"}});
+  expect(mismatched.status()).toBe(400);
+  expect(invoiceReads().slice(providerBefore)).toEqual(reads);
+  for (const result of [first,second]) {
+    const receipt = await request.get("/v1/admin/audit/"+result.read_audit_event_id,{headers});
+    expect(receipt.status()).toBe(200);
+    expect((await receipt.json()).audit).toMatchObject({tenant_id:TENANT,
+      operation:"admin.read",integrity_status:"signed_verified",
+      change:{field:"protected_read",resource:"stripe.invoices"}});
+  }
+  expect(saved().tenants).toEqual(before);
+  await page.locator("#logout").click();
+  await expect(page.locator("#invoice-page-status")).toBeEmpty();
+  await expect(page.locator("#invoice-next")).toBeDisabled();
+  await expect(page.locator("#invoice-details")).not.toContainText("707");
+});
+
+for (const code of ["customer","no-mfa","stale-mfa","forged"]) {
+  test(`actual invoice browser denies ${code} before provider reads`,async ({page,request})=>{
+    const before = invoiceReads();
+    await page.addInitScript(()=>sessionStorage.setItem("go_admin_pkce",
+      JSON.stringify({state:"invoice-denial",verifier:"v".repeat(43)})));
+    const exchanged = page.waitForResponse(r=>r.url().endsWith("/v1/admin/auth/exchange"));
+    await page.goto(`/admin/login?code=${code}&state=invoice-denial`);
+    expect((await exchanged).status()).toBe(403);
+    await expect(page.locator("#app")).toBeHidden();
+    expect((await request.get(`/v1/admin/subscriptions/${TENANT}/invoices`)).status()).toBe(401);
+    expect((await request.get(`/v1/admin/subscriptions/${TENANT}/invoices`,{
+      headers:{"X-GuardOath-Key":"synthetic-customer-key"}})).status()).toBe(401);
+    expect(invoiceReads()).toEqual(before);
+  });
+}

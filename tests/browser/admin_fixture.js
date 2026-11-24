@@ -155,6 +155,7 @@ function createAdminFixture(options = {}) {
         source:"Synthetic saved tenant record"}}));
       if (/^\/v1\/admin\/subscriptions\/[^/]+\/invoices$/.test(pathname)) return json(withReceipt({tenant_id:pathname.split("/")[4],history:{
         verified:true,status:"verified",count:1,has_more:false,read_at_utc:FIXTURE_TIME,
+        page_number:1,status_filter:null,next_cursor:null,
         invoices:[{status:"paid",currency:"usd",created_utc:FIXTURE_TIME,
           amount_due_minor:2900,amount_paid_minor:2900,amount_remaining_minor:0,
           collection_method:"charge_automatically",attempted:true,attempt_count:1,

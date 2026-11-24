@@ -445,7 +445,7 @@ mandatory.
 
 
 ## Audited owner invoice history (source only)
-- Authenticated owner/MFA `GET /v1/admin/subscriptions/{tenant_id}/invoices` persists a signed protected read attempt before any tenant or provider read. It independently verifies the saved Stripe subscription/customer, configured price and environment before reading at most five provider invoices from server-owned IDs.
+- Authenticated owner/MFA `GET /v1/admin/subscriptions/{tenant_id}/invoices` persists a signed protected read attempt before any tenant or provider read. It independently verifies the saved Stripe subscription/customer, configured price and environment before reading at most five provider invoices per page from server-owned IDs. The existing Billing view supports bounded status filtering and encrypted continuation as described below.
 - Every invoice must match the same customer, subscription and livemode with valid status, UTC timestamp and nonnegative minor-unit amounts; malformed or ambiguous pages fail closed. UI excludes provider IDs, customer email, links and payment method. Zero invoices in a verified page is distinct from unavailable provider data.
 - Read-only historical sample, not paid entitlement, revenue, a future invoice forecast or refund capability. No Stripe mutation, new service, AWS deployment, 500-ms privacy deadline change or 15 live acceptance is claimed. Exact-SHA CI and live provider acceptance remain required.
 
@@ -706,7 +706,7 @@ exact-SHA release jobs and the 15 production checks remain separate requirements
 
 
 ## Invoice page payment-review signals (2026-11-20)
-An independently verified Stripe invoice page now includes `payment_review` with counts of **open invoices with remaining balances** and **uncollectible invoices**, plus a currency-separated sum of remaining open balances. The owner UI cross-checks the summary against redacted invoice rows and fails closed on mismatched counts or amounts. A page is limited to five invoices; `complete_history=false` and a partial-history warning are shown if Stripe reports more results. These are bounded operator-review signals **not** verified payment failures, aging, account-wide receivables, collected revenue, refunds, entitlement status or AWS costs. No new Stripe calls, financial writes, credentials, provider spending or tenant-policy changes are introduced.
+An independently verified Stripe invoice page includes `payment_review` with counts of **open invoices with remaining balances** and **uncollectible invoices**, plus a currency-separated sum of remaining open balances. The owner UI cross-checks the summary against redacted invoice rows and fails closed on mismatched counts or amounts. A page is limited to five invoices; `complete_history=false` applies when more results exist and to every filtered or continuation page, including the final page. These are bounded operator-review signals **not** verified payment failures, aging, account-wide receivables, collected revenue, refunds, entitlement status or AWS costs. Reading another page requires an explicit owner action; no financial write or tenant-policy change occurs.
 
 
 ## On-demand recorded-request quota pacing (source integration)
@@ -1197,7 +1197,7 @@ and existing entitlement checks still run first.
 
 
 ## Verified invoice next-attempt observations
-Owner **Tenants → Invoices** now shows a first-page-only count of open positive-balance automatic-collection invoices with a provider-recorded earlier attempt and next-attempt timestamp. It never infers payment failure, overdue debt, a future retry or recognized revenue from this signal. Missing attempt metadata and manually invoiced or paid rows do not qualify. The browser independently recomputes and fails closed on inconsistent count data. No new Stripe call, financial write or AWS spend.
+Owner **Tenants → Invoices** shows a count, limited to the displayed page, of open positive-balance automatic-collection invoices with a provider-recorded earlier attempt and next-attempt timestamp. It never infers payment failure, overdue debt, a future retry or recognized revenue from this signal. Missing attempt metadata and manually invoiced or paid rows do not qualify. The browser independently recomputes and fails closed on inconsistent count data. Separate page observations are never accumulated into a financial total.
 
 
 ## Concurrent-safe source-controlled catalog metadata release
@@ -1326,3 +1326,73 @@ it issues no additional request, does not modify tenant records, and is not
 a global search or alert. Continue with Next page even when none of the
 current rows match. Unknown counters are not treated as zero or safe.
 The filter is reset on sign-out. AWS spend and live billing remain unavailable.
+
+## Protected invoice history pages and status filters
+
+Choose **Invoices** beside a tenant. The existing Billing workspace reads the
+newest five invoices for that independently verified saved subscription. Choose
+**Older invoices** for the next five, select an invoice status to start a new
+filtered first page, or use **Restart invoice history** to reread page one with
+the selected filter. No automatic background crawl or financial mutation runs.
+
+The existing authenticated endpoint accepts these bounded query parameters:
+
+| Parameter | Contract |
+| --- | --- |
+| `status` | Omit for all; otherwise exactly `open`, `uncollectible`, `paid`, `draft` or `void` |
+| `cursor` | Omit for the first page; otherwise use only the opaque `history.next_cursor` returned for this owner, tenant and filter |
+
+Every page independently checks owner authorization and current MFA, persists a
+signed `stripe.invoices` read-attempt receipt, loads the authoritative tenant,
+validates the cursor against its saved billing binding, verifies the subscription
+with Stripe, and performs one invoice-list GET. The adapter retains the existing
+pinned `2025-02-24.acacia` contract, strict JSON, fixed Stripe host, no redirects,
+five-row/256-KiB response bound and five-second timeout per provider read.
+See [pinned invoice list API](https://docs.stripe.com/api/invoices/list?api-version=2025-02-24.acacia)
+and [Stripe pagination](https://docs.stripe.com/api/pagination).
+
+The `ic1.` cursor uses authenticated encryption with a separately derived key;
+raw invoice, customer and subscription IDs are not exposed. Its context includes
+owner, tenant, saved billing IDs, configured price/environment, filter and page
+size. The original 15-minute expiry persists across pages. Changing the billing
+binding or filter, using another owner's cursor, tampering or expiry refuses
+the page before either Stripe read. Ordinary saved revision changes do not
+invalidate an unchanged billing identity. A fresh provider verification remains
+mandatory. The cursor is held in tab memory, not browser storage.
+
+Each successful response identifies `page_number`, `status_filter`, `next_cursor`,
+`has_more`, a UTC read time and the signed read receipt. A page with more results
+must contain a usable next cursor and at least one invoice. Rows must preserve
+provider order and match the customer, subscription, environment and filter;
+duplicates within the page and the prior continuation anchor are refused.
+Equal creation timestamps are allowed. The service does not retain every prior
+invoice ID or claim a frozen, globally deduplicated traversal.
+
+All amount and collection-attempt summaries apply only to the displayed page.
+The first unfiltered page retains `verified_first_page_only`; later or filtered
+pages use `verified_selected_page_only`. `complete_history` can be true only for
+an unfiltered first page with no additional results. The last continuation page
+is not complete invoice history. Separate reads can observe changing amounts or
+statuses and are never added into a revenue, receivables or margin total.
+Currencies remain separate integer minor units without conversion.
+
+HTTP 400 means the cursor/selection is invalid or expired; restart the history.
+HTTP 429 means the invoice-read budget is exhausted; wait before restarting.
+HTTP 503 means verification is unavailable. All clear the previous page's
+amounts and continuation. No raw provider error body is displayed. The budget
+is 20 invoice-page requests per owner per minute in a warm process, with bounded
+owner tracking; it is not a distributed rate limit and does not replace edge or
+provider controls. Each accepted read can make one subscription GET plus one
+invoice GET. Audit and owner identity checks precede that budget.
+
+Controls prevent duplicate in-flight page requests while permitting a different
+tenant selection. Refresh, logout, subscription inspection and confirmed billing
+reconciliation clear the old page. Selection/auth epochs suppress late results;
+an old session's late 401/403 cannot sign out a new session. Read-only API tests,
+the actual mounted owner browser journey and focused fault/race/mobile tests are
+part of the existing test gates. Production financial evidence still requires
+real provider credentials and deployed owner/MFA acceptance.
+
+The next confirmed financial-write architecture is preserved in
+[admin-financial-operations-design.md](admin-financial-operations-design.md).
+That design does not enable cancellation, refunds, credits or plan changes.

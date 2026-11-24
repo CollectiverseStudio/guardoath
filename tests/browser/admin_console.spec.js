@@ -382,6 +382,7 @@ test("late failed Stripe check cannot replace newer tenant invoice view", async 
     } else if (path === "/v1/admin/subscriptions/sample-labs/invoices") {
       await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
         tenant_id:"sample-labs",history:{verified:true,status:"verified",count:1,has_more:false,
+            page_number:1,status_filter:null,next_cursor:null,
           invoices:[{status:"paid",currency:"usd",created_utc:"2026-11-20T12:00:00Z",
             amount_due_minor:700,amount_paid_minor:700,amount_remaining_minor:0,
             collection_method:"charge_automatically",attempted:true,
@@ -447,6 +448,7 @@ test("owner Billing shows verified collection attempt metadata without claiming 
     /^\/v1\/admin\/subscriptions\/[^/]+\/invoices$/.test(request.path)
       ? {status:200, contentType:"application/json", body:JSON.stringify({
           tenant_id:"sample-studio",history:{verified:true,status:"verified",count:1,has_more:false,
+            page_number:1,status_filter:null,next_cursor:null,
             read_at_utc:"2026-11-21T12:00:00Z",invoices:[{
               status:"open",currency:"usd",created_utc:"2026-11-20T12:00:00Z",
               amount_due_minor:2500,amount_paid_minor:0,amount_remaining_minor:2500,
@@ -477,6 +479,7 @@ test("owner rejects inconsistent verified invoice next-attempt count", async ({p
     request.path === "/v1/admin/subscriptions/sample-studio/invoices"
       ? {status:200,contentType:"application/json",body:JSON.stringify({
           tenant_id:"sample-studio",history:{verified:true,status:"verified",count:1,has_more:false,
+            page_number:1,status_filter:null,next_cursor:null,
             read_at_utc:"2026-11-23T12:00:00Z",
             invoices:[{status:"open",currency:"usd",created_utc:"2026-11-20T12:00:00Z",
               amount_due_minor:2500,amount_paid_minor:0,amount_remaining_minor:2500,
@@ -1310,6 +1313,7 @@ test("owner invoices reject a different or missing tenant despite HTTP 200 with 
     fixture.override=req=>req.path==="/v1/admin/subscriptions/sample-studio/invoices" ?
       {status:200,contentType:"application/json",body:JSON.stringify({
         tenant_id:identity,history:{verified:true,status:"verified",count:1,has_more:false,
+            page_number:1,status_filter:null,next_cursor:null,
           invoices:[{status:"paid",currency:"usd",created_utc:"2026-11-20T12:00:00Z",
             amount_due_minor:999999,amount_paid_minor:999999,amount_remaining_minor:0,
             collection_method:"charge_automatically",attempted:true,attempt_count:1,

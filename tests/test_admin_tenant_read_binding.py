@@ -57,7 +57,8 @@ def client_for(record):
                     "subscription_entitlement": False}
 
     class Invoices:
-        def read(self, tenant):
+        def read(self, tenant, *, owner_sub, cursor, status):
+            assert owner_sub == OWNER and cursor is None and status is None
             operations.append(("invoice_provider", tenant.tenant_id))
             return {"status": "verified", "verified": True, "invoices": [],
                     "count": 0, "has_more": False}

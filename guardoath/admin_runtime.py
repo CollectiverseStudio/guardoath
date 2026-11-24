@@ -138,9 +138,11 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
             verified_stripe, expected_price_id=price, expected_livemode=secret.startswith("sk_live_"))
         from guardoath.admin_invoices import AdminInvoiceHistory, fetch_invoice_list
         from guardoath.subscription_reconciliation import StripeBinding
-        def verified_invoices(tenant_id, customer_id, subscription_id):
-            return fetch_invoice_list(StripeBinding(tenant_id, customer_id, subscription_id), secret)
-        billing_invoices = AdminInvoiceHistory(verified_invoices, billing_reporter)
+        def verified_invoices(tenant_id, customer_id, subscription_id, *, starting_after=None, status=None):
+            return fetch_invoice_list(StripeBinding(tenant_id, customer_id, subscription_id), secret,
+                                      starting_after=starting_after, status=status)
+        billing_invoices = AdminInvoiceHistory(verified_invoices, billing_reporter,
+                                               cursor_key=bytes.fromhex(key_hex))
     record_validator = rule_exists = None
     if mutator is not None:
         from guardoath.tenant_record import TenantRecord

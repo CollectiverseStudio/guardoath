@@ -33,6 +33,7 @@ from guardoath.admin_billing_reconcile import AdminBillingDowngrade
 from guardoath.admin_browser import BrowserAuthConfig, BoundExchange
 from guardoath.admin_catalog_drafts import AdminCatalogDrafts
 from guardoath.admin_integration import mount_admin_console
+from guardoath.admin_invoices import AdminInvoiceHistory
 from guardoath.admin_subscription_reconcile import AdminSubscriptionReconciliation
 from guardoath.app import create_app, demo_engine
 from guardoath.checkers import default_checkers
@@ -193,6 +194,30 @@ def resolve_subscription(record):
     return binding, stripe_snapshot(binding.tenant_id,binding.customer_id,binding.subscription_id)
 
 
+def stripe_invoices(tenant_id, customer_id, subscription_id, *, starting_after=None, status=None):
+    """Only external provider transport is synthetic; real cursor/API/audit run above it."""
+    suffix = tenant_id.removeprefix("usr-admin-")
+    assert suffix in ("alpha", "beta") and customer_id == "cus_" + suffix and subscription_id == "sub_" + suffix
+    with path.with_suffix(".invoice-reads.jsonl").open("a", encoding="utf-8") as evidence:
+        evidence.write(json.dumps({"tenant_id":tenant_id, "starting_after":starting_after,
+                                   "status":status}) + "\n")
+    rows = [{"object":"invoice", "id":f"in_{suffix}_{index}", "customer":customer_id,
+        "subscription":subscription_id, "livemode":False,
+        "status":"open" if index == 6 else "uncollectible" if index == 7 else "paid",
+        "created":1795161600 - index * 86400, "currency":"eur" if index == 7 else "usd",
+        "amount_due":700 + index, "amount_paid":700 + index if index < 6 else 0,
+        "amount_remaining":0 if index < 6 else 700 + index,
+        "collection_method":"charge_automatically", "attempted":True, "attempt_count":1,
+        "next_payment_attempt":None, "customer_email":"private-invoice@example.invalid",
+        "hosted_invoice_url":"https://private-invoice.example.invalid"} for index in range(8)]
+    if status is not None:
+        rows = [row for row in rows if row["status"] == status]
+    if starting_after is not None:
+        at = next(i for i, row in enumerate(rows) if row["id"] == starting_after)
+        rows = rows[at + 1:]
+    return {"object":"list", "data":rows[:5], "has_more":len(rows) > 5}
+
+
 reader = AdminAuditReader(db,"audit_table",verify_key=ADMIN_BROWSER_AUDIT_KEY)
 reporter = AdminSubscriptionReporter(stripe_snapshot,expected_price_id="price_starter",expected_livemode=False)
 mount_admin_console(app,sessions=sessions,tenants=tenants,cognito=CognitoBoundary(),
@@ -201,6 +226,7 @@ mount_admin_console(app,sessions=sessions,tenants=tenants,cognito=CognitoBoundar
     audit_reader=reader,read_auditor=AdminSensitiveReadAuditor(db,"audit_table",signing_key=ADMIN_BROWSER_AUDIT_KEY),
     catalog_drafts=AdminCatalogDrafts(db,"audit_table",ADMIN_BROWSER_AUDIT_KEY),require_persistent_read_audit=True,
     billing_reporter=reporter,
+    billing_invoices=AdminInvoiceHistory(stripe_invoices, reporter, cursor_key=CURSOR_KEY),
     billing_downgrade=AdminBillingDowngrade(db,"tenant_table","audit_table",signing_key=ADMIN_BROWSER_AUDIT_KEY,
         reporter=reporter,validate_record=TenantRecord.model_validate),
     billing_reconciler=AdminSubscriptionReconciliation(db,"tenant_table","audit_table",signing_key=ADMIN_BROWSER_AUDIT_KEY,
