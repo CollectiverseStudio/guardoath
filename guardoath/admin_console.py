@@ -961,7 +961,9 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             except ValueError as exc:
                 raise HTTPException(status_code=422,detail="Invalid cost cap request") from exc
             except AdminUnboundZeroCap as exc:
-                raise HTTPException(status_code=409,detail="A zero cap for an unbound account is unavailable in this release. Use Suspend to block access.") from exc
+                raise HTTPException(status_code=409,
+                    detail="A zero cap for an unbound account is unavailable in this release. Use Suspend to block access.",
+                    headers={"X-GuardOath-Admin-Error":"unbound-zero-cap"}) from exc
             except AdminActionConflict as exc:
                 raise HTTPException(status_code=409,detail="Tenant state changed; refresh") from exc
             except AdminActionUnavailable as exc:

@@ -41,6 +41,47 @@ legacy-shaped cap, left full reconciliation unmounted (404), and isolated an
 inherited Cognito redirect setting. Syntax/whitespace passed. New baseline
 browser acceptance still requires exact-new-SHA CI; it is not a local Chrome pass.
 
+### Latest baseline CI failures and concrete correction
+
+Baseline commit
+[`d6998c70d34db2af575c5843e5976db052c01325`](https://github.com/CollectiverseStudio/guardoath/commit/d6998c70d34db2af575c5843e5976db052c01325)
+is **not release accepted**. All nine workflows / 28 jobs were inspected:
+25 succeeded, two failed and one was cancelled. The eight specialized workflows
+succeeded, including all three PII reliability jobs. Both failures are in
+[Tests run 45307985727](https://github.com/CollectiverseStudio/guardoath/actions/runs/45307985727):
+
+- Dashboard job [138156392308](https://github.com/CollectiverseStudio/guardoath/actions/runs/45307985727/job/138156392308):
+  `admin_baseline.spec.js:91` received the intended API 409 for an ambiguous
+  unbound zero cap, but the UI displayed only `Request failed (409)` instead of
+  the supported Suspend guidance. The shared request helper intentionally hides
+  arbitrary server error bodies. The follow-up adds an operation-scoped,
+  allowlisted error header and a fixed client explanation. Four additional
+  browser cases cover recognized, unknown, absent and wrong-status error signals
+  and ensure private response bodies never render. The original real-application
+  test and backend refusal remain unchanged. The other two baseline browser
+  cases passed; later browser steps were not executed after the failure.
+- Python 3.12 job [138156392746](https://github.com/CollectiverseStudio/guardoath/actions/runs/45307985727/job/138156392746):
+  `test_uc033_extracted_receipt_fields_only[record1-block-output]` expected a
+  complete schema result but received incomplete. The log omitted checker error
+  and latency, so **the root cause is unproven**; do not label it a timeout or
+  scheduler defect. The unchanged 24-case module passed locally. Its complete
+  assertions now include only checker ID/status/error code/latency diagnostics,
+  preserving every assertion and the original 250-ms schema budget. No test
+  isolation, retry, skip or clock/deadline change is introduced. Python 3.13 was
+  cancelled by matrix fail-fast and cannot count as successful acceptance.
+
+The cap explanation/API change passed **129 focused Python 3.13 tests**, actual
+client/spec syntax checks and a read-only privacy review. The new source still
+requires complete exact-SHA CI; a passing rerun alone will not prove the receipt
+failure's underlying cause fixed.
+
+A real Python 3.13 Lambda build was also produced for **d6998c7 only**:
+48,694,800 ZIP bytes, 130,288,585 unzipped bytes, code digest
+`L/lcCtNX/I0EbAZ6BNs4thX9dt/Ko/ME74pHyk5NAVs=`. Its manifest names that exact SHA,
+supports the cap contract and introduces none; source-controlled phase bytes
+match and no test harness is packaged. The archive was not uploaded. It is not
+source-parity evidence for this later follow-up or for production.
+
 ### Preceding writer source is fully CI verified
 
 All **25 individual jobs** at
@@ -169,8 +210,9 @@ Its actual owner browser/real API acceptance step passed in dashboard job
 left PowerShell's process exit code at one, despite all assertions completing.
 The follow-up source corrects only that harness success exit after assertions
 and cleanup. All negative cases and the production gate remain intact. The
-follow-up commit still needs its own full exact-SHA CI; this predecessor's
-partial success is not release acceptance.
+follow-up `e17baba1` subsequently passed all 25 required jobs, as recorded above.
+This paragraph preserves the original failure history; the latest baseline and
+follow-up require their own acceptance.
 
 | Evidence | Result and limits |
 | --- | --- |
@@ -182,7 +224,7 @@ partial success is not release acceptance.
 | JavaScript source/spec syntax and diff whitespace | Passed |
 | Local Playwright | Server starts; Chromium launch is blocked by OS socket permission before test assertions execute. No local browser pass claimed |
 | Actual PowerShell execution | Unavailable locally; new acceptance script is wired into exact-SHA CI |
-| New commit CI | Pending when this handoff was written; inspect exact-SHA job results before release |
+| Original writer follow-up CI | `e17baba1` passed all 25 jobs; see the separate latest-baseline failure record above |
 | AWS / live Stripe / deployed `/admin` | No live mutation or deployment in this batch; no live financial or end-to-end readiness claim |
 
 Offline test transport is not AWS acceptance. The existing real-table test was

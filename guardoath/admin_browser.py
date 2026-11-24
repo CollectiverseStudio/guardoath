@@ -394,6 +394,12 @@ _JS = r'''"use strict";
         ? "Cognito directory request limit reached (429); retry later"
         : "Request failed (" + result.status + ")");
       error.status = result.status;
+      // Only this fixed, operation-scoped signal has a public explanation.
+      // Never render arbitrary server/provider error bodies in the console.
+      if (result.status === 409 && options.method === "POST" &&
+          /^\/v1\/admin\/tenants\/[a-z][a-z0-9-]{1,39}\/allowance-cap$/.test(path) &&
+          result.headers.get("X-GuardOath-Admin-Error") === "unbound-zero-cap")
+        error.code = "unbound-zero-cap";
       throw error;
     }
     return result.json();
@@ -1930,7 +1936,9 @@ _JS = r'''"use strict";
         change:{field:"monthly_allowance",before:tenant.monthly_allowance,after:limit}
       });
       if (token && epoch === authEpoch) {await load();say("status","Request cap saved · " + receipt);}
-    } catch(err) {if(token && epoch===authEpoch) say("status",err.message);}
+    } catch(err) {if(token && epoch===authEpoch) say("status",err.code === "unbound-zero-cap"
+      ? "A zero cap for an unbound account is unavailable in this release. Use Suspend to block access."
+      : err.message);}
   }
   async function revokeTenantKeys(tenant) {
     if (!token || !features.tenant_key_revocation || !Number.isSafeInteger(tenant.revision) ||

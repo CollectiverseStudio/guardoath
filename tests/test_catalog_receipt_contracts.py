@@ -42,7 +42,10 @@ def test_uc033_extracted_receipt_fields_only(stage, record, expected):
     result = asyncio.run(engine.check(CheckRequest(
         application_id="receipt-demo", policy_version="v1",
         content_format="json", content=json.dumps(record)), stage))
-    assert result.evaluation_status == "complete"
+    assert result.evaluation_status == "complete", [
+        (item.checker_id, item.status, item.error_code, item.latency_ms)
+        for item in result.checker_results
+    ]
     assert result.effective_action == expected
 
 
@@ -63,7 +66,10 @@ def test_uc033_observe_mode_reports_but_does_not_block(stage, record, has_violat
     result = asyncio.run(Engine([policy], default_checkers()).check(CheckRequest(
         application_id="receipt-demo", policy_version="v1",
         content_format="json", content=json.dumps(record)), stage))
-    assert result.evaluation_status == "complete"
+    assert result.evaluation_status == "complete", [
+        (item.checker_id, item.status, item.error_code, item.latency_ms)
+        for item in result.checker_results
+    ]
     assert result.effective_action == Action.ALLOW
     assert result.recommended_action == (Action.BLOCK if has_violation else Action.ALLOW)
     assert bool(result.findings) is has_violation

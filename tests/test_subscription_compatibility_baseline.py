@@ -180,6 +180,7 @@ def test_unbound_zero_cap_api_gives_actionable_release_limitation(db):
         response = client.post("/v1/admin/tenants/"+TENANT+"/allowance-cap",
             headers={"X-GuardOath-Admin-Session":"owner","Origin":"https://guardoath.com"},json={**payload,"new_limit":0})
     assert response.status_code == 409
+    assert response.headers["X-GuardOath-Admin-Error"] == "unbound-zero-cap"
     assert "Use Suspend to block access" in response.json()["detail"]
     assert "refresh" not in response.json()["detail"].lower()
     assert db.transactions == 0 and not db.audit_items()
