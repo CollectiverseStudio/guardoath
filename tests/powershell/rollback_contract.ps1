@@ -14,9 +14,13 @@ foreach ($name in @('Invoke-Checked','Assert-RollbackCompatibility','Assert-Roll
     Invoke-Expression $method.Extent.Text
 }
 function Invoke-Aws { throw 'No AWS call permitted in offline rollback acceptance' }
-function Expect-Refused([scriptblock]$Action) {
-    try { & $Action } catch { return }
-    throw 'Incompatible rollback was accepted'
+function Expect-Refused([scriptblock]$Action, [string]$Phrase) {
+    try { & $Action }
+    catch {
+        if ($_.Exception.Message.Contains($Phrase)) { return }
+        throw "Wrong rollback refusal; expected '$Phrase', received: $($_.Exception.Message)"
+    }
+    throw "Incompatible rollback was accepted; expected '$Phrase'"
 }
 function New-TestArchive([string]$Path,[string]$Metadata) {
     $stream = [IO.File]::Create($Path)
@@ -45,21 +49,27 @@ try {
     New-TestArchive $writer (@{source_sha=$sha;release_contract_version=1;
         supported_state_contracts=@($contract);introduced_state_contracts=@($contract)} | ConvertTo-Json -Compress)
     Assert-RollbackCompatibility $baseline $old $sha (Digest $old)
-    Expect-Refused { Assert-RollbackCompatibility $writer $old $sha (Digest $old) }
+    Expect-Refused { Assert-RollbackCompatibility $writer $old $sha (Digest $old) } 'cannot preserve new persistent state'
     Assert-RollbackCompatibility $writer $baseline $sha (Digest $baseline)
-    Expect-Refused { Assert-RollbackCompatibility $writer $baseline $oldSha (Digest $baseline) }
+    Expect-Refused { Assert-RollbackCompatibility $writer $baseline $oldSha (Digest $baseline) } 'Candidate source differs from accepted exact SHA'
     $acceptedDigest = Digest $baseline
     Assert-RollbackArchive $baseline $acceptedDigest
     [IO.File]::AppendAllText($baseline,'changed after deployment approval')
-    Expect-Refused { Assert-RollbackArchive $baseline $acceptedDigest }
+    Expect-Refused { Assert-RollbackArchive $baseline $acceptedDigest } 'does not match deployed CodeSha256'
 
     # Verify the checked functions remain on the actual write/restore path.
     $source = Get-Content $scriptPath -Raw
     $gateCall = $source.IndexOf('    Assert-RollbackCompatibility $Zip $BackupFile $Sha $BackupCodeSha256')
     $updateMark = $source.IndexOf('    $Uploaded = $true')
     if ($gateCall -lt 0 -or $gateCall -ge $updateMark) { throw 'Compatibility must be checked before Lambda may change' }
-    $restoreCheck = $source.IndexOf('        Assert-RollbackArchive $BackupFile $BackupCodeSha256')
-    $restoreWrite = $source.IndexOf('"fileb://$BackupFile"')
+    $restoreMethod = $ast.Find({ param($node)
+        $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Restore-VerifiedLambdaBackup'
+    },$true)
+    if (-not $restoreMethod -or -not $source.Contains('Restore-VerifiedLambdaBackup $FunctionName $BackupFile')) {
+        throw 'Production failure path must use the tested rollback helper'
+    }
+    $restoreCheck = $restoreMethod.Extent.Text.IndexOf('    Assert-RollbackArchive $Backup $BackupCodeSha256')
+    $restoreWrite = $restoreMethod.Extent.Text.IndexOf('"fileb://$Backup"')
     if ($restoreCheck -lt 0 -or $restoreCheck -ge $restoreWrite) { throw 'Reverify backup bytes before restoration' }
     Write-Host 'Actual rollback functions: compatible pairs accepted, incompatible or changed archives refused before writes'
 } finally {

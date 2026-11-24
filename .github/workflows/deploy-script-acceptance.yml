@@ -21,6 +21,9 @@ jobs:
       - name: Execute actual deployment rollback compatibility functions
         shell: pwsh
         run: ./tests/powershell/rollback_contract.ps1
+      - name: Refuse rollback over another deployment or uncertain revision
+        shell: pwsh
+        run: ./tests/powershell/rollback_ownership.ps1
       - name: Parse the real deployment script without AWS access
         shell: pwsh
         run: |

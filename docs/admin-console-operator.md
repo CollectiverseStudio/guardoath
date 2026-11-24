@@ -134,6 +134,31 @@ the rollback image to support every introduced contract, and refuses loss of
 already-deployed support. Archive inspection does not extract or execute code.
 Rollback rechecks the same backup digest immediately before restoration.
 
+Rollback authority is also bound to the update that this deployment actually
+performed. The script hashes the candidate archive, validates the
+`UpdateFunctionCode` response and retains that response's revision. It verifies
+the candidate digest, revision and successful update after the waiter. If a
+later deployment or configuration update changes the revision, automatic rollback
+refuses to overwrite it, even when the code bytes happen to match.
+
+Restoration requires the current candidate digest and the exact retained revision
+to match, and the update to be terminal. The conditional restore uses that
+retained revision; it never adopts a newer observed revision or retries a
+revision conflict. A lost or malformed original update response leaves ownership
+uncertain and does not authorize an automatic restore. An update still in
+progress is also refused. If the backup digest is already present, the script
+reports an observation and performs no restore write. A completed restoration
+must independently verify the backup digest, returned new revision and successful
+update state before it is reported restored. All 15 live checks still apply.
+These rules use AWS's documented [conditional code updates](https://docs.aws.amazon.com/lambda/latest/api/API_UpdateFunctionCode.html)
+and [update states](https://docs.aws.amazon.com/lambda/latest/dg/functions-states.html).
+
+The offline PowerShell acceptance runs the actual production helper functions
+against scripted AWS responses and real backup archives. It tests concurrent
+updates, ambiguous responses, incomplete updates, digest/revision mismatch,
+restore verification and archive tampering. It does not execute AWS actions or
+establish that a production rollback has occurred.
+
 The current baseline sets source-controlled `ENABLE_NEW_SUBSCRIPTION_STATE=False`.
 That same phase controls generated artifact metadata and all producers: owner
 full reconciliation, request-cap actions, both tenant stores' subscription updates

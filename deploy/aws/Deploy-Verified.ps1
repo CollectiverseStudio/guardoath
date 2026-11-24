@@ -59,6 +59,71 @@ function Assert-RollbackArchive([string]$Backup, [string]$CodeSha256) {
     [void](Invoke-Checked "python" @("deploy/aws/verify_rollback.py", "--backup", $Backup,
         "--backup-code-sha256", $CodeSha256, "--verify-backup-only"))
 }
+function Get-ArchiveCodeSha256([string]$Path) {
+    $stream = [IO.File]::OpenRead($Path)
+    $hasher = [Security.Cryptography.SHA256]::Create()
+    try { return [Convert]::ToBase64String($hasher.ComputeHash($stream)) }
+    finally { $hasher.Dispose(); $stream.Dispose() }
+}
+function ConvertTo-LambdaCodeEvidence([string]$Json) {
+    # AWS configuration responses can contain environment secrets. Keep only
+    # the three required fields and never echo a malformed response body.
+    if (-not $Json.TrimStart().StartsWith('{')) { throw "Lambda code evidence is not a configuration object" }
+    try { $value = $Json | ConvertFrom-Json }
+    catch { throw "Lambda code evidence is not valid JSON" }
+    if ($null -eq $value -or $value -isnot [pscustomobject]) { throw "Lambda code evidence is not a configuration object" }
+    foreach ($name in @('CodeSha256', 'RevisionId', 'LastUpdateStatus')) {
+        if ($null -eq $value.PSObject.Properties[$name] -or $value.$name -isnot [string]) {
+            throw "Lambda code evidence is missing required fields"
+        }
+    }
+    try { $decoded = [Convert]::FromBase64String($value.CodeSha256) }
+    catch { throw "Lambda code evidence has an invalid digest" }
+    if ($decoded.Length -ne 32 -or [Convert]::ToBase64String($decoded) -cne $value.CodeSha256) {
+        throw "Lambda code evidence has an invalid digest"
+    }
+    if ($value.RevisionId -cnotmatch '^[A-Za-z0-9_-]{1,128}$' -or
+        $value.LastUpdateStatus -cnotin @('InProgress', 'Successful', 'Failed')) {
+        throw "Lambda code evidence has an invalid revision or update state"
+    }
+    return [pscustomobject]@{CodeSha256=$value.CodeSha256; RevisionId=$value.RevisionId;
+        LastUpdateStatus=$value.LastUpdateStatus}
+}
+function Assert-AppliedLambdaCode([string]$Name, [string]$CodeSha256, [string]$RevisionId) {
+    $current = ConvertTo-LambdaCodeEvidence (Invoke-Aws @('lambda', 'get-function-configuration', '--function-name', $Name))
+    if ($current.LastUpdateStatus -cne 'Successful' -or $current.CodeSha256 -cne $CodeSha256 -or
+        $current.RevisionId -cne $RevisionId) {
+        throw "Lambda code and successful update are not verified at the expected revision"
+    }
+}
+function Restore-VerifiedLambdaBackup([string]$Name, [string]$Backup, [string]$BackupCodeSha256,
+                                     [string]$CandidateCodeSha256, [string]$AppliedRevisionId) {
+    $current = ConvertTo-LambdaCodeEvidence (Invoke-Aws @('lambda', 'get-function-configuration', '--function-name', $Name))
+    if ($current.LastUpdateStatus -ceq 'InProgress') {
+        throw "Automatic rollback refused while the Lambda update remains in progress"
+    }
+    if ($current.CodeSha256 -ceq $BackupCodeSha256) {
+        # Observation only: this process did not perform a restoration.
+        return 'backup_observed'
+    }
+    if ([string]::IsNullOrEmpty($AppliedRevisionId)) {
+        throw "Automatic rollback refused: original update outcome is uncertain; no owned revision receipt"
+    }
+    if ($current.CodeSha256 -cne $CandidateCodeSha256 -or $current.RevisionId -cne $AppliedRevisionId) {
+        throw "Automatic rollback refused: current code or revision belongs to another update"
+    }
+    # Never adopt a freshly observed revision as rollback authority. Reuse the
+    # revision returned by OUR successful update, so a race is rejected by AWS.
+    Assert-RollbackArchive $Backup $BackupCodeSha256
+    $restored = ConvertTo-LambdaCodeEvidence (Invoke-Aws @('lambda', 'update-function-code', '--function-name', $Name,
+        '--revision-id', $AppliedRevisionId, '--zip-file', "fileb://$Backup"))
+    if ($restored.CodeSha256 -cne $BackupCodeSha256 -or $restored.RevisionId -ceq $AppliedRevisionId) {
+        throw "Rollback response did not verify the backup at a new revision"
+    }
+    [void](Invoke-Aws @('lambda', 'wait', 'function-updated', '--function-name', $Name))
+    Assert-AppliedLambdaCode $Name $BackupCodeSha256 $restored.RevisionId
+    return 'restored'
+}
 function Assert-Run([object[]]$Runs, [string]$Name, [string]$Sha) {
     $matches = @($Runs | Where-Object { $_.name -eq $Name -and $_.head_sha -eq $Sha })
     if (-not $matches.Count) {
@@ -144,6 +209,8 @@ $BackupFile = Join-Path $BackupDir ("lambda-before-" + $Sha.Substring(0,12) + ".
 if (Test-Path $BackupFile) { throw "Backup filename already exists; avoid overwriting the previous rollback copy." }
 $BackupCodeSha256 = $Function.Configuration.CodeSha256
 $Uploaded = $false
+$CandidateCodeSha256 = $null
+$AppliedRevisionId = $null
 try {
     Invoke-WebRequest -Uri $Function.Code.Location -OutFile $BackupFile -UseBasicParsing
     if ((Get-Item $BackupFile).Length -lt 1000) { throw "Lambda rollback package is unexpectedly small" }
@@ -154,29 +221,35 @@ try {
     $CurrentHead = Invoke-Checked "git" @("rev-parse", "HEAD")
     if ($CurrentHead -ne $Sha) { throw "Git HEAD changed during build" }
     Assert-RollbackCompatibility $Zip $BackupFile $Sha $BackupCodeSha256
+    $CandidateCodeSha256 = Get-ArchiveCodeSha256 $Zip
     $Uploaded = $true # AWS may apply the update even if the client loses its response.
-    [void](Invoke-Aws @("lambda", "update-function-code", "--function-name", $FunctionName,
+    $Applied = ConvertTo-LambdaCodeEvidence (Invoke-Aws @("lambda", "update-function-code", "--function-name", $FunctionName,
         "--revision-id", $Function.Configuration.RevisionId, "--zip-file", "fileb://$Zip"))
+    if ($Applied.CodeSha256 -cne $CandidateCodeSha256) { throw "Update response did not verify candidate archive bytes" }
+    $AppliedRevisionId = $Applied.RevisionId
     [void](Invoke-Aws @("lambda", "wait", "function-updated", "--function-name", $FunctionName))
+    Assert-AppliedLambdaCode $FunctionName $CandidateCodeSha256 $AppliedRevisionId
     [void](Invoke-Aws @("cloudfront", "create-invalidation", "--distribution-id", $Outputs.DistributionId,
         "--paths", "/assets/*"))
     [void](Invoke-Checked "python" @("-m", "tools.verify_live_dashboard",
         "--url", "https://guardoath.com", "--expected-sha", $Sha))
     Write-Host "Source parity verified. Production is NOT accepted until all 15 live safety checks have passed."
 } catch {
-    Write-Warning "Deployment or parity verification failed: $_"
+    $DeploymentFailure = $_
+    Write-Warning "Deployment or parity verification failed: $DeploymentFailure"
     if ($Uploaded -and (Test-Path $BackupFile)) {
-        # Recheck the bytes immediately before restoring the already accepted
-        # compatible image. Never strip tenant provenance to fit an old image.
-        Assert-RollbackArchive $BackupFile $BackupCodeSha256
-        Write-Warning "Attempting to restore the previously downloaded Lambda code (tenant table and configuration unchanged)."
-        $Now = (Invoke-Aws @("lambda", "get-function-configuration", "--function-name", $FunctionName)) | ConvertFrom-Json
-        [void](Invoke-Aws @("lambda", "update-function-code", "--function-name", $FunctionName,
-            "--revision-id", $Now.RevisionId, "--zip-file", "fileb://$BackupFile"))
-        [void](Invoke-Aws @("lambda", "wait", "function-updated", "--function-name", $FunctionName))
-        [void](Invoke-Aws @("cloudfront", "create-invalidation", "--distribution-id", $Outputs.DistributionId,
-            "--paths", "/assets/*"))
-        Write-Warning "Restored backup Lambda archive. Verify old /healthz, dashboard and all production checks."
+        try {
+            $Recovery = Restore-VerifiedLambdaBackup $FunctionName $BackupFile $BackupCodeSha256 $CandidateCodeSha256 $AppliedRevisionId
+            if ($Recovery -ceq 'restored') {
+                [void](Invoke-Aws @("cloudfront", "create-invalidation", "--distribution-id", $Outputs.DistributionId,
+                    "--paths", "/assets/*"))
+                Write-Warning "Restored backup Lambda archive and verified its code/revision. All 15 live production checks remain required."
+            } elseif ($Recovery -ceq 'backup_observed') {
+                Write-Warning "Previously recorded backup code digest is already present; no restoration was performed. Live acceptance remains unverified."
+            }
+        } catch {
+            Write-Warning "Automatic rollback was not verified: $_. Preserved backup: $BackupFile. No retry with another revision is permitted."
+        }
     }
-    throw
+    throw $DeploymentFailure
 }

@@ -5,7 +5,27 @@ record for a new chat. The append-only engineering history remains in
 [director-agent-coordination.md](director-agent-coordination.md); the complete
 47-target product discussion is preserved in [product-roadmap.md](product-roadmap.md).
 
-## Current implementation batch: catalog inspection
+## Current release safety batch: rollback revision ownership
+
+The deployment script now binds automatic rollback to the candidate digest and
+the revision returned by **its own successful update response**. It cannot take
+a newly observed revision after a rejected or lost upload and use it to overwrite
+another deployment. A current hash/revision mismatch, uncertain original update
+receipt or in-progress update refuses restoration. A post-read race is still
+protected by the original revision condition. A restored result requires a fresh
+digest/revision/success-state verification; already-present backup bytes are only
+an observation, and lost restore responses are not blindly retried.
+
+The actual production functions passed every scenario in the new PowerShell
+ownership suite. All **six PowerShell steps from the actual deployment-acceptance
+workflow passed locally**, including existing ZIP compatibility, parse/guard,
+individual-job and issue-risk checks. The original negative archive tests now
+require their specific refusal reason. Python archive/build/template checks:
+**65 passed**. PowerShell 7.4.6 was obtained from the official release and its
+archive verified against the official checksum; no AWS/provider call occurred.
+This batch still needs its own exact-SHA CI and does not establish live rollback.
+
+## Catalog inspection implementation
 
 The existing owner Catalog page now has **Inspect check** and **Inspect rule**
 actions backed by exact-target, owner/MFA-authenticated API reads. The same
@@ -25,8 +45,10 @@ Python 3.12 admin/catalog/source-history/real-rule-example regression:
 **1,580 passed**. Actual client-validator smoke accepted check/rule and the
 maximum Unicode fixture and refused five injected account fields. New fault
 browser cases and a mounted-application inspection journey are integrated into
-the existing CI suites; the new source still needs its own exact-SHA browser
-acceptance. Source declarations are not current CI or live-deployment evidence.
+the existing CI suites. Catalog source `276a1871` passed all eight triggered
+workflows / 26 jobs, including 4 baseline owner, 7 writer owner, 19 invocation
+and 462 default browser tests. Source declarations shown inside the inspector
+are not executed-CI or live-deployment attestations.
 Authenticated publication/rollback and general definition authoring remain open.
 Python 3.13 focused catalog/API/browser-shell/source-history run: **315 passed**.
 
@@ -109,29 +131,31 @@ supports the cap contract and introduces none; source-controlled phase bytes
 match and no test harness is packaged. The archive was not uploaded. It is not
 source-parity evidence for this later follow-up or for production.
 
-### Accepted baseline predecessor: exact CI evidence
+### Accepted catalog predecessor: exact CI evidence
 
-All **25 individual jobs** at
-[`1c9d88512182ee4d905678c4e21b73d7c4fcf01f`](https://github.com/CollectiverseStudio/guardoath/commit/1c9d88512182ee4d905678c4e21b73d7c4fcf01f)
+All **26 individual jobs** at
+[`276a187191cc326d1b1106849b11345df0d7a519`](https://github.com/CollectiverseStudio/guardoath/commit/276a187191cc326d1b1106849b11345df0d7a519)
 were individually inspected and passed, with no missing, failed or cancelled
-job. This accepts that baseline source's CI, not this later catalog-inspection
-batch or a production deployment.
+job: the seven required workflows / 25 jobs plus the extra red-team job. This
+accepts the catalog source's CI, not this later rollback-ownership batch or a
+production deployment.
 
 | Exact-SHA workflow | Jobs | Evidence |
 | --- | ---: | --- |
-| Tests | 13 | [45309444506](https://github.com/CollectiverseStudio/guardoath/actions/runs/45309444506) |
-| CodeQL / Push on main | 3 | [45309444541](https://github.com/CollectiverseStudio/guardoath/actions/runs/45309444541) |
-| Field Comparisons Evidence | 2 | [45309444481](https://github.com/CollectiverseStudio/guardoath/actions/runs/45309444481) |
-| Trusted Reference Acceptance | 1 | [45309444490](https://github.com/CollectiverseStudio/guardoath/actions/runs/45309444490) |
-| PII Reliability Gate | 3 | [45309444456](https://github.com/CollectiverseStudio/guardoath/actions/runs/45309444456) |
-| Stripe Reconciliation Acceptance | 2 | [45309444518](https://github.com/CollectiverseStudio/guardoath/actions/runs/45309444518) |
-| Deploy Script Acceptance | 1 | [45309444431](https://github.com/CollectiverseStudio/guardoath/actions/runs/45309444431) |
+| Tests | 13 | [45310982995](https://github.com/CollectiverseStudio/guardoath/actions/runs/45310982995) |
+| CodeQL / Push on main | 3 | [45310983347](https://github.com/CollectiverseStudio/guardoath/actions/runs/45310983347) |
+| Field Comparisons Evidence | 2 | [45310982947](https://github.com/CollectiverseStudio/guardoath/actions/runs/45310982947) |
+| Trusted Reference Acceptance | 1 | [45310982959](https://github.com/CollectiverseStudio/guardoath/actions/runs/45310982959) |
+| PII Reliability Gate | 3 | [45310983071](https://github.com/CollectiverseStudio/guardoath/actions/runs/45310983071) |
+| Stripe Reconciliation Acceptance | 2 | [45310982956](https://github.com/CollectiverseStudio/guardoath/actions/runs/45310982956) |
+| Deploy Script Acceptance | 1 | [45310983080](https://github.com/CollectiverseStudio/guardoath/actions/runs/45310983080) |
+| Red-team regression evidence | 1 | [45310982950](https://github.com/CollectiverseStudio/guardoath/actions/runs/45310982950) |
 
-Dashboard job 138161207470 executed **3 baseline owner, 7 retained writer owner,
-19 guarded-invocation and 441 default browser tests**, all passed. The original
-zero-cap explanation test passed unchanged. The preceding writer source
-`e17baba1` also passed all 25 jobs; its detailed evidence remains in coordination
-history. These are offline external-service boundaries;
+Dashboard job 138166353168 executed **4 baseline owner, 7 retained writer owner,
+19 guarded-invocation and 462 default browser tests**, all passed. The original
+zero-cap explanation and actual catalog-inspection journey passed. Earlier
+`1c9d8851` and writer source `e17baba1` also passed all 25 required jobs; their
+detailed evidence remains in coordination history. These are offline external-service boundaries;
 live Cognito/AWS/Stripe behavior and all 15 live checks remain unverified.
 
 ## Start here in a new session
@@ -253,7 +277,7 @@ follow-up require their own acceptance.
 | Actual mounted ASGI application smoke | Owner auth 200; customer, missing MFA, stale MFA and forged token 403; authenticated features/overview/users/tenants/catalog 200; tenant reconciliation revision 8 and signed receipt verified |
 | JavaScript source/spec syntax and diff whitespace | Passed |
 | Local Playwright | Server starts; Chromium launch is blocked by OS socket permission before test assertions execute. No local browser pass claimed |
-| Actual PowerShell execution | Unavailable locally; new acceptance script is wired into exact-SHA CI |
+| Actual PowerShell execution | The later rollback-ownership batch executed all six real workflow steps locally; all passed with offline AWS boundaries |
 | Original writer follow-up CI | `e17baba1` passed all 25 jobs; see the separate latest-baseline failure record above |
 | AWS / live Stripe / deployed `/admin` | No live mutation or deployment in this batch; no live financial or end-to-end readiness claim |
 
@@ -284,9 +308,9 @@ one. No AWS resource or paid provider was purchased or provisioned.
    the shared runtime. Existing signed draft/review/manifests and offline source
    application are not proof that an owner can safely publish a deployed catalog
    change end to end. Preserve stable identifiers and all saved tenant Off states.
-   Current authoring is metadata-only. The new schema/example inspector completes
-   that read workflow once its exact-SHA browser tests pass; actual executed-test
-   receipts and behavior authoring remain unfinished.
+   Current authoring is metadata-only. The new schema/example inspector has
+   exact-SHA browser acceptance at `276a1871`; actual executed-test receipts
+   attached to publication and behavior authoring remain unfinished.
 6. Review remaining user-management and authentication acceptance directly
    against #39–#42 and the operator guide. Existing Cognito account operations
    require actual signed audit, authorization and deployed MFA evidence.
@@ -307,8 +331,11 @@ one. No AWS resource or paid provider was purchased or provisioned.
 - `tests/test_admin_subscription_reconcile.py`: provider/state/receipt corruption,
   replay, durable reopen, atomicity, race, zero-cap and customer-policy coverage.
 - `tests/test_rollback_compatibility.py` and
-  `tests/powershell/rollback_contract.ps1`: real ZIP and real deployment-function
-  acceptance without AWS calls.
+  `tests/powershell/rollback_contract.ps1`, `rollback_ownership.ps1`: real ZIP,
+  real deployment-function and revision-ownership acceptance without AWS calls.
+  Local PowerShell, when this workspace remains available, is
+  `.guardoath-reports/release-runtime/powershell-7.4.6/pwsh`; the workflow itself
+  remains the durable execution recipe.
 - `.github/workflows/tests.yml`, `stripe-reconciliation-acceptance.yml` and
   `deploy-script-acceptance.yml`: new coverage is integrated with existing gates.
 - GitHub Actions exact-source listing:
