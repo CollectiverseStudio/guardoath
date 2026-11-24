@@ -12,7 +12,7 @@ import urllib.request
 
 from guardoath.subscription_reconciliation import (
     EntitlementDecision, StripeBinding, SubscriptionReconciliationError,
-    reconcile_subscription,
+    reconcile_subscription, require_supported_entitlement,
 )
 
 
@@ -214,6 +214,7 @@ def verified_subscription_snapshot(*, tenant_id: str, customer_id: str,
     actual_price = price.get("id") if isinstance(price, dict) else price
     if actual_price != price_id:
         raise SubscriptionReconciliationError("Subscription price changed")
+    require_supported_entitlement(direct, active=reconcile_subscription(binding, direct).active)
     return binding, direct
 
 

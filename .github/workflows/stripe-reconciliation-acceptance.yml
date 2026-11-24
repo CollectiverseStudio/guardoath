@@ -26,6 +26,8 @@ jobs:
           tests/test_verified_subscription_store.py
           tests/test_account_registration_entitlement.py
           tests/test_dynamodb_store.py
+          tests/test_admin_subscription_reconcile.py
+          tests/test_admin_runtime.py
   authenticated-billing-browser:
     runs-on: ubuntu-latest
     timeout-minutes: 12

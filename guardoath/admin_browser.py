@@ -293,7 +293,7 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <button id="user-action-inspect" type="button" disabled>Inspect signed action</button><p id="user-action-result" role="status"></p></section>
 <section id="section-tenants" data-admin-section class="panel" hidden tabindex="-1" aria-label="Tenants"><h2>Tenants</h2><p class="muted">API key counts and saved overage policies come from persisted tenant records; Allow and record is not a hard cap. Key material is never displayed. Unknown values remain unavailable. Quota risk is advisory, derived from each saved counter and allowance for the UTC read month, not live activity, financial cost, or a persistent alert.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button> <label for="quota-risk-filter">Saved quota risk (this page only)</label> <select id="quota-risk-filter"><option value="all">All risks</option><option value="watch">Watch or higher</option><option value="near">Near allowance or higher</option><option value="at">At or above allowance</option><option value="unknown">Unavailable</option></select><p class="muted">This filter only hides rows on the current bounded page. Next page continues the source scan even if no visible rows match.</p><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>Saved quota risk (UTC)</th><th>Overage policy</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
 <section id="section-billing" data-admin-section class="section-stack" hidden tabindex="-1" aria-label="Billing"><section class="panel"><h2>Verified recent invoices</h2><p class="muted">Up to five Stripe invoice summaries for an independently verified customer subscription. Amounts are in minor currency units, not a revenue total or forecast.</p><p id="invoice-details" role="status">No invoice history selected.</p></section>
-<section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Select Verify Stripe beside a tenant to compare the current provider status with its saved tenant entitlement. Discrepancies are advisory: no paid access or billing state is modified here.</p><p id="billing-details" role="status">No subscription selected.</p></section>
+<section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Verify Stripe compares provider state with saved entitlement. Reconcile subscription independently reads Stripe again and saves the verified entitlement with an audit receipt. Saved request caps and suspended accounts remain enforced. Reconciliation does not collect a payment or issue a refund.</p><p id="billing-details" role="status">No subscription selected.</p><p id="billing-action-result" role="status"></p><button id="billing-retry" type="button" hidden disabled>Retry same reconciliation</button></section>
 </section><section id="section-usage" data-admin-section class="panel" hidden tabindex="-1" aria-label="Usage"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
 <section id="section-audit" data-admin-section class="panel" hidden tabindex="-1" aria-label="Audit"><h2>Audit receipt lookup</h2><p class="muted">Read one stored administrative event by its exact event ID. No exports or audit enumeration.</p><label for="audit-id">Audit event ID</label> <input id="audit-id" maxlength="64" autocomplete="off" spellcheck="false"> <button type="button" id="audit-go">Verify receipt</button><p id="audit-result" role="status"></p></section>
 <section id="section-catalog" data-admin-section class="panel" hidden tabindex="-1" aria-label="Catalog"><h2>Categories and checks</h2><p id="catalog-summary"></p><div id="categories"></div>
@@ -335,6 +335,8 @@ _JS = r'''"use strict";
   let auditSelection = 0;
   // One browser-initiated Cognito mutation at a time; server remains authoritative.
   let activeUserStatus = null;
+  let activeBillingReconcile = null;
+  let pendingBillingReconcile = null;
   let previewSelection = null;
   let previewReady = null;
   let draftReadyForReview = null;
@@ -388,8 +390,11 @@ _JS = r'''"use strict";
     const result = await fetch(path, { ...options, headers, cache:"no-store", credentials:"omit" });
     if (!result.ok) {
       if (token && (result.status === 401 || result.status === 403)) signOut("Administrator session expired or access revoked");
-      if (result.status === 429) throw new Error("Cognito directory request limit reached (429); retry later");
-      throw new Error("Request failed (" + result.status + ")");
+      const error = new Error(result.status === 429
+        ? "Cognito directory request limit reached (429); retry later"
+        : "Request failed (" + result.status + ")");
+      error.status = result.status;
+      throw error;
     }
     return result.json();
   }
@@ -435,6 +440,11 @@ _JS = r'''"use strict";
     }
   }
   const clearAdminData = () => {
+    activeBillingReconcile = null;
+    pendingBillingReconcile = null;
+    say("billing-action-result", "");
+    el("billing-retry").hidden = true;
+    el("billing-retry").disabled = true;
     ++tenantPageSelection;
     ++userPageSelection;
     activeUserStatus = null;
@@ -1383,6 +1393,16 @@ _JS = r'''"use strict";
         downgrade.addEventListener("click", () => reconcileUnpaid(tenant));
         actions.append(downgrade);
       }
+      if (features.billing_reconcile && features.audit_receipt_lookup && tenant.demo === false &&
+          ["active","inactive","past_due","canceled"].includes(tenant.subscription_status) &&
+          Number.isSafeInteger(tenant.revision) && tenant.revision > 0 &&
+          Number.isSafeInteger(tenant.monthly_allowance) && tenant.monthly_allowance >= 0) {
+        const reconcile = document.createElement("button");
+        reconcile.type = "button";
+        reconcile.textContent = "Reconcile subscription";
+        reconcile.addEventListener("click", () => reconcileSubscription(tenant));
+        actions.append(reconcile);
+      }
       if (features.monthly_cost_caps && tenant.demo === false && Number.isInteger(tenant.revision) &&
           Number.isSafeInteger(tenant.monthly_allowance) && tenant.monthly_allowance >= 0) {
         const cap = document.createElement("button");
@@ -1663,8 +1683,95 @@ _JS = r'''"use strict";
     }
   }
 
+  async function reconcileSubscription(tenant) {
+    if (!token || !features.billing_reconcile || !features.audit_receipt_lookup || activeBillingReconcile) return;
+    if (pendingBillingReconcile) {
+      showSection("billing", true);
+      say("billing-action-result", "A previous reconciliation needs verification. Retry its same action reference before starting another.");
+      return;
+    }
+    const confirmation = prompt("Reconcile only with independently verified Stripe state. Saved request caps and account suspension remain. Type RECONCILE " + tenant.tenant_id);
+    if (confirmation !== "RECONCILE " + tenant.tenant_id) return;
+    const reason = prompt("Reason for subscription reconciliation (10–240 characters; no sensitive data):");
+    if (!reason || reason.length < 10 || reason.length > 240) return;
+    if (!confirm("Verify Stripe and save its subscription status for " + tenant.tenant_id +
+        "? Active subscriptions use the server plan within preserved request caps; non-active subscriptions receive zero requests. No payment or refund is created.")) return;
+    pendingBillingReconcile = {tenant:{...tenant}, epoch:authEpoch, payload:{expected_revision:tenant.revision,
+      confirmation, reason, idempotency_key:crypto.randomUUID().replaceAll("-", "")}};
+    await submitSubscriptionReconciliation();
+  }
+
+  async function submitSubscriptionReconciliation() {
+    const pending = pendingBillingReconcile;
+    if (!pending || !token || pending.epoch !== authEpoch || activeBillingReconcile ||
+        !features.billing_reconcile || !features.audit_receipt_lookup) return;
+    activeBillingReconcile = pending;
+    const {tenant, payload, epoch} = pending;
+    ++billingSelection;
+    showSection("billing", true);
+    el("billing-retry").hidden = false;
+    el("billing-retry").disabled = true;
+    say("billing-action-result", "Verifying subscription and signed receipt · Action reference: " + payload.idempotency_key);
+    let mutationReturned = false;
+    try {
+      const result = await request("/v1/admin/subscriptions/" + encodeURIComponent(tenant.tenant_id) + "/reconcile",
+        {method:"POST", body:JSON.stringify(payload)});
+      mutationReturned = true;
+      if (!token || epoch !== authEpoch) return;
+      const label = auditReceipt(result, tenant.tenant_id, tenant.revision);
+      const mapping = {active:"active",past_due:"past_due",canceled:"canceled",unpaid:"inactive",
+        incomplete:"inactive",incomplete_expired:"inactive",trialing:"inactive",paused:"inactive"};
+      const cap = result.admin_monthly_allowance_cap, plan = result.plan_monthly_allowance;
+      if (!Object.prototype.hasOwnProperty.call(mapping, result.provider_status) ||
+          result.subscription_status !== mapping[result.provider_status] || result.overage !== "block" ||
+          typeof result.replayed !== "boolean" || !Number.isSafeInteger(plan) || plan < 1 || plan > 1000000000 ||
+          (cap !== null && (!Number.isSafeInteger(cap) || cap < 0 || cap > 1000000000)) ||
+          result.monthly_allowance !== (result.subscription_status === "active" ? Math.min(plan, cap ?? plan) : 0))
+        throw new Error("Subscription outcome not verified");
+      await verifyTenantMutationAudit(result, tenant.tenant_id, tenant.revision, {
+        operation:"billing.reconcile", change:{field:"subscription_status",before:tenant.subscription_status,
+          after:result.subscription_status,provider_status:result.provider_status,
+          allowance_before:tenant.monthly_allowance,allowance_after:result.monthly_allowance,
+          plan_allowance:plan,operator_cap:cap}});
+      if (!token || epoch !== authEpoch) return;
+      pendingBillingReconcile = null;
+      el("billing-retry").hidden = true;
+      const message = (result.replayed ? "Prior reconciliation receipt recovered" : "Subscription reconciled with Stripe") +
+        " · " + result.subscription_status + " · Saved allowance: " + result.monthly_allowance +
+        (cap !== null ? " · Preserved request cap: " + cap : "") +
+        (result.monthly_allowance === 0 ? " · Zero-request limit remains enforced" : "") +
+        (tenant.status === "disabled" ? " · Tenant remains suspended" : "") + " · " + label;
+      say("billing-action-result", message);
+      nextCursor = null;
+      let refreshWarning = "";
+      try { await load(); }
+      catch (_) { refreshWarning = " · Workspace refresh unavailable; the signed reconciliation receipt is verified."; }
+      if (token && epoch === authEpoch) {
+        say("billing-action-result", message + refreshWarning);
+        say("status", message + refreshWarning);
+      }
+    } catch (err) {
+      if (token && epoch === authEpoch) {
+        if (!mutationReturned && [409, 422].includes(err.status)) {
+          pendingBillingReconcile = null;
+          el("billing-retry").hidden = true;
+          say("billing-action-result", "Reconciliation rejected · " + err.message +
+            " · Refresh the directory and review the account before starting a new action.");
+        } else {
+          say("billing-action-result", "Reconciliation not verified · " + err.message +
+            " · Action reference: " + payload.idempotency_key + ". Retrying this same reference cannot repeat a committed change.");
+          el("billing-retry").hidden = false;
+          el("billing-retry").disabled = false;
+        }
+      }
+    } finally {
+      if (activeBillingReconcile === pending) activeBillingReconcile = null;
+    }
+  }
+
   async function reconcileUnpaid(tenant) {
     if (!token || !features.billing_downgrade || !features.audit_receipt_lookup ||
+        activeBillingReconcile || pendingBillingReconcile ||
         tenant.subscription_status !== "active" || !Number.isSafeInteger(tenant.revision) ||
         !Number.isSafeInteger(tenant.monthly_allowance) || tenant.monthly_allowance < 0) return;
     const confirmation = prompt("Only REVOKES paid entitlement after verified Stripe delinquency. Type RECONCILE " + tenant.tenant_id);
@@ -1822,7 +1929,7 @@ _JS = r'''"use strict";
         operation:"tenant.allowance_cap",
         change:{field:"monthly_allowance",before:tenant.monthly_allowance,after:limit}
       });
-      if (token && epoch === authEpoch) {await load();say("status","Cost cap saved · " + receipt);}
+      if (token && epoch === authEpoch) {await load();say("status","Request cap saved · " + receipt);}
     } catch(err) {if(token && epoch===authEpoch) say("status",err.message);}
   }
   async function revokeTenantKeys(tenant) {
@@ -2207,6 +2314,7 @@ _JS = r'''"use strict";
     say("user-status", "Filter changed; search to read matching Cognito accounts.");
   });
   el("quota-risk-filter").addEventListener("change", applyQuotaFilter);
+  el("billing-retry").addEventListener("click", submitSubscriptionReconciliation);
   el("search-go").addEventListener("click", () => {nextCursor=null;page();});
   el("user-search-go").addEventListener("click", () => {nextUserCursor=null;pageUsers();});
   el("user-next").addEventListener("click", pageUsers);

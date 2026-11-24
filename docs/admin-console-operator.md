@@ -6,12 +6,114 @@ The new `/admin` route redirects to `/admin/login` only when the admin feature i
 Set `GUARDOATH_ADMIN_ENABLED=1` only after establishing a separate public Cognito admin OAuth client with PKCE and callback `https://guardoath.com/admin/login`, in the existing trusted pool, and verifying independently fetched `GuardOathOwners` membership and signed current-login MFA evidence. Required: `GUARDOATH_ADMIN_CLIENT_ID`, `GUARDOATH_ADMIN_COGNITO_DOMAIN`, `GUARDOATH_ADMIN_CURSOR_HMAC_KEY` (independent 32–64 random bytes, hex). An invalid/missing configuration fails closed at startup. Each authorization request independently checks a complete Cognito group page: malformed, duplicate, oversized or paginated memberships (including an empty continuation token) deny owner access even if an owner group appears in the response. Distinct additional groups remain permitted. This changes no roles or enrollment. CloudFront forwards `X-GuardOath-Admin-Session`; `Authorization` is reserved for AWS origin signing.
 
 ## Capabilities
-Read-only overview, bounded tenant directory and current-month usage, category/check/rule catalog, and on-demand provider-verified subscription lookup when existing `GUARDOATH_STRIPE_SECRET_KEY` is configured. Stripe snapshots do not change entitlement or expose payment details. Costs and revenue are unavailable without a separately approved verified data source.
 
-Optional `GUARDOATH_ADMIN_AUDIT_TABLE` enables owner tenant suspension/reactivation, single tenant rule action updates, and downward-only allowance caps with enforced Block overage. **Do not enable** until a separate append-only DynamoDB audit table, least-privilege transaction IAM and operational restore procedure exist. Every mutation requires typed tenant confirmation, reason, expected revision and atomic update + audit. No billing changes, refunds or versioned global catalog publication are implemented yet.
+This section describes current source capabilities. Historical implementation
+notes below record earlier stages and do not supersede this summary. Source and
+offline acceptance are not evidence of AWS deployment or live financial data.
+
+| Area | Current implementation | Remaining acceptance or capability |
+| --- | --- | --- |
+| Owner access | Separate Cognito client, signed tokens, fresh independent owner membership/account checks, recent MFA, same-origin mutations, memory-only browser tokens | Actual configured production login and all live acceptance |
+| User management | Bounded masked directory/exact lookup; confirmed Cognito enable/disable with signed intent and independently verified outcome, recoverable ambiguity | Live provider acceptance; no owner role grants or self-disable |
+| Tenant management | Existing tenant store, suspend/reactivate, key revocation, stage-specific rule actions, downward request caps, revision checks and signed atomic audit | Deployed customer safeguards and source parity |
+| Subscriptions | Read-only provider inspection and owner-requested full reconciliation from fresh server-side Stripe state; saved caps/suspension preserved; durable signed replay receipt | Live Stripe acceptance and supported provider subscription changes |
+| Billing and costs | Bounded verified invoice history, saved usage/allowance history and clearly labeled request-cap signals | Refunds/credits, verified infrastructure cost/revenue allocation and financial operations remain unavailable |
+| Catalog | Shared registry, signed immutable description drafts/reviews, reversible source-plan export and shipped metadata history | Authenticated source publication/rollback, behavior/schema authoring and deployment acceptance remain incomplete |
+
+`GUARDOATH_ADMIN_AUDIT_TABLE` is required in production for protected reads and
+mutations. The separate audit table and scoped permissions must already be
+approved and provisioned; configuring a variable is not evidence that they exist.
+Tenant writes require typed confirmation, reason, expected revision and an
+atomic tenant-update/audit transaction. Cognito writes persist a signed intent
+before the provider action and record its independently checked outcome.
+
+### Provider-verified subscription reconciliation
+
+The owner **Reconcile subscription** action calls
+`POST /v1/admin/subscriptions/{tenant_id}/reconcile`. The backend accepts only
+an expected tenant revision, typed `RECONCILE <tenant-id>` confirmation, reason
+and idempotency key. Owner identity comes from authenticated Cognito/MFA, and
+customer/subscription/price/environment/plan allowance come from the saved record
+and trusted server configuration. Browser claims cannot grant paid access.
+
+The service fetches the existing saved subscription directly, or discovers one
+unambiguous subscription for the saved customer and independently fetches it
+again. Active admission requires the configured price/environment, exactly one
+item at quantity one, explicit unpaused collection and `charge_automatically`.
+Missing collection information and manual-invoice subscriptions cannot activate
+this automatic-payment plan. A known nonactive status revokes quota; a positive
+quantity change does not obstruct that conservative revocation. These rules are
+shared with customer reconciliation. See Stripe's
+[subscription lifecycle](https://docs.stripe.com/billing/subscriptions/overview)
+and [collection methods](https://docs.stripe.com/billing/collection-method).
+This is entitlement reconciliation, not a receipt proving money was collected.
+
+`GUARDOATH_PAID_MONTHLY_ALLOWANCE` must explicitly configure a positive plan
+allowance before the runtime exposes full owner reconciliation. Saved
+`admin_monthly_allowance_cap` and `stripe_plan_monthly_allowance` separate an
+operator restriction from the nominal provider plan. Both are server-controlled,
+not customer-editable. Delinquency sets effective allowance to zero without
+erasing a known cap; verified recovery still honors that cap. Account suspension,
+keys, usage, checks, Input/Output Off choices and unrelated tenants remain intact.
+Legacy bound records without provenance retain their saved restriction,
+including zero, rather than silently relaxing a potentially intentional limit.
+An audited cap-restoration workflow remains separate future work.
+
+A byte-exact source compare-and-set and revision condition protect the update.
+The signed `billing.reconcile` receipt and tenant change commit together. Its
+idempotency key is bound to actor, tenant and the exact confirmed request. After
+an ambiguous response, **Retry same reconciliation** uses the same payload/key
+and recovers the persisted signed result without another provider call or write.
+Reusing a key with different parameters is refused. Replays describe the
+historical operation; they do not claim to be current Stripe state. The UI also
+reads and validates the signed receipt before reporting success. A failed
+subsequent workspace refresh does not erase that verified outcome.
+
+The UI's **Request cap** is measured in validation requests. The legacy API
+feature name `monthly_cost_caps` does not mean dollars, AWS cost or provider spend.
+
+### Persistent-state rollback compatibility
+
+Non-null cap/plan provenance cannot be read by older application images that
+forbid unknown tenant fields, and deleting it would remove a safeguard. Ordinary
+records with neither field omit the absent fields; populated values, including
+zero, are always preserved.
+
+Lambda builds now declare supported and introduced persistent-state contracts
+in their generated source manifest. The current source introduces
+`subscription-cap-provenance-v1`. Before any Lambda update,
+`Deploy-Verified.ps1` verifies the downloaded rollback archive against the
+actual deployed `CodeSha256`, checks the candidate's exact source SHA, requires
+the rollback image to support every introduced contract, and refuses loss of
+already-deployed support. Archive inspection does not extract or execute code.
+Rollback rechecks the same backup digest immediately before restoration.
+
+**A legacy rollback image blocks this writer release.** A separately tested
+compatibility baseline must first support reading, preserving and enforcing the
+new fields/receipts while introducing none. After that baseline is deployed and
+accepted, it can serve as the writer release's rollback. Do not fabricate a
+manifest, delete provenance, use the candidate as its own rollback, or bypass
+this gate. Neither a compatibility baseline nor its deployment is claimed here.
+
+### Offline acceptance
+
+`playwright.admin.config.js` runs actual browser HTML/JS against the mounted
+GuardOath application, RSA-signed Cognito token validation, owner/MFA verifier,
+tenant adapter, mutation services and signed audit readers. SQLite persists the
+typed DynamoDB boundary across independent process reads. External Cognito,
+Stripe and DynamoDB boundaries are explicitly synthetic. Separate browser
+failure tests cover ambiguous retries, altered receipts, rejected requests,
+session loss and post-success refresh failure. Existing browser tests remain in
+the CI gate. This evidence does not replace live AWS/Cognito/Stripe acceptance.
 
 ## Release gate
-Run full repo and browser tests plus exact-SHA Tests (13), CodeQL (3), Field Comparisons Evidence (2), Trusted Reference Acceptance (1), PII Reliability Gate (3); maintain 500-ms checker limit and the existing verified deploy script rollback and 15 live acceptance checks. Unresolved issue #30 must be reported, never silently closed. A GitHub commit is not an AWS deployment.
+Run full repo and browser tests plus exact-SHA Tests (13), CodeQL (3), Field Comparisons Evidence (2), Trusted Reference Acceptance (1), PII Reliability Gate (3), Stripe Reconciliation Acceptance (2), and Deploy Script Acceptance (1). All 25 individual jobs must succeed. Maintain the 500-ms checker limit, verified rollback compatibility and all 15 live acceptance checks. Unresolved issue #30 must be reported, never silently closed. A GitHub commit is not an AWS deployment.
+
+## Historical implementation notes
+
+The following sections retain the implementation history. Earlier statements
+that a later-implemented capability is outstanding describe that earlier stage;
+the current capability summary above governs current source status.
 
 ## Opt-in infrastructure provisioning
 The deployment template includes default-off `EnableAdminConsole` and a separate `AdminCursorHmacKey` NoEcho parameter. Only explicitly enabling the feature provisions an isolated Cognito OAuth code/PKCE client, the `GuardOathOwners` group, and pool-scoped read-only Cognito IAM permissions. The template rejects activation without an independent random 32–64 byte hex key. It creates no owner account or group assignment and does not provision a mutation audit table.

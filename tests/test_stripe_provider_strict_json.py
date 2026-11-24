@@ -33,7 +33,8 @@ class Response:
 def valid(**changes):
     return {"object": "subscription", "id": "sub_acme", "customer": "cus_acme",
             "status": "active", "livemode": False,
-            "items": {"data": [{"price": {"id": "price_starter"}}], "has_more": False},
+            "pause_collection": None, "collection_method": "charge_automatically",
+            "items": {"data": [{"price": {"id": "price_starter"}, "quantity": 1}], "has_more": False},
             **changes}
 
 

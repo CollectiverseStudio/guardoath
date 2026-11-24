@@ -25,8 +25,9 @@ def subscription(**changes):
     return {
         "object": "subscription", "id": "sub_valid",
         "customer": "cus_acme", "livemode": False, "status": "active",
+        "pause_collection": None, "collection_method": "charge_automatically",
         "items": {"object": "list", "has_more": False,
-                  "data": [{"price": {"id": "price_starter"}}]},
+                  "data": [{"price": {"id": "price_starter"}, "quantity": 1}]},
         **changes,
     }
 
@@ -134,3 +135,36 @@ def test_ambiguous_customer_subscription_never_reaches_direct_get():
         verify_discovered_subscription(**KW, opener=transport(
             listing(subscription(), subscription(id="sub_other")), calls))
     assert len(calls) == 1
+
+
+@pytest.mark.parametrize("field,value", [
+    ("quantity", None), ("quantity", True), ("quantity", 0), ("quantity", 2),
+    ("quantity", "1"), ("quantity", 1.0),
+    ("pause_collection", "missing"), ("pause_collection", {"behavior":"void"}),
+    ("collection_method", "missing"), ("collection_method", "send_invoice"),
+])
+def test_active_entitlement_requires_exact_single_quantity_and_known_automatic_collection(field, value):
+    direct = subscription()
+    if field == "quantity":
+        direct["items"]["data"][0][field] = value
+    elif value == "missing":
+        direct.pop(field)
+    else:
+        direct[field] = value
+    calls = []
+    def open(request, timeout):
+        calls.append(request.full_url)
+        return Response(listing(subscription()) if "?" in request.full_url else json.dumps(direct).encode())
+    with pytest.raises(SubscriptionReconciliationError):
+        verify_discovered_subscription(**KW, opener=open)
+    assert len(calls) == 2
+
+
+def test_nonactive_manual_collection_can_still_revoke_entitlement():
+    snapshot = subscription(status="past_due", collection_method="send_invoice",
+                            pause_collection={"behavior":"void"})
+    snapshot["items"]["data"][0]["quantity"] = 2
+    def open(request, timeout):
+        return Response(listing(snapshot) if "?" in request.full_url else json.dumps(snapshot).encode())
+    result = verify_discovered_subscription(**KW, opener=open)
+    assert result.status == "past_due" and result.active is False

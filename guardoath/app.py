@@ -906,7 +906,7 @@ def create_app(engine: Engine | None = None, credentials: dict[str, str] | None 
         price_id = os.getenv("GUARDOATH_STRIPE_PRICE_ID", "")
         raw_allowance = os.getenv("GUARDOATH_PAID_MONTHLY_ALLOWANCE", "")
         if (not raw_allowance.isascii() or not raw_allowance.isdecimal()
-                or len(raw_allowance) > 9):
+                or len(raw_allowance) > 10):
             raise HTTPException(503, "Paid plan allowance is not configured")
         allowance = int(raw_allowance)
         if not 1 <= allowance <= 1_000_000_000:

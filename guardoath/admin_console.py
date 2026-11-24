@@ -17,6 +17,8 @@ from guardoath.admin_actions import AdminActionConflict, AdminActionUnavailable,
 from guardoath.admin_audit import AdminAuditReader, AdminSensitiveReadAuditor, AdminAuditUnavailable, EVENT
 from guardoath.admin_billing import AdminSubscriptionReporter, BillingUnavailable
 from guardoath.admin_billing_reconcile import AdminBillingDowngrade, BillingDowngradeConflict, BillingDowngradeUnavailable
+from guardoath.admin_subscription_reconcile import (
+    AdminSubscriptionReconciliation, SubscriptionConflict, SubscriptionUnavailable)
 from guardoath.admin_invoices import AdminInvoiceHistory
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from guardoath.admin_catalog import CatalogProvider, read_catalog
@@ -258,6 +260,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                         browser_entry_enabled: bool = False,
                         billing_reporter: AdminSubscriptionReporter | None = None,
                         billing_downgrade: AdminBillingDowngrade | None = None,
+                        billing_reconciler: AdminSubscriptionReconciliation | None = None,
                         billing_invoices: AdminInvoiceHistory | None = None,
                         catalog_drafts: AdminCatalogDrafts | None = None,
                         record_validator=None, rule_exists=None) -> APIRouter:
@@ -358,6 +361,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            "cognito_action_receipts": user_actions is not None,
                            "billing_changes": False, "billing_verify": billing_reporter is not None,
                            "billing_downgrade": billing_downgrade is not None,
+                           "billing_reconcile": billing_reconciler is not None,
                            "billing_invoices": billing_invoices is not None,
                            "tenant_rule_changes": admin_mutator is not None and callable(record_validator) and callable(rule_exists),
                            "monthly_cost_caps": admin_mutator is not None and callable(record_validator),
@@ -645,6 +649,27 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             raise HTTPException(status_code=503, detail="Invoice history unavailable") from exc
         return admin_json({"tenant_id": tenant_id, "history": result,
                            **({"read_audit_event_id": read_event} if read_event else {})})
+
+    if billing_reconciler is not None:
+        @router.post("/v1/admin/subscriptions/{tenant_id}/reconcile")
+        def reconcile_verified_subscription(tenant_id: str, payload: ReconcileUnpaidSubscription,
+                                            request: Request, principal: VerifiedAdmin = Depends(require_admin)):
+            _require_admin_origin(request)
+            if not TENANT_ID.fullmatch(tenant_id):
+                raise HTTPException(status_code=404, detail="Tenant not found")
+            read_event = audit_sensitive_read(principal, "stripe.subscription", tenant_id)
+            try:
+                result = billing_reconciler.apply(
+                    tenant_id=tenant_id, expected_revision=payload.expected_revision,
+                    confirmation=payload.confirmation, reason=payload.reason,
+                    actor=principal.subject, idempotency_key=payload.idempotency_key)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail="Invalid subscription reconciliation") from exc
+            except SubscriptionConflict as exc:
+                raise HTTPException(status_code=409, detail="Reconciliation conflicts with saved account or provider state; refresh and inspect") from exc
+            except SubscriptionUnavailable as exc:
+                raise HTTPException(status_code=503, detail="Subscription reconciliation not verified; retain action reference before retry") from exc
+            return admin_json({**result, **({"read_audit_event_id": read_event} if read_event else {})})
 
     if billing_downgrade is not None:
         @router.post("/v1/admin/subscriptions/{tenant_id}/downgrade")

@@ -19,6 +19,7 @@ from guardoath.admin_actions import AdminTenantActions
 from guardoath.admin_audit import AdminAuditReader, AdminSensitiveReadAuditor
 from guardoath.admin_billing import AdminSubscriptionReporter
 from guardoath.admin_billing_reconcile import AdminBillingDowngrade
+from guardoath.admin_subscription_reconcile import AdminSubscriptionReconciliation
 from guardoath.admin_catalog_drafts import AdminCatalogDrafts
 
 _HEX_KEY = re.compile(r"^[a-fA-F0-9]{64,128}$")
@@ -147,11 +148,29 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
         record_validator = TenantRecord.model_validate
         rule_exists = lambda rule_id: rule_id in RULES
     billing_downgrade = None
+    billing_reconciler = None
     if mutator is not None and billing_reporter is not None:
         billing_downgrade = AdminBillingDowngrade(
             tenants.store._client, tenants.store.table_name, audit_table,
             signing_key=audit_signing_key, reporter=billing_reporter,
             validate_record=record_validator)
+        raw_allowance = os.getenv("GUARDOATH_PAID_MONTHLY_ALLOWANCE", "")
+        if raw_allowance:
+            if (not raw_allowance.isascii() or not raw_allowance.isdecimal()
+                    or len(raw_allowance) > 10 or not 1 <= int(raw_allowance) <= 1_000_000_000):
+                raise AdminConfigurationError("Admin reconciliation requires a valid server plan allowance")
+            def resolve_snapshot(record):
+                from guardoath.stripe_provider import fetch_subscription_snapshot, verified_subscription_snapshot
+                if record.stripe_subscription_id is not None:
+                    binding = StripeBinding(record.tenant_id, record.payer_id, record.stripe_subscription_id)
+                    return binding, fetch_subscription_snapshot(binding, secret)
+                return verified_subscription_snapshot(tenant_id=record.tenant_id,
+                    customer_id=record.payer_id, price_id=price, api_key=secret)
+            billing_reconciler = AdminSubscriptionReconciliation(
+                tenants.store._client, tenants.store.table_name, audit_table,
+                signing_key=audit_signing_key, resolve_snapshot=resolve_snapshot,
+                expected_price_id=price, expected_livemode=secret.startswith("sk_live_"),
+                plan_monthly_allowance=int(raw_allowance))
     mount_admin_console(app, sessions=admin_sessions, tenants=tenants, cognito=cognito_client,
                         cursor_signing_key=bytes.fromhex(key_hex), browser_config=config,
                         browser_exchange=BoundExchange(config), native_auth=native_auth,
@@ -161,6 +180,7 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
                         catalog_drafts=catalog_drafts,
                         require_persistent_read_audit=True,
                         billing_reporter=billing_reporter, billing_downgrade=billing_downgrade,
+                        billing_reconciler=billing_reconciler,
                         billing_invoices=billing_invoices,
                         record_validator=record_validator,rule_exists=rule_exists)
     return True

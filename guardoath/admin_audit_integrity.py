@@ -18,6 +18,7 @@ SIGNED_FIELDS = (
     "old_key_count", "new_key_count", "read_resource",
     "old_subscription_status", "new_subscription_status", "provider_status",
     "old_enabled", "new_enabled", "target_fingerprint", "related_event_id",
+    "request_fingerprint", "plan_limit", "cap_limit",
 )
 _DOMAIN = b"guardoath-admin-audit-integrity-v1\x00"
 

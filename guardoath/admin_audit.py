@@ -117,7 +117,7 @@ class AdminAuditReader:
                     or operation not in ("tenant.status", "tenant.rule_action", "tenant.allowance_cap",
                                          "tenant.keys_revoke", "admin.read",
                                          "cognito.user.status.intent", "cognito.user.status.outcome",
-                                         "billing.downgrade")
+                                         "billing.downgrade", "billing.reconcile")
                     or not when or not UTC.fullmatch(when)
                     or not reason or not 10 <= len(reason) <= 240):
                 raise AdminAuditUnavailable("Invalid audit receipt")
@@ -152,7 +152,26 @@ class AdminAuditReader:
             previous, revision = number("prior_revision"), number("new_revision")
             if previous < 1 or revision != previous + 1 or "read_resource" in item:
                 raise AdminAuditUnavailable("Invalid mutation receipt")
-            if operation == "billing.downgrade":
+            if operation == "billing.reconcile":
+                before, after, provider = (string(k) for k in
+                    ("old_subscription_status", "new_subscription_status", "provider_status"))
+                old_limit, new_limit, plan = (number(k) for k in ("old_limit", "new_limit", "plan_limit"))
+                cap = number("cap_limit") if "cap_limit" in item else None
+                fingerprint = string("request_fingerprint")
+                mapping = {"active": "active", "past_due": "past_due", "canceled": "canceled",
+                           "unpaid": "inactive", "incomplete": "inactive", "incomplete_expired": "inactive",
+                           "trialing": "inactive", "paused": "inactive"}
+                if (integrity_status != "signed_verified" or before not in ("inactive", "active", "past_due", "canceled")
+                        or provider not in mapping or after != mapping[provider]
+                        or not 0 <= old_limit <= 1_000_000_000 or not 1 <= plan <= 1_000_000_000
+                        or (cap is not None and cap > 1_000_000_000)
+                        or new_limit != (min(plan, cap) if cap is not None else plan) * (after == "active")
+                        or not fingerprint or not EVENT.fullmatch(fingerprint)):
+                    raise AdminAuditUnavailable("Invalid subscription reconciliation receipt")
+                change = {"field": "subscription_status", "before": before, "after": after,
+                          "provider_status": provider, "allowance_before": old_limit,
+                          "allowance_after": new_limit, "plan_allowance": plan, "operator_cap": cap}
+            elif operation == "billing.downgrade":
                 before, after, provider = (string(k) for k in
                     ("old_subscription_status", "new_subscription_status", "provider_status"))
                 old_limit, new_limit = number("old_limit"), number("new_limit")

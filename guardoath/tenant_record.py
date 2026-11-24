@@ -113,6 +113,10 @@ class TenantRecord(Contract):
     demo: bool = Field(default=False, strict=True)
     key_hashes: tuple[KeyHash, ...] = Field(default=(), max_length=2)
     monthly_allowance: int = Field(default=0, ge=0, le=1_000_000_000, strict=True)
+    # Server-owned budget controls survive Stripe delinquency and reconciliation.
+    # Neither field belongs to EDITABLE_FIELDS or accepts browser billing claims.
+    admin_monthly_allowance_cap: int | None = Field(default=None, ge=0, le=1_000_000_000, strict=True)
+    stripe_plan_monthly_allowance: int | None = Field(default=None, ge=1, le=1_000_000_000, strict=True)
     overage: Literal["allow_and_record", "block"] = "allow_and_record"
     usage: dict[Month, Annotated[int, Field(ge=0, strict=True)]] = Field(default_factory=dict, max_length=120)
     billing_mode: BillingMode = BillingMode.INTERNAL
@@ -300,6 +304,9 @@ class TenantRecord(Contract):
         if self.demo:
             if self.overage != "block":
                 raise ValueError("Demo users have a hard monthly limit")
+        if self.admin_monthly_allowance_cap is not None:
+            if self.monthly_allowance > self.admin_monthly_allowance_cap or self.overage != "block":
+                raise ValueError("Operator request cap must remain enforced")
         if self.sigma_rule_actions:
             from guardoath.sigma_site import sigma_rule_ids
             if any(rule_id not in sigma_rule_ids() for rule_id in self.sigma_rule_actions):
@@ -443,7 +450,16 @@ def demo_defaults(path: Path = DEMO_DEFAULTS_FILE) -> dict:
     return values
 
 
+def stored_record_fields(record: TenantRecord) -> dict:
+    """Canonical stored fields; absent optional provenance is not a migration."""
+    fields = record.model_dump(mode="json", exclude={"usage", "revision"})
+    for name in ("admin_monthly_allowance_cap", "stripe_plan_monthly_allowance"):
+        if fields.get(name) is None:
+            fields.pop(name, None)
+    return fields
+
+
 def record_bytes(record: TenantRecord) -> int:
     """The size of the record's stored fields, exactly as guardoath.dynamodb_store.record_json writes them."""
-    return len(json.dumps(record.model_dump(mode="json", exclude={"usage", "revision"}), separators=(",", ":"),
+    return len(json.dumps(stored_record_fields(record), separators=(",", ":"),
                           sort_keys=True).encode("utf-8"))

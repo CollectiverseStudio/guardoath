@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 import json
 import os
 
-from guardoath.tenant_record import EDITABLE_FIELDS, TenantRecord, usage_month
+from guardoath.tenant_record import EDITABLE_FIELDS, TenantRecord, stored_record_fields, usage_month
 from guardoath.tenant_store import TenantConflict, TenantNotFound, UsageLimitReached
 
 # Every expression this store sends. The test double in tests/test_dynamodb_store.py implements
@@ -37,7 +37,10 @@ def _now() -> str:
 
 
 def record_json(record: TenantRecord) -> str:
-    return json.dumps(record.model_dump(mode="json", exclude={"usage", "revision"}), separators=(",", ":"), sort_keys=True)
+    # Unrelated/demo writes must not acquire new optional billing provenance.
+    # Once populated these safeguards require a schema-compatible rollback;
+    # they must never be stripped from an actual capped subscription.
+    return json.dumps(stored_record_fields(record), separators=(",", ":"), sort_keys=True)
 
 
 def to_item(record: TenantRecord) -> dict:
@@ -170,7 +173,7 @@ class DynamoDBTenantStore:
                                     plan_monthly_allowance: int | None = None) -> TenantRecord:
         """Persist a verified Stripe entitlement with revision-conditional write."""
         from guardoath.billing import BillingMode
-        from guardoath.subscription_reconciliation import StripeBinding, reconcile_subscription
+        from guardoath.subscription_reconciliation import StripeBinding, reconcile_subscription, reconciled_allowance
         current = self.get(tenant_id)
         if current is None:
             raise TenantNotFound(tenant_id)
@@ -182,19 +185,12 @@ class DynamoDBTenantStore:
                                           provider_subscription)
         if current.stripe_subscription_id not in (None, subscription_id):
             raise ValueError("Subscription binding cannot be replaced")
-        if (plan_monthly_allowance is not None and
-                (type(plan_monthly_allowance) is not int or
-                 not 1 <= plan_monthly_allowance <= 1_000_000_000)):
-            raise ValueError("Invalid server-configured plan allowance")
-        allowance = (plan_monthly_allowance if decision.active and
-                     plan_monthly_allowance is not None else
-                     current.monthly_allowance if decision.active else 0)
+        quota = reconciled_allowance(current, active=decision.active,
+                                     plan_monthly_allowance=plan_monthly_allowance)
         updated = TenantRecord.model_validate({**current.model_dump(),
             "subscription_status": decision.status,
             "stripe_subscription_id": subscription_id,
-            "monthly_allowance": allowance,
-            "overage": "block" if not decision.active or
-                       plan_monthly_allowance is not None else current.overage,
+            **quota,
             "revision": current.revision + 1, "updated_at": _now()})
         return self._replace(tenant_id, current, updated)
 

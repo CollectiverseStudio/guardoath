@@ -94,6 +94,15 @@ def release_source_sha(root: Path = ROOT) -> str:
     return sha
 
 
+def release_metadata(source_sha: str, root: Path = ROOT) -> dict:
+    # Load only this trusted, source-controlled declaration. No application
+    # initialization, AWS credentials or builder-supplied contract overrides.
+    spec = importlib.util.spec_from_file_location("guardoath_build_state_contracts",root / "guardoath/state_contracts.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.release_metadata(source_sha)
+
+
 def main() -> int:
     problem = check_python()
     if problem:
@@ -118,7 +127,7 @@ def main() -> int:
     # This metadata is generated inside the build artifact, not checked into
     # the working source. /healthz exposes this public SHA for exact release checks.
     (STAGE / "guardoath" / "_release_source.json").write_text(
-        json.dumps({"source_sha": source_sha}, sort_keys=True) + "\n",
+        json.dumps(release_metadata(source_sha), sort_keys=True) + "\n",
         encoding="utf-8", newline="\n")
     (STAGE / "index.py").write_text(INDEX, encoding="utf-8", newline="\n")
     print(f"Compiled {compile_package(STAGE)} modules to unchecked-hash bytecode", flush=True)

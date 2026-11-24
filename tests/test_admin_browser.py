@@ -222,7 +222,7 @@ def test_owner_mutation_ui_requires_consistent_atomic_audit_receipt():
     assert script.count("const receipt = auditReceipt(outcome,") == 4
     for endpoint in ("/status", "/rule-action", "/allowance-cap", "/revoke-keys"):
         assert endpoint in script
-    assert 'say("status","Cost cap saved · " + receipt)' in script
+    assert 'say("status","Request cap saved · " + receipt)' in script
     assert 'say("status","Tenant rule saved · " + receipt)' in script
     assert 'say("status", "Tenant access updated · " + receipt)' in script
     assert "innerHTML" not in script

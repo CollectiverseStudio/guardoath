@@ -227,7 +227,8 @@ class AdminTenantActions:
             if type(old) is not int or new_limit>old or (new_limit==old and doc.get("overage")=="block"):
                 raise AdminActionConflict("Cost cap may only reduce current allowance or enforce blocking")
             now=self.clock().astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00","Z")
-            updated={**doc,"monthly_allowance":new_limit,"overage":"block","updated_at":now}
+            updated={**doc,"monthly_allowance":new_limit,"admin_monthly_allowance_cap":new_limit,
+                     "overage":"block","updated_at":now}
             validated=validate_record({**updated,"revision":expected_revision+1})
             if not callable(getattr(validated,"model_dump",None)):
                 raise ValueError("Invalid record validation result")

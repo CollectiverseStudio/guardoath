@@ -4,6 +4,14 @@ GuardOath — policy-driven input and output checks for AI applications.
 
 See [validation packs](docs/validation-packs.md) for packaged check bundles.
 
+See the [product roadmap](docs/product-roadmap.md) for the preserved six-phase
+development direction, priority order, existing issue links and completion
+criteria. The current priority is owner administration (#39–#42) and verified
+production readiness.
+
+The [admin implementation handoff](docs/admin-console-handoff.md) records current
+work, actual verification, remaining requirements and continuation instructions.
+
 Start with the [user guide](docs/user-guide.md): each supported check has a purpose,
 example/use case, expected result, configuration and limitations. The [200-use-case catalog](docs/use-case-coverage.md) spans [UC001–050](docs/use-case-coverage.md), [UC051–100](docs/additional-use-cases.md), and [UC101–200](docs/use-cases-101-200.md), distinguishing supported, partial and proposed coverage.
 

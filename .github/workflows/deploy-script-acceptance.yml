@@ -12,6 +12,15 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest==9.2.0
+      - name: Inspect real rollback ZIPs without executing or extracting them
+        run: python -m pytest -q tests/test_rollback_compatibility.py
+      - name: Execute actual deployment rollback compatibility functions
+        shell: pwsh
+        run: ./tests/powershell/rollback_contract.ps1
       - name: Parse the real deployment script without AWS access
         shell: pwsh
         run: |

@@ -143,3 +143,44 @@ def test_hosted_runtime_denies_admin_data_without_persistent_audit_table(monkeyp
         assert response.status_code == 503
         assert "read_audit_event_id" not in response.text
     assert c.get("/v1/admin/overview").status_code == 401
+
+
+@pytest.mark.parametrize("allowance,enabled", [(None,False),("125",True),("1000000000",True)])
+def test_owner_reconciliation_needs_explicit_server_plan_and_mounts_without_provider_calls(monkeypatch, allowance, enabled):
+    from admin_test_support import AdminTestDynamo
+    from guardoath.dynamodb_store import DynamoDBTenantStore
+    from guardoath import admin_runtime
+    configure(monkeypatch)
+    monkeypatch.setenv("GUARDOATH_ADMIN_AUDIT_TABLE","audit_table")
+    monkeypatch.setenv("GUARDOATH_STRIPE_SECRET_KEY","sk_test_" + "a" * 32)
+    monkeypatch.setenv("GUARDOATH_STRIPE_PRICE_ID","price_starter")
+    if allowance is None: monkeypatch.delenv("GUARDOATH_PAID_MONTHLY_ALLOWANCE",raising=False)
+    else: monkeypatch.setenv("GUARDOATH_PAID_MONTHLY_ALLOWANCE",allowance)
+    mounted = []
+    monkeypatch.setattr(admin_runtime,"mount_admin_console",lambda app,**kwargs:mounted.append(kwargs))
+    database = AdminTestDynamo()
+    try:
+        assert configure_admin_from_environment(FastAPI(),tenants=Tenants(DynamoDBTenantStore("tenant_table",database)),
+            admin_sessions=AdminSessions(),cognito_client=Cognito()) is True
+        assert (mounted[0]["billing_reconciler"] is not None) is enabled
+        assert database.transactions == 0 and not database.audit_items()
+    finally: database.close()
+
+
+@pytest.mark.parametrize("allowance", ["0","-1","true","1.5","1000000001","１２５","125 "])
+def test_bad_owner_reconciliation_allowance_fails_before_mount(monkeypatch, allowance):
+    from admin_test_support import AdminTestDynamo
+    from guardoath.dynamodb_store import DynamoDBTenantStore
+    from guardoath import admin_runtime
+    configure(monkeypatch)
+    monkeypatch.setenv("GUARDOATH_ADMIN_AUDIT_TABLE","audit_table")
+    monkeypatch.setenv("GUARDOATH_STRIPE_SECRET_KEY","sk_test_" + "a" * 32)
+    monkeypatch.setenv("GUARDOATH_STRIPE_PRICE_ID","price_starter")
+    monkeypatch.setenv("GUARDOATH_PAID_MONTHLY_ALLOWANCE",allowance)
+    monkeypatch.setattr(admin_runtime,"mount_admin_console",lambda *a,**kw:pytest.fail("Invalid plan must not mount"))
+    database = AdminTestDynamo()
+    try:
+        with pytest.raises(AdminConfigurationError):
+            configure_admin_from_environment(FastAPI(),tenants=Tenants(DynamoDBTenantStore("tenant_table",database)),
+                admin_sessions=AdminSessions(),cognito_client=Cognito())
+    finally: database.close()

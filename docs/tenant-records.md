@@ -1,5 +1,25 @@
 # Tenant records
 
+### Protected subscription allowance provenance
+
+`admin_monthly_allowance_cap` is an optional nonnegative server-owned request
+limit; `stripe_plan_monthly_allowance` records the positive server-configured
+nominal plan used in trusted reconciliation. Neither belongs to customer-editable
+settings. Effective allowance cannot exceed a saved operator cap, and a cap
+requires Block overage. Owner and customer reconciliation use the same allowance
+calculation: nonactive entitlement has zero requests, and verified reactivation
+retains an existing cap. Legacy bound records with no provenance retain their
+saved restriction, including zero, until a separately audited restoration is
+implemented. Reconciliation never enables a suspended tenant.
+
+Null provenance is omitted from ordinary stored JSON; non-null values, including
+cap zero, survive unrelated policy/key/status edits. These fields introduce the
+`subscription-cap-provenance-v1` state contract and require a compatible rollback
+image. See [operator administration](admin-console-operator.md#persistent-state-rollback-compatibility).
+
+The remaining historical field descriptions distinguish request allowances from
+money: provider costs and billed revenue require their own verified sources.
+
 Each tenant is one record. Everything about the tenant is on it:
 
 - **Account:** `tenant_id`, `display_name`, `status`, `billing_mode`, `payer_id`.

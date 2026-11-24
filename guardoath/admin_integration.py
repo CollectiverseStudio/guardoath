@@ -49,7 +49,7 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
                         native_enrollment=None,
                         admin_mutator=None, audit_reader=None, read_auditor=None, catalog_drafts=None,
                         require_persistent_read_audit: bool = False,
-                        billing_reporter=None, billing_downgrade=None, billing_invoices=None,
+                        billing_reporter=None, billing_downgrade=None, billing_reconciler=None, billing_invoices=None,
                         record_validator=None, rule_exists=None) -> None:
     """Register the guarded read-only admin routes on an existing GuardOath app.
 
@@ -125,6 +125,7 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
         require_persistent_read_audit=require_persistent_read_audit,
         billing_reporter=billing_reporter,
         billing_downgrade=billing_downgrade,
+        billing_reconciler=billing_reconciler,
         billing_invoices=billing_invoices,
         record_validator=record_validator,
         rule_exists=rule_exists,

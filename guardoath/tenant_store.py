@@ -103,7 +103,7 @@ class MemoryTenantStore:
         on the existing tenant; this method cannot establish one.
         """
         from guardoath.billing import BillingMode
-        from guardoath.subscription_reconciliation import StripeBinding, reconcile_subscription
+        from guardoath.subscription_reconciliation import StripeBinding, reconcile_subscription, reconciled_allowance
         with self._lock:
             current = self._records.get(tenant_id)
             if current is None:
@@ -116,21 +116,12 @@ class MemoryTenantStore:
                                               provider_subscription)
             if current.stripe_subscription_id not in (None, subscription_id):
                 raise ValueError("Subscription binding cannot be replaced")
-            if (plan_monthly_allowance is not None and
-                    (type(plan_monthly_allowance) is not int or
-                     not 1 <= plan_monthly_allowance <= 1_000_000_000)):
-                raise ValueError("Invalid server-configured plan allowance")
-            # Cancellation/past-due removes paid quota in the same atomic record
-            # write as status; a stale allowance cannot survive revocation.
-            allowance = (plan_monthly_allowance if decision.active and
-                         plan_monthly_allowance is not None else
-                         current.monthly_allowance if decision.active else 0)
+            quota = reconciled_allowance(current, active=decision.active,
+                                         plan_monthly_allowance=plan_monthly_allowance)
             updated = TenantRecord.model_validate({**current.model_dump(),
                 "subscription_status": decision.status,
                 "stripe_subscription_id": subscription_id,
-                "monthly_allowance": allowance,
-                "overage": "block" if not decision.active or
-                           plan_monthly_allowance is not None else current.overage,
+                **quota,
                 "revision": current.revision + 1, "updated_at": _now()})
             self._records[tenant_id] = updated
             return updated

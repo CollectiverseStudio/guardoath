@@ -47,6 +47,17 @@ $RequiredJobs = @{
         "real-pii-tail (ubuntu-latest, py3.13)",
         "real-pii-tail (windows-latest, py3.12)"
     )
+    "Stripe Reconciliation Acceptance" = @("owner-billing-api-and-stores", "authenticated-billing-browser")
+    "Deploy Script Acceptance" = @("powershell-parse-and-guardrails")
+}
+
+function Assert-RollbackCompatibility([string]$Candidate, [string]$Backup, [string]$Sha, [string]$CodeSha256) {
+    [void](Invoke-Checked "python" @("deploy/aws/verify_rollback.py", "--candidate", $Candidate,
+        "--backup", $Backup, "--expected-sha", $Sha, "--backup-code-sha256", $CodeSha256))
+}
+function Assert-RollbackArchive([string]$Backup, [string]$CodeSha256) {
+    [void](Invoke-Checked "python" @("deploy/aws/verify_rollback.py", "--backup", $Backup,
+        "--backup-code-sha256", $CodeSha256, "--verify-backup-only"))
 }
 function Assert-Run([object[]]$Runs, [string]$Name, [string]$Sha) {
     $matches = @($Runs | Where-Object { $_.name -eq $Name -and $_.head_sha -eq $Sha })
@@ -93,7 +104,7 @@ Write-Host "Clean current main source: $Sha"
 $Headers = @{ "User-Agent" = "GuardOath-Verified-Deployment"; "Accept" = "application/vnd.github+json" }
 $RunsResponse = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/actions/runs?head_sha=$Sha&per_page=100" -Headers $Headers -Method Get
 $Runs = @($RunsResponse.workflow_runs)
-foreach ($required in @("Tests", "Push on main", "Field Comparisons Evidence", "Trusted Reference Acceptance", "PII Reliability Gate")) {
+foreach ($required in @("Tests", "Push on main", "Field Comparisons Evidence", "Trusted Reference Acceptance", "PII Reliability Gate", "Stripe Reconciliation Acceptance", "Deploy Script Acceptance")) {
     Assert-Run $Runs $required $Sha
 }
 $OpenRisk = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/issues/30" -Headers $Headers -Method Get
@@ -131,6 +142,7 @@ $BackupDir = Join-Path $Root ".guardoath-reports"
 New-Item -ItemType Directory -Path $BackupDir -Force | Out-Null
 $BackupFile = Join-Path $BackupDir ("lambda-before-" + $Sha.Substring(0,12) + ".zip")
 if (Test-Path $BackupFile) { throw "Backup filename already exists; avoid overwriting the previous rollback copy." }
+$BackupCodeSha256 = $Function.Configuration.CodeSha256
 $Uploaded = $false
 try {
     Invoke-WebRequest -Uri $Function.Code.Location -OutFile $BackupFile -UseBasicParsing
@@ -141,6 +153,7 @@ try {
     if (-not (Test-Path $Zip)) { throw "Release archive missing" }
     $CurrentHead = Invoke-Checked "git" @("rev-parse", "HEAD")
     if ($CurrentHead -ne $Sha) { throw "Git HEAD changed during build" }
+    Assert-RollbackCompatibility $Zip $BackupFile $Sha $BackupCodeSha256
     $Uploaded = $true # AWS may apply the update even if the client loses its response.
     [void](Invoke-Aws @("lambda", "update-function-code", "--function-name", $FunctionName,
         "--revision-id", $Function.Configuration.RevisionId, "--zip-file", "fileb://$Zip"))
@@ -153,6 +166,9 @@ try {
 } catch {
     Write-Warning "Deployment or parity verification failed: $_"
     if ($Uploaded -and (Test-Path $BackupFile)) {
+        # Recheck the bytes immediately before restoring the already accepted
+        # compatible image. Never strip tenant provenance to fit an old image.
+        Assert-RollbackArchive $BackupFile $BackupCodeSha256
         Write-Warning "Attempting to restore the previously downloaded Lambda code (tenant table and configuration unchanged)."
         $Now = (Invoke-Aws @("lambda", "get-function-configuration", "--function-name", $FunctionName)) | ConvertFrom-Json
         [void](Invoke-Aws @("lambda", "update-function-code", "--function-name", $FunctionName,
