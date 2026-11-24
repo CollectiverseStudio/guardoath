@@ -28,10 +28,13 @@ versioned category/check/rule publishing in
 These remain open until their actual acceptance criteria are met.
 
 The concise [admin handoff](admin-console-handoff.md) records implementation and
-exact-source evidence. The [financial-operation design](admin-financial-operations-design.md)
-preserves the next confirmed-action/recovery architecture for CORE-04. A design
-does not mark that target delivered; keep all original targets and acceptance
-boundaries below until implementation and verification establish completion.
+exact-source evidence. The [financial-operation record](admin-financial-operations-design.md)
+now covers the implemented cancellation review/recovery compatibility baseline
+and its retained, tested, source-disabled scheduling writer for CORE-04. It also
+preserves the remaining refund, credit and plan-change requirements. This does
+not mark CORE-04 delivered: compatible deployment, writer activation and live
+acceptance remain open. Keep all original targets and acceptance boundaries
+below until implementation and verification establish completion.
 
 ## Phase 1 — Complete the core commercial platform
 

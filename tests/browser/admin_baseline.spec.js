@@ -20,14 +20,15 @@ function saved() {
     "sys.path.insert(0,'tests')",
     "from admin_test_support import AdminTestDynamo, ADMIN_BROWSER_AUDIT_KEY",
     "from guardoath.admin_audit import AdminAuditReader",
+    "from admin_cancellation_support import verified_financial_rows",
     "db=AdminTestDynamo(sys.argv[1])",
     "reader=AdminAuditReader(db,'audit_table',verify_key=ADMIN_BROWSER_AUDIT_KEY)",
     "tenants={}",
     "for key in ('usr-admin-alpha','usr-admin-beta'):",
     " item=db.get_item(TableName='tenant_table',Key={'tenant_id':{'S':key}},ConsistentRead=True)['Item']",
     " tenants[key]={'record':json.loads(item['record']['S']),'revision':int(item['revision']['N']),'usage':item['usage']}",
-    "receipts=[reader.read(row['event_id']['S']) for row in db.audit_items()]",
-    "print(json.dumps({'tenants':tenants,'receipts':receipts}))",
+    "receipts=[reader.read(row['event_id']['S']) for row in db.audit_items() if 'financial_operation' not in row]",
+    "print(json.dumps({'tenants':tenants,'receipts':receipts,'financial':verified_financial_rows(db)}))",
     "db.close()",
   ].join("\n");
   return JSON.parse(execFileSync(process.env.PYTHON || "python",
@@ -224,3 +225,28 @@ for (const code of ["customer","no-mfa","stale-mfa","forged"]) {
     expect(invoiceReads()).toEqual(before);
   });
 }
+
+test("baseline cancellation review and history work while provider dispatch remains source-disabled",async ({page,request})=>{
+  const headers = await login(page), before = saved();
+  const features = await request.get("/v1/admin/features",{headers});
+  expect(await features.json()).toMatchObject({billing_cancellation_preview:true,
+    billing_cancellation_schedule:false,billing_cancellation_receipts:true});
+  await page.locator("#nav-tenants").click();
+  const row = page.locator("#tenant-rows tr").filter({hasText:TENANT});
+  await row.getByRole("button",{name:"Review cancellation",exact:true}).click();
+  await expect(page.locator("#cancellation-review")).toContainText("Scheduling is unavailable in this release");
+  await expect(page.locator("#cancellation-schedule")).toBeDisabled();
+  expect((await request.post("/v1/admin/subscriptions/"+TENANT+"/cancel-at-period-end",{headers,data:{}})).status()).toBe(404);
+  await page.locator("#cancellation-receipt-tenant").fill(TENANT);
+  await page.locator("#cancellation-receipt-reference").fill("baseline-unknown-action-123456789");
+  await page.locator("#cancellation-receipt").click();
+  await expect(page.locator("#cancellation-receipt-result")).toContainText("No signed cancellation intent found");
+  const after = saved();
+  expect(after.tenants).toEqual(before.tenants);
+  expect(after.financial).toEqual([]);
+  expect(after.receipts.every(value=>value.integrity_status==="signed_verified")).toBe(true);
+  const dbPath = path.parse(process.env.GUARDOATH_ADMIN_TEST_DB);
+  const evidence = fs.readFileSync(path.join(dbPath.dir,dbPath.name+".cancellation-requests.jsonl"),"utf8")
+    .trim().split("\n").map(JSON.parse);
+  expect(evidence.map(value=>value.method)).toEqual(["GET","GET"]);
+});

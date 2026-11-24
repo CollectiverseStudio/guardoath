@@ -53,7 +53,8 @@ if phase not in ("0", "1"):
     raise RuntimeError("Invalid synthetic browser phase")
 if phase == "1":
     state_contracts.ENABLE_NEW_SUBSCRIPTION_STATE = True
-elif state_contracts.new_subscription_state_enabled():
+    state_contracts.ENABLE_NEW_CANCELLATION_STATE = True
+elif state_contracts.new_subscription_state_enabled() or state_contracts.new_cancellation_state_enabled():
     raise RuntimeError("Baseline browser acceptance requires baseline source")
 
 POOL, CLIENT = "us-east-1_Example", "syntheticownerclient"
@@ -183,6 +184,8 @@ app = create_app(engine=demo_engine(enable_pii=True,checkers=checkers),credentia
 def stripe_snapshot(tenant_id, customer_id, subscription_id):
     suffix = tenant_id.removeprefix("usr-admin-")
     assert suffix in ("alpha","beta") and customer_id == "cus_" + suffix and subscription_id == "sub_" + suffix
+    if suffix == "alpha":
+        return json.loads(json.dumps(cancellation_boundary.value))
     return {"object":"subscription","id":subscription_id,"customer":customer_id,"status":"active",
         "livemode":False,"pause_collection":None,"collection_method":"charge_automatically",
         "items":{"has_more":False,"data":[{"quantity":1,"price":{"id":"price_starter"}}]}}
@@ -220,12 +223,37 @@ def stripe_invoices(tenant_id, customer_id, subscription_id, *, starting_after=N
 
 reader = AdminAuditReader(db,"audit_table",verify_key=ADMIN_BROWSER_AUDIT_KEY)
 reporter = AdminSubscriptionReporter(stripe_snapshot,expected_price_id="price_starter",expected_livemode=False)
+from admin_cancellation_support import ProviderBoundary
+from guardoath.admin_cancellation_provider import StripePeriodEndCancellation
+from guardoath.admin_cancellation_state import DynamoCancellationState
+from guardoath.admin_subscription_cancellation import AdminSubscriptionCancellation
+
+cancellation_boundary = ProviderBoundary()
+cancellation_boundary.value.update(id="sub_alpha", customer="cus_alpha",
+    current_period_start=int(time.time())-86400, current_period_end=int(time.time())+86400*10)
+cancellation_boundary.value["items"]["data"][0].update(id="si_alpha", subscription="sub_alpha")
+cancellation_boundary.value["items"]["data"][0]["price"]["id"] = "price_starter"
+
+def cancellation_evidence(request):
+    with path.with_suffix(".cancellation-requests.jsonl").open("a",encoding="utf-8") as evidence:
+        evidence.write(json.dumps({"method":request.get_method(), "url":request.full_url,
+            "body":request.data.decode() if request.data else None,
+            "idempotency_key":request.get_header("Idempotency-key")}) + "\n")
+
+cancellation_boundary.before = cancellation_evidence
+cancellation = AdminSubscriptionCancellation(
+    state=DynamoCancellationState(db,"audit_table",ADMIN_BROWSER_AUDIT_KEY),
+    tenant_table="tenant_table", preview_key=CURSOR_KEY,
+    provider=StripePeriodEndCancellation(api_key="rk_test_synthetic_cancel_0123456789",
+        expected_account_id="acct_owner",expected_price_id="price_starter",expected_livemode=False,
+        opener=cancellation_boundary.open))
 mount_admin_console(app,sessions=sessions,tenants=tenants,cognito=CognitoBoundary(),
     cursor_signing_key=CURSOR_KEY,browser_config=config,browser_exchange=BoundExchange(config,sender=exchange_code),
     admin_mutator=AdminTenantActions(db,"tenant_table","audit_table",audit_key=ADMIN_BROWSER_AUDIT_KEY),
     audit_reader=reader,read_auditor=AdminSensitiveReadAuditor(db,"audit_table",signing_key=ADMIN_BROWSER_AUDIT_KEY),
     catalog_drafts=AdminCatalogDrafts(db,"audit_table",ADMIN_BROWSER_AUDIT_KEY),require_persistent_read_audit=True,
     billing_reporter=reporter,
+    billing_cancellation=cancellation,
     billing_invoices=AdminInvoiceHistory(stripe_invoices, reporter, cursor_key=CURSOR_KEY),
     billing_downgrade=AdminBillingDowngrade(db,"tenant_table","audit_table",signing_key=ADMIN_BROWSER_AUDIT_KEY,
         reporter=reporter,validate_record=TenantRecord.model_validate),

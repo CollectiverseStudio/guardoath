@@ -1393,6 +1393,102 @@ the actual mounted owner browser journey and focused fault/race/mobile tests are
 part of the existing test gates. Production financial evidence still requires
 real provider credentials and deployed owner/MFA acceptance.
 
-The next confirmed financial-write architecture is preserved in
-[admin-financial-operations-design.md](admin-financial-operations-design.md).
-That design does not enable cancellation, refunds, credits or plan changes.
+The implemented cancellation contract and remaining financial work are preserved
+in [admin-financial-operations-design.md](admin-financial-operations-design.md).
+Refunds, credits and plan changes remain separate capabilities.
+
+## Owner period-end cancellation review and recovery (2026-11-24)
+
+The existing Billing workspace now supports a cancellation review and signed
+historical receipt lookup. **The current source is a support-only compatibility
+release.** `ENABLE_NEW_CANCELLATION_STATE=False` keeps the scheduling route
+unmounted and independently refuses state writes and the provider POST. Its
+retained writer is tested through an isolated harness. The real compatible
+reader release must be deployed and accepted before a later source commit can
+enable scheduling; no environment variable can bypass this phase.
+
+### Explicit configuration and narrow admission
+
+Review requires `GUARDOATH_ADMIN_STRIPE_WRITE_KEY` and
+`GUARDOATH_ADMIN_STRIPE_ACCOUNT_ID` together, plus the existing Stripe plan/key
+configuration and independent signed audit store. These are server-only secure
+environment values; there is no fallback from the new credential to the existing
+read key. The new adapter narrowly accepts restricted or secret test/live key
+forms and requires mode agreement with the configured Stripe reader. Provide
+only the account/subscription read and subscription update permissions needed
+for this operation. No credential appears in the UI, receipt projection or
+provider metadata. Receipt lookup needs the signed audit store but no Stripe
+write credential. Invalid partial configuration prevents admin initialization.
+
+Choose **Review cancellation** beside the bound tenant. The API first verifies
+owner/Cognito/MFA and origin and persists a signed protected-read attempt. It
+strongly reads the actual tenant record, then checks the configured Stripe
+account and the exact saved subscription with the same cancellation credential.
+No subscription discovery or browser-selected provider ID is accepted.
+
+The initial supported state is one active, automatically collected item of
+quantity one at the configured price, explicitly unpaused, with no schedule,
+pending update or existing cancellation. Item and subscription periods must
+agree when both are present. Trial, manual-invoice and other unsupported states
+remain inspectable through existing read views but cannot enter this operation.
+The review shows its observation, scheduled end and expiry in UTC. Its encrypted
+reference lasts at most 180 seconds and binds the exact owner, tenant document,
+revision, provider state and prior target control. Refresh or selection changes
+withdraw the review; a changed provider state requires a fresh review.
+
+### Confirmed scheduling in the later enabled release
+
+The writer requires the displayed `SCHEDULE CANCELLATION <tenant_id>` text,
+bounded reason and action reference. It never accepts arbitrary Stripe fields,
+price, quantity, invoice, refund or proration parameters. A target control and
+immutable signed intent are inserted atomically; a second transaction checks
+the exact tenant JSON/revision while acquiring dispatch ownership. Only an
+acknowledged successful transition can issue the one fixed
+`cancel_at_period_end=true` request. The pinned adapter refuses redirects and
+automatic retries, validates its reply, then independently rereads account and
+subscription before storing a verified outcome. The browser independently
+reopens the signed receipt before showing verified success.
+
+Scheduling changes no tenant status, entitlement, cap, key, usage counter or
+customer policy. Trusted reconciliation remains responsible for later access
+changes. A scheduled end is neither immediate cancellation nor a guarantee that
+no further invoice can arise. See Stripe's
+[cancellation behavior](https://docs.stripe.com/billing/subscriptions/cancel).
+Another Stripe integration can still race the local observation; GuardOath does
+not claim a provider-wide compare-and-set.
+
+### Uncertainty and historical recovery
+
+Keep the action reference when the page reports unverified or indeterminate.
+Sign in as the original owner and use the Billing receipt lookup with the tenant
+and original reference; action IDs are owner-bound. A conflicting new request
+does not disclose another owner's held action reference. This
+reads signed historical intent/outcome only, with no provider read or retry.
+A missing intent means not found; a retained intent without verified outcome
+means indeterminate. A verified linked outcome proves the recorded action, not
+the subscription's current state. Existing **Verify Stripe** provides a separate
+current observation and cannot manufacture a historical action receipt.
+
+The page blocks duplicate in-flight dispatch across refresh, withdraws stale
+previews on confirmed reconciliation, and suppresses results from older
+selections or sessions. Signing out does not cancel a server operation. Durable
+unknown claims never expire automatically and cannot be released through this
+UI. There is no automatic repair or provider retry. A later generation is
+available only after a verified prior outcome and a fresh eligible review.
+
+The service uses an eight-second maximum coordination budget, reduced using
+trusted Lambda remaining time, with four seconds required before reservation
+and dispatch and at most a one-second provider socket timeout. These checks do
+not guarantee completion before termination: blocking AWS or body reads and
+persistence failures can still leave a retained indeterminate operation. The
+15-second Lambda timeout and 500-ms PII deadline are unchanged. Review/admission
+also shares a best-effort 20-inspections-per-owner-per-minute warm-process budget;
+this is not distributed rate limiting.
+
+The contract is `stripe-period-end-cancellation-v1`, independent of cap
+provenance. Dedicated financial envelopes leave the shared ordinary audit schema
+unchanged. Infrastructure adds only `dynamodb:ConditionCheckItem` on the existing
+tenant table under the existing admin-mutations policy condition. No new table,
+capacity or paid provider is added. All exact-source CI, source parity, compatible
+rollback and 15 live checks still apply. Local synthetic provider/database
+acceptance is not evidence of AWS deployment or live financial data.

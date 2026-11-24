@@ -144,7 +144,7 @@ def test_the_site_role_can_use_only_its_table_and_log_group(template):
             assert "*" not in json.dumps(statement["Resource"])
     assert set(conditionals) == {"AdminConsoleEnabled", "AdminMutationsEnabled"}
     assert len(conditionals["AdminConsoleEnabled"]) == 1
-    assert len(conditionals["AdminMutationsEnabled"]) == 2
+    assert len(conditionals["AdminMutationsEnabled"]) == 3
     cognito = conditionals["AdminConsoleEnabled"][0]
     assert cognito["Action"] == [
         "cognito-idp:AdminGetUser", "cognito-idp:AdminListGroupsForUser", "cognito-idp:ListUsers"
@@ -159,6 +159,9 @@ def test_the_site_role_can_use_only_its_table_and_log_group(template):
     cognito_mutations = next(p for p in mutation_policies if "cognito-idp:AdminDisableUser" in p["Action"])
     assert cognito_mutations["Action"] == ["cognito-idp:AdminDisableUser", "cognito-idp:AdminEnableUser"]
     assert cognito_mutations["Resource"] == cognito["Resource"]
+    condition_check = next(p for p in mutation_policies if "dynamodb:ConditionCheckItem" in p["Action"])
+    assert condition_check["Action"] == ["dynamodb:ConditionCheckItem"]
+    assert condition_check["Resource"] == {"Fn::GetAtt": ["TenantTable", "Arn"]}
 
 
 def test_the_table_stays_within_the_free_capacity(template):
@@ -447,7 +450,9 @@ def test_admin_identity_infrastructure_is_strictly_opt_in(template):
     for key in ("GUARDOATH_ADMIN_CLIENT_ID", "GUARDOATH_ADMIN_COGNITO_DOMAIN", "GUARDOATH_ADMIN_CURSOR_HMAC_KEY"):
         assert env[key]["Fn::If"][0] == "AdminConsoleEnabled"
         assert env[key]["Fn::If"][2] == {"Ref": "AWS::NoValue"}
-    policy = template["Resources"]["SiteRole"]["Properties"]["Policies"][0]["PolicyDocument"]["Statement"][-2]["Fn::If"]
+    statements = template["Resources"]["SiteRole"]["Properties"]["Policies"][0]["PolicyDocument"]["Statement"]
+    policy = next(statement["Fn::If"] for statement in statements
+                  if statement.get("Fn::If", [None])[0] == "AdminConsoleEnabled")
     assert policy[0] == "AdminConsoleEnabled" and policy[2] == {"Ref": "AWS::NoValue"}
     assert set(policy[1]["Action"]) == {"cognito-idp:AdminGetUser", "cognito-idp:AdminListGroupsForUser", "cognito-idp:ListUsers"}
     assert policy[1]["Resource"] == {"Fn::Sub": "arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPool}"}
@@ -476,9 +481,12 @@ def test_admin_mutations_require_explicit_opt_in_and_retained_append_only_audit(
     assert props["DeletionProtectionEnabled"] is True
     assert props["KeySchema"] == [{"AttributeName": "event_id", "KeyType": "HASH"}]
     assert props["AttributeDefinitions"] == [{"AttributeName": "event_id", "AttributeType": "S"}]
-    # The application can append or inspect a single receipt, but cannot edit, delete, scan or enumerate the log.
+    # Immutable receipts are insert-only in code; versioned financial/enrollment
+    # controls use conditional PutItem. No Update/Delete/Scan permission is added.
     statements = template["Resources"]["SiteRole"]["Properties"]["Policies"][0]["PolicyDocument"]["Statement"]
-    audit_policy = statements[-1]["Fn::If"]
+    audit_policy = next(statement["Fn::If"] for statement in statements
+                        if statement.get("Fn::If", [None,{}])[1].get("Resource") ==
+                        {"Fn::GetAtt": ["AdminAuditTable", "Arn"]})
     assert audit_policy == ["AdminMutationsEnabled", {
         "Effect": "Allow", "Action": ["dynamodb:PutItem", "dynamodb:GetItem"],
         "Resource": {"Fn::GetAtt": ["AdminAuditTable", "Arn"]}}, {"Ref": "AWS::NoValue"}]

@@ -1,18 +1,24 @@
-# Owner financial operations: continuation design
+# Owner financial operations: implementation and continuation record
 
-Recorded November 23, 2026 (America/New_York). This document preserves the next
-implementation decisions for #41 and CORE-04 of the [product roadmap](product-roadmap.md).
-It is a design, **not an implemented financial API, deployment, or authorization
-to operate on a real customer's subscription during development**. The existing
-owner reconciliation refreshes saved entitlement; invoice inspection reads
-provider information. Neither is cancellation, refund, credit, or plan change.
+Recorded November 23, 2026 (America/New_York); implementation updated November
+24, 2026 (UTC). This preserves the decisions and remaining work for #41 and
+CORE-04 of the [product roadmap](product-roadmap.md). Cancellation review,
+historical recovery and the independently gated writer are now implemented in
+the actual owner UI/API. The current source is a **support-only compatibility
+release**, with `ENABLE_NEW_CANCELLATION_STATE=False`; scheduling is unmounted
+and refused at every write boundary. The future writer is exercised only in an
+isolated test harness. No deployment, live financial action or authorization to
+operate on real customer subscriptions during development is implied.
+
+Existing reconciliation refreshes entitlement and invoice inspection reads
+provider information. Refunds, credits and plan changes remain future work.
 
 ## First coherent operation: schedule cancellation at period end
 
-Implement this inside the existing owner Billing workspace, authoritative tenant
-store and signed audit infrastructure. Do not discover a target subscription:
-require an existing server-owned customer/subscription binding. Use the actual
-owner/Cognito/MFA verifier and same-origin protection for every operation.
+The operation uses the existing owner Billing workspace, authoritative tenant
+store and signed audit infrastructure. It does not discover a subscription:
+an existing server-owned customer/subscription binding is required. Every route
+uses the actual owner/Cognito/MFA verifier and same-origin protection.
 
 Stripe's pinned update API supports `cancel_at_period_end=true`; immediate
 cancellation uses a different operation. A scheduled end must not be presented
@@ -21,19 +27,19 @@ exist. Pending prorations, invoice items and usage have separate provider rules.
 Sources: [pinned update API](https://docs.stripe.com/api/subscriptions/update?api-version=2025-02-24.acacia),
 [cancellation semantics](https://docs.stripe.com/billing/subscriptions/cancel).
 
-Proposed service: `guardoath/admin_subscription_cancellation.py`, integrated
+Implemented service: `guardoath/admin_subscription_cancellation.py`, integrated
 through `admin_runtime.py`, `mount_admin_console()` and `create_admin_router()`.
 
-| Proposed endpoint | Purpose |
+| Endpoint | Purpose and current availability |
 | --- | --- |
-| `POST /v1/admin/subscriptions/{tenant_id}/cancellation/preview` | Inspect and sign a bounded, short-lived review of the exact saved binding and effective date |
-| `POST /v1/admin/subscriptions/{tenant_id}/cancel-at-period-end` | Accept the exact confirmed preview, claim the provider target, persist intent, dispatch once and verify |
-| `POST /v1/admin/subscriptions/{tenant_id}/cancellation/receipt` | Recover signed historical intent/outcome; optionally perform a separately labeled current-state read |
+| `POST /v1/admin/subscriptions/{tenant_id}/cancellation/preview` | Inspect the exact saved binding and encrypt a 180-second review; requires explicit provider configuration and signed audit |
+| `POST /v1/admin/subscriptions/{tenant_id}/cancel-at-period-end` | Claim, dispatch once and verify the confirmed review; unmounted in the support-only release |
+| `POST /v1/admin/subscriptions/{tenant_id}/cancellation/receipt` | Read signed historical intent/outcome without any provider request; works with the audit store and no write credential |
 
 The browser supplies tenant ID, expected revision, opaque preview reference,
 bounded reason, exact typed confirmation and an action reference. It must never
 choose provider IDs, prices, amounts, URLs, raw Stripe parameters or credentials.
-Use a confirmation such as `SCHEDULE CANCELLATION usr-...`, with the effective
+The confirmation is exactly `SCHEDULE CANCELLATION <tenant_id>`, with the effective
 UTC date displayed before submission. Do not send the operator reason into
 Stripe metadata or cancellation comments.
 
@@ -44,8 +50,9 @@ billing binding, and independently verify a fresh raw provider snapshot. The
 read-only subscription reporter is useful for inspection but does not project
 all fields required for mutation admission. Validate:
 
-- Exact customer and subscription IDs, configured price and environment.
-- A complete single-item supported plan and quantity.
+- Exact customer and subscription IDs, configured price and environment, and
+  an independently fetched account ID using the same cancellation credential.
+- A complete single-item supported plan with quantity exactly one.
 - A known supported active state, automatic collection, explicitly unpaused
   payment collection and no attached subscription schedule or pending update.
 - Explicit `cancel_at_period_end=false`, `cancel_at=null`, and a valid future
@@ -53,18 +60,22 @@ all fields required for mutation admission. Validate:
 - Unchanged tenant revision, billing target and reviewed provider state on the
   final pre-dispatch read.
 
-Initially refuse unsupported trial/manual-invoice/paused/scheduled states for
-this mutation without removing their existing read-only inspection. Sign the
-preview with actor, tenant, expected revision, target/request fingerprint,
-effective date, operation version and expiry. A current provider state alone
-must never create a historical successful action receipt.
+Unsupported trial/manual-invoice/paused/scheduled states are refused without
+removing existing read-only inspection. The AES-GCM preview binds actor, tenant,
+exact document hash and revision, provider fingerprint, target, effective date,
+operation version, prior control hash and expiry. The prior control hash fences
+previews made before a competing completed generation. Expiry is at most 180
+seconds and never after the reviewed period end. A current provider observation
+cannot create a historical successful action receipt.
 
 ## Serialize the target and preserve unknown outcomes
 
-Reuse the signed document and full-document compare-and-set approach in
-`DynamoEnrollmentState` (`admin_enrollment_state.py`). Its conditional `PutItem`
-pattern fits the audit table's existing GetItem/PutItem permissions. Keep mutable
-control documents explicitly separate from immutable signed action receipts.
+`DynamoCancellationState` uses the existing independent audit table and strict,
+domain-separated signed envelopes. Mutable control documents are separate from
+immutable signed intent/outcome receipts. All shapes, links, generations,
+timestamps and signatures are validated when reopened. Ordinary read auditing
+reuses `stripe.subscription` and `audit.receipt`, preserving the preceding
+shared audit schema in this support-only release.
 
 An action key only prevents replay of that key. Two owners or tabs can generate
 different keys for the same subscription, so also require a durable
@@ -72,28 +83,35 @@ different keys for the same subscription, so also require a durable
 provider account scope/environment and subscription, independent of actor,
 tenant alias or action key. Key rotation must not make existing claims invisible.
 
-Proposed control states are `RESERVED`, `DISPATCHING`, `VERIFIED` and
-`BLOCKED`/indeterminate. Each transition compares the complete verified prior
-document and generation. Only the successful transition to `DISPATCHING` may
-issue the provider request. Never automatically expire or release a dispatching
-or unknown-outcome claim: a delayed worker can still be running. A replaceable
-pre-dispatch reservation would require CAS fencing that prevents its former
-owner from dispatching; conservative retention is an acceptable first version.
+Control states are `RESERVED`, `DISPATCHING`, `VERIFIED` and `BLOCKED`/indeterminate.
+Each transition compares the complete verified prior document and generation.
+Only an acknowledged successful transition to `DISPATCHING` may issue the
+provider request. A lost transaction response, or later observation of that
+state, grants no dispatch authority. Reserved, dispatching and unknown claims
+are retained indefinitely; there is no automatic expiry, release or replay.
+A later generation requires the prior linked verified outcome and fresh review.
 
-Persist an immutable signed intent before dispatch, binding actor, tenant,
-operation/schema version, expected revision, exact request fingerprint, target,
-old/new cancellation flags, reviewed date, reason and control generation.
-Use a dedicated versioned envelope and reader; do not casually widen the shared
-audit signature schema. If implementing an atomic tenant condition plus control
-claim, explicitly account for DynamoDB transaction ConditionCheck permissions.
-A strong read followed by a separate PutItem is not an atomic tenant CAS.
+Target reservation and immutable intent insertion commit in one DynamoDB
+transaction. An action-reference collision for another target therefore cannot
+strand that unrelated target. The intent binds actor, tenant, contract version,
+expected revision, exact request fingerprint, target, old/new flags, reviewed
+date, reason and generation. Action IDs bind owner and reference independently
+of tenant, so changing a tenant cannot silently create another action with the
+same reference.
+
+The following dispatch transaction atomically checks the exact tenant document
+and revision while changing control to `DISPATCHING`. The deployment policy adds
+only `dynamodb:ConditionCheckItem` on the existing tenant table under the existing
+admin-mutations condition. No new table, capacity or resource is introduced.
+A strong read followed by an unrelated write would not supply this protection.
 
 ## One narrow provider dispatch and independent verification
 
-The first adapter should send only the fixed subscription update with
+`StripePeriodEndCancellation` sends only the fixed subscription update with
 `cancel_at_period_end=true`, using a stable server-derived idempotency key, the
-existing pinned API, fixed host, no redirects, strict bounded JSON and bounded
-timeout. Do not introduce a generic Stripe mutation proxy. Do not include price,
+existing pinned API, fixed host, no redirects, strict bounded JSON, a socket
+timeout of at most one second and no automatic retry. There is no generic mutation proxy.
+The request cannot include price,
 quantity, invoice/proration, refund, custom cancellation-date or metadata fields.
 
 Do not automatically repeat a dispatch after an ambiguous response. Stripe API
@@ -122,44 +140,79 @@ remains responsible for entitlement when the provider state actually changes.
 | Matching intent with no verified outcome | Indeterminate; retain target claim and permit read-only inspection |
 | Verified linked intent/outcome | Return historical outcome without provider mutation, even if current state later differs |
 | Same key with a different request | Conflict before any provider write |
-| Different key for an in-flight/unknown target | Conflict; show safe recovery reference |
+| Different key for an in-flight/unknown target | Conflict; retain the claim and inspect the original action using its original owner and reference |
 | Provider currently scheduled but no action outcome | Current observation only; no invented historical success |
 | Prior verified operation later reversed externally | Require fresh preview and confirmation before a new proven generation |
 
+### Execution budget and remaining operational limit
+
+The service uses an eight-second maximum admission/coordination budget. The API
+reduces it using trusted Lambda remaining time after owner authorization and
+read auditing; browser-supplied budget fields are rejected. At least four
+observed seconds must remain before creating the claim and again after acquiring
+dispatch ownership. Provider calls receive a deadline leaving a nominal second
+for outcome handling. Failure after the claim leaves durable uncertainty and
+never repeats POST.
+
+This is not a guaranteed upper bound on execution: blocking database calls and
+response body reads can still consume more time before control returns. A slow
+or interrupted operation can retain an indeterminate target permanently. This
+release has no administrative claim-release or automatic repair operation.
+Keep that availability limitation visible. The Lambda timeout remains 15 seconds
+and the unrelated PII deadline remains 500 ms.
+
 ## Visible workflow, credentials and release compatibility
 
-The existing Billing page should show review, effective date, typed confirmation,
-reason, action reference, submission state and receipt recovery. Use clear
-verified/refused/indeterminate outcomes. Refresh, tenant selection and sign-out
+The existing Billing page shows review, effective date, typed confirmation,
+reason, action reference, submission state and receipt recovery. It distinguishes
+verified, refused and indeterminate outcomes and independently reads the signed
+receipt before displaying verified success. Refresh, tenant selection and sign-out
 invalidate previews and stale display updates; they cannot cancel a dispatched
 server operation or clear its durable claim. An in-flight action's single-flight
 guard must survive an unrelated workspace refresh.
 
-Use least-privilege server credentials through the existing secure configuration
-mechanism. Current runtime validation accepts `sk_test_`/`sk_live_` and derives
-mode from those prefixes; a separate restricted write credential needs a narrow,
-explicitly validated configuration path and environment binding. Do not broadly
-relax existing credential validation, expose keys, provision a paid service, or
-perform live financial actions as part of offline acceptance.
+The adapter requires explicit `GUARDOATH_ADMIN_STRIPE_WRITE_KEY` and
+`GUARDOATH_ADMIN_STRIPE_ACCOUNT_ID`, alongside the existing configured Stripe
+plan/mode and signed audit store. It accepts narrowly validated `rk_test_`,
+`rk_live_`, `sk_test_` or `sk_live_` credentials and verifies account identity
+through that same credential. Subscription mode must independently match.
+Provision only the necessary account/subscription read and subscription update
+permissions through the existing secure environment mechanism. There is no
+fallback to the existing Stripe key and no relaxation of the read adapter's
+credential validation. No key enters the browser or provider metadata. No paid
+service or real customer mutation is part of offline acceptance.
 
-Add a separately versioned persistent operation contract. The current
-`state_contracts.release_metadata()` ties introductions to the subscription-cap
-writer flag; compute future contract introductions independently so cancellation
-cannot accidentally enable cap-provenance writers. Deploy and accept a real
+`state_contracts.release_metadata()` now computes introductions independently
+for `subscription-cap-provenance-v1` and `stripe-period-end-cancellation-v1`.
+Both source-controlled writer flags remain false. There is no environment or
+deployment-argument override. Cancellation cannot enable cap-provenance writers
+or vice versa. Deploy and accept a real
 support-only compatibility release before introducing the new operation's
 durable state. Keep the actual rollback gate, source parity and all 15 live checks.
 Do not infer compatibility from a manifest declaration alone.
 
-## Required implementation acceptance
+## Implementation acceptance and outstanding release evidence
 
-Complete service, provider adapter, actual authenticated UI/API, durable reopen
-and recovery in a coherent batch. Required scenarios include two simultaneous
+The service, provider adapter, actual authenticated UI/API, durable reopen and
+recovery are integrated in one batch. Repository scenarios include two simultaneous
 keys/owners for one target, lost provider response, successful provider action
 followed by failed outcome persistence, corrupt/foreign receipts, stale preview,
 changed revision/period/price/customer/environment, signed audit outage, exact
 provider request body, and byte-for-byte preservation of tenant policy/key/cap/
-usage state. Extend the mounted owner browser harness rather than relying only
-on intercepted HTTP responses. CI must match the exact published source SHA.
+usage state. The mounted owner browser harness uses real routes and signed-token
+verification with synthetic external transports and no HTTP interception.
+Focused fault/race browser tests complement that harness.
+
+Actually executed locally: 1,590 broad Python 3.12 tests; 254 focused Python 3.13
+tests including budget-during-dispatch and trusted Lambda remaining-time cases;
+baseline ASGI review with two GETs, scheduling 404 and no financial state;
+writer ASGI preview/schedule/recovery with one POST, six GETs, three independently
+reopened signed financial records and unchanged tenants. Four signed identity
+denial cases executed in each ASGI phase. JavaScript syntax/discovery passed for
+42 new focused browser cases and the 10 baseline/8 writer mounted journeys.
+Discovery and ASGI execution do not establish Chrome acceptance. All new
+exact-SHA jobs, source parity, compatible deployed rollback, real owner/MFA and
+15 live acceptance checks remain required. No new test skip or relaxed deadline.
 
 Refunds, credits and plan changes need their own exact-object/amount/currency,
 preview, concurrency, reconciliation and recovery contracts; scheduling an end

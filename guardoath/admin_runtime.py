@@ -123,6 +123,7 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
                 enrollment_subject=enrollment_subject)
     billing_reporter = None
     billing_invoices = None
+    cancellation_provider = None
     if os.getenv("GUARDOATH_STRIPE_SECRET_KEY", ""):
         secret = os.environ["GUARDOATH_STRIPE_SECRET_KEY"]
         price = os.getenv("GUARDOATH_STRIPE_PRICE_ID", "")
@@ -143,6 +144,28 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
                                       starting_after=starting_after, status=status)
         billing_invoices = AdminInvoiceHistory(verified_invoices, billing_reporter,
                                                cursor_key=bytes.fromhex(key_hex))
+    cancellation_key = os.getenv("GUARDOATH_ADMIN_STRIPE_WRITE_KEY", "")
+    cancellation_account = os.getenv("GUARDOATH_ADMIN_STRIPE_ACCOUNT_ID", "")
+    if cancellation_key or cancellation_account:
+        if not cancellation_key or not cancellation_account or billing_reporter is None or not audit_table:
+            raise AdminConfigurationError("Cancellation requires explicit account, credential, Stripe plan and signed audit configuration")
+        from guardoath.admin_cancellation_provider import StripePeriodEndCancellation
+        try:
+            cancellation_provider = StripePeriodEndCancellation(api_key=cancellation_key,
+                expected_account_id=cancellation_account, expected_price_id=price,
+                expected_livemode=secret.startswith("sk_live_"))
+        except ValueError as exc:
+            raise AdminConfigurationError("Cancellation credential/account configuration unavailable") from exc
+    billing_cancellation = None
+    if audit_table:
+        from guardoath.admin_cancellation_state import DynamoCancellationState
+        from guardoath.admin_subscription_cancellation import AdminSubscriptionCancellation
+        # A support-only rollback retains its real receipt reader without a
+        # write credential. Production has no environment override for dispatch.
+        billing_cancellation = AdminSubscriptionCancellation(
+            state=DynamoCancellationState(tenants.store._client, audit_table, audit_signing_key),
+            tenant_table=tenants.store.table_name, preview_key=bytes.fromhex(key_hex),
+            provider=cancellation_provider)
     record_validator = rule_exists = None
     if mutator is not None:
         from guardoath.tenant_record import TenantRecord
@@ -186,5 +209,6 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
                         billing_reporter=billing_reporter, billing_downgrade=billing_downgrade,
                         billing_reconciler=billing_reconciler,
                         billing_invoices=billing_invoices,
+                        billing_cancellation=billing_cancellation,
                         record_validator=record_validator,rule_exists=rule_exists)
     return True

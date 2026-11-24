@@ -295,6 +295,17 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <section id="section-tenants" data-admin-section class="panel" hidden tabindex="-1" aria-label="Tenants"><h2>Tenants</h2><p class="muted">API key counts and saved overage policies come from persisted tenant records; Allow and record is not a hard cap. Key material is never displayed. Unknown values remain unavailable. Quota risk is advisory, derived from each saved counter and allowance for the UTC read month, not live activity, financial cost, or a persistent alert.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button> <label for="quota-risk-filter">Saved quota risk (this page only)</label> <select id="quota-risk-filter"><option value="all">All risks</option><option value="watch">Watch or higher</option><option value="near">Near allowance or higher</option><option value="at">At or above allowance</option><option value="unknown">Unavailable</option></select><p class="muted">This filter only hides rows on the current bounded page. Next page continues the source scan even if no visible rows match.</p><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>Saved quota risk (UTC)</th><th>Overage policy</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
 <section id="section-billing" data-admin-section class="section-stack" hidden tabindex="-1" aria-label="Billing"><section class="panel"><h2>Verified invoices</h2><p class="muted">Five Stripe invoice summaries per page for an independently verified customer subscription. Each page is a separate provider observation. Amounts are in minor currency units, not a revenue total or forecast.</p><label for="invoice-status-filter">Invoice status</label> <select id="invoice-status-filter" disabled><option value="">All statuses</option><option value="open">Open</option><option value="uncollectible">Uncollectible</option><option value="paid">Paid</option><option value="draft">Draft</option><option value="void">Void</option></select> <button id="invoice-restart" type="button" disabled>Restart invoice history</button> <button id="invoice-next" type="button" disabled>Older invoices</button><p id="invoice-page-status" class="muted"></p><p id="invoice-details" role="status">No invoice history selected.</p></section>
 <section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Verify Stripe compares provider state with saved entitlement. Reconcile subscription independently reads Stripe again and saves the verified entitlement with an audit receipt. Saved request caps and suspended accounts remain enforced. Reconciliation does not collect a payment or issue a refund.</p><p id="billing-details" role="status">No subscription selected.</p><p id="billing-action-result" role="status"></p><button id="billing-retry" type="button" hidden disabled>Retry same reconciliation</button></section>
+<section class="panel"><h2>Schedule cancellation at period end</h2><p class="muted">Review the exact saved subscription before confirming. Scheduling preserves current tenant access and does not promise that no additional invoice can exist. Refunds and credits are separate operations.</p>
+<p id="cancellation-review" role="status">Choose Review cancellation beside a tenant.</p>
+<label for="cancellation-confirm">Exact confirmation shown in the review</label><p><input id="cancellation-confirm" maxlength="62" autocomplete="off" disabled></p>
+<label for="cancellation-reason">Reason (10–240 characters; no personal data)</label><p><input id="cancellation-reason" maxlength="240" autocomplete="off" disabled></p>
+<button id="cancellation-schedule" type="button" disabled>Schedule cancellation at period end</button>
+<label for="cancellation-reference">Retain this action reference</label><p><input id="cancellation-reference" readonly autocomplete="off"></p>
+<p id="cancellation-result" role="status"></p>
+<h3>Recover cancellation history</h3><p class="muted">Signed history never retries a provider action. It records what was verified at that time; use Verify Stripe separately for current subscription state.</p>
+<label for="cancellation-receipt-tenant">Tenant ID</label><p><input id="cancellation-receipt-tenant" maxlength="40" autocomplete="off"></p>
+<label for="cancellation-receipt-reference">Action reference from this owner</label><p><input id="cancellation-receipt-reference" maxlength="96" autocomplete="off"></p>
+<button id="cancellation-receipt" type="button" disabled>Inspect cancellation history</button><p id="cancellation-receipt-result" role="status"></p></section>
 </section><section id="section-usage" data-admin-section class="panel" hidden tabindex="-1" aria-label="Usage"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
 <section id="section-audit" data-admin-section class="panel" hidden tabindex="-1" aria-label="Audit"><h2>Audit receipt lookup</h2><p class="muted">Read one stored administrative event by its exact event ID. No exports or audit enumeration.</p><label for="audit-id">Audit event ID</label> <input id="audit-id" maxlength="64" autocomplete="off" spellcheck="false"> <button type="button" id="audit-go">Verify receipt</button><p id="audit-result" role="status"></p></section>
 <section id="section-catalog" data-admin-section class="panel" hidden tabindex="-1" aria-label="Catalog"><h2>Categories and checks</h2><p id="catalog-summary"></p>
@@ -341,6 +352,9 @@ _JS = r'''"use strict";
   let activeUserStatus = null;
   let activeBillingReconcile = null;
   let pendingBillingReconcile = null;
+  let cancellationSelection = 0, cancellationReceiptSelection = 0;
+  let cancellationPreview = null, cancellationExpiryTimer = null;
+  let activeCancellation = null, pendingCancellation = null;
   let previewSelection = null;
   let previewReady = null;
   let draftReadyForReview = null;
@@ -457,6 +471,13 @@ _JS = r'''"use strict";
   const clearAdminData = () => {
     clearCatalogInspection();
     clearInvoiceBrowser();
+    clearCancellationReview();
+    ++cancellationReceiptSelection;
+    pendingCancellation = null;
+    // An old session's HTTP dispatch may still be running. Keep its local
+    // single-flight guard until completion; durable target control is primary.
+    for (const id of ["cancellation-reference", "cancellation-receipt-tenant", "cancellation-receipt-reference"]) el(id).value = "";
+    el("cancellation-receipt").disabled = true;
     activeBillingReconcile = null;
     pendingBillingReconcile = null;
     say("billing-action-result", "");
@@ -471,7 +492,7 @@ _JS = r'''"use strict";
     el("user-rows").replaceChildren();
     el("categories").replaceChildren();
     el("catalog-release-entries").replaceChildren();
-    for (const id of ["catalog-release-summary", "status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "user-action-result", "usage-details", "billing-details", "invoice-details", "audit-result", "proposal-result", "draft-result", "review-manifest-result"]) say(id, "");
+    for (const id of ["catalog-release-summary", "status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "user-action-result", "usage-details", "billing-details", "invoice-details", "audit-result", "proposal-result", "draft-result", "review-manifest-result", "cancellation-result", "cancellation-receipt-result"]) say(id, "");
     previewSelection = null;
     previewReady = null;
     draftReadyForReview = null;
@@ -517,6 +538,10 @@ _JS = r'''"use strict";
   function withdrawWorkspaceSnapshot(message) {
     clearCatalogInspection();
     clearInvoiceBrowser();
+    clearCancellationReview();
+    ++cancellationReceiptSelection;
+    say("cancellation-receipt-result", "");
+    el("cancellation-receipt").disabled = true;
     // A failed core read must not leave yesterday's account or rule metadata
     // looking current. Do not clear activeUserStatus: an independent Cognito
     // mutation may still be in progress and must remain single-flight.
@@ -691,6 +716,7 @@ _JS = r'''"use strict";
       el("metrics").append(card);
     }
     features = available;
+    updateCancellationControls();
     catalogInspectionVersion = features.catalog_inspection === true &&
       typeof catalog.registry_version === "string" && /^[1-9][0-9]{0,8}$/.test(catalog.registry_version)
       ? catalog.registry_version : null;
@@ -1546,6 +1572,14 @@ _JS = r'''"use strict";
         invoices.addEventListener("click", () => inspectInvoices(tenant));
         actions.append(invoices);
       }
+      if (features.billing_cancellation_preview === true && tenant.demo === false &&
+          Number.isSafeInteger(tenant.revision) && tenant.revision > 0) {
+        const cancellation = document.createElement("button");
+        cancellation.type = "button";
+        cancellation.textContent = "Review cancellation";
+        cancellation.addEventListener("click", () => reviewCancellation(tenant));
+        actions.append(cancellation);
+      }
       if (features.billing_downgrade && features.audit_receipt_lookup && tenant.demo === false &&
           tenant.subscription_status === "active" && Number.isSafeInteger(tenant.revision) &&
           Number.isSafeInteger(tenant.monthly_allowance) && tenant.monthly_allowance >= 0) {
@@ -1687,11 +1721,204 @@ _JS = r'''"use strict";
       if (token && epoch === authEpoch && selection === usageSelection) say("usage-details", err.message);
     }
   }
+  const cancellationContract = "stripe-period-end-cancellation-v1";
+  const cancellationHash = value => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
+  function cancellationUtc(value) {
+    if (typeof value !== "string" || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/.test(value)) return null;
+    const time = Date.parse(value);
+    return Number.isFinite(time) && new Date(time).toISOString() === value.slice(0,-1) + ".000Z" ? time : null;
+  }
+  function updateCancellationControls() {
+    const ready = token && cancellationPreview && !activeCancellation && !pendingCancellation &&
+      features.billing_cancellation_schedule === true && cancellationPreview.scheduling_available === true &&
+      Date.now() < cancellationUtc(cancellationPreview.expires_at_utc);
+    el("cancellation-confirm").disabled = !ready;
+    el("cancellation-reason").disabled = !ready;
+    el("cancellation-schedule").disabled = !(ready &&
+      el("cancellation-confirm").value === cancellationPreview.confirmation &&
+      /^[A-Za-z0-9][A-Za-z0-9 .,;:_()/#-]{9,239}$/.test(el("cancellation-reason").value));
+    el("cancellation-receipt").disabled = !token || features.billing_cancellation_receipts !== true || !!activeCancellation;
+  }
+  function clearCancellationReview() {
+    ++cancellationSelection;
+    cancellationPreview = null;
+    if (cancellationExpiryTimer !== null) clearTimeout(cancellationExpiryTimer);
+    cancellationExpiryTimer = null;
+    el("cancellation-confirm").value = "";
+    el("cancellation-reason").value = "";
+    el("cancellation-confirm").disabled = true;
+    el("cancellation-reason").disabled = true;
+    el("cancellation-schedule").disabled = true;
+    say("cancellation-review", "Choose Review cancellation beside a tenant.");
+  }
+  async function reviewCancellation(tenant) {
+    if (!token || features.billing_cancellation_preview !== true) return;
+    showSection("billing", true);
+    if (activeCancellation || pendingCancellation) {
+      say("cancellation-result", "Retain the previous action reference and inspect its signed history before another action.");
+      return;
+    }
+    clearCancellationReview();
+    clearInvoiceBrowser();
+    ++billingSelection;
+    const epoch = authEpoch, selection = cancellationSelection;
+    say("cancellation-review", "Reviewing supported subscription for " + tenant.tenant_id + "...");
+    say("cancellation-result", "");
+    try {
+      const result = await request("/v1/admin/subscriptions/" + encodeURIComponent(tenant.tenant_id) + "/cancellation/preview", {
+        method:"POST", body:JSON.stringify({expected_revision:tenant.revision})});
+      if (!token || epoch !== authEpoch || selection !== cancellationSelection) return;
+      const value = result?.cancellation;
+      const observed = cancellationUtc(value?.observed_at_utc), effective = cancellationUtc(value?.effective_at_utc),
+        expires = cancellationUtc(value?.expires_at_utc);
+      if (!value || value.status !== "reviewed" || value.operation !== cancellationContract ||
+          value.tenant_id !== tenant.tenant_id || value.expected_revision !== tenant.revision ||
+          !Number.isSafeInteger(value.expected_revision) || value.expected_revision < 1 ||
+          observed === null || effective === null || expires === null || observed >= expires ||
+          expires > observed + 180000 || expires > effective || expires <= Date.now() || observed > Date.now() + 30000 ||
+          !cancellationHash(value.target_fingerprint) || typeof value.preview_reference !== "string" ||
+          !/^sc1\.[A-Za-z0-9_-]{40,4092}$/.test(value.preview_reference) ||
+          value.confirmation !== "SCHEDULE CANCELLATION " + tenant.tenant_id ||
+          typeof value.scheduling_available !== "boolean" || value.tenant_mutated !== false)
+        throw new Error("Cancellation review is unverified");
+      cancellationPreview = {...value};
+      say("cancellation-review", tenant.tenant_id + " · Reviewed UTC " + value.observed_at_utc +
+        " · Scheduled end UTC " + value.effective_at_utc + " · Review expires UTC " + value.expires_at_utc +
+        " · Type exactly: " + value.confirmation +
+        (value.scheduling_available && features.billing_cancellation_schedule === true ? "" :
+          " · Scheduling is unavailable in this release; this review does not change the subscription.") + readAuditLabel(result));
+      cancellationExpiryTimer = setTimeout(() => {
+        if (token && epoch === authEpoch && selection === cancellationSelection) {
+          clearCancellationReview();
+          say("cancellation-review", "Review expired. Select the tenant again for a fresh review.");
+        }
+      }, Math.max(0, expires - Date.now()));
+      updateCancellationControls();
+    } catch (_err) {
+      if (token && epoch === authEpoch && selection === cancellationSelection) {
+        clearCancellationReview();
+        say("cancellation-review", "Cancellation review unavailable or changed. No schedule request was sent.");
+      }
+    }
+  }
+  function cancellationReceipt(value, tenantId, reference, expected = null) {
+    if (!value || value.operation !== cancellationContract || value.tenant_id !== tenantId ||
+        value.action_reference !== reference || value.tenant_mutated !== false || value.provider_state_refreshed !== false ||
+        !["not_found","indeterminate","verified"].includes(value.status))
+      throw new Error("Cancellation history is unverified");
+    const intent = value.intent, outcome = value.outcome;
+    if (value.status === "not_found") {
+      if (intent !== null || outcome !== null || value.integrity_status !== "not_found")
+        throw new Error("Cancellation history is unverified");
+      return value;
+    }
+    if (value.integrity_status !== "signed_verified" || !intent || intent.tenant_id !== tenantId ||
+        ![intent.action_id,intent.intent_hash,intent.target_fingerprint].every(cancellationHash) ||
+        typeof intent.actor_sub !== "string" || !/^[A-Za-z0-9_-]{12,128}$/.test(intent.actor_sub) ||
+        !Number.isSafeInteger(intent.expected_revision) || intent.expected_revision < 1 ||
+        !Number.isSafeInteger(intent.generation) || intent.generation < 1 || intent.generation > 1000000000 ||
+        typeof intent.reason !== "string" || !/^[A-Za-z0-9][A-Za-z0-9 .,;:_()/#-]{9,239}$/.test(intent.reason) ||
+        cancellationUtc(intent.created_at_utc) === null || cancellationUtc(intent.effective_at_utc) === null ||
+        cancellationUtc(intent.created_at_utc) >= cancellationUtc(intent.effective_at_utc) ||
+        intent.before !== false || intent.after !== true ||
+        (expected && (intent.expected_revision !== expected.expected_revision || intent.reason !== expected.reason ||
+          intent.effective_at_utc !== expected.effective_at_utc || intent.target_fingerprint !== expected.target_fingerprint)))
+      throw new Error("Cancellation intent is unverified");
+    if (outcome !== null && (!outcome || outcome.action_id !== intent.action_id || outcome.intent_hash !== intent.intent_hash ||
+        outcome.status !== value.status || cancellationUtc(outcome.recorded_at_utc) === null ||
+        cancellationUtc(outcome.recorded_at_utc) < cancellationUtc(intent.created_at_utc)))
+      throw new Error("Cancellation outcome is unverified");
+    if (value.status === "verified" && outcome === null) throw new Error("Cancellation outcome is missing");
+    return value;
+  }
+  function cancellationMessage(value) {
+    if (value.status === "not_found") return "No signed cancellation intent found. This is not evidence of current provider state.";
+    const detail = value.tenant_id + " · Action " + value.action_reference + " · Intent " + value.intent.action_id;
+    if (value.status === "verified") return "Verified historical schedule · " + detail +
+      " · Period end UTC " + value.intent.effective_at_utc + " · Recorded UTC " + value.outcome.recorded_at_utc +
+      ". Tenant access, keys, rules, usage and caps were not changed. Current provider state was not refreshed.";
+    return "Indeterminate cancellation · " + detail +
+      ". The target remains held; no automatic retry. A current provider observation cannot prove this action succeeded.";
+  }
+  async function scheduleCancellation() {
+    updateCancellationControls();
+    if (el("cancellation-schedule").disabled) return;
+    const preview = {...cancellationPreview}, epoch = authEpoch, selection = cancellationSelection;
+    const reference = crypto.randomUUID().replaceAll("-", "");
+    const pending = {tenant_id:preview.tenant_id, reference, epoch, selection,
+      expected:{expected_revision:preview.expected_revision, reason:el("cancellation-reason").value,
+        effective_at_utc:preview.effective_at_utc, target_fingerprint:preview.target_fingerprint}};
+    const payload = {expected_revision:preview.expected_revision, preview_reference:preview.preview_reference,
+      confirmation:el("cancellation-confirm").value, reason:pending.expected.reason, idempotency_key:reference};
+    activeCancellation = pending;
+    pendingCancellation = pending;
+    if (cancellationExpiryTimer !== null) clearTimeout(cancellationExpiryTimer);
+    cancellationExpiryTimer = null;
+    ++cancellationReceiptSelection;
+    say("cancellation-receipt-result", "");
+    el("cancellation-reference").value = reference;
+    el("cancellation-receipt-tenant").value = pending.tenant_id;
+    el("cancellation-receipt-reference").value = reference;
+    say("cancellation-result", "Submitting once for " + pending.tenant_id + " · Retain action " + reference + ".");
+    updateCancellationControls();
+    try {
+      const response = await request("/v1/admin/subscriptions/" + encodeURIComponent(pending.tenant_id) + "/cancel-at-period-end", {
+        method:"POST", body:JSON.stringify(payload)});
+      if (!token || epoch !== authEpoch || selection !== cancellationSelection) return;
+      const initial = cancellationReceipt(response?.cancellation, pending.tenant_id, reference, pending.expected);
+      if (initial.status === "verified") {
+        const recovery = await request("/v1/admin/subscriptions/" + encodeURIComponent(pending.tenant_id) + "/cancellation/receipt", {
+          method:"POST", body:JSON.stringify({idempotency_key:reference})});
+        if (!token || epoch !== authEpoch || selection !== cancellationSelection) return;
+        const verified = cancellationReceipt(recovery?.cancellation, pending.tenant_id, reference, pending.expected);
+        if (verified.status !== "verified" || verified.intent.action_id !== initial.intent.action_id ||
+            verified.intent.intent_hash !== initial.intent.intent_hash) throw new Error("Historical result changed");
+        pendingCancellation = null;
+        say("cancellation-result", cancellationMessage(verified) + readAuditLabel(recovery));
+      } else {
+        say("cancellation-result", cancellationMessage(initial));
+      }
+      clearCancellationReview();
+      say("cancellation-review", "Review consumed. A new operation requires a fresh provider review.");
+    } catch (_err) {
+      if (token && epoch === authEpoch && selection === cancellationSelection) {
+        clearCancellationReview();
+        say("cancellation-result", "Cancellation outcome unverified. Retain action " + reference +
+          " for " + pending.tenant_id + " and inspect signed history. No automatic retry.");
+      }
+    } finally {
+      if (activeCancellation === pending) activeCancellation = null;
+      updateCancellationControls();
+    }
+  }
+  async function inspectCancellationHistory() {
+    if (!token || features.billing_cancellation_receipts !== true || activeCancellation) return;
+    const tenantId = el("cancellation-receipt-tenant").value, reference = el("cancellation-receipt-reference").value;
+    if (!/^[a-z][a-z0-9-]{1,39}$/.test(tenantId) || !/^[A-Za-z0-9_-]{16,96}$/.test(reference)) {
+      say("cancellation-receipt-result", "Enter the exact tenant ID and retained action reference."); return;
+    }
+    const epoch = authEpoch, selection = ++cancellationReceiptSelection;
+    say("cancellation-receipt-result", "Reading signed cancellation history...");
+    try {
+      const result = await request("/v1/admin/subscriptions/" + encodeURIComponent(tenantId) + "/cancellation/receipt", {
+        method:"POST", body:JSON.stringify({idempotency_key:reference})});
+      if (!token || epoch !== authEpoch || selection !== cancellationReceiptSelection) return;
+      const pending = pendingCancellation && pendingCancellation.tenant_id === tenantId &&
+        pendingCancellation.reference === reference ? pendingCancellation : null;
+      const receipt = cancellationReceipt(result?.cancellation, tenantId, reference, pending?.expected);
+      say("cancellation-receipt-result", cancellationMessage(receipt) + readAuditLabel(result));
+      if (receipt.status === "verified" && pending) pendingCancellation = null;
+    } catch (_err) {
+      if (token && epoch === authEpoch && selection === cancellationReceiptSelection)
+        say("cancellation-receipt-result", "Signed cancellation history unavailable or unverified. Retain the reference; no action was retried.");
+    } finally { updateCancellationControls(); }
+  }
   async function verifyBilling(tenant) {
     if (!token || !features.billing_verify) return;
     const epoch = authEpoch;
     const selection = ++billingSelection;
     clearInvoiceBrowser();
+    clearCancellationReview();
     showSection("billing", true);
     say("invoice-details", "No invoice history selected for this subscription inspection.");
     say("billing-details", "Verifying subscription for " + tenant.tenant_id + "...");
@@ -1765,6 +1992,7 @@ _JS = r'''"use strict";
       return;
     }
     const epoch = authEpoch;
+    clearCancellationReview();
     const selection = ++billingSelection;
     invoiceTenant = {tenant_id:tenant.tenant_id};
     invoiceCursor = null; invoicePage = 0; invoiceFilter = status; invoicePending = true;
@@ -1926,6 +2154,7 @@ _JS = r'''"use strict";
     const {tenant, payload, epoch} = pending;
     ++billingSelection;
     clearInvoiceBrowser();
+    clearCancellationReview();
     showSection("billing", true);
     el("billing-retry").hidden = false;
     el("billing-retry").disabled = true;
@@ -2001,6 +2230,7 @@ _JS = r'''"use strict";
     const epoch = authEpoch;
     ++billingSelection;
     clearInvoiceBrowser();
+    clearCancellationReview();
     try {
       const result = await request("/v1/admin/subscriptions/" +
         encodeURIComponent(tenant.tenant_id) + "/downgrade", {
@@ -2537,6 +2767,13 @@ _JS = r'''"use strict";
   });
   el("quota-risk-filter").addEventListener("change", applyQuotaFilter);
   el("billing-retry").addEventListener("click", submitSubscriptionReconciliation);
+  el("cancellation-confirm").addEventListener("input", updateCancellationControls);
+  el("cancellation-reason").addEventListener("input", updateCancellationControls);
+  el("cancellation-schedule").addEventListener("click", scheduleCancellation);
+  el("cancellation-receipt").addEventListener("click", inspectCancellationHistory);
+  for (const id of ["cancellation-receipt-tenant","cancellation-receipt-reference"]) el(id).addEventListener("input", () => {
+    ++cancellationReceiptSelection; say("cancellation-receipt-result", "");
+  });
   el("invoice-status-filter").addEventListener("change", () => {
     if (invoiceTenant && !invoicePending)
       inspectInvoices(invoiceTenant, {status:el("invoice-status-filter").value || null});
@@ -2573,4 +2810,3 @@ _JS = r'''"use strict";
   el("proposal-go").addEventListener("click", previewCatalogRule);
   finishLogin().catch(err => say("login-message", err.message));
 })();'''
-

@@ -147,3 +147,22 @@ def test_real_cli_refuses_unsafe_pair_and_can_reverify_only_accepted_backup(tmp_
     result = subprocess.run([*common,"--candidate",str(candidate),"--expected-sha",OLD],capture_output=True,text=True)
     assert result.returncode == 1 and "differs from accepted exact SHA" in result.stdout
     assert not (tmp_path / "index.py").exists()
+
+def test_cancellation_writer_requires_its_own_supported_backup_and_never_enables_cap_writers(tmp_path,monkeypatch):
+    from guardoath import state_contracts
+    financial = "stripe-period-end-cancellation-v1"
+    support = (CONTRACT,financial)
+    legacy = archive(tmp_path / "legacy-financial.zip",{"source_sha":OLD})
+    cap_only = archive(tmp_path / "cap-only-financial.zip",metadata(OLD,support=(CONTRACT,),writes=()))
+    baseline = archive(tmp_path / "financial-baseline.zip",state_contracts.release_metadata(SHA))
+    assert verify(baseline,legacy)["status"] == "compatible"
+    assert verify(baseline,cap_only)["status"] == "compatible"
+    monkeypatch.setattr(state_contracts,"ENABLE_NEW_CANCELLATION_STATE",True)
+    writer_metadata = state_contracts.release_metadata(SHA)
+    assert writer_metadata["introduced_state_contracts"] == [financial]
+    writer = archive(tmp_path / "financial-writer.zip",writer_metadata)
+    with pytest.raises(ValueError,match="compatibility baseline"): verify(writer,cap_only)
+    compatible = archive(tmp_path / "supporting-financial.zip",metadata(OLD,support=support,writes=()))
+    assert verify(writer,compatible)["status"] == "compatible"
+    with pytest.raises(ValueError):
+        verify(archive(tmp_path / "dropped-financial-support.zip",metadata(support=(CONTRACT,),writes=())),compatible)

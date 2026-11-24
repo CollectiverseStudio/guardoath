@@ -29,6 +29,10 @@ jobs:
           tests/test_admin_subscription_reconcile.py
           tests/test_admin_invoices.py
           tests/test_admin_invoice_pagination.py
+          tests/test_admin_subscription_cancellation.py
+          tests/test_admin_cancellation_api.py
+          tests/test_admin_cancellation_provider.py
+          tests/test_cancellation_compatibility_baseline.py
           tests/test_subscription_compatibility_baseline.py
           tests/test_admin_runtime.py
   authenticated-billing-browser:

@@ -20,6 +20,8 @@ from guardoath.admin_billing_reconcile import AdminBillingDowngrade, BillingDown
 from guardoath.admin_subscription_reconcile import (
     AdminSubscriptionReconciliation, SubscriptionConflict, SubscriptionUnavailable)
 from guardoath.admin_invoices import AdminInvoiceHistory, InvalidInvoiceCursor, InvoiceReadRateLimited
+from guardoath.admin_subscription_cancellation import (
+    AdminSubscriptionCancellation, CancellationConflict, CancellationUnavailable, CancellationRateLimited)
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from guardoath.admin_catalog import CatalogProvider, read_catalog
 from guardoath.admin_catalog_inspection import (
@@ -96,6 +98,23 @@ class ReconcileUnpaidSubscription(BaseModel):
     expected_revision: int = Field(ge=1, le=MAX_MUTABLE_REVISION, strict=True)
     confirmation: str = Field(min_length=12, max_length=55)
     reason: str = Field(min_length=10, max_length=240)
+    idempotency_key: str = Field(pattern=r"^[A-Za-z0-9_-]{16,96}$", max_length=96)
+
+
+class CancellationPreviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_revision: int = Field(ge=1, le=MAX_BROWSER_SAFE_INTEGER, strict=True)
+
+
+class CancellationRequest(CancellationPreviewRequest):
+    preview_reference: str = Field(min_length=44, max_length=4096, pattern=r"^sc1\.[A-Za-z0-9_-]+$")
+    confirmation: str = Field(min_length=23, max_length=62)
+    reason: str = Field(min_length=10, max_length=240)
+    idempotency_key: str = Field(pattern=r"^[A-Za-z0-9_-]{16,96}$", max_length=96)
+
+
+class CancellationReceiptRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     idempotency_key: str = Field(pattern=r"^[A-Za-z0-9_-]{16,96}$", max_length=96)
 
 
@@ -264,6 +283,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                         billing_downgrade: AdminBillingDowngrade | None = None,
                         billing_reconciler: AdminSubscriptionReconciliation | None = None,
                         billing_invoices: AdminInvoiceHistory | None = None,
+                        billing_cancellation: AdminSubscriptionCancellation | None = None,
                         catalog_drafts: AdminCatalogDrafts | None = None,
                         record_validator=None, rule_exists=None) -> APIRouter:
     """Build guarded admin routes; absent verifier => no admin access.
@@ -274,9 +294,14 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
     """
     if type(require_persistent_read_audit) is not bool:
         raise ValueError("Persistent audit enforcement must be an explicit boolean")
-    from guardoath.state_contracts import new_subscription_state_enabled
+    from guardoath.state_contracts import new_subscription_state_enabled, new_cancellation_state_enabled
     if not new_subscription_state_enabled():
         billing_reconciler = None
+    if billing_cancellation is not None and (not isinstance(billing_cancellation, AdminSubscriptionCancellation)
+            or not isinstance(read_auditor, AdminSensitiveReadAuditor)
+            or read_auditor.ddb is not billing_cancellation.state.client
+            or read_auditor.audit_table != billing_cancellation.state.table_name):
+        raise ValueError("Cancellation requires its bound persistent read auditor")
     router = APIRouter()
     user_actions = None
     if (isinstance(admin_user_directory, CognitoUserDirectory)
@@ -368,6 +393,9 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            "billing_downgrade": billing_downgrade is not None,
                            "billing_reconcile": billing_reconciler is not None,
                            "billing_invoices": billing_invoices is not None,
+                           "billing_cancellation_preview": billing_cancellation is not None and billing_cancellation.provider is not None,
+                           "billing_cancellation_schedule": billing_cancellation is not None and billing_cancellation.provider is not None and new_cancellation_state_enabled(),
+                           "billing_cancellation_receipts": billing_cancellation is not None,
                            "tenant_rule_changes": admin_mutator is not None and callable(record_validator) and callable(rule_exists),
                            "monthly_cost_caps": admin_mutator is not None and callable(record_validator),
                            "tenant_key_revocation": admin_mutator is not None and callable(record_validator),
@@ -663,6 +691,58 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             raise HTTPException(status_code=503, detail="Invoice history unavailable") from exc
         return admin_json({"tenant_id": tenant_id, "history": result,
                            **({"read_audit_event_id": read_event} if read_event else {})})
+
+    if billing_cancellation is not None:
+        def cancellation_call(tenant_id, principal, request, operation, **payload):
+            _require_admin_origin(request)
+            if not TENANT_ID.fullmatch(tenant_id):
+                raise HTTPException(status_code=404, detail="Tenant not found")
+            # Reuse the existing read-audit vocabulary so the support-only
+            # release creates no shared audit schema its predecessor rejects.
+            resource = "audit.receipt" if operation == billing_cancellation.receipt else "stripe.subscription"
+            read_event = audit_sensitive_read(principal, resource, tenant_id)
+            try:
+                if operation == billing_cancellation.apply:
+                    # Mangum exposes the trusted Lambda context in ASGI scope.
+                    # Reserve one second beyond the service's own outcome
+                    # allowance; browsers cannot supply this execution budget.
+                    context = request.scope.get("aws.context")
+                    budget = 8.0
+                    if context is not None:
+                        remaining = context.get_remaining_time_in_millis()
+                        if type(remaining) is not int or remaining <= 0:
+                            raise CancellationUnavailable()
+                        budget = min(8.0, remaining / 1000 - 1)
+                    payload["execution_budget_seconds"] = budget
+                result = operation(actor=principal.subject, tenant_id=tenant_id, **payload)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail="Invalid cancellation request") from exc
+            except CancellationConflict as exc:
+                raise HTTPException(status_code=409, detail="Cancellation review or target changed; inspect the retained action reference") from exc
+            except CancellationRateLimited as exc:
+                raise HTTPException(status_code=429, detail="Cancellation inspections temporarily limited") from exc
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="Cancellation not verified; retain the action reference and inspect signed history") from exc
+            return admin_json({"cancellation": result, "read_audit_event_id": read_event})
+
+        @router.post("/v1/admin/subscriptions/{tenant_id}/cancellation/preview")
+        def preview_cancellation(tenant_id: str, payload: CancellationPreviewRequest, request: Request,
+                                 principal: VerifiedAdmin = Depends(require_admin)):
+            return cancellation_call(tenant_id, principal, request, billing_cancellation.preview,
+                                     **payload.model_dump())
+
+        @router.post("/v1/admin/subscriptions/{tenant_id}/cancellation/receipt")
+        def cancellation_receipt(tenant_id: str, payload: CancellationReceiptRequest, request: Request,
+                                 principal: VerifiedAdmin = Depends(require_admin)):
+            return cancellation_call(tenant_id, principal, request, billing_cancellation.receipt,
+                                     **payload.model_dump())
+
+        if new_cancellation_state_enabled() and billing_cancellation.provider is not None:
+            @router.post("/v1/admin/subscriptions/{tenant_id}/cancel-at-period-end")
+            def schedule_cancellation(tenant_id: str, payload: CancellationRequest, request: Request,
+                                      principal: VerifiedAdmin = Depends(require_admin)):
+                return cancellation_call(tenant_id, principal, request, billing_cancellation.apply,
+                                         **payload.model_dump())
 
     if billing_reconciler is not None:
         @router.post("/v1/admin/subscriptions/{tenant_id}/reconcile")

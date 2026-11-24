@@ -47,14 +47,34 @@ class AdminTestDynamo:
             item = self._get(TableName, self._key(Key))
             return {"Item": item} if item is not None else {}
 
-    def put_item(self, *, TableName, Item, ConditionExpression):
-        assert ConditionExpression in ("attribute_not_exists(event_id)", "attribute_not_exists(tenant_id)")
+    def put_item(self, *, TableName, Item, ConditionExpression,
+                 ExpressionAttributeNames=None, ExpressionAttributeValues=None):
+        assert ConditionExpression in ("attribute_not_exists(event_id)", "attribute_not_exists(tenant_id)",
+                                       "attribute_exists(event_id) AND #control = :original")
         with self.lock:
             if self.fail_audit and "event_id" in Item:
                 raise RuntimeError("Synthetic audit outage")
-            if self._get(TableName, self._key(Item)) is not None:
-                raise ConditionalFailure("Synthetic conditional conflict")
-            self._save(TableName, Item)
+            # Separate reopened clients must enforce the same atomic condition,
+            # not merely serialize threads that happen to share one instance.
+            own_transaction = not self.connection.in_transaction
+            if own_transaction:
+                self.connection.execute("BEGIN IMMEDIATE")
+            try:
+                old = self._get(TableName, self._key(Item))
+                if ConditionExpression == "attribute_exists(event_id) AND #control = :original":
+                    assert ExpressionAttributeNames == {"#control": "financial_operation"}
+                    assert set(ExpressionAttributeValues) == {":original"}
+                    if old is None or old.get("financial_operation") != ExpressionAttributeValues[":original"]:
+                        raise ConditionalFailure("Synthetic full-document conflict")
+                elif old is not None:
+                    raise ConditionalFailure("Synthetic conditional conflict")
+                self._save(TableName, Item)
+                if own_transaction:
+                    self.connection.execute("COMMIT")
+            except Exception:
+                if own_transaction:
+                    self.connection.execute("ROLLBACK")
+                raise
         return {}
 
     def _update(self, update):
@@ -77,13 +97,24 @@ class AdminTestDynamo:
         return {}
 
     def transact_write_items(self, *, TransactItems):
-        assert len(TransactItems) == 2 and set(TransactItems[0]) == {"Update"} and set(TransactItems[1]) == {"Put"}
+        assert len(TransactItems) == 2 and set(TransactItems[0]) in ({"Update"}, {"ConditionCheck"}, {"Put"}) and set(TransactItems[1]) == {"Put"}
         with self.lock:
             if self.fail_transaction:
                 raise RuntimeError("Synthetic transaction outage")
             self.connection.execute("BEGIN IMMEDIATE")
             try:
-                self._update(TransactItems[0]["Update"])
+                if "Update" in TransactItems[0]:
+                    self._update(TransactItems[0]["Update"])
+                elif "Put" in TransactItems[0]:
+                    self.put_item(**TransactItems[0]["Put"])
+                else:
+                    condition = TransactItems[0]["ConditionCheck"]
+                    assert condition["ConditionExpression"] == "attribute_exists(tenant_id) AND #revision = :prior AND #record = :original"
+                    assert condition["ExpressionAttributeNames"] == {"#revision": "revision", "#record": "record"}
+                    old = self._get(condition["TableName"], self._key(condition["Key"]))
+                    values = condition["ExpressionAttributeValues"]
+                    if old is None or old["revision"] != values[":prior"] or old["record"] != values[":original"]:
+                        raise ConditionalFailure("Synthetic tenant dispatch conflict")
                 self.put_item(**TransactItems[1]["Put"])
                 self.connection.execute("COMMIT")
                 self.transactions += 1

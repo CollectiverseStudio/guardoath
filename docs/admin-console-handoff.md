@@ -1,11 +1,72 @@
 # Owner admin console implementation handoff
 
-Updated November 23, 2026 (America/New_York). This is the concise continuation
+Updated November 24, 2026 (UTC). This is the concise continuation
 record for a new chat. The append-only engineering history remains in
 [director-agent-coordination.md](director-agent-coordination.md); the complete
 47-target product discussion is preserved in [product-roadmap.md](product-roadmap.md).
 
-## Current implementation batch: protected invoice browsing
+## Current implementation batch: cancellation review and durable recovery
+
+The existing owner Billing workspace now integrates period-end cancellation
+review, exact typed confirmation, reason, action reference and independently
+verified historical recovery. The real API uses the existing Cognito owner/MFA
+verifier, same-origin checks, authoritative tenant binding and signed read audit.
+The current production source is a **support-only compatibility release**:
+`ENABLE_NEW_CANCELLATION_STATE=False`. Review is available when its explicit
+provider configuration exists; historical receipts work without a write
+credential. The scheduling route is unmounted, and service, state and provider
+write boundaries independently refuse dispatch. The retained writer is tested
+through an isolated harness, not enabled by an environment variable.
+
+The narrow provider adapter verifies its own configured Stripe account, mode,
+exact saved customer/subscription and supported single-item active automatic
+plan. It accepts only an explicitly unpaused, unscheduled subscription with no
+pending update and a valid unchanged period. The 180-second encrypted preview
+binds owner, tenant document/revision, provider fingerprint and prior control
+document. A preview from before another completed operation cannot authorize
+a later generation.
+
+The future writer atomically reserves a stable provider target and inserts its
+immutable signed intent. A separate transaction checks the exact saved tenant
+document/revision while acquiring dispatch ownership. Only its successful
+response permits one fixed `cancel_at_period_end=true` POST; account and
+subscription are then independently reread before a signed verified outcome.
+Two owners, tenant aliases or conflicting action references cannot acquire the
+same dispatch. Lost replies and corrupt or unknown evidence retain the claim;
+receipt recovery never repeats POST, expires the claim or invents success from
+current provider state. Scheduling leaves the tenant document, usage, keys,
+entitlement, request cap and saved customer Off settings unchanged.
+
+The API derives a maximum eight-second admission/coordination budget from the
+trusted Lambda remaining-time context, uses one-second provider boundaries and
+checks available time before claiming and before POST. This is **not a hard
+wall-time guarantee**: blocking database/body reads can still yield an
+indeterminate retained operation. The Lambda template's 15-second timeout and
+500-ms PII deadline are unchanged. Only `dynamodb:ConditionCheckItem` on the
+existing tenant table is added to the existing conditional admin policy; no
+resource or capacity is added.
+
+Actual local evidence: **1,590 broad Python 3.12 tests passed**; **254 focused
+Python 3.13 tests passed**, including final budget admission cases. Mounted ASGI
+baseline and writer journeys denied customer, missing-MFA, stale-MFA and forged
+signed identities before the provider boundary. Baseline review made two GETs
+and direct scheduling returned 404; writer admission made one POST and six GETs
+including preview, independently reopened three signed financial documents and
+left both saved tenants unchanged. All external transports were synthetic.
+JavaScript syntax and discovery passed: **42** new focused browser cases,
+**10** total actual baseline journeys and **8** total actual writer journeys.
+Discovery is not browser execution; local Chromium remains socket-blocked.
+This cancellation batch requires its own published exact-SHA CI and live release
+acceptance. No AWS deployment, live financial data or live `/admin` is established.
+
+The implemented contract, configuration and recovery limits are recorded in
+[the financial-operation design and implementation record](admin-financial-operations-design.md)
+and [the operator guide](admin-console-operator.md#owner-period-end-cancellation-review-and-recovery-2026-11-24).
+Refunds, credits, plan changes, lifecycle/risk event processing, real cost and
+revenue ingestion, catalog publication/rollback and 15 live checks remain open.
+The complete original 47-target roadmap remains intact.
+
+## Accepted predecessor: protected invoice browsing
 
 The existing **Tenants → Invoices** workflow now offers status filtering,
 **Older invoices** and **Restart invoice history**. Each click performs one
@@ -41,18 +102,24 @@ any invoice-provider boundary call. Filter/cursor mismatch returned 400 before
 another provider read. External boundaries were synthetic; this is not live
 Stripe or Cognito evidence.
 
-The real baseline owner browser suite now includes pagination/filter/audit and
-four denied-login cases; the default suite adds 33 fault, race, native-reauthentication,
-single-flight and mobile cases. JavaScript parsing/discovery is separate from
-browser execution. This invoice batch still needs its own exact-source CI;
-local Chromium remains unavailable under the workspace's socket restrictions.
+Published invoice source `ab65cd27cb59e41880d3b38c3205ef9a5beda201` passed all
+seven exact-SHA workflows / **25 individually inspected jobs**: Tests
+[45314905970](https://github.com/CollectiverseStudio/guardoath/actions/runs/45314905970)
+(13), CodeQL 45314905215 (3), Field Comparisons 45314905953 (2), Trusted Reference
+45314905962 (1), PII 45314905971 (3), Stripe 45314905922 (2) and Deploy Script
+45314905968 (1). Actual dashboard job 138179286234 passed **9 baseline owner,
+7 writer owner, 19 invocation and 495 default browser tests**. Stripe backend
+job 138179285012 passed 422 tests with only the existing opt-in real-DynamoDB test
+unavailable; both invoice modules actually executed. No failed, cancelled,
+missing or skipped job. These results accept that invoice source, not this
+later cancellation source or production.
 
-The complete financial-operation continuation decisions are preserved in
-[admin-financial-operations-design.md](admin-financial-operations-design.md):
-scheduled cancellation preview, exact confirmation, durable target serialization,
-single dispatch, independent verification and ambiguity-safe recovery. That
-document is a design, not a completed cancellation/refund/credit API. The original
-47-target roadmap remains intact.
+A clean Python 3.13 Lambda artifact for **ab65cd2 only** contains all 648 tracked
+application/policy files byte-for-byte, with exact source manifest and no test
+harness: 48,724,051 ZIP bytes / 130,376,543 unzipped bytes, CodeSha256
+`aXE/JKWbK7zLlogawmoPaAzHFPwTB8TZzDfbdMK9fMI=`. It supports cap provenance and
+introduces none. It was not uploaded and is not a cancellation-source artifact
+or live source-parity evidence.
 
 ## Accepted release safety batch: rollback revision ownership
 
@@ -120,10 +187,14 @@ Python 3.13 focused catalog/API/browser-shell/source-history run: **315 passed**
 
 ## Current release phase: implemented compatibility baseline
 
-The current source supports `subscription-cap-provenance-v1` while introducing
-none of that state. `ENABLE_NEW_SUBSCRIPTION_STATE=False` in
-`guardoath/state_contracts.py` governs both artifact declarations and actual
-production writers. There is no environment or build-argument override.
+The current source supports `subscription-cap-provenance-v1` and
+`stripe-period-end-cancellation-v1` while introducing neither contract's state.
+Independent `ENABLE_NEW_SUBSCRIPTION_STATE=False` and
+`ENABLE_NEW_CANCELLATION_STATE=False` declarations in
+`guardoath/state_contracts.py` govern both artifact introductions and actual
+production writers. Neither enables the other. There is no environment or
+build-argument override. Cancellation history has a real signed reader in this
+baseline; ordinary protected reads reuse the prior audit resource vocabulary.
 
 Both stores preserve and enforce existing caps and plan provenance, including
 zero and later writer receipts. Legacy customer activation, positive request
@@ -360,13 +431,13 @@ one. No AWS resource or paid provider was purchased or provisioned.
 2. Deploy and accept the implemented compatible rollback baseline, establish real source parity,
    verified backup and all 15 live acceptance results when authenticated release
    access is available. Issue #30 remains an unresolved disclosed latency risk.
-3. Complete the real financial management operations required by #41, including
-   configured plan changes/cancellation and auditable, idempotent provider
-   reconciliation. Current reconciliation is an entitlement refresh; it is not
-   an upgrade, charge, cancellation or refund API. Continue from the preserved
-   [financial-operation design](admin-financial-operations-design.md); implement
-   durable provider-target control rather than relying only on a browser action
-   key or Stripe's expiring idempotency cache.
+3. Accept the cancellation support-only release and compatible rollback before
+   enabling its separately gated writer in a later source release. Continue
+   #41 with refunds, credits, configured plan changes and durable lifecycle/risk
+   event processing. The implemented scheduled-cancellation operation does not
+   supply these capabilities; existing reconciliation is an entitlement refresh.
+   Preserve the actual target/intent transaction and conservative ambiguity
+   recovery in [the financial-operation record](admin-financial-operations-design.md).
 4. Complete verified infrastructure cost ingestion, freshness/currency and
    defensible tenant attribution. Request counts and request caps are not AWS
    billing data or tenant profitability. Do not fill missing money values with

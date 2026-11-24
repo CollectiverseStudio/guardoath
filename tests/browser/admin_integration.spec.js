@@ -17,11 +17,12 @@ function persisted() {
     "from admin_test_support import AdminTestDynamo, ADMIN_BROWSER_AUDIT_KEY",
     "from guardoath.dynamodb_store import DynamoDBTenantStore",
     "from guardoath.admin_audit import AdminAuditReader",
+    "from admin_cancellation_support import verified_financial_rows",
     "db=AdminTestDynamo(sys.argv[1])",
     "store=DynamoDBTenantStore('tenant_table',db)",
     "reader=AdminAuditReader(db,'audit_table',verify_key=ADMIN_BROWSER_AUDIT_KEY)",
-    "receipts=[reader.read(row['event_id']['S']) for row in db.audit_items() if not row['operation']['S'].startswith('catalog.') ]",
-    "print(json.dumps({'tenants':{key:store.get(key).model_dump(mode='json') for key in ('usr-admin-alpha','usr-admin-beta')},'receipts':receipts}))",
+    "receipts=[reader.read(row['event_id']['S']) for row in db.audit_items() if 'financial_operation' not in row and not row['operation']['S'].startswith('catalog.') ]",
+    "print(json.dumps({'tenants':{key:store.get(key).model_dump(mode='json') for key in ('usr-admin-alpha','usr-admin-beta')},'receipts':receipts,'financial':verified_financial_rows(db)}))",
     "db.close()",
   ].join("\n");
   return JSON.parse(execFileSync(process.env.PYTHON || "python",["-c",program,path],{encoding:"utf8"}));
@@ -188,3 +189,59 @@ for (const code of ["customer","no-mfa","stale-mfa","forged"]) {
     expect(persisted().tenants).toEqual(before);
   });
 }
+
+test("real owner schedules one provider cancellation and reopens linked history without tenant changes",async ({page,request}) => {
+  const headers = await login(page);
+  let before = persisted().tenants;
+  if (!before[TENANT].stripe_subscription_id) {
+    const bound = await request.post("/v1/admin/subscriptions/"+TENANT+"/reconcile",{headers,data:{
+      expected_revision:before[TENANT].revision,confirmation:"RECONCILE "+TENANT,
+      reason:"Bind synthetic account before cancellation acceptance",idempotency_key:"cancel-setup-123456789"}});
+    expect(bound.status()).toBe(200);
+    await page.locator("#refresh").click();
+    await expect(page.locator("#status")).toContainText("Administration loaded");
+    before = persisted().tenants;
+  }
+  await page.locator("#nav-tenants").click();
+  await row(page).getByRole("button",{name:"Review cancellation",exact:true}).click();
+  await expect(page.locator("#cancellation-review")).toContainText("Scheduled end UTC");
+  await page.locator("#cancellation-reason").fill("Owner requested synthetic period end cancellation");
+  await page.locator("#cancellation-confirm").fill("SCHEDULE CANCELLATION wrong-tenant");
+  await expect(page.locator("#cancellation-schedule")).toBeDisabled();
+  await page.locator("#cancellation-confirm").fill("SCHEDULE CANCELLATION "+TENANT);
+  const changed = mutation(page,"/v1/admin/subscriptions/"+TENANT+"/cancel-at-period-end");
+  await page.locator("#cancellation-schedule").click();
+  const response = await changed;
+  expect(response.status()).toBe(200);
+  const action = (await response.json()).cancellation;
+  expect(action).toMatchObject({status:"verified",tenant_mutated:false,provider_state_refreshed:false});
+  await expect(page.locator("#cancellation-result")).toContainText("Verified historical schedule");
+  const reference = await page.locator("#cancellation-reference").inputValue();
+  expect(reference).toBe(action.action_reference);
+  await page.locator("#cancellation-receipt").click();
+  await expect(page.locator("#cancellation-receipt-result")).toContainText("Verified historical schedule");
+  const reopened = persisted();
+  expect(reopened.tenants).toEqual(before);
+  expect(reopened.financial.map(value=>value.kind).sort()).toEqual(["control","intent","outcome"]);
+  const intent = reopened.financial.find(value=>value.kind==="intent");
+  const outcome = reopened.financial.find(value=>value.kind==="outcome");
+  const control = reopened.financial.find(value=>value.kind==="control");
+  expect(control.state).toBe("VERIFIED");
+  expect(outcome).toMatchObject({action_id:intent.action_id,status:"verified",
+    update_hash:intent.provider_hash,verification_hash:intent.provider_hash});
+  expect(control.intent_hash).toBe(outcome.intent_hash);
+  const replay = await request.post("/v1/admin/subscriptions/"+TENANT+"/cancel-at-period-end",{
+    headers,data:response.request().postDataJSON()});
+  expect(replay.status()).toBe(200);
+  expect((await replay.json()).cancellation).toEqual(action);
+  const fs = require("node:fs"), nodePath = require("node:path");
+  const parsed = nodePath.parse(path);
+  const evidence = fs.readFileSync(nodePath.join(parsed.dir,parsed.name+".cancellation-requests.jsonl"),"utf8")
+    .trim().split("\n").map(JSON.parse);
+  const posts = evidence.filter(value=>value.method==="POST");
+  expect(posts).toHaveLength(1);
+  expect(posts[0]).toMatchObject({url:"https://api.stripe.com/v1/subscriptions/sub_alpha",
+    body:"cancel_at_period_end=true"});
+  expect(posts[0].idempotency_key).toMatch(/^guardoath-sc1-[a-f0-9]{64}$/);
+  expect(persisted().tenants).toEqual(before);
+});

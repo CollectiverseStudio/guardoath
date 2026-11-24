@@ -229,3 +229,48 @@ def test_production_invoice_service_forwards_filtered_continuation_with_stable_k
         assert database.transactions == 0 and not database.audit_items()
     finally:
         database.close()
+
+@pytest.mark.parametrize("writer_phase",[False,True])
+def test_runtime_constructs_cancellation_with_exact_store_account_mode_and_independent_gate(monkeypatch,writer_phase):
+    from admin_test_support import AdminTestDynamo
+    from admin_cancellation_support import tenant
+    from guardoath.dynamodb_store import DynamoDBTenantStore,to_item
+    from guardoath import admin_runtime,state_contracts
+    configure(monkeypatch)
+    monkeypatch.setattr(state_contracts,"ENABLE_NEW_CANCELLATION_STATE",writer_phase)
+    monkeypatch.setenv("GUARDOATH_ADMIN_AUDIT_TABLE","audit_table")
+    monkeypatch.setenv("GUARDOATH_STRIPE_SECRET_KEY","sk_test_"+"a"*32)
+    monkeypatch.setenv("GUARDOATH_STRIPE_PRICE_ID","price_plan")
+    monkeypatch.setenv("GUARDOATH_ADMIN_STRIPE_WRITE_KEY","rk_test_"+"b"*32)
+    monkeypatch.setenv("GUARDOATH_ADMIN_STRIPE_ACCOUNT_ID","acct_owner")
+    monkeypatch.delenv("GUARDOATH_PAID_MONTHLY_ALLOWANCE",raising=False)
+    mounted=[]
+    monkeypatch.setattr(admin_runtime,"mount_admin_console",lambda app,**kwargs:mounted.append(kwargs))
+    database=AdminTestDynamo()
+    database.seed("tenant_table",to_item(tenant()))
+    configure_admin_from_environment(FastAPI(),tenants=Tenants(DynamoDBTenantStore("tenant_table",database)),
+        admin_sessions=AdminSessions(),cognito_client=Cognito())
+    service=mounted[0]["billing_cancellation"]
+    assert service.state.client is database and service.tenant_table=="tenant_table"
+    assert service.state.table_name=="audit_table" and service.provider.account_id=="acct_owner"
+    assert service.provider.price_id=="price_plan" and service.provider.livemode is False
+    assert mounted[0]["billing_reconciler"] is None
+    assert database.transactions==0 and not database.audit_items()
+
+
+@pytest.mark.parametrize("key,account", [("rk_live_"+"b"*32,"acct_owner"),("rk_test_"+"b"*32,""),
+    ("","acct_owner"),("pk_test_"+"b"*32,"acct_owner"),("rk_test_"+"b"*32,"acct_bad/path")])
+def test_runtime_rejects_partial_or_wrong_mode_cancellation_configuration(monkeypatch,key,account):
+    from admin_test_support import AdminTestDynamo
+    from guardoath.dynamodb_store import DynamoDBTenantStore
+    configure(monkeypatch)
+    monkeypatch.setenv("GUARDOATH_ADMIN_AUDIT_TABLE","audit_table")
+    monkeypatch.setenv("GUARDOATH_STRIPE_SECRET_KEY","sk_test_"+"a"*32)
+    monkeypatch.setenv("GUARDOATH_STRIPE_PRICE_ID","price_plan")
+    monkeypatch.setenv("GUARDOATH_ADMIN_STRIPE_WRITE_KEY",key)
+    monkeypatch.setenv("GUARDOATH_ADMIN_STRIPE_ACCOUNT_ID",account)
+    database=AdminTestDynamo()
+    with pytest.raises(AdminConfigurationError):
+        configure_admin_from_environment(FastAPI(),tenants=Tenants(DynamoDBTenantStore("tenant_table",database)),
+            admin_sessions=AdminSessions(),cognito_client=Cognito())
+    assert database.transactions==0 and not database.audit_items()
