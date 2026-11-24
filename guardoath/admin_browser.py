@@ -245,6 +245,7 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 .panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:25px;margin:0 0 18px;min-width:0;box-shadow:0 2px 5px #19364b03}.panel:focus,.section-stack:focus{outline:none}.panel h2{font-size:18px;letter-spacing:-.3px;margin:0 0 11px;line-height:1.4}.panel h3{font-size:14px;margin:25px 0 9px;line-height:1.5}.panel p{font-size:13px;line-height:1.75;overflow-wrap:anywhere}.panel label{font-size:12px;font-weight:650;color:#354f60}.muted{color:var(--muted)}.section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.section-heading h2{margin:0}.section-tag{font-size:10px;border:1px solid #d7e5e6;border-radius:20px;padding:5px 9px;color:#46747b;background:#f2f8f7;white-space:nowrap}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:13px;margin-top:22px}.metric{border:1px solid var(--line);border-radius:9px;padding:17px;background:#fafcfd;min-width:0}.metric>div{font-size:11px;text-transform:capitalize;letter-spacing:.2px;color:#657b8a;margin-bottom:13px}.metric strong{display:block;font-size:22px;line-height:1.3;letter-spacing:-.6px;font-weight:650;margin-bottom:11px;overflow-wrap:anywhere}.metric small{display:block;font-size:10px;line-height:1.6;color:#788b98}.overview-guides{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:24px}.overview-guides button{color:#244957;background:#fff;text-align:left;padding:16px;border:1px solid var(--line);border-radius:9px;font-size:13px}.overview-guides button:hover{border-color:#60a9a8;background:#f4fbfa}.overview-guides span{display:block;color:var(--muted);font-size:11px;font-weight:400;line-height:1.6;margin-top:7px}
 button{background:var(--teal);color:#fff;border:1px solid transparent;border-radius:7px;padding:10px 14px;cursor:pointer;font-size:12px;font-weight:650;line-height:1.4;transition:background .15s,border-color .15s}button:hover{background:#066e71}button:disabled{opacity:.45;cursor:default}.secondary{background:#fff;color:#365264;border-color:#d0dce4}.secondary:hover{background:#e7eef2}input,select,textarea{border:1px solid #cfdae3;background:#fff;color:#173347;border-radius:6px;padding:9px 10px;font-size:13px;max-width:100%;min-height:38px}input:disabled,textarea:disabled{background:#f3f6f8;color:#82939f}textarea{width:100%;resize:vertical}input{margin:5px 5px 5px 0}#proposal-title{width:100%}#audit-id,#draft-id{width:min(100%,520px);font-family:ui-monospace,monospace;font-size:12px}.scroll{overflow:auto;max-width:100%;border:1px solid var(--line);border-radius:8px;margin-top:19px}table{width:100%;min-width:650px;border-collapse:collapse;font-size:12px}th{font-size:10px;color:#637a8a;background:#f4f7f9;letter-spacing:.4px;white-space:nowrap}td,th{border-bottom:1px solid #e7edf1;padding:13px 12px;text-align:left;vertical-align:top}tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:#f8fbfc}td button{margin:0 5px 6px 0;padding:6px 9px;font-size:10px;white-space:nowrap}td:last-child>span{display:block;color:#788d9b;font-size:10px}#tenant-rows td:last-child{min-width:170px}#categories details{border:1px solid var(--line);border-radius:8px;margin:9px 0;padding:0 14px}#categories details details{background:#f8fafb;margin-bottom:13px}summary{padding:14px 0;cursor:pointer;font-size:12px;line-height:1.5}summary span{color:var(--muted);font-size:11px}#categories ul{padding-left:19px;font-size:12px;line-height:1.8}#categories li{margin:10px 0;overflow-wrap:anywhere}#categories li button{font-size:10px;padding:6px 9px;margin:6px}#proposal-target{background:#f3f7f9;border-radius:6px;padding:10px 12px;color:#557382;font-size:12px}.login-panel{max-width:560px;margin:64px auto;padding:36px}.login-panel h2{font-size:25px;letter-spacing:-.6px}.login-panel>p{color:var(--muted)}.login-panel>button{margin:12px 0 6px;min-height:43px}.login-panel .eyebrow{color:var(--teal)}#native-auth{border-top:1px solid var(--line);margin-top:24px;padding-top:15px}#native-auth label{display:block;margin-top:13px}#native-auth input{display:block;width:100%;margin:7px 0 12px}#native-challenge{margin-top:18px}#login-message{color:#456670;overflow-wrap:anywhere}#login-message:empty{display:none}
 @media(min-width:1500px){.workspace{padding:34px 45px}}@media(max-width:1080px){.admin-layout{grid-template-columns:180px minmax(0,1fr)}.workspace{padding:26px 22px}.sidebar{padding:28px 10px}.workspace-header{align-items:flex-start}.overview-guides{grid-template-columns:1fr}.overview-guides button{padding:13px}.overview-guides span{margin-top:4px}}@media(max-width:720px){.topbar{padding:16px 18px;min-height:78px;gap:12px}.topbar h1{font-size:16px}.brand{gap:10px}.brand-mark{width:34px;height:39px;font-size:21px}.header-note{display:none}.admin-layout{display:block;min-height:calc(100vh - 78px)}.sidebar{padding:12px 14px;gap:8px}.sidebar-heading,.sidebar-note{display:none}#admin-navigation{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.section-link{justify-content:center;font-size:11px;padding:9px 5px;min-height:36px;text-align:center}.nav-index{display:none}.section-link[aria-current="page"]{box-shadow:inset 0 -2px #42c5be}.workspace{padding:21px 14px 30px}.workspace-header{gap:13px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}.workspace-header h2{font-size:25px}.workspace-header p:not(.eyebrow){font-size:12px}.workspace-actions{width:100%;justify-content:flex-end}.workspace-actions button{padding:8px 12px}.panel{padding:18px;border-radius:10px}.panel h2{font-size:17px}.section-heading{align-items:flex-start}.section-tag{font-size:9px;padding:4px 7px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}.metric{padding:13px}.metric strong{font-size:18px}.login-panel{margin:28px 14px;padding:25px}.panel>input{width:100%}.panel>label{display:block;margin-top:13px}.panel>button{margin-top:5px}.workspace-status{font-size:10px;padding:10px 12px}.overview-guides{margin-top:17px}}@media(prefers-reduced-motion:reduce){button{transition:none}}
+#catalog-inspector{border:1px solid var(--line);border-radius:8px;background:#f8fafb;margin:18px 0;padding:16px;min-width:0}#catalog-inspector-content{min-width:0;overflow-wrap:anywhere}#catalog-inspector-content h4{margin-bottom:7px}.catalog-source-text{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:24rem;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px;font:11px/1.6 ui-monospace,monospace;max-width:100%}
 </style></head><body>
 <header class="topbar"><div class="brand"><span class="brand-mark" aria-hidden="true">G</span><div><p class="eyebrow">Owner workspace</p><h1>GuardOath Administration</h1></div></div><p class="header-note">Owner console<span>Audited access · MFA required</span></p></header><main>
 <section id="login" class="panel login-panel"><p class="eyebrow">Secure administration</p><h2>Administrator sign-in</h2><p>Use your GuardOath administrator account with MFA. Customers and demo API keys do not have administrative access.</p><button id="login-start" type="button">Sign in with Cognito</button>
@@ -296,7 +297,8 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Verify Stripe compares provider state with saved entitlement. Reconcile subscription independently reads Stripe again and saves the verified entitlement with an audit receipt. Saved request caps and suspended accounts remain enforced. Reconciliation does not collect a payment or issue a refund.</p><p id="billing-details" role="status">No subscription selected.</p><p id="billing-action-result" role="status"></p><button id="billing-retry" type="button" hidden disabled>Retry same reconciliation</button></section>
 </section><section id="section-usage" data-admin-section class="panel" hidden tabindex="-1" aria-label="Usage"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
 <section id="section-audit" data-admin-section class="panel" hidden tabindex="-1" aria-label="Audit"><h2>Audit receipt lookup</h2><p class="muted">Read one stored administrative event by its exact event ID. No exports or audit enumeration.</p><label for="audit-id">Audit event ID</label> <input id="audit-id" maxlength="64" autocomplete="off" spellcheck="false"> <button type="button" id="audit-go">Verify receipt</button><p id="audit-result" role="status"></p></section>
-<section id="section-catalog" data-admin-section class="panel" hidden tabindex="-1" aria-label="Catalog"><h2>Categories and checks</h2><p id="catalog-summary"></p><div id="categories"></div>
+<section id="section-catalog" data-admin-section class="panel" hidden tabindex="-1" aria-label="Catalog"><h2>Categories and checks</h2><p id="catalog-summary"></p>
+<section id="catalog-inspector" hidden aria-labelledby="catalog-inspector-title"><h3 id="catalog-inspector-title">Published check and rule details</h3><p id="catalog-inspector-status" role="status"></p><div id="catalog-inspector-content" tabindex="-1"></div></section><div id="categories"></div>
 <h3>Versioned source history</h3><p id="catalog-release-summary" role="status"></p><ol id="catalog-release-entries"></ol><p class="muted">Read-only shipped description history. Fingerprint consistency is not an approval signature, live deployment evidence or permission to override tenant checks. Rollback is a separately reviewed next-version source release.</p>
 <h3>Preview a versioned catalog description proposal</h3><p class="muted">Select Preview description beside a published rule. This checks the change against the live registry version; it does not save, publish, enable or change any rule. Review fingerprints are not signatures or approvals.</p>
 <p id="proposal-target">No rule selected.</p>
@@ -333,6 +335,8 @@ _JS = r'''"use strict";
   let exactUserSelection = 0;
   let userReceiptSelection = 0;
   let auditSelection = 0;
+  let catalogInspectorSelection = 0;
+  let catalogInspectionVersion = null;
   // One browser-initiated Cognito mutation at a time; server remains authoritative.
   let activeUserStatus = null;
   let activeBillingReconcile = null;
@@ -446,6 +450,7 @@ _JS = r'''"use strict";
     }
   }
   const clearAdminData = () => {
+    clearCatalogInspection();
     activeBillingReconcile = null;
     pendingBillingReconcile = null;
     say("billing-action-result", "");
@@ -504,6 +509,7 @@ _JS = r'''"use strict";
     say("login-message", message);
   };
   function withdrawWorkspaceSnapshot(message) {
+    clearCatalogInspection();
     // A failed core read must not leave yesterday's account or rule metadata
     // looking current. Do not clear activeUserStatus: an independent Cognito
     // mutation may still be in progress and must remain single-flight.
@@ -678,6 +684,11 @@ _JS = r'''"use strict";
       el("metrics").append(card);
     }
     features = available;
+    catalogInspectionVersion = features.catalog_inspection === true &&
+      typeof catalog.registry_version === "string" && /^[1-9][0-9]{0,8}$/.test(catalog.registry_version)
+      ? catalog.registry_version : null;
+    el("catalog-inspector").hidden = catalogInspectionVersion === null;
+    if (catalogInspectionVersion) say("catalog-inspector-status", "Choose Inspect check or Inspect rule to read published definitions and examples.");
     el("user-change").disabled = !features.cognito_user_status_changes || !!activeUserStatus;
     el("user-action-inspect").disabled = !features.cognito_action_receipts;
     previewSelection = null;
@@ -737,6 +748,15 @@ _JS = r'''"use strict";
         title.append(textNode("strong", check.name || check.check_id),
           textNode("span", " — " + (check.rule_count ?? "?") + " rules"));
         item.append(title);
+        if (catalogInspectionVersion) {
+          const inspect = document.createElement("button");
+          inspect.type = "button";
+          inspect.textContent = "Inspect check";
+          inspect.addEventListener("click", () => inspectPublishedCatalog({
+            category_id:category.category_id, check_id:check.check_id, rule_id:null,
+            registry_version:catalog.registry_version}));
+          item.append(inspect);
+        }
         const evidence = check.test_evidence || {};
         const fileCount = count => Number.isSafeInteger(count) && count >= 0 ? String(count) : "unavailable";
         const stages = Array.isArray(check.stages) && check.stages.length ? check.stages.join(", ") : "unknown";
@@ -756,6 +776,15 @@ _JS = r'''"use strict";
           const entry = document.createElement("li");
           entry.append(textNode("strong", rule.rule_id),
             textNode("span", " — " + (rule.title || "") + ": " + (rule.use_case || "")));
+          if (catalogInspectionVersion) {
+            const inspect = document.createElement("button");
+            inspect.type = "button";
+            inspect.textContent = "Inspect rule";
+            inspect.addEventListener("click", () => inspectPublishedCatalog({
+              category_id:category.category_id, check_id:check.check_id, rule_id:rule.rule_id,
+              registry_version:catalog.registry_version}));
+            entry.append(inspect);
+          }
           if (features.catalog_preview) {
             const preview = document.createElement("button");
             preview.type = "button";
@@ -793,6 +822,126 @@ _JS = r'''"use strict";
       (features.sensitive_read_audit ? "" : " · Persistent read auditing not configured"));
   }
   const unsafeCatalogText = value => /[\p{Cc}\p{Cf}\p{Cs}\p{Zl}\p{Zp}]/u.test(value);
+  function clearCatalogInspection() {
+    ++catalogInspectorSelection;
+    catalogInspectionVersion = null;
+    el("catalog-inspector-content").replaceChildren();
+    say("catalog-inspector-status", "");
+    el("catalog-inspector").hidden = true;
+  }
+  function validCatalogInspection(result, selected) {
+    // Defense against malformed replies; parity with TenantRecord.SETTINGS_OF
+    // is tested. Account/billing/key fields can never join this schema view.
+    const catalogCheckSettings = {"schema":["input_schema","output_schema"],"cross_field":["comparisons","advanced_arithmetic","advanced_identity","advanced_conversion_time","advanced_trusted_reference","advanced_statistical_drift"],"completeness":["required_sections"],"matched_outcomes":["matched_outcomes"],"evidence":["evidence"],"tool_calls":["tool_calls"],"ledger":["ledger"],"timestamps":["timestamps"],"graph":["graph"],"integrity":["integrity"],"pii":["detect_labeled_sensitive_data","privacy_patterns","disabled_privacy_entities","privacy_min_score"],"secrets":["detect_secret_assignments","inspect_encoded_secrets","confidential_terms"]};
+    const allowedFields = new Set(["input_check_"+selected.check_id,"output_check_"+selected.check_id,
+      "input_rule_actions","output_rule_actions",...(catalogCheckSettings[selected.check_id] || [])]);
+    const object = value => value && typeof value === "object" && !Array.isArray(value);
+    const text = (value, limit=4096) => typeof value === "string" && value.length <= limit && !unsafeCatalogText(value);
+    const list = (value, limit, valid) => Array.isArray(value) && value.length <= limit && value.every(valid);
+    const escaped = value => {
+      if (typeof value !== "string" || value.length > 196610 || !/^[\x20-\x7e]*$/.test(value)) return false;
+      try { const parsed = JSON.parse(value); return typeof parsed === "string" && parsed.length <= 32768 && Array.from(parsed).length <= 16384; }
+      catch { return false; }
+    };
+    const paths = (value, prefix, suffix) => list(value, 200, path => text(path, 255) &&
+      path.startsWith(prefix + "/") && path.endsWith(suffix) && /^[A-Za-z0-9_./-]+$/.test(path) &&
+      path.split("/").every(part => part !== "" && part !== "." && part !== "..")) && new Set(value).size === value.length;
+    if (!object(result) || result.status !== "ok" || result.read_only !== true ||
+        result.source !== "published GuardOath control registry" || result.registry_version !== selected.registry_version ||
+        !object(result.category) || result.category.category_id !== selected.category_id ||
+        !text(result.category.name,255) || !text(result.category.description) || !text(result.category.status,32) ||
+        !object(result.check) || result.check.check_id !== selected.check_id ||
+        !["name","use_case","limitations","outcome"].every(key => text(result.check[key])) ||
+        !list(result.check.stages,2,value=>["input","output"].includes(value)) || !result.check.stages.length ||
+        new Set(result.check.stages).size !== result.check.stages.length ||
+        !list(result.check.supported_actions,4,value=>["block","flag","allow","redact"].includes(value)) ||
+        new Set(result.check.supported_actions).size !== result.check.supported_actions.length ||
+        !result.check.supported_actions.includes(result.check.recommended_action) ||
+        !object(result.test_evidence) || result.test_evidence.ci_verified_for_source !== false ||
+        result.test_evidence.live_deployment_verified !== null ||
+        result.test_evidence.basis !== "registry declarations, not executed test results" ||
+        !paths(result.test_evidence.unit_tests,"tests",".py") || !paths(result.test_evidence.evaluations,"evals",".json") ||
+        !object(result.detector) || !(result.detector.version === null || text(result.detector.version,64)) ||
+        !paths(result.detector.implementation,"guardoath",".py") ||
+        (features.sensitive_read_audit && !/^[a-f0-9]{64}$/.test(result.read_audit_event_id || ""))) return false;
+    if (!object(result.examples) || !["positive_examples","look_alikes","known_false_positives","known_misses"].every(group =>
+        list(result.examples[group],64,item=>object(item) && text(item.label,255) &&
+          result.check.stages.includes(item.stage) && ["text","json"].includes(item.format) && escaped(item.escaped_text)))) return false;
+    if (selected.rule_id === null) { if (result.rule !== null) return false; }
+    else if (!object(result.rule) || result.rule.rule_id !== selected.rule_id ||
+        !["title","use_case","severity"].every(key=>text(result.rule[key])) ||
+        !["text","json"].includes(result.rule.content_format) || !escaped(result.rule.example) || !escaped(result.rule.look_alike) ||
+        !(result.rule.needs_setting === null || text(result.rule.needs_setting,80)) ||
+        !list(result.rule.settings,64,value=>text(value,80) && /^[a-z][a-z0-9_]*$/.test(value)) ||
+        !list(result.rule.needs_checks,64,value=>text(value,60) && /^[a-z][a-z0-9_]*$/.test(value))) return false;
+    const settings = result.settings;
+    if (!object(settings) || settings.source !== "TenantRecord.model_json_schema" || !text(settings.limitations) ||
+        !list(settings.field_names,64,value=>text(value,80) && /^[a-z][a-z0-9_]*$/.test(value)) ||
+        new Set(settings.field_names).size !== settings.field_names.length ||
+        !object(settings.schema) || settings.schema.type !== "object" || settings.schema.additionalProperties !== false ||
+        !object(settings.schema.properties) || Object.keys(settings.schema.properties).length !== settings.field_names.length ||
+        !settings.field_names.every(name=>Object.prototype.hasOwnProperty.call(settings.schema.properties,name)) ||
+        settings.field_names.length !== allowedFields.size || !settings.field_names.every(name=>allowedFields.has(name))) return false;
+    try { return JSON.stringify(result).length <= 262144; } catch { return false; }
+  }
+  async function inspectPublishedCatalog(selected) {
+    if (!token || !features.catalog_inspection || selected.registry_version !== catalogInspectionVersion ||
+        !/^[a-z][a-z0-9_]{0,59}$/.test(selected.category_id) || !/^[a-z][a-z0-9_]{0,59}$/.test(selected.check_id) ||
+        (selected.rule_id !== null && !/^[A-Za-z0-9_.:-]{3,100}$/.test(selected.rule_id))) return;
+    const selection = ++catalogInspectorSelection;
+    const epoch = authEpoch, workspace = workspaceReadSelection;
+    const current = () => token && epoch === authEpoch && workspace === workspaceReadSelection &&
+      selection === catalogInspectorSelection && selected.registry_version === catalogInspectionVersion;
+    const panel = el("catalog-inspector-content");
+    panel.replaceChildren();
+    panel.focus();
+    say("catalog-inspector-status", "Loading published " + (selected.rule_id || selected.check_id) + "…");
+    let path = "/v1/admin/catalog/categories/"+encodeURIComponent(selected.category_id)+"/checks/"+encodeURIComponent(selected.check_id);
+    if (selected.rule_id !== null) path += "/rules/" + encodeURIComponent(selected.rule_id);
+    path += "?expected_registry_version=" + encodeURIComponent(selected.registry_version);
+    try {
+      const result = await request(path);
+      if (!current()) return;
+      if (!validCatalogInspection(result,selected)) throw new Error("Published inspection failed identity or source validation");
+      const heading = (label,value) => { panel.append(textNode("h4",label),textNode("p",value)); };
+      const pre = value => { const node = textNode("pre",value); node.className = "catalog-source-text"; panel.append(node); };
+      heading(result.category.name, result.category.description);
+      heading(result.check.name, result.check.outcome);
+      panel.append(textNode("p","Use case: "+result.check.use_case),textNode("p","Limitations: "+result.check.limitations));
+      panel.append(textNode("p","Stages: "+result.check.stages.join(", ")+" · Supported actions: "+result.check.supported_actions.join(", ")+
+        " · Recommended: "+result.check.recommended_action+" · Detector version: "+(result.detector.version ?? "unavailable")));
+      if (result.rule) {
+        heading(result.rule.rule_id + " — " + result.rule.title,result.rule.use_case);
+        panel.append(textNode("p","Rule example format: "+result.rule.content_format+" · Required setting: "+(result.rule.needs_setting ?? "none declared")+
+          " · Example settings: "+(result.rule.settings.join(", ") || "none declared")+" · Required checks: "+(result.rule.needs_checks.join(", ") || "none declared")));
+        panel.append(textNode("h4","Rule positive example")); pre(result.rule.example);
+        panel.append(textNode("h4","Rule benign look-alike")); pre(result.rule.look_alike);
+      }
+      panel.append(textNode("p","Published examples are displayed as escaped JSON strings. Inspecting them does not run a detector or change a tenant."));
+      for (const [group,label] of [["positive_examples","Check positive examples"],["look_alikes","Check benign look-alikes"],
+          ["known_false_positives","Known false positives"],["known_misses","Known misses"]]) {
+        panel.append(textNode("h4",label));
+        if (!result.examples[group].length) panel.append(textNode("p","None declared; this is not proof that none exist."));
+        for (const item of result.examples[group]) {
+          panel.append(textNode("p",item.label+" · "+item.stage+" · "+item.format)); pre(item.escaped_text);
+        }
+      }
+      heading("Selected tenant setting schema",result.settings.limitations);
+      pre(JSON.stringify(result.settings.schema,null,2).replace(/[\u007f-\uffff]/g,char=>"\\u"+char.charCodeAt(0).toString(16).padStart(4,"0")));
+      heading("Declared source and test files","Registry declarations only; not current CI or live deployment evidence.");
+      for (const [label,paths] of [["Implementation",result.detector.implementation],["Unit tests",result.test_evidence.unit_tests],
+          ["Evaluations",result.test_evidence.evaluations]]) {
+        panel.append(textNode("p",label+": "+(paths.length ? paths.join(", ") : "none declared")));
+      }
+      say("catalog-inspector-status","Published "+(selected.rule_id || selected.check_id)+" · registry "+result.registry_version+
+        " · Read-only definitions; tenant Off settings unchanged"+readAuditLabel(result));
+    } catch (err) {
+      if (current()) {
+        panel.replaceChildren();
+        say("catalog-inspector-status",err.status === 409 ? "Published catalog changed; refresh before inspection." : err.message);
+      }
+    }
+  }
   async function previewCatalogRule() {
     invalidateCatalogExport();
     if (!token || !features.catalog_preview || !previewSelection) return;

@@ -5,6 +5,31 @@ record for a new chat. The append-only engineering history remains in
 [director-agent-coordination.md](director-agent-coordination.md); the complete
 47-target product discussion is preserved in [product-roadmap.md](product-roadmap.md).
 
+## Current implementation batch: catalog inspection
+
+The existing owner Catalog page now has **Inspect check** and **Inspect rule**
+actions backed by exact-target, owner/MFA-authenticated API reads. The same
+registry provides descriptions, examples, prerequisites and evidence paths;
+the real tenant model provides only the selected check's configuration schema
+and reachable definitions. No tenant record is read or changed. The persistent
+signed read-attempt audit precedes source access.
+
+Examples are escaped text, including invisible and directional characters.
+Source/schema/example bounds, exact version/identity checks, account-field
+exclusion, selection/refresh/sign-out race guards and literal DOM rendering
+protect inspection. The old counts-only inventory and its draft/history
+fingerprints are unchanged. `rule_payload.settings` now exposes the existing
+source's example prerequisites; it does not change detector behavior.
+
+Python 3.12 admin/catalog/source-history/real-rule-example regression:
+**1,580 passed**. Actual client-validator smoke accepted check/rule and the
+maximum Unicode fixture and refused five injected account fields. New fault
+browser cases and a mounted-application inspection journey are integrated into
+the existing CI suites; the new source still needs its own exact-SHA browser
+acceptance. Source declarations are not current CI or live-deployment evidence.
+Authenticated publication/rollback and general definition authoring remain open.
+Python 3.13 focused catalog/API/browser-shell/source-history run: **315 passed**.
+
 ## Current release phase: implemented compatibility baseline
 
 The current source supports `subscription-cap-provenance-v1` while introducing
@@ -33,15 +58,15 @@ creation; its artifact will automatically declare the contract introduced and
 the gate will require that verified compatible backup. No baseline deployment
 or live acceptance is established in this workspace.
 
-Current batch evidence before publication: **1,555 Python 3.12 tests passed** in
+Original baseline local evidence: **1,555 Python 3.12 tests passed** in
 the broad admin/Stripe/tenant/release run, with the existing opt-in real-AWS test
 unavailable without credentials; **210 Python 3.13 targeted tests passed** after
 the unbound-cap correction. Actual signed-owner ASGI smoke saved a 4,000-request
 legacy-shaped cap, left full reconciliation unmounted (404), and isolated an
-inherited Cognito redirect setting. Syntax/whitespace passed. New baseline
-browser acceptance still requires exact-new-SHA CI; it is not a local Chrome pass.
+inherited Cognito redirect setting. The repaired baseline subsequently passed
+all required exact-SHA CI at `1c9d8851`, including actual Chrome, as recorded below.
 
-### Latest baseline CI failures and concrete correction
+### Predecessor failures and accepted correction
 
 Baseline commit
 [`d6998c70d34db2af575c5843e5976db052c01325`](https://github.com/CollectiverseStudio/guardoath/commit/d6998c70d34db2af575c5843e5976db052c01325)
@@ -71,9 +96,11 @@ succeeded, including all three PII reliability jobs. Both failures are in
   cancelled by matrix fail-fast and cannot count as successful acceptance.
 
 The cap explanation/API change passed **129 focused Python 3.13 tests**, actual
-client/spec syntax checks and a read-only privacy review. The new source still
-requires complete exact-SHA CI; a passing rerun alone will not prove the receipt
-failure's underlying cause fixed.
+client/spec syntax checks and a read-only privacy review. The full local Python
+3.12 suite then passed **22,200 tests**, with the single existing opt-in AWS test
+unavailable. All 25 required CI jobs passed at `1c9d8851`. The receipt failure did
+not recur, but its original root cause remains unproven; no runtime latency fix,
+deadline change or issue #30 resolution is claimed.
 
 A real Python 3.13 Lambda build was also produced for **d6998c7 only**:
 48,694,800 ZIP bytes, 130,288,585 unzipped bytes, code digest
@@ -82,26 +109,29 @@ supports the cap contract and introduces none; source-controlled phase bytes
 match and no test harness is packaged. The archive was not uploaded. It is not
 source-parity evidence for this later follow-up or for production.
 
-### Preceding writer source is fully CI verified
+### Accepted baseline predecessor: exact CI evidence
 
 All **25 individual jobs** at
-[`e17baba1a7ee325878b68dc9460f21fcfbfae11e`](https://github.com/CollectiverseStudio/guardoath/commit/e17baba1a7ee325878b68dc9460f21fcfbfae11e)
-were inspected and passed. This accepts that source's CI, not the new baseline
-or a production deployment.
+[`1c9d88512182ee4d905678c4e21b73d7c4fcf01f`](https://github.com/CollectiverseStudio/guardoath/commit/1c9d88512182ee4d905678c4e21b73d7c4fcf01f)
+were individually inspected and passed, with no missing, failed or cancelled
+job. This accepts that baseline source's CI, not this later catalog-inspection
+batch or a production deployment.
 
 | Exact-SHA workflow | Jobs | Evidence |
 | --- | ---: | --- |
-| Tests | 13 | [45305824684](https://github.com/CollectiverseStudio/guardoath/actions/runs/45305824684) |
-| CodeQL / Push on main | 3 | [45305824483](https://github.com/CollectiverseStudio/guardoath/actions/runs/45305824483) |
-| Field Comparisons Evidence | 2 | [45305824632](https://github.com/CollectiverseStudio/guardoath/actions/runs/45305824632) |
-| Trusted Reference Acceptance | 1 | [45305824638](https://github.com/CollectiverseStudio/guardoath/actions/runs/45305824638) |
-| PII Reliability Gate | 3 | [45305824625](https://github.com/CollectiverseStudio/guardoath/actions/runs/45305824625) |
-| Stripe Reconciliation Acceptance | 2 | [45305824620](https://github.com/CollectiverseStudio/guardoath/actions/runs/45305824620) |
-| Deploy Script Acceptance | 1 | [45305824528](https://github.com/CollectiverseStudio/guardoath/actions/runs/45305824528) |
+| Tests | 13 | [45309444506](https://github.com/CollectiverseStudio/guardoath/actions/runs/45309444506) |
+| CodeQL / Push on main | 3 | [45309444541](https://github.com/CollectiverseStudio/guardoath/actions/runs/45309444541) |
+| Field Comparisons Evidence | 2 | [45309444481](https://github.com/CollectiverseStudio/guardoath/actions/runs/45309444481) |
+| Trusted Reference Acceptance | 1 | [45309444490](https://github.com/CollectiverseStudio/guardoath/actions/runs/45309444490) |
+| PII Reliability Gate | 3 | [45309444456](https://github.com/CollectiverseStudio/guardoath/actions/runs/45309444456) |
+| Stripe Reconciliation Acceptance | 2 | [45309444518](https://github.com/CollectiverseStudio/guardoath/actions/runs/45309444518) |
+| Deploy Script Acceptance | 1 | [45309444431](https://github.com/CollectiverseStudio/guardoath/actions/runs/45309444431) |
 
-The dashboard job executed **7 owner real-application tests, 19 guarded-invocation
-tests and 437 default browser tests**, all passed. The PowerShell expected-refusal
-exit correction is verified. These are offline external-service boundaries;
+Dashboard job 138161207470 executed **3 baseline owner, 7 retained writer owner,
+19 guarded-invocation and 441 default browser tests**, all passed. The original
+zero-cap explanation test passed unchanged. The preceding writer source
+`e17baba1` also passed all 25 jobs; its detailed evidence remains in coordination
+history. These are offline external-service boundaries;
 live Cognito/AWS/Stripe behavior and all 15 live checks remain unverified.
 
 ## Start here in a new session
@@ -254,8 +284,9 @@ one. No AWS resource or paid provider was purchased or provisioned.
    the shared runtime. Existing signed draft/review/manifests and offline source
    application are not proof that an owner can safely publish a deployed catalog
    change end to end. Preserve stable identifiers and all saved tenant Off states.
-   Current authoring is metadata-only; complete schema/example inspection and
-   actual executed-test receipts before claiming general rule authoring.
+   Current authoring is metadata-only. The new schema/example inspector completes
+   that read workflow once its exact-SHA browser tests pass; actual executed-test
+   receipts and behavior authoring remain unfinished.
 6. Review remaining user-management and authentication acceptance directly
    against #39–#42 and the operator guide. Existing Cognito account operations
    require actual signed audit, authorization and deployed MFA evidence.

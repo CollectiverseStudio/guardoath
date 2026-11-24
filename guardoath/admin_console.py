@@ -22,6 +22,8 @@ from guardoath.admin_subscription_reconcile import (
 from guardoath.admin_invoices import AdminInvoiceHistory
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from guardoath.admin_catalog import CatalogProvider, read_catalog
+from guardoath.admin_catalog_inspection import (
+    CatalogInspectionConflict, CatalogInspectionNotFound, inspect_catalog)
 from guardoath.admin_catalog_history import verified_catalog_history, CatalogHistoryUnavailable
 from guardoath.admin_catalog_drafts import AdminCatalogDrafts, DraftConflict, DraftUnavailable
 from guardoath.admin_catalog_preview import (
@@ -372,6 +374,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            "rule_publishing": False, "catalog_drafts": catalog_drafts is not None,
                            "catalog_review_receipts": catalog_drafts is not None and catalog_provider is not None,
                            "catalog_preview": catalog_provider is not None,
+                           "catalog_inspection": catalog_provider is not None,
                            "audit_required_for_writes": True,
                            "audit_receipt_lookup": audit_reader is not None,
                            "sensitive_read_audit": read_auditor is not None,
@@ -720,6 +723,34 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             raise HTTPException(status_code=503, detail="Published catalog unavailable") from exc
         return admin_json({"status": "ok", **result,
                            **({"read_audit_event_id": read_event} if read_event else {})})
+
+    def catalog_inspection(category_id, check_id, rule_id, expected_registry_version, principal):
+        if catalog_provider is None:
+            raise HTTPException(status_code=503, detail="Published catalog unavailable")
+        read_event = audit_sensitive_read(principal, "catalog.registry")
+        try:
+            result = inspect_catalog(catalog_provider, category_id=category_id,
+                check_id=check_id, rule_id=rule_id,
+                expected_registry_version=expected_registry_version)
+        except CatalogInspectionNotFound as exc:
+            raise HTTPException(status_code=404, detail="Published catalog target not found") from exc
+        except CatalogInspectionConflict as exc:
+            raise HTTPException(status_code=409, detail="Published catalog changed; refresh before inspection") from exc
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="Published catalog inspection unavailable") from exc
+        return admin_json({**result, **({"read_audit_event_id": read_event} if read_event else {})})
+
+    @router.get("/v1/admin/catalog/categories/{category_id}/checks/{check_id}")
+    def inspect_catalog_check(category_id: str, check_id: str,
+            expected_registry_version: str = Query(pattern=r"^[1-9][0-9]{0,8}$", max_length=9),
+            principal: VerifiedAdmin = Depends(require_admin)):
+        return catalog_inspection(category_id, check_id, None, expected_registry_version, principal)
+
+    @router.get("/v1/admin/catalog/categories/{category_id}/checks/{check_id}/rules/{rule_id}")
+    def inspect_catalog_rule(category_id: str, check_id: str, rule_id: str,
+            expected_registry_version: str = Query(pattern=r"^[1-9][0-9]{0,8}$", max_length=9),
+            principal: VerifiedAdmin = Depends(require_admin)):
+        return catalog_inspection(category_id, check_id, rule_id, expected_registry_version, principal)
 
     @router.post("/v1/admin/catalog/preview")
     def preview_catalog_rule(payload: CatalogRuleDescriptionPreview, request: Request,

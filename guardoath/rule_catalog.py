@@ -522,7 +522,8 @@ def rules_for(control_id: str) -> tuple[RuleInfo, ...]:
 def rule_payload(rule: RuleInfo) -> dict:
     return {"rule_id": rule.rule_id, "title": rule.title, "use_case": rule.use_case, "severity": rule.severity,
             "example": rule.example, "look_alike": rule.look_alike, "needs_setting": rule.needs_setting,
-            "content_format": rule.content_format, "needs_checks": list(rule.needs_checks)}
+            "content_format": rule.content_format, "needs_checks": list(rule.needs_checks),
+            "settings": list(rule.settings)}
 
 
 def _validate():

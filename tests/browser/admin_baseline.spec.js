@@ -115,3 +115,36 @@ test("baseline explains ambiguous zero-cap refusal and owner can suspend the unb
     receipt.integrity_status==="signed_verified")).toBe(true);
   expect(answers).toEqual([]);
 });
+
+test("owner inspects actual published catalog schemas and examples with signed persistent reads",async ({page,request})=>{
+  const before = saved().tenants;
+  const headers = await login(page);
+  await page.locator("#nav-catalog").click();
+  const category = page.locator("#categories > details").filter({has:page.locator("summary",{hasText:"Privacy and personal data"})});
+  await category.locator(":scope > summary").click();
+  const check = category.locator(":scope > details").filter({has:page.getByText("Personal identifiers",{exact:true})});
+  await check.locator(":scope > summary").click();
+  const observed = page.waitForResponse(response=>new URL(response.url()).pathname===
+    "/v1/admin/catalog/categories/privacy/checks/pii");
+  await check.getByRole("button",{name:"Inspect check",exact:true}).click();
+  const response = await observed;
+  expect(response.status()).toBe(200);
+  const report = await response.json();
+  expect(report).toMatchObject({read_only:true,category:{category_id:"privacy"},check:{check_id:"pii"},rule:null,
+    test_evidence:{ci_verified_for_source:false,live_deployment_verified:null}});
+  await expect(page.locator("#catalog-inspector-status")).toContainText("Published pii · registry "+report.registry_version);
+  await expect(page.locator("#catalog-inspector-content")).toContainText("privacy_min_score");
+  await expect(page.locator("#catalog-inspector-content")).toContainText("tests/test_pii.py");
+  await expect(page.locator("#catalog-inspector-content")).toContainText("not current CI or live deployment evidence");
+  const rule = check.locator("li").filter({has:page.getByText("pii.email_address",{exact:true})});
+  await rule.getByRole("button",{name:"Inspect rule",exact:true}).click();
+  await expect(page.locator("#catalog-inspector-status")).toContainText("Published pii.email_address");
+  await expect(page.locator("#catalog-inspector-content")).toContainText("jane@example.com");
+  const receipt = await request.get("/v1/admin/audit/"+report.read_audit_event_id,{headers});
+  expect(receipt.status()).toBe(200);
+  expect((await receipt.json()).audit).toMatchObject({integrity_status:"signed_verified",operation:"admin.read",
+    change:{field:"protected_read",resource:"catalog.registry"}});
+  expect(saved().tenants).toEqual(before);
+  await page.locator("#logout").click();
+  await expect(page.locator("#catalog-inspector-content")).toBeEmpty();
+});

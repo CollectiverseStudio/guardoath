@@ -18,7 +18,7 @@ offline acceptance are not evidence of AWS deployment or live financial data.
 | Tenant management | Existing tenant store, suspend/reactivate, key revocation, stage-specific rule actions, downward request caps, revision checks and signed atomic audit | Deployed customer safeguards and source parity |
 | Subscriptions | Provider inspection and protective delinquency downgrade; compatibility baseline preserves existing caps and receipts; complete owner reconciliation implementation retained for the subsequent writer release | Deploy/accept the baseline before enabling new provenance and full owner reconciliation; live Stripe acceptance and provider subscription changes |
 | Billing and costs | Bounded verified invoice history, saved usage/allowance history and clearly labeled request-cap signals | Refunds/credits, verified infrastructure cost/revenue allocation and financial operations remain unavailable |
-| Catalog | Shared registry, signed immutable description drafts/reviews, reversible source-plan export and shipped metadata history | Authenticated source publication/rollback, behavior/schema authoring and deployment acceptance remain incomplete |
+| Catalog | Shared registry; owner inspection of setting schemas, published examples/prerequisites and declared evidence; signed immutable description drafts/reviews, reversible source-plan export and shipped metadata history | Authenticated source publication/rollback, behavior/schema authoring and deployment acceptance remain incomplete |
 
 `GUARDOATH_ADMIN_AUDIT_TABLE` is required in production for protected reads and
 mutations. The separate audit table and scoped permissions must already be
@@ -26,6 +26,44 @@ approved and provisioned; configuring a variable is not evidence that they exist
 Tenant writes require typed confirmation, reason, expected revision and an
 atomic tenant-update/audit transaction. Cognito writes persist a signed intent
 before the provider action and record its independently checked outcome.
+
+### Inspect published checks and rules
+
+Open **Catalog**, expand a category and check, and select **Inspect check** or
+**Inspect rule**. The inspector reads the same published registry and the real
+`TenantRecord` setting schema. It shows the category description, check outcome,
+use case and limitations, Input/Output eligibility, actions, positive examples,
+benign look-alikes, known false positives/misses, and declared implementation,
+unit-test and evaluation paths. Rule details also show content format, required
+settings and prerequisite checks. A prerequisite may belong to another check;
+the displayed schema remains restricted to the selected check's fields.
+
+These examples are published source content, never a tenant's submitted values.
+They appear as escaped JSON strings, so newlines, invisible characters and
+directional controls remain visible. HTML-like examples and schema references
+are rendered only as text; inspection does not run a detector, follow a URL,
+modify a draft or activate a tenant check. Account, payer, billing, usage and key
+fields are excluded. Data-shape schemas do not replace runtime model validators,
+host-signed reference verification, stage eligibility or saved Off settings.
+
+The two authenticated reads are:
+
+- `GET /v1/admin/catalog/categories/{category_id}/checks/{check_id}`
+- `GET /v1/admin/catalog/categories/{category_id}/checks/{check_id}/rules/{rule_id}`
+
+Both require `expected_registry_version`, current verified owner/MFA authority
+and, in production, a persisted signed `catalog.registry` read-attempt receipt
+before registry access. The response is bound to the exact category/check/rule
+and version. Unknown targets return 404, changed versions return 409, and
+malformed source/schema or unavailable audit returns a sanitized 503. Selecting
+another item, refreshing or signing out invalidates late responses. Inspection
+does not change the existing inventory projection, signed-draft fingerprints or
+source-history chain.
+
+Declared file paths are not executed test receipts. The inspector explicitly
+leaves current-source CI and live deployment unverified, and reports an unknown
+detector version as unavailable. Catalog publication/rollback and behavior/schema
+authoring remain separate unfinished capabilities under #42.
 
 ### Retained provider-verified subscription reconciliation
 
@@ -689,7 +727,7 @@ No new AWS capacity, provider charges or privacy deadline change is introduced.
 The owner Users workspace now displays the one-time action-reference key used for a confirmed account disable/enable operation. If the independent provider recheck or signed outcome write fails, **do not replay the action**: enter the same reference in **Inspect signed action**. The MFA-authorized, same-origin, signed read-before-provider operation `POST /v1/admin/users/status/receipt` checks strongly consistent persisted signed intent/outcome rows. `not_found` means no signed intent for the owner/reference; `indeterminate` means an intent exists but the Cognito outcome is not verified; `outcome_recorded` verifies the historical signed pair. None establishes the **current** provider state; independently inspect the exact Cognito account before additional changes. The endpoint performs no Cognito call or mutation, exposes no email, refuses tampering and audit outages, and never grants paid entitlement. The transient reference is cleared on sign-out. Source changes are not evidence of production deployment.
 
 ## Catalog evidence visibility (source only, 2026-11-21)
-The existing guarded owner Catalog page lists published category/check/rule metadata, eligible Input/Output stages, supported actions, check use cases and limitations, plus counts of unit-test and evaluation files **declared** by the published registry. The API does not return filenames, detector paths, positive-example content or test fixtures. Counts never attest that current-SHA CI ran, that acceptance passed, or that the system was deployed; missing declarations are unavailable, not zero. Catalog reads now reject malformed or duplicate IDs, incomplete rule objects, inconsistent declared rule counts, and ambiguous stages/actions before returning partial results, including in filtered views. This inventory does not publish, roll back, or modify system rules or tenant-saved Off policies. Versioned publishing, live AWS cost reporting and 15/15 acceptance remain open.
+The guarded owner Catalog inventory lists published category/check/rule metadata, eligible Input/Output stages, supported actions, check use cases and limitations, plus counts of unit-test and evaluation files **declared** by the published registry. That original inventory API remains counts-only and does not return filenames, detector paths, positive-example content or test fixtures. The separate exact-target inspector described above now makes bounded published source declarations visible without changing this projection or its signed-history fingerprints. Counts and paths never attest that current-SHA CI ran, that acceptance passed, or that the system was deployed; missing declarations are unavailable, not zero. Catalog reads reject malformed or duplicate IDs, incomplete rule objects, inconsistent declared rule counts, and ambiguous stages/actions before returning partial results, including in filtered views. This inventory does not publish, roll back, or modify system rules or tenant-saved Off policies. Versioned publishing, live AWS cost reporting and 15/15 acceptance remain open.
 
 ### Ambiguous published IDs and preview safety
 A duplicate published category, check or rule ID fails the inventory read and is an explicit stale/ambiguous-source conflict (HTTP 409) in the reviewed metadata-preview workflow; the proposal is never saved or published. Other malformed source objects and provider failures remain 503 unavailable. These are separate, fail-closed outcomes; neither authorizes changes.
