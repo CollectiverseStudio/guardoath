@@ -70,14 +70,35 @@ passed. The deployment-script job passed all six actual workflow steps,
 including 29 archive tests; installed-wheel acceptance matched all 228 rules
 and 239 required assets. **Do not describe this first attempt as accepted.**
 
-The privacy engine, scanner, failing test and Tests workflow are unchanged from
-the accepted predecessor. This documentation update preserves the failure and
-browser receipts before one bounded complete exact-new-SHA CI recheck with
-unchanged application/tests/deadline. Inspect all seven workflows and all 25
-jobs for the current main before any deployment; older results cannot accept
-it. A passing recheck does not close #30. If the unchanged application fails
-again, retain the evidence and investigate full diagnostics rather than
-automatically repeating runs or weakening expectations.
+The bounded unchanged-application recheck at
+`db3de2b81ca8f01b03dd754361c1327ba48dbd8a` failed a different existing case:
+Linux Python 3.12
+[job 138915521216](https://github.com/CollectiverseStudio/guardoath/actions/runs/45527851353/job/138915521216),
+`test_uc068_declared_coordinate_count_and_shape[coords2-False-input]` in
+`tests/test_catalog_partial_boundaries.py`. Its complete diagnostics identify
+`schema / error / checker_timeout / 427.958 ms` against Policy's original
+**250-ms schema budget**. The sweep reported 1 failed, 22,685 passed and nine
+existing skips; Linux Python 3.11/3.13 were cancelled, not passed. Both Windows
+jobs passed, including the existing isolated 36-case catalog module. This
+source also lacks complete release acceptance.
+
+The schema failure appeared at 18% of the large collection. Process state,
+GC and host descheduling remain hypotheses, not established causes. After
+independent log/code/history review, the CI layout now applies Windows'
+existing fresh-process catalog-module arrangement to **both Linux matrices**.
+Each runs all **36 unchanged cases** before its remaining suite and excludes
+that exact module only from the later sweep. A structural workflow comparison
+verified one execution, unchanged other steps/matrices/jobs and no new skip,
+retry, exception or relaxed assertion. The fresh local module passed all 36
+cases in 2.90 seconds. Application, detector, Engine, model and test sources
+remain unchanged; this aligns test process boundaries and does not fix the
+underlying latency risk. Both the 250-ms schema and 500-ms privacy budgets
+still reject late results.
+
+Inspect all seven workflows and all 25 jobs for the current main before any
+deployment; neither prior failed attempt nor an older green source can accept
+it. A passing CI cycle does not close #30. Preserve and investigate any further
+failure rather than automatically repeating runs or weakening expectations.
 
 The clean Python 3.13 package for `240355368c70bd8eb69c62bed3ce03e345dcf664`
 was built and checked against all **655** tracked application/policy files.
