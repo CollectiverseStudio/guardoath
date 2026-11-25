@@ -1,10 +1,13 @@
-# Owner catalog publication: implementation evidence and next integration
+# Owner catalog publication: implementation evidence and completion boundary
 
-Recorded November 24, 2026 (UTC), for #42 and CORE-06 of the preserved
-[product roadmap](product-roadmap.md). This document records the real source
-authority, the executed forward/reversal acceptance, and the remaining
-owner-to-release connection. It does not claim an authenticated publication API,
-deployed catalog edit, or completion of #42.
+Updated November 25, 2026 (UTC), for #42 and CORE-06 of the preserved
+[product roadmap](product-roadmap.md). The current source implements owner
+publication review/history, a separately confirmed retained request writer and
+an external source-preparation worker. The production writer remains disabled.
+This batch can record and prepare one candidate under tests; it does not provide
+the scheduling, remote publication, CI/deployment evidence or terminal-control
+completion needed for a practical release lifecycle. No live catalog edit or
+completion of #42 is claimed.
 
 ## Existing authority and working operations
 
@@ -29,7 +32,7 @@ existing rule. General category/check/rule authoring and detector/schema changes
 are not implemented by that source tool. A signed review says `published=false`;
 an exported hash is not a signature or an instruction to deploy.
 
-## Newly verified real source round trip
+## Predecessor acceptance: real source round trip
 
 The new acceptance copies the complete application and policy assets into an
 isolated directory. It then executes five fresh subprocess stages:
@@ -88,74 +91,108 @@ the complete actual registry/history chain. This allows a legitimate first
 release without dropping the baseline assertions. The new full forward/inverse
 test verifies nonempty history against real source objects.
 
-Local evidence for this batch: **1,303 Python 3.12 catalog/admin/real-rule-example
-tests passed**, and **57 Python 3.13 source/runtime tests passed**. Exact published
-source CI is still required independently.
+Local evidence for that predecessor: **1,303 Python 3.12 catalog/admin/real-rule-example
+tests passed**, and **57 Python 3.13 source/runtime tests passed**. Published
+predecessor `1e4fba61ebf9ae15e7cf000c1e2533b63e8b0c49` subsequently passed all
+25 individually inspected exact-source CI jobs; it is not live deployment
+evidence or acceptance of the current request/preparation batch.
 
-## Next coherent implementation: explicit owner publication request
+## Implemented owner request and signed history
 
-Keep the first connected publication path limited to the supported description
-fields of one existing rule. The owner API must re-read its signed review and
-draft, reproduce the current manifest and persist a distinct publication intent
-after exact typed confirmation, reason and action reference. Recording a review
-alone must not promote it to publication authority. Current drafts and reviews
-are bound to the same owner; they do not establish independent reviewer approval.
-Retain owner-only authorization and do not activate historical delegated roles.
+`AdminCatalogPublications` binds to the existing independent audit client/table
+and the same `AdminCatalogDrafts` instance used by the owner routes. Every route
+requires the actual owner verifier and fresh MFA. POST routes also require the
+existing same-origin check. Signed `catalog.draft` or `audit.receipt` read intent
+is persisted before reading publication state, drafts or source. The existing
+`rule_publishing` capability remains false; preview, requests and history have
+separate feature fields.
 
-The intent needs the exact base source commit, current registry version and
-complete metadata fingerprint, review/draft IDs, operation kind, requested next
-version and target. A stable control for the application catalog must serialize
-competing release requests. Insert the intent and acquire its expected baseline
-atomically; replay or ambiguity must not create a second release. New persistent
-formats need their own verified reader and independent source-controlled release
-contract, not the cancellation or subscription-cap writer flags.
+The service rereads the owner's signed review and draft, regenerates the full
+current metadata manifest, and invokes the existing forward or latest-inverse
+compiler against the current history. Exact source provenance comes from the
+bounded, strictly decoded packaged `_release_source.json`, checked against the
+current release-contract manifest. Browser fields and environment variables
+cannot supply the authoritative source commit. Historical request readers remain
+usable without that marker or a worker credential. Drafts/reviews remain owner-bound and do not
+constitute independent reviewer approval.
 
-Proposed routes can express request and history without mislabeling completion:
-
-| Proposed operation | Required meaning |
+| Route | Meaning |
 | --- | --- |
-| Request publication of a signed review | Persist a confirmed, source-bound intent; no immediate deployment claim |
-| Inspect a publication | Verify immutable evidence and report the actual attained stage |
-| Request reversal of the latest published change | Require a fresh inverse review and a new higher-version release |
+| `POST /v1/admin/catalog/publications/preview` | Regenerate source-bound proposal and report global-control availability; create no intent |
+| `POST /v1/admin/catalog/publications` | Retained writer: explicit `PUBLISH` or `REVERSE` plus review suffix, reason and action reference; atomically reserve one confirmed request |
+| `GET /v1/admin/catalog/publications/{request_id}` | Independently verify owner-bound signed intent and attained preparation stage |
+| `POST /v1/admin/catalog/publications/recover` | Read the original request using its retained action reference; never submit, claim or retry work |
 
-## Trusted source executor and truthful completion evidence
+The signed `catalog-publication-v1` intent binds the complete request hash,
+review/draft hashes, exact base source, current/next registry versions, full
+metadata fingerprints, target, operation and compiler plan. Global control is
+acquired atomically with the immutable intent. Stable owner/action-reference
+replay returns the same verified request before rereading current source;
+changed payload at the same reference conflicts. A later source outage therefore
+does not destroy historical recovery or authorize a replacement request.
 
-The application must retain its source-shipped catalog authority. A DynamoDB
-"published version" pointer or an altered admin projection would not update all
-workers, customer responses and Engine imports together. Do not introduce that
-second authority.
+The browser first requires the independently verified manifest. It presents the
+operation, target, typed confirmation, reason and stable action reference. It
+validates the request receipt against the selected review/source/metadata and
+independently rereads the persisted request. A lost reply retains the reference
+for read-only recovery; refresh cannot create a second submission. Selection
+changes, refresh and logout invalidate late results, and logout clears the
+retained form state. Receipt stages are `requested`, `preparing` and
+`source_prepared`; `remote_published`, `ci_verified` and `deployed` stay false.
 
-A separate trusted release executor should consume an exact verified request
-ID, obtain a clean exact-base checkout, invoke the existing compiler and actual
-source/app acceptance, and produce the proposed source commit. Browser input
-must never choose arbitrary paths, commands, credentials or detector code.
-Keep Git/subprocess/deployment privileges out of the request-serving Lambda.
+## Implemented external source preparation
 
-Completion evidence must distinguish the projected metadata hash from the Git
-source and artifact. Independently verified receipts should bind:
+`catalog_publication_worker.prepare_publication` consumes one exact request ID
+outside the request-serving Lambda. It verifies the signed intent and original
+review/draft, fixed repository origin, clean fetched main at the exact base, and
+full source provenance. An acknowledged compare-and-swap control claim alone
+permits preparation. A fresh detached worktree runs the existing compiler and
+actual source/app/Engine acceptance, then retains a local candidate commit.
+The worker verifies the result and records a signed preparation receipt binding
+the candidate source SHA and history bytes to the original intent. It never
+moves main, pushes, dispatches CI or deploys; browser input cannot choose its
+paths, commands, credentials or detector code.
 
-- Original publication intent and signed review/draft references.
-- Exact base and candidate commits, registry versions and metadata fingerprints.
-- Release-history bytes and built package digest.
-- Complete successful CI jobs for the candidate commit.
-- Deployed source and actual live acceptance, only when obtained.
+Invocation is manual and exact-ID; no request poller or normal release-worker
+scheduling is implemented. The standalone audit-key-file CLI requires POSIX
+permission verification and refuses non-POSIX use; the callable worker can use
+an appropriately injected signed-state adapter on other platforms. A claimed,
+interrupted or uncertain attempt remains occupied for inspection. Read-back
+after an uncertain claim is never permission to retry source preparation.
 
-Use distinct states such as requested, source prepared, CI verified and
-deployment verified. A browser assertion, local build or simulated deployment
-cannot advance the live state. Reuse the existing Lambda builder and verified
-deployment/rollback gates; keep a separate catalog evidence artifact if needed
-rather than casually changing the strict persistent-state rollback manifest.
+## Current release gate and remaining lifecycle
 
-Logical catalog reversal follows the same requested/reviewed/tested release
-path. Emergency restoration of a verified prior Lambda package after failed
-deployment remains the existing separate rollback procedure.
+`ENABLE_NEW_CATALOG_PUBLICATION_STATE=False` is source controlled. The release
+supports the new persistent contract but introduces none. The request route is
+unmounted, and the service, state and worker independently refuse writes. The
+writer must remain disabled until both a compatible baseline is deployed and
+accepted **and** the remaining release lifecycle is implemented and verified.
+A compatible baseline alone does not make this a usable multi-release workflow.
 
-## Remaining completion boundary
+The single global control never expires, releases or moves to a terminal state,
+including after `SOURCE_PREPARED`. There is no implemented completion, reset or
+recovery action that frees it. Remote publication, complete exact-candidate CI,
+artifact/source parity, deployed-source/live evidence and a verified terminal
+transition must be designed and accepted before normal subsequent releases.
+Do not delete the control or substitute a fresh reference to bypass uncertainty.
+Logical reversal still needs a fresh exact-inverse review at a new higher
+version; emergency Lambda artifact rollback remains a separate existing gate.
 
-This batch fixes source interpretation and verifies a full metadata release
-round trip. It does not implement the proposed request/executor/receipt bridge,
-general category/check/rule creation or behavior authoring. Those still need
-stable-ID/reference constraints, meaningful benign/adversarial/negative/timeout
-tests, authenticated browser operation and persistent audit. Source parity,
-compatible rollback, all 15 live checks, customer Off preservation, host-signed
-reference authority and the original 500-ms PII deadline remain required.
+Local evidence includes **1,624 broad tests** and the final **259-test focused
+suite**, including 25 worker cases and the real mounted ASGI baseline and
+retained-writer journeys: customer, missing-MFA, stale-MFA and forged signed
+identities are denied before state/source reads; origin and audit failures also
+block access. Reopened storage independently verifies seven baseline and eleven
+writer signed read receipts, with one writer intent/transaction and unchanged
+catalog and tenants. External transports and the harness source marker are
+synthetic. Discovery identifies 30 new focused browser cases, 11 total actual
+baseline journeys and 9 total actual writer journeys. Local Chrome execution
+is blocked by unavailable bundled Chromium and OS socket restrictions on the
+installed browser; discovery and ASGI acceptance are not browser acceptance.
+Integration, exact published-SHA CI and live acceptance remain separate gates.
+
+General category/check/rule creation and behavior authoring remain unfinished.
+The complete 47-target roadmap, stable IDs, tenant Off settings, host-signed
+reference authority, attachment hard Blocks, all 15 live checks and the original
+500-ms PII deadline remain unchanged. No new cloud resource or purchase is
+required by this batch.

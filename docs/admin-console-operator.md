@@ -1513,10 +1513,117 @@ and parent-check Off behavior at each stage; tenant records remain byte-for-byte
 unchanged. The original repository history is not edited by this acceptance.
 
 This is local source/app/API/Engine evidence with synthetic external transports,
-not a live publication action or a Chrome/customer-login result. The current
-owner UI still records and exports reviewed descriptions; it does not promote
-a review into publication authority. The remaining authenticated publication
-request, trusted source executor, verified completion receipts and monotonic
-reversal connection are preserved in
-[the catalog publication record](admin-catalog-publication-design.md). General
-category/check/rule authoring and production acceptance remain unfinished.
+not a live publication action or a Chrome/customer-login result. The subsequent
+request/preparation integration below preserves separate signed review and
+publication authority. The full implementation and remaining release lifecycle
+are recorded in [the catalog publication record](admin-catalog-publication-design.md).
+General category/check/rule authoring and production acceptance remain unfinished.
+
+## Owner catalog request review and preparation history (2026-11-25)
+
+The current release supports `catalog-publication-v1` readers, with
+`ENABLE_NEW_CATALOG_PUBLICATION_STATE=False`. In **Catalog**, first save and
+independently inspect a signed description draft, record its signed review, and
+verify the metadata manifest. **Review publication request** then regenerates
+the exact proposal from the real source catalog/history and the same owner's
+signed evidence. Supported edits are limited to the `title` and `use_case` of
+one existing rule. A signed review or downloaded source plan alone never
+creates a publication request.
+
+The compatibility baseline exposes review and history when the existing
+independent audit service is configured. Its request button remains disabled
+and direct `POST /v1/admin/catalog/publications` is absent. Separate feature
+fields describe `catalog_publication_preview`, `catalog_publication_requests`
+and `catalog_publication_history`; broad `rule_publishing` remains false.
+There is no environment variable that activates the writer. The API, service,
+state adapter and external worker each enforce the source gate.
+
+The writer must remain disabled until **both** an accepted compatible baseline
+is deployed **and** the remaining release lifecycle is implemented and verified.
+Baseline deployment alone is insufficient: this batch has no normal worker
+scheduling, remote publication, complete CI/deployment evidence or verified
+terminal transition that releases the catalog's global control.
+
+### Separate confirmed request in the retained writer
+
+The isolated retained-writer acceptance exercises the later workflow. After
+reviewing the current target/version, select **Publish metadata** or
+**Reverse latest release**. Reversal requires a fresh review containing the exact
+inverse of the latest source-history entry and appends another higher version.
+Enter the displayed `PUBLISH` or `REVERSE` confirmation with the review's final
+eight characters, provide a reason, and retain the generated action reference.
+Only that explicit confirmation can reserve a request; it does not deploy.
+
+The service ignores browser or environment claims of source authority. It reads
+the strict bounded packaged `_release_source.json`, verifies the actual release
+contract manifest, rereads the signed draft/review, regenerates the full metadata
+manifest and compiler plan, and checks current global control. The immutable
+intent records those exact source, review, plan, target and version bindings.
+Intent insertion and control reservation are atomic in the existing audit table;
+no new resource is provisioned. Runtime uses the same audited client/table and
+draft store already mounted for the owner console, with lazy trusted source and
+history providers.
+
+All publication routes require verified owner membership and fresh MFA.
+POST routes require the existing same-origin policy. A signed `catalog.draft`
+read intent precedes proposal/request reads, and a signed `audit.receipt` read
+intent precedes historical inspection. Audit failure blocks state/source access.
+The browser independently rereads the request after its POST and checks its
+review, source, target, metadata, reason and stage before displaying it.
+
+### Lost reply and historical recovery
+
+Use **Recover publication request** with the original action reference. Its
+`POST /v1/admin/catalog/publications/recover` endpoint is read-only. The exact
+request can also be inspected with
+`GET /v1/admin/catalog/publications/{request_id}`. These readers verify the
+original signed records and work without the current source marker or worker
+credentials. Exact same-reference replay returns the original verified request;
+altered request content at that reference conflicts.
+
+The browser retains the attempted reference across a workspace refresh and
+prevents another submission after a lost response. Logout clears it and
+suppresses late results; keep the reference in the approved operational record
+before leaving the session. An unknown/missing receipt does not authorize a new
+request, and no recovery read dispatches source preparation. Refresh, changed
+selections and expired sessions cannot restore stale request authority.
+
+| Verified stage | Meaning and remaining work |
+| --- | --- |
+| `requested` | Immutable intent and global control are recorded; a release operator must explicitly invoke preparation |
+| `preparing` | One worker obtained the acknowledged claim; do not retry an interrupted or uncertain attempt |
+| `source_prepared` | A retained local candidate commit and signed source/history receipt exist; remote publication, CI and deployment remain unverified |
+
+`published`, `remote_published`, `ci_verified`, `deployed`,
+`tenant_policies_changed` and `detector_behavior_changed` remain false at every
+stage. A prepared receipt includes the candidate Git source SHA and history
+fingerprint, never a claim that production changed.
+
+### External worker and global-control limit
+
+`catalog_publication_worker.prepare_publication` is an external, exact-ID,
+prepare-only operation. It verifies the repository origin and exact clean base,
+reopens signed evidence, acquires the global claim, creates a detached worktree,
+runs the existing compiler plus actual source/app/Engine acceptance, and retains
+a local candidate commit. Git and subprocess privileges are outside the
+request-serving Lambda. It never pushes, schedules CI or deploys. The standalone
+CLI accepts a private audit-key file only where POSIX permission checks are
+available; it deliberately refuses that key-file path on Windows. The callable
+worker remains portable with correctly injected signed state.
+
+There is no automatic polling/scheduling integration. Once a request reserves
+global control, the control remains held indefinitely, including after
+`SOURCE_PREPARED`. No expiry, completion/reset action or automatic retry frees
+it in this version. Retain interrupted/unknown evidence for inspection; never
+delete a control or use a new reference to bypass it. A future independently
+verified release lifecycle must bind exact candidate CI, artifact/source parity,
+deployed-source/live acceptance and a safe terminal transition before normal
+subsequent releases are possible.
+
+Current local acceptance uses real mounted auth/API/services and reopened signed
+storage with synthetic external transports. Actual Chrome journeys are added to
+the existing baseline/writer suites; local browser execution remains blocked by
+Chromium availability and OS socket restrictions. Exact-source CI, compatible
+rollback and all 15 live checks remain required. Tenant records, saved per-stage
+Off settings, attachments, detector behavior, payment entitlements and the
+original 500-ms PII deadline remain unchanged.

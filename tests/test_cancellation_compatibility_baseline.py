@@ -24,7 +24,8 @@ def test_writer_contract_introductions_are_independent(monkeypatch,caps,cancella
     monkeypatch.setattr(state_contracts,"ENABLE_NEW_SUBSCRIPTION_STATE",caps)
     monkeypatch.setattr(state_contracts,"ENABLE_NEW_CANCELLATION_STATE",cancellation)
     metadata = state_contracts.release_metadata("a"*40)
-    assert metadata["supported_state_contracts"] == ["subscription-cap-provenance-v1",CONTRACT]
+    assert metadata["supported_state_contracts"] == ["subscription-cap-provenance-v1",CONTRACT,
+                                                       "catalog-publication-v1"]
     assert metadata["introduced_state_contracts"] == (["subscription-cap-provenance-v1"] if caps else []) + ([CONTRACT] if cancellation else [])
 
 

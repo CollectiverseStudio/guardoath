@@ -3734,6 +3734,24 @@ After you confirm a fresh MFA sign-in, the operator removes the temporary setup
 designation. Your ordinary password+authenticator sign-in remains available.
 
 
+### Owner catalog publication review and request history
+
+The owner Catalog can review a separately confirmed source-preparation proposal
+after its saved description draft, signed review and metadata manifest have been
+verified. The current compatibility release exposes review and history while
+keeping new request writes disabled. Supported proposals change only an existing
+rule's title or use case; they do not edit detector behavior or customer settings.
+
+The retained future request workflow displays an exact typed confirmation,
+release reason and action reference. Keep that reference for **Recover publication
+request** if a response is lost. Recovery reads the original signed evidence and
+never submits a replacement. **Requested**, **preparing** and **local candidate
+source prepared** describe preparation evidence; none means a change is live.
+Normal worker scheduling, remote publication, complete release verification and
+global-control completion remain unfinished, so compatibility deployment alone
+does not enable the writer. See the [owner operator guide](admin-console-operator.md#owner-catalog-request-review-and-preparation-history-2026-11-25)
+for the exact limits and recovery procedure.
+
 ## Owner console navigation
 
 After administrator sign-in, use **Overview, Users, Tenants, Billing, Usage,

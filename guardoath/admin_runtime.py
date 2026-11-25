@@ -94,6 +94,7 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
     audit_reader = None
     read_auditor = None
     catalog_drafts = None
+    catalog_publications = None
     native_enrollment = None
     if audit_table:
         if audit_table == getattr(tenants.store, "table_name", None):
@@ -105,6 +106,17 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
         mutator = AdminTenantActions(tenants.store._client, tenants.store.table_name,
                                      audit_table, audit_key=audit_signing_key)
         catalog_drafts = AdminCatalogDrafts(tenants.store._client, audit_table, audit_signing_key)
+        from guardoath.admin_catalog import published_catalog
+        from guardoath.admin_catalog_publication import AdminCatalogPublications
+        from guardoath.admin_catalog_publication_state import DynamoCatalogPublicationState
+        from guardoath.catalog_metadata import load_release_history
+        from guardoath.catalog_publication_source import packaged_source_sha
+        # Provenance is read lazily only for a new preview/request. Signed
+        # historical readers remain available in a support-only rollback image.
+        catalog_publications = AdminCatalogPublications(
+            state=DynamoCatalogPublicationState(tenants.store._client, audit_table, audit_signing_key),
+            drafts=catalog_drafts, catalog_provider=published_catalog,
+            history_provider=load_release_history, source_provider=packaged_source_sha)
         if native_enabled == "1" and enrollment_subject:
             from guardoath.admin_enrollment import CognitoNativeEnrollment
             from guardoath.admin_enrollment_state import DynamoEnrollmentState
@@ -205,6 +217,7 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
                         admin_mutator=mutator,
                         audit_reader=audit_reader, read_auditor=read_auditor,
                         catalog_drafts=catalog_drafts,
+                        catalog_publications=catalog_publications,
                         require_persistent_read_audit=True,
                         billing_reporter=billing_reporter, billing_downgrade=billing_downgrade,
                         billing_reconciler=billing_reconciler,

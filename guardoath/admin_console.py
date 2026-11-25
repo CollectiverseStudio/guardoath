@@ -32,6 +32,8 @@ from guardoath.admin_catalog_preview import (
     CatalogPreviewConflict, CatalogPreviewUnavailable, preview_rule_description)
 from guardoath.admin_catalog_manifest import (
     CatalogManifestConflict, CatalogManifestUnavailable, reviewed_metadata_manifest)
+from guardoath.admin_catalog_publication import AdminCatalogPublications
+from guardoath.admin_catalog_publication_state import PublicationConflict, PublicationUnavailable
 from guardoath.admin_directory import DynamoAdminDirectory, DirectoryUnavailable, InvalidCursor, saved_utc_timestamp
 from guardoath.admin_usage import tenant_usage_report
 from guardoath.admin_rule_inspection import (
@@ -139,6 +141,25 @@ class CatalogDraftReviewRequest(BaseModel):
     confirmation: str = Field(min_length=15, max_length=80)
     reason: str = Field(min_length=10, max_length=240)
     idempotency_key: str = Field(pattern=r"^[A-Za-z0-9_-]{16,96}$", max_length=96)
+
+
+class CatalogPublicationPreviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    review_id: str = Field(pattern=r"^[a-f0-9]{64}$", max_length=64)
+    operation: str = Field(pattern=r"^(publish_metadata|reverse_latest)$", max_length=20)
+
+
+class CatalogPublicationRequest(CatalogPublicationPreviewRequest):
+    expected_source_sha: str = Field(pattern=r"^[a-f0-9]{40}$", max_length=40)
+    expected_control_hash: str = Field(pattern=r"^[a-f0-9]{64}$", max_length=64)
+    reason: str = Field(min_length=10, max_length=240)
+    action_reference: str = Field(pattern=r"^[A-Za-z0-9_-]{16,96}$", max_length=96)
+    confirmation: str = Field(min_length=16, max_length=16)
+
+
+class CatalogPublicationRecoveryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    action_reference: str = Field(pattern=r"^[A-Za-z0-9_-]{16,96}$", max_length=96)
 
 
 class ExactUserLookup(BaseModel):
@@ -285,6 +306,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                         billing_invoices: AdminInvoiceHistory | None = None,
                         billing_cancellation: AdminSubscriptionCancellation | None = None,
                         catalog_drafts: AdminCatalogDrafts | None = None,
+                        catalog_publications: AdminCatalogPublications | None = None,
                         record_validator=None, rule_exists=None) -> APIRouter:
     """Build guarded admin routes; absent verifier => no admin access.
 
@@ -294,7 +316,8 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
     """
     if type(require_persistent_read_audit) is not bool:
         raise ValueError("Persistent audit enforcement must be an explicit boolean")
-    from guardoath.state_contracts import new_subscription_state_enabled, new_cancellation_state_enabled
+    from guardoath.state_contracts import (new_subscription_state_enabled, new_cancellation_state_enabled,
+                                         new_catalog_publication_state_enabled)
     if not new_subscription_state_enabled():
         billing_reconciler = None
     if billing_cancellation is not None and (not isinstance(billing_cancellation, AdminSubscriptionCancellation)
@@ -302,6 +325,13 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             or read_auditor.ddb is not billing_cancellation.state.client
             or read_auditor.audit_table != billing_cancellation.state.table_name):
         raise ValueError("Cancellation requires its bound persistent read auditor")
+    if catalog_publications is not None and (
+            not isinstance(catalog_publications, AdminCatalogPublications)
+            or not isinstance(read_auditor, AdminSensitiveReadAuditor)
+            or read_auditor.ddb is not catalog_publications.state.client
+            or read_auditor.audit_table != catalog_publications.state.table_name
+            or catalog_publications.drafts is not catalog_drafts):
+        raise ValueError("Catalog publication requires its bound signed draft and read audit store")
     router = APIRouter()
     user_actions = None
     if (isinstance(admin_user_directory, CognitoUserDirectory)
@@ -403,6 +433,9 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            "catalog_review_receipts": catalog_drafts is not None and catalog_provider is not None,
                            "catalog_preview": catalog_provider is not None,
                            "catalog_inspection": catalog_provider is not None,
+                           "catalog_publication_preview": catalog_publications is not None,
+                           "catalog_publication_requests": catalog_publications is not None and new_catalog_publication_state_enabled(),
+                           "catalog_publication_history": catalog_publications is not None,
                            "audit_required_for_writes": True,
                            "audit_receipt_lookup": audit_reader is not None,
                            "sensitive_read_audit": read_auditor is not None,
@@ -1021,6 +1054,50 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                 raise HTTPException(status_code=503, detail="Catalog manifest unavailable") from exc
             return admin_json({**manifest,
                 **({"read_audit_event_id": read_event} if read_event else {})})
+
+    if catalog_publications is not None:
+        def publication_result(principal, operation, *, receipt=False):
+            read_event = audit_sensitive_read(principal, "audit.receipt" if receipt else "catalog.draft")
+            try:
+                result = operation()
+            except PublicationConflict as exc:
+                raise HTTPException(status_code=409, detail="Catalog publication source or request conflicts; inspect the retained action reference") from exc
+            except PublicationUnavailable as exc:
+                raise HTTPException(status_code=503, detail="Catalog publication evidence unavailable; recover the same action reference") from exc
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail="Invalid catalog publication confirmation or reference") from exc
+            if result is None:
+                raise HTTPException(status_code=404, detail="Catalog publication request not found")
+            return admin_json({**result, **({"read_audit_event_id": read_event} if read_event else {})})
+
+        @router.post("/v1/admin/catalog/publications/preview")
+        def preview_publication(payload: CatalogPublicationPreviewRequest, request: Request,
+                                principal: VerifiedAdmin = Depends(require_admin)):
+            _require_admin_origin(request)
+            return publication_result(principal, lambda: catalog_publications.preview(
+                actor=principal.subject, **payload.model_dump()))
+
+        @router.post("/v1/admin/catalog/publications/recover")
+        def recover_publication(payload: CatalogPublicationRecoveryRequest, request: Request,
+                                principal: VerifiedAdmin = Depends(require_admin)):
+            _require_admin_origin(request)
+            return publication_result(principal, lambda: catalog_publications.recover(
+                actor=principal.subject, **payload.model_dump()), receipt=True)
+
+        @router.get("/v1/admin/catalog/publications/{request_id}")
+        def inspect_publication(request_id: str, principal: VerifiedAdmin = Depends(require_admin)):
+            if not re.fullmatch(r"[a-f0-9]{64}", request_id):
+                raise HTTPException(status_code=422, detail="Invalid catalog publication reference")
+            return publication_result(principal, lambda: catalog_publications.inspect(
+                actor=principal.subject, request_id=request_id), receipt=True)
+
+        if new_catalog_publication_state_enabled():
+            @router.post("/v1/admin/catalog/publications")
+            def request_publication(payload: CatalogPublicationRequest, request: Request,
+                                    principal: VerifiedAdmin = Depends(require_admin)):
+                _require_admin_origin(request)
+                return publication_result(principal, lambda: catalog_publications.request(
+                    actor=principal.subject, **payload.model_dump()))
 
     if admin_mutator is not None:
         @router.post("/v1/admin/tenants/{tenant_id}/status")

@@ -325,13 +325,30 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <button id="review-manifest" type="button" disabled>Preview reviewed metadata manifest</button>
 <button id="manifest-export" type="button" disabled>Export reviewed forward/rollback JSON (not published)</button>
 <p id="draft-result" role="status"></p>
-<p id="review-manifest-result" role="status"></p></section></div></div>
+<p id="review-manifest-result" role="status"></p>
+<h3>Request a catalog source release</h3><p class="muted">Review the saved proposal before confirming a separate source preparation request. This release provides review and verified history. Automated publishing and release completion remain unavailable. Requests preserve all customer settings.</p>
+<label for="publication-operation">Release operation</label> <select id="publication-operation"><option value="publish_metadata">Publish reviewed description</option><option value="reverse_latest">Reverse latest description release</option></select>
+<button id="publication-preview" type="button" disabled>Review publication request</button>
+<p id="publication-target" role="status">Preview a reviewed metadata manifest first.</p>
+<label for="publication-confirm">Exact confirmation</label> <input id="publication-confirm" maxlength="16" autocomplete="off" spellcheck="false" disabled>
+<label for="publication-reason">Publication reason</label> <textarea id="publication-reason" rows="2" maxlength="240" disabled></textarea>
+<label for="publication-reference">Action reference</label> <input id="publication-reference" maxlength="96" readonly autocomplete="off" spellcheck="false">
+<button id="publication-request" type="button" disabled>Request source preparation</button><p id="publication-result" role="status"></p>
+<h3>Recover a publication request</h3><p class="muted">Keep the action reference before submitting. If a response is lost, inspect that same reference to read its verified history.</p>
+<label for="publication-recover-reference">Publication action reference</label> <input id="publication-recover-reference" maxlength="96" autocomplete="off" spellcheck="false">
+<button id="publication-recover" type="button" disabled>Verify publication history</button><p id="publication-recovery-result" role="status"></p>
+</section></div></div>
 </main><script src="/admin/client.js" defer></script></body></html>"""
 
 # Zero third-party scripts. OAuth access token is deliberately memory-only.
 _JS = r'''"use strict";
 (() => {
   let token = null;
+  let publicationPreview = null;
+  let publicationSelection = 0;
+  let publicationHistorySelection = 0;
+  let publicationFlight = null;
+  let publicationAttempt = null;
   let config = null;
   let nativeTicket = null;
   let enrollmentTicket = null;
@@ -444,6 +461,7 @@ _JS = r'''"use strict";
   const invalidateCatalogExport = () => {
     exportableManifest = null;
     el("manifest-export").disabled = true;
+    clearPublicationPreview();
   };
   function exportReviewedManifest() {
     if (!token || !exportableManifest ||
@@ -469,6 +487,10 @@ _JS = r'''"use strict";
     }
   }
   const clearAdminData = () => {
+    publicationAttempt = null;
+    ++publicationHistorySelection;
+    for (const id of ["publication-reference","publication-recover-reference","publication-confirm","publication-reason"]) el(id).value = "";
+    el("publication-recover").disabled = true;
     clearCatalogInspection();
     clearInvoiceBrowser();
     clearCancellationReview();
@@ -492,7 +514,7 @@ _JS = r'''"use strict";
     el("user-rows").replaceChildren();
     el("categories").replaceChildren();
     el("catalog-release-entries").replaceChildren();
-    for (const id of ["catalog-release-summary", "status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "user-action-result", "usage-details", "billing-details", "invoice-details", "audit-result", "proposal-result", "draft-result", "review-manifest-result", "cancellation-result", "cancellation-receipt-result"]) say(id, "");
+    for (const id of ["catalog-release-summary", "status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "user-action-result", "usage-details", "billing-details", "invoice-details", "audit-result", "proposal-result", "draft-result", "review-manifest-result", "cancellation-result", "cancellation-receipt-result", "publication-result", "publication-recovery-result"]) say(id, "");
     previewSelection = null;
     previewReady = null;
     draftReadyForReview = null;
@@ -536,6 +558,8 @@ _JS = r'''"use strict";
     say("login-message", message);
   };
   function withdrawWorkspaceSnapshot(message) {
+    ++publicationHistorySelection;
+    say("publication-recovery-result", "");
     clearCatalogInspection();
     clearInvoiceBrowser();
     clearCancellationReview();
@@ -716,6 +740,7 @@ _JS = r'''"use strict";
       el("metrics").append(card);
     }
     features = available;
+    updatePublicationControls();
     updateCancellationControls();
     catalogInspectionVersion = features.catalog_inspection === true &&
       typeof catalog.registry_version === "string" && /^[1-9][0-9]{0,8}$/.test(catalog.registry_version)
@@ -1266,6 +1291,7 @@ _JS = r'''"use strict";
         acceptance_tests_run:false
       };
       el("manifest-export").disabled = false;
+      updatePublicationControls();
       say("review-manifest-result", "Reviewed catalog metadata manifest · version " +
         result.registry_version + " → " + result.candidate_registry_version +
         " · " + result.category_id + "/" + result.check_id + "/" + result.rule_id +
@@ -1279,6 +1305,203 @@ _JS = r'''"use strict";
       if (token && epoch === authEpoch)
         say("review-manifest-result", "Manifest unavailable: " + err.message +
           " · no publication attempted");
+    }
+  }
+
+  function clearPublicationPreview() {
+    publicationPreview = null;
+    ++publicationSelection;
+    el("publication-confirm").value = "";
+    el("publication-reason").value = "";
+    el("publication-confirm").disabled = true;
+    el("publication-reason").disabled = true;
+    say("publication-target", "Preview a reviewed metadata manifest first.");
+    updatePublicationControls();
+  }
+
+  function updatePublicationControls() {
+    const ready = token && publicationPreview && !publicationFlight && !publicationAttempt &&
+      features.catalog_publication_requests === true && publicationPreview.control_available === true;
+    el("publication-preview").disabled = !token || !exportableManifest ||
+      features.catalog_publication_preview !== true || !!publicationFlight || !!publicationAttempt;
+    const reason = el("publication-reason").value;
+    el("publication-request").disabled = !ready ||
+      el("publication-confirm").value !== publicationPreview.confirmation ||
+      reason.length < 10 || reason.length > 240 || reason!==reason.trim() || unsafeCatalogText(reason);
+    el("publication-recover").disabled = !token || features.catalog_publication_history !== true ||
+      !/^[A-Za-z0-9_-]{16,96}$/.test(el("publication-recover-reference").value.trim());
+  }
+
+  function samePublicationChanges(first, second) {
+    if (!first || !second || typeof first !== "object" || typeof second !== "object" ||
+        Array.isArray(first) || Array.isArray(second)) return false;
+    const fields = Object.keys(first).sort();
+    if (!fields.length || fields.length > 2 || fields.join(",") !== Object.keys(second).sort().join(",")) return false;
+    return fields.every(field => {
+      if (!["title","use_case"].includes(field)) return false;
+      const a=first[field],b=second[field],limit=field==="title"?120:500;
+      return a && b && typeof a==="object" && typeof b==="object" &&
+        Object.keys(a).sort().join(",")==="after,before" && Object.keys(b).sort().join(",")==="after,before" &&
+        [a.before,a.after,b.before,b.after].every(value=>typeof value==="string" &&
+          value.length>=3 && value.length<=limit && !unsafeCatalogText(value)) &&
+        a.before!==a.after && a.before===b.before && a.after===b.after;
+    });
+  }
+
+  function validPublicationShape(result, selected = null) {
+    const hex = value=>typeof value==="string" && /^[a-f0-9]{64}$/.test(value);
+    const sha = value=>typeof value==="string" && /^[a-f0-9]{40}$/.test(value);
+    const version = value=>typeof value==="string" && /^[1-9][0-9]{0,8}$/.test(value);
+    const target=result?.target;
+    if (!result || !hex(result.review_id) || !hex(result.draft_id) || !sha(result.base_source_sha) ||
+        !hex(result.baseline_sha256) || !hex(result.candidate_metadata_sha256) ||
+        !version(result.registry_version) || !version(result.candidate_registry_version) ||
+        Number(result.candidate_registry_version)!==Number(result.registry_version)+1 ||
+        !["publish_metadata","reverse_latest"].includes(result.operation) ||
+        !target || Object.keys(target).sort().join(",")!=="category_id,check_id,rule_id" ||
+        typeof target.category_id!=="string" || !/^[a-z][a-z0-9_]{0,59}$/.test(target.category_id) ||
+        typeof target.check_id!=="string" || !/^[a-z][a-z0-9_]{0,59}$/.test(target.check_id) ||
+        typeof target.rule_id!=="string" || !/^[A-Za-z0-9_.:-]{3,100}$/.test(target.rule_id) ||
+        !samePublicationChanges(result.changed_metadata,result.changed_metadata) ||
+        ["published","remote_published","ci_verified","deployed","tenant_policies_changed",
+         "detector_behavior_changed"].some(name=>result[name]!==false)) return false;
+    if (selected) {
+      for (const field of ["review_id","draft_id","operation","base_source_sha","registry_version",
+          "candidate_registry_version","baseline_sha256","candidate_metadata_sha256"])
+        if (selected[field]!==undefined && result[field]!==selected[field]) return false;
+      if (selected.target && Object.keys(target).some(field=>target[field]!==selected.target[field])) return false;
+      if (selected.changed_metadata && !samePublicationChanges(result.changed_metadata,selected.changed_metadata)) return false;
+    }
+    return true;
+  }
+
+  function validPublicationReceipt(result, selected = null) {
+    if (!validPublicationShape(result,selected) || result.integrity_verified!==true ||
+        typeof result.request_id!=="string" || !/^[a-f0-9]{64}$/.test(result.request_id) ||
+        typeof result.intent_sha256!=="string" || !/^[a-f0-9]{64}$/.test(result.intent_sha256) ||
+        !["requested","preparing","source_prepared"].includes(result.status) ||
+        !Number.isSafeInteger(result.created_at) || result.created_at<1 || result.created_at>253402300799 ||
+        typeof result.reason!=="string" || result.reason.length<10 || result.reason.length>240 ||
+        unsafeCatalogText(result.reason) || (selected?.reason && result.reason!==selected.reason)) return false;
+    if (result.status!=="source_prepared") return result.source_preparation===null;
+    const prepared=result.source_preparation;
+    return prepared && Object.keys(prepared).sort().join(",")==="candidate_source_sha,history_sha256,recorded_at" &&
+      typeof prepared.candidate_source_sha==="string" && /^[a-f0-9]{40}$/.test(prepared.candidate_source_sha) &&
+      prepared.candidate_source_sha!==result.base_source_sha && typeof prepared.history_sha256==="string" &&
+      /^[a-f0-9]{64}$/.test(prepared.history_sha256) && Number.isSafeInteger(prepared.recorded_at) &&
+      prepared.recorded_at>=result.created_at && prepared.recorded_at<=253402300799;
+  }
+
+  function showPublicationReceipt(result, id) {
+    const stage={requested:"Request recorded; waiting for a release operator",preparing:
+      "Source preparation claimed; no automatic second attempt",source_prepared:
+      "Local candidate source prepared; remote publication and release checks remain"}[result.status];
+    say(id,stage+" · "+result.target.rule_id+" · registry "+result.registry_version+" → "+
+      result.candidate_registry_version+" · request "+result.request_id+
+      (result.source_preparation ? " · candidate source "+result.source_preparation.candidate_source_sha : "")+
+      " · production deployment unverified; customer settings unchanged"+readAuditLabel(result));
+  }
+
+  async function previewPublicationRequest() {
+    if (!token || !exportableManifest || !features.catalog_publication_preview || publicationFlight || publicationAttempt) return;
+    const manifest=structuredClone(exportableManifest), operation=el("publication-operation").value;
+    clearPublicationPreview();
+    const selection=publicationSelection,epoch=authEpoch;
+    const selected={review_id:manifest.review_id,draft_id:manifest.draft_id,operation,
+      registry_version:manifest.registry_version,candidate_registry_version:manifest.candidate_registry_version,
+      baseline_sha256:manifest.reviewed_source_sha256,candidate_metadata_sha256:manifest.candidate_metadata_sha256,
+      target:manifest.target,changed_metadata:manifest.changed_metadata};
+    say("publication-target","Checking signed review, current source and catalog release control…");
+    el("publication-preview").disabled=true;
+    try {
+      const result=await request("/v1/admin/catalog/publications/preview",{method:"POST",
+        body:JSON.stringify({review_id:manifest.review_id,operation})});
+      if (!token || epoch!==authEpoch || selection!==publicationSelection ||
+          exportableManifest?.review_id!==manifest.review_id) return;
+      if (!validPublicationShape(result,selected) || result.status!=="publication_preview" ||
+          typeof result.expected_control_hash!=="string" || !/^[a-f0-9]{64}$/.test(result.expected_control_hash) ||
+          typeof result.control_available!=="boolean" ||
+          (result.control_available && result.expected_control_hash!=="0".repeat(64)) ||
+          result.writer_enabled!==(features.catalog_publication_requests===true) ||
+          result.confirmation!==(operation==="publish_metadata"?"PUBLISH ":"REVERSE ")+manifest.review_id.slice(-8))
+        throw new Error("Publication review integrity unavailable");
+      publicationPreview=result;
+      const enabled=result.writer_enabled && result.control_available;
+      el("publication-confirm").disabled=!enabled;
+      el("publication-reason").disabled=!enabled;
+      if (enabled) el("publication-reference").value=crypto.randomUUID().replaceAll("-","");
+      say("publication-target",result.target.rule_id+" · registry "+result.registry_version+" → "+
+        result.candidate_registry_version+" · "+(enabled ? "Type "+result.confirmation+" and give the release reason." :
+          !result.writer_enabled ? "Publication requests await compatible deployment and the completed release workflow." :
+          "A catalog request already owns source preparation; recover its action reference.")+readAuditLabel(result));
+    } catch(err) {
+      if(token && epoch===authEpoch && selection===publicationSelection)
+        say("publication-target","Publication review unavailable: "+err.message);
+    } finally {
+      if(token && epoch===authEpoch && selection===publicationSelection) updatePublicationControls();
+    }
+  }
+
+  async function requestPublication() {
+    updatePublicationControls();
+    if(el("publication-request").disabled) return;
+    const selected=structuredClone(publicationPreview),epoch=authEpoch,selection=publicationSelection;
+    const reference=el("publication-reference").value;
+    if(!/^[A-Za-z0-9_-]{16,96}$/.test(reference)) return;
+    const body={review_id:selected.review_id,operation:selected.operation,
+      expected_source_sha:selected.base_source_sha,expected_control_hash:selected.expected_control_hash,
+      reason:el("publication-reason").value,action_reference:reference,
+      confirmation:el("publication-confirm").value};
+    const flight={reference};
+    publicationFlight=flight;
+    publicationAttempt={reference,selected:{...selected,reason:body.reason}};
+    publicationPreview=null;
+    el("publication-confirm").disabled=true;
+    el("publication-reason").disabled=true;
+    el("publication-recover-reference").value=reference;
+    ++publicationHistorySelection;
+    updatePublicationControls();
+    say("publication-result","Recording the confirmed request; retain action reference "+reference+".");
+    try {
+      const result=await request("/v1/admin/catalog/publications",{method:"POST",body:JSON.stringify(body)});
+      if(!token || epoch!==authEpoch) return;
+      if(!validPublicationReceipt(result,publicationAttempt?.selected) || result.action_reference!==reference)
+        throw new Error("Publication request receipt unavailable");
+      const verified=await request("/v1/admin/catalog/publications/"+result.request_id);
+      if(!token || epoch!==authEpoch || selection!==publicationSelection) return;
+      if(!validPublicationReceipt(verified,publicationAttempt?.selected) || verified.request_id!==result.request_id ||
+          verified.intent_sha256!==result.intent_sha256)
+        throw new Error("Persisted publication request integrity unavailable");
+      showPublicationReceipt(verified,"publication-result");
+    } catch(err) {
+      if(token && epoch===authEpoch && selection===publicationSelection)
+        say("publication-result","Request outcome unavailable: "+err.message+
+          " · recover action reference "+reference+"; no automatic second submission.");
+    } finally {
+      if(publicationFlight===flight) publicationFlight=null;
+      if(token && epoch===authEpoch) updatePublicationControls();
+    }
+  }
+
+  async function recoverPublication() {
+    updatePublicationControls();
+    if(el("publication-recover").disabled) return;
+    const reference=el("publication-recover-reference").value.trim(),epoch=authEpoch;
+    const selection=++publicationHistorySelection;
+    const current=()=>token && epoch===authEpoch && selection===publicationHistorySelection;
+    const expected=publicationAttempt?.reference===reference ? publicationAttempt.selected : null;
+    say("publication-recovery-result","Verifying persisted publication history…");
+    try {
+      const result=await request("/v1/admin/catalog/publications/recover",{method:"POST",
+        body:JSON.stringify({action_reference:reference})});
+      if(!current()) return;
+      if(result.action_reference!==reference || !validPublicationReceipt(result,expected))
+        throw new Error("Publication history integrity unavailable");
+      showPublicationReceipt(result,"publication-recovery-result");
+    } catch(err) {
+      if(current()) say("publication-recovery-result",(err.status===404 ?
+        "No verified request found for this reference; no new request was submitted." :
+        "Publication history unavailable: "+err.message));
     }
   }
 
@@ -2808,5 +3031,13 @@ _JS = r'''"use strict";
   el("next").addEventListener("click", page);
   el("audit-go").addEventListener("click", inspectAudit);
   el("proposal-go").addEventListener("click", previewCatalogRule);
+  el("publication-preview").addEventListener("click",previewPublicationRequest);
+  el("publication-request").addEventListener("click",requestPublication);
+  el("publication-recover").addEventListener("click",recoverPublication);
+  el("publication-operation").addEventListener("change",clearPublicationPreview);
+  for(const id of ["publication-confirm","publication-reason"]) el(id).addEventListener("input",updatePublicationControls);
+  el("publication-recover-reference").addEventListener("input",()=>{
+    ++publicationHistorySelection; say("publication-recovery-result",""); updatePublicationControls();
+  });
   finishLogin().catch(err => say("login-message", err.message));
 })();'''

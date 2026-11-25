@@ -4,6 +4,7 @@ const {test,expect} = require("@playwright/test");
 const {execFileSync} = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
+const {reviewedPublication,publicationState}=require("./admin_publication_flow");
 
 const TENANT = "usr-admin-alpha";
 const ORIGIN = "http://127.0.0.1:8781";
@@ -27,7 +28,7 @@ function saved() {
     "for key in ('usr-admin-alpha','usr-admin-beta'):",
     " item=db.get_item(TableName='tenant_table',Key={'tenant_id':{'S':key}},ConsistentRead=True)['Item']",
     " tenants[key]={'record':json.loads(item['record']['S']),'revision':int(item['revision']['N']),'usage':item['usage']}",
-    "receipts=[reader.read(row['event_id']['S']) for row in db.audit_items() if 'financial_operation' not in row]",
+    "receipts=[reader.read(row['event_id']['S']) for row in db.audit_items() if 'financial_operation' not in row and 'catalog_publication' not in row and not row['operation']['S'].startswith('catalog.') ]",
     "print(json.dumps({'tenants':tenants,'receipts':receipts,'financial':verified_financial_rows(db)}))",
     "db.close()",
   ].join("\n");
@@ -249,4 +250,22 @@ test("baseline cancellation review and history work while provider dispatch rema
   const evidence = fs.readFileSync(path.join(dbPath.dir,dbPath.name+".cancellation-requests.jsonl"),"utf8")
     .trim().split("\n").map(JSON.parse);
   expect(evidence.map(value=>value.method)).toEqual(["GET","GET"]);
+});
+
+test("baseline catalog publication reviews and history remain usable while request writes are absent",async ({page,request})=>{
+  const headers=await login(page),before=saved().tenants;
+  const features=await (await request.get("/v1/admin/features",{headers})).json();
+  expect(features).toMatchObject({catalog_publication_preview:true,catalog_publication_history:true,
+    catalog_publication_requests:false,rule_publishing:false});
+  const manifest=await reviewedPublication(page,"Baseline publication review example");
+  await page.locator("#publication-preview").click();
+  await expect(page.locator("#publication-target")).toContainText("Publication requests await compatible deployment and the completed release workflow");
+  await expect(page.locator("#publication-request")).toBeDisabled();
+  await expect(page.locator("#publication-confirm")).toBeDisabled();
+  expect((await request.post("/v1/admin/catalog/publications",{headers,data:{review_id:manifest.review_id}})).status()).toBe(404);
+  await page.locator("#publication-recover-reference").fill("baseline-no-publication-reference");
+  await page.locator("#publication-recover").click();
+  await expect(page.locator("#publication-recovery-result")).toContainText("No verified request found");
+  expect(publicationState()).toEqual({control:null,intent:null,prepared:null});
+  expect(saved().tenants).toEqual(before);
 });

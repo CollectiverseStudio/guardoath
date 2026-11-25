@@ -32,6 +32,10 @@ from guardoath.admin_billing import AdminSubscriptionReporter
 from guardoath.admin_billing_reconcile import AdminBillingDowngrade
 from guardoath.admin_browser import BrowserAuthConfig, BoundExchange
 from guardoath.admin_catalog_drafts import AdminCatalogDrafts
+from guardoath.admin_catalog import published_catalog
+from guardoath.admin_catalog_publication import AdminCatalogPublications
+from guardoath.admin_catalog_publication_state import DynamoCatalogPublicationState
+from guardoath.catalog_metadata import load_release_history
 from guardoath.admin_integration import mount_admin_console
 from guardoath.admin_invoices import AdminInvoiceHistory
 from guardoath.admin_subscription_reconcile import AdminSubscriptionReconciliation
@@ -54,7 +58,9 @@ if phase not in ("0", "1"):
 if phase == "1":
     state_contracts.ENABLE_NEW_SUBSCRIPTION_STATE = True
     state_contracts.ENABLE_NEW_CANCELLATION_STATE = True
-elif state_contracts.new_subscription_state_enabled() or state_contracts.new_cancellation_state_enabled():
+    state_contracts.ENABLE_NEW_CATALOG_PUBLICATION_STATE = True
+elif (state_contracts.new_subscription_state_enabled() or state_contracts.new_cancellation_state_enabled()
+      or state_contracts.new_catalog_publication_state_enabled()):
     raise RuntimeError("Baseline browser acceptance requires baseline source")
 
 POOL, CLIENT = "us-east-1_Example", "syntheticownerclient"
@@ -247,11 +253,16 @@ cancellation = AdminSubscriptionCancellation(
     provider=StripePeriodEndCancellation(api_key="rk_test_synthetic_cancel_0123456789",
         expected_account_id="acct_owner",expected_price_id="price_starter",expected_livemode=False,
         opener=cancellation_boundary.open))
+catalog_drafts = AdminCatalogDrafts(db,"audit_table",ADMIN_BROWSER_AUDIT_KEY)
+catalog_publications = AdminCatalogPublications(
+    state=DynamoCatalogPublicationState(db,"audit_table",ADMIN_BROWSER_AUDIT_KEY),
+    drafts=catalog_drafts,catalog_provider=published_catalog,history_provider=load_release_history,
+    source_provider=lambda: "a" * 40)
 mount_admin_console(app,sessions=sessions,tenants=tenants,cognito=CognitoBoundary(),
     cursor_signing_key=CURSOR_KEY,browser_config=config,browser_exchange=BoundExchange(config,sender=exchange_code),
     admin_mutator=AdminTenantActions(db,"tenant_table","audit_table",audit_key=ADMIN_BROWSER_AUDIT_KEY),
     audit_reader=reader,read_auditor=AdminSensitiveReadAuditor(db,"audit_table",signing_key=ADMIN_BROWSER_AUDIT_KEY),
-    catalog_drafts=AdminCatalogDrafts(db,"audit_table",ADMIN_BROWSER_AUDIT_KEY),require_persistent_read_audit=True,
+    catalog_drafts=catalog_drafts,catalog_publications=catalog_publications,require_persistent_read_audit=True,
     billing_reporter=reporter,
     billing_cancellation=cancellation,
     billing_invoices=AdminInvoiceHistory(stripe_invoices, reporter, cursor_key=CURSOR_KEY),

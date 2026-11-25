@@ -1,11 +1,75 @@
 # Owner admin console implementation handoff
 
-Updated November 24, 2026 (UTC). This is the concise continuation
+Updated November 25, 2026 (UTC). This is the concise continuation
 record for a new chat. The append-only engineering history remains in
 [director-agent-coordination.md](director-agent-coordination.md); the complete
 47-target product discussion is preserved in [product-roadmap.md](product-roadmap.md).
 
-## Current implementation batch: consistent catalog loading and real source reversal
+## Current batch: owner publication request and local source preparation
+
+The owner Catalog now connects a verified signed review/manifest to a separate
+publication preview, retained explicit request writer and read-only history/
+action-reference recovery. The service regenerates the entire current source
+manifest/history, accepts authoritative source SHA only from the strict packaged
+release marker, and requires typed `PUBLISH` or `REVERSE` plus review suffix,
+reason and stable reference. Actual owner/fresh-MFA, same-origin and signed
+read-audit checks precede state/source access. The browser validates exact
+review/target/source/metadata bindings, independently rereads the signed intent,
+retains single-flight recovery across refresh and suppresses late logout results.
+
+The independent `catalog-publication-v1` contract atomically reserves one global
+catalog control and immutable intent. An external exact-ID worker verifies the
+signed review, exact clean base and repository origin, runs the existing
+compiler and real source/app/Engine acceptance in a detached worktree, and
+retains a local candidate commit with signed preparation evidence. It does not
+push, dispatch CI or deploy. Its standalone audit-key-file CLI requires POSIX
+permission verification; the injected-state callable is portable.
+
+**The production source remains compatibility-only:**
+`ENABLE_NEW_CATALOG_PUBLICATION_STATE=False`; the request route is unmounted,
+and service/state/worker writes independently refuse. Broad `rule_publishing`
+is false. Supported edits are only existing-rule `title`/`use_case`. This batch
+can record and prepare one candidate under tests. It has no normal worker
+scheduling, remote publication, complete CI/deployment receipts or terminal
+control release. Global control stays occupied indefinitely even after
+`SOURCE_PREPARED`; no expiry, reset or automatic retry is implemented. Keep the
+writer disabled until compatible deployment **and** the remaining lifecycle are
+both verified. A deployed baseline alone does not complete this workflow.
+
+Local evidence: the broad admin/catalog/rollback run passed **1,624 tests**.
+The final consolidated focused suite passed **259 tests**, including all
+25 worker cases, state/provenance/API, both mounted journeys, both compatibility
+contracts and rollback. The two fresh-process mounted ASGI journeys deny customer, missing-MFA,
+stale-MFA and forged signed identities before state/source reads. Origin and
+audit failures also block access. Reopened storage independently verifies seven
+baseline and eleven writer read receipts, one writer intent/transaction, exact
+replay/recovery without current source and unchanged catalog/tenant records.
+All external transports and the harness source marker are synthetic.
+
+Browser syntax/discovery identifies **30** focused new cases, **11** total
+mounted baseline journeys and **9** total mounted writer journeys. Discovery is
+not browser execution: bundled Chromium is unavailable, its official download
+was HTTP 403, and installed Chromium aborts at `socket()` with `EPERM` before
+tests. No assertion or deadline was relaxed. This uncommitted integration batch
+still requires review and its own exact published-SHA CI; no browser/production
+acceptance is inferred from ASGI tests. The full contract and limits are in
+[the catalog publication record](admin-catalog-publication-design.md) and
+[the operator guide](admin-console-operator.md#owner-catalog-request-review-and-preparation-history-2026-11-25).
+
+AWS handoff: the accepted predecessor package for
+`1e4fba61ebf9ae15e7cf000c1e2533b63e8b0c49` was built and checked for 651-file
+source parity, but was not deployed. Live health still identified
+`a9154dabbeff945bb19b901e20cde34b17b63fe7`; `/admin/login` returned 200 and
+anonymous admin feature access returned 401. Public SSO client registration
+occurred. Automatic approval review rejected issuing AWS credentials while the
+new application-access consent remained unanswered. There were no production
+changes. Do not describe this as a completed connection/deployment or as an
+absence of all AWS authentication requests.
+
+The complete original 47-target roadmap and the remaining #39–#42 production
+acceptance requirements are preserved.
+
+## Predecessor: consistent catalog loading and real source reversal
 
 Catalog startup and the existing release CLI now share the same strict JSON
 decoder and source-size constant. Six regression cases failed before the fix:
@@ -30,15 +94,15 @@ Local evidence: **1,303 Python 3.12 tests passed** across catalog/admin/real-rul
 examples; **57 Python 3.13 source/runtime tests passed**; the final persisted-row
 guard round trip passed again on Python 3.12. Identity-provider and database
 transports are synthetic. This proves source/app/API/Engine behavior, not a
-customer login, Chrome journey or live catalog publication. The batch still
-requires its own exact published-SHA CI.
+customer login, Chrome journey or live catalog publication. Published predecessor
+`1e4fba61ebf9ae15e7cf000c1e2533b63e8b0c49` subsequently passed all 25
+individually inspected exact-source CI jobs. That acceptance does not cover the
+current uncommitted request/preparation batch.
 
-The concrete remaining owner-to-source publication request, trusted executor,
-receipt and reversal work is preserved in
+The current request/preparation batch above extends that evidence while keeping
+the existing source-shipped catalog as authority. Remaining release completion
+and general category/check/rule authoring are recorded in
 [admin-catalog-publication-design.md](admin-catalog-publication-design.md).
-It keeps the existing source-shipped catalog as authority; adding a second
-mutable admin-only registry would not update the actual app consistently.
-General category/check/rule authoring remains open.
 
 ## Accepted cancellation compatibility release
 

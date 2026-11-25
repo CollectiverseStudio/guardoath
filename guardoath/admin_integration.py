@@ -48,6 +48,7 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
                         native_auth: CognitoNativeMfa | None = None,
                         native_enrollment=None,
                         admin_mutator=None, audit_reader=None, read_auditor=None, catalog_drafts=None,
+                        catalog_publications=None,
                         require_persistent_read_audit: bool = False,
                         billing_reporter=None, billing_downgrade=None, billing_reconciler=None, billing_invoices=None,
                         billing_cancellation=None,
@@ -114,6 +115,11 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
             getattr(billing_cancellation, "tenant_table", None) != store.table_name
             or getattr(getattr(billing_cancellation, "state", None), "client", None) is not store._client):
         raise AdminConfigurationError("Cancellation must use the authoritative tenant store")
+    if catalog_publications is not None and (
+            getattr(getattr(catalog_publications, "state", None), "client", None) is not store._client
+            or getattr(getattr(catalog_publications, "state", None), "table_name", None) == store.table_name
+            or getattr(catalog_publications, "drafts", None) is not catalog_drafts):
+        raise AdminConfigurationError("Catalog publication must use the independent signed catalog audit store")
     users = CognitoUserDirectory(cognito, sessions.pool_id, cursor_signing_key) if callable(getattr(cognito, 'list_users', None)) else None
     verifier = make_verifier(sessions, cognito)
     app.include_router(create_admin_router(
@@ -127,6 +133,7 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
         audit_reader=audit_reader,
         read_auditor=read_auditor,
         catalog_drafts=catalog_drafts,
+        catalog_publications=catalog_publications,
         require_persistent_read_audit=require_persistent_read_audit,
         billing_reporter=billing_reporter,
         billing_downgrade=billing_downgrade,

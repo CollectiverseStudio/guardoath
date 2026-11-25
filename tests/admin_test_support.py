@@ -62,9 +62,11 @@ class AdminTestDynamo:
             try:
                 old = self._get(TableName, self._key(Item))
                 if ConditionExpression == "attribute_exists(event_id) AND #control = :original":
-                    assert ExpressionAttributeNames == {"#control": "financial_operation"}
+                    assert ExpressionAttributeNames in (
+                        {"#control": "financial_operation"}, {"#control": "catalog_publication"})
                     assert set(ExpressionAttributeValues) == {":original"}
-                    if old is None or old.get("financial_operation") != ExpressionAttributeValues[":original"]:
+                    attribute = ExpressionAttributeNames["#control"]
+                    if old is None or old.get(attribute) != ExpressionAttributeValues[":original"]:
                         raise ConditionalFailure("Synthetic full-document conflict")
                 elif old is not None:
                     raise ConditionalFailure("Synthetic conditional conflict")

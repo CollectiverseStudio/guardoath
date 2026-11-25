@@ -2,6 +2,7 @@
 
 const {test,expect} = require("@playwright/test");
 const {execFileSync} = require("node:child_process");
+const {reviewedPublication,publicationState}=require("./admin_publication_flow");
 
 // No request interception: every admin HTTP response comes from the mounted
 // application. Only its external identity, payment and database boundaries are
@@ -21,7 +22,7 @@ function persisted() {
     "db=AdminTestDynamo(sys.argv[1])",
     "store=DynamoDBTenantStore('tenant_table',db)",
     "reader=AdminAuditReader(db,'audit_table',verify_key=ADMIN_BROWSER_AUDIT_KEY)",
-    "receipts=[reader.read(row['event_id']['S']) for row in db.audit_items() if 'financial_operation' not in row and not row['operation']['S'].startswith('catalog.') ]",
+    "receipts=[reader.read(row['event_id']['S']) for row in db.audit_items() if 'financial_operation' not in row and 'catalog_publication' not in row and not row['operation']['S'].startswith('catalog.') ]",
     "print(json.dumps({'tenants':{key:store.get(key).model_dump(mode='json') for key in ('usr-admin-alpha','usr-admin-beta')},'receipts':receipts,'financial':verified_financial_rows(db)}))",
     "db.close()",
   ].join("\n");
@@ -244,4 +245,53 @@ test("real owner schedules one provider cancellation and reopens linked history 
     body:"cancel_at_period_end=true"});
   expect(posts[0].idempotency_key).toMatch(/^guardoath-sc1-[a-f0-9]{64}$/);
   expect(persisted().tenants).toEqual(before);
+});
+
+test("real owner explicitly requests source preparation and recovers immutable evidence without publishing",async ({page,request})=>{
+  const headers=await login(page),before=persisted().tenants;
+  const source=await (await request.get("/v1/admin/catalog",{headers})).json();
+  const manifest=await reviewedPublication(page,"Explicit publication request example");
+  const previewResponse=page.waitForResponse(r=>r.url().endsWith("/publications/preview"));
+  await page.locator("#publication-preview").click();
+  const preview=await (await previewResponse).json();
+  await expect(page.locator("#publication-target")).toContainText("Type PUBLISH ");
+  expect(preview).toMatchObject({status:"publication_preview",writer_enabled:true,control_available:true,
+    review_id:manifest.review_id,base_source_sha:"a".repeat(40),published:false,deployed:false});
+  expect(publicationState().control).toBeNull();
+  await page.locator("#publication-reason").fill("Owner authorizes synthetic catalog source preparation");
+  await page.locator("#publication-confirm").fill("PUBLISH wrong-id");
+  await expect(page.locator("#publication-request")).toBeDisabled();
+  await page.locator("#publication-confirm").fill(preview.confirmation);
+  const reference=await page.locator("#publication-reference").inputValue();
+  const recorded=page.waitForResponse(r=>r.url().endsWith("/v1/admin/catalog/publications") && r.request().method()==="POST");
+  await page.locator("#publication-request").click();
+  const response=await recorded;
+  expect(response.status()).toBe(200);
+  const receipt=await response.json();
+  await expect(page.locator("#publication-result")).toContainText("Request recorded; waiting for a release operator");
+  await expect(page.locator("#publication-result")).toContainText("production deployment unverified");
+  await expect(page.locator("#publication-request")).toBeDisabled();
+  expect(receipt).toMatchObject({status:"requested",action_reference:reference,remote_published:false,ci_verified:false,deployed:false});
+  await page.locator("#publication-recover").click();
+  await expect(page.locator("#publication-recovery-result")).toContainText(receipt.request_id);
+  const reopened=publicationState();
+  expect(reopened.control).toMatchObject({state:"REQUESTED",request_id:receipt.request_id});
+  expect(reopened.intent).toMatchObject({review_id:manifest.review_id,draft_id:manifest.draft_id,base_source_sha:"a".repeat(40)});
+  expect(reopened.prepared).toBeNull();
+  const replay=await request.post("/v1/admin/catalog/publications",{headers,data:response.request().postDataJSON()});
+  expect(replay.status()).toBe(200);
+  expect((await replay.json()).request_id).toBe(receipt.request_id);
+  const after=await (await request.get("/v1/admin/catalog",{headers})).json();
+  expect(after.registry_version).toBe(source.registry_version);
+  expect(after.categories).toEqual(source.categories);
+  expect(persisted().tenants).toEqual(before);
+  await page.locator("#refresh").click();
+  await expect(page.locator("#status")).toContainText("Administration loaded");
+  await page.locator("#nav-catalog").click();
+  await expect(page.locator("#publication-recover-reference")).toHaveValue(reference);
+  await page.locator("#publication-recover").click();
+  await expect(page.locator("#publication-recovery-result")).toContainText(receipt.request_id);
+  await page.locator("#logout").click();
+  await expect(page.locator("#publication-recover-reference")).toHaveValue("");
+  await expect(page.locator("#publication-reference")).toHaveValue("");
 });
