@@ -66,6 +66,37 @@ These focused groups are not a summed full-suite count. The activation commit
 still requires its own complete CI and deployment; local results do not establish
 production activation, a live catalog mutation or all fifteen live areas.
 
+### First activation CI failure and bounded test correction
+
+Activation source `b09e48c062809c9959f630f40180759822231e88` was published but
+is **not accepted or deployed**. Five required workflows succeeded. First-attempt
+[Tests run 45650190032](https://github.com/CollectiverseStudio/guardoath/actions/runs/45650190032)
+failed the same 17 new operator tests in local-pii (3.12) job `139332281980`,
+test (3.11) job `139332282045`, and windows-launcher (3.12) job `139332282023`.
+The CI dependency set is `.[test,pii]`; the local interpreter had additionally
+installed `[aws]`. The tests imported optional `boto3`/`botocore` merely to
+configure synthetic transports. Without those packages, positive bootstrap and
+12 invalid-binding cases failed before their fake calls, and four CLI cases
+raised `ModuleNotFoundError`. Linux reported 17 failed/22,781 passed/9 existing
+skips; Windows reported 17 failed/22,849 passed/13 existing skips.
+
+The correction supplies function-scoped explicit synthetic SDK modules for
+those unit tests, preserves the real worker/state paths and every assertion,
+and adds a missing-SDK refusal case. A separate interpreter uses the exact CI
+dependency set and independently confirms neither optional SDK package is
+installed. All **18** focused cases (the original 17 plus the explicit missing-SDK
+refusal) passed in 1.26 seconds in that environment. Runtime code, release flags, dependencies, deadlines and existing
+skips do not change. The replacement commit needs its own complete CI.
+
+Separately, first-attempt [CodeQL run 45650189705](https://github.com/CollectiverseStudio/guardoath/actions/runs/45650189705)
+failed Python job `139333123459`, JavaScript/TypeScript `139333123743` and Actions
+`139333123745` at result upload after extraction and SARIF export. The logs have
+no error/HTTP explanation; all three check summaries/text are null and annotations
+are empty. No source defect or infrastructure root cause is established.
+The failed-only and single-job retry tools each returned an internal error with
+no success acknowledgement; the last observed attempt was still 1. Do not claim
+that a retry succeeded or that the failed scan accepted this source.
+
 The restored workspace did not retain the earlier temporary AWS credential files;
 the shared AWS portal currently presents its sign-in screen. Greg's existing
 authorization for the GuardOath release session and assigned production role
