@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 import shutil
 import sys
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 import time
 from urllib.parse import urlsplit
 
@@ -581,6 +581,36 @@ def test_local_preflight_rejects_unavailable_tools_or_receipt_path_before_claim(
     assert len(calls) == (fault == "private-path")
 
 
+@pytest.fixture
+def synthetic_aws_sdk(monkeypatch):
+    """Install only the SDK boundary needed by these synthetic transport tests.
+
+    General CI intentionally does not install the optional AWS adapter. Keep
+    worker imports/configuration real while supplying the provider's two lazy
+    import surfaces explicitly, even when an SDK happens to be installed.
+    """
+    boto3 = ModuleType("boto3")
+    botocore = ModuleType("botocore")
+    botocore.__path__ = []
+    config_module = ModuleType("botocore.config")
+
+    class Config:
+        def __init__(self, *, connect_timeout, read_timeout, retries):
+            self.connect_timeout = connect_timeout
+            self.read_timeout = read_timeout
+            self.retries = deepcopy(retries)
+
+    def unconfigured_session(**_kwargs):
+        pytest.fail("Synthetic AWS session must be explicitly configured by the test")
+
+    boto3.Session = unconfigured_session
+    config_module.Config = Config
+    botocore.config = config_module
+    for name, module in (("boto3", boto3), ("botocore", botocore), ("botocore.config", config_module)):
+        monkeypatch.setitem(sys.modules, name, module)
+    return boto3
+
+
 class ProductionConfigurationTransport:
     """Only the fixed read-only AWS SDK boundary is synthetic."""
 
@@ -622,7 +652,7 @@ class ProductionConfigurationTransport:
         return deepcopy(self.configuration)
 
 
-def test_production_bootstrap_reuses_exact_existing_audit_derivation_without_persisting_secrets(capsys, caplog):
+def test_production_bootstrap_reuses_exact_existing_audit_derivation_without_persisting_secrets(synthetic_aws_sdk, capsys, caplog):
     provider = ProductionConfigurationTransport()
     before = dict(os.environ)
     table, key = release._production_audit_binding(provider)
@@ -636,7 +666,7 @@ def test_production_bootstrap_reuses_exact_existing_audit_derivation_without_per
 
 @pytest.mark.parametrize("fault", ["account", "function", "arn", "in-progress", "inactive", "environment-error",
                                   "admin-disabled", "same-table", "missing-table", "bad-table", "bad-key", "provider"])
-def test_production_bootstrap_refuses_wrong_or_incomplete_binding_without_state_access(fault, capsys, caplog):
+def test_production_bootstrap_refuses_wrong_or_incomplete_binding_without_state_access(synthetic_aws_sdk, fault, capsys, caplog):
     provider = ProductionConfigurationTransport()
     config = provider.configuration
     variables = config["Environment"]["Variables"]
@@ -679,15 +709,14 @@ def test_production_bootstrap_is_source_gated_before_provider_reads(monkeypatch)
     assert not provider.calls
 
 
-def test_production_config_cli_next_uses_real_signed_state_reader_once(tmp_path, monkeypatch, capsys):
-    import boto3
+def test_production_config_cli_next_uses_real_signed_state_reader_once(synthetic_aws_sdk, tmp_path, monkeypatch, capsys):
     db = AdminTestDynamo()
     provider = ProductionConfigurationTransport(db)
     selected_profiles = []
     def session(*, profile_name):
         selected_profiles.append(profile_name)
         return provider
-    monkeypatch.setattr(boto3, "Session", session)
+    monkeypatch.setattr(synthetic_aws_sdk, "Session", session)
     # Executable discovery is covered by the actual preflight tests; this
     # transport-only test retains the real bootstrap, state and bounded runner.
     monkeypatch.setattr(release, "_operator_preflight", lambda repo, root, deploy: (repo, root))
@@ -701,22 +730,34 @@ def test_production_config_cli_next_uses_real_signed_state_reader_once(tmp_path,
 
 
 @pytest.mark.parametrize("manual", [["--audit-table", "existing-table"], ["--audit-key-file", "private-key"]])
-def test_production_config_cli_rejects_mixed_secret_sources_before_provider_access(monkeypatch, manual, capsys):
-    import boto3
-    monkeypatch.setattr(boto3, "Session", lambda **_: pytest.fail("Invalid CLI must not create provider session"))
+def test_production_config_cli_rejects_mixed_secret_sources_before_provider_access(synthetic_aws_sdk, monkeypatch, manual, capsys):
+    monkeypatch.setattr(synthetic_aws_sdk, "Session", lambda **_: pytest.fail("Invalid CLI must not create provider session"))
     with pytest.raises(SystemExit) as error:
         release.main(["--next", "--production-config", *manual])
     assert error.value.code == 2
     assert "either --production-config or both" in capsys.readouterr().err
 
 
-def test_production_config_cli_checks_local_setup_before_reading_secrets_or_claiming(tmp_path, monkeypatch, capsys):
-    import boto3
-    monkeypatch.setattr(boto3, "Session", lambda **_: pytest.fail("Local failure must precede provider access"))
+def test_production_config_cli_checks_local_setup_before_reading_secrets_or_claiming(synthetic_aws_sdk, tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(synthetic_aws_sdk, "Session", lambda **_: pytest.fail("Local failure must precede provider access"))
     root = Path(__file__).resolve().parents[1]
     with pytest.raises(SystemExit) as error:
         release.main(["--next", "--production-config", "--repository", str(root),
                       "--work-root", str(tmp_path / "private-work"), "--powershell", str(tmp_path / "missing-pwsh")])
+    assert error.value.code == 2
+    assert "No publication claim was consumed" in capsys.readouterr().err
+
+
+def test_production_operator_without_optional_sdk_fails_before_state_or_provider_access(tmp_path, monkeypatch, capsys):
+    for name in ("boto3", "botocore", "botocore.config"):
+        monkeypatch.setitem(sys.modules, name, None)
+    provider = ProductionConfigurationTransport()
+    with pytest.raises(PublicationUnavailable, match="^Existing production audit configuration unavailable$"):
+        release._production_audit_binding(provider)
+    assert not provider.calls
+    monkeypatch.setattr(release, "_operator_preflight", lambda repo, root, deploy: (repo, root))
+    with pytest.raises(SystemExit) as error:
+        release.main(["--next", "--production-config", "--repository", str(tmp_path)])
     assert error.value.code == 2
     assert "No publication claim was consumed" in capsys.readouterr().err
 
