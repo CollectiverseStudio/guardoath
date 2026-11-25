@@ -185,11 +185,16 @@ identities are denied before state/source reads; origin and audit failures also
 block access. Reopened storage independently verifies seven baseline and eleven
 writer signed read receipts, with one writer intent/transaction and unchanged
 catalog and tenants. External transports and the harness source marker are
-synthetic. Discovery identifies 30 new focused browser cases, 11 total actual
-baseline journeys and 9 total actual writer journeys. Local Chrome execution
-is blocked by unavailable bundled Chromium and OS socket restrictions on the
-installed browser; discovery and ASGI acceptance are not browser acceptance.
-Integration, exact published-SHA CI and live acceptance remain separate gates.
+synthetic. At committed source `240355368c70bd8eb69c62bed3ce03e345dcf664`,
+actual CI Chrome passed 11 baseline journeys, 9 retained-writer journeys,
+19 invocation journeys and all 567 default cases, including the 30 new
+publication cases. Local browser download/socket restrictions remain separate
+from that CI evidence. The first full CI attempt passed 24 of 25 jobs: an
+existing Windows Python 3.12 privacy redaction case withheld its preview at
+532.51 ms total under the unchanged 500-ms deadline. This is recorded with
+the exact job and bounded recheck decision in the
+[owner handoff](admin-console-handoff.md). That first attempt is not release
+acceptance; current-main exact-SHA CI and all live acceptance gates still apply.
 
 General category/check/rule creation and behavior authoring remain unfinished.
 The complete 47-target roadmap, stable IDs, tenant Off settings, host-signed

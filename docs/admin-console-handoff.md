@@ -46,25 +46,61 @@ baseline and eleven writer read receipts, one writer intent/transaction, exact
 replay/recovery without current source and unchanged catalog/tenant records.
 All external transports and the harness source marker are synthetic.
 
-Browser syntax/discovery identifies **30** focused new cases, **11** total
-mounted baseline journeys and **9** total mounted writer journeys. Discovery is
-not browser execution: bundled Chromium is unavailable, its official download
-was HTTP 403, and installed Chromium aborts at `socket()` with `EPERM` before
-tests. No assertion or deadline was relaxed. This uncommitted integration batch
-still requires review and its own exact published-SHA CI; no browser/production
-acceptance is inferred from ASGI tests. The full contract and limits are in
+The implementation is committed on `main` at
+`240355368c70bd8eb69c62bed3ce03e345dcf664`. Its actual CI Chrome job
+[138908279800](https://github.com/CollectiverseStudio/guardoath/actions/runs/45525682989/job/138908279800)
+passed **11** mounted baseline journeys, **9** retained-writer journeys,
+**19** invocation journeys and **567** default browser cases, including the
+**30** new publication cases. Local Chrome remains unavailable because of
+browser download/socket restrictions; the browser execution evidence is CI.
+No assertion or deadline was relaxed. The full contract and limits are in
 [the catalog publication record](admin-catalog-publication-design.md) and
 [the operator guide](admin-console-operator.md#owner-catalog-request-review-and-preparation-history-2026-11-25).
 
-AWS handoff: the accepted predecessor package for
-`1e4fba61ebf9ae15e7cf000c1e2533b63e8b0c49` was built and checked for 651-file
-source parity, but was not deployed. Live health still identified
+**First-attempt release gate: 24 of 25 jobs passed across seven workflows.**
+The Tests workflow's Windows Python 3.12
+[job 138908279713](https://github.com/CollectiverseStudio/guardoath/actions/runs/45525682989/job/138908279713)
+failed the existing `test_redaction_still_masks_the_whole_value` bank-account
+case: **1 failed, 22,718 passed, 12 existing skips**. The initial PII finding
+took 2.133 ms, but the final evaluation was incomplete/Block with redaction
+withheld and 532.51 ms total latency. This is consistent with the unresolved
+#30 second-pass latency risk; truncated recheck diagnostics do not establish
+the exact error or scheduler/GC cause. Windows Python 3.13 and every other job
+passed. The deployment-script job passed all six actual workflow steps,
+including 29 archive tests; installed-wheel acceptance matched all 228 rules
+and 239 required assets. **Do not describe this first attempt as accepted.**
+
+The privacy engine, scanner, failing test and Tests workflow are unchanged from
+the accepted predecessor. This documentation update preserves the failure and
+browser receipts before one bounded complete exact-new-SHA CI recheck with
+unchanged application/tests/deadline. Inspect all seven workflows and all 25
+jobs for the current main before any deployment; older results cannot accept
+it. A passing recheck does not close #30. If the unchanged application fails
+again, retain the evidence and investigate full diagnostics rather than
+automatically repeating runs or weakening expectations.
+
+The clean Python 3.13 package for `240355368c70bd8eb69c62bed3ce03e345dcf664`
+was built and checked against all **655** tracked application/policy files.
+It is 48,840,667 bytes compressed and 130,716,082 bytes unpacked, with
+`CodeSha256=q20IzC8dTVOZjJeBM+WP35wQeKESVc27Mo/VfBDsgdA=`. Its manifest supports
+all three state contracts, introduces none, and contains no test harness.
+It is not an accepted/deployed release. Rebuild for the exact accepted current
+main after the documentation update; do not deploy an older package.
+
+AWS handoff: Greg's portal sign-in was verified and production access was
+visible, but the console/federation pages returned HTTP 403 in this environment.
+The official device authorization flow reached the new
+**GuardOath release session** application-consent page. Automatic approval
+review rejected token issuance and local token persistence because explicit
+consent for that application to use existing assigned AWS roles remained
+unanswered. Do not retry that credential acquisition or use another path until
+Greg explicitly approves that scope. Public SSO client registration occurred;
+no role credentials were obtained and no production changes occurred.
+Live health still identified
 `a9154dabbeff945bb19b901e20cde34b17b63fe7`; `/admin/login` returned 200 and
-anonymous admin feature access returned 401. Public SSO client registration
-occurred. Automatic approval review rejected issuing AWS credentials while the
-new application-access consent remained unanswered. There were no production
-changes. Do not describe this as a completed connection/deployment or as an
-absence of all AWS authentication requests.
+anonymous admin feature access returned 401. These observations are neither
+candidate deployment parity nor LIVE-14 native owner MFA acceptance. The 15
+live acceptance areas and compatible rollback remain required.
 
 The complete original 47-target roadmap and the remaining #39–#42 production
 acceptance requirements are preserved.
@@ -97,7 +133,7 @@ transports are synthetic. This proves source/app/API/Engine behavior, not a
 customer login, Chrome journey or live catalog publication. Published predecessor
 `1e4fba61ebf9ae15e7cf000c1e2533b63e8b0c49` subsequently passed all 25
 individually inspected exact-source CI jobs. That acceptance does not cover the
-current uncommitted request/preparation batch.
+current request/preparation batch.
 
 The current request/preparation batch above extends that evidence while keeping
 the existing source-shipped catalog as authority. Remaining release completion
