@@ -22,8 +22,8 @@ def test_mounted_catalog_publication_preserves_auth_audit_and_tenants(tmp_path, 
     assert result.returncode == 0, result.stdout + result.stderr
     evidence = json.loads(result.stdout)
     assert evidence["phase"] == phase
-    assert evidence["signed_read_receipts"] == (11 if phase == "1" else 7)
+    assert evidence["signed_read_receipts"] == (19 if phase == "1" else 7)
     assert set(evidence["denied"]) == {"customer", "no-mfa", "stale-mfa", "forged"}
-    assert evidence["transactions"] == evidence["intent_documents"] == int(phase)
+    assert evidence["request_transactions"] == evidence["intent_documents"] == int(phase)
     assert evidence["tenants_unchanged"] and evidence["catalog_unchanged"]
     assert evidence["remote_published"] is evidence["ci_verified"] is evidence["deployed"] is False

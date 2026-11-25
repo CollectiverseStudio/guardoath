@@ -3,8 +3,9 @@
 One fixed catalog control serializes every owner and signing key. Acknowledging
 its conditional REQUESTED -> PREPARING write grants one worker attempt. Reading
 that state later never grants a replacement attempt. Prepared source is not a
-remote publication, accepted CI or a deployment; this version never releases
-the global control, expires it or permits another generation.
+remote publication, accepted CI or a deployment. The separately versioned
+lifecycle verifies those facts before a later request can atomically replace
+the control. No control or immutable history is deleted, reset or expired.
 """
 from __future__ import annotations
 
@@ -187,8 +188,12 @@ class DynamoCatalogPublicationState:
     @staticmethod
     def _require_writer() -> None:
         try:
-            from guardoath.state_contracts import new_catalog_publication_state_enabled
-            if new_catalog_publication_state_enabled() is not True:
+            from guardoath.state_contracts import (
+                new_catalog_publication_state_enabled,
+                new_catalog_publication_lifecycle_state_enabled,
+            )
+            if (new_catalog_publication_state_enabled() is not True
+                    or new_catalog_publication_lifecycle_state_enabled() is not True):
                 raise ValueError()
         except Exception:
             raise PublicationUnavailable() from None
@@ -314,13 +319,16 @@ class DynamoCatalogPublicationState:
         control = self._read("control", CATALOG_ID)
         intent, prepared = self._read("intent", request_id), self._read("prepared", request_id)
         if control is not None and control["request_id"] != request_id:
-            # Validate an occupied global control even while looking up a
-            # different action reference. Any unrelated saved request is orphaned
-            # because this contract never releases or reassigns the control.
+            # A replaced global control never erases a completed generation.
+            # Its immutable, signed terminal chain must independently establish
+            # why it was safe to admit the current request.
             self._links(control, self._read("intent", control["request_id"]),
                         self._read("prepared", control["request_id"]))
             if intent is not None or prepared is not None:
-                raise PublicationUnavailable() from None
+                history = self.publication_history(request_id)
+                if (history["intent"] != intent or history["prepared"] != prepared
+                        or history["completion"] is None):
+                    raise PublicationUnavailable() from None
         else:
             self._links(control, intent, prepared)
         return control, intent, prepared
@@ -338,6 +346,40 @@ class DynamoCatalogPublicationState:
     def history(self, request_id: str) -> tuple[dict | None, dict | None]:
         _, intent, prepared = self._snapshot(request_id)
         return intent, prepared
+
+    def _lifecycle(self):
+        from guardoath.admin_catalog_publication_lifecycle import CatalogPublicationLifecycle
+        return CatalogPublicationLifecycle(self)
+
+    def publication_history(self, request_id: str) -> dict:
+        return self._lifecycle().history(request_id)
+
+    def request_control(self) -> dict:
+        control = self.read_control()
+        completion = None
+        if control is not None and control["state"] == "SOURCE_PREPARED":
+            completion = self.publication_history(control["request_id"])["completion"]
+        return {"control": control, "available": control is None or completion is not None,
+                "expected_control_hash": EMPTY_CONTROL_HASH if control is None else document_hash(control),
+                "completion": completion}
+
+    def claim_remote(self, request_id: str) -> dict:
+        return self._lifecycle().claim_remote(request_id)
+
+    def complete_remote(self, request_id: str, claim: dict, fields: dict) -> dict:
+        return self._lifecycle().complete_remote(request_id, claim, fields)
+
+    def record_ci(self, request_id: str, fields: dict) -> dict:
+        return self._lifecycle().record_ci(request_id, fields)
+
+    def claim_deployment(self, request_id: str) -> dict:
+        return self._lifecycle().claim_deployment(request_id)
+
+    def complete_deployment(self, request_id: str, claim: dict, fields: dict) -> dict:
+        return self._lifecycle().complete_deployment(request_id, claim, fields)
+
+    def complete_release(self, request_id: str, fields: dict) -> dict:
+        return self._lifecycle().complete_release(request_id, fields)
 
     def _put_request(self, value: dict, previous: dict | None = None) -> dict:
         identifier = CATALOG_ID if value["kind"] == "control" else value["request_id"]
@@ -381,14 +423,27 @@ class DynamoCatalogPublicationState:
             if not self._same_request(saved, intent):
                 raise PublicationConflict() from None
             return saved
-        if control is not None or expected_control_hash != EMPTY_CONTROL_HASH:
-            raise PublicationConflict() from None
+        completion = None
+        if control is None:
+            if expected_control_hash != EMPTY_CONTROL_HASH:
+                raise PublicationConflict() from None
+        else:
+            completion = self.publication_history(control["request_id"])["completion"]
+            if (completion is None or expected_control_hash != document_hash(control)
+                    or intent["base_source_sha"] != completion["candidate_source_sha"]
+                    or intent["registry_version"] != completion["candidate_registry_version"]
+                    or intent["baseline_sha256"] != completion["candidate_metadata_sha256"]
+                    or intent["created_at"] < completion["recorded_at"]):
+                raise PublicationConflict() from None
         requested = self._seal({"version": 1, "contract": CONTRACT, "kind": "control",
             "request_id": intent["request_id"], "catalog_id": CATALOG_ID,
             "intent_hash": document_hash(intent), "state": "REQUESTED", "revision": 1})
         try:
-            response = self.client.transact_write_items(TransactItems=[
-                {"Put": self._put_request(requested)}, {"Put": self._put_request(intent)}])
+            writes = [{"Put": self._put_request(requested, control)},
+                      {"Put": self._put_request(intent)}]
+            if completion is not None:
+                writes.insert(0, {"ConditionCheck": self._lifecycle().condition(completion)})
+            response = self.client.transact_write_items(TransactItems=writes)
             self._acknowledged(response)
         except Exception:
             # A transaction may have committed despite a lost acknowledgement.

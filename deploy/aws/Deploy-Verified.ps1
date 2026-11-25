@@ -1,4 +1,5 @@
-# GuardOath production deployment. Run from a clean repository checkout on Windows.
+# GuardOath production deployment. Run from a clean checkout with PowerShell 7.
+# Set POWERSHELL_TELEMETRY_OPTOUT=1 before starting PowerShell.
 # Default is read-only preflight. -Deploy requires exact-source GitHub gates.
 # Issue #30 stays visible as a warning; the 15 live acceptance checks still apply.
 # Release stabilization: preserve this exact candidate while its CI/deployment completes.
@@ -8,7 +9,9 @@ param(
     [string]$Profile = "collectiverse-prod",
     [string]$Region = "us-east-1",
     [string]$FunctionName = "guardoath-site",
-    [string]$StackName = "guardoath-site"
+    [string]$StackName = "guardoath-site",
+    [string]$ReceiptPath = "",
+    [string]$ReceiptInvocationId = ""
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -25,6 +28,42 @@ function Invoke-Checked([string]$Program, [string[]]$Arguments) {
 }
 function Invoke-Aws([string[]]$Arguments) {
     return Invoke-Checked "aws" ($Arguments + @("--region", $Region, "--profile", $Profile, "--output", "json"))
+}
+function Invoke-DeploymentEvidence([string]$Operation, [object]$Value) {
+    # Configuration contains secrets. Pass it only through private stdin to the
+    # local validator, never arguments, files, normal stdout or error details.
+    $payload = $Value | ConvertTo-Json -Depth 100 -Compress
+    $lines = @($payload | & python deploy/aws/deployment_evidence.py $Operation 2>&1)
+    if ($LASTEXITCODE -ne 0) { throw "Deployment evidence refused for $Operation" }
+    $document = $null
+    try {
+        # ConvertFrom-Json in PowerShell 7.4 converts timestamp strings to
+        # DateTime and changes their spelling. Keep the bounded flat evidence
+        # exactly as the validator returned it, without exposing provider data.
+        $document = [System.Text.Json.JsonDocument]::Parse(($lines -join "`n"))
+        $values = @{}
+        foreach ($property in $document.RootElement.EnumerateObject()) {
+            $values[$property.Name] = switch ($property.Value.ValueKind.ToString()) {
+                'String' { $property.Value.GetString() }
+                'Number' { $property.Value.GetInt64() }
+                'True' { $true }
+                'False' { $false }
+                'Null' { $null }
+                default { throw "Unexpected evidence structure" }
+            }
+        }
+        return [pscustomobject]$values
+    } catch { throw "Deployment evidence response invalid" }
+    finally { if ($null -ne $document) { $document.Dispose() } }
+}
+function Assert-CompletedLambdaCode([string]$Name, [string]$CodeSha256,
+                                    [object]$Acknowledged, [string]$ConfigurationSha256) {
+    $json = Invoke-Aws @('lambda', 'get-function-configuration', '--function-name', $Name)
+    [void](ConvertTo-LambdaCodeEvidence $json) # Sanitize malformed provider evidence before decoding.
+    return Invoke-DeploymentEvidence 'complete' @{
+        acknowledged=$Acknowledged; observed=$json; expected_code_sha256=$CodeSha256;
+        original_configuration_sha256=$ConfigurationSha256
+    }
 }
 # Exact job membership is part of the release contract. A top-level "success"
 # is not enough: a matrix job may have been removed, skipped or left unexamined.
@@ -52,8 +91,8 @@ $RequiredJobs = @{
 }
 
 function Assert-RollbackCompatibility([string]$Candidate, [string]$Backup, [string]$Sha, [string]$CodeSha256) {
-    [void](Invoke-Checked "python" @("deploy/aws/verify_rollback.py", "--candidate", $Candidate,
-        "--backup", $Backup, "--expected-sha", $Sha, "--backup-code-sha256", $CodeSha256))
+    return ((Invoke-Checked "python" @("deploy/aws/verify_rollback.py", "--candidate", $Candidate,
+        "--backup", $Backup, "--expected-sha", $Sha, "--backup-code-sha256", $CodeSha256)) | ConvertFrom-Json)
 }
 function Assert-RollbackArchive([string]$Backup, [string]$CodeSha256) {
     [void](Invoke-Checked "python" @("deploy/aws/verify_rollback.py", "--backup", $Backup,
@@ -98,7 +137,8 @@ function Assert-AppliedLambdaCode([string]$Name, [string]$CodeSha256, [string]$R
 }
 function Restore-VerifiedLambdaBackup([string]$Name, [string]$Backup, [string]$BackupCodeSha256,
                                      [string]$CandidateCodeSha256, [string]$AppliedRevisionId) {
-    $current = ConvertTo-LambdaCodeEvidence (Invoke-Aws @('lambda', 'get-function-configuration', '--function-name', $Name))
+    $currentJson = Invoke-Aws @('lambda', 'get-function-configuration', '--function-name', $Name)
+    $current = ConvertTo-LambdaCodeEvidence $currentJson
     if ($current.LastUpdateStatus -ceq 'InProgress') {
         throw "Automatic rollback refused while the Lambda update remains in progress"
     }
@@ -115,13 +155,16 @@ function Restore-VerifiedLambdaBackup([string]$Name, [string]$Backup, [string]$B
     # Never adopt a freshly observed revision as rollback authority. Reuse the
     # revision returned by OUR successful update, so a race is rejected by AWS.
     Assert-RollbackArchive $Backup $BackupCodeSha256
-    $restored = ConvertTo-LambdaCodeEvidence (Invoke-Aws @('lambda', 'update-function-code', '--function-name', $Name,
-        '--revision-id', $AppliedRevisionId, '--zip-file', "fileb://$Backup"))
+    $currentEvidence = Invoke-DeploymentEvidence 'inspect' $currentJson
+    $restoredJson = Invoke-Aws @('lambda', 'update-function-code', '--function-name', $Name,
+        '--revision-id', $AppliedRevisionId, '--zip-file', "fileb://$Backup")
+    $restored = ConvertTo-LambdaCodeEvidence $restoredJson
     if ($restored.CodeSha256 -cne $BackupCodeSha256 -or $restored.RevisionId -ceq $AppliedRevisionId) {
         throw "Rollback response did not verify the backup at a new revision"
     }
+    $restorationAcknowledged = Invoke-DeploymentEvidence 'inspect' $restoredJson
     [void](Invoke-Aws @('lambda', 'wait', 'function-updated', '--function-name', $Name))
-    Assert-AppliedLambdaCode $Name $BackupCodeSha256 $restored.RevisionId
+    [void](Assert-CompletedLambdaCode $Name $BackupCodeSha256 $restorationAcknowledged $currentEvidence.configuration_sha256)
     return 'restored'
 }
 function Assert-Run([object[]]$Runs, [string]$Name, [string]$Sha) {
@@ -157,6 +200,13 @@ function Assert-Run([object[]]$Runs, [string]$Name, [string]$Sha) {
     Write-Host "$Name passed at ${Sha}: $($jobs.Count)/$($jobs.Count) individual jobs SUCCESS ($($latest.html_url))"
 }
 
+if ($ReceiptPath -or $ReceiptInvocationId) {
+    if (-not $Deploy -or -not $ReceiptPath -or $ReceiptInvocationId -cnotmatch '^[a-f0-9]{64}$') {
+        throw "A deployment receipt requires -Deploy, an explicit private path and a 64-hex invocation ID"
+    }
+    [void](Invoke-DeploymentEvidence 'path' @{path=$ReceiptPath; checkout=$Root})
+}
+
 $Sha = Invoke-Checked "git" @("rev-parse", "--verify", "HEAD")
 if ($Sha -notmatch '^[a-f0-9]{40}$') { throw "Invalid full Git SHA" }
 $dirty = Invoke-Checked "git" @("status", "--porcelain", "--untracked-files=all")
@@ -181,7 +231,7 @@ if ($OpenRisk.state -ne "closed" -or $OpenRisk.state_reason -eq "not_planned") {
 
 # The account identity and deployed stack must be readable before any write.
 $Identity = (Invoke-Aws @("sts", "get-caller-identity")) | ConvertFrom-Json
-if (-not $Identity.Account) { throw "AWS caller account not identified" }
+if ($Identity.Account -cne '839000214942') { throw "AWS caller is not the authorized production account" }
 $Stack = (Invoke-Aws @("cloudformation", "describe-stacks", "--stack-name", $StackName)) | ConvertFrom-Json
 if ($Stack.Stacks[0].StackStatus -notin @("CREATE_COMPLETE", "UPDATE_COMPLETE", "UPDATE_ROLLBACK_COMPLETE")) {
     throw "Stack not stable: $($Stack.Stacks[0].StackStatus)"
@@ -191,7 +241,8 @@ foreach ($output in $Stack.Stacks[0].Outputs) { $Outputs[$output.OutputKey] = $o
 if (-not $Outputs.DistributionId -or $Outputs.FunctionName -ne $FunctionName) {
     throw "CloudFormation outputs do not match the expected website function/distribution"
 }
-$Function = (Invoke-Aws @("lambda", "get-function", "--function-name", $FunctionName)) | ConvertFrom-Json
+$FunctionJson = Invoke-Aws @("lambda", "get-function", "--function-name", $FunctionName)
+$Function = $FunctionJson | ConvertFrom-Json
 if ($Function.Configuration.LastUpdateStatus -ne "Successful" -or -not $Function.Configuration.RevisionId) {
     throw "Lambda has a pending/failed update; do not overwrite it."
 }
@@ -208,6 +259,7 @@ New-Item -ItemType Directory -Path $BackupDir -Force | Out-Null
 $BackupFile = Join-Path $BackupDir ("lambda-before-" + $Sha.Substring(0,12) + ".zip")
 if (Test-Path $BackupFile) { throw "Backup filename already exists; avoid overwriting the previous rollback copy." }
 $BackupCodeSha256 = $Function.Configuration.CodeSha256
+$OriginalEvidence = Invoke-DeploymentEvidence 'inspect' $FunctionJson
 $Uploaded = $false
 $CandidateCodeSha256 = $null
 $AppliedRevisionId = $null
@@ -220,19 +272,45 @@ try {
     if (-not (Test-Path $Zip)) { throw "Release archive missing" }
     $CurrentHead = Invoke-Checked "git" @("rev-parse", "HEAD")
     if ($CurrentHead -ne $Sha) { throw "Git HEAD changed during build" }
-    Assert-RollbackCompatibility $Zip $BackupFile $Sha $BackupCodeSha256
+    $RollbackEvidence = Assert-RollbackCompatibility $Zip $BackupFile $Sha $BackupCodeSha256
     $CandidateCodeSha256 = Get-ArchiveCodeSha256 $Zip
     $Uploaded = $true # AWS may apply the update even if the client loses its response.
-    $Applied = ConvertTo-LambdaCodeEvidence (Invoke-Aws @("lambda", "update-function-code", "--function-name", $FunctionName,
-        "--revision-id", $Function.Configuration.RevisionId, "--zip-file", "fileb://$Zip"))
+    $AppliedJson = Invoke-Aws @("lambda", "update-function-code", "--function-name", $FunctionName,
+        "--revision-id", $Function.Configuration.RevisionId, "--zip-file", "fileb://$Zip")
+    $Applied = ConvertTo-LambdaCodeEvidence $AppliedJson
     if ($Applied.CodeSha256 -cne $CandidateCodeSha256) { throw "Update response did not verify candidate archive bytes" }
     $AppliedRevisionId = $Applied.RevisionId
+    $Acknowledged = Invoke-DeploymentEvidence 'inspect' $AppliedJson
+    Write-Host "Lambda upload acknowledged: code $CandidateCodeSha256 | revision $AppliedRevisionId"
     [void](Invoke-Aws @("lambda", "wait", "function-updated", "--function-name", $FunctionName))
-    Assert-AppliedLambdaCode $FunctionName $CandidateCodeSha256 $AppliedRevisionId
-    [void](Invoke-Aws @("cloudfront", "create-invalidation", "--distribution-id", $Outputs.DistributionId,
-        "--paths", "/assets/*"))
-    [void](Invoke-Checked "python" @("-m", "tools.verify_live_dashboard",
-        "--url", "https://guardoath.com", "--expected-sha", $Sha))
+    # AWS changes revision for asynchronous state transitions. Bind completed
+    # code to our acknowledgement's timestamp and unchanged complete settings.
+    # Never replace AppliedRevisionId with this observed completion revision.
+    $Completed = Assert-CompletedLambdaCode $FunctionName $CandidateCodeSha256 $Acknowledged $OriginalEvidence.configuration_sha256
+    $Invalidation = (Invoke-Aws @("cloudfront", "create-invalidation", "--distribution-id", $Outputs.DistributionId,
+        "--paths", "/assets/*")) | ConvertFrom-Json
+    $Parity = (Invoke-Checked "python" @("-m", "tools.verify_live_dashboard",
+        "--url", "https://guardoath.com", "--expected-sha", $Sha)) | ConvertFrom-Json
+    if ($ReceiptPath) {
+        $receipt = @{
+            format='guardoath.catalog-deployment-receipt.v1'; invocation_id=$ReceiptInvocationId;
+            source_sha=$Sha; code_sha256=$CandidateCodeSha256; backup_code_sha256=$BackupCodeSha256;
+            backup_source_sha=$RollbackEvidence.rollback_source_sha;
+            original_revision_id=$Function.Configuration.RevisionId; upload_revision_id=$AppliedRevisionId;
+            verified_revision_id=$Completed.revision_id; last_modified=$Completed.last_modified;
+            configuration_sha256=$Completed.configuration_sha256; account_id=$Identity.Account;
+            region=$Region; function_name=$FunctionName; stack_name=$StackName;
+            distribution_id=$Outputs.DistributionId; invalidation_id=$Invalidation.Invalidation.Id;
+            observed_at=[DateTimeOffset]::UtcNow.ToUnixTimeSeconds();
+            automatic_rollback_owned=$Completed.automatic_rollback_owned; last_update_status='Successful';
+            release_source_parity_verified=$Parity.release_source_parity_verified;
+            dashboard_ui_matches_local_source=$Parity.dashboard_ui_matches_local_source;
+            expected_source_sha=$Parity.expected_source_sha; live_source_sha=$Parity.live_source_sha;
+            verified_asset_count=$Parity.verified_asset_count; expected_asset_count=$Parity.expected_asset_count;
+            production_live_acceptance=$false
+        }
+        [void](Invoke-DeploymentEvidence 'write' @{receipt=$receipt; path=$ReceiptPath; checkout=$Root})
+    }
     Write-Host "Source parity verified. Production is NOT accepted until all 15 live safety checks have passed."
 } catch {
     $DeploymentFailure = $_

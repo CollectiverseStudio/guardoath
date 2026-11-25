@@ -59,8 +59,10 @@ if phase == "1":
     state_contracts.ENABLE_NEW_SUBSCRIPTION_STATE = True
     state_contracts.ENABLE_NEW_CANCELLATION_STATE = True
     state_contracts.ENABLE_NEW_CATALOG_PUBLICATION_STATE = True
+    state_contracts.ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE = True
 elif (state_contracts.new_subscription_state_enabled() or state_contracts.new_cancellation_state_enabled()
-      or state_contracts.new_catalog_publication_state_enabled()):
+      or state_contracts.new_catalog_publication_state_enabled()
+      or state_contracts.new_catalog_publication_lifecycle_state_enabled()):
     raise RuntimeError("Baseline browser acceptance requires baseline source")
 
 POOL, CLIENT = "us-east-1_Example", "syntheticownerclient"

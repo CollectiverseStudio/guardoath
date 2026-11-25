@@ -71,6 +71,7 @@ def record(db, kind, identifier):
 @pytest.fixture
 def writer(monkeypatch):
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_STATE", True)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE", True)
 
 
 def test_complete_signed_lifecycle_reopens_with_no_remote_publication_claim(tmp_path, writer):
@@ -116,6 +117,7 @@ def test_supported_baseline_reads_future_records_and_independently_refuses_every
     inputs = fields()
     with monkeypatch.context() as enabled:
         enabled.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_STATE", True)
+        enabled.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE", True)
         intent = state.reserve(inputs, EMPTY_CONTROL_HASH)
         claim = state.claim(intent["request_id"])
         prepared = state.complete_preparation(intent["request_id"], claim, prepared_fields(intent))

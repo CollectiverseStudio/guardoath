@@ -59,7 +59,7 @@ try {
 
     # Verify the checked functions remain on the actual write/restore path.
     $source = Get-Content $scriptPath -Raw
-    $gateCall = $source.IndexOf('    Assert-RollbackCompatibility $Zip $BackupFile $Sha $BackupCodeSha256')
+    $gateCall = $source.IndexOf('Assert-RollbackCompatibility $Zip $BackupFile $Sha $BackupCodeSha256')
     $updateMark = $source.IndexOf('    $Uploaded = $true')
     if ($gateCall -lt 0 -or $gateCall -ge $updateMark) { throw 'Compatibility must be checked before Lambda may change' }
     $restoreMethod = $ast.Find({ param($node)

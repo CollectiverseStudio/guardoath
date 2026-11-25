@@ -166,3 +166,29 @@ def test_cancellation_writer_requires_its_own_supported_backup_and_never_enables
     assert verify(writer,compatible)["status"] == "compatible"
     with pytest.raises(ValueError):
         verify(archive(tmp_path / "dropped-financial-support.zip",metadata(support=(CONTRACT,),writes=())),compatible)
+
+
+def test_catalog_lifecycle_has_explicit_reader_baseline_before_any_new_shapes(tmp_path, monkeypatch):
+    from guardoath import state_contracts
+    lifecycle = "catalog-publication-lifecycle-v1"
+    prior_support = ("subscription-cap-provenance-v1",
+                     "stripe-period-end-cancellation-v1", "catalog-publication-v1")
+    prior = archive(tmp_path / "prepared-only.zip", metadata(OLD, support=prior_support, writes=()))
+    supporting_metadata = state_contracts.release_metadata(OLD)
+    assert lifecycle in supporting_metadata["supported_state_contracts"]
+    assert supporting_metadata["introduced_state_contracts"] == []
+    supporting = archive(tmp_path / "lifecycle-reader.zip", supporting_metadata)
+    baseline = archive(tmp_path / "lifecycle-baseline.zip", state_contracts.release_metadata(SHA))
+    assert verify(baseline, prior)["status"] == "compatible"
+    assert verify(baseline, archive(tmp_path / "legacy-lifecycle.zip"))["status"] == "compatible"
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_STATE", True)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE", True)
+    writer_metadata = state_contracts.release_metadata(SHA)
+    assert writer_metadata["introduced_state_contracts"] == ["catalog-publication-v1", lifecycle]
+    writer = archive(tmp_path / "lifecycle-writer.zip", writer_metadata)
+    with pytest.raises(ValueError, match="compatibility baseline"):
+        verify(writer, prior)
+    assert verify(writer, supporting)["status"] == "compatible"
+    dropped = archive(tmp_path / "dropped-lifecycle.zip", metadata(support=prior_support, writes=()))
+    with pytest.raises(ValueError, match="drops deployed"):
+        verify(dropped, supporting)

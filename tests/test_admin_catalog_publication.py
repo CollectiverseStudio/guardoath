@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 from admin_test_support import AdminTestDynamo
+from admin_publication_lifecycle_support import publication_stages
 from guardoath import state_contracts
 from guardoath.admin_audit import AdminSensitiveReadAuditor
 from guardoath.admin_catalog_drafts import AdminCatalogDrafts
@@ -31,6 +32,7 @@ BASE={"base_registry_version":"3","releases":[]}
 @pytest.fixture
 def env(tmp_path,monkeypatch):
     monkeypatch.setattr(state_contracts,"ENABLE_NEW_CATALOG_PUBLICATION_STATE",True)
+    monkeypatch.setattr(state_contracts,"ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE",True)
     path=tmp_path/"publication.sqlite3"
     db=AdminTestDynamo(path)
     source,history=deepcopy(SOURCE),deepcopy(BASE)
@@ -271,3 +273,76 @@ def test_mismatched_audit_store_is_rejected_at_router_construction(env):
             create_admin_router(catalog_publications=env["service"],catalog_drafts=env["drafts"],
                 read_auditor=AdminSensitiveReadAuditor(wrong,"audit_table",signing_key=KEY))
     finally: wrong.close()
+
+
+def test_complete_lifecycle_projects_only_verified_linked_facts(env):
+    request = body(env)
+    first = env["service"].request(actor=OWNER, **request)
+    stages = ["preparing", "source_prepared", "publishing", "remote_published",
+              "ci_verified", "deploying", "deployed", "completed"]
+    for position, stage in enumerate(publication_stages(env["state"], first["request_id"])):
+        result = env["service"].recover(actor=OWNER, action_reference=request["action_reference"])
+        assert result["status"] == stages[position] == stage
+        assert result["remote_published"] is (position >= 3)
+        assert result["ci_verified"] is (position >= 4)
+        assert result["deployed"] is result["published"] is (position >= 6)
+        assert result["completion_verified"] is result["next_request_available"] is (position == 7)
+        assert result["production_live_acceptance"] is result["tenant_policies_changed"] is False
+        if result["ci_verified"]:
+            assert result["ci_acceptance"]["workflow_count"] == 7
+            assert result["ci_acceptance"]["job_count"] == 25
+            assert result["ci_acceptance"]["remote_sha256"] == result["remote_source"]["receipt_sha256"]
+        if result["deployed"]:
+            assert result["deployment"]["source_sha"] == result["source_preparation"]["candidate_source_sha"]
+            assert result["deployment"]["verified_asset_count"] == result["deployment"]["expected_asset_count"]
+            assert result["deployment"]["production_live_acceptance"] is False
+        if result["completion_verified"]:
+            assert result["completion"]["deployment_sha256"] == result["deployment"]["receipt_sha256"]
+    assert env["service"].request(actor=OWNER, **request)["request_id"] == first["request_id"]
+
+
+def test_completed_control_requires_exact_successor_source_and_preserves_old_history(env):
+    request = body(env)
+    first = env["service"].request(actor=OWNER, **request)
+    list(publication_stages(env["state"], first["request_id"]))
+    old = env["service"].preview(actor=OWNER, review_id=request["review_id"], operation="publish_metadata")
+    assert old["control_available"] is False
+    assert old["control_completion"]["candidate_source_sha"] == "b" * 40
+    with pytest.raises(PublicationConflict):
+        env["service"].request(actor=OWNER, **{**request,
+            "expected_control_hash": old["expected_control_hash"], "action_reference": "successor-action-reference-002"})
+    current = env["state"].read_request(first["request_id"])
+    env["history"].update(candidate_release(current["plan"], lambda: env["source"], env["history"]))
+    env["source"]["registry_version"] = "4"
+    env["source"]["domains"][0]["controls"][0]["rules"][0]["title"] = "Clearer email rule"
+    env["service"].source_provider = lambda: "b" * 40
+    env["service"].clock = lambda: 1795478500
+    _, review = saved_review(env, "Email rule", "next-inverse")
+    preview = env["service"].preview(actor=OWNER, review_id=review["review_id"], operation="reverse_latest")
+    assert preview["control_available"] is True and preview["expected_control_hash"] != "0" * 64
+    assert preview["control_completion"]["request_id"] == first["request_id"]
+    second = env["service"].request(actor=OWNER, review_id=review["review_id"], operation="reverse_latest",
+        expected_source_sha="b" * 40, expected_control_hash=preview["expected_control_hash"],
+        reason="Reverse the independently completed description release", action_reference="successor-action-reference-002",
+        confirmation=preview["confirmation"])
+    assert second["status"] == "requested" and second["request_id"] != first["request_id"]
+    old_history = env["service"].recover(actor=OWNER, action_reference=request["action_reference"])
+    assert old_history["status"] == "completed" and old_history["next_request_available"] is False
+    assert env["service"].request(actor=OWNER, **request)["request_id"] == first["request_id"]
+    assert env["state"].read_control()["request_id"] == second["request_id"]
+
+
+def test_lifecycle_gate_is_required_and_completed_history_remains_readable(env, monkeypatch):
+    request = body(env)
+    result = env["service"].request(actor=OWNER, **request)
+    list(publication_stages(env["state"], result["request_id"]))
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE", False)
+    env["service"].source_provider = lambda: None
+    app = client(env)
+    assert app.post("/v1/admin/catalog/publications", headers=HEADERS, json=request).status_code == 404
+    recovered = app.post("/v1/admin/catalog/publications/recover", headers=HEADERS,
+        json={"action_reference": request["action_reference"]})
+    assert recovered.status_code == 200 and recovered.json()["status"] == "completed"
+    assert app.get("/v1/admin/features", headers=HEADERS).json()["catalog_publication_requests"] is False
+    with pytest.raises(PublicationUnavailable):
+        env["service"].request(actor=OWNER, **request)

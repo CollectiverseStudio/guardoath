@@ -54,4 +54,9 @@ function publicationState() {
   ].join("\n");
   return JSON.parse(execFileSync(process.env.PYTHON||"python",["-c",program,process.env.GUARDOATH_ADMIN_TEST_DB],{encoding:"utf8"}));
 }
-module.exports={reviewedPublication,publicationState};
+
+function completePublication(requestId) {
+  return JSON.parse(execFileSync(process.env.PYTHON||"python",[
+    "tests/admin_publication_lifecycle_support.py",process.env.GUARDOATH_ADMIN_TEST_DB,requestId],{encoding:"utf8"}));
+}
+module.exports={reviewedPublication,publicationState,completePublication};

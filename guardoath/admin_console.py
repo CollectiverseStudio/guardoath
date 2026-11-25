@@ -316,8 +316,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
     """
     if type(require_persistent_read_audit) is not bool:
         raise ValueError("Persistent audit enforcement must be an explicit boolean")
-    from guardoath.state_contracts import (new_subscription_state_enabled, new_cancellation_state_enabled,
-                                         new_catalog_publication_state_enabled)
+    from guardoath.state_contracts import new_subscription_state_enabled, new_cancellation_state_enabled
     if not new_subscription_state_enabled():
         billing_reconciler = None
     if billing_cancellation is not None and (not isinstance(billing_cancellation, AdminSubscriptionCancellation)
@@ -434,7 +433,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            "catalog_preview": catalog_provider is not None,
                            "catalog_inspection": catalog_provider is not None,
                            "catalog_publication_preview": catalog_publications is not None,
-                           "catalog_publication_requests": catalog_publications is not None and new_catalog_publication_state_enabled(),
+                           "catalog_publication_requests": catalog_publications is not None and catalog_publications.writer_enabled(),
                            "catalog_publication_history": catalog_publications is not None,
                            "audit_required_for_writes": True,
                            "audit_receipt_lookup": audit_reader is not None,
@@ -1091,7 +1090,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             return publication_result(principal, lambda: catalog_publications.inspect(
                 actor=principal.subject, request_id=request_id), receipt=True)
 
-        if new_catalog_publication_state_enabled():
+        if catalog_publications.writer_enabled():
             @router.post("/v1/admin/catalog/publications")
             def request_publication(payload: CatalogPublicationRequest, request: Request,
                                     principal: VerifiedAdmin = Depends(require_admin)):

@@ -18,7 +18,7 @@ offline acceptance are not evidence of AWS deployment or live financial data.
 | Tenant management | Existing tenant store, suspend/reactivate, key revocation, stage-specific rule actions, downward request caps, revision checks and signed atomic audit | Deployed customer safeguards and source parity |
 | Subscriptions | Provider inspection and protective delinquency downgrade; compatibility baseline preserves existing caps and receipts; complete owner reconciliation implementation retained for the subsequent writer release | Deploy/accept the baseline before enabling new provenance and full owner reconciliation; live Stripe acceptance and provider subscription changes |
 | Billing and costs | Bounded verified invoice history, saved usage/allowance history and clearly labeled request-cap signals | Refunds/credits, verified infrastructure cost/revenue allocation and financial operations remain unavailable |
-| Catalog | Shared registry; owner inspection of setting schemas, published examples/prerequisites and declared evidence; signed immutable description drafts/reviews, reversible source-plan export and shipped metadata history | Authenticated source publication/rollback, behavior/schema authoring and deployment acceptance remain incomplete |
+| Catalog | Shared registry, signed description drafts/reviews, reversible metadata source plans and a retained publication/CI/deployment/history workflow | Lifecycle compatibility activation, operator execution and live publication remain open; general behavior/schema authoring is unfinished |
 
 `GUARDOATH_ADMIN_AUDIT_TABLE` is required in production for protected reads and
 mutations. The separate audit table and scoped permissions must already be
@@ -1521,8 +1521,10 @@ General category/check/rule authoring and production acceptance remain unfinishe
 
 ## Owner catalog request review and preparation history (2026-11-25)
 
-The current release supports `catalog-publication-v1` readers, with
-`ENABLE_NEW_CATALOG_PUBLICATION_STATE=False`. In **Catalog**, first save and
+The current release supports `catalog-publication-v1` and
+`catalog-publication-lifecycle-v1` readers. Both
+`ENABLE_NEW_CATALOG_PUBLICATION_STATE` and
+`ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE` remain `False`. In **Catalog**, first save and
 independently inspect a signed description draft, record its signed review, and
 verify the metadata manifest. **Review publication request** then regenerates
 the exact proposal from the real source catalog/history and the same owner's
@@ -1538,11 +1540,12 @@ and `catalog_publication_history`; broad `rule_publishing` remains false.
 There is no environment variable that activates the writer. The API, service,
 state adapter and external worker each enforce the source gate.
 
-The writer must remain disabled until **both** an accepted compatible baseline
-is deployed **and** the remaining release lifecycle is implemented and verified.
-Baseline deployment alone is insufficient: this batch has no normal worker
-scheduling, remote publication, complete CI/deployment evidence or verified
-terminal transition that releases the catalog's global control.
+Both source gates remain disabled until an accepted deployment/rollback baseline
+understands the new lifecycle contract and the complete retained workflow passes
+its implementation acceptance. The lifecycle now includes bounded current-request
+selection, remote publication, complete CI/deployment evidence and verified
+terminal control. An operator must run it; the browser does not start a
+background worker or provision any scheduler.
 
 ### Separate confirmed request in the retained writer
 
@@ -1590,16 +1593,29 @@ selections and expired sessions cannot restore stale request authority.
 
 | Verified stage | Meaning and remaining work |
 | --- | --- |
-| `requested` | Immutable intent and global control are recorded; a release operator must explicitly invoke preparation |
-| `preparing` | One worker obtained the acknowledged claim; do not retry an interrupted or uncertain attempt |
-| `source_prepared` | A retained local candidate commit and signed source/history receipt exist; remote publication, CI and deployment remain unverified |
+| Requested | Immutable intent and global control are recorded; an operator must invoke the bounded release worker |
+| Preparing | One worker obtained the acknowledged preparation claim; interrupted or uncertain work cannot be retried automatically |
+| Local source prepared | Exact retained candidate, parent and signed history receipt exist; publication and deployment are not yet established |
+| Source publication in progress | One conditional claim authorized the fixed non-forced push; an unknown result retains control |
+| Remote source published | The exact candidate is recorded on the fixed repository main; CI and deployment remain separate |
+| Release jobs verified | All required individual jobs in all seven exact-candidate workflows succeeded |
+| Deployment in progress | One claim and fresh invocation ID authorized the guarded script; a lost result cannot authorize another upload |
+| Deployment source/assets verified | The exact Lambda code, backend source, full dashboard and every linked asset are bound to the operation receipt |
+| Release complete | The signed terminal chain permits a fresh next proposal; this is not all-fifteen-area production acceptance |
 
-`published`, `remote_published`, `ci_verified`, `deployed`,
-`tenant_policies_changed` and `detector_behavior_changed` remain false at every
-stage. A prepared receipt includes the candidate Git source SHA and history
-fingerprint, never a claim that production changed.
+The original preparation receipt is immutable and continues to describe only
+preparation. Subsequent progress comes from distinct signed lifecycle receipts.
+`tenant_policies_changed` and `detector_behavior_changed` remain false. Even the
+terminal receipt reports `production_live_acceptance=false`.
 
-### External worker and global-control limit
+After completion, **Review another release** independently rereads the completed
+request and current control, then starts a new draft/review. The next proposal
+must match the actually deployed source, registry version and complete metadata
+fingerprint. A stale app or old confirmation cannot reserve a successor. Earlier
+requests remain recoverable by their original owner/reference after control moves
+to the next request.
+
+### Bounded external release worker
 
 `catalog_publication_worker.prepare_publication` is an external, exact-ID,
 prepare-only operation. It verifies the repository origin and exact clean base,
@@ -1611,14 +1627,27 @@ CLI accepts a private audit-key file only where POSIX permission checks are
 available; it deliberately refuses that key-file path on Windows. The callable
 worker remains portable with correctly injected signed state.
 
-There is no automatic polling/scheduling integration. Once a request reserves
-global control, the control remains held indefinitely, including after
-`SOURCE_PREPARED`. No expiry, completion/reset action or automatic retry frees
-it in this version. Retain interrupted/unknown evidence for inspection; never
-delete a control or use a new reference to bypass it. A future independently
-verified release lifecycle must bind exact candidate CI, artifact/source parity,
-deployed-source/live acceptance and a safe terminal transition before normal
-subsequent releases are possible.
+`catalog_release_worker` extends the preparation primitive through the actual
+fixed-origin non-forced push, complete exact-source GitHub jobs and the candidate's
+real guarded deployment script. Its `--next` mode reads only the one signed global
+control and handles at most that request; `--prerequisites` and `--help` describe
+the required private operator workspace, existing Git/GitHub access, Python 3.13,
+PowerShell, AWS CLI/profile and private audit-key intake. There is no table scan,
+perpetual polling process or newly provisioned cloud scheduler.
+
+The script writes a fresh operation-bound machine receipt only after successful
+code/configuration and full source/asset verification. Normal terminal completion
+uses that just-verified receipt without running the same AWS/asset pass again.
+A separately resumed deployed stage needs readback because the earlier call ended
+before terminal evidence persisted. AWS upload/completion revisions remain
+separate; an observed later revision never grants rollback authority.
+
+Global control is replaced only by the next legitimate request's atomic,
+full-document transaction after a verified terminal chain. Nothing deletes,
+expires or resets it to bypass an unknown outcome. Retain interrupted/unknown
+evidence and its original reference. CI failure, incomplete evidence, a lost
+push/deployment acknowledgement or changed source cannot silently release control
+or dispatch another attempt.
 
 Current local acceptance uses real mounted auth/API/services and reopened signed
 storage with synthetic external transports. Actual Chrome journeys are added to

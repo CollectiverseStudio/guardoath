@@ -246,6 +246,7 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 button{background:var(--teal);color:#fff;border:1px solid transparent;border-radius:7px;padding:10px 14px;cursor:pointer;font-size:12px;font-weight:650;line-height:1.4;transition:background .15s,border-color .15s}button:hover{background:#066e71}button:disabled{opacity:.45;cursor:default}.secondary{background:#fff;color:#365264;border-color:#d0dce4}.secondary:hover{background:#e7eef2}input,select,textarea{border:1px solid #cfdae3;background:#fff;color:#173347;border-radius:6px;padding:9px 10px;font-size:13px;max-width:100%;min-height:38px}input:disabled,textarea:disabled{background:#f3f6f8;color:#82939f}textarea{width:100%;resize:vertical}input{margin:5px 5px 5px 0}#proposal-title{width:100%}#audit-id,#draft-id{width:min(100%,520px);font-family:ui-monospace,monospace;font-size:12px}.scroll{overflow:auto;max-width:100%;border:1px solid var(--line);border-radius:8px;margin-top:19px}table{width:100%;min-width:650px;border-collapse:collapse;font-size:12px}th{font-size:10px;color:#637a8a;background:#f4f7f9;letter-spacing:.4px;white-space:nowrap}td,th{border-bottom:1px solid #e7edf1;padding:13px 12px;text-align:left;vertical-align:top}tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:#f8fbfc}td button{margin:0 5px 6px 0;padding:6px 9px;font-size:10px;white-space:nowrap}td:last-child>span{display:block;color:#788d9b;font-size:10px}#tenant-rows td:last-child{min-width:170px}#categories details{border:1px solid var(--line);border-radius:8px;margin:9px 0;padding:0 14px}#categories details details{background:#f8fafb;margin-bottom:13px}summary{padding:14px 0;cursor:pointer;font-size:12px;line-height:1.5}summary span{color:var(--muted);font-size:11px}#categories ul{padding-left:19px;font-size:12px;line-height:1.8}#categories li{margin:10px 0;overflow-wrap:anywhere}#categories li button{font-size:10px;padding:6px 9px;margin:6px}#proposal-target{background:#f3f7f9;border-radius:6px;padding:10px 12px;color:#557382;font-size:12px}.login-panel{max-width:560px;margin:64px auto;padding:36px}.login-panel h2{font-size:25px;letter-spacing:-.6px}.login-panel>p{color:var(--muted)}.login-panel>button{margin:12px 0 6px;min-height:43px}.login-panel .eyebrow{color:var(--teal)}#native-auth{border-top:1px solid var(--line);margin-top:24px;padding-top:15px}#native-auth label{display:block;margin-top:13px}#native-auth input{display:block;width:100%;margin:7px 0 12px}#native-challenge{margin-top:18px}#login-message{color:#456670;overflow-wrap:anywhere}#login-message:empty{display:none}
 @media(min-width:1500px){.workspace{padding:34px 45px}}@media(max-width:1080px){.admin-layout{grid-template-columns:180px minmax(0,1fr)}.workspace{padding:26px 22px}.sidebar{padding:28px 10px}.workspace-header{align-items:flex-start}.overview-guides{grid-template-columns:1fr}.overview-guides button{padding:13px}.overview-guides span{margin-top:4px}}@media(max-width:720px){.topbar{padding:16px 18px;min-height:78px;gap:12px}.topbar h1{font-size:16px}.brand{gap:10px}.brand-mark{width:34px;height:39px;font-size:21px}.header-note{display:none}.admin-layout{display:block;min-height:calc(100vh - 78px)}.sidebar{padding:12px 14px;gap:8px}.sidebar-heading,.sidebar-note{display:none}#admin-navigation{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.section-link{justify-content:center;font-size:11px;padding:9px 5px;min-height:36px;text-align:center}.nav-index{display:none}.section-link[aria-current="page"]{box-shadow:inset 0 -2px #42c5be}.workspace{padding:21px 14px 30px}.workspace-header{gap:13px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}.workspace-header h2{font-size:25px}.workspace-header p:not(.eyebrow){font-size:12px}.workspace-actions{width:100%;justify-content:flex-end}.workspace-actions button{padding:8px 12px}.panel{padding:18px;border-radius:10px}.panel h2{font-size:17px}.section-heading{align-items:flex-start}.section-tag{font-size:9px;padding:4px 7px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}.metric{padding:13px}.metric strong{font-size:18px}.login-panel{margin:28px 14px;padding:25px}.panel>input{width:100%}.panel>label{display:block;margin-top:13px}.panel>button{margin-top:5px}.workspace-status{font-size:10px;padding:10px 12px}.overview-guides{margin-top:17px}}@media(prefers-reduced-motion:reduce){button{transition:none}}
 #catalog-inspector{border:1px solid var(--line);border-radius:8px;background:#f8fafb;margin:18px 0;padding:16px;min-width:0}#catalog-inspector-content{min-width:0;overflow-wrap:anywhere}#catalog-inspector-content h4{margin-bottom:7px}.catalog-source-text{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:24rem;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px;font:11px/1.6 ui-monospace,monospace;max-width:100%}
+.publication-evidence{display:grid;gap:8px;margin:12px 0 18px;list-style:none;padding:0}.publication-evidence:empty{display:none}.publication-evidence li{padding:12px 14px;border:1px solid var(--line);border-radius:7px;background:#f8fafb;overflow-wrap:anywhere}.publication-evidence strong{display:block;font-size:12px}.publication-evidence span{display:block;margin-top:5px;font-size:11px;line-height:1.7;color:var(--muted)}.publication-evidence [data-verified="true"]{border-left:3px solid var(--teal)}
 </style></head><body>
 <header class="topbar"><div class="brand"><span class="brand-mark" aria-hidden="true">G</span><div><p class="eyebrow">Owner workspace</p><h1>GuardOath Administration</h1></div></div><p class="header-note">Owner console<span>Audited access · MFA required</span></p></header><main>
 <section id="login" class="panel login-panel"><p class="eyebrow">Secure administration</p><h2>Administrator sign-in</h2><p>Use your GuardOath administrator account with MFA. Customers and demo API keys do not have administrative access.</p><button id="login-start" type="button">Sign in with Cognito</button>
@@ -326,17 +327,18 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <button id="manifest-export" type="button" disabled>Export reviewed forward/rollback JSON (not published)</button>
 <p id="draft-result" role="status"></p>
 <p id="review-manifest-result" role="status"></p>
-<h3>Request a catalog source release</h3><p class="muted">Review the saved proposal before confirming a separate source preparation request. This release provides review and verified history. Automated publishing and release completion remain unavailable. Requests preserve all customer settings.</p>
+<h3>Request a catalog source release</h3><p class="muted">Review the saved proposal before confirming a separate release request. Verified history distinguishes source preparation, remote source, complete release checks and deployment. New requests require this release's enabled writer and available verified catalog control. Customer settings remain unchanged.</p>
 <label for="publication-operation">Release operation</label> <select id="publication-operation"><option value="publish_metadata">Publish reviewed description</option><option value="reverse_latest">Reverse latest description release</option></select>
 <button id="publication-preview" type="button" disabled>Review publication request</button>
 <p id="publication-target" role="status">Preview a reviewed metadata manifest first.</p>
 <label for="publication-confirm">Exact confirmation</label> <input id="publication-confirm" maxlength="16" autocomplete="off" spellcheck="false" disabled>
 <label for="publication-reason">Publication reason</label> <textarea id="publication-reason" rows="2" maxlength="240" disabled></textarea>
 <label for="publication-reference">Action reference</label> <input id="publication-reference" maxlength="96" readonly autocomplete="off" spellcheck="false">
-<button id="publication-request" type="button" disabled>Request source preparation</button><p id="publication-result" role="status"></p>
+<button id="publication-request" type="button" disabled>Request reviewed release</button><p id="publication-result" role="status"></p><ol id="publication-result-evidence" class="publication-evidence" aria-label="Verified publication evidence"></ol>
 <h3>Recover a publication request</h3><p class="muted">Keep the action reference before submitting. If a response is lost, inspect that same reference to read its verified history.</p>
 <label for="publication-recover-reference">Publication action reference</label> <input id="publication-recover-reference" maxlength="96" autocomplete="off" spellcheck="false">
-<button id="publication-recover" type="button" disabled>Verify publication history</button><p id="publication-recovery-result" role="status"></p>
+<button id="publication-recover" type="button" disabled>Verify publication history</button><p id="publication-recovery-result" role="status"></p><ol id="publication-recovery-result-evidence" class="publication-evidence" aria-label="Verified recovered publication evidence"></ol>
+<button id="publication-next" type="button" class="secondary" disabled>Review another release</button><p id="publication-next-result" role="status"></p>
 </section></div></div>
 </main><script src="/admin/client.js" defer></script></body></html>"""
 
@@ -345,6 +347,7 @@ _JS = r'''"use strict";
 (() => {
   let token = null;
   let publicationPreview = null;
+  let publicationCompleted = null;
   let publicationSelection = 0;
   let publicationHistorySelection = 0;
   let publicationFlight = null;
@@ -488,6 +491,7 @@ _JS = r'''"use strict";
   }
   const clearAdminData = () => {
     publicationAttempt = null;
+    clearPublicationCompletion();
     ++publicationHistorySelection;
     for (const id of ["publication-reference","publication-recover-reference","publication-confirm","publication-reason"]) el(id).value = "";
     el("publication-recover").disabled = true;
@@ -514,7 +518,8 @@ _JS = r'''"use strict";
     el("user-rows").replaceChildren();
     el("categories").replaceChildren();
     el("catalog-release-entries").replaceChildren();
-    for (const id of ["catalog-release-summary", "status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "user-action-result", "usage-details", "billing-details", "invoice-details", "audit-result", "proposal-result", "draft-result", "review-manifest-result", "cancellation-result", "cancellation-receipt-result", "publication-result", "publication-recovery-result"]) say(id, "");
+    for (const id of ["catalog-release-summary", "status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "user-action-result", "usage-details", "billing-details", "invoice-details", "audit-result", "proposal-result", "draft-result", "review-manifest-result", "cancellation-result", "cancellation-receipt-result", "publication-result", "publication-recovery-result", "publication-next-result"]) say(id, "");
+    for (const id of ["publication-result-evidence", "publication-recovery-result-evidence"]) el(id).replaceChildren();
     previewSelection = null;
     previewReady = null;
     draftReadyForReview = null;
@@ -559,7 +564,9 @@ _JS = r'''"use strict";
   };
   function withdrawWorkspaceSnapshot(message) {
     ++publicationHistorySelection;
+    clearPublicationCompletion();
     say("publication-recovery-result", "");
+    el("publication-recovery-result-evidence").replaceChildren();
     clearCatalogInspection();
     clearInvoiceBrowser();
     clearCancellationReview();
@@ -1319,6 +1326,11 @@ _JS = r'''"use strict";
     updatePublicationControls();
   }
 
+  function clearPublicationCompletion() {
+    publicationCompleted = null;
+    el("publication-next").disabled = true;
+  }
+
   function updatePublicationControls() {
     const ready = token && publicationPreview && !publicationFlight && !publicationAttempt &&
       features.catalog_publication_requests === true && publicationPreview.control_available === true;
@@ -1330,6 +1342,8 @@ _JS = r'''"use strict";
       reason.length < 10 || reason.length > 240 || reason!==reason.trim() || unsafeCatalogText(reason);
     el("publication-recover").disabled = !token || features.catalog_publication_history !== true ||
       !/^[A-Za-z0-9_-]{16,96}$/.test(el("publication-recover-reference").value.trim());
+    el("publication-next").disabled = !token || !publicationCompleted || !!publicationFlight ||
+      features.catalog_publication_requests !== true;
   }
 
   function samePublicationChanges(first, second) {
@@ -1348,6 +1362,16 @@ _JS = r'''"use strict";
     });
   }
 
+  const publicationHash=value=>typeof value==="string" && /^[a-f0-9]{64}$/.test(value);
+  const publicationSha=value=>typeof value==="string" && /^[a-f0-9]{40}$/.test(value);
+  const publicationTime=value=>Number.isSafeInteger(value) && value>=1 && value<=253402300799;
+  const publicationCodeHash=value=>typeof value==="string" && /^[A-Za-z0-9+/]{43}=$/.test(value);
+  const publicationWorkflowJobs={"Tests":13,"Push on main":3,"Field Comparisons Evidence":2,
+    "PII Reliability Gate":3,"Stripe Reconciliation Acceptance":2,"Trusted Reference Acceptance":1,
+    "Deploy Script Acceptance":1};
+  const publicationKeys=(value,keys)=>value && typeof value==="object" && !Array.isArray(value) &&
+    Object.keys(value).sort().join(",")===keys.slice().sort().join(",");
+
   function validPublicationShape(result, selected = null) {
     const hex = value=>typeof value==="string" && /^[a-f0-9]{64}$/.test(value);
     const sha = value=>typeof value==="string" && /^[a-f0-9]{40}$/.test(value);
@@ -1363,8 +1387,9 @@ _JS = r'''"use strict";
         typeof target.check_id!=="string" || !/^[a-z][a-z0-9_]{0,59}$/.test(target.check_id) ||
         typeof target.rule_id!=="string" || !/^[A-Za-z0-9_.:-]{3,100}$/.test(target.rule_id) ||
         !samePublicationChanges(result.changed_metadata,result.changed_metadata) ||
-        ["published","remote_published","ci_verified","deployed","tenant_policies_changed",
-         "detector_behavior_changed"].some(name=>result[name]!==false)) return false;
+        ["published","remote_published","ci_verified","deployed","completion_verified"].some(name=>
+          typeof result[name]!=="boolean") || result.production_live_acceptance!==false ||
+        result.tenant_policies_changed!==false || result.detector_behavior_changed!==false) return false;
     if (selected) {
       for (const field of ["review_id","draft_id","operation","base_source_sha","registry_version",
           "candidate_registry_version","baseline_sha256","candidate_metadata_sha256"])
@@ -1376,35 +1401,132 @@ _JS = r'''"use strict";
   }
 
   function validPublicationReceipt(result, selected = null) {
+    const stages=["requested","preparing","source_prepared","publishing","remote_published",
+      "ci_verified","deploying","deployed","completed"];
     if (!validPublicationShape(result,selected) || result.integrity_verified!==true ||
-        typeof result.request_id!=="string" || !/^[a-f0-9]{64}$/.test(result.request_id) ||
-        typeof result.intent_sha256!=="string" || !/^[a-f0-9]{64}$/.test(result.intent_sha256) ||
-        !["requested","preparing","source_prepared"].includes(result.status) ||
-        !Number.isSafeInteger(result.created_at) || result.created_at<1 || result.created_at>253402300799 ||
+        !publicationHash(result.request_id) || !publicationHash(result.intent_sha256) ||
+        !stages.includes(result.status) || !publicationTime(result.created_at) ||
         typeof result.reason!=="string" || result.reason.length<10 || result.reason.length>240 ||
-        unsafeCatalogText(result.reason) || (selected?.reason && result.reason!==selected.reason)) return false;
-    if (result.status!=="source_prepared") return result.source_preparation===null;
+        result.reason!==result.reason.trim() || unsafeCatalogText(result.reason) ||
+        (selected?.reason && result.reason!==selected.reason)) return false;
+    const rank=stages.indexOf(result.status);
+    if (result.remote_published!==(rank>=4) || result.ci_verified!==(rank>=5) ||
+        result.deployed!==(rank>=7) || result.published!==(rank>=7) ||
+        result.completion_verified!==(rank===8) || typeof result.next_request_available!=="boolean" ||
+        (result.next_request_available && rank!==8)) return false;
+    const requirements=[["source_preparation",2],["remote_source",4],["ci_acceptance",5],
+      ["deployment",7],["completion",8]];
+    for (const [field,minimum] of requirements) {
+      if (rank<minimum && result[field]!==null) return false;
+      if (rank>=minimum && (!result[field] || typeof result[field]!=="object")) return false;
+    }
+    if (selected?.completion && result.completion?.receipt_sha256!==selected.completion.receipt_sha256) return false;
+    if (rank<2) return !selected?.source_preparation;
     const prepared=result.source_preparation;
-    return prepared && Object.keys(prepared).sort().join(",")==="candidate_source_sha,history_sha256,recorded_at" &&
-      typeof prepared.candidate_source_sha==="string" && /^[a-f0-9]{40}$/.test(prepared.candidate_source_sha) &&
-      prepared.candidate_source_sha!==result.base_source_sha && typeof prepared.history_sha256==="string" &&
-      /^[a-f0-9]{64}$/.test(prepared.history_sha256) && Number.isSafeInteger(prepared.recorded_at) &&
-      prepared.recorded_at>=result.created_at && prepared.recorded_at<=253402300799;
+    if (!publicationKeys(prepared,["receipt_sha256","candidate_source_sha","history_sha256","recorded_at"]) ||
+        !publicationHash(prepared.receipt_sha256) || !publicationSha(prepared.candidate_source_sha) ||
+        prepared.candidate_source_sha===result.base_source_sha || !publicationHash(prepared.history_sha256) ||
+        !publicationTime(prepared.recorded_at) || prepared.recorded_at<result.created_at ||
+        (selected?.source_preparation && ["receipt_sha256","candidate_source_sha","history_sha256"].some(
+          field=>prepared[field]!==selected.source_preparation[field]))) return false;
+    const common=["receipt_sha256","intent_sha256","prepared_sha256","request_id","base_source_sha",
+      "candidate_source_sha","candidate_registry_version","candidate_metadata_sha256","history_sha256","recorded_at"];
+    const evidence=(value,extra,after)=>publicationKeys(value,[...common,...extra]) &&
+      publicationHash(value.receipt_sha256) && value.request_id===result.request_id &&
+      value.intent_sha256===result.intent_sha256 && value.prepared_sha256===prepared.receipt_sha256 &&
+      value.base_source_sha===result.base_source_sha && value.candidate_source_sha===prepared.candidate_source_sha &&
+      value.candidate_registry_version===result.candidate_registry_version &&
+      value.candidate_metadata_sha256===result.candidate_metadata_sha256 && value.history_sha256===prepared.history_sha256 &&
+      publicationTime(value.recorded_at) && value.recorded_at>=after;
+    const remote=result.remote_source,ci=result.ci_acceptance,deployment=result.deployment,completion=result.completion;
+    if (rank>=4 && (!evidence(remote,["candidate_tree_sha","remote_head_sha"],prepared.recorded_at) ||
+        !publicationSha(remote.candidate_tree_sha) || remote.remote_head_sha!==prepared.candidate_source_sha)) return false;
+    if (rank>=5) {
+      if (!evidence(ci,["evidence_sha256","remote_sha256","workflow_count","job_count","workflows"],remote.recorded_at) ||
+          !publicationHash(ci.evidence_sha256) || ci.remote_sha256!==remote.receipt_sha256 ||
+          ci.workflow_count!==7 || ci.job_count!==25 || !Array.isArray(ci.workflows) || ci.workflows.length!==7 ||
+          new Set(ci.workflows.map(run=>run?.workflow)).size!==7 ||
+          new Set(ci.workflows.map(run=>run?.run_id)).size!==7 || ci.workflows.some(run=>
+            !publicationKeys(run,["workflow","run_id","run_attempt","job_count"]) ||
+            !Object.prototype.hasOwnProperty.call(publicationWorkflowJobs,run.workflow) ||
+            run.job_count!==publicationWorkflowJobs[run.workflow] ||
+            !Number.isSafeInteger(run.run_id) || run.run_id<1 ||
+            !Number.isSafeInteger(run.run_attempt) || run.run_attempt<1)) return false;
+    }
+    if (rank>=7 && (!evidence(deployment,["remote_sha256","ci_sha256","evidence_sha256","invocation_id",
+          "source_sha","code_sha256","configuration_sha256","verified_asset_count","expected_asset_count",
+          "automatic_rollback_owned","production_live_acceptance","source_parity_verified","assets_parity_verified"],ci.recorded_at) ||
+        deployment.remote_sha256!==remote.receipt_sha256 || deployment.ci_sha256!==ci.receipt_sha256 ||
+        !publicationHash(deployment.evidence_sha256) || !publicationHash(deployment.invocation_id) ||
+        deployment.source_sha!==prepared.candidate_source_sha || !publicationCodeHash(deployment.code_sha256) ||
+        !publicationHash(deployment.configuration_sha256) || !Number.isSafeInteger(deployment.expected_asset_count) ||
+        deployment.expected_asset_count<13 || deployment.expected_asset_count>100000 ||
+        deployment.verified_asset_count!==deployment.expected_asset_count ||
+        typeof deployment.automatic_rollback_owned!=="boolean" || deployment.production_live_acceptance!==false ||
+        deployment.source_parity_verified!==true || deployment.assets_parity_verified!==true)) return false;
+    if (rank===8 && (!evidence(completion,["remote_sha256","ci_sha256","deployment_sha256","verified_source_sha",
+          "verified_code_sha256","production_live_acceptance"],deployment.recorded_at) ||
+        completion.remote_sha256!==remote.receipt_sha256 || completion.ci_sha256!==ci.receipt_sha256 ||
+        completion.deployment_sha256!==deployment.receipt_sha256 ||
+        completion.verified_source_sha!==prepared.candidate_source_sha ||
+        completion.verified_code_sha256!==deployment.code_sha256 || completion.production_live_acceptance!==false)) return false;
+    return true;
   }
 
   function showPublicationReceipt(result, id) {
     const stage={requested:"Request recorded; waiting for a release operator",preparing:
       "Source preparation claimed; no automatic second attempt",source_prepared:
-      "Local candidate source prepared; remote publication and release checks remain"}[result.status];
+      "Local candidate source prepared; remote publication and release checks remain",
+      publishing:"Remote source publication claimed; outcome verification pending",
+      remote_published:"Remote source commit verified; complete CI acceptance pending",
+      ci_verified:"Complete source CI verified; deployment pending",
+      deploying:"Deployment claimed; verified deployment receipt pending",
+      deployed:"Deployment source and assets verified; terminal completion pending",
+      completed:"Metadata publication completed with verified release evidence"}[result.status];
     say(id,stage+" · "+result.target.rule_id+" · registry "+result.registry_version+" → "+
       result.candidate_registry_version+" · request "+result.request_id+
       (result.source_preparation ? " · candidate source "+result.source_preparation.candidate_source_sha : "")+
-      " · production deployment unverified; customer settings unchanged"+readAuditLabel(result));
+      (result.deployed ? " · deployment verified at recorded time; 15-area production acceptance not established" :
+        " · production deployment unverified")+"; customer settings unchanged"+readAuditLabel(result));
+    const details=el(id+"-evidence"); details.replaceChildren();
+    const utc=value=>new Date(value*1000).toISOString();
+    const row=(label,value,description)=>{
+      const item=textNode("li","");item.dataset.verified=String(!!value);
+      item.append(textNode("strong",label+" · "+(value?"Verified":"Awaiting verified evidence")),textNode("span",description));
+      details.append(item);return item;
+    };
+    const prepared=result.source_preparation,remote=result.remote_source,ci=result.ci_acceptance,
+      deployment=result.deployment,completion=result.completion;
+    row("Source candidate",prepared,prepared ? prepared.candidate_source_sha+" · "+utc(prepared.recorded_at) :
+      "The original request remains available by its action reference.");
+    row("Remote source",remote,remote ? remote.remote_head_sha+" · "+utc(remote.recorded_at) :
+      "A local candidate or an attempted remote operation does not prove remote publication.");
+    const ciRow=row("Complete release CI",ci,ci ? "7 workflows / 25 individual jobs · "+utc(ci.recorded_at) :
+      "All required jobs must succeed for the exact candidate source.");
+    if (ci) {
+      const disclosure=textNode("details","");disclosure.append(textNode("summary","Inspect accepted workflow runs"));
+      for (const run of ci.workflows) {
+        const line=textNode("span",run.workflow+" · "+run.job_count+" jobs · ");
+        const link=textNode("a","run "+run.run_id+", attempt "+run.run_attempt);
+        link.href="https://github.com/CollectiverseStudio/guardoath/actions/runs/"+run.run_id;
+        link.target="_blank";link.rel="noopener noreferrer";line.append(link);disclosure.append(line);
+      }
+      ciRow.append(disclosure);
+    }
+    row("Deployment source and assets",deployment,deployment ? deployment.verified_asset_count+" of "+
+      deployment.expected_asset_count+" expected assets · artifact "+deployment.code_sha256+" · "+utc(deployment.recorded_at)+
+      " · broader production acceptance remains separate." : "No verified production deployment receipt has been recorded.");
+    row("Metadata release completion",completion,completion ? utc(completion.recorded_at)+" · "+
+      (result.next_request_available ? "Current control permits a freshly reviewed successor." :
+        "This historical receipt does not authorize another request.") :
+      "The catalog remains occupied until a verified terminal receipt exists.");
   }
 
   async function previewPublicationRequest() {
     if (!token || !exportableManifest || !features.catalog_publication_preview || publicationFlight || publicationAttempt) return;
     const manifest=structuredClone(exportableManifest), operation=el("publication-operation").value;
+    clearPublicationCompletion();
+    ++publicationHistorySelection;
     clearPublicationPreview();
     const selection=publicationSelection,epoch=authEpoch;
     const selected={review_id:manifest.review_id,draft_id:manifest.draft_id,operation,
@@ -1418,10 +1540,22 @@ _JS = r'''"use strict";
         body:JSON.stringify({review_id:manifest.review_id,operation})});
       if (!token || epoch!==authEpoch || selection!==publicationSelection ||
           exportableManifest?.review_id!==manifest.review_id) return;
+      const completed=result.control_completion;
+      const completionValid=completed!==null && publicationKeys(completed,["request_id","receipt_sha256",
+        "candidate_source_sha","candidate_registry_version","candidate_metadata_sha256","recorded_at"]) &&
+        publicationHash(completed.request_id) && publicationHash(completed.receipt_sha256) &&
+        publicationSha(completed.candidate_source_sha) && publicationHash(completed.candidate_metadata_sha256) &&
+        typeof completed.candidate_registry_version==="string" && /^[1-9][0-9]{0,8}$/.test(completed.candidate_registry_version) &&
+        publicationTime(completed.recorded_at);
+      const successorMatches=completionValid && completed.candidate_source_sha===result.base_source_sha &&
+        completed.candidate_registry_version===result.registry_version && completed.candidate_metadata_sha256===result.baseline_sha256;
       if (!validPublicationShape(result,selected) || result.status!=="publication_preview" ||
-          typeof result.expected_control_hash!=="string" || !/^[a-f0-9]{64}$/.test(result.expected_control_hash) ||
+          ["published","remote_published","ci_verified","deployed","completion_verified"].some(name=>result[name]!==false) ||
+          !publicationHash(result.expected_control_hash) ||
           typeof result.control_available!=="boolean" ||
-          (result.control_available && result.expected_control_hash!=="0".repeat(64)) ||
+          (completed!==null && !completionValid) ||
+          (result.expected_control_hash==="0".repeat(64) && completed!==null) ||
+          (result.control_available && result.expected_control_hash!=="0".repeat(64) && !successorMatches) ||
           result.writer_enabled!==(features.catalog_publication_requests===true) ||
           result.confirmation!==(operation==="publish_metadata"?"PUBLISH ":"REVERSE ")+manifest.review_id.slice(-8))
         throw new Error("Publication review integrity unavailable");
@@ -1432,8 +1566,9 @@ _JS = r'''"use strict";
       if (enabled) el("publication-reference").value=crypto.randomUUID().replaceAll("-","");
       say("publication-target",result.target.rule_id+" · registry "+result.registry_version+" → "+
         result.candidate_registry_version+" · "+(enabled ? "Type "+result.confirmation+" and give the release reason." :
-          !result.writer_enabled ? "Publication requests await compatible deployment and the completed release workflow." :
-          "A catalog request already owns source preparation; recover its action reference.")+readAuditLabel(result));
+          !result.writer_enabled ? "Publication requests remain disabled in this compatibility release." :
+          completed ? "The current catalog does not match the completed release; refresh the deployed source." :
+          "A catalog request already owns release control; recover its action reference.")+readAuditLabel(result));
     } catch(err) {
       if(token && epoch===authEpoch && selection===publicationSelection)
         say("publication-target","Publication review unavailable: "+err.message);
@@ -1454,6 +1589,7 @@ _JS = r'''"use strict";
       confirmation:el("publication-confirm").value};
     const flight={reference};
     publicationFlight=flight;
+    clearPublicationCompletion();
     publicationAttempt={reference,selected:{...selected,reason:body.reason}};
     publicationPreview=null;
     el("publication-confirm").disabled=true;
@@ -1461,6 +1597,7 @@ _JS = r'''"use strict";
     el("publication-recover-reference").value=reference;
     ++publicationHistorySelection;
     updatePublicationControls();
+    el("publication-result-evidence").replaceChildren();
     say("publication-result","Recording the confirmed request; retain action reference "+reference+".");
     try {
       const result=await request("/v1/admin/catalog/publications",{method:"POST",body:JSON.stringify(body)});
@@ -1473,6 +1610,7 @@ _JS = r'''"use strict";
           verified.intent_sha256!==result.intent_sha256)
         throw new Error("Persisted publication request integrity unavailable");
       showPublicationReceipt(verified,"publication-result");
+      rememberPublicationReceipt(verified,reference);
     } catch(err) {
       if(token && epoch===authEpoch && selection===publicationSelection)
         say("publication-result","Request outcome unavailable: "+err.message+
@@ -1490,6 +1628,9 @@ _JS = r'''"use strict";
     const selection=++publicationHistorySelection;
     const current=()=>token && epoch===authEpoch && selection===publicationHistorySelection;
     const expected=publicationAttempt?.reference===reference ? publicationAttempt.selected : null;
+    clearPublicationCompletion();
+    el("publication-recovery-result-evidence").replaceChildren();
+    say("publication-next-result","");
     say("publication-recovery-result","Verifying persisted publication history…");
     try {
       const result=await request("/v1/admin/catalog/publications/recover",{method:"POST",
@@ -1498,10 +1639,58 @@ _JS = r'''"use strict";
       if(result.action_reference!==reference || !validPublicationReceipt(result,expected))
         throw new Error("Publication history integrity unavailable");
       showPublicationReceipt(result,"publication-recovery-result");
+      rememberPublicationReceipt(result,reference);
     } catch(err) {
       if(current()) say("publication-recovery-result",(err.status===404 ?
         "No verified request found for this reference; no new request was submitted." :
         "Publication history unavailable: "+err.message));
+    } finally {
+      if(current()) updatePublicationControls();
+    }
+  }
+
+  function rememberPublicationReceipt(result,reference) {
+    if(publicationAttempt?.reference===reference) {
+      publicationAttempt.selected={...publicationAttempt.selected,
+        source_preparation:result.source_preparation,completion:result.completion};
+    }
+    if(result.status==="completed" && result.completion_verified && result.next_request_available) {
+      publicationCompleted={reference,result:structuredClone(result)};
+    } else clearPublicationCompletion();
+  }
+
+  async function reviewNextPublication() {
+    updatePublicationControls();
+    if(el("publication-next").disabled) return;
+    const previous=publicationCompleted,epoch=authEpoch,selection=publicationHistorySelection;
+    const current=()=>token && epoch===authEpoch && selection===publicationHistorySelection && publicationCompleted===previous;
+    const flight={reference:previous.reference};publicationFlight=flight;updatePublicationControls();
+    let completedRead=false;
+    say("publication-next-result","Rechecking completed release and current catalog control…");
+    try {
+      const verified=await request("/v1/admin/catalog/publications/"+previous.result.request_id);
+      if(!current()) return;
+      if(!validPublicationReceipt(verified,previous.result) || verified.request_id!==previous.result.request_id ||
+          verified.intent_sha256!==previous.result.intent_sha256 || !verified.next_request_available)
+        throw new Error("Completed release does not currently authorize a successor");
+      publicationAttempt=null;
+      completedRead=true;
+      el("publication-reference").value="";
+      clearPublicationPreview();clearPublicationCompletion();
+      el("publication-result-evidence").replaceChildren();say("publication-result","");
+      await load();
+      if(token && epoch===authEpoch) say("publication-next-result",
+        "Completed release verified. Select the current rule, save a fresh draft and review its new manifest before another request.");
+    } catch(err) {
+      if(current() || (completedRead && token && epoch===authEpoch)) {
+        clearPublicationCompletion();
+        say("publication-next-result",completedRead ?
+          "Completed release verified, but current catalog refresh is unavailable: "+err.message+". Refresh before reviewing another draft." :
+          "Another request remains unavailable: "+err.message+". Recover the original reference again.");
+      }
+    } finally {
+      if(publicationFlight===flight) publicationFlight=null;
+      if(token && epoch===authEpoch) updatePublicationControls();
     }
   }
 
@@ -3034,10 +3223,12 @@ _JS = r'''"use strict";
   el("publication-preview").addEventListener("click",previewPublicationRequest);
   el("publication-request").addEventListener("click",requestPublication);
   el("publication-recover").addEventListener("click",recoverPublication);
+  el("publication-next").addEventListener("click",reviewNextPublication);
   el("publication-operation").addEventListener("change",clearPublicationPreview);
   for(const id of ["publication-confirm","publication-reason"]) el(id).addEventListener("input",updatePublicationControls);
   el("publication-recover-reference").addEventListener("input",()=>{
-    ++publicationHistorySelection; say("publication-recovery-result",""); updatePublicationControls();
+    ++publicationHistorySelection; clearPublicationCompletion(); say("publication-recovery-result","");
+    el("publication-recovery-result-evidence").replaceChildren(); updatePublicationControls();
   });
   finishLogin().catch(err => say("login-message", err.message));
 })();'''

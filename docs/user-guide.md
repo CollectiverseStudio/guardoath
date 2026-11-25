@@ -3742,15 +3742,27 @@ verified. The current compatibility release exposes review and history while
 keeping new request writes disabled. Supported proposals change only an existing
 rule's title or use case; they do not edit detector behavior or customer settings.
 
-The retained future request workflow displays an exact typed confirmation,
-release reason and action reference. Keep that reference for **Recover publication
-request** if a response is lost. Recovery reads the original signed evidence and
-never submits a replacement. **Requested**, **preparing** and **local candidate
-source prepared** describe preparation evidence; none means a change is live.
-Normal worker scheduling, remote publication, complete release verification and
-global-control completion remain unfinished, so compatibility deployment alone
-does not enable the writer. See the [owner operator guide](admin-console-operator.md#owner-catalog-request-review-and-preparation-history-2026-11-25)
-for the exact limits and recovery procedure.
+The retained workflow displays an exact typed confirmation, release reason and
+action reference. Keep that reference for **Recover publication request** if a
+response is lost. Recovery reads the original signed evidence and never submits
+a replacement. The console distinguishes a requested change, local prepared
+source, source published to the repository, successful release jobs, deployment
+source/assets and completed publication. Preparation or a Git push alone does
+not mean the change is live.
+
+An authorized release operator invokes the bounded worker for the current signed
+request. A browser request does not start a background GitHub/AWS worker by
+itself. After independently verified completion, **Review another release**
+opens a fresh draft/review path; an earlier confirmation cannot publish a second
+change. Unknown outcomes retain the original reference and block conflicting
+work. Completed publication establishes its exact code/assets, while the
+separate fifteen-area production acceptance remains explicit.
+
+The compatibility release keeps both catalog source writer gates disabled until
+its new lifecycle contract is present in an accepted deployment/rollback
+baseline. General category creation and detector changes remain outside this
+metadata workflow. See the [owner operator guide](admin-console-operator.md#owner-catalog-request-review-and-preparation-history-2026-11-25)
+for activation, operation and recovery details.
 
 ## Owner console navigation
 

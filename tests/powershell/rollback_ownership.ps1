@@ -7,7 +7,8 @@ $scriptPath = (Resolve-Path 'deploy/aws/Deploy-Verified.ps1').Path
 $ast = [System.Management.Automation.Language.Parser]::ParseFile($scriptPath,[ref]$tokens,[ref]$errors)
 if ($errors.Count) { throw 'Deployment script cannot be parsed' }
 foreach ($name in @('Invoke-Checked','Assert-RollbackArchive','Get-ArchiveCodeSha256',
-    'ConvertTo-LambdaCodeEvidence','Assert-AppliedLambdaCode','Restore-VerifiedLambdaBackup')) {
+    'ConvertTo-LambdaCodeEvidence','Assert-AppliedLambdaCode','Invoke-DeploymentEvidence',
+    'Assert-CompletedLambdaCode','Restore-VerifiedLambdaBackup')) {
     $method = $ast.Find({ param($node)
         $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name
     },$true)
@@ -25,9 +26,14 @@ function Invoke-Aws([string[]]$Arguments) {
     if ($expected.Error) { throw $expected.Error }
     return $expected.Json
 }
-function Reply([string]$Command, [string]$Hash='', [string]$Revision='', [string]$Status='Successful') {
+function Reply([string]$Command, [string]$Hash='', [string]$Revision='', [string]$Status='Successful',
+               [string]$Modified='2026-11-24T12:00:00.000+0000') {
     return @{Command=$Command; Error=$null; Json=(@{CodeSha256=$Hash; RevisionId=$Revision;
-        LastUpdateStatus=$Status} | ConvertTo-Json -Compress)}
+        LastUpdateStatus=$Status; LastModified=$Modified; FunctionName='synthetic-function';
+        FunctionArn='arn:aws:lambda:us-east-1:839000214942:function:synthetic-function';
+        Runtime='python3.13'; Handler='index.handler'; Role='synthetic-role';
+        Timeout=15; MemorySize=512; Version='$LATEST';
+        Environment=@{Variables=@{SECRET='private-provider-body'}}} | ConvertTo-Json -Depth 5 -Compress)}
 }
 function BrokenReply([string]$Command, [string]$Message) {
     return @{Command=$Command; Error=$Message; Json=''}
@@ -132,12 +138,12 @@ try {
     Expect-Refused $restore 'did not verify the backup'
     Assert-Calls 2 1
     foreach ($final in @((Reply $get $thirdHash 'restored-revision'),
-        (Reply $get $backupHash 'other-revision'),
+        (Reply $get $backupHash 'other-revision' 'Successful' '2026-11-24T12:00:01.000+0000'),
         (Reply $get $backupHash 'restored-revision' 'Failed'),
         (Reply $get $backupHash 'restored-revision' 'InProgress'))) {
         Scenario @((Reply $get $candidateHash 'owned-revision'),
             (Reply $update $backupHash 'restored-revision' 'InProgress'), (Reply $wait), $final)
-        Expect-Refused $restore 'not verified at the expected revision'
+        Expect-Refused $restore 'Deployment evidence refused'
         Assert-Calls 4 1
     }
 
@@ -147,6 +153,30 @@ try {
     Scenario @((Reply $get $differentCaseHash 'owned-revision'))
     Expect-Refused { Assert-AppliedLambdaCode 'synthetic-function' $caseHash 'owned-revision' } 'not verified at the expected revision'
     Assert-Calls 1 0
+
+    # The real service changes RevisionId when its acknowledged InProgress
+    # operation becomes Successful. This is completion evidence, not authority
+    # to roll back using an observed replacement revision.
+    $ack = Invoke-DeploymentEvidence 'inspect' (Reply $update $candidateHash 'owned-revision' 'InProgress').Json
+    if ($ack.last_modified -isnot [string] -or $ack.last_modified -cne '2026-11-24T12:00:00.000+0000') {
+        throw 'Acknowledged timestamp must remain an exact string through PowerShell'
+    }
+    Scenario @((Reply $get $candidateHash 'completed-state-revision'))
+    $done = Assert-CompletedLambdaCode 'synthetic-function' $candidateHash $ack $ack.configuration_sha256
+    if ($done.revision_id -cne 'completed-state-revision' -or
+        $done.upload_revision_id -cne 'owned-revision' -or $done.automatic_rollback_owned -ne $false) {
+        throw 'State transition must not become rollback ownership'
+    }
+    Assert-Calls 1 0
+    Scenario @((Reply $get $candidateHash 'completed-state-revision'))
+    Expect-Refused $restore 'belongs to another update'
+    Assert-Calls 1 0
+
+    Scenario @((Reply $get $candidateHash 'owned-revision'),
+        (Reply $update $backupHash 'restored-revision' 'InProgress'),
+        (Reply $wait), (Reply $get $backupHash 'restored-completed-state'))
+    if ((& $restore) -cne 'restored') { throw 'Acknowledged asynchronous restore was not verified' }
+    Assert-Calls 4 1
     Scenario @((Reply $get $candidateHash 'OWNED-revision'))
     Expect-Refused $restore 'belongs to another update'
     Assert-Calls 1 0

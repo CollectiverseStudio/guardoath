@@ -2,7 +2,7 @@
 
 const {test,expect} = require("@playwright/test");
 const {execFileSync} = require("node:child_process");
-const {reviewedPublication,publicationState}=require("./admin_publication_flow");
+const {reviewedPublication,publicationState,completePublication}=require("./admin_publication_flow");
 
 // No request interception: every admin HTTP response comes from the mounted
 // application. Only its external identity, payment and database boundaries are
@@ -247,7 +247,7 @@ test("real owner schedules one provider cancellation and reopens linked history 
   expect(persisted().tenants).toEqual(before);
 });
 
-test("real owner explicitly requests source preparation and recovers immutable evidence without publishing",async ({page,request})=>{
+test("real owner requests a release and recovers signed lifecycle evidence before reviewing a successor",async ({page,request})=>{
   const headers=await login(page),before=persisted().tenants;
   const source=await (await request.get("/v1/admin/catalog",{headers})).json();
   const manifest=await reviewedPublication(page,"Explicit publication request example");
@@ -291,6 +291,26 @@ test("real owner explicitly requests source preparation and recovers immutable e
   await expect(page.locator("#publication-recover-reference")).toHaveValue(reference);
   await page.locator("#publication-recover").click();
   await expect(page.locator("#publication-recovery-result")).toContainText(receipt.request_id);
+  const completed=completePublication(receipt.request_id);
+  expect(completed.stages).toEqual(["preparing","source_prepared","publishing","remote_published",
+    "ci_verified","deploying","deployed","completed"]);
+  expect(completed.history.control.state).toBe("VERIFIED");
+  await page.locator("#publication-recover").click();
+  await expect(page.locator("#publication-recovery-result")).toContainText("Metadata publication completed");
+  await expect(page.locator("#publication-recovery-result")).toContainText("15-area production acceptance not established");
+  await expect(page.locator("#publication-recovery-result-evidence [data-verified=true]")).toHaveCount(5);
+  await expect(page.locator("#publication-recovery-result-evidence")).toContainText("7 workflows / 25 individual jobs");
+  await expect(page.locator("#publication-next")).toBeEnabled();
+  await page.locator("#publication-next").click();
+  await expect(page.locator("#publication-next-result")).toContainText("save a fresh draft");
+  await expect(page.locator("#publication-request")).toBeDisabled();
+  await expect(page.locator("#publication-reference")).toHaveValue("");
+  await expect(page.locator("#publication-recover-reference")).toHaveValue(reference);
+  await reviewedPublication(page,"A separately reviewed successor description");
+  await page.locator("#publication-preview").click();
+  await expect(page.locator("#publication-target")).toContainText("current catalog does not match the completed release");
+  await expect(page.locator("#publication-request")).toBeDisabled();
+  expect(persisted().tenants).toEqual(before);
   await page.locator("#logout").click();
   await expect(page.locator("#publication-recover-reference")).toHaveValue("");
   await expect(page.locator("#publication-reference")).toHaveValue("");

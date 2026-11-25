@@ -1,13 +1,12 @@
 # Owner catalog publication: implementation evidence and completion boundary
 
 Updated November 25, 2026 (UTC), for #42 and CORE-06 of the preserved
-[product roadmap](product-roadmap.md). The current source implements owner
-publication review/history, a separately confirmed retained request writer and
-an external source-preparation worker. The production writer remains disabled.
-This batch can record and prepare one candidate under tests; it does not provide
-the scheduling, remote publication, CI/deployment evidence or terminal-control
-completion needed for a practical release lifecycle. No live catalog edit or
-completion of #42 is claimed.
+[product roadmap](product-roadmap.md). The current source implements owner review/history, separately confirmed
+requests, external source preparation and a bounded release worker through
+remote publication, exact-candidate CI, guarded deployment receipts and verified
+terminal control. Both source-controlled catalog writer gates remain disabled
+for the compatibility baseline. No live catalog edit, automatic background
+worker service or general category/detector authoring is claimed.
 
 ## Existing authority and working operations
 
@@ -137,8 +136,10 @@ validates the request receipt against the selected review/source/metadata and
 independently rereads the persisted request. A lost reply retains the reference
 for read-only recovery; refresh cannot create a second submission. Selection
 changes, refresh and logout invalidate late results, and logout clears the
-retained form state. Receipt stages are `requested`, `preparing` and
-`source_prepared`; `remote_published`, `ci_verified` and `deployed` stay false.
+retained form state. The immutable preparation receipt retains `remote_published`, `ci_verified`
+and `deployed` as false. Later progress comes only from the separately signed
+lifecycle chain described below; the preparation receipt is never rewritten
+into a deployment claim.
 
 ## Implemented external source preparation
 
@@ -153,30 +154,85 @@ the candidate source SHA and history bytes to the original intent. It never
 moves main, pushes, dispatches CI or deploys; browser input cannot choose its
 paths, commands, credentials or detector code.
 
-Invocation is manual and exact-ID; no request poller or normal release-worker
-scheduling is implemented. The standalone audit-key-file CLI requires POSIX
+The preparation primitive remains manual and exact-ID. The bounded release
+runner below can select the one current signed request without scanning or
+requiring an operator to copy its identifier. The standalone audit-key-file CLI requires POSIX
 permission verification and refuses non-POSIX use; the callable worker can use
 an appropriately injected signed-state adapter on other platforms. A claimed,
 interrupted or uncertain attempt remains occupied for inspection. Read-back
 after an uncertain claim is never permission to retry source preparation.
 
-## Current release gate and remaining lifecycle
+## Complete bounded release lifecycle
 
-`ENABLE_NEW_CATALOG_PUBLICATION_STATE=False` is source controlled. The release
-supports the new persistent contract but introduces none. The request route is
-unmounted, and the service, state and worker independently refuse writes. The
-writer must remain disabled until both a compatible baseline is deployed and
-accepted **and** the remaining release lifecycle is implemented and verified.
-A compatible baseline alone does not make this a usable multi-release workflow.
+The new `catalog-publication-lifecycle-v1` contract keeps per-request signed
+control and immutable remote, CI, deployment and completion receipts in the
+existing independent audit table. Each effect needs its own acknowledged
+full-document conditional claim. Unknown claim/write outcomes retain control;
+reading an in-progress state does not authorize replacement execution.
 
-The single global control never expires, releases or moves to a terminal state,
-including after `SOURCE_PREPARED`. There is no implemented completion, reset or
-recovery action that frees it. Remote publication, complete exact-candidate CI,
-artifact/source parity, deployed-source/live evidence and a verified terminal
-transition must be designed and accepted before normal subsequent releases.
-Do not delete the control or substitute a fresh reference to bypass uncertainty.
-Logical reversal still needs a fresh exact-inverse review at a new higher
-version; emergency Lambda artifact rollback remains a separate existing gate.
+`catalog_release_worker` consumes the retained exact history-only candidate. It
+checks its source, parent, tree, original review and history against the signed
+preparation receipt, then performs at most one non-forced push to the fixed
+GuardOath `main`. Browser input cannot select a repository, branch, executable,
+cloud profile or path. It never dispatches a CI rerun. The next stage enumerates
+all seven exact-candidate workflows and every required individual job; a newer
+failed/pending run cannot be replaced by an older success, and partial evidence
+does not accept a release.
+
+After CI succeeds, one acknowledged deployment claim binds a fresh invocation
+ID and private receipt destination. The worker runs that exact candidate's
+`Deploy-Verified.ps1`, which preserves a compatible backup and uses the captured
+original Lambda revision for the upload. Its strict machine receipt binds code,
+backup, original/upload/completed revisions, configuration, exact resources and
+full backend/dashboard/assets parity. The normal terminal path consumes these
+just-observed operation-bound results without repeating the entire AWS/asset
+pass. An interrupted deployed-stage recovery uses independent readback because
+its prior operation ended before terminal evidence persisted.
+
+AWS's asynchronous revision transition is represented honestly. The completed
+revision may differ from the acknowledged upload revision; exact acknowledged
+`LastModified`, digest and unchanged full configuration still bind completion.
+An observed revision never becomes rollback authority. No failed/unknown
+deployment emits a success receipt or grants another deployment attempt.
+
+A verified terminal chain permits the **next** legitimate owner request to
+atomically replace the old global `SOURCE_PREPARED` control while inserting its
+new immutable intent. There is no delete, expiry or administrative reset that
+bypasses uncertainty. Earlier owner/reference recovery remains verifiable after
+control replacement. The successor proposal must use the currently deployed
+source, version and full metadata fingerprint; a stale deployed app cannot
+reserve another release just because an older release completed.
+
+The owner UI presents remote publication, all-job CI, deployment source/assets
+and completed release evidence distinctly. **Review another release** first
+rereads the prior completion and current control, then requires a fresh signed
+draft/review. It does not reuse a prior confirmation. Terminal release means
+this metadata publication completed, with
+`production_live_acceptance=false`; it is not a claim of all fifteen live areas
+or general category/check/rule authoring.
+
+### Operator entry point and activation
+
+`process_next_publication` / `--next` reads only the one signed global control
+and processes at most one current request. Empty or completed control is idle.
+It does not scan, perpetually poll, reclaim uncertain work or provision a cloud
+scheduler. An authorized operator must invoke the worker; a browser request does
+not itself start GitHub/AWS operations. The CLI exposes its prerequisites before
+credential use.
+
+The release supports both `catalog-publication-v1` and
+`catalog-publication-lifecycle-v1`.
+`ENABLE_NEW_CATALOG_PUBLICATION_STATE=False` and
+`ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE=False` remain source controlled.
+The route, service, original state and release worker require both gates; the
+new lifecycle adapter also refuses writes while its gate is disabled. Deploy an
+accepted baseline that understands both contracts before enabling the complete
+workflow in a later tested source release. No environment override substitutes
+for that compatible rollback boundary.
+
+The original preparation-stage evidence below is historical. Current batch
+results and deployment status are recorded in the owner handoff; earlier CI
+failures remain preserved rather than silently converted to successes.
 
 Local evidence includes **1,624 broad tests** and the final **259-test focused
 suite**, including 25 worker cases and the real mounted ASGI baseline and

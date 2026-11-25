@@ -5,7 +5,94 @@ record for a new chat. The append-only engineering history remains in
 [director-agent-coordination.md](director-agent-coordination.md); the complete
 47-target product discussion is preserved in [product-roadmap.md](product-roadmap.md).
 
-## Current batch: owner publication request and local source preparation
+## Current implementation: complete publication lifecycle
+
+Greg directed completion of the existing strategy and stopping repeated stability
+checks. The strategy and all 47 original targets remain in
+[product-roadmap.md](product-roadmap.md). Current work completes the next CORE-06
+step after local source preparation: fixed-repository remote publication, exact
+candidate CI, guarded deployment evidence, terminal control release and owner
+progress/history. It does not broaden supported edits beyond existing-rule
+`title`/`use_case` or claim general category/detector authoring. Implementation
+and focused acceptance are integrated as one source batch.
+
+The new signed lifecycle contract records acknowledged publication/deployment
+claims and immutable remote, exact-source CI, deployment and terminal receipts.
+A verified terminal chain allows the next owner request to atomically replace
+global control without deleting earlier evidence. Earlier action references
+remain recoverable. The next proposal must match the completed source/version/
+metadata; stale deployment or browser state cannot authorize it.
+
+The bounded external runner verifies the retained history-only candidate,
+pushes once without force to the fixed repository, reads every required exact-
+candidate CI job, and invokes that candidate's guarded deployment script with a
+fresh operation-bound receipt. Its `--next` entry point selects at most the one
+current signed request. Unknown external results keep their claims; no retry,
+reset, table scan or background cloud scheduler is added. An operator must run
+the worker. Normal completion consumes the deployer's fresh source/asset receipt
+once; separate interrupted-stage recovery performs necessary new readback.
+
+The owner UI now displays the complete stage chain and **Review another
+release**, which independently rereads terminal/control eligibility before a
+fresh draft/review/confirmation. All four persistent-state writer flags remain
+False in this compatibility source. Catalog writes require both catalog gates,
+and activation needs an accepted deployment/rollback image supporting
+`catalog-publication-lifecycle-v1`. Broad rule publishing and general detector/
+category/check creation are not claimed.
+
+Focused evidence at integration: **253** state/provenance/rollback compatibility
+tests and **121** service/runtime/mounted/browser-shell tests passed. The actual
+client validator accepted all nine service stages and rejected seven corrupted
+receipts. Playwright discovery includes **50** focused publication cases, with
+20 added here; actual Chrome execution remains part of this new commit's CI.
+The deployment evidence validator passed **32** cases, and the real PowerShell
+rollback/acknowledged-completion functions passed, including asynchronous revision
+changes, conflicting updates, changed configuration and private-input handling.
+The release worker exercised **57 distinct cases** in focused runs (38 initial,
+15 added, and 14 final affected cases with overlap). These include real local Git,
+compiler/app/Engine and reopened signed-state paths; remote GitHub/AWS/deployment
+transports are synthetic. Missing local deployment prerequisites are refused
+before consuming a deployment claim. All implementation owners have frozen their
+files. These groups overlap and are not a summed suite count. Full new-source CI
+and candidate deployment are distinct from the completed `aa907ba` baseline below.
+
+### Completed production baseline
+
+`aa907ba94470c841c5509a8ecbe03f2fd620fac8` passed all **25 required individual
+jobs** across all seven workflows, including both Windows suites and real Chrome.
+Greg explicitly approved the GuardOath release session's temporary AWS credentials
+and use of existing assigned roles. AWS production account `839000214942` and
+its assigned `AdministratorAccess` role were verified. The earlier unanswered
+consent and browser-console 403 notes below are historical, not current blockers.
+
+That exact baseline is now running on `https://guardoath.com`. Lambda reported
+`Successful` with `CodeSha256=2RpJ7NymtmKbrkn1e0FGpdWBkKrine1cSXuropTYsmk=`;
+health reported the exact source SHA. Full dashboard HTML and all **13** linked
+assets matched the checkout with no parity issues. Assets were invalidated. The
+previous code archive and configuration were preserved privately; the archive
+matched its original AWS digest. No tenant, billing, IAM, environment, concurrency
+or writer configuration was changed.
+
+The old deployment runner stopped after upload because it assumed the update
+response and completed function must have the same revision. The actual
+acknowledged update was `InProgress`; AWS assigned a different revision on
+completion while preserving the exact uploaded code. The original response was
+corroborated by its CloudTrail event, and the independent live source/asset result
+completed this code rollout. No second upload or automatic rollback occurred.
+The new runner integration binds acknowledged timestamp, code and unchanged
+configuration, retains the original upload revision separately, and never adopts
+a completion observation as rollback authority. Its new operation-bound receipt
+is for future catalog publications; no retroactive machine receipt is invented
+for the baseline.
+
+This establishes LIVE-01 and the source/asset component of LIVE-02, plus a
+preserved compatible backup. It does not establish all fifteen live areas,
+current native owner MFA, customer onboarding/billing, paid model inference or an
+exercised rollback. Those journeys were not repeated in this continuation at
+Greg's direction. The unresolved #30 latency risk and original 500-ms fail-closed
+deadline remain unchanged.
+
+## Historical batch: owner publication request and local source preparation
 
 The owner Catalog now connects a verified signed review/manifest to a separate
 publication preview, retained explicit request writer and read-only history/

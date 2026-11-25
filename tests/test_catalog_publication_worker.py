@@ -70,6 +70,7 @@ def repository(template, tmp_path, monkeypatch):
     git(source, "config", "user.name", "Synthetic catalog acceptance")
     git(source, "config", "user.email", "synthetic@guardoath.invalid")
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_STATE", True)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE", True)
     # Only the remote network call is synthetic. All local Git, source compiler,
     # fresh application, shared Engine and signed persistence boundaries are real.
     monkeypatch.setattr(worker, "_remote_main", lambda path: git(path, "rev-parse", "HEAD"))

@@ -1,8 +1,9 @@
-"""Explicit owner authority to prepare one source-shipped catalog change.
+"""Owner authority and verified history for source-shipped catalog releases.
 
 This service records a separately confirmed request from independently verified
 draft/review evidence. It never runs Git, changes runtime source, dispatches a
 worker, changes tenant policy or reports deployment from a prepared candidate.
+Later publication facts come only from independently verified signed receipts.
 """
 from __future__ import annotations
 
@@ -14,7 +15,7 @@ from guardoath.admin_catalog_drafts import DraftUnavailable
 from guardoath.admin_catalog_manifest import (
     CatalogManifestConflict, CatalogManifestUnavailable, reviewed_metadata_manifest)
 from guardoath.admin_catalog_publication_state import (
-    DynamoCatalogPublicationState, EMPTY_CONTROL_HASH,
+    DynamoCatalogPublicationState,
     PublicationConflict, PublicationUnavailable, document_hash)
 from guardoath.catalog_metadata import _safe_text
 from guardoath.catalog_publication_source import PublicationSourceUnavailable
@@ -67,8 +68,11 @@ class AdminCatalogPublications:
 
     @staticmethod
     def writer_enabled() -> bool:
-        from guardoath.state_contracts import new_catalog_publication_state_enabled
-        return new_catalog_publication_state_enabled()
+        from guardoath.state_contracts import (
+            new_catalog_publication_state_enabled,
+            new_catalog_publication_lifecycle_state_enabled)
+        return (new_catalog_publication_state_enabled()
+                and new_catalog_publication_lifecycle_state_enabled())
 
     @staticmethod
     def _identity(actor, review_id=None):
@@ -127,18 +131,40 @@ class AdminCatalogPublications:
             "target": deepcopy(plan["target"]), "plan": plan,
             "plan_sha256": document_hash(plan)}
 
+    def _request_control(self, proposal: dict) -> dict:
+        current = self.state.request_control()
+        completion = current["completion"]
+        # A completed earlier generation is usable only by its exact deployed
+        # successor source. A stale warm process cannot start from old metadata.
+        matches = completion is None or all((
+            proposal["base_source_sha"] == completion["candidate_source_sha"],
+            proposal["registry_version"] == completion["candidate_registry_version"],
+            proposal["baseline_sha256"] == completion["candidate_metadata_sha256"],
+        ))
+        return {**current, "available": current["available"] is True and matches}
+
+    @staticmethod
+    def _completion_proof(completion):
+        if completion is None:
+            return None
+        return {"receipt_sha256": document_hash(completion), **{name: completion[name]
+            for name in ("request_id", "candidate_source_sha", "candidate_registry_version",
+                         "candidate_metadata_sha256", "recorded_at")}}
+
     def preview(self, *, actor: str, review_id: str, operation: str) -> dict:
         proposal = self._proposal(actor, review_id, operation)
-        control = self.state.read_control()
+        current = self._request_control(proposal)
         return {"status": "publication_preview", **{name: proposal[name] for name in (
             "review_id", "draft_id", "base_source_sha", "operation", "registry_version",
             "candidate_registry_version", "baseline_sha256", "candidate_metadata_sha256", "target")},
             "changed_metadata": deepcopy(proposal["plan"]["changed_metadata"]),
-            "expected_control_hash": document_hash(control) if control else EMPTY_CONTROL_HASH,
-            "control_available": control is None, "writer_enabled": self.writer_enabled(),
+            "expected_control_hash": current["expected_control_hash"],
+            "control_available": current["available"], "writer_enabled": self.writer_enabled(),
+            "control_completion": self._completion_proof(current["completion"]),
             "confirmation": ("PUBLISH " if operation == "publish_metadata" else "REVERSE ") + review_id[-8:],
             "published": False, "tenant_policies_changed": False, "detector_behavior_changed": False,
-            "remote_published": False, "ci_verified": False, "deployed": False}
+            "remote_published": False, "ci_verified": False, "deployed": False,
+            "completion_verified": False, "production_live_acceptance": False}
 
     def request(self, *, actor: str, review_id: str, operation: str,
                 expected_source_sha: str, expected_control_hash: str, reason: str,
@@ -170,9 +196,9 @@ class AdminCatalogPublications:
         proposal = self._proposal(actor, review_id, operation)
         if proposal["base_source_sha"] != expected_source_sha:
             raise PublicationConflict("Deployed source changed; review publication again")
-        control = self.state.read_control()
-        if control is not None or expected_control_hash != EMPTY_CONTROL_HASH:
-            raise PublicationConflict("Another catalog release owns source preparation")
+        current = self._request_control(proposal)
+        if (not current["available"] or expected_control_hash != current["expected_control_hash"]):
+            raise PublicationConflict("Catalog release control or completed source changed")
         try:
             stamp = self.clock()
             if isinstance(stamp, bool) or not isinstance(stamp, (int, float)) or not 1 <= stamp <= 253402300799:
@@ -189,27 +215,85 @@ class AdminCatalogPublications:
         self._identity(actor)
         if type(request_id) is not str or not _HEX.fullmatch(request_id):
             raise ValueError("Invalid catalog publication reference")
-        intent, prepared = self.state.history(request_id)
+        history = self.state.publication_history(request_id)
+        intent, prepared = history["intent"], history["prepared"]
         if intent is None or intent["actor_sub"] != actor:
             return None
-        control = self.state.read_control()
+        current = self.state.request_control()
+        global_control = current["control"]
+        control = history["control"] or global_control
         if (control is None or control["request_id"] != request_id
                 or control["intent_hash"] != document_hash(intent)):
             raise PublicationUnavailable("Publication control integrity unavailable")
-        status = {"REQUESTED": "requested", "PREPARING": "preparing",
-                  "SOURCE_PREPARED": "source_prepared"}[control["state"]]
-        if (status == "source_prepared") != (prepared is not None):
-            raise PublicationUnavailable("Source preparation receipt unavailable")
+        stages = {"REQUESTED": "requested", "PREPARING": "preparing",
+            "SOURCE_PREPARED": "source_prepared", "PUBLISHING": "publishing",
+            "REMOTE_PUBLISHED": "remote_published", "CI_VERIFIED": "ci_verified",
+            "DEPLOYING": "deploying", "DEPLOYED": "deployed", "VERIFIED": "completed"}
+        status = stages.get(control["state"])
+        if status is None:
+            raise PublicationUnavailable("Publication stage unavailable")
+        rank = list(stages.values()).index(status)
+        for name, minimum in (("prepared", 2), ("remote", 4), ("ci", 5),
+                              ("deployment", 7), ("completion", 8)):
+            if (history[name] is not None) != (rank >= minimum):
+                raise PublicationUnavailable("Publication stage evidence unavailable")
+
+        def evidence(value, extra):
+            if value is None:
+                return None
+            return {"receipt_sha256": document_hash(value),
+                "intent_sha256": value["intent_hash"], "prepared_sha256": value["prepared_hash"],
+                **{name: value[name] for name in ("request_id", "base_source_sha", "candidate_source_sha",
+                    "candidate_registry_version", "candidate_metadata_sha256", "history_sha256", "recorded_at")},
+                **extra}
+
+        remote, ci = history["remote"], history["ci"]
+        deployment, completion = history["deployment"], history["completion"]
+        remote_view = evidence(remote, {name: remote[name] for name in (
+            "candidate_tree_sha", "remote_head_sha")} if remote else {})
+        ci_view = evidence(ci, {"evidence_sha256": ci["evidence_sha256"],
+            "remote_sha256": document_hash(remote),
+            "workflow_count": len(ci["runs"]),
+            "job_count": sum(len(run["jobs"]) for run in ci["runs"]),
+            "workflows": [{"workflow": run["workflow"], "run_id": run["run_id"],
+                "run_attempt": run["run_attempt"], "job_count": len(run["jobs"])}
+                for run in ci["runs"]]} if ci else {})
+        report = deployment["receipt"] if deployment else None
+        deployment_view = evidence(deployment, {
+            "remote_sha256": document_hash(remote), "ci_sha256": document_hash(ci),
+            "evidence_sha256": document_hash(report),
+            **{name: report[name] for name in ("invocation_id", "source_sha", "code_sha256",
+                "configuration_sha256", "verified_asset_count", "expected_asset_count",
+                "automatic_rollback_owned", "production_live_acceptance")},
+            "source_parity_verified": report["release_source_parity_verified"],
+            "assets_parity_verified": report["dashboard_ui_matches_local_source"],
+        } if deployment else {})
+        completion_view = evidence(completion, {
+            "remote_sha256": document_hash(remote), "ci_sha256": document_hash(ci),
+            "deployment_sha256": document_hash(deployment),
+            "verified_source_sha": completion["verified_source_sha"],
+            "verified_code_sha256": completion["verified_code_sha256"],
+            "production_live_acceptance": completion["production_live_acceptance"],
+        } if completion else {})
+        available = (completion is not None and current["available"] is True
+            and global_control is not None and global_control["request_id"] == request_id
+            and current["completion"] is not None
+            and document_hash(current["completion"]) == document_hash(completion))
         return {"status": status, "request_id": request_id, "integrity_verified": True,
             "intent_sha256": document_hash(intent), **{name: intent[name] for name in (
                 "review_id", "draft_id", "operation", "base_source_sha", "registry_version",
                 "candidate_registry_version", "baseline_sha256", "candidate_metadata_sha256",
                 "created_at", "target", "reason")},
             "changed_metadata": deepcopy(intent["plan"]["changed_metadata"]),
-            "source_preparation": ({name: prepared[name] for name in (
-                "candidate_source_sha", "history_sha256", "recorded_at")} if prepared else None),
-            "remote_published": False, "ci_verified": False, "deployed": False,
-            "published": False, "tenant_policies_changed": False, "detector_behavior_changed": False}
+            "source_preparation": ({"receipt_sha256": document_hash(prepared), **{name: prepared[name]
+                for name in ("candidate_source_sha", "history_sha256", "recorded_at")}} if prepared else None),
+            "remote_source": remote_view, "ci_acceptance": ci_view,
+            "deployment": deployment_view, "completion": completion_view,
+            "next_request_available": available,
+            "remote_published": remote is not None, "ci_verified": ci is not None,
+            "deployed": deployment is not None, "completion_verified": completion is not None,
+            "production_live_acceptance": False, "published": deployment is not None,
+            "tenant_policies_changed": False, "detector_behavior_changed": False}
 
     def recover(self, *, actor: str, action_reference: str) -> dict | None:
         self._identity(actor)

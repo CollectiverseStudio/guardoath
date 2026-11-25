@@ -99,7 +99,10 @@ class AdminTestDynamo:
         return {}
 
     def transact_write_items(self, *, TransactItems):
-        assert len(TransactItems) == 2 and set(TransactItems[0]) in ({"Update"}, {"ConditionCheck"}, {"Put"}) and set(TransactItems[1]) == {"Put"}
+        assert len(TransactItems) in (2, 3)
+        assert set(TransactItems[0]) in ({"Update"}, {"ConditionCheck"}, {"Put"})
+        assert all(set(item) == {"Put"} for item in TransactItems[1:])
+        assert len(TransactItems) == 2 or set(TransactItems[0]) == {"ConditionCheck"}
         with self.lock:
             if self.fail_transaction:
                 raise RuntimeError("Synthetic transaction outage")
@@ -111,13 +114,20 @@ class AdminTestDynamo:
                     self.put_item(**TransactItems[0]["Put"])
                 else:
                     condition = TransactItems[0]["ConditionCheck"]
-                    assert condition["ConditionExpression"] == "attribute_exists(tenant_id) AND #revision = :prior AND #record = :original"
-                    assert condition["ExpressionAttributeNames"] == {"#revision": "revision", "#record": "record"}
                     old = self._get(condition["TableName"], self._key(condition["Key"]))
                     values = condition["ExpressionAttributeValues"]
-                    if old is None or old["revision"] != values[":prior"] or old["record"] != values[":original"]:
-                        raise ConditionalFailure("Synthetic tenant dispatch conflict")
-                self.put_item(**TransactItems[1]["Put"])
+                    if condition["ConditionExpression"] == "attribute_exists(event_id) AND #control = :original":
+                        assert condition["ExpressionAttributeNames"] == {"#control": "catalog_publication"}
+                        assert set(values) == {":original"}
+                        if old is None or old.get("catalog_publication") != values[":original"]:
+                            raise ConditionalFailure("Synthetic catalog lifecycle conflict")
+                    else:
+                        assert condition["ConditionExpression"] == "attribute_exists(tenant_id) AND #revision = :prior AND #record = :original"
+                        assert condition["ExpressionAttributeNames"] == {"#revision": "revision", "#record": "record"}
+                        if old is None or old["revision"] != values[":prior"] or old["record"] != values[":original"]:
+                            raise ConditionalFailure("Synthetic tenant dispatch conflict")
+                for item in TransactItems[1:]:
+                    self.put_item(**item["Put"])
                 self.connection.execute("COMMIT")
                 self.transactions += 1
             except Exception:

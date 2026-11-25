@@ -76,8 +76,10 @@ print(json.dumps({"plan": plan, "candidate_history": candidate,
 
 def _enabled() -> None:
     try:
-        from guardoath.state_contracts import new_catalog_publication_state_enabled
-        if new_catalog_publication_state_enabled() is not True:
+        from guardoath.state_contracts import (new_catalog_publication_state_enabled,
+            new_catalog_publication_lifecycle_state_enabled)
+        if (new_catalog_publication_state_enabled() is not True
+                or new_catalog_publication_lifecycle_state_enabled() is not True):
             raise ValueError()
     except Exception:
         raise PublicationUnavailable("Catalog source preparation is not enabled") from None

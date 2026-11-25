@@ -219,7 +219,8 @@ require the full 13 individual Tests jobs, three CodeQL analyses,
 specialized reliability suites at the exact release SHA, tenant/API/browser
 live smoke tests, the saved-Off provenance audit, rollback readiness and
 all 15 documented post-deployment checks. Historical 500-ms PII latency
-failures must be resolved; do not stretch timeouts to force a green release.
+failures remain a disclosed risk under Greg's authorized release policy;
+do not stretch timeouts or declare the underlying incident resolved.
 
 ## After a code change
 
@@ -256,7 +257,7 @@ The table `guardoath-tenants` is kept (deletion protection and Retain); delete i
 
 ## Exact-SHA guarded PowerShell deployment
 
-Use `deploy/aws/Deploy-Verified.ps1` from a clean **Windows PowerShell** checkout. It is read-only by default; it checks that local HEAD is the current GitHub `main`, then verifies exact-SHA successful **Tests**, **Push on main / CodeQL**, **Field Comparisons Evidence**, **Trusted Reference Acceptance**, and **PII Reliability Gate** workflow runs. Following Greg's explicit deployment instruction, Issue #30's open or `not_planned` status produces a visible warning rather than preventing an otherwise accepted release. This does not close the incident, establish a permanent latency fix, or bypass any exact-SHA CI or runtime fail-closed check. The preflight fetches **each individual job** for every exact-SHA workflow run: 13 full Tests jobs, 3 CodeQL analyses, 2 Field Comparisons jobs (strict portfolio/scale and customer Chrome), the signed-reference job, and 3 cross-platform PII reliability jobs. A workflow-level green badge is insufficient: any missing, skipped, cancelled, failed or unenumerated job blocks deployment, with its name and GitHub job URL reported. Adding jobs cannot silently bypass this contract; all reported jobs must succeed. It never substitutes an older SHA's jobs. This is a safety gate, not an additional human approval gate.
+Use `deploy/aws/Deploy-Verified.ps1` from a clean checkout with **PowerShell 7**, Python 3.13 and the AWS CLI. It runs on Windows or Linux. It is read-only by default. Deployment requires current GitHub `main` and all 25 individual jobs across Tests, CodeQL, Field Comparisons, Trusted Reference, PII Reliability, Stripe Reconciliation and Deploy Script Acceptance at that exact SHA. Missing, skipped, cancelled, failed or incompletely enumerated jobs stop the release. All additional returned jobs must also succeed. Issue #30 remains a disclosed latency risk, not an issue-state deployment veto; its original fail-closed deadlines remain unchanged. These are release conditions, not an additional human approval gate.
 
 From the existing repository:
 
@@ -264,7 +265,8 @@ From the existing repository:
 Set-Location "C:\Users\grego\Documents\Personal\collectiverse\guardoath"
 git fetch origin main
 git pull --ff-only origin main
-powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy\aws\Deploy-Verified.ps1
+$env:POWERSHELL_TELEMETRY_OPTOUT = '1'
+pwsh -NoProfile -File .\deploy\aws\Deploy-Verified.ps1
 ```
 
 The script requires the normal AWS CLI profile `collectiverse-prod`. **A preflight failure is actionable and performs no AWS write.** The specialized workflows support manual GitHub Actions `workflow_dispatch`; to obtain *exact-current-SHA* results use their GitHub Actions **Run workflow** controls with branch `main` (or, if authenticated with GitHub CLI, `gh workflow run field-comparison-evidence.yml --ref main`, `gh workflow run field-reference-acceptance.yml --ref main`, and `gh workflow run pii-reliability-gate.yml --ref main`). Re-run preflight after the exact-source workflows have completed successfully. Issue #30 stays tracked separately and must not be falsely closed merely to permit deployment. Older green jobs cannot authorize a new SHA.
@@ -272,9 +274,49 @@ The script requires the normal AWS CLI profile `collectiverse-prod`. **A preflig
 Only after those safety gates are satisfied, execute:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy\aws\Deploy-Verified.ps1 -Deploy
+pwsh -NoProfile -File .\deploy\aws\Deploy-Verified.ps1 -Deploy
 ```
 
 The deployment mode checks AWS account and CloudFormation outputs, downloads an original Lambda code ZIP into the ignored `.guardoath-reports` directory **before** changing code, uses revision-protected `update-function-code`, invalidates `/assets/*`, and runs `python -m tools.verify_live_dashboard --expected-sha <exact HEAD>`. A failed upload/parity check triggers an attempt to restore the previously downloaded Lambda code and re-invalidate assets. It does not update CloudFormation, the tenant database, paid entitlements, Stripe credentials, IAM permissions or site concurrency. It does not claim rollback or production success if those operations fail.
 
-**The complete 15 post-deployment live safety checks are still required**. The [numbered production acceptance manifest](../../docs/production-live-acceptance.md) defines LIVE-01 through LIVE-15, their evidence and the distinction between a disabled capability and a successful live activation. It includes authenticated tenant Input/Output, attachment policy provenance and fail-closed inspection, trusted reference integrity, redaction/recheck reliability, customer sign-in and subscription behavior. Passing only live byte/SHA parity is not sufficient. Do not use `-Deploy` while those pre-deployment safety prerequisites remain unresolved. The script does not have AWS credentials in GitHub; the host executing it must have authorized access.
+The production account is pinned to `839000214942`. Set the telemetry opt-out
+before starting PowerShell; setting it inside an already running process cannot
+prevent startup telemetry. The publication worker sets it before spawning the
+deployer.
+
+### Acknowledged updates and machine-readable publication receipts
+
+AWS can assign another `RevisionId` as an acknowledged update moves from
+`InProgress` to `Successful`. Completion therefore binds the exact uploaded code
+digest and acknowledged `LastModified` to the complete unchanged configuration.
+The configuration comparison includes role, environment, layers, resource identity
+and unknown future settings; values remain private. Code/state/revision response
+metadata and AWS-managed runtime-version metadata are excluded from that
+configuration fingerprint. The acknowledged and completed revisions are recorded
+separately. A changed timestamp, digest or configuration still refuses completion.
+
+Rollback continues to require the revision acknowledged by this process's own
+upload, together with its code digest. The observed completion revision never
+becomes rollback authority. If the service's asynchronous transition changes that
+revision, automatic rollback is unavailable; preserve the backup and operation
+evidence rather than retrying over a newly observed revision. An acknowledged
+restoration uses the same timestamp/configuration completion binding.
+
+The trusted external publication worker can supply `-ReceiptPath` and
+`-ReceiptInvocationId` (a fresh 64-hex operation ID). The path must be new,
+absolute, outside the checkout and inside an operator-owned private POSIX
+directory. Windows manual deployment remains supported; the standalone automated
+receipt path refuses to infer private ACLs from Windows mode bits. Receipt creation
+is exclusive, mode 0600 and flushed to disk only after the real deployment and
+full backend/dashboard/asset parity succeed. No receipt is issued for an unknown
+or failed deployment.
+
+The strict `guardoath.catalog-deployment-receipt.v1` document binds the invocation,
+source SHA, candidate/backup digests, backup source, original/upload/completed
+revisions, unchanged configuration fingerprint, exact resources, invalidation,
+time and all asset counts. `automatic_rollback_owned` reports the retained revision
+boundary honestly. `production_live_acceptance=false` is mandatory: a completed
+metadata publication and released catalog control do not establish all fifteen
+customer/operational acceptance areas.
+
+**Full production acceptance still requires the 15 post-deployment live areas.** The [numbered manifest](../../docs/production-live-acceptance.md) distinguishes accepted source from authenticated customer, billing, provider and operational behavior. Prewrite source/CI, authorized identity, stable resource and compatible rollback conditions remain mandatory. Post-deployment source parity does not fill every live-acceptance row. Perform the available relevant journeys and record blocked or unrun areas honestly; do not repeat settled checks without a changed source/configuration or concrete failure to resolve. The deployment host needs its existing authorized AWS access; GitHub CI has no production credentials.

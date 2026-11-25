@@ -109,18 +109,21 @@ def test_catalog_writer_is_a_separate_source_only_phase(monkeypatch):
     assert "catalog-publication-v1" in manifest()["supported_state_contracts"]
 
 
-@pytest.mark.parametrize("caps,cancellation,catalog", list(itertools.product([False, True], repeat=3)))
-def test_all_three_writer_contracts_are_independent(monkeypatch, caps, cancellation, catalog):
+@pytest.mark.parametrize("caps,cancellation,catalog,lifecycle", list(itertools.product([False, True], repeat=4)))
+def test_all_writer_contracts_are_independently_declared(monkeypatch, caps, cancellation, catalog, lifecycle):
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_SUBSCRIPTION_STATE", caps)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CANCELLATION_STATE", cancellation)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_STATE", catalog)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE", lifecycle)
     declaration = manifest()
     assert declaration["supported_state_contracts"] == [
-        "subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1", "catalog-publication-v1"]
+        "subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1",
+        "catalog-publication-v1", "catalog-publication-lifecycle-v1"]
     assert declaration["introduced_state_contracts"] == [contract for enabled, contract in (
         (caps, "subscription-cap-provenance-v1"),
         (cancellation, "stripe-period-end-cancellation-v1"),
-        (catalog, "catalog-publication-v1")) if enabled]
+        (catalog, "catalog-publication-v1"),
+        (lifecycle, "catalog-publication-lifecycle-v1")) if enabled]
 
 
 @pytest.mark.parametrize("invalid", [None, 0, 1, "true", [], {}])

@@ -259,7 +259,7 @@ test("baseline catalog publication reviews and history remain usable while reque
     catalog_publication_requests:false,rule_publishing:false});
   const manifest=await reviewedPublication(page,"Baseline publication review example");
   await page.locator("#publication-preview").click();
-  await expect(page.locator("#publication-target")).toContainText("Publication requests await compatible deployment and the completed release workflow");
+  await expect(page.locator("#publication-target")).toContainText("Publication requests remain disabled in this compatibility release");
   await expect(page.locator("#publication-request")).toBeDisabled();
   await expect(page.locator("#publication-confirm")).toBeDisabled();
   expect((await request.post("/v1/admin/catalog/publications",{headers,data:{review_id:manifest.review_id}})).status()).toBe(404);

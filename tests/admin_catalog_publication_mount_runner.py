@@ -12,6 +12,7 @@ from admin_test_support import AdminTestDynamo, ADMIN_BROWSER_AUDIT_KEY
 from guardoath.admin_audit import AdminAuditReader
 from guardoath.admin_catalog_drafts import AdminCatalogDrafts
 from guardoath.admin_catalog_publication_state import DynamoCatalogPublicationState, document_hash
+from admin_publication_lifecycle_support import publication_stages
 
 
 PREFIX = "/v1/admin/catalog/publications"
@@ -121,6 +122,7 @@ def main():
     mounted.db.fail_audit = False
 
     receipt = None
+    request_transactions = 0
     if writer:
         receipt = accepted(client.post(PREFIX, headers=headers, json=body))
         assert receipt["status"] == "requested" and receipt["source_preparation"] is None
@@ -144,6 +146,18 @@ def main():
         assert client.post(PREFIX, headers=headers, json={**body,
             "reason": "Different text with the same retained action"}).status_code == 409
         assert mounted.db.transactions == 1
+        request_transactions = mounted.db.transactions
+        for stage in publication_stages(mounted.catalog_publications.state, receipt["request_id"]):
+            observed = accepted(client.post(PREFIX + "/recover", headers=headers,
+                json={"action_reference": body["action_reference"]}))
+            assert observed["status"] == stage
+            assert observed["production_live_acceptance"] is False
+            assert observed["next_request_available"] is (stage == "completed")
+        assert observed["completion_verified"] is True
+        assert observed["ci_acceptance"]["workflow_count"] == 7
+        assert observed["ci_acceptance"]["job_count"] == 25
+        assert observed["deployment"]["verified_asset_count"] == 17
+        assert observed["completion"]["deployment_sha256"] == observed["deployment"]["receipt_sha256"]
     else:
         assert client.post(PREFIX, headers=headers, json=body).status_code == 404
         assert client.post(PREFIX + "/recover", headers=headers,
@@ -161,7 +175,10 @@ def main():
         control = state.read_control()
         if writer:
             intent, prepared = state.history(receipt["request_id"])
-            assert control["state"] == "REQUESTED" and prepared is None
+            assert control["state"] == "SOURCE_PREPARED" and prepared is not None
+            lifecycle = state.publication_history(receipt["request_id"])
+            assert lifecycle["control"]["state"] == "VERIFIED"
+            assert lifecycle["completion"]["receipt_hashes"]["deployment"] == document_hash(lifecycle["deployment"])
             assert document_hash(intent) == receipt["intent_sha256"]
             assert document_hash(drafts.read_review(mounted.OWNER, review["review_id"])) == intent["review_sha256"]
             assert document_hash(drafts.read(mounted.OWNER, draft["draft_id"])) == intent["draft_sha256"]
@@ -174,7 +191,7 @@ def main():
     assert strip_audit(fresh) == strip_audit(catalog)
     print(json.dumps({"phase": mounted.phase, "denied": denied,
         "signed_read_receipts": len(audits) - 1, "intent_documents": int(writer),
-        "transactions": mounted.db.transactions, "tenants_unchanged": True,
+        "request_transactions": request_transactions, "tenants_unchanged": True,
         "catalog_unchanged": True, "remote_published": False, "ci_verified": False, "deployed": False}))
     mounted.db.close()
 
