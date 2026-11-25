@@ -82,18 +82,35 @@ existing skips; Linux Python 3.11/3.13 were cancelled, not passed. Both Windows
 jobs passed, including the existing isolated 36-case catalog module. This
 source also lacks complete release acceptance.
 
-The schema failure appeared at 18% of the large collection. Process state,
-GC and host descheduling remain hypotheses, not established causes. After
-independent log/code/history review, the CI layout now applies Windows'
-existing fresh-process catalog-module arrangement to **both Linux matrices**.
-Each runs all **36 unchanged cases** before its remaining suite and excludes
-that exact module only from the later sweep. A structural workflow comparison
-verified one execution, unchanged other steps/matrices/jobs and no new skip,
-retry, exception or relaxed assertion. The fresh local module passed all 36
-cases in 2.90 seconds. Application, detector, Engine, model and test sources
-remain unchanged; this aligns test process boundaries and does not fix the
-underlying latency risk. Both the 250-ms schema and 500-ms privacy budgets
-still reject late results.
+That schema failure appeared at 18% of the large collection. Process state,
+GC and host descheduling remain hypotheses, not established causes. The first
+layout follow-up, `c6b01ba1d52d94da130db29849f224c02fc1ffef`, passed all 36
+boundary cases in a fresh process in **all eight Linux jobs**. Its remaining
+Linux Python 3.12 suite nevertheless failed the sole sibling module that
+imports the same helper:
+[job 138919464822](https://github.com/CollectiverseStudio/guardoath/actions/runs/45529038882/job/138919464822),
+`tests/test_catalog_partial_contracts.py::test_uc092_overposting_and_missing_fields[payload5-False-input]`.
+Diagnostics were `schema / error / checker_timeout / 565.376 ms`; the sweep
+reported 1 failed, 22,649 passed and nine existing skips. Linux Python
+3.11/3.14/3.15 were cancelled. Windows Python 3.12
+[job 138919464610](https://github.com/CollectiverseStudio/guardoath/actions/runs/45529038882/job/138919464610)
+also failed two cases in that same sibling module, reporting schema timeouts
+at 422.437 ms and 419.23 ms (2 failed, 22,717 passed, 12 existing skips).
+The full run ended with **20 successful jobs, two failures and three
+cancellations**. Actual Chrome again passed 11/9/19/567 tests. This third
+candidate is also unaccepted; no same-source automatic retry was made.
+
+The CI group now includes the complete shared-helper family: **36 boundary
+cases plus 58 contract cases, 94 total**, run together in each existing fresh
+catalog process in Linux `test`, Linux `local-pii` and Windows. Only those
+two modules are excluded from the later sweeps, retaining one execution of
+every case. The actual combined local command passed all 94 cases in 5.49
+seconds. A structural workflow comparison verifies unchanged other commands,
+jobs, matrices and failure gates. No application, detector, Engine, model,
+test, assertion, timeout, skip or automatic retry changed. This completes the
+test-group process boundary; it does not establish a fix for underlying
+latency. Both the 250-ms schema and 500-ms privacy budgets still reject late
+results.
 
 Inspect all seven workflows and all 25 jobs for the current main before any
 deployment; neither prior failed attempt nor an older green source can accept
