@@ -64,7 +64,7 @@ def test_source_phase_and_manifest_cannot_be_enabled_by_environment(monkeypatch)
     assert state_contracts.new_subscription_state_enabled() is False
     manifest = state_contracts.release_metadata("a" * 40)
     assert manifest["supported_state_contracts"] == ["subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1",
-                                                   "catalog-publication-v1"]
+                                                   "catalog-publication-v1", "catalog-publication-lifecycle-v1"]
     assert manifest["introduced_state_contracts"] == []
 
 

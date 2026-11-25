@@ -56,6 +56,26 @@ before consuming a deployment claim. All implementation owners have frozen their
 files. These groups overlap and are not a summed suite count. Full new-source CI
 and candidate deployment are distinct from the completed `aa907ba` baseline below.
 
+### First lifecycle CI attempt and exact fixture correction
+
+The full lifecycle batch was published at
+`529343c0c6e65cf953843c59fe6f3645d038410c`. Its first Stripe acceptance attempt
+([run45540836797](https://github.com/CollectiverseStudio/guardoath/actions/runs/45540836797),
+job138958665362) failed one exact manifest expectation in
+`test_subscription_compatibility_baseline.py`: it still listed three supported
+contracts instead of the four now declared. The environment-disable assertion
+passed; the job reported **1failed,590passed,1existing skip**. This candidate is
+not accepted or deployed. Deploy, PII, signed reference and CodeQL workflows
+succeeded; the remaining workflows were pending when monitoring that obsolete
+SHA stopped. No same-source rerun was dispatched.
+
+The correction adds `catalog-publication-lifecycle-v1` to that exact expected
+list. All **36** subscription-baseline tests then passed locally. The other two
+exact supported-contract expectations already include the new contract. No
+application behavior, writer flag, assertion requirement, privacy deadline or
+skip changed. The replacement source requires its own complete CI before
+deployment.
+
 ### Completed production baseline
 
 `aa907ba94470c841c5509a8ecbe03f2fd620fac8` passed all **25 required individual
