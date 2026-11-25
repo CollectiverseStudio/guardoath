@@ -113,7 +113,11 @@ def next_fields(*, actor=ACTOR, reference="another-reviewed-release-123"):
             "base_source_sha": "d" * 40, "created_at": NOW + 60}
 
 
-def test_complete_lifecycle_reopens_and_atomically_admits_next_reviewed_generation(tmp_path, writer):
+def test_source_default_lifecycle_reopens_and_atomically_admits_next_reviewed_generation(tmp_path):
+    assert state_contracts.new_catalog_publication_state_enabled() is True
+    assert state_contracts.new_catalog_publication_lifecycle_state_enabled() is True
+    assert state_contracts.new_subscription_state_enabled() is False
+    assert state_contracts.new_cancellation_state_enabled() is False
     path = tmp_path / "signed.sqlite"
     state, db = make_state(AdminTestDynamo(path))
     request_id = advance(state)
@@ -481,6 +485,8 @@ def test_lifecycle_source_gate_cannot_be_nonboolean(monkeypatch, invalid):
 
 
 def test_lifecycle_source_gate_cannot_be_enabled_by_environment(monkeypatch):
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_STATE", False)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE", False)
     for name in ("ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE",
                  "GUARDOATH_ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE",
                  "GUARDOATH_ADMIN_TEST_WRITER_PHASE"):

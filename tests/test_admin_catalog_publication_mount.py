@@ -8,7 +8,8 @@ import sys
 import pytest
 
 
-@pytest.mark.parametrize("phase", ["0", "1"], ids=["compatibility_baseline", "retained_writer"])
+@pytest.mark.parametrize("phase", ["0", "1", "source"],
+    ids=["compatibility_fixture", "financial_writer_fixture", "activated_source"])
 def test_mounted_catalog_publication_preserves_auth_audit_and_tenants(tmp_path, phase):
     root = Path(__file__).resolve().parents[1]
     environment = {key: value for key, value in os.environ.items()
@@ -22,8 +23,11 @@ def test_mounted_catalog_publication_preserves_auth_audit_and_tenants(tmp_path, 
     assert result.returncode == 0, result.stdout + result.stderr
     evidence = json.loads(result.stdout)
     assert evidence["phase"] == phase
-    assert evidence["signed_read_receipts"] == (19 if phase == "1" else 7)
+    assert evidence["signed_read_receipts"] == (7 if phase == "0" else 19)
+    assert evidence["catalog_source_defaults"] is (phase != "0")
+    assert evidence["financial_writers"] is (phase == "1")
+    assert evidence["processing_mode"] == "operator_started"
     assert set(evidence["denied"]) == {"customer", "no-mfa", "stale-mfa", "forged"}
-    assert evidence["request_transactions"] == evidence["intent_documents"] == int(phase)
+    assert evidence["request_transactions"] == evidence["intent_documents"] == int(phase != "0")
     assert evidence["tenants_unchanged"] and evidence["catalog_unchanged"]
     assert evidence["remote_published"] is evidence["ci_verified"] is evidence["deployed"] is False

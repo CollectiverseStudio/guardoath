@@ -154,7 +154,8 @@ class AdminCatalogPublications:
     def preview(self, *, actor: str, review_id: str, operation: str) -> dict:
         proposal = self._proposal(actor, review_id, operation)
         current = self._request_control(proposal)
-        return {"status": "publication_preview", **{name: proposal[name] for name in (
+        return {"status": "publication_preview", "processing_mode": "operator_started",
+            **{name: proposal[name] for name in (
             "review_id", "draft_id", "base_source_sha", "operation", "registry_version",
             "candidate_registry_version", "baseline_sha256", "candidate_metadata_sha256", "target")},
             "changed_metadata": deepcopy(proposal["plan"]["changed_metadata"]),
@@ -279,7 +280,8 @@ class AdminCatalogPublications:
             and global_control is not None and global_control["request_id"] == request_id
             and current["completion"] is not None
             and document_hash(current["completion"]) == document_hash(completion))
-        return {"status": status, "request_id": request_id, "integrity_verified": True,
+        return {"status": status, "processing_mode": "operator_started",
+            "request_id": request_id, "integrity_verified": True,
             "intent_sha256": document_hash(intent), **{name: intent[name] for name in (
                 "review_id", "draft_id", "operation", "base_source_sha", "registry_version",
                 "candidate_registry_version", "baseline_sha256", "candidate_metadata_sha256",

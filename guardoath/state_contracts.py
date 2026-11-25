@@ -17,13 +17,14 @@ ENABLE_NEW_SUBSCRIPTION_STATE = False
 # Cancellation is an independent writer phase. Supporting/reading its signed
 # durable claims does not authorize either financial dispatch or cap writers.
 ENABLE_NEW_CANCELLATION_STATE = False
-# Catalog requests and their external source-preparation claims are independent
-# persistent state. Deploy the real readers before a later source enables writes.
-ENABLE_NEW_CATALOG_PUBLICATION_STATE = False
+# The accepted catalog reader baseline supports requests, source preparation and
+# the complete release lifecycle. Enable both source-controlled phases together;
+# financial writers remain independent and disabled above.
+ENABLE_NEW_CATALOG_PUBLICATION_STATE = True
 # Remote publication, accepted CI, deployment and terminal release introduce
 # their own signed records. A rollback image must understand this complete
-# lifecycle before either catalog writer phase is activated.
-ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE = False
+# lifecycle. Deployment still verifies the digest-bound rollback archive.
+ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE = True
 
 
 def new_subscription_state_enabled() -> bool:

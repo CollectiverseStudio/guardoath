@@ -25,7 +25,8 @@ function manifest() {
     release_kind:"review_only_projection_not_executable_source"};
 }
 function preview(writer=true) {
-  return {status:"publication_preview",review_id:REVIEW,draft_id:DRAFT,base_source_sha:"a".repeat(40),
+  return {status:"publication_preview",processing_mode:"operator_started",
+    review_id:REVIEW,draft_id:DRAFT,base_source_sha:"a".repeat(40),
     operation:"publish_metadata",registry_version:"3",candidate_registry_version:"4",baseline_sha256:BASE,
     candidate_metadata_sha256:CANDIDATE,target:structuredClone(target),changed_metadata:structuredClone(changes),
     expected_control_hash:"0".repeat(64),control_available:true,control_completion:null,writer_enabled:writer,
@@ -123,6 +124,7 @@ async function settleResponse(page,response) {
 
 test("explicit request retains its reference, independently rereads history and never claims deployment",async({page})=>{
   const {fixture,state}=await setup(page);
+  await expect(page.locator("#publication-processing")).toContainText("An operator starts each release by running the release worker");
   await ready(page);
   const reference=await page.locator("#publication-reference").inputValue();
   await page.locator("#publication-request").click();
@@ -139,6 +141,7 @@ test("explicit request retains its reference, independently rereads history and 
 });
 
 for(const [name,mutate] of [
+  ["automatic processing",value=>({...value,processing_mode:"automatic"})],
   ["claimed deployment",value=>({...value,deployed:true})],
   ["different review",value=>({...value,review_id:"0".repeat(64)})],
   ["different draft",value=>({...value,draft_id:"0".repeat(64)})],
@@ -159,6 +162,7 @@ for(const [name,mutate] of [
 });
 
 for(const [name,mutate] of [
+  ["automatic processing",value=>({...value,processing_mode:"automatic"})],
   ["remote publication",value=>({...value,remote_published:true})],
   ["CI acceptance",value=>({...value,ci_verified:true})],
   ["deployment",value=>({...value,deployed:true})],

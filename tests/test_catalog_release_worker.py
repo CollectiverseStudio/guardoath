@@ -2,6 +2,7 @@
 from copy import deepcopy
 import base64
 import hashlib
+import hmac
 import io
 import json
 import os
@@ -138,7 +139,7 @@ def prepared(release_template, tmp_path, monkeypatch):
     git(source, "remote", "set-url", "origin", ORIGIN)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_STATE", True)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE", True)
-    remote = {"calls": [], "failure": None, "path": bare}
+    remote = {"calls": [], "dry_runs": [], "failure": None, "path": bare}
     original_git = preparation._git
 
     def external_git(path, *args, **kwargs):
@@ -147,9 +148,12 @@ def prepared(release_template, tmp_path, monkeypatch):
         assert args[:6] == ("-c", "push.followTags=false", "push", "--porcelain", "--no-follow-tags", "--recurse-submodules=no")
         assert args[-2] == "origin" and args[-1].endswith(":refs/heads/main")
         assert not any(argument.startswith("+") or argument in ("--force", "-f", "--force-with-lease") for argument in args)
-        remote["calls"].append(args)
+        dry_run = "--dry-run" in args
+        remote["dry_runs" if dry_run else "calls"].append(args)
+        if dry_run and remote["failure"] == "denied":
+            raise PublicationUnavailable("Synthetic fixed-origin push authentication denied")
         response = original_git(path, *args[:-2], str(bare), args[-1], **kwargs)
-        if remote["failure"] == "lost":
+        if not dry_run and remote["failure"] == "lost":
             raise PublicationUnavailable("Synthetic push response lost")
         return response
 
@@ -229,6 +233,19 @@ def test_unknown_remote_attempt_is_never_reclaimed(prepared, fault):
         advance(prepared)
     assert len(prepared["remote"]["calls"]) == (fault == "push")
     assert not prepared["deployment"].calls
+
+
+def test_denied_push_setup_preserves_source_prepared_without_publication_claim(prepared):
+    prepared["remote"]["failure"] = "denied"
+    before = prepared["state"].publication_history(prepared["request_id"])
+    remote_before = git(prepared["remote"]["path"], "rev-parse", "main")
+    with pytest.raises(PublicationUnavailable, match="authentication denied"):
+        advance(prepared)
+    assert prepared["state"].publication_history(prepared["request_id"]) == before
+    assert before["control"] is None and prepared["state"].read_control()["state"] == "SOURCE_PREPARED"
+    assert git(prepared["remote"]["path"], "rev-parse", "main") == remote_before
+    assert len(prepared["remote"]["dry_runs"]) == 1 and not prepared["remote"]["calls"]
+    assert not prepared["github"].calls and not prepared["deployment"].calls
 
 
 def test_waiting_ci_uses_fresh_reads_without_second_push(prepared):
@@ -376,6 +393,7 @@ def test_prerequisites_are_local_only_and_state_disabled(monkeypatch, capsys):
     result = json.loads(capsys.readouterr().out)
     assert result["automatic_scheduling"] is result["request_processing_enabled"] is False
     assert result["worker_mode"] == "operator_one_request"
+    assert result["production_configuration_bootstrap"] is True
     assert any("browser requests" in value for value in result["requirements"])
 
 
@@ -391,6 +409,7 @@ def test_guarded_deployment_invokes_only_fixed_script_and_claim_bound_receipt(tm
     original_run = release.subprocess.run
     calls = []
     monkeypatch.setenv("GUARDOATH_AUDIT_SIGNING_KEY", "synthetic-must-not-reach-child")
+    monkeypatch.setenv("GH_TOKEN", "synthetic-private-github-token")
     monkeypatch.setenv("AWS_ACCESS_KEY_ID", "synthetic-operator-authentication")
 
     def child(arguments, **kwargs):
@@ -405,6 +424,8 @@ def test_guarded_deployment_invokes_only_fixed_script_and_claim_bound_receipt(tm
         assert kwargs["env"]["POWERSHELL_TELEMETRY_OPTOUT"] == "1"
         assert "GUARDOATH_AUDIT_SIGNING_KEY" not in kwargs["env"]
         assert kwargs["env"]["AWS_ACCESS_KEY_ID"] == "synthetic-operator-authentication"
+        assert kwargs["env"]["GH_TOKEN"] == "synthetic-private-github-token"
+        assert all("synthetic-private-github-token" not in argument for argument in arguments)
         receipt = deployment_receipt(sha, "e" * 64 if fault == "wrong-invocation" else invocation)
         preparation._write_private(receipt_path, receipt)
         return SimpleNamespace(returncode=1 if fault == "returncode" else 0)
@@ -558,3 +579,149 @@ def test_local_preflight_rejects_unavailable_tools_or_receipt_path_before_claim(
     with pytest.raises(PublicationUnavailable, match="no deployment claim was consumed"):
         deployment.preflight(source, tmp_path / "receipt.json")
     assert len(calls) == (fault == "private-path")
+
+
+class ProductionConfigurationTransport:
+    """Only the fixed read-only AWS SDK boundary is synthetic."""
+
+    def __init__(self, database=None):
+        self.calls = []
+        self.account = release.ACCOUNT
+        self.failure = False
+        self.database = database
+        self.configuration = deployment_configuration()
+        self.configuration["State"] = "Active"
+        self.configuration["Environment"]["Variables"].update({
+            "GUARDOATH_ADMIN_ENABLED": "1",
+            "GUARDOATH_ADMIN_AUDIT_TABLE": "existing-owner-audit",
+            "GUARDOATH_TENANT_TABLE": "existing-tenants",
+            "GUARDOATH_ADMIN_CURSOR_HMAC_KEY": "ab" * 32,
+        })
+
+    def client(self, name, *, region_name, config):
+        assert region_name == "us-east-1"
+        assert config.retries == {"total_max_attempts": 1}
+        assert config.connect_timeout == 2 and config.read_timeout == 3
+        self.calls.append(("client", name))
+        if name == "sts":
+            return SimpleNamespace(get_caller_identity=self.identity)
+        if name == "lambda":
+            return SimpleNamespace(get_function_configuration=self.function)
+        assert name == "dynamodb" and self.database is not None
+        return self.database
+
+    def identity(self):
+        self.calls.append(("identity",))
+        return {"Account": self.account}
+
+    def function(self, *, FunctionName):
+        assert FunctionName == "guardoath-site"
+        self.calls.append(("configuration", FunctionName))
+        if self.failure:
+            raise RuntimeError("Synthetic provider error containing never-in-receipt")
+        return deepcopy(self.configuration)
+
+
+def test_production_bootstrap_reuses_exact_existing_audit_derivation_without_persisting_secrets(capsys, caplog):
+    provider = ProductionConfigurationTransport()
+    before = dict(os.environ)
+    table, key = release._production_audit_binding(provider)
+    assert table == "existing-owner-audit"
+    assert key == hmac.new(bytes.fromhex("ab" * 32), b"guardoath-admin-audit-v1", hashlib.sha256).digest()
+    assert provider.calls == [("client", "sts"), ("identity",), ("client", "lambda"),
+                              ("configuration", "guardoath-site")]
+    assert dict(os.environ) == before
+    assert capsys.readouterr().out == caplog.text == ""
+
+
+@pytest.mark.parametrize("fault", ["account", "function", "arn", "in-progress", "inactive", "environment-error",
+                                  "admin-disabled", "same-table", "missing-table", "bad-table", "bad-key", "provider"])
+def test_production_bootstrap_refuses_wrong_or_incomplete_binding_without_state_access(fault, capsys, caplog):
+    provider = ProductionConfigurationTransport()
+    config = provider.configuration
+    variables = config["Environment"]["Variables"]
+    if fault == "account":
+        provider.account = "111111111111"
+    elif fault == "function":
+        config["FunctionName"] = "other-function"
+    elif fault == "arn":
+        config["FunctionArn"] = "arn:aws:lambda:us-west-2:111111111111:function:guardoath-site"
+    elif fault == "in-progress":
+        config["LastUpdateStatus"] = "InProgress"
+    elif fault == "inactive":
+        config["State"] = "Inactive"
+    elif fault == "environment-error":
+        config["Environment"]["Error"] = {"Message": "never-in-receipt"}
+    elif fault == "admin-disabled":
+        variables["GUARDOATH_ADMIN_ENABLED"] = "0"
+    elif fault == "same-table":
+        variables["GUARDOATH_ADMIN_AUDIT_TABLE"] = variables["GUARDOATH_TENANT_TABLE"]
+    elif fault == "missing-table":
+        del variables["GUARDOATH_TENANT_TABLE"]
+    elif fault == "bad-table":
+        variables["GUARDOATH_ADMIN_AUDIT_TABLE"] = "untrusted/table"
+    elif fault == "bad-key":
+        variables["GUARDOATH_ADMIN_CURSOR_HMAC_KEY"] = "a" * 65
+    else:
+        provider.failure = True
+    with pytest.raises(PublicationUnavailable, match="^Existing production audit configuration unavailable$"):
+        release._production_audit_binding(provider)
+    assert not any(call == ("client", "dynamodb") for call in provider.calls)
+    assert len(provider.calls) == (2 if fault == "account" else 4)
+    assert capsys.readouterr().out == caplog.text == ""
+
+
+def test_production_bootstrap_is_source_gated_before_provider_reads(monkeypatch):
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE", False)
+    provider = ProductionConfigurationTransport()
+    with pytest.raises(PublicationUnavailable, match="not enabled"):
+        release._production_audit_binding(provider)
+    assert not provider.calls
+
+
+def test_production_config_cli_next_uses_real_signed_state_reader_once(tmp_path, monkeypatch, capsys):
+    import boto3
+    db = AdminTestDynamo()
+    provider = ProductionConfigurationTransport(db)
+    selected_profiles = []
+    def session(*, profile_name):
+        selected_profiles.append(profile_name)
+        return provider
+    monkeypatch.setattr(boto3, "Session", session)
+    # Executable discovery is covered by the actual preflight tests; this
+    # transport-only test retains the real bootstrap, state and bounded runner.
+    monkeypatch.setattr(release, "_operator_preflight", lambda repo, root, deploy: (repo, root))
+    release.main(["--next", "--production-config", "--aws-profile", "synthetic-existing-profile",
+                  "--repository", str(tmp_path), "--work-root", str(tmp_path / "private-evidence")])
+    result = json.loads(capsys.readouterr().out)
+    assert result == {"status": "idle", "worker_mode": "operator_one_request", "automatic_scheduling": False}
+    assert selected_profiles == ["synthetic-existing-profile"]
+    assert provider.calls[-1] == ("client", "dynamodb") and len(provider.calls) == 5
+    db.close()
+
+
+@pytest.mark.parametrize("manual", [["--audit-table", "existing-table"], ["--audit-key-file", "private-key"]])
+def test_production_config_cli_rejects_mixed_secret_sources_before_provider_access(monkeypatch, manual, capsys):
+    import boto3
+    monkeypatch.setattr(boto3, "Session", lambda **_: pytest.fail("Invalid CLI must not create provider session"))
+    with pytest.raises(SystemExit) as error:
+        release.main(["--next", "--production-config", *manual])
+    assert error.value.code == 2
+    assert "either --production-config or both" in capsys.readouterr().err
+
+
+def test_production_config_cli_checks_local_setup_before_reading_secrets_or_claiming(tmp_path, monkeypatch, capsys):
+    import boto3
+    monkeypatch.setattr(boto3, "Session", lambda **_: pytest.fail("Local failure must precede provider access"))
+    root = Path(__file__).resolve().parents[1]
+    with pytest.raises(SystemExit) as error:
+        release.main(["--next", "--production-config", "--repository", str(root),
+                      "--work-root", str(tmp_path / "private-work"), "--powershell", str(tmp_path / "missing-pwsh")])
+    assert error.value.code == 2
+    assert "No publication claim was consumed" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("token", ["synthetic-private token", "synthetic-private\n", "synthetic-private\x01", "x" * 4097])
+def test_operator_github_credentials_are_validated_without_echoing_values(token):
+    with pytest.raises(PublicationUnavailable, match="^Invalid operator GitHub authentication$"):
+        release.GitHubReleaseReader(token)

@@ -29,6 +29,36 @@ function Invoke-Checked([string]$Program, [string[]]$Arguments) {
 function Invoke-Aws([string[]]$Arguments) {
     return Invoke-Checked "aws" ($Arguments + @("--region", $Region, "--profile", $Profile, "--output", "json"))
 }
+function Invoke-GitHubRead([string]$Path) {
+    # Never place credentials in a URL, child-process argument or diagnostic.
+    # These are the only three read endpoints used by the release contract.
+    if ($Path -cnotmatch '\A/repos/CollectiverseStudio/guardoath/(actions/runs\?head_sha=[a-f0-9]{40}&per_page=100|actions/runs/[1-9][0-9]*/jobs\?per_page=100|issues/30)\z') {
+        throw 'Untrusted GitHub release evidence path'
+    }
+    $headers = @{ 'User-Agent' = 'GuardOath-Verified-Deployment';
+        'Accept' = 'application/vnd.github+json'; 'X-GitHub-Api-Version' = '2022-11-28' }
+    $token = [Environment]::GetEnvironmentVariable('GH_TOKEN')
+    if ([string]::IsNullOrEmpty($token)) {
+        $token = [Environment]::GetEnvironmentVariable('GITHUB_TOKEN')
+    }
+    if (-not [string]::IsNullOrEmpty($token)) {
+        if ($token -cnotmatch '\A[\x21-\x7e]{1,4096}\z') {
+            throw 'Invalid operator GitHub authentication'
+        }
+        $headers['Authorization'] = 'Bearer ' + $token
+    }
+    try {
+        # A redirect is an error, including a redirect to another GitHub URL.
+        # Suppress transport diagnostics, which can contain provider data.
+        return Invoke-RestMethod -Uri ('https://api.github.com' + $Path) -Headers $headers -Method Get `
+            -MaximumRedirection 0 -TimeoutSec 15 -Verbose:$false -Debug:$false -ErrorAction Stop
+    } catch {
+        throw 'Actual GitHub release evidence unavailable; verify operator authentication and rate limits'
+    } finally {
+        [void]$headers.Remove('Authorization')
+        $token = $null
+    }
+}
 function Invoke-DeploymentEvidence([string]$Operation, [object]$Value) {
     # Configuration contains secrets. Pass it only through private stdin to the
     # local validator, never arguments, files, normal stdout or error details.
@@ -177,8 +207,7 @@ function Assert-Run([object[]]$Runs, [string]$Name, [string]$Sha) {
         throw "$Name not green for $($Sha): status=$($latest.status) conclusion=$($latest.conclusion) run=$($latest.html_url)"
     }
     if (-not $latest.id) { throw "$Name has no GitHub Actions run ID; cannot inspect individual jobs." }
-    $jobsUrl = "https://api.github.com/repos/$Repo/actions/runs/$($latest.id)/jobs?per_page=100"
-    $jobResponse = Invoke-RestMethod -Uri $jobsUrl -Headers $Headers -Method Get
+    $jobResponse = Invoke-GitHubRead "/repos/$Repo/actions/runs/$($latest.id)/jobs?per_page=100"
     $jobs = @($jobResponse.jobs)
     if (-not $jobs.Count -or $jobResponse.total_count -ne $jobs.Count) {
         throw "$Name run $($latest.html_url) returned only $($jobs.Count) of $($jobResponse.total_count) jobs; fail closed on incomplete job evidence."
@@ -216,13 +245,12 @@ $remoteSha = ($origin -split '\s+')[0]
 if ($remoteSha -ne $Sha) { throw "Local HEAD $Sha is not current origin/main $remoteSha. Fetch and fast-forward first." }
 Write-Host "Clean current main source: $Sha"
 
-$Headers = @{ "User-Agent" = "GuardOath-Verified-Deployment"; "Accept" = "application/vnd.github+json" }
-$RunsResponse = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/actions/runs?head_sha=$Sha&per_page=100" -Headers $Headers -Method Get
+$RunsResponse = Invoke-GitHubRead "/repos/$Repo/actions/runs?head_sha=$Sha&per_page=100"
 $Runs = @($RunsResponse.workflow_runs)
 foreach ($required in @("Tests", "Push on main", "Field Comparisons Evidence", "Trusted Reference Acceptance", "PII Reliability Gate", "Stripe Reconciliation Acceptance", "Deploy Script Acceptance")) {
     Assert-Run $Runs $required $Sha
 }
-$OpenRisk = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/issues/30" -Headers $Headers -Method Get
+$OpenRisk = Invoke-GitHubRead "/repos/$Repo/issues/30"
 if ($OpenRisk.state -ne "closed" -or $OpenRisk.state_reason -eq "not_planned") {
     # Greg explicitly authorized deployment without waiting for issue closure.
     # Exact-SHA PII jobs and runtime fail-closed deadlines remain mandatory.

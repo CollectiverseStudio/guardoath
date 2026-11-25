@@ -112,6 +112,8 @@ def test_complete_signed_lifecycle_reopens_with_no_remote_publication_claim(tmp_
 
 
 def test_supported_baseline_reads_future_records_and_independently_refuses_every_write(monkeypatch):
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_STATE", False)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE", False)
     assert state_contracts.new_catalog_publication_state_enabled() is False
     state, db = make_state()
     inputs = fields()

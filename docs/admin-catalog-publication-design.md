@@ -222,13 +222,27 @@ credential use.
 
 The release supports both `catalog-publication-v1` and
 `catalog-publication-lifecycle-v1`.
-`ENABLE_NEW_CATALOG_PUBLICATION_STATE=False` and
-`ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE=False` remain source controlled.
-The route, service, original state and release worker require both gates; the
-new lifecycle adapter also refuses writes while its gate is disabled. Deploy an
-accepted baseline that understands both contracts before enabling the complete
-workflow in a later tested source release. No environment override substitutes
-for that compatible rollback boundary.
+The accepted deployed `d81db4d9c418cd198fc8f1e48df42a5ca3822a5f` baseline
+understands both contracts. This later activation source sets
+`ENABLE_NEW_CATALOG_PUBLICATION_STATE=True` and
+`ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE=True`. The route, service,
+original state and release worker still require both gates; the new lifecycle
+adapter refuses writes when its gate is disabled. The new artifact declares
+both introduced contracts, so deployment must preserve an actual rollback ZIP
+that supports both. Subscription and cancellation gates remain false. No
+environment override substitutes for this source/rollback boundary.
+
+The preview/history response exposes `processing_mode=operator_started`, which
+the browser validates before displaying queued or completed progress. Owner
+confirmation records one request; it does not start a worker. The CLI's optional
+`--production-config` obtains the existing audit table and derives its signing
+key in memory from the fixed production function's validated configuration.
+It cannot be combined with manually supplied audit-table/key arguments. It
+requires the existing production account, enabled admin console and an audit
+table separate from the tenant table; it does not create resources or write
+configuration. The guarded deployment's GitHub reader honors operator-provided
+`GH_TOKEN`/`GITHUB_TOKEN` using fixed HTTPS-host requests with redirects refused.
+Tokens and provider error bodies are never printed.
 
 The original preparation-stage evidence below is historical. Current batch
 results and deployment status are recorded in the owner handoff; earlier CI

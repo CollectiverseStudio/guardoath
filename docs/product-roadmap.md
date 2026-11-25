@@ -38,13 +38,15 @@ below until implementation and verification establish completion.
 
 For CORE-06, the [catalog publication record](admin-catalog-publication-design.md)
 preserves actual full-registry forward/reversal app and Engine acceptance and
-now records owner review/history, source-disabled confirmed requests and the
-external source-preparation/release worker. The retained complete lifecycle adds
+now records owner review/history, confirmed requests and the external
+source-preparation/release worker. The retained complete lifecycle adds
 bounded current-request selection, fixed-main remote publication, complete
 exact-candidate CI, guarded deployment receipts, owner progress/recovery and
-verified terminal control replacement. Both catalog source gates remain disabled
-until the new lifecycle contract has an accepted compatible deployment baseline
-and complete implementation acceptance. An operator must invoke the worker;
+verified terminal control replacement. The accepted deployed d81db4d reader
+baseline supports both catalog contracts. The next tested source release enables
+both catalog gates together and adds in-memory operator configuration from the
+existing AWS setup; its exact-source CI and deployment remain separate evidence.
+An operator must invoke the worker;
 browser requests do not provision or start a background service. General
 category/check/rule authoring and live publication remain open; all original
 targets below remain unchanged.

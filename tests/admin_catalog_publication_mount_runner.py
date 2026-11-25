@@ -61,11 +61,13 @@ def main():
     manifest = accepted(client.get("/v1/admin/catalog/reviews/" + review["review_id"] + "/manifest",
         headers=headers))
     features = accepted(client.get("/v1/admin/features", headers=headers))
-    writer = mounted.phase == "1"
+    writer = mounted.phase != "0"
     assert features["catalog_publication_preview"] is True
     assert features["catalog_publication_history"] is True
     assert features["catalog_publication_requests"] is writer
     assert features["rule_publishing"] is False
+    assert features["billing_reconcile"] is (mounted.phase == "1")
+    assert features["billing_cancellation_schedule"] is (mounted.phase == "1")
 
     reads = []
     get_item = mounted.db.get_item
@@ -81,6 +83,7 @@ def main():
     preview_body = {"review_id": review["review_id"], "operation": "publish_metadata"}
     preview = accepted(client.post(PREFIX + "/preview", headers=headers, json=preview_body))
     assert preview["writer_enabled"] is writer and preview["control_available"] is True
+    assert preview["processing_mode"] == "operator_started"
     assert preview["candidate_metadata_sha256"] == manifest["candidate_metadata_sha256"]
     assert mounted.catalog_publications.state.read_control() is None
     body = {**preview_body, "expected_source_sha": preview["base_source_sha"],
@@ -140,6 +143,7 @@ def main():
         assert len(source_reads) == prior_source_reads
         for value in (receipt, replay, recovered, history):
             assert value["integrity_verified"] is True and value["request_id"] == receipt["request_id"]
+            assert value["processing_mode"] == "operator_started"
             assert value["intent_sha256"] == receipt["intent_sha256"]
             assert all(value[name] is False for name in ("published", "remote_published", "ci_verified",
                 "deployed", "tenant_policies_changed", "detector_behavior_changed"))
@@ -151,6 +155,7 @@ def main():
             observed = accepted(client.post(PREFIX + "/recover", headers=headers,
                 json={"action_reference": body["action_reference"]}))
             assert observed["status"] == stage
+            assert observed["processing_mode"] == "operator_started"
             assert observed["production_live_acceptance"] is False
             assert observed["next_request_available"] is (stage == "completed")
         assert observed["completion_verified"] is True
@@ -190,6 +195,9 @@ def main():
     strip_audit = lambda value: {key: item for key, item in value.items() if key != "read_audit_event_id"}
     assert strip_audit(fresh) == strip_audit(catalog)
     print(json.dumps({"phase": mounted.phase, "denied": denied,
+        "catalog_source_defaults": mounted.phase != "0",
+        "financial_writers": features["billing_reconcile"] or features["billing_cancellation_schedule"],
+        "processing_mode": preview["processing_mode"],
         "signed_read_receipts": len(audits) - 1, "intent_documents": int(writer),
         "request_transactions": request_transactions, "tenants_unchanged": True,
         "catalog_unchanged": True, "remote_published": False, "ci_verified": False, "deployed": False}))

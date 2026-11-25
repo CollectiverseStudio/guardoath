@@ -10,11 +10,13 @@ from __future__ import annotations
 import argparse
 from datetime import datetime
 import hashlib
+import hmac
 import json
 import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -46,13 +48,20 @@ OPERATOR_REQUIREMENTS = (
     "Use a private external work directory and a clean current-main checkout of CollectiverseStudio/guardoath.",
     "Git needs authorized fixed-origin push access; GitHub API access must enumerate every exact-candidate job.",
     "Deployment requires Python 3.13, PowerShell, AWS CLI and the existing authorized production profile.",
-    "Use the existing audit table/signing key; the standalone private-key-file CLI requires POSIX permissions.",
+    "Use --production-config to read the existing audit binding into memory with the selected AWS profile; no secret file is needed.",
+    "Alternatively supply the existing audit table and a private audit-key file; CLI receipt/key permissions require POSIX.",
+    "Set GH_TOKEN or GITHUB_TOKEN in the operator environment for authenticated fixed-host GitHub API reads.",
     "A claimed or uncertain external operation requires inspection and is never automatically repeated.",
 )
 _MAX_JSON = 8 * 1024 * 1024
 _SHA = re.compile(r"^[a-f0-9]{40}$")
 _HEX = re.compile(r"^[a-f0-9]{64}$")
 _PROFILE = re.compile(r"^[A-Za-z0-9_.-]{1,128}$")
+_TABLE = re.compile(r"[A-Za-z0-9_.-]{3,255}")
+
+
+def _operator_github_token():
+    return os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
 
 
 def _now(clock, minimum=1):
@@ -85,7 +94,7 @@ class GitHubReleaseReader:
 
     def __init__(self, token: str | None = None):
         if token is not None and (type(token) is not str or not 1 <= len(token) <= 4096
-                                  or any(character.isspace() for character in token)):
+                                  or any(not "!" <= character <= "~" for character in token)):
             raise PublicationUnavailable("Invalid operator GitHub authentication")
         self._token = token
 
@@ -259,6 +268,7 @@ class GuardedDeployment:
     def preflight(self, source: Path, receipt_path: Path):
         """Check deterministic local requirements before consuming a claim."""
         try:
+            GitHubReleaseReader(_operator_github_token())
             aws, python = shutil.which("aws"), shutil.which("python")
             if (self.program is None or not self.program.is_file()
                     or not os.access(self.program, os.X_OK) or aws is None or python is None
@@ -420,6 +430,11 @@ def advance_publication(request_id: str, *, state: DynamoCatalogPublicationState
             raise PublicationConflict("Candidate has not been remotely published")
         preparation._verify_main(repository, intent["base_source_sha"])
         tree = _verify_candidate(source, intent, prepared)
+        # Missing/denied operator push access is a setup failure, not an
+        # attempted publication. Probe the identical fixed ref without writing
+        # before consuming the one-attempt PUBLISHING claim.
+        preparation._git(source, "-c", "push.followTags=false", "push", "--porcelain",
+            "--no-follow-tags", "--recurse-submodules=no", "--dry-run", "origin", sha + ":" + BRANCH)
         claim = state.claim_remote(request_id)
         preparation._enabled()
         _current_source(source, intent["base_source_sha"])
@@ -540,6 +555,65 @@ def process_next_publication(*, state: DynamoCatalogPublicationState, drafts: Ad
         work_root=work_root, github=github, deployment=deployment, readback=readback, clock=clock)
 
 
+def _production_audit_binding(session):
+    """Read the existing fixed production binding; retain its secrets only in memory."""
+    preparation._enabled()
+    try:
+        from botocore.config import Config
+        config = Config(connect_timeout=2, read_timeout=3, retries={"total_max_attempts": 1})
+        identity = session.client("sts", region_name=REGION, config=config).get_caller_identity()
+        if type(identity) is not dict or identity.get("Account") != ACCOUNT:
+            raise ValueError()
+        configuration = session.client("lambda", region_name=REGION, config=config).get_function_configuration(
+            FunctionName=FUNCTION)
+        if (type(configuration) is not dict or configuration.get("FunctionName") != FUNCTION
+                or configuration.get("FunctionArn") != f"arn:aws:lambda:{REGION}:{ACCOUNT}:function:{FUNCTION}"
+                or configuration.get("LastUpdateStatus") != "Successful"
+                or configuration.get("State") != "Active"):
+            raise ValueError()
+        environment = configuration.get("Environment")
+        if type(environment) is not dict or "Error" in environment:
+            raise ValueError()
+        variables = environment.get("Variables")
+        if type(variables) is not dict or variables.get("GUARDOATH_ADMIN_ENABLED") != "1":
+            raise ValueError()
+        table = variables.get("GUARDOATH_ADMIN_AUDIT_TABLE")
+        tenant_table = variables.get("GUARDOATH_TENANT_TABLE")
+        key_hex = variables.get("GUARDOATH_ADMIN_CURSOR_HMAC_KEY")
+        if (type(table) is not str or not _TABLE.fullmatch(table)
+                or type(tenant_table) is not str or not _TABLE.fullmatch(tenant_table)
+                or table == tenant_table or type(key_hex) is not str
+                or not re.fullmatch(r"[a-fA-F0-9]{64,128}", key_hex)):
+            raise ValueError()
+        # Keep byte-for-byte parity with admin_runtime's existing derivation.
+        key = hmac.new(bytes.fromhex(key_hex), b"guardoath-admin-audit-v1", hashlib.sha256).digest()
+        return table, key
+    except Exception:
+        # Neither SDK errors nor Lambda environment values are safe diagnostics.
+        raise PublicationUnavailable("Existing production audit configuration unavailable") from None
+
+
+def _operator_preflight(repository, work_root, deployment):
+    """Reject deterministic local setup failures before any new phase claim."""
+    try:
+        repository = preparation._repository_path(Path(repository))
+        root = Path(work_root) if work_root is not None else repository.parent / "guardoath-catalog-preparations"
+        root = root.absolute()
+        if (os.name != "posix" or not shutil.which("git") or root.resolve() != root
+                or root.is_relative_to(repository)):
+            raise ValueError()
+        root.mkdir(mode=0o700, parents=True, exist_ok=True)
+        info = root.stat()
+        if (not stat.S_ISDIR(info.st_mode) or info.st_mode & 0o077
+                or info.st_uid != os.getuid()):
+            raise ValueError()
+        with tempfile.TemporaryDirectory(prefix="operator-preflight-", dir=root) as directory:
+            deployment.preflight(repository, Path(directory) / "receipt.json")
+        return repository, root
+    except Exception:
+        raise PublicationUnavailable("Local operator prerequisites unavailable; no publication claim was consumed") from None
+
+
 def operator_prerequisites(powershell=None):
     try:
         preparation._enabled()
@@ -550,6 +624,8 @@ def operator_prerequisites(powershell=None):
         "request_processing_enabled": enabled, "requirements": list(OPERATOR_REQUIREMENTS),
         "python_313": sys.version_info[:2] == (3, 13), "git_available": shutil.which("git") is not None,
         "aws_cli_available": shutil.which("aws") is not None,
+        "github_api_authentication_available": _operator_github_token() is not None,
+        "production_configuration_bootstrap": True,
         "powershell_available": (Path(powershell).is_file() if powershell is not None else
                                   bool(shutil.which("pwsh") or shutil.which("powershell")))}
 
@@ -567,29 +643,38 @@ def main(argv=None):
     parser.add_argument("--phase", choices=("advance", "remote", "ci", "deploy", "complete"), default="advance")
     parser.add_argument("--audit-table")
     parser.add_argument("--audit-key-file", type=Path)
+    parser.add_argument("--production-config", action="store_true",
+                        help="Read the existing fixed production audit binding into memory using --aws-profile")
     parser.add_argument("--aws-profile", default="collectiverse-prod")
     parser.add_argument("--powershell", type=Path)
     args = parser.parse_args(argv)
     if args.prerequisites:
         print(json.dumps(operator_prerequisites(args.powershell), sort_keys=True))
         return
-    if (not (args.request_id or args.next_request) or not args.audit_table or not args.audit_key_file
-            or (args.next_request and args.phase != "advance")):
-        parser.error("Choose --request-id or --next and supply the existing --audit-table and --audit-key-file")
+    if (not (args.request_id or args.next_request) or (args.next_request and args.phase != "advance")
+            or (args.production_config and (args.audit_table is not None or args.audit_key_file is not None))
+            or (not args.production_config and (not args.audit_table or not args.audit_key_file))):
+        parser.error("Choose --request-id or --next and either --production-config or both --audit-table and --audit-key-file")
+    processing = False
     try:
         preparation._enabled()
+        github = GitHubReleaseReader(_operator_github_token())
+        deployment = GuardedDeployment(powershell=args.powershell, profile=args.aws_profile)
+        if args.next_request or args.phase in {"advance", "deploy"}:
+            args.repository, args.work_root = _operator_preflight(args.repository, args.work_root, deployment)
         import boto3
         from botocore.config import Config
-        key = preparation._audit_key(args.audit_key_file)
         session = boto3.Session(profile_name=args.aws_profile)
+        table, key = (_production_audit_binding(session) if args.production_config else
+                      (args.audit_table, preparation._audit_key(args.audit_key_file)))
         client = session.client("dynamodb", region_name=REGION,
             config=Config(connect_timeout=2, read_timeout=3, retries={"total_max_attempts": 1}))
-        state = DynamoCatalogPublicationState(client, args.audit_table, key)
-        options = dict(state=state, drafts=AdminCatalogDrafts(client, args.audit_table, key),
+        state = DynamoCatalogPublicationState(client, table, key)
+        options = dict(state=state, drafts=AdminCatalogDrafts(client, table, key),
             repository=args.repository, work_root=args.work_root,
-            github=GitHubReleaseReader(os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")),
-            deployment=GuardedDeployment(powershell=args.powershell, profile=args.aws_profile),
+            github=github, deployment=deployment,
             readback=AwsDeploymentReader(profile=args.aws_profile))
+        processing = True
         result = (process_next_publication(**options) if args.next_request else
                   advance_publication(args.request_id, phase=args.phase, **options))
         if result is None:
@@ -603,6 +688,8 @@ def main(argv=None):
             "production_live_acceptance": False, "worker_mode": "operator_one_request",
             "automatic_scheduling": False}, sort_keys=True))
     except Exception:
+        if not processing:
+            parser.exit(2, "Catalog release operator setup unavailable. Check --prerequisites, the selected existing AWS profile and production audit binding. No publication claim was consumed.\n")
         parser.exit(2, "Catalog release is pending, conflicted or unavailable; retained evidence requires inspection. No uncertain side effect was retried.\n")
 
 

@@ -284,6 +284,33 @@ before starting PowerShell; setting it inside an already running process cannot
 prevent startup telemetry. The publication worker sets it before spawning the
 deployer.
 
+The GitHub evidence reader uses `GH_TOKEN` or `GITHUB_TOKEN` when provided by the
+operator's existing credential setup. The token is passed in a request header
+only to the fixed GitHub API HTTPS host; redirects and malformed token values
+are refused, and provider error bodies are not printed. Without a configured
+token, the request remains anonymous and may encounter GitHub's anonymous rate
+limit. Git push authentication is separate. Neither this script nor the worker
+extracts a shell token from a connected GitHub application.
+
+### Activated catalog publication operator
+
+The d81db4d reader baseline supports both catalog state contracts. This later
+source enables their writers together, declares both as introduced contracts,
+and requires an actual compatible backup before deployment. Owner confirmation
+creates an audited request for an operator; it does not launch a scheduler.
+
+`python -m guardoath.catalog_release_worker --prerequisites` reports local setup
+without provider access. On a prepared private POSIX release host, the worker's
+`--next --production-config --aws-profile collectiverse-prod` mode obtains its
+existing audit table and signing configuration from the fixed production Lambda
+using the authorized AWS profile. It validates account/function identity,
+enabled administration and tenant/audit table separation, then derives the audit
+key in memory exactly as the runtime does. No key is copied into arguments,
+files, logs or process environment, and no AWS resource is created. This mode
+cannot be combined with manual audit-table/key arguments. The full command and
+retained-workspace requirements are in the
+[operator guide](../../docs/admin-console-operator.md#bounded-external-release-worker).
+
 ### Acknowledged updates and machine-readable publication receipts
 
 AWS can assign another `RevisionId` as an acknowledged update moves from

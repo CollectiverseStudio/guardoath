@@ -28,6 +28,9 @@ jobs:
       - name: Refuse rollback over another deployment or uncertain revision
         shell: pwsh
         run: ./tests/powershell/rollback_ownership.ps1
+      - name: Keep authenticated GitHub reads on fixed endpoints without redirects
+        shell: pwsh
+        run: ./tests/powershell/github_auth.ps1
       - name: Parse the real deployment script without AWS access
         shell: pwsh
         run: |
@@ -72,24 +75,29 @@ jobs:
             (Resolve-Path 'deploy/aws/Deploy-Verified.ps1').Path,
             [ref]$tokens, [ref]$errors)
           if ($errors.Count) { throw "Deployment script cannot be parsed" }
-          $method = $ast.Find({
-            param($node)
-            $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
-              $node.Name -eq 'Assert-Run'
-          }, $true)
-          if (-not $method) { throw "Expected actual deployment Assert-Run implementation" }
-          Invoke-Expression $method.Extent.Text
+          foreach ($name in @('Invoke-GitHubRead', 'Assert-Run')) {
+            $method = $ast.Find({
+              param($node)
+              $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+                $node.Name -eq $name
+            }, $true)
+            if (-not $method) { throw "Expected actual deployment $name implementation" }
+            Invoke-Expression $method.Extent.Text
+          }
           $Repo = 'CollectiverseStudio/guardoath'
-          $Headers = @{ Accept = 'application/vnd.github+json' }
           $RequiredJobs = @{ 'Field Comparisons Evidence' = @(
             'strict-portfolio-and-scale', 'customer-browser-acceptance'
           ) }
           $sha = 'abc123'
           $script:response = $null
           function Invoke-RestMethod {
-            param($Uri, $Headers, $Method)
+            [CmdletBinding()]
+            param($Uri, $Headers, $Method, $MaximumRedirection, $TimeoutSec)
             if (-not $Uri.Contains('/actions/runs/42/jobs?per_page=100')) {
               throw "Unexpected job API endpoint: $Uri"
+            }
+            if ($MaximumRedirection -ne 0 -or $TimeoutSec -ne 15 -or $Method -cne 'Get') {
+              throw 'GitHub evidence transport must remain bounded and read-only'
             }
             return $script:response
           }

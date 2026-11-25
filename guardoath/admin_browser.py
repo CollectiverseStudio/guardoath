@@ -327,7 +327,8 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <button id="manifest-export" type="button" disabled>Export reviewed forward/rollback JSON (not published)</button>
 <p id="draft-result" role="status"></p>
 <p id="review-manifest-result" role="status"></p>
-<h3>Request a catalog source release</h3><p class="muted">Review the saved proposal before confirming a separate release request. Verified history distinguishes source preparation, remote source, complete release checks and deployment. New requests require this release's enabled writer and available verified catalog control. Customer settings remain unchanged.</p>
+<h3>Request a catalog source release</h3><p class="muted">Review the saved title and use-case changes before confirming a separate release request. Verified history shows source preparation, remote source, release checks and deployment. Another release becomes available after verified completion.</p>
+<p id="publication-processing" class="muted">An operator starts each release by running the release worker. Save the action reference to check progress here.</p>
 <label for="publication-operation">Release operation</label> <select id="publication-operation"><option value="publish_metadata">Publish reviewed description</option><option value="reverse_latest">Reverse latest description release</option></select>
 <button id="publication-preview" type="button" disabled>Review publication request</button>
 <p id="publication-target" role="status">Preview a reviewed metadata manifest first.</p>
@@ -1377,7 +1378,8 @@ _JS = r'''"use strict";
     const sha = value=>typeof value==="string" && /^[a-f0-9]{40}$/.test(value);
     const version = value=>typeof value==="string" && /^[1-9][0-9]{0,8}$/.test(value);
     const target=result?.target;
-    if (!result || !hex(result.review_id) || !hex(result.draft_id) || !sha(result.base_source_sha) ||
+    if (!result || result.processing_mode!=="operator_started" ||
+        !hex(result.review_id) || !hex(result.draft_id) || !sha(result.base_source_sha) ||
         !hex(result.baseline_sha256) || !hex(result.candidate_metadata_sha256) ||
         !version(result.registry_version) || !version(result.candidate_registry_version) ||
         Number(result.candidate_registry_version)!==Number(result.registry_version)+1 ||

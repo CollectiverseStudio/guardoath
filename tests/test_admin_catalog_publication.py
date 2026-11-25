@@ -97,6 +97,7 @@ def test_preview_requires_separate_confirmation_and_preserves_source(env):
     before=deepcopy(env["source"])
     preview=env["service"].preview(actor=OWNER,review_id=env["review"]["review_id"],operation="publish_metadata")
     assert preview["status"]=="publication_preview" and preview["writer_enabled"] is True
+    assert preview["processing_mode"]=="operator_started"
     assert preview["control_available"] is True and preview["expected_control_hash"]=="0"*64
     assert preview["base_source_sha"]=="a"*40 and preview["confirmation"].startswith("PUBLISH ")
     assert env["state"].read_control() is None and env["db"].transactions==0
@@ -109,6 +110,7 @@ def test_request_reopens_signed_records_and_recovers_after_source_changes(env):
     request=body(env)
     receipt=env["service"].request(actor=OWNER,**request)
     assert receipt["status"]=="requested" and receipt["source_preparation"] is None
+    assert receipt["processing_mode"]=="operator_started"
     assert receipt["action_reference"]==request["action_reference"]
     assert env["db"].transactions==1
     env["service"].catalog_provider=lambda:pytest.fail("Historical recovery must not read current catalog")

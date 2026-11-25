@@ -1521,10 +1521,10 @@ General category/check/rule authoring and production acceptance remain unfinishe
 
 ## Owner catalog request review and preparation history (2026-11-25)
 
-The current release supports `catalog-publication-v1` and
-`catalog-publication-lifecycle-v1` readers. Both
+This activation source supports and introduces `catalog-publication-v1` and
+`catalog-publication-lifecycle-v1`. Both
 `ENABLE_NEW_CATALOG_PUBLICATION_STATE` and
-`ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE` remain `False`. In **Catalog**, first save and
+`ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE` are `True`. In **Catalog**, first save and
 independently inspect a signed description draft, record its signed review, and
 verify the metadata manifest. **Review publication request** then regenerates
 the exact proposal from the real source catalog/history and the same owner's
@@ -1532,25 +1532,26 @@ signed evidence. Supported edits are limited to the `title` and `use_case` of
 one existing rule. A signed review or downloaded source plan alone never
 creates a publication request.
 
-The compatibility baseline exposes review and history when the existing
-independent audit service is configured. Its request button remains disabled
-and direct `POST /v1/admin/catalog/publications` is absent. Separate feature
+The accepted d81db4d compatibility baseline exposed review/history with request
+writes disabled. This later source mounts `POST /v1/admin/catalog/publications`
+and enables its confirmed request control when the existing independent audit
+service is configured. Separate feature
 fields describe `catalog_publication_preview`, `catalog_publication_requests`
 and `catalog_publication_history`; broad `rule_publishing` remains false.
 There is no environment variable that activates the writer. The API, service,
 state adapter and external worker each enforce the source gate.
 
-Both source gates remain disabled until an accepted deployment/rollback baseline
-understands the new lifecycle contract and the complete retained workflow passes
-its implementation acceptance. The lifecycle now includes bounded current-request
+Both source gates are enabled together after the accepted d81db4d deployment
+established reader support for both catalog contracts. The actual backup ZIP
+must support both introduced contracts before this release can deploy; no old
+unsupported backup or environment override can substitute. The lifecycle includes bounded current-request
 selection, remote publication, complete CI/deployment evidence and verified
 terminal control. An operator must run it; the browser does not start a
 background worker or provision any scheduler.
 
-### Separate confirmed request in the retained writer
+### Separate confirmed publication request
 
-The isolated retained-writer acceptance exercises the later workflow. After
-reviewing the current target/version, select **Publish metadata** or
+After reviewing the current target/version, select **Publish metadata** or
 **Reverse latest release**. Reversal requires a fresh review containing the exact
 inverse of the latest source-history entry and appends another higher version.
 Enter the displayed `PUBLISH` or `REVERSE` confirmation with the review's final
@@ -1632,8 +1633,40 @@ fixed-origin non-forced push, complete exact-source GitHub jobs and the candidat
 real guarded deployment script. Its `--next` mode reads only the one signed global
 control and handles at most that request; `--prerequisites` and `--help` describe
 the required private operator workspace, existing Git/GitHub access, Python 3.13,
-PowerShell, AWS CLI/profile and private audit-key intake. There is no table scan,
+PowerShell, AWS CLI/profile and trusted audit-key intake. There is no table scan,
 perpetual polling process or newly provisioned cloud scheduler.
+
+Use `--production-config` with the existing production profile to load the
+configured audit table and derive its signing key in memory. The bootstrap pins
+AWS account `839000214942`, region `us-east-1` and function `guardoath-site`,
+requires a completed configuration with owner administration enabled, and refuses
+an invalid audit table or one equal to `GUARDOATH_TENANT_TABLE`. It derives the
+key from `GUARDOATH_ADMIN_CURSOR_HMAC_KEY` with the same audit label as
+`admin_runtime`; it never writes or prints that key or the Lambda environment.
+Do not combine this mode with `--audit-table` or `--audit-key-file`.
+
+On the operator's POSIX release host, with Python 3.13, PowerShell 7 and AWS CLI
+already on `PATH`, the bounded entry points are:
+
+```sh
+export POWERSHELL_TELEMETRY_OPTOUT=1
+python -m guardoath.catalog_release_worker --prerequisites
+python -m guardoath.catalog_release_worker --next --production-config --aws-profile collectiverse-prod --repository /path/to/guardoath --work-root /private/operator/catalog-releases
+```
+
+The paths are operator configuration, never browser-supplied values. Preserve the
+private work root and its retained candidates between invocations. A request
+waiting for CI remains at its recorded stage; a later invocation can observe the
+candidate's actual completed jobs. This does not authorize retrying an uncertain
+push or deployment. The receipt directory requires POSIX ownership/mode checks.
+
+Git needs existing fixed-origin push credentials. A non-mutating dry run detects
+denied push access before the publication claim. The API reader and guarded
+deployer honor the operator's existing `GH_TOKEN` or `GITHUB_TOKEN`, send it only
+to the fixed GitHub HTTPS host, refuse redirects and suppress provider error
+bodies. A connected GitHub app does not automatically supply shell credentials.
+Missing or expired provider authorization is an operator setup problem; it must
+not be described as a completed publication.
 
 The script writes a fresh operation-bound machine receipt only after successful
 code/configuration and full source/asset verification. Normal terminal completion
@@ -1649,8 +1682,9 @@ evidence and its original reference. CI failure, incomplete evidence, a lost
 push/deployment acknowledgement or changed source cannot silently release control
 or dispatch another attempt.
 
-Current local acceptance uses real mounted auth/API/services and reopened signed
-storage with synthetic external transports. Actual Chrome journeys are added to
+Current local acceptance includes the actual activated source defaults, real
+mounted auth/API/services and reopened signed storage with synthetic external
+transports. The explicit disabled compatibility fixture remains covered. Actual Chrome journeys are added to
 the existing baseline/writer suites; local browser execution remains blocked by
 Chromium availability and OS socket restrictions. Exact-source CI, compatible
 rollback and all 15 live checks remain required. Tenant records, saved per-stage

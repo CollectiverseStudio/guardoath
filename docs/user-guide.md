@@ -3738,11 +3738,11 @@ designation. Your ordinary password+authenticator sign-in remains available.
 
 The owner Catalog can review a separately confirmed source-preparation proposal
 after its saved description draft, signed review and metadata manifest have been
-verified. The current compatibility release exposes review and history while
-keeping new request writes disabled. Supported proposals change only an existing
+verified. The activated source enables a separately confirmed publication
+request. Supported proposals change only an existing
 rule's title or use case; they do not edit detector behavior or customer settings.
 
-The retained workflow displays an exact typed confirmation, release reason and
+The workflow displays an exact typed confirmation, release reason and
 action reference. Keep that reference for **Recover publication request** if a
 response is lost. Recovery reads the original signed evidence and never submits
 a replacement. The console distinguishes a requested change, local prepared
@@ -3758,9 +3758,10 @@ change. Unknown outcomes retain the original reference and block conflicting
 work. Completed publication establishes its exact code/assets, while the
 separate fifteen-area production acceptance remains explicit.
 
-The compatibility release keeps both catalog source writer gates disabled until
-its new lifecycle contract is present in an accepted deployment/rollback
-baseline. General category creation and detector changes remain outside this
+The two catalog source gates are enabled together after the compatible reader
+baseline has been deployed. A confirmed request is **queued for the release
+operator**; the console identifies when processing and deployment actually
+finish. General category creation and detector changes remain outside this
 metadata workflow. See the [owner operator guide](admin-console-operator.md#owner-catalog-request-review-and-preparation-history-2026-11-25)
 for activation, operation and recovery details.
 

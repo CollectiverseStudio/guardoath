@@ -31,7 +31,9 @@ def test_valid_complete_packaged_manifest_is_source_authority(tmp_path):
     lambda x: x.update(release_contract_version=True),
     lambda x: x.update(release_contract_version=1.0),
     lambda x: x.update(release_contract_version=2),
+    lambda x: x.update(introduced_state_contracts=[]),
     lambda x: x.update(introduced_state_contracts=["catalog-publication-v1"]),
+    lambda x: x.update(introduced_state_contracts=["catalog-publication-lifecycle-v1"]),
     lambda x: x.update(supported_state_contracts=["catalog-publication-v1"]),
     lambda x: x["supported_state_contracts"].append("catalog-publication-v1"),
     lambda x: x["supported_state_contracts"].reverse(),
@@ -99,7 +101,27 @@ def test_missing_nonfile_and_symlink_provenance_are_refused(tmp_path):
         packaged_source_sha(link)
 
 
-def test_catalog_writer_is_a_separate_source_only_phase(monkeypatch):
+def test_activated_source_enables_only_both_catalog_contracts(monkeypatch):
+    for name in ("ENABLE_NEW_CATALOG_PUBLICATION_STATE", "GUARDOATH_ENABLE_NEW_CATALOG_PUBLICATION_STATE",
+                 "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE",
+                 "GUARDOATH_ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE",
+                 "GUARDOATH_CATALOG_PUBLICATION_ENABLED", "GUARDOATH_ADMIN_TEST_WRITER_PHASE"):
+        monkeypatch.setenv(name, "0")
+    assert state_contracts.ENABLE_NEW_CATALOG_PUBLICATION_STATE is True
+    assert state_contracts.ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE is True
+    assert state_contracts.new_catalog_publication_state_enabled() is True
+    assert state_contracts.new_catalog_publication_lifecycle_state_enabled() is True
+    assert state_contracts.ENABLE_NEW_SUBSCRIPTION_STATE is False
+    assert state_contracts.ENABLE_NEW_CANCELLATION_STATE is False
+    assert state_contracts.new_subscription_state_enabled() is False
+    assert state_contracts.new_cancellation_state_enabled() is False
+    assert manifest()["introduced_state_contracts"] == [
+        "catalog-publication-v1", "catalog-publication-lifecycle-v1"]
+
+
+def test_explicit_catalog_reader_phase_cannot_be_enabled_by_environment(monkeypatch):
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_STATE", False)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE", False)
     assert state_contracts.ENABLE_NEW_CATALOG_PUBLICATION_STATE is False
     for name in ("ENABLE_NEW_CATALOG_PUBLICATION_STATE", "GUARDOATH_ENABLE_NEW_CATALOG_PUBLICATION_STATE",
                  "GUARDOATH_CATALOG_PUBLICATION_ENABLED", "GUARDOATH_ADMIN_TEST_WRITER_PHASE"):

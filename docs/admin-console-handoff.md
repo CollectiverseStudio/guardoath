@@ -5,7 +5,75 @@ record for a new chat. The append-only engineering history remains in
 [director-agent-coordination.md](director-agent-coordination.md); the complete
 47-target product discussion is preserved in [product-roadmap.md](product-roadmap.md).
 
-## Current implementation: complete publication lifecycle
+## Current implementation: activate confirmed metadata publication
+
+Greg continued after the completed lifecycle deployment. The new source enables
+both `ENABLE_NEW_CATALOG_PUBLICATION_STATE` and
+`ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE`; subscription-cap and financial
+cancellation writers remain disabled. Its artifact introduces exactly the two
+catalog contracts. The accepted compatible reader baseline is the already
+deployed `d81db4d9c418cd198fc8f1e48df42a5ca3822a5f`, so the next release can preserve
+a rollback image that understands every new catalog record.
+
+The actual prior deployment completed with AWS `Successful`, archive digest
+`ZllvLTKAOGLgiUwszWJTKhi0jwakY0GSJ4aEWzpc73o=`, exact backend/dashboard source and
+all **13** dashboard assets. Its preserved backup was
+`aa907ba94470c841c5509a8ecbe03f2fd620fac8`. All seven required workflows and **25**
+individual jobs passed on d81. This is retained observed evidence; this activation
+batch does not repeat a healthy-deployment audit or create a retroactive receipt.
+
+The owner workflow requires a signed current review, fresh owner MFA, same-origin
+request, explicit typed confirmation/reason and stable action reference. Supported
+changes remain an existing rule's title/use-case description. Preview/history and
+the browser explicitly identify `processing_mode=operator_started`: submitting a
+request does not start a background service. An authorized operator runs the
+bounded worker for at most one current request and can return after candidate CI.
+The existing progress, unknown-outcome handling and signed completion remain
+authoritative.
+
+Operator setup now includes `--production-config`, which reads the fixed existing
+AWS function through the operator's existing profile, validates its account and
+admin configuration, and derives the existing audit signing key in memory. It
+does not copy signing secrets into arguments, files or logs, or provision a new
+table/role/scheduler. The guarded deployer uses `GH_TOKEN` or `GITHUB_TOKEN` when
+provided for fixed-host GitHub evidence reads, refuses redirects, and reports
+sanitized failures. Git push authorization is a separate existing prerequisite;
+the GitHub connector does not export a CLI credential.
+
+Focused state/source/rollback compatibility acceptance passed **293 tests** on
+Python 3.13. The real source-default lifecycle includes verified completion, a
+successor request and immutable earlier recovery. The actual build manifest
+introduces both catalog contracts; a digest-bound d81-contract fixture passes,
+while five unsupported/legacy backup variants fail. Explicit disabled-reader and
+environment-override refusals remain tested.
+
+UI/service acceptance passed **122 tests**, including three mounted phases:
+explicit disabled compatibility, the financial fixture using actual catalog
+defaults, and completely unchanged source gates. The last phase enables catalog
+requests while financial writers remain false; customer, missing/stale MFA,
+forged identity and wrong origin are denied before state/source access. The
+activated mounted paths each verify 19 signed read receipts and one request
+transaction through recovery. Browser discovery found **52 publication**, **9
+mounted writer** and **11 compatibility** cases; actual Chrome execution belongs
+to the new commit's CI because this restored workspace has no Chromium binary.
+
+Worker acceptance passed **105 tests** across the two worker modules. The actual
+PowerShell authenticated-reader test and all eight existing individual-job gate
+scenarios passed. A fixed-ref non-mutating Git push dry run detects missing or
+denied push setup before consuming the publication claim; only the acknowledged
+claim permits the one actual push. Read-only integration review found no blocker.
+These focused groups are not a summed full-suite count. The activation commit
+still requires its own complete CI and deployment; local results do not establish
+production activation, a live catalog mutation or all fifteen live areas.
+
+The restored workspace did not retain the earlier temporary AWS credential files;
+the shared AWS portal currently presents its sign-in screen. Greg's existing
+authorization for the GuardOath release session and assigned production role
+continues to apply. A fresh sign-in/session is needed before the next deployment;
+no new permission scope is being requested. Preserve the completed d81 baseline
+until the activation candidate passes its own release gates.
+
+## Previous implementation: complete publication lifecycle
 
 Greg directed completion of the existing strategy and stopping repeated stability
 checks. The strategy and all 47 original targets remain in

@@ -247,15 +247,20 @@ test("real owner schedules one provider cancellation and reopens linked history 
   expect(persisted().tenants).toEqual(before);
 });
 
-test("real owner requests a release and recovers signed lifecycle evidence before reviewing a successor",async ({page,request})=>{
+test("activated catalog source lets the owner request operator processing and recover a signed successor",async ({page,request})=>{
   const headers=await login(page),before=persisted().tenants;
+  const features=await (await request.get("/v1/admin/features",{headers})).json();
+  expect(features).toMatchObject({catalog_publication_preview:true,catalog_publication_history:true,
+    catalog_publication_requests:true,rule_publishing:false});
   const source=await (await request.get("/v1/admin/catalog",{headers})).json();
   const manifest=await reviewedPublication(page,"Explicit publication request example");
+  await expect(page.locator("#publication-processing")).toContainText("An operator starts each release by running the release worker");
   const previewResponse=page.waitForResponse(r=>r.url().endsWith("/publications/preview"));
   await page.locator("#publication-preview").click();
   const preview=await (await previewResponse).json();
   await expect(page.locator("#publication-target")).toContainText("Type PUBLISH ");
-  expect(preview).toMatchObject({status:"publication_preview",writer_enabled:true,control_available:true,
+  expect(preview).toMatchObject({status:"publication_preview",processing_mode:"operator_started",
+    writer_enabled:true,control_available:true,
     review_id:manifest.review_id,base_source_sha:"a".repeat(40),published:false,deployed:false});
   expect(publicationState().control).toBeNull();
   await page.locator("#publication-reason").fill("Owner authorizes synthetic catalog source preparation");
@@ -271,7 +276,8 @@ test("real owner requests a release and recovers signed lifecycle evidence befor
   await expect(page.locator("#publication-result")).toContainText("Request recorded; waiting for a release operator");
   await expect(page.locator("#publication-result")).toContainText("production deployment unverified");
   await expect(page.locator("#publication-request")).toBeDisabled();
-  expect(receipt).toMatchObject({status:"requested",action_reference:reference,remote_published:false,ci_verified:false,deployed:false});
+  expect(receipt).toMatchObject({status:"requested",processing_mode:"operator_started",
+    action_reference:reference,remote_published:false,ci_verified:false,deployed:false});
   await page.locator("#publication-recover").click();
   await expect(page.locator("#publication-recovery-result")).toContainText(receipt.request_id);
   const reopened=publicationState();
