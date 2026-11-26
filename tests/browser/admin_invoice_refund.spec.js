@@ -15,6 +15,7 @@ function setupFixture(options={}) {
     amount:options.amount || 2900,currency:options.currency || "usd",exponent:options.exponent ?? 2};
   const config = {signed_audit:true,stripe_read:true,plan_allowance:true,cancellation_provider:true,
     refund_provider:true,subscription_writer_enabled:true,cancellation_writer_enabled:true,refund_writer_enabled:true,
+    cap_restore_writer_enabled:false,
     ...options.configuration};
   const fixture = createAdminFixture({nativeMfa:true,features:{
     billing_refund_preview:true,billing_refund_submit:true,billing_refund_receipts:true,billing_refund_refresh:true,

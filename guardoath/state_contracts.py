@@ -9,7 +9,7 @@ import re
 RELEASE_CONTRACT_VERSION = 1
 SUPPORTED_STATE_CONTRACTS = ("subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1",
                              "catalog-publication-v1", "catalog-publication-lifecycle-v1",
-                             "stripe-invoice-refund-v1")
+                             "stripe-invoice-refund-v1", "subscription-cap-restoration-v1")
 # This later writer release follows the deployed reader compatibility baseline.
 # Deployment must still verify the actual, digest-bound rollback archive supports
 # every introduced contract. There is deliberately no environment or deployment-
@@ -30,6 +30,10 @@ ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE = True
 # been accepted and deployed. Deployment must verify that actual digest-bound
 # rollback archive preserves permanent claims and the bounded observation chain.
 ENABLE_NEW_REFUND_STATE = True
+# This reader release understands signed local-cap restoration receipts. A later
+# source activation requires this reader's accepted, digest-bound rollback image.
+# Reading existing receipts never depends on the writer phase or environment.
+ENABLE_NEW_CAP_RESTORATION_STATE = False
 
 
 def new_subscription_state_enabled() -> bool:
@@ -62,6 +66,12 @@ def new_refund_state_enabled() -> bool:
     return ENABLE_NEW_REFUND_STATE
 
 
+def new_cap_restoration_state_enabled() -> bool:
+    if type(ENABLE_NEW_CAP_RESTORATION_STATE) is not bool:
+        raise ValueError("Cap restoration release phase must be source controlled")
+    return ENABLE_NEW_CAP_RESTORATION_STATE
+
+
 def release_metadata(source_sha: str) -> dict:
     if not isinstance(source_sha, str) or not re.fullmatch(r"[a-f0-9]{40}", source_sha):
         raise ValueError("An exact committed source SHA is required")
@@ -76,6 +86,8 @@ def release_metadata(source_sha: str) -> dict:
         introduced.append("catalog-publication-lifecycle-v1")
     if new_refund_state_enabled():
         introduced.append("stripe-invoice-refund-v1")
+    if new_cap_restoration_state_enabled():
+        introduced.append("subscription-cap-restoration-v1")
     return {"source_sha":source_sha,"release_contract_version":RELEASE_CONTRACT_VERSION,
             "supported_state_contracts":list(SUPPORTED_STATE_CONTRACTS),
             "introduced_state_contracts":introduced}

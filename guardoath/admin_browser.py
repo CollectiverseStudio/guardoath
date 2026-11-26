@@ -299,10 +299,21 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <p id="billing-reconcile-capability"></p><p id="billing-cap-capability"></p>
 <p id="billing-cancellation-capability"></p><p id="billing-history-capability"></p>
 <p id="billing-refund-capability"></p><p id="billing-refund-history-capability"></p>
+<p id="billing-cap-restore-capability"></p><p id="billing-cap-restore-history-capability"></p>
 <button id="billing-choose-tenant" type="button">Choose a tenant</button>
 <p class="muted">Availability reports server configuration, not a verified customer subscription or payment. Each action requires fresh owner MFA, the saved tenant binding and a signed audit receipt. Invoice refunds require their own review and confirmation. Credits and plan changes are unavailable.</p></section>
 <section class="panel"><h2>Verified invoices</h2><p class="muted">Five Stripe invoice summaries per page for an independently verified customer subscription. Each page is a separate provider observation. Amounts are in minor currency units, not a revenue total or forecast.</p><label for="invoice-status-filter">Invoice status</label> <select id="invoice-status-filter" disabled><option value="">All statuses</option><option value="open">Open</option><option value="uncollectible">Uncollectible</option><option value="paid">Paid</option><option value="draft">Draft</option><option value="void">Void</option></select> <button id="invoice-restart" type="button" disabled>Restart invoice history</button> <button id="invoice-next" type="button" disabled>Older invoices</button><p id="invoice-page-status" class="muted"></p><p id="invoice-details" role="status">No invoice history selected.</p><div id="invoice-refund-actions"></div></section>
 <section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Verify Stripe compares provider state with saved entitlement. Reconcile subscription independently reads Stripe again and saves the verified entitlement with an audit receipt. Saved request caps and suspended accounts remain enforced. Reconciliation does not collect a payment or issue a refund.</p><p id="billing-details" role="status">No subscription selected.</p><p id="billing-action-result" role="status"></p><button id="billing-retry" type="button" hidden disabled>Retry same reconciliation</button></section>
+<section class="panel"><h2>Restore plan allowance</h2><p class="muted">Review a saved local request cap against the configured plan and a fresh Stripe subscription observation. Restoration removes that cap and restores exactly the verified plan allowance. Overages remain blocked. Suspension, usage, keys, rules and subscription billing stay unchanged. A saved local cap may have been inferred during reconciliation.</p>
+<p id="cap-restore-review" role="status">Choose Review cap restoration beside a tenant.</p>
+<label for="cap-restore-confirm">Exact confirmation shown in the review</label><p><input id="cap-restore-confirm" maxlength="120" autocomplete="off" disabled></p>
+<label for="cap-restore-reason">Reason (10–240 characters; no personal data)</label><p><input id="cap-restore-reason" maxlength="240" autocomplete="off" disabled></p>
+<button id="cap-restore-submit" type="button" disabled>Restore plan allowance</button>
+<label for="cap-restore-reference">Retain this action reference</label><p><input id="cap-restore-reference" readonly autocomplete="off"></p><p id="cap-restore-result" role="status"></p>
+<h3>Restoration history</h3><p class="muted">Inspect the retained reference to recover the signed historical result. Inspection does not change a tenant or read Stripe. A missing receipt after a timeout does not establish whether a request can still complete.</p>
+<label for="cap-restore-receipt-tenant">Tenant ID</label><p><input id="cap-restore-receipt-tenant" maxlength="40" autocomplete="off"></p>
+<label for="cap-restore-receipt-reference">Action reference from this owner</label><p><input id="cap-restore-receipt-reference" maxlength="96" autocomplete="off"></p>
+<button id="cap-restore-receipt" type="button" disabled>Inspect restoration history</button><p id="cap-restore-receipt-result" role="status"></p></section>
 <section class="panel"><h2>Schedule cancellation at period end</h2><p class="muted">Review the exact saved subscription before confirming. Scheduling preserves current tenant access and does not promise that no additional invoice can exist. Refunds and credits are separate operations.</p>
 <p id="cancellation-review" role="status">Choose Review cancellation beside a tenant.</p>
 <label for="cancellation-confirm">Exact confirmation shown in the review</label><p><input id="cancellation-confirm" maxlength="62" autocomplete="off" disabled></p>
@@ -396,6 +407,9 @@ _JS = r'''"use strict";
   let refundSelection = 0, refundReceiptSelection = 0;
   let refundPreview = null, refundExpiryTimer = null;
   let activeRefund = null, pendingRefund = null, activeRefundRefresh = null;
+  let capRestoreSelection = 0, capRestoreReceiptSelection = 0;
+  let capRestorePreview = null, capRestoreExpiryTimer = null;
+  let activeCapRestore = null, pendingCapRestore = null, activeCapRestoreHistory = null;
   let previewSelection = null;
   let previewReady = null;
   let draftReadyForReview = null;
@@ -526,6 +540,11 @@ _JS = r'''"use strict";
     pendingRefund = null;
     for (const id of ["refund-reference", "refund-receipt-tenant", "refund-receipt-reference"]) el(id).value = "";
     for (const id of ["refund-receipt", "refund-refresh"]) el(id).disabled = true;
+    clearCapRestoreReview();
+    ++capRestoreReceiptSelection;
+    pendingCapRestore = null;
+    for (const id of ["cap-restore-reference","cap-restore-receipt-tenant","cap-restore-receipt-reference"]) el(id).value = "";
+    el("cap-restore-receipt").disabled = true;
     // An old session's HTTP dispatch may still be running. Keep its local
     // single-flight guard until completion; durable target control is primary.
     for (const id of ["cancellation-reference", "cancellation-receipt-tenant", "cancellation-receipt-reference"]) el(id).value = "";
@@ -544,7 +563,7 @@ _JS = r'''"use strict";
     el("user-rows").replaceChildren();
     el("categories").replaceChildren();
     el("catalog-release-entries").replaceChildren();
-    for (const id of ["catalog-release-summary", "status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "user-action-result", "usage-details", "billing-details", "invoice-details", "audit-result", "proposal-result", "draft-result", "review-manifest-result", "cancellation-result", "cancellation-receipt-result", "refund-result", "refund-receipt-result", "publication-result", "publication-recovery-result", "publication-next-result", "billing-configuration-status", "billing-reconcile-capability", "billing-cap-capability", "billing-cancellation-capability", "billing-history-capability", "billing-refund-capability", "billing-refund-history-capability"]) say(id, "");
+    for (const id of ["catalog-release-summary", "status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "user-action-result", "usage-details", "billing-details", "invoice-details", "audit-result", "proposal-result", "draft-result", "review-manifest-result", "cancellation-result", "cancellation-receipt-result", "refund-result", "refund-receipt-result", "cap-restore-result", "cap-restore-receipt-result", "publication-result", "publication-recovery-result", "publication-next-result", "billing-configuration-status", "billing-reconcile-capability", "billing-cap-capability", "billing-cancellation-capability", "billing-history-capability", "billing-refund-capability", "billing-refund-history-capability", "billing-cap-restore-capability", "billing-cap-restore-history-capability"]) say(id, "");
     for (const id of ["publication-result-evidence", "publication-recovery-result-evidence"]) el(id).replaceChildren();
     previewSelection = null;
     previewReady = null;
@@ -604,6 +623,10 @@ _JS = r'''"use strict";
     say("refund-receipt-result", "");
     el("refund-receipt").disabled = true;
     el("refund-refresh").disabled = true;
+    clearCapRestoreReview();
+    ++capRestoreReceiptSelection;
+    say("cap-restore-receipt-result", "");
+    el("cap-restore-receipt").disabled = true;
     // A failed core read must not leave yesterday's account or rule metadata
     // looking current. Do not clear activeUserStatus: an independent Cognito
     // mutation may still be in progress and must remain single-flight.
@@ -617,7 +640,7 @@ _JS = r'''"use strict";
     el("next").disabled = true;
     el("user-next").disabled = true;
     features = {tenant_status_changes:false};
-    for (const id of ["billing-reconcile-capability", "billing-cap-capability", "billing-cancellation-capability", "billing-history-capability", "billing-refund-capability", "billing-refund-history-capability"]) say(id, "");
+    for (const id of ["billing-reconcile-capability", "billing-cap-capability", "billing-cancellation-capability", "billing-history-capability", "billing-refund-capability", "billing-refund-history-capability", "billing-cap-restore-capability", "billing-cap-restore-history-capability"]) say(id, "");
     say("billing-configuration-status", message);
     el("user-change").disabled = true;
     el("user-action-inspect").disabled = true;
@@ -784,6 +807,7 @@ _JS = r'''"use strict";
     updatePublicationControls();
     updateCancellationControls();
     updateRefundControls();
+    updateCapRestoreControls();
     catalogInspectionVersion = features.catalog_inspection === true &&
       typeof catalog.registry_version === "string" && /^[1-9][0-9]{0,8}$/.test(catalog.registry_version)
       ? catalog.registry_version : null;
@@ -2055,6 +2079,16 @@ _JS = r'''"use strict";
         cap.addEventListener("click", () => capUsage(tenant));
         actions.append(cap);
       }
+      if (features.billing_cap_restore_preview === true && tenant.demo === false &&
+          Number.isSafeInteger(tenant.revision) && tenant.revision > 0) {
+        const restore = document.createElement("button");
+        restore.type = "button";
+        restore.dataset.capRestore = "true";
+        restore.textContent = "Review cap restoration";
+        restore.disabled = !!activeCapRestore || !!pendingCapRestore || !!activeCapRestoreHistory;
+        restore.addEventListener("click", () => reviewCapRestoration(tenant));
+        actions.append(restore);
+      }
       if (features.tenant_key_revocation && tenant.demo === false &&
           Number.isSafeInteger(tenant.revision) && Number.isInteger(tenant.api_key_count) &&
           tenant.api_key_count > 0) {
@@ -2173,7 +2207,8 @@ _JS = r'''"use strict";
     const config = features.billing_configuration;
     const details = config && typeof config === "object" &&
       ["signed_audit", "stripe_read", "plan_allowance", "cancellation_provider", "refund_provider",
-       "subscription_writer_enabled", "cancellation_writer_enabled", "refund_writer_enabled"].every(key => typeof config[key] === "boolean");
+       "subscription_writer_enabled", "cancellation_writer_enabled", "refund_writer_enabled",
+       "cap_restore_writer_enabled"].every(key => typeof config[key] === "boolean");
     const labels = {signed_audit:"signed audit setup", stripe_read:"Stripe read setup",
       plan_allowance:"a configured request allowance", cancellation_provider:"the account-bound cancellation provider",
       refund_provider:"the dedicated account-bound refund provider"};
@@ -2211,6 +2246,15 @@ _JS = r'''"use strict";
       "Available. Inspect the retained action reference below." +
         (features.billing_refund_refresh === true ? " Explicit status refresh reads Stripe without sending another refund." : "") :
       "Unavailable. Signed history requires the independent audit store."));
+    say("billing-cap-restore-capability", "Cap restoration · " +
+      (features.billing_cap_restore_preview === true && features.billing_cap_restore_submit === true ?
+        "Available after a fresh review and exact request-allowance confirmation. Choose Review cap restoration beside a tenant." :
+        unavailable("cap_restore_writer_enabled", ["signed_audit", "stripe_read", "plan_allowance"]) +
+        (features.billing_cap_restore_preview === true ? " Cap review remains available without restoration." : "")));
+    say("billing-cap-restore-history-capability", "Restoration history · " +
+      (features.billing_cap_restore_receipts === true ?
+        "Available. Inspect a retained reference without changing a tenant or reading Stripe." :
+        "Unavailable. Signed history requires the independent audit store."));
   }
 
   const cancellationContract = "stripe-period-end-cancellation-v1";
@@ -2244,6 +2288,7 @@ _JS = r'''"use strict";
     say("cancellation-review", "Choose Review cancellation beside a tenant.");
   }
   async function reviewCancellation(tenant) {
+    clearCapRestoreReview();
     if (!token || features.billing_cancellation_preview !== true) return;
     showSection("billing", true);
     if (activeCancellation || pendingCancellation) {
@@ -2447,6 +2492,7 @@ _JS = r'''"use strict";
     say("refund-review", "Choose Invoices beside a tenant, then Review refund.");
   }
   async function reviewRefund(tenant, invoice) {
+    clearCapRestoreReview();
     if (!token || features.billing_refund_preview !== true) return;
     showSection("billing", true);
     if (activeRefund || activeRefundRefresh || pendingRefund) {
@@ -2629,7 +2675,214 @@ _JS = r'''"use strict";
       updateRefundControls();
     }
   }
+  const capRestoreContract = "subscription-cap-restoration-v1";
+  function validCapRestoreChange(value) {
+    return value && [value.allowance_before,value.operator_cap_before,value.plan_allowance,value.allowance_after]
+      .every(n => Number.isSafeInteger(n) && n >= 0 && n <= 1000000000) &&
+      value.allowance_before === value.operator_cap_before && value.allowance_after === value.plan_allowance &&
+      value.allowance_before < value.allowance_after && value.operator_cap_after === null &&
+      ["active","disabled"].includes(value.tenant_status) && value.subscription_status === "active" && value.overage === "block";
+  }
+  function capRestoreAllowance(value) {
+    return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ",") + " requests/month";
+  }
+  function updateCapRestoreControls() {
+    const busy = !!activeCapRestore || !!activeCapRestoreHistory;
+    const ready = token && capRestorePreview && !busy && !pendingCapRestore &&
+      features.billing_cap_restore_submit === true && capRestorePreview.restore_available === true &&
+      Date.now() < cancellationUtc(capRestorePreview.expires_at_utc);
+    el("cap-restore-confirm").disabled = !ready;
+    el("cap-restore-reason").disabled = !ready;
+    el("cap-restore-submit").disabled = !(ready &&
+      el("cap-restore-confirm").value === capRestorePreview.confirmation &&
+      /^[A-Za-z0-9][A-Za-z0-9 .,;:_()/#-]{9,239}$/.test(el("cap-restore-reason").value));
+    el("cap-restore-receipt").disabled = !token || features.billing_cap_restore_receipts !== true || busy;
+    for (const button of document.querySelectorAll("[data-cap-restore]"))
+      button.disabled = !token || busy || !!pendingCapRestore || features.billing_cap_restore_preview !== true;
+  }
+  function clearCapRestoreReview() {
+    ++capRestoreSelection;
+    capRestorePreview = null;
+    if (capRestoreExpiryTimer !== null) clearTimeout(capRestoreExpiryTimer);
+    capRestoreExpiryTimer = null;
+    for (const id of ["cap-restore-confirm","cap-restore-reason"]) el(id).value = "";
+    for (const id of ["cap-restore-confirm","cap-restore-reason","cap-restore-submit"]) el(id).disabled = true;
+    say("cap-restore-review", "Choose Review cap restoration beside a tenant.");
+  }
+  async function reviewCapRestoration(tenant) {
+    if (!token || features.billing_cap_restore_preview !== true) return;
+    showSection("billing", true);
+    if (activeCapRestore || activeCapRestoreHistory || pendingCapRestore) {
+      say("cap-restore-result", "Retain the previous restoration reference and inspect its signed history before another restoration.");
+      return;
+    }
+    clearCapRestoreReview();
+    clearCancellationReview();
+    clearRefundReview();
+    const epoch = authEpoch, selection = capRestoreSelection;
+    say("cap-restore-review", "Reviewing the saved local request cap and configured plan for " + tenant.tenant_id + "...");
+    say("cap-restore-result", "");
+    try {
+      const response = await request("/v1/admin/tenants/" + encodeURIComponent(tenant.tenant_id) + "/allowance-cap/restore/preview", {
+        method:"POST",body:JSON.stringify({expected_revision:tenant.revision})});
+      if (!token || epoch !== authEpoch || selection !== capRestoreSelection) return;
+      const value = response?.restoration, observed = cancellationUtc(value?.observed_at_utc),
+        expires = cancellationUtc(value?.expires_at_utc), start = cancellationUtc(value?.current_period_start_utc),
+        end = cancellationUtc(value?.current_period_end_utc), schedule = value?.cancellation;
+      if (!value || value.status !== "reviewed" || value.operation !== capRestoreContract ||
+          value.tenant_id !== tenant.tenant_id || value.expected_revision !== tenant.revision ||
+          !Number.isSafeInteger(value.expected_revision) || value.expected_revision < 1 || value.expected_revision >= Number.MAX_SAFE_INTEGER ||
+          !validCapRestoreChange(value) || value.provider_status !== "active" || typeof value.livemode !== "boolean" ||
+          observed === null || expires === null || observed >= expires || expires > observed + 180000 ||
+          expires <= Date.now() || observed > Date.now() + 30000 || start === null || end === null ||
+          start > observed || observed >= end || expires > end || !schedule || typeof schedule.cancel_at_period_end !== "boolean" ||
+          !(schedule.cancel_at_utc === null || cancellationUtc(schedule.cancel_at_utc) === end) ||
+          (!schedule.cancel_at_period_end && schedule.cancel_at_utc !== null) ||
+          !cancellationHash(value.target_fingerprint) || typeof value.preview_reference !== "string" ||
+          !/^cr1\.[A-Za-z0-9_-]{40,4092}$/.test(value.preview_reference) ||
+          value.confirmation !== "RESTORE " + tenant.tenant_id + " TO " + value.allowance_after + " REQUESTS PER MONTH" ||
+          typeof value.restore_available !== "boolean" || value.tenant_mutated !== false)
+        throw new Error("Cap restoration review is unverified");
+      capRestorePreview = {...value};
+      say("cap-restore-review", tenant.tenant_id + " · Saved allowance: " + capRestoreAllowance(value.allowance_before) +
+        " · Saved local request cap: " + capRestoreAllowance(value.operator_cap_before) +
+        " · Verified configured plan: " + capRestoreAllowance(value.plan_allowance) +
+        " · After restoration: " + capRestoreAllowance(value.allowance_after) + " · Saved local request cap will be removed" +
+        " · Overages remain blocked · " + (value.tenant_status === "disabled" ? "Tenant remains suspended" : "Tenant access status remains active") +
+        " · " + (value.livemode ? "Live mode" : "Test mode") + " · Active provider subscription" +
+        " · Current period ends UTC " + value.current_period_end_utc +
+        (schedule.cancel_at_period_end ? " · Scheduled cancellation remains at period end" : " · No period-end cancellation reported") +
+        " · Reviewed UTC " + value.observed_at_utc + " · Review expires UTC " + value.expires_at_utc +
+        " · Type exactly: " + value.confirmation +
+        (value.restore_available && features.billing_cap_restore_submit === true ? "" :
+          " · Restoration is unavailable in this release; this review changes no tenant allowance.") + readAuditLabel(response));
+      capRestoreExpiryTimer = setTimeout(() => {
+        if (token && epoch === authEpoch && selection === capRestoreSelection) {
+          clearCapRestoreReview();
+          say("cap-restore-review", "Restoration review expired. Review the tenant again before confirming.");
+        }
+      }, Math.max(0, expires - Date.now()));
+      updateCapRestoreControls();
+    } catch (_err) {
+      if (token && epoch === authEpoch && selection === capRestoreSelection) {
+        clearCapRestoreReview();
+        say("cap-restore-review", "Restoration review unavailable or the account is not eligible. Inspect the saved cap and subscription; missing or ambiguous cap provenance requires reconciliation first. No restoration was submitted.");
+      }
+    }
+  }
+  function capRestoreReceipt(value, tenantId, expected = null) {
+    if (!value || value.operation !== capRestoreContract || value.tenant_id !== tenantId ||
+        !cancellationHash(value.action_id) || !["not_found","applied"].includes(value.status))
+      throw new Error("Restoration history is unverified");
+    if (value.status === "not_found") {
+      if (value.tenant_mutated !== false) throw new Error("Restoration history is unverified");
+      return value;
+    }
+    if (!validCapRestoreChange(value) || value.audit_event_id !== value.action_id ||
+        value.integrity_status !== "signed_verified" || value.historical !== true || typeof value.replayed !== "boolean" ||
+        !Number.isSafeInteger(value.prior_revision) || value.prior_revision < 1 ||
+        !Number.isSafeInteger(value.revision) || value.revision !== value.prior_revision + 1 ||
+        cancellationUtc(value.recorded_at_utc) === null || !cancellationHash(value.target_fingerprint) ||
+        typeof value.reason !== "string" || !/^[A-Za-z0-9][A-Za-z0-9 .,;:_()/#-]{9,239}$/.test(value.reason) ||
+        (expected && (value.prior_revision !== expected.expected_revision || value.reason !== expected.reason ||
+          value.allowance_before !== expected.allowance_before || value.operator_cap_before !== expected.operator_cap_before ||
+          value.plan_allowance !== expected.plan_allowance || value.allowance_after !== expected.allowance_after ||
+          value.tenant_status !== expected.tenant_status || value.target_fingerprint !== expected.target_fingerprint)))
+      throw new Error("Restoration receipt is unverified");
+    return value;
+  }
+  function capRestoreMessage(value) {
+    if (value.status === "not_found") return "No signed restoration receipt found. A timed-out request may still complete. Retain its original reference; inspection submitted no restoration.";
+    return "Recorded restoration · " + value.tenant_id + " · " + capRestoreAllowance(value.allowance_before) +
+      " → " + capRestoreAllowance(value.allowance_after) + " · Saved local request cap removed" +
+      " · Overages remain blocked · " + (value.tenant_status === "disabled" ? "Suspension was preserved" : "Active tenant status was preserved") +
+      " · Revision " + value.prior_revision + " → " + value.revision + " · Recorded UTC " + value.recorded_at_utc +
+      " · Signed audit " + value.audit_event_id + ". Historical result; later caps and tenant changes remain authoritative.";
+  }
+  async function submitCapRestoration() {
+    updateCapRestoreControls();
+    if (el("cap-restore-submit").disabled) return;
+    const preview = {...capRestorePreview}, epoch = authEpoch, selection = capRestoreSelection;
+    const reference = crypto.randomUUID().replaceAll("-", "");
+    const pending = {tenant_id:preview.tenant_id, reference, epoch, selection,
+      expected:{...preview, reason:el("cap-restore-reason").value}};
+    const payload = {expected_revision:preview.expected_revision, preview_reference:preview.preview_reference,
+      confirmation:el("cap-restore-confirm").value, reason:pending.expected.reason, idempotency_key:reference};
+    activeCapRestore = pending;
+    pendingCapRestore = pending;
+    if (capRestoreExpiryTimer !== null) clearTimeout(capRestoreExpiryTimer);
+    capRestoreExpiryTimer = null;
+    ++capRestoreReceiptSelection;
+    say("cap-restore-receipt-result", "");
+    el("cap-restore-reference").value = reference;
+    el("cap-restore-receipt-tenant").value = pending.tenant_id;
+    el("cap-restore-receipt-reference").value = reference;
+    say("cap-restore-result", "Submitting the reviewed restoration once. Retain action " + reference + " for " + pending.tenant_id + ".");
+    updateCapRestoreControls();
+    let returned = false;
+    try {
+      const response = await request("/v1/admin/tenants/" + encodeURIComponent(pending.tenant_id) + "/allowance-cap/restore", {
+        method:"POST",body:JSON.stringify(payload)});
+      returned = true;
+      if (!token || epoch !== authEpoch || selection !== capRestoreSelection) return;
+      const initial = capRestoreReceipt(response?.restoration, pending.tenant_id, pending.expected);
+      const recovered = await request("/v1/admin/tenants/" + encodeURIComponent(pending.tenant_id) + "/allowance-cap/restore/receipt", {
+        method:"POST",body:JSON.stringify({idempotency_key:reference})});
+      if (!token || epoch !== authEpoch || selection !== capRestoreSelection) return;
+      const verified = capRestoreReceipt(recovered?.restoration, pending.tenant_id, pending.expected);
+      if (initial.status !== "applied" || verified.status !== "applied" || initial.action_id !== verified.action_id)
+        throw new Error("Restoration history changed");
+      pendingCapRestore = null;
+      clearCapRestoreReview();
+      const message = "Plan allowance restored · " + capRestoreMessage(verified) + readAuditLabel(recovered);
+      let warning = "";
+      try { await load(); } catch (_) { warning = " · Workspace refresh unavailable; the historical restoration receipt is verified."; }
+      if (token && epoch === authEpoch) say("cap-restore-result", message + warning);
+    } catch (err) {
+      if (token && epoch === authEpoch && selection === capRestoreSelection) {
+        clearCapRestoreReview();
+        if (!returned && [409,422].includes(err.status)) {
+          pendingCapRestore = null;
+          say("cap-restore-result", "Restoration rejected. Refresh the directory and request a fresh review. Retained action " + reference + " for " + pending.tenant_id + ".");
+        } else {
+          say("cap-restore-result", "Restoration outcome unverified. Retain action " + reference + " for " + pending.tenant_id +
+            " and inspect signed history. No additional restoration will be submitted automatically.");
+        }
+      }
+    } finally {
+      if (activeCapRestore === pending) activeCapRestore = null;
+      updateCapRestoreControls();
+    }
+  }
+  async function inspectCapRestorationHistory() {
+    if (!token || features.billing_cap_restore_receipts !== true || activeCapRestore || activeCapRestoreHistory) return;
+    const tenantId = el("cap-restore-receipt-tenant").value, reference = el("cap-restore-receipt-reference").value;
+    if (!/^[a-z][a-z0-9-]{1,39}$/.test(tenantId) || !/^[A-Za-z0-9_-]{16,96}$/.test(reference)) {
+      say("cap-restore-receipt-result", "Enter the exact tenant ID and retained restoration reference."); return;
+    }
+    const epoch = authEpoch, selection = ++capRestoreReceiptSelection, attempt = {epoch,selection};
+    activeCapRestoreHistory = attempt;
+    say("cap-restore-receipt-result", "Reading signed restoration history...");
+    updateCapRestoreControls();
+    try {
+      const response = await request("/v1/admin/tenants/" + encodeURIComponent(tenantId) + "/allowance-cap/restore/receipt", {
+        method:"POST",body:JSON.stringify({idempotency_key:reference})});
+      if (!token || epoch !== authEpoch || selection !== capRestoreReceiptSelection) return;
+      const pending = pendingCapRestore && pendingCapRestore.tenant_id === tenantId && pendingCapRestore.reference === reference ? pendingCapRestore : null;
+      const value = capRestoreReceipt(response?.restoration, tenantId, pending?.expected);
+      say("cap-restore-receipt-result", (value.status === "applied" ? "Recovered signed history · " : "") +
+        capRestoreMessage(value) + readAuditLabel(response));
+      if (value.status === "applied" && pending) pendingCapRestore = null;
+    } catch (_err) {
+      if (token && epoch === authEpoch && selection === capRestoreReceiptSelection)
+        say("cap-restore-receipt-result", "Restoration history unavailable or unverified. Retain the original reference; no restoration was submitted by this inspection.");
+    } finally {
+      if (activeCapRestoreHistory === attempt) activeCapRestoreHistory = null;
+      updateCapRestoreControls();
+    }
+  }
   async function verifyBilling(tenant) {
+    clearCapRestoreReview();
     if (!token || !features.billing_verify) return;
     const epoch = authEpoch;
     const selection = ++billingSelection;
@@ -2878,6 +3131,7 @@ _JS = r'''"use strict";
   }
 
   async function reconcileSubscription(tenant) {
+    clearCapRestoreReview();
     if (!token || !features.billing_reconcile || !features.audit_receipt_lookup || activeBillingReconcile) return;
     if (pendingBillingReconcile) {
       showSection("billing", true);
@@ -3104,6 +3358,7 @@ _JS = r'''"use strict";
       throw new Error("Signed mutation audit unverified; outcome may have applied. Inspect before retrying");
   }
   async function capUsage(tenant) {
+    clearCapRestoreReview();
     if (!token || !features.monthly_cost_caps) return;
     if (!features.audit_receipt_lookup) {say("status","Signed audit lookup unavailable; no change attempted");return;}
     if (!Number.isSafeInteger(tenant.monthly_allowance) || tenant.monthly_allowance < 0) return;
@@ -3525,6 +3780,14 @@ _JS = r'''"use strict";
   el("refund-submit").addEventListener("click", submitRefund);
   el("refund-receipt").addEventListener("click", () => inspectRefundHistory(false));
   el("refund-refresh").addEventListener("click", () => inspectRefundHistory(true));
+  el("cap-restore-confirm").addEventListener("input", updateCapRestoreControls);
+  el("cap-restore-reason").addEventListener("input", updateCapRestoreControls);
+  el("cap-restore-submit").addEventListener("click", submitCapRestoration);
+  el("cap-restore-receipt").addEventListener("click", inspectCapRestorationHistory);
+  for (const id of ["cap-restore-receipt-tenant","cap-restore-receipt-reference"]) el(id).addEventListener("input", () => {
+    ++capRestoreReceiptSelection;
+    say("cap-restore-receipt-result", "");
+  });
   for (const id of ["refund-receipt-tenant","refund-receipt-reference"]) el(id).addEventListener("input", () => {
     ++refundReceiptSelection;
     say("refund-receipt-result", "");

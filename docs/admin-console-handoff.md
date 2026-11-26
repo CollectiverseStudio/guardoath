@@ -5,7 +5,55 @@ record for a new chat. The append-only engineering history remains in
 [director-agent-coordination.md](director-agent-coordination.md); the complete
 47-target product discussion is preserved in [product-roadmap.md](product-roadmap.md).
 
-## Current implementation: source activation for owner invoice refunds
+## Current implementation: reviewed saved-cap restoration compatibility reader
+
+The next CORE-04/#41 operation restores an explicit saved local monthly request
+cap to the independently verified configured plan allowance. It is implemented
+through `admin_cap_restore.py`, the strict pure provider validator, atomic signed
+state, configured runtime and the actual owner tenant/Billing UI and API. The
+cap can have been inferred by conservative reconciliation; this workflow does
+not claim proof of the historical owner action that created it.
+
+Eligibility requires a coherent saved cap/plan/effective allowance, active saved
+subscription, existing customer/subscription binding and current direct provider
+proof of the exact supported single-item plan. Review and apply each retrieve
+that subscription once using the existing read credential. A normal future
+period-end cancellation is retained. Missing provenance or changed plan requires
+the existing reconciliation first. The browser cannot supply a plan, provider
+identifier, new allowance or environment.
+
+The encrypted review lasts at most 180 seconds and never extends beyond the
+verified period. Apply revalidates proof, exact owner/tenant/document/revision,
+confirmation and configuration. The actual transaction boundary rechecks expiry
+and its monotonic execution budget after the final history read. One conditional
+transaction removes the cap, restores the plan allowance, increments revision
+and saves the signed `tenant.allowance_restore` receipt. Suspension, usage,
+subscription status, keys, policy and overage blocking are preserved. Exact
+historical replay precedes time, provider, current tenant and writer checks, so
+an old receipt cannot remove a later owner cap. An ambiguous response triggers
+one read-only recovery and never an automatic second write.
+
+This source supports six contracts and introduces the existing five.
+`subscription-cap-restoration-v1` is the new contract;
+`ENABLE_NEW_CAP_RESTORATION_STATE=False` keeps new restoration writes disabled.
+All five existing source flags remain enabled. Required reader acceptance and
+deployment must precede a separate source-controlled activation and deployment
+with the actual digest-bound compatible reader backup. No new credential,
+resource or live customer action is needed for this implementation.
+
+Focused root acceptance passed 67 service cases, 11 actual runtime cases and 63
+affected existing runtime cases. Provider acceptance passed 150; state/new
+compatibility/affected compatibility passed 81/75/188. The owner API, mounted,
+console, integration, browser-Python and existing financial/refund mount group
+passed 185 cases. These are bounded groups with overlap, not one summed suite.
+The four new mounted cases cover source-reader, disabled-reader, enabled atomic
+success and committed-response-loss recovery, including a later stricter cap.
+JavaScript syntax and discovery passed for 29 mocked restoration cases and one
+actual mounted browser case. Local Chrome is unavailable, so actual browser
+acceptance belongs to required exact-source CI. The implemented review screen
+is not evidence that the new writer has been deployed.
+
+## Previous implementation: source activation for owner invoice refunds
 
 Deployed writer source `83298d309c49ede4640c70320489c5d21306d40b` enables
 `ENABLE_NEW_REFUND_STATE=True` and declares all five persistent-state contracts
@@ -95,8 +143,8 @@ and configured plan. Its dedicated restricted-key scopes are Accounts Read,
 Invoices Read, Payment Intents Read, and Charges and Refunds Write; all other
 and connected-account permissions remain None. Stripe's combined charge/refund
 scope is broader than the application's sole refund mutation endpoint. The
-existing cancellation key must not be broadened or reused. A separate explicit
-credential-creation approval is still required after implementation and release.
+existing cancellation key must not be broadened or reused. The separate explicit
+approval and completed configuration are recorded in the current production entry.
 
 Focused service acceptance passed 40 cases, including competing owners, exact
 request replay, transaction acknowledgement loss, pending and lost-response
@@ -1074,16 +1122,16 @@ live Cognito/AWS/Stripe behavior and all 15 live checks remain unverified.
 
 ## Start here in a new session
 
-1. Fetch current `main` and read the coordination file's top override, then
-   `AGENTS.md`. Check the actual main SHA, every exact-SHA CI job, open issues and
-   active writers before changing files. This handoff is evidence of prior work,
-   not a substitute for those fresh checks.
+1. Read `AGENTS.md`, the coordination override and current assigned work, and
+   fetch current `main` before changing shared files. Use the recorded accepted
+   release evidence; do not repeat healthy-deployment or completed-CI audits.
+   A new source release must still satisfy its own exact-source required gates.
 2. Continue requirements [#39](https://github.com/CollectiverseStudio/guardoath/issues/39),
    [#40](https://github.com/CollectiverseStudio/guardoath/issues/40),
    [#41](https://github.com/CollectiverseStudio/guardoath/issues/41) and
    [#42](https://github.com/CollectiverseStudio/guardoath/issues/42). Work directly
-   on main with one writer. Read-only parallel reviews are useful; concurrent
-   implementation writers are not.
+   on main with explicitly acknowledged nonoverlapping file ownership and one
+   publication coordinator. Parallel implementation must preserve those assignments.
 3. Fix a failing exact-SHA job first using its actual failing test/log and root
    cause. Preserve assertions, the original 500-ms PII deadline, customer Off
    choices, shared tenant authority, audit, cost controls and rollback.
@@ -1206,9 +1254,10 @@ one. No AWS resource or paid provider was purchased or provisioned.
    existing Stripe test-mode account is complete. The bounded owner
    invoice-refund workflow and source activation are deployed in `83298d3`
    with the actual compatible reader backup recorded above. Its separately
-   approved dedicated test-mode refund configuration is complete. Next implement
-   reviewed restoration of a saved local request cap to the independently
-   verified configured plan allowance, followed by credits, configured plan
+   approved dedicated test-mode refund configuration is complete. Reviewed
+   restoration of a saved local request cap now has its compatibility-reader
+   implementation. Complete its reader deployment and separate writer activation,
+   then continue credits, configured plan
    changes and durable lifecycle/risk event processing. Source deployment does not establish a customer refund or
    complete CORE-04. Preserve the actual target/intent transaction and
    conservative ambiguity recovery in

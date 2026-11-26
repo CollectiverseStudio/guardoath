@@ -63,7 +63,7 @@ def test_activated_refund_build_requires_compatible_reader_source_and_rejects_un
     spec.loader.exec_module(build)
     actual = build.release_metadata(SHA)
     assert actual == release_metadata(SHA)
-    assert actual["supported_state_contracts"] == list(REFUND_READER_SUPPORT)
+    assert actual["supported_state_contracts"] == [*REFUND_READER_SUPPORT, "subscription-cap-restoration-v1"]
     assert actual["introduced_state_contracts"] == list(REFUND_READER_SUPPORT)
     candidate = archive(tmp_path / "activated.zip", actual)
     # Exercise the committed reader source's declared shape offline. This is
@@ -75,7 +75,7 @@ def test_activated_refund_build_requires_compatible_reader_source_and_rejects_un
     assert result == {"status": "compatible", "candidate_source_sha": SHA,
                       "rollback_source_sha": REFUND_READER_SHA,
                       "rollback_code_sha256": gate.archive_digest(backup),
-                      "state_contracts": sorted(REFUND_READER_SUPPORT)}
+                      "state_contracts": sorted((*REFUND_READER_SUPPORT, "subscription-cap-restoration-v1"))}
     previous = archive(tmp_path / "pre-refund-catalog-release.zip", metadata(
         PRE_REFUND_READER_SHA, support=PRE_REFUND_READER_SUPPORT, writes=CATALOG_CONTRACTS))
     with pytest.raises(ValueError, match="compatibility baseline"):

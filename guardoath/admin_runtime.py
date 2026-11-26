@@ -215,6 +215,26 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
             tenant_table=tenants.store.table_name, preview_key=bytes.fromhex(key_hex),
             invoice_references=billing_invoices.refund_references if billing_invoices else None,
             provider=refund_provider)
+    billing_cap_restore = None
+    if audit_table:
+        from guardoath.admin_cap_restore import AdminRequestCapRestoration
+        from guardoath.admin_cap_restore_state import DynamoCapRestoreState
+        restoration_configuration = {}
+        if billing_reporter is not None and plan_allowance is not None:
+            def cap_restoration_snapshot(binding, *, timeout):
+                from guardoath.stripe_provider import fetch_subscription_snapshot
+                # Existing fixed subscription GET only. A saved binding is
+                # required; restoration never discovers or mutates Stripe state.
+                return fetch_subscription_snapshot(binding, secret, timeout=timeout)
+            restoration_configuration = {"fetch_snapshot": cap_restoration_snapshot,
+                "expected_price_id": price, "expected_livemode": secret.startswith("sk_live_"),
+                "plan_monthly_allowance": plan_allowance}
+        # The signed reader survives provider configuration removal and an
+        # accepted source-disabled rollback. Construction performs no I/O.
+        billing_cap_restore = AdminRequestCapRestoration(
+            state=DynamoCapRestoreState(tenants.store._client, audit_table, audit_signing_key),
+            tenant_table=tenants.store.table_name, preview_key=bytes.fromhex(key_hex),
+            **restoration_configuration)
     record_validator = rule_exists = None
     if mutator is not None:
         from guardoath.tenant_record import TenantRecord
@@ -257,6 +277,7 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
                         billing_invoices=billing_invoices,
                         billing_cancellation=billing_cancellation,
                         billing_refunds=billing_refunds,
+                        billing_cap_restore=billing_cap_restore,
                         billing_configuration={
                             "signed_audit": read_auditor is not None,
                             "stripe_read": billing_reporter is not None,

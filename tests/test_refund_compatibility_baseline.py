@@ -30,7 +30,7 @@ def test_source_default_introduces_refund_writes_despite_environment(monkeypatch
     assert state_contracts.ENABLE_NEW_REFUND_STATE is True
     assert state_contracts.new_refund_state_enabled() is True
     declaration = state_contracts.release_metadata(SHA)
-    assert declaration["supported_state_contracts"] == [*PRIOR_CONTRACTS, CONTRACT]
+    assert declaration["supported_state_contracts"] == [*PRIOR_CONTRACTS, CONTRACT, "subscription-cap-restoration-v1"]
     assert declaration["introduced_state_contracts"] == [*PRIOR_CONTRACTS, CONTRACT]
 
 
@@ -42,7 +42,7 @@ def test_explicit_refund_reader_cannot_be_enabled_by_environment(monkeypatch):
     assert state_contracts.ENABLE_NEW_REFUND_STATE is False
     assert state_contracts.new_refund_state_enabled() is False
     declaration = state_contracts.release_metadata(SHA)
-    assert declaration["supported_state_contracts"] == [*PRIOR_CONTRACTS, CONTRACT]
+    assert declaration["supported_state_contracts"] == [*PRIOR_CONTRACTS, CONTRACT, "subscription-cap-restoration-v1"]
     assert declaration["introduced_state_contracts"] == list(PRIOR_CONTRACTS)
 
 
@@ -59,7 +59,7 @@ def test_all_five_writer_introductions_remain_independent(monkeypatch, enabled):
         monkeypatch.setattr(state_contracts, flag, value)
     contracts = (*PRIOR_CONTRACTS, CONTRACT)
     declaration = state_contracts.release_metadata(SHA)
-    assert declaration["supported_state_contracts"] == list(contracts)
+    assert declaration["supported_state_contracts"] == [*contracts, "subscription-cap-restoration-v1"]
     assert declaration["introduced_state_contracts"] == [name for name, value in zip(contracts, enabled) if value]
 
 

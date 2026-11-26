@@ -120,6 +120,30 @@ def test_reconciliation_must_use_the_actual_mounted_tenant_store(mismatch):
         database.close()
         other_database.close()
 
+
+@pytest.mark.parametrize("mismatch", ["table", "database"])
+def test_cap_restoration_must_use_the_actual_mounted_tenant_store(mismatch):
+    from admin_test_support import AdminTestDynamo, ADMIN_BROWSER_AUDIT_KEY
+    from guardoath.admin_cap_restore import AdminRequestCapRestoration
+    from guardoath.admin_cap_restore_state import DynamoCapRestoreState
+    from guardoath.dynamodb_store import DynamoDBTenantStore
+    database, other_database = AdminTestDynamo(), AdminTestDynamo()
+    try:
+        store = DynamoDBTenantStore("tenant_table", database)
+        actions = AdminRequestCapRestoration(
+            state=DynamoCapRestoreState(other_database if mismatch == "database" else database,
+                "audit_table", ADMIN_BROWSER_AUDIT_KEY),
+            tenant_table="other_tenants" if mismatch == "table" else "tenant_table", preview_key=KEY)
+        app = FastAPI()
+        with pytest.raises(AdminConfigurationError, match="authoritative tenant store"):
+            mount_admin_console(app, sessions=Sessions(), tenants=Tenants(store), cognito=Cognito(),
+                cursor_signing_key=KEY, billing_cap_restore=actions)
+        assert not getattr(app.state, "guardoath_admin_mounted", False)
+        assert not database.audit_items() and not other_database.audit_items()
+    finally:
+        database.close()
+        other_database.close()
+
 def test_weak_cursor_secret_and_double_mount_rejected():
     app=FastAPI();params=dict(sessions=Sessions(),tenants=Tenants(Store()),cognito=Cognito(),cursor_signing_key=KEY)
     with pytest.raises(AdminConfigurationError): mount_admin_console(app,**{**params,"cursor_signing_key":b"short"})

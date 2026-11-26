@@ -61,6 +61,7 @@ if phase == "0":
     state_contracts.ENABLE_NEW_CATALOG_PUBLICATION_STATE = False
     state_contracts.ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE = False
     state_contracts.ENABLE_NEW_REFUND_STATE = False
+    state_contracts.ENABLE_NEW_CAP_RESTORATION_STATE = False
 elif not (state_contracts.new_catalog_publication_state_enabled()
           and state_contracts.new_catalog_publication_lifecycle_state_enabled()):
     raise RuntimeError("Catalog acceptance requires activated source defaults")
@@ -81,10 +82,18 @@ if refund_phase != "source":
 if phase == "source" and refund_phase == "source" and not state_contracts.new_refund_state_enabled():
     raise RuntimeError("Refund acceptance requires the activated source default")
 
+# Reader-first restoration tests preserve the disabled source gate. The
+# separate enabled fixture exercises future writing with no production switch.
+cap_restore_phase = os.environ.get("GUARDOATH_ADMIN_TEST_CAP_RESTORE_WRITER_PHASE", "source")
+if cap_restore_phase not in ("source", "enabled", "disabled"):
+    raise RuntimeError("Invalid synthetic cap restoration phase")
+if cap_restore_phase != "source":
+    state_contracts.ENABLE_NEW_CAP_RESTORATION_STATE = cap_restore_phase == "enabled"
+
 POOL, CLIENT = "us-east-1_Example", "syntheticownerclient"
 DOMAIN = "operators.auth.us-east-1.amazoncognito.com"
 ORIGIN = os.environ.get("GUARDOATH_ADMIN_TEST_ORIGIN", "http://127.0.0.1:8780")
-if ORIGIN not in ("http://127.0.0.1:8780", "http://127.0.0.1:8781", "http://127.0.0.1:8782"):
+if ORIGIN not in ("http://127.0.0.1:8780", "http://127.0.0.1:8781", "http://127.0.0.1:8782", "http://127.0.0.1:8783"):
     raise RuntimeError("Browser acceptance must stay on its isolated loopback origin")
 OWNER = "12345678-1234-1234-1234-123456789012"
 CUSTOMER = "87654321-4321-4321-4321-210987654321"
@@ -314,6 +323,21 @@ def refund_evidence(request):
             "idempotency_key":request.get_header("Idempotency-key")}) + "\n")
 
 refund_boundary.before = refund_evidence
+from guardoath.admin_cap_restore import AdminRequestCapRestoration
+from guardoath.admin_cap_restore_state import DynamoCapRestoreState
+
+cap_restoration_reads = []
+def cap_restoration_snapshot(binding, *, timeout):
+    assert isinstance(binding, StripeBinding) and 0 < timeout <= 8
+    cap_restoration_reads.append(binding)
+    with path.with_suffix(".cap-restore-reads.jsonl").open("a", encoding="utf-8") as evidence:
+        evidence.write(json.dumps({"tenant_id":binding.tenant_id}) + "\n")
+    return stripe_snapshot(binding.tenant_id, binding.customer_id, binding.subscription_id)
+
+cap_restoration = AdminRequestCapRestoration(
+    state=DynamoCapRestoreState(db, "audit_table", ADMIN_BROWSER_AUDIT_KEY),
+    tenant_table="tenant_table", preview_key=CURSOR_KEY, fetch_snapshot=cap_restoration_snapshot,
+    expected_price_id="price_starter", expected_livemode=False, plan_monthly_allowance=10000)
 invoice_history = AdminInvoiceHistory(stripe_invoices, reporter, cursor_key=CURSOR_KEY)
 refunds = AdminInvoiceRefund(state=DynamoRefundState(db, "audit_table", ADMIN_BROWSER_AUDIT_KEY),
     tenant_table="tenant_table", preview_key=CURSOR_KEY, invoice_references=invoice_history.refund_references,
@@ -333,6 +357,7 @@ mount_admin_console(app,sessions=sessions,tenants=tenants,cognito=CognitoBoundar
     billing_reporter=reporter,
     billing_cancellation=cancellation,
     billing_refunds=refunds,
+    billing_cap_restore=cap_restoration,
     billing_configuration={"signed_audit":True, "stripe_read":True,
         "plan_allowance":True, "cancellation_provider":True, "refund_provider":True},
     billing_invoices=invoice_history,

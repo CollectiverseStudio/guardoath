@@ -14,6 +14,7 @@ module.exports = {...config,
     url:"http://127.0.0.1:8781/healthz",
     env:{...config.webServer.env,GUARDOATH_ADMIN_TEST_WRITER_PHASE:"0",
       GUARDOATH_ADMIN_TEST_REFUND_WRITER_PHASE:"disabled",
+      GUARDOATH_ADMIN_TEST_CAP_RESTORE_WRITER_PHASE:"disabled",
       GUARDOATH_ADMIN_TEST_ORIGIN:"http://127.0.0.1:8781"},
   },
 };

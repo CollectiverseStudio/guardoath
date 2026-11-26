@@ -16,8 +16,8 @@ offline acceptance are not evidence of AWS deployment or live financial data.
 | Owner access | Separate Cognito client, signed tokens, fresh independent owner membership/account checks, recent MFA, same-origin mutations, memory-only browser tokens | Actual configured production login and all live acceptance |
 | User management | Bounded masked directory/exact lookup; confirmed Cognito enable/disable with signed intent and independently verified outcome, recoverable ambiguity | Live provider acceptance; no owner role grants or self-disable |
 | Tenant management | Existing tenant store, suspend/reactivate, key revocation, stage-specific rule actions, downward request caps, revision checks and signed atomic audit | Deployed customer safeguards and source parity |
-| Subscriptions | Provider inspection, cap-preserving full owner reconciliation and protective delinquency downgrade; source enables provenance creation with explicit trusted plan configuration | Live Stripe acceptance, cap restoration and provider plan changes remain open |
-| Billing and costs | Bounded invoice history, usage/allowance history, request-cap signals, confirmed period-end cancellation and source-enabled full paid-invoice refund submission/recovery; dedicated refund provider remains absent | Writer release acceptance/deployment, separate refund credential approval/configuration and customer financial acceptance; credits, infrastructure cost/revenue allocation and lifecycle/risk-event processing remain open |
+| Subscriptions | Provider inspection, cap-preserving reconciliation, protective delinquency downgrade and reviewed saved-cap restoration with signed history; restoration's new writer is source-disabled in this compatibility reader | Cap-restoration reader acceptance/deployment followed by separate writer activation; live Stripe acceptance and provider plan changes remain open |
+| Billing and costs | Bounded invoice history, usage/allowance history, request-cap signals, confirmed period-end cancellation and deployed full paid-invoice refund submission/recovery; dedicated test-mode refund setup completed November 26 | Customer financial acceptance; credits, infrastructure cost/revenue allocation and lifecycle/risk-event processing remain open |
 | Catalog | Shared registry, signed description drafts/reviews, reversible metadata source plans and an enabled publication/CI/deployment/history workflow | An operator must run a requested release; live publication and general behavior/schema authoring remain open |
 
 `GUARDOATH_ADMIN_AUDIT_TABLE` is required in production for protected reads and
@@ -121,15 +121,12 @@ feature name `monthly_cost_caps` does not mean dollars, AWS cost or provider spe
 
 The owner Billing workspace implements refund review, full-amount submission,
 signed history and explicit provider refresh. Current writer source sets
-`ENABLE_NEW_REFUND_STATE=True`; it supports and introduces all five persistent
-contracts. Submission and refresh still require the dedicated refund provider,
-which remains unconfigured and needs separate approval. Review also requires
-that provider; history remains available with the signed audit store. The
-reader's required acceptance and actual deployment are recorded in the
-[handoff](admin-console-handoff.md). This writer source still requires its own
-release acceptance/deployment and does not establish operational refund availability
-or customer financial acceptance. It does not
-complete CORE-04. Explicit compatibility coverage retains the disabled-reader
+`ENABLE_NEW_REFUND_STATE=True`. Submission, review and refresh require the
+dedicated provider, which was separately approved and configured in test mode
+on November 26. History remains available with the signed audit store. Actual
+reader/writer acceptance, deployment and configuration are recorded in the
+[handoff](admin-console-handoff.md). Customer financial acceptance remains open;
+this does not complete CORE-04. Explicit compatibility coverage retains the disabled-reader
 phase with `ENABLE_NEW_REFUND_STATE=False`.
 
 The supported target is an existing non-demo tenant's paid subscription creation
@@ -213,9 +210,9 @@ visible beside the formatted amount. See [Stripe currency rules](https://docs.st
 
 **Dedicated refund configuration**
 
-The dedicated refund provider is currently absent. Provisioning and installing
-its credential require separate approval; the prior cancellation-key setup
-does not authorize or configure this provider.
+The dedicated refund provider was separately approved and configured on November
+26 at 2:08 p.m. Eastern. The cancellation key remains separate. This completed
+setup does not need to be recreated during subsequent feature work.
 
 Configure the server-only pair `GUARDOATH_ADMIN_STRIPE_REFUND_KEY` and
 `GUARDOATH_ADMIN_STRIPE_REFUND_ACCOUNT_ID` through the existing secure environment
@@ -257,11 +254,53 @@ Retain explicit disabled-reader compatibility: with the refund flag false,
 submission/refresh routes remain unmounted, provider POSTs and financial state
 writes are refused, and later signed history remains readable. No environment
 variable bypasses the phase. Existing cancellation, subscription and catalog
-writer settings cannot substitute for the refund flag or the absent dedicated
+writer settings cannot substitute for the refund flag or the dedicated
 credential. The existing eight-second coordination budget and trusted Lambda
 remaining-time checks limit admission; blocking calls or termination can still
 leave a permanent indeterminate claim. Writer source, reader/writer deployment,
 credential configuration and customer financial acceptance remain distinct.
+
+### Restore a saved local request cap
+
+In **Tenants**, select **Review cap restoration** for the account. The review
+shows the saved request cap, configured plan allowance, current tenant status,
+verified subscription period, any ordinary scheduled cancellation and expiry.
+The label describes the saved local cap; historical reconciliation may have
+inferred it, so it is not proof of a particular previous owner action.
+
+The tenant must have coherent saved cap/plan fields and a currently active
+supported subscription. Missing provenance or a changed configured plan needs
+**Reconcile subscription** first. The service independently retrieves the saved
+subscription during review and again before applying the change. It uses the
+existing read credential; no new Stripe key is required.
+
+This compatibility-reader source leaves new restoration writes disabled.
+After the separately accepted reader and writer release sequence, enter the
+exact displayed `RESTORE <tenant_id> TO <plan_allowance> REQUESTS PER MONTH`
+confirmation and a reason, then choose **Restore plan allowance**. The browser
+retains the original action reference before sending. The server restores only
+the configured allowance and removes the saved cap; suspension, usage, keys,
+validation settings, subscription status and overage blocking stay unchanged.
+A disabled account remains disabled.
+
+The review expires within 180 seconds or at the current period end, whichever
+comes first. Changed tenant data, configuration or provider proof require a
+fresh review. Success requires the signed saved receipt and next revision.
+After a connection error or an unverified response, retain the original action
+reference and inspect signed history. A **Not found** result does not prove a
+pending request cannot finish and does not unlock a replacement action.
+Historical inspection never calls Stripe or reapplies an old allowance; it
+remains available with the audit configuration after provider removal or a
+compatible source-disabled rollback.
+
+The preview, apply and receipt paths are respectively
+`POST /v1/admin/tenants/{tenant_id}/allowance-cap/restore/preview`,
+`POST /v1/admin/tenants/{tenant_id}/allowance-cap/restore`, and
+`POST /v1/admin/tenants/{tenant_id}/allowance-cap/restore/receipt`.
+Each requires verified owner access, fresh MFA, same origin and a signed read
+audit. The request accepts no client allowance, plan, environment or provider ID.
+See the [financial design](admin-financial-operations-design.md) for the exact
+transaction, replay and rollback contracts.
 
 ### Persistent-state rollback compatibility
 
@@ -271,10 +310,15 @@ records with neither field omit the absent fields; populated values, including
 zero, are always preserved.
 
 Lambda builds declare supported and introduced persistent-state contracts
-in their generated source manifest. This writer source supports and introduces
-all five: `subscription-cap-provenance-v1`,
+in their generated source manifest. This restoration compatibility reader
+supports six contracts and introduces the preceding five:
+`subscription-cap-provenance-v1`,
 `stripe-period-end-cancellation-v1`, `catalog-publication-v1`,
 `catalog-publication-lifecycle-v1` and `stripe-invoice-refund-v1`.
+The sixth, `subscription-cap-restoration-v1`, remains source-disabled for new
+writes until this reader has been accepted and deployed. Restoration activation
+must preserve its actual compatible reader archive; the older refund reader
+alone cannot provide restoration compatibility.
 Reader `26724c3049db679ded77bfe8ff176e87551835c7` supports all five with its
 refund writer disabled; its required acceptance and actual deployment are
 recorded in the handoff. The earlier four-contract 762e7b6 reader

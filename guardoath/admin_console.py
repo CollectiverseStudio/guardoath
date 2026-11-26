@@ -25,6 +25,8 @@ from guardoath.admin_subscription_cancellation import (
     AdminSubscriptionCancellation, CancellationConflict, CancellationUnavailable, CancellationRateLimited)
 from guardoath.admin_invoice_refund import (
     AdminInvoiceRefund, RefundConflict, RefundUnavailable, RefundRateLimited)
+from guardoath.admin_cap_restore import (
+    AdminRequestCapRestoration, CapRestoreConflict)
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from guardoath.admin_catalog import CatalogProvider, read_catalog
 from guardoath.admin_catalog_inspection import (
@@ -135,6 +137,22 @@ class RefundRequest(CancellationPreviewRequest):
 
 
 class RefundReceiptRequest(CancellationReceiptRequest):
+    pass
+
+
+class CapRestorePreviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_revision: int = Field(ge=1, le=MAX_MUTABLE_REVISION, strict=True)
+
+
+class CapRestoreRequest(CapRestorePreviewRequest):
+    preview_reference: str = Field(min_length=44, max_length=4096, pattern=r"^cr1\.[A-Za-z0-9_-]+$")
+    confirmation: str = Field(min_length=30, max_length=120)
+    reason: str = Field(min_length=10, max_length=240)
+    idempotency_key: str = Field(pattern=r"^[A-Za-z0-9_-]{16,96}$", max_length=96)
+
+
+class CapRestoreReceiptRequest(CancellationReceiptRequest):
     pass
 
 
@@ -324,6 +342,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                         billing_invoices: AdminInvoiceHistory | None = None,
                         billing_cancellation: AdminSubscriptionCancellation | None = None,
                         billing_refunds: AdminInvoiceRefund | None = None,
+                        billing_cap_restore: AdminRequestCapRestoration | None = None,
                         billing_configuration: dict[str, bool] | None = None,
                         catalog_drafts: AdminCatalogDrafts | None = None,
                         catalog_publications: AdminCatalogPublications | None = None,
@@ -337,7 +356,8 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
     if type(require_persistent_read_audit) is not bool:
         raise ValueError("Persistent audit enforcement must be an explicit boolean")
     from guardoath.state_contracts import (
-        new_subscription_state_enabled, new_cancellation_state_enabled, new_refund_state_enabled)
+        new_subscription_state_enabled, new_cancellation_state_enabled, new_refund_state_enabled,
+        new_cap_restoration_state_enabled)
     if billing_configuration is not None and (
             not isinstance(billing_configuration, dict)
             or set(billing_configuration) != {"signed_audit", "stripe_read", "plan_allowance", "cancellation_provider", "refund_provider"}
@@ -367,6 +387,13 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             or read_auditor.audit_table != billing_refunds.state.table_name
             or not hmac.compare_digest(read_auditor.signing_key, billing_refunds.state.audit_key)):
         raise ValueError("Refunds require their bound persistent read auditor")
+    if billing_cap_restore is not None and (
+            not isinstance(billing_cap_restore, AdminRequestCapRestoration)
+            or not isinstance(read_auditor, AdminSensitiveReadAuditor)
+            or read_auditor.ddb is not billing_cap_restore.state.client
+            or read_auditor.audit_table != billing_cap_restore.state.table_name
+            or not hmac.compare_digest(read_auditor.signing_key, billing_cap_restore.state.audit_key)):
+        raise ValueError("Cap restoration requires its bound persistent read auditor")
     if catalog_publications is not None and (
             not isinstance(catalog_publications, AdminCatalogPublications)
             or not isinstance(read_auditor, AdminSensitiveReadAuditor)
@@ -472,10 +499,14 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            "billing_refund_submit": billing_refunds is not None and billing_refunds.provider is not None and new_refund_state_enabled(),
                            "billing_refund_receipts": billing_refunds is not None,
                            "billing_refund_refresh": billing_refunds is not None and billing_refunds.provider is not None and new_refund_state_enabled(),
+                           "billing_cap_restore_preview": billing_cap_restore is not None and billing_cap_restore.provider_configured,
+                           "billing_cap_restore_submit": billing_cap_restore is not None and billing_cap_restore.provider_configured and new_cap_restoration_state_enabled(),
+                           "billing_cap_restore_receipts": billing_cap_restore is not None,
                            "billing_configuration": {**billing_configuration,
                                "subscription_writer_enabled": new_subscription_state_enabled(),
                                "cancellation_writer_enabled": new_cancellation_state_enabled(),
-                               "refund_writer_enabled": new_refund_state_enabled()},
+                               "refund_writer_enabled": new_refund_state_enabled(),
+                               "cap_restore_writer_enabled": new_cap_restoration_state_enabled()},
                            "tenant_rule_changes": admin_mutator is not None and callable(record_validator) and callable(rule_exists),
                            "monthly_cost_caps": admin_mutator is not None and callable(record_validator),
                            "tenant_key_revocation": admin_mutator is not None and callable(record_validator),
@@ -879,6 +910,42 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                                principal: VerifiedAdmin = Depends(require_admin)):
                 return refund_call(tenant_id, principal, request, billing_refunds.refresh,
                                    **payload.model_dump())
+
+    if billing_cap_restore is not None:
+        def cap_restore_call(tenant_id, principal, request, operation, **payload):
+            _require_admin_origin(request)
+            if not TENANT_ID.fullmatch(tenant_id):
+                raise HTTPException(status_code=404, detail="Tenant not found")
+            resource = "audit.receipt" if operation == billing_cap_restore.receipt else "stripe.subscription"
+            read_event = audit_sensitive_read(principal, resource, tenant_id)
+            try:
+                result = operation(actor=principal.subject, tenant_id=tenant_id, **payload)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail="Invalid cap restoration request") from exc
+            except CapRestoreConflict as exc:
+                raise HTTPException(status_code=409, detail="Cap restoration review or saved account changed; inspect the retained action reference") from exc
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="Cap restoration not verified; retain the action reference and inspect signed history") from exc
+            return admin_json({"restoration": result, "read_audit_event_id": read_event})
+
+        @router.post("/v1/admin/tenants/{tenant_id}/allowance-cap/restore/preview")
+        def preview_cap_restoration(tenant_id: str, payload: CapRestorePreviewRequest, request: Request,
+                                    principal: VerifiedAdmin = Depends(require_admin)):
+            return cap_restore_call(tenant_id, principal, request, billing_cap_restore.preview,
+                                    **payload.model_dump())
+
+        @router.post("/v1/admin/tenants/{tenant_id}/allowance-cap/restore/receipt")
+        def cap_restoration_receipt(tenant_id: str, payload: CapRestoreReceiptRequest, request: Request,
+                                    principal: VerifiedAdmin = Depends(require_admin)):
+            return cap_restore_call(tenant_id, principal, request, billing_cap_restore.receipt,
+                                    **payload.model_dump())
+
+        if new_cap_restoration_state_enabled() and billing_cap_restore.provider_configured:
+            @router.post("/v1/admin/tenants/{tenant_id}/allowance-cap/restore")
+            def restore_request_cap(tenant_id: str, payload: CapRestoreRequest, request: Request,
+                                    principal: VerifiedAdmin = Depends(require_admin)):
+                return cap_restore_call(tenant_id, principal, request, billing_cap_restore.apply,
+                                        **payload.model_dump())
 
     if billing_reconciler is not None:
         @router.post("/v1/admin/subscriptions/{tenant_id}/reconcile")

@@ -128,11 +128,17 @@ def test_financial_configuration_reports_prerequisites_without_granting_routes()
         "plan_allowance": True, "cancellation_provider": True, "refund_provider": True,
         "subscription_writer_enabled": state_contracts.new_subscription_state_enabled(),
         "cancellation_writer_enabled": state_contracts.new_cancellation_state_enabled(),
-        "refund_writer_enabled": state_contracts.new_refund_state_enabled()}
+        "refund_writer_enabled": state_contracts.new_refund_state_enabled(),
+        "cap_restore_writer_enabled": state_contracts.new_cap_restoration_state_enabled()}
     assert features["billing_reconcile"] is features["billing_cancellation_schedule"] is False
     assert features["billing_cancellation_preview"] is features["billing_cancellation_receipts"] is False
     assert features["billing_refund_preview"] is features["billing_refund_submit"] is False
     assert features["billing_refund_receipts"] is features["billing_refund_refresh"] is False
+    assert features["billing_cap_restore_preview"] is features["billing_cap_restore_submit"] is False
+    assert features["billing_cap_restore_receipts"] is False
+    for suffix in ("/preview", "", "/receipt"):
+        assert c.post("/v1/admin/tenants/alpha/allowance-cap/restore" + suffix,
+            headers={**auth(), "Origin":"https://guardoath.com"}, json={}).status_code == 404
     for operation in ("reconcile", "cancel-at-period-end", "cancellation/preview", "cancellation/receipt",
                       "refund/preview", "refund", "refund/receipt", "refund/refresh"):
         assert c.post("/v1/admin/subscriptions/alpha/" + operation,

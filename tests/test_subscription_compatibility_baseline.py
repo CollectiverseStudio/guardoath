@@ -73,7 +73,7 @@ def test_explicit_reader_phase_and_manifest_cannot_be_enabled_by_environment(mon
     manifest = state_contracts.release_metadata("a" * 40)
     assert manifest["supported_state_contracts"] == ["subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1",
                                                    "catalog-publication-v1", "catalog-publication-lifecycle-v1",
-                                                   "stripe-invoice-refund-v1"]
+                                                   "stripe-invoice-refund-v1", "subscription-cap-restoration-v1"]
     assert manifest["introduced_state_contracts"] == [
         "catalog-publication-v1", "catalog-publication-lifecycle-v1"]
 
@@ -92,7 +92,7 @@ def test_source_default_introduces_existing_writer_contracts_despite_environment
     assert manifest["introduced_state_contracts"] == [
         "subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1",
         "catalog-publication-v1", "catalog-publication-lifecycle-v1", "stripe-invoice-refund-v1"]
-    assert manifest["supported_state_contracts"] == manifest["introduced_state_contracts"]
+    assert manifest["supported_state_contracts"] == [*manifest["introduced_state_contracts"], "subscription-cap-restoration-v1"]
 
 
 @pytest.mark.parametrize("kind", ["memory", "dynamo"])

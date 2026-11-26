@@ -63,6 +63,7 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
                         billing_reporter=None, billing_downgrade=None, billing_reconciler=None, billing_invoices=None,
                         billing_cancellation=None,
                         billing_refunds=None,
+                        billing_cap_restore=None,
                         billing_configuration=None,
                         record_validator=None, rule_exists=None) -> None:
     """Register the guarded read-only admin routes on an existing GuardOath app.
@@ -136,6 +137,11 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
             or getattr(getattr(billing_refunds, "state", None), "client", None) is not store._client
             or getattr(getattr(billing_refunds, "state", None), "table_name", None) == store.table_name):
         raise AdminConfigurationError("Refunds must use the authoritative tenant store and independent audit state")
+    if billing_cap_restore is not None and (
+            getattr(billing_cap_restore, "tenant_table", None) != store.table_name
+            or getattr(getattr(billing_cap_restore, "state", None), "client", None) is not store._client
+            or getattr(getattr(billing_cap_restore, "state", None), "table_name", None) == store.table_name):
+        raise AdminConfigurationError("Cap restoration must use the authoritative tenant store and independent audit state")
     if catalog_publications is not None and (
             getattr(getattr(catalog_publications, "state", None), "client", None) is not store._client
             or getattr(getattr(catalog_publications, "state", None), "table_name", None) == store.table_name
@@ -162,6 +168,7 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
         billing_invoices=billing_invoices,
         billing_cancellation=billing_cancellation,
         billing_refunds=billing_refunds,
+        billing_cap_restore=billing_cap_restore,
         billing_configuration=billing_configuration,
         record_validator=record_validator,
         rule_exists=rule_exists,

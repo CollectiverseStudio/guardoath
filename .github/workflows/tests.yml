@@ -177,6 +177,10 @@ jobs:
         run: npx playwright test --config playwright.admin-refund.config.js
         env:
           PLAYWRIGHT_CHANNEL: chrome
+      - name: Owner saved-cap restoration browser and real API acceptance
+        run: npx playwright test --config playwright.admin-cap-restore.config.js
+        env:
+          PLAYWRIGHT_CHANNEL: chrome
       - name: Authenticated guarded model invocation browser acceptance
         run: |
           mkdir -p .guardoath-reports/invocation-guidance

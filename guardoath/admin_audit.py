@@ -86,6 +86,20 @@ class AdminAuditReader:
             if not isinstance(item, dict):
                 raise AdminAuditUnavailable("Invalid audit receipt")
 
+            if item.get("operation") == {"S": "tenant.allowance_restore"}:
+                from guardoath.admin_cap_restore_state import decode_cap_restore_receipt
+                receipt = decode_cap_restore_receipt(item, key=self.verify_key, event_id=event_id)
+                return {"status": "ok", "integrity_status": "signed_verified",
+                        "source": "persistent DynamoDB administrative audit receipt",
+                        **{name: receipt[name] for name in ("event_id", "tenant_id", "actor_sub", "operation",
+                            "when_utc", "reason", "prior_revision", "new_revision")},
+                        "change": {"field": "monthly_allowance", "before": receipt["old_limit"],
+                            "after": receipt["new_limit"], "plan_allowance": receipt["plan_limit"],
+                            "operator_cap_before": receipt["cap_limit"], "operator_cap_after": None,
+                            "cap_removed": True, "tenant_status": receipt["new_status"],
+                            "subscription_status": "active", "provider_status": "active",
+                            "target_fingerprint": receipt["target_fingerprint"]}}
+
             integrity_status = "legacy_unverified"
             if "integrity_mac" in item:
                 if self.verify_key is None or not verify_audit(item, self.verify_key):

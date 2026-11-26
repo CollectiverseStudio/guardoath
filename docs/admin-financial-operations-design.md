@@ -27,8 +27,9 @@ seven-workflow/25-job gate and was deployed with the actual compatible reader
 expected account were configured successfully in the existing Lambda. Exact
 release/configuration evidence is in the [handoff](admin-console-handoff.md).
 This establishes the deployed implementation and test-mode setup, not a customer
-refund or full financial acceptance. Saved-cap restoration, credits and plan
-changes remain future implementation work.
+refund or full financial acceptance. Reviewed saved-cap restoration now has its
+own implementation and source-disabled compatibility reader, described below.
+Credits and provider plan changes remain future implementation work.
 
 ## First coherent operation: schedule cancellation at period end
 
@@ -200,11 +201,12 @@ credential validation. No key enters the browser or provider metadata. No paid
 service or real customer mutation is part of offline acceptance.
 
 `state_contracts.release_metadata()` computes introductions from independent
-source flags. This writer source enables subscription, cancellation, both catalog
-phases and refunds, so its manifest supports and introduces all five contracts:
+source flags. Subscription, cancellation, both catalog phases and refunds remain
+enabled, so this restoration reader introduces the preceding five contracts:
 `subscription-cap-provenance-v1`, `stripe-period-end-cancellation-v1`,
 `catalog-publication-v1`, `catalog-publication-lifecycle-v1` and
-`stripe-invoice-refund-v1`. There is no environment or deployment-argument
+`stripe-invoice-refund-v1`. It additionally supports `subscription-cap-restoration-v1`
+without introducing its new state. There is no environment or deployment-argument
 override. One operation's flag cannot activate another operation's writer.
 
 The earlier 762e7b6 deployment established reader support for the four preceding
@@ -251,11 +253,11 @@ The separate implementation uses `admin_invoice_refund.py`,
 is `stripe-invoice-refund-v1`. Current writer source sets
 `ENABLE_NEW_REFUND_STATE=True` and introduces that contract as well as supporting
 its signed readers. Explicit disabled-reader compatibility remains covered with
-the flag false. The dedicated refund provider is still absent: review,
-submission and provider refresh require its separately approved configuration.
-Signed history only needs the retained audit store and signing key. This section
-does not claim reader/writer deployment, a configured refund credential or
-customer financial acceptance.
+the flag false. Review, submission and provider refresh require the dedicated
+configuration, separately approved and completed in test mode on November 26.
+Signed history only needs the retained audit store and signing key. The handoff
+records actual reader/writer deployment and configuration evidence; customer
+financial acceptance remains separate.
 
 ### Supported payment and authority
 
@@ -363,9 +365,10 @@ cap provenance, usage, keys or customer rules.
 
 ### Dedicated credential and separate release activation
 
-The dedicated refund provider is not configured. Provisioning and installing its
-credential require separate approval; the existing cancellation credential and
-its earlier authorization do not supply refund access.
+The dedicated refund provider was separately approved and configured on November
+26 at 2:08 p.m. Eastern. The existing cancellation credential remains separate;
+its earlier authorization did not supply refund access. Do not recreate or
+broaden either key as part of subsequent roadmap work.
 
 Runtime configuration is the pair `GUARDOATH_ADMIN_STRIPE_REFUND_KEY` and
 `GUARDOATH_ADMIN_STRIPE_REFUND_ACCOUNT_ID`, alongside the existing Stripe
@@ -407,9 +410,8 @@ Writer deployment requires the real, digest-bound rollback archive
 to support all five contracts. Neither reader commitment nor writer preparation
 establishes that deployed rollback evidence. No environment variable or
 deployment argument overrides the phase, and the other financial/catalog flags
-cannot substitute for the refund flag. The absent dedicated provider keeps
-refund operations unavailable even with the writer source enabled; configuring
-it remains a separate approved step. Source activation, deployment and customer
+cannot substitute for the refund flag. Dedicated test-mode configuration is now
+complete and is recorded separately from source activation. Deployment and customer
 financial acceptance are distinct evidence requirements.
 
 Further refund scope, credits and plan changes remain separate work. Provider
@@ -418,3 +420,85 @@ and evidence before reporting webhook health or calling financial management
 complete. Real infrastructure cost ingestion, freshness and defensible tenant
 allocation remain separate work. This refund implementation does not complete
 CORE-04.
+
+## Reviewed restoration of a saved local request cap
+
+`admin_cap_restore.py`, `admin_cap_restore_provider.py` and
+`admin_cap_restore_state.py` implement a distinct `subscription-cap-restoration-v1`
+operation. This first source is its compatibility reader: support is declared,
+but `ENABLE_NEW_CAP_RESTORATION_STATE=False` introduces no restoration state.
+The five existing writer flags remain enabled. A later source activation must
+follow accepted reader deployment and retain its actual digest-bound archive.
+
+The operation removes one explicit saved local request cap and restores exactly
+the configured plan allowance. It makes no provider mutation and creates no
+charge, refund, credit, subscription or price change. Cap provenance can result
+from conservative legacy reconciliation; the UI uses “saved local request cap”
+and does not assert that a particular owner originally imposed it.
+
+### Eligibility and independently refreshed proof
+
+The authoritative record must explicitly be a non-demo Stripe tenant with active
+saved subscription status, active or disabled tenant status, an existing valid
+customer/subscription binding, blocking overage, and strict integer values
+`0 <= admin_monthly_allowance_cap == monthly_allowance < stripe_plan_monthly_allowance`.
+The saved nominal plan must equal the configured plan allowance. Missing or
+incoherent provenance and plan drift require reconciliation before review.
+
+Each preview and apply performs one direct fixed-host GET of that bound
+subscription through the existing Acacia-pinned reader. The pure validator
+requires exact customer/subscription/price/mode, a complete single-item list,
+quantity one, active automatic collection, explicit null pause/schedule/pending
+update, and integer current-period bounds containing the observation time.
+Present item-period fields must match. A coherent ordinary future period-end
+cancellation is allowed and preserved; custom or ambiguous cancellation is
+refused. There is no discovery or claim of an independent Stripe account check.
+
+### Review, transaction and historical recovery
+
+| Endpoint | Contract |
+| --- | --- |
+| `POST /v1/admin/tenants/{tenant_id}/allowance-cap/restore/preview` | Strict expected revision; signed read audit and configured provider; returns before/after allowance, status, cancellation, UTC period/expiry and opaque review |
+| `POST /v1/admin/tenants/{tenant_id}/allowance-cap/restore` | Strict revision, opaque review, exact confirmation, reason and idempotency reference; route exists only with configured provider and enabled source |
+| `POST /v1/admin/tenants/{tenant_id}/allowance-cap/restore/receipt` | Signed history by owner-bound idempotency reference; no provider, tenant mutation or current-plan dependency |
+
+All three retain owner identity, fresh MFA, same-origin and persistent sensitive
+read auditing. Mount admission binds the actual service, tenant store and signed
+auditor to the same client and independent audit table/key. The browser supplies
+no provider identifiers, allowance, price, mode or raw provider parameters.
+Confirmation is exactly `RESTORE <tenant_id> TO <plan_allowance> REQUESTS PER MONTH`.
+
+The `cr1.` authenticated encrypted review binds owner, tenant, revision, exact
+serialized document, plan configuration, normalized provider proof and target.
+Its TTL is 180 seconds or the current period end, whichever is earlier. Provider
+reads have a bounded per-owner rate and execution budget. Apply retrieves the
+tenant and provider again and refuses any changed proof or document. A final
+callback runs after the state's history read, document validation and sealing,
+immediately before transaction dispatch, so a slow read cannot bypass expiry.
+
+One conditional DynamoDB transaction compares exact document and revision,
+removes `admin_monthly_allowance_cap`, sets `monthly_allowance` to the plan,
+updates timestamp/revision and appends the immutable signed
+`tenant.allowance_restore` receipt. Every other tenant field and the separate
+usage attributes are preserved, including a disabled tenant status. The signed
+19-field payload records both revisions/statuses, old/new/plan/cap limits, reason,
+actor, target fingerprint and exact request fingerprint; it contains no raw
+provider IDs or tenant document. The generic audit reader uses the same strict
+receipt decoder as the dedicated history reader.
+
+Action identity is an HMAC of owner and idempotency reference. The request
+fingerprint additionally binds tenant, revision, exact review bytes, confirmation
+and reason. Exact prior signed history is returned before expiry, source gate,
+provider configuration or current tenant checks. Thus an old action remains
+readable after rollback or a later cap reduction and cannot perform another
+increase. Competing references are limited by the exact tenant CAS; ambiguous
+transaction responses permit one strongly consistent receipt lookup, never an
+automatic repeat write. A missing receipt does not prove that no pending write
+exists. The browser retains the original reference and blocks a new submission
+after unknown outcomes; explicit historical inspection performs no provider call.
+
+Required CI includes the isolated actual mounted cap-restoration browser/API
+journey in the existing dashboard job, plus the ordinary full test suite. Source
+activation, deployment and customer financial acceptance are separate. This
+bounded local operation does not finish CORE-04, credits, provider plan changes,
+durable lifecycle/risk processing or true infrastructure-cost attribution.
