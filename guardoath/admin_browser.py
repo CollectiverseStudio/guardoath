@@ -294,7 +294,13 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <label for="user-action-email">Optional exact account email for live comparison</label> <input id="user-action-email" type="email" maxlength="254" autocomplete="off" spellcheck="false">
 <button id="user-action-inspect" type="button" disabled>Inspect signed action</button><p id="user-action-result" role="status"></p></section>
 <section id="section-tenants" data-admin-section class="panel" hidden tabindex="-1" aria-label="Tenants"><h2>Tenants</h2><p class="muted">API key counts and saved overage policies come from persisted tenant records; Allow and record is not a hard cap. Key material is never displayed. Unknown values remain unavailable. Quota risk is advisory, derived from each saved counter and allowance for the UTC read month, not live activity, financial cost, or a persistent alert.</p><label for="search">Tenant ID filter</label> <input id="search" maxlength="40" autocomplete="off"> <button id="search-go">Search</button> <label for="quota-risk-filter">Saved quota risk (this page only)</label> <select id="quota-risk-filter"><option value="all">All risks</option><option value="watch">Watch or higher</option><option value="near">Near allowance or higher</option><option value="at">At or above allowance</option><option value="unknown">Unavailable</option></select><p class="muted">This filter only hides rows on the current bounded page. Next page continues the source scan even if no visible rows match.</p><div class="scroll"><table><thead><tr><th>Tenant</th><th>Name</th><th>Status</th><th>Subscription</th><th>Allowance</th><th>Used this month</th><th>Saved quota risk (UTC)</th><th>Overage policy</th><th>API keys</th><th>Manage</th></tr></thead><tbody id="tenant-rows"></tbody></table></div><p id="tenant-status"></p><button id="next" type="button" disabled>Next page</button></section>
-<section id="section-billing" data-admin-section class="section-stack" hidden tabindex="-1" aria-label="Billing"><section class="panel"><h2>Verified invoices</h2><p class="muted">Five Stripe invoice summaries per page for an independently verified customer subscription. Each page is a separate provider observation. Amounts are in minor currency units, not a revenue total or forecast.</p><label for="invoice-status-filter">Invoice status</label> <select id="invoice-status-filter" disabled><option value="">All statuses</option><option value="open">Open</option><option value="uncollectible">Uncollectible</option><option value="paid">Paid</option><option value="draft">Draft</option><option value="void">Void</option></select> <button id="invoice-restart" type="button" disabled>Restart invoice history</button> <button id="invoice-next" type="button" disabled>Older invoices</button><p id="invoice-page-status" class="muted"></p><p id="invoice-details" role="status">No invoice history selected.</p></section>
+<section id="section-billing" data-admin-section class="section-stack" hidden tabindex="-1" aria-label="Billing"><section class="panel"><h2>Financial controls</h2>
+<p id="billing-configuration-status" role="status">Sign in to read the available owner controls.</p>
+<p id="billing-reconcile-capability"></p><p id="billing-cap-capability"></p>
+<p id="billing-cancellation-capability"></p><p id="billing-history-capability"></p>
+<button id="billing-choose-tenant" type="button">Choose a tenant</button>
+<p class="muted">Availability reports server configuration, not a verified customer subscription or payment. Each action requires fresh owner MFA, the saved tenant binding and a signed audit receipt. Refunds, credits and plan changes are unavailable.</p></section>
+<section class="panel"><h2>Verified invoices</h2><p class="muted">Five Stripe invoice summaries per page for an independently verified customer subscription. Each page is a separate provider observation. Amounts are in minor currency units, not a revenue total or forecast.</p><label for="invoice-status-filter">Invoice status</label> <select id="invoice-status-filter" disabled><option value="">All statuses</option><option value="open">Open</option><option value="uncollectible">Uncollectible</option><option value="paid">Paid</option><option value="draft">Draft</option><option value="void">Void</option></select> <button id="invoice-restart" type="button" disabled>Restart invoice history</button> <button id="invoice-next" type="button" disabled>Older invoices</button><p id="invoice-page-status" class="muted"></p><p id="invoice-details" role="status">No invoice history selected.</p></section>
 <section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Verify Stripe compares provider state with saved entitlement. Reconcile subscription independently reads Stripe again and saves the verified entitlement with an audit receipt. Saved request caps and suspended accounts remain enforced. Reconciliation does not collect a payment or issue a refund.</p><p id="billing-details" role="status">No subscription selected.</p><p id="billing-action-result" role="status"></p><button id="billing-retry" type="button" hidden disabled>Retry same reconciliation</button></section>
 <section class="panel"><h2>Schedule cancellation at period end</h2><p class="muted">Review the exact saved subscription before confirming. Scheduling preserves current tenant access and does not promise that no additional invoice can exist. Refunds and credits are separate operations.</p>
 <p id="cancellation-review" role="status">Choose Review cancellation beside a tenant.</p>
@@ -519,7 +525,7 @@ _JS = r'''"use strict";
     el("user-rows").replaceChildren();
     el("categories").replaceChildren();
     el("catalog-release-entries").replaceChildren();
-    for (const id of ["catalog-release-summary", "status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "user-action-result", "usage-details", "billing-details", "invoice-details", "audit-result", "proposal-result", "draft-result", "review-manifest-result", "cancellation-result", "cancellation-receipt-result", "publication-result", "publication-recovery-result", "publication-next-result"]) say(id, "");
+    for (const id of ["catalog-release-summary", "status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "user-action-result", "usage-details", "billing-details", "invoice-details", "audit-result", "proposal-result", "draft-result", "review-manifest-result", "cancellation-result", "cancellation-receipt-result", "publication-result", "publication-recovery-result", "publication-next-result", "billing-configuration-status", "billing-reconcile-capability", "billing-cap-capability", "billing-cancellation-capability", "billing-history-capability"]) say(id, "");
     for (const id of ["publication-result-evidence", "publication-recovery-result-evidence"]) el(id).replaceChildren();
     previewSelection = null;
     previewReady = null;
@@ -587,6 +593,8 @@ _JS = r'''"use strict";
     el("next").disabled = true;
     el("user-next").disabled = true;
     features = {tenant_status_changes:false};
+    for (const id of ["billing-reconcile-capability", "billing-cap-capability", "billing-cancellation-capability", "billing-history-capability"]) say(id, "");
+    say("billing-configuration-status", message);
     el("user-change").disabled = true;
     el("user-action-inspect").disabled = true;
     previewSelection = null;
@@ -748,6 +756,7 @@ _JS = r'''"use strict";
       el("metrics").append(card);
     }
     features = available;
+    showBillingCapabilities();
     updatePublicationControls();
     updateCancellationControls();
     catalogInspectionVersion = features.catalog_inspection === true &&
@@ -2135,6 +2144,40 @@ _JS = r'''"use strict";
       if (token && epoch === authEpoch && selection === usageSelection) say("usage-details", err.message);
     }
   }
+  function showBillingCapabilities() {
+    const config = features.billing_configuration;
+    const details = config && typeof config === "object" &&
+      ["signed_audit", "stripe_read", "plan_allowance", "cancellation_provider",
+       "subscription_writer_enabled", "cancellation_writer_enabled"].every(key => typeof config[key] === "boolean");
+    const labels = {signed_audit:"signed audit setup", stripe_read:"Stripe read setup",
+      plan_allowance:"a configured request allowance", cancellation_provider:"the account-bound cancellation provider"};
+    const unavailable = (gate, prerequisites) => {
+      if (config && config[gate] === false) return "Unavailable in this release.";
+      if (!details) return "Unavailable; configuration details could not be verified.";
+      const missing = prerequisites.filter(key => config[key] === false).map(key => labels[key]);
+      return missing.length ? "Unavailable. Requires " + missing.join(", ") + "." :
+        "Unavailable. Required owner services are not mounted.";
+    };
+    say("billing-configuration-status", details ?
+      "Owner capability and configuration status loaded. Review a tenant to verify its provider state." :
+      "Owner capability status loaded; detailed configuration status is unavailable.");
+    say("billing-reconcile-capability", "Subscription reconciliation · " +
+      (features.billing_reconcile === true && features.audit_receipt_lookup === true ?
+        "Available. Choose Reconcile subscription beside a tenant to save verified entitlement within its request cap." :
+        unavailable("subscription_writer_enabled", ["signed_audit", "stripe_read", "plan_allowance"])));
+    say("billing-cap-capability", "Request caps · " + (features.monthly_cost_caps === true && features.audit_receipt_lookup === true ?
+      "Available. Choose Cap usage beside a tenant. The saved limit is requests per month." :
+      "Unavailable. Request caps require the audited tenant controls."));
+    say("billing-cancellation-capability", "Period-end cancellation · " +
+      (features.billing_cancellation_schedule === true && features.billing_cancellation_preview === true ?
+        "Available after a fresh provider review and exact confirmation. Choose Review cancellation beside the tenant. Scheduling preserves current tenant access." :
+        unavailable("cancellation_writer_enabled", ["signed_audit", "stripe_read", "cancellation_provider"]) +
+        (features.billing_cancellation_preview === true ? " Provider review remains available without scheduling." : "")));
+    say("billing-history-capability", "Cancellation history · " + (features.billing_cancellation_receipts === true ?
+      "Available. Inspect the retained action reference below; recovery never resends a provider action." :
+      "Unavailable. Signed history requires the independent audit store."));
+  }
+
   const cancellationContract = "stripe-period-end-cancellation-v1";
   const cancellationHash = value => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
   function cancellationUtc(value) {
@@ -2248,10 +2291,10 @@ _JS = r'''"use strict";
   function cancellationMessage(value) {
     if (value.status === "not_found") return "No signed cancellation intent found. This is not evidence of current provider state.";
     const detail = value.tenant_id + " · Action " + value.action_reference + " · Intent " + value.intent.action_id;
-    if (value.status === "verified") return "Verified historical schedule · " + detail +
+    if (value.status === "verified") return "Verified historical schedule · Provider-confirmed at the recorded time · " + detail +
       " · Period end UTC " + value.intent.effective_at_utc + " · Recorded UTC " + value.outcome.recorded_at_utc +
       ". Tenant access, keys, rules, usage and caps were not changed. Current provider state was not refreshed.";
-    return "Indeterminate cancellation · " + detail +
+    return "Indeterminate cancellation · Provider outcome ambiguous · " + detail +
       ". The target remains held; no automatic retry. A current provider observation cannot prove this action succeeded.";
   }
   async function scheduleCancellation() {
@@ -2273,7 +2316,7 @@ _JS = r'''"use strict";
     el("cancellation-reference").value = reference;
     el("cancellation-receipt-tenant").value = pending.tenant_id;
     el("cancellation-receipt-reference").value = reference;
-    say("cancellation-result", "Submitting once for " + pending.tenant_id + " · Retain action " + reference + ".");
+    say("cancellation-result", "Pending provider confirmation · Submitting once for " + pending.tenant_id + " · Retain action " + reference + ".");
     updateCancellationControls();
     try {
       const response = await request("/v1/admin/subscriptions/" + encodeURIComponent(pending.tenant_id) + "/cancel-at-period-end", {
@@ -2320,7 +2363,8 @@ _JS = r'''"use strict";
       const pending = pendingCancellation && pendingCancellation.tenant_id === tenantId &&
         pendingCancellation.reference === reference ? pendingCancellation : null;
       const receipt = cancellationReceipt(result?.cancellation, tenantId, reference, pending?.expected);
-      say("cancellation-receipt-result", cancellationMessage(receipt) + readAuditLabel(result));
+      say("cancellation-receipt-result", (receipt.status === "not_found" ? "" : "Recovered signed history · ") +
+        cancellationMessage(receipt) + readAuditLabel(result));
       if (receipt.status === "verified" && pending) pendingCancellation = null;
     } catch (_err) {
       if (token && epoch === authEpoch && selection === cancellationReceiptSelection)
@@ -3185,6 +3229,7 @@ _JS = r'''"use strict";
   el("cancellation-reason").addEventListener("input", updateCancellationControls);
   el("cancellation-schedule").addEventListener("click", scheduleCancellation);
   el("cancellation-receipt").addEventListener("click", inspectCancellationHistory);
+  el("billing-choose-tenant").addEventListener("click", () => showSection("tenants", true));
   for (const id of ["cancellation-receipt-tenant","cancellation-receipt-reference"]) el(id).addEventListener("input", () => {
     ++cancellationReceiptSelection; say("cancellation-receipt-result", "");
   });

@@ -65,8 +65,18 @@ const mutation = (page,path) => page.waitForResponse(r =>
 test("real owner browser reconciles, caps and suspends the authoritative tenant with durable receipts",async ({page,request}) => {
   const before = persisted().tenants;
   const headers = await login(page);
+  const features = await (await request.get("/v1/admin/features", {headers})).json();
+  expect(features).toMatchObject({billing_reconcile:true,billing_cancellation_schedule:true,
+    billing_cancellation_preview:true,billing_cancellation_receipts:true,
+    billing_configuration:{signed_audit:true,stripe_read:true,plan_allowance:true,cancellation_provider:true,
+      subscription_writer_enabled:true,cancellation_writer_enabled:true}});
+  await page.locator("#nav-billing").click();
+  await expect(page.locator("#billing-configuration-status")).toContainText("Review a tenant to verify its provider state");
+  await expect(page.locator("#billing-reconcile-capability")).toContainText("Available");
+  await expect(page.locator("#billing-cancellation-capability")).toContainText("fresh provider review and exact confirmation");
+  await page.locator("#billing-choose-tenant").click();
+  await expect(page.locator("#section-tenants")).toBeVisible();
   const answers = dialogs(page);
-  await page.locator("#nav-tenants").click();
   await expect(page.locator("#tenant-rows tr")).toHaveCount(2);
   answers.push("RECONCILE " + TENANT,"Verify synthetic provider subscription");
   const firstResponse = mutation(page,`/v1/admin/subscriptions/${TENANT}/reconcile`);
@@ -217,10 +227,12 @@ test("real owner schedules one provider cancellation and reopens linked history 
   const action = (await response.json()).cancellation;
   expect(action).toMatchObject({status:"verified",tenant_mutated:false,provider_state_refreshed:false});
   await expect(page.locator("#cancellation-result")).toContainText("Verified historical schedule");
+  await expect(page.locator("#cancellation-result")).toContainText("Provider-confirmed at the recorded time");
   const reference = await page.locator("#cancellation-reference").inputValue();
   expect(reference).toBe(action.action_reference);
   await page.locator("#cancellation-receipt").click();
   await expect(page.locator("#cancellation-receipt-result")).toContainText("Verified historical schedule");
+  await expect(page.locator("#cancellation-receipt-result")).toContainText("Recovered signed history");
   const reopened = persisted();
   expect(reopened.tenants).toEqual(before);
   expect(reopened.financial.map(value=>value.kind).sort()).toEqual(["control","intent","outcome"]);

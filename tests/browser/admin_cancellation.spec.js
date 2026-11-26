@@ -114,6 +114,7 @@ test("confirmed schedule shows linked historical outcome and recovery never rese
   expect(await page.locator("#cancellation-reference").inputValue()).toBe(sent.idempotency_key);
   await page.locator("#cancellation-receipt").click();
   await expect(page.locator("#cancellation-receipt-result")).toContainText("Verified historical schedule");
+  await expect(page.locator("#cancellation-receipt-result")).toContainText("Recovered signed history");
   expect(posts(fixture)).toHaveLength(1);
   expect(await page.evaluate(()=>JSON.stringify([localStorage,sessionStorage]))).not.toContain(sent.preview_reference);
 });
@@ -174,6 +175,7 @@ test("refresh and repeated clicks cannot dispatch a second in-flight operation",
   const held=holdNext(fixture,"/cancel-at-period-end");
   await page.evaluate(()=>{document.querySelector("#cancellation-schedule").click();document.querySelector("#cancellation-schedule").click();});
   await held.entered;
+  await expect(page.locator("#cancellation-result")).toContainText("Pending provider confirmation");
   await page.locator("#refresh").click();
   await expect(page.locator("#status")).toContainText("Administration loaded");
   await page.locator("#nav-tenants").click();
@@ -238,6 +240,7 @@ test("indeterminate and absent history do not imply current provider success",as
   fixture.state.outcomeChange=value=>{value.status="indeterminate";value.outcome=null;};
   await review(page);await fill(page);await page.locator("#cancellation-schedule").click();
   await expect(page.locator("#cancellation-result")).toContainText("Indeterminate cancellation");
+  await expect(page.locator("#cancellation-result")).toContainText("Provider outcome ambiguous");
   await page.locator("#cancellation-receipt").click();
   await expect(page.locator("#cancellation-receipt-result")).toContainText("Indeterminate cancellation");
   await page.locator("#cancellation-receipt-reference").fill("different-unknown-reference");
@@ -254,6 +257,50 @@ test("support-only capability stays visible and read-only at mobile width",async
   await expect(page.locator("#cancellation-review")).toContainText("Scheduling is unavailable in this release");
   await expect(page.locator("#cancellation-schedule")).toBeDisabled();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  expect(posts(fixture)).toHaveLength(0);
+});
+
+for (const scenario of [
+  {name:"disabled source",configuration:{subscription_writer_enabled:false,cancellation_writer_enabled:false},
+    features:{billing_reconcile:false,billing_cancellation_schedule:false},
+    target:"#billing-cancellation-capability",message:"Unavailable in this release",review:true},
+  {name:"missing cancellation provider",configuration:{cancellation_provider:false},
+    features:{billing_reconcile:true,billing_cancellation_preview:false,billing_cancellation_schedule:false},
+    target:"#billing-cancellation-capability",message:"Requires the account-bound cancellation provider",review:false},
+  {name:"missing request plan",configuration:{plan_allowance:false},
+    features:{billing_reconcile:false},target:"#billing-reconcile-capability",
+    message:"Requires a configured request allowance",review:true},
+  {name:"configured prerequisites without services",configuration:{},
+    features:{billing_reconcile:false,billing_cancellation_preview:false,billing_cancellation_schedule:false},
+    target:"#billing-cancellation-capability",message:"Required owner services are not mounted",review:false},
+]) {
+  test("financial controls explain "+scenario.name+" without claiming provider verification",async ({page})=>{
+    const fixture=await setup(page,{features:{...scenario.features,billing_configuration:{
+      signed_audit:true,stripe_read:true,plan_allowance:true,cancellation_provider:true,
+      subscription_writer_enabled:true,cancellation_writer_enabled:true,...scenario.configuration}}});
+    await page.locator("#nav-billing").click();
+    await expect(page.locator("#billing-configuration-status")).toContainText("Review a tenant to verify its provider state");
+    await expect(page.locator(scenario.target)).toContainText(scenario.message);
+    await expect(page.locator("#billing-history-capability")).toContainText("recovery never resends");
+    await page.locator("#billing-choose-tenant").click();
+    await expect(page.locator("#section-tenants")).toBeVisible();
+    await expect(page.getByRole("button",{name:"Review cancellation",exact:true})).toHaveCount(scenario.review?2:0);
+    expect(fixture.calls.filter(r=>r.path.includes("/v1/admin/subscriptions/") && r.method==="POST")).toHaveLength(0);
+  });
+}
+
+test("capability details are withdrawn after a failed authenticated refresh",async ({page})=>{
+  const fixture=await setup(page,{features:{billing_configuration:{signed_audit:true,stripe_read:true,
+    plan_allowance:true,cancellation_provider:true,subscription_writer_enabled:true,cancellation_writer_enabled:true}}});
+  await page.locator("#nav-billing").click();
+  await expect(page.locator("#billing-cancellation-capability")).toContainText("Available");
+  const resolve=fixture.override;
+  fixture.override=request=>request.path==="/v1/admin/features" ?
+    {status:503,contentType:"application/json",body:JSON.stringify({detail:"Source unavailable"})}:resolve(request);
+  await page.locator("#refresh").click();
+  await expect(page.locator("#billing-configuration-status")).toContainText("one or more protected owner sources failed");
+  await expect(page.locator("#billing-cancellation-capability")).toBeEmpty();
+  await expect(page.locator("#cancellation-schedule")).toBeDisabled();
   expect(posts(fixture)).toHaveLength(0);
 });
 

@@ -274,3 +274,186 @@ def test_runtime_rejects_partial_or_wrong_mode_cancellation_configuration(monkey
         configure_admin_from_environment(FastAPI(),tenants=Tenants(DynamoDBTenantStore("tenant_table",database)),
             admin_sessions=AdminSessions(),cognito_client=Cognito())
     assert database.transactions==0 and not database.audit_items()
+
+
+@pytest.mark.parametrize("audit,stripe,allowance,cancellation", [
+    (False, False, None, False),
+    (True, False, "125", False),
+    (True, True, None, False),
+    (True, True, "125", False),
+    (True, True, "125", True),
+])
+def test_financial_configuration_reports_validated_prerequisites_without_provider_reads(
+        monkeypatch, audit, stripe, allowance, cancellation):
+    from admin_test_support import AdminTestDynamo
+    from guardoath.dynamodb_store import DynamoDBTenantStore
+    from guardoath import admin_runtime
+    import urllib.request
+
+    configure(monkeypatch)
+    settings = {
+        "GUARDOATH_ADMIN_AUDIT_TABLE": "audit_table" if audit else "",
+        "GUARDOATH_STRIPE_SECRET_KEY": "sk_test_" + "a" * 32 if stripe else "",
+        "GUARDOATH_STRIPE_PRICE_ID": "price_plan" if stripe else "",
+        "GUARDOATH_PAID_MONTHLY_ALLOWANCE": allowance or "",
+        "GUARDOATH_ADMIN_STRIPE_WRITE_KEY": "rk_test_" + "b" * 32 if cancellation else "",
+        "GUARDOATH_ADMIN_STRIPE_ACCOUNT_ID": "acct_owner" if cancellation else "",
+    }
+    for key, value in settings.items():
+        monkeypatch.setenv(key, value)
+    class NoNetwork:
+        def open(self, *_args, **_kwargs):
+            pytest.fail("Runtime configuration must not query or mutate Stripe")
+    monkeypatch.setattr(urllib.request, "build_opener", lambda *_: NoNetwork())
+    mounted = []
+    monkeypatch.setattr(admin_runtime, "mount_admin_console", lambda app, **kwargs: mounted.append(kwargs))
+    database = AdminTestDynamo()
+    try:
+        configure_admin_from_environment(FastAPI(),
+            tenants=Tenants(DynamoDBTenantStore("tenant_table", database)),
+            admin_sessions=AdminSessions(), cognito_client=Cognito())
+        assert mounted[0]["billing_configuration"] == {
+            "signed_audit": audit,
+            "stripe_read": stripe,
+            "plan_allowance": allowance is not None,
+            "cancellation_provider": cancellation,
+        }
+        assert (mounted[0]["billing_reconciler"] is not None) is (audit and stripe and allowance is not None)
+        assert (mounted[0]["billing_cancellation"] is not None) is audit
+        assert database.transactions == 0 and not database.audit_items()
+    finally:
+        database.close()
+
+
+@pytest.mark.parametrize("lost_post_response", [False, True], ids=["verified", "indeterminate"])
+def test_source_default_runtime_reconciles_and_recovers_one_cancellation_without_tenant_change(
+        monkeypatch, tmp_path, lost_post_response):
+    """Exercise configured production constructors and transports with shipped gates.
+
+    Only the remote DynamoDB and HTTP boundaries are synthetic. No phase flag,
+    reconciler, cancellation service or receipt reader is replaced by a mock.
+    """
+    import base64
+    import json
+    import urllib.request
+    from types import SimpleNamespace
+    from admin_cancellation_support import ACTOR, TENANT, ProviderBoundary, Response, tenant
+    from admin_test_support import AdminTestDynamo
+    from guardoath import admin_runtime, state_contracts
+    from guardoath.dynamodb_store import DynamoDBTenantStore, to_item
+    from guardoath.tenant_record import EDITABLE_FIELDS
+
+    assert state_contracts.new_subscription_state_enabled() is True
+    assert state_contracts.new_cancellation_state_enabled() is True
+    configure(monkeypatch)
+    read_key = "sk_test_synthetic_runtime_read_0123456789"
+    write_key = "rk_test_synthetic_runtime_cancel_0123456789"
+    for key, value in {
+        "GUARDOATH_ADMIN_AUDIT_TABLE": "audit_table",
+        "GUARDOATH_STRIPE_SECRET_KEY": read_key,
+        "GUARDOATH_STRIPE_PRICE_ID": "price_plan",
+        "GUARDOATH_PAID_MONTHLY_ALLOWANCE": "10000",
+        "GUARDOATH_ADMIN_STRIPE_WRITE_KEY": write_key,
+        "GUARDOATH_ADMIN_STRIPE_ACCOUNT_ID": "acct_owner",
+    }.items():
+        monkeypatch.setenv(key, value)
+
+    boundary = ProviderBoundary()
+    now = int(time())
+    boundary.value.update(current_period_start=now - 86400, current_period_end=now + 864000)
+    boundary.lose_post_response = lost_post_response
+    read_requests = []
+    def transport(request, *, timeout):
+        headers = {key.lower(): value for key, value in request.header_items()}
+        assert headers["stripe-version"] == "2025-02-24.acacia"
+        credential = base64.b64decode(headers["authorization"][6:]).decode("ascii")
+        if credential == read_key + ":":
+            assert request.get_method() == "GET" and request.data is None and timeout == 5.0
+            read_requests.append(request)
+            if request.full_url == "https://api.stripe.com/v1/subscriptions?customer=cus_cancel&status=all&limit=100":
+                value = {"object": "list", "has_more": False, "data": [boundary.value]}
+            else:
+                assert request.full_url == "https://api.stripe.com/v1/subscriptions/sub_cancel"
+                value = boundary.value
+            return Response(json.dumps(value).encode("utf-8"))
+        assert credential == write_key + ":"
+        return boundary.open(request, timeout=timeout)
+    monkeypatch.setattr(urllib.request, "build_opener", lambda *_: SimpleNamespace(open=transport))
+    mounted = []
+    monkeypatch.setattr(admin_runtime, "mount_admin_console", lambda app, **kwargs: mounted.append(kwargs))
+    path = tmp_path / "runtime-financial.sqlite3"
+    database = AdminTestDynamo(path)
+    initial = tenant().model_copy(update={"stripe_subscription_id": None, "subscription_status": "inactive"})
+    database.seed("tenant_table", to_item(initial))
+    store = DynamoDBTenantStore("tenant_table", database)
+    try:
+        configure_admin_from_environment(FastAPI(), tenants=Tenants(store),
+            admin_sessions=AdminSessions(), cognito_client=Cognito())
+        runtime = mounted[0]
+        assert all(runtime["billing_configuration"].values())
+        assert not read_requests and not boundary.calls and database.transactions == 0
+
+        payload = {"tenant_id": TENANT, "expected_revision": initial.revision,
+            "confirmation": "RECONCILE " + TENANT,
+            "reason": "Verify the saved customer subscription", "actor": ACTOR,
+            "idempotency_key": "runtime-reconcile-123456789"}
+        result = runtime["billing_reconciler"].apply(**payload)
+        saved = store.get(TENANT)
+        assert result["subscription_status"] == "active" and result["replayed"] is False
+        assert saved.stripe_subscription_id == "sub_cancel" and saved.revision == initial.revision + 1
+        assert saved.stripe_plan_monthly_allowance == 10000
+        assert saved.monthly_allowance == saved.admin_monthly_allowance_cap == initial.monthly_allowance == 4000
+        for field in (*EDITABLE_FIELDS, "usage", "key_hashes", "status", "payer_id"):
+            assert getattr(saved, field) == getattr(initial, field)
+        audit = runtime["audit_reader"].read(result["audit_event_id"])
+        assert audit["integrity_status"] == "signed_verified" and audit["operation"] == "billing.reconcile"
+        assert len(read_requests) == 2 and not boundary.calls and database.transactions == 1
+        assert runtime["billing_reconciler"].apply(**payload) == {**result, "replayed": True}
+        assert len(read_requests) == 2 and database.transactions == 1
+
+        cancellation = runtime["billing_cancellation"]
+        prepared = cancellation.preview(actor=ACTOR, tenant_id=TENANT, expected_revision=saved.revision)
+        assert prepared["scheduling_available"] is True
+        command = {"actor": ACTOR, "tenant_id": TENANT, "expected_revision": saved.revision,
+            "preview_reference": prepared["preview_reference"], "confirmation": prepared["confirmation"],
+            "reason": "Owner requested cancellation at the verified period end",
+            "idempotency_key": "runtime-cancellation-123456789"}
+        scheduled = cancellation.apply(**command)
+        assert scheduled["status"] == ("indeterminate" if lost_post_response else "verified")
+        assert scheduled["integrity_status"] == "signed_verified"
+        assert scheduled["tenant_mutated"] is False and scheduled["provider_state_refreshed"] is False
+        assert store.get(TENANT) == saved and len(boundary.posts) == 1
+        count = len(boundary.calls)
+        assert count == (5 if lost_post_response else 7)
+        assert cancellation.apply(**command) == scheduled
+        assert len(boundary.calls) == count and len(read_requests) == 2
+        assert database.transactions == 3
+
+        # A fresh runtime still exposes its signed historical reader without
+        # keeping the provider write credential or the plan configuration.
+        for key in ("GUARDOATH_ADMIN_STRIPE_WRITE_KEY", "GUARDOATH_ADMIN_STRIPE_ACCOUNT_ID",
+                    "GUARDOATH_PAID_MONTHLY_ALLOWANCE"):
+            monkeypatch.delenv(key)
+        reopened = AdminTestDynamo(path)
+        try:
+            configure_admin_from_environment(FastAPI(),
+                tenants=Tenants(DynamoDBTenantStore("tenant_table", reopened)),
+                admin_sessions=AdminSessions(), cognito_client=Cognito())
+            recovery = mounted[1]["billing_cancellation"]
+            assert recovery.provider is None and mounted[1]["billing_reconciler"] is None
+            assert mounted[1]["billing_configuration"] == {
+                "signed_audit": True, "stripe_read": True,
+                "plan_allowance": False, "cancellation_provider": False}
+            assert recovery.receipt(actor=ACTOR, tenant_id=TENANT,
+                idempotency_key=command["idempotency_key"]) == scheduled
+            assert DynamoDBTenantStore("tenant_table", reopened).get(TENANT) == saved
+            assert len(boundary.calls) == count and len(read_requests) == 2
+            financial = [row for row in reopened.audit_items() if "financial_operation" in row]
+            assert len(financial) == 3
+            for row in financial:
+                _, kind, identifier = row["event_id"]["S"].split(":")
+                recovery.state.verify_item(row, kind, identifier)
+        finally:
+            reopened.close()
+    finally:
+        database.close()

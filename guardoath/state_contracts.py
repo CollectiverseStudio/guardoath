@@ -9,17 +9,17 @@ import re
 RELEASE_CONTRACT_VERSION = 1
 SUPPORTED_STATE_CONTRACTS = ("subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1",
                              "catalog-publication-v1", "catalog-publication-lifecycle-v1")
-# First deploy and accept this compatibility source over the legacy image.
-# Only a later source commit may enable creation, after the deployed backup
-# actually supports the contract. There is deliberately no environment or
-# deployment-argument override: it would invalidate the artifact declaration.
-ENABLE_NEW_SUBSCRIPTION_STATE = False
+# This later writer release follows the deployed reader compatibility baseline.
+# Deployment must still verify the actual, digest-bound rollback archive supports
+# every introduced contract. There is deliberately no environment or deployment-
+# argument override: it would invalidate the artifact declaration.
+ENABLE_NEW_SUBSCRIPTION_STATE = True
 # Cancellation is an independent writer phase. Supporting/reading its signed
 # durable claims does not authorize either financial dispatch or cap writers.
-ENABLE_NEW_CANCELLATION_STATE = False
+ENABLE_NEW_CANCELLATION_STATE = True
 # The accepted catalog reader baseline supports requests, source preparation and
 # the complete release lifecycle. Enable both source-controlled phases together;
-# financial writers remain independent and disabled above.
+# their declarations remain independent from the financial writers above.
 ENABLE_NEW_CATALOG_PUBLICATION_STATE = True
 # Remote publication, accepted CI, deployment and terminal release introduce
 # their own signed records. A rollback image must understand this complete

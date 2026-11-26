@@ -25,7 +25,7 @@ def test_mounted_catalog_publication_preserves_auth_audit_and_tenants(tmp_path, 
     assert evidence["phase"] == phase
     assert evidence["signed_read_receipts"] == (7 if phase == "0" else 19)
     assert evidence["catalog_source_defaults"] is (phase != "0")
-    assert evidence["financial_writers"] is (phase == "1")
+    assert evidence["financial_writers"] is (phase != "0")
     assert evidence["processing_mode"] == "operator_started"
     assert set(evidence["denied"]) == {"customer", "no-mfa", "stale-mfa", "forged"}
     assert evidence["request_transactions"] == evidence["intent_documents"] == int(phase != "0")

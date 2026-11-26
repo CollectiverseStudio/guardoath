@@ -34,6 +34,8 @@ def test_valid_complete_packaged_manifest_is_source_authority(tmp_path):
     lambda x: x.update(introduced_state_contracts=[]),
     lambda x: x.update(introduced_state_contracts=["catalog-publication-v1"]),
     lambda x: x.update(introduced_state_contracts=["catalog-publication-lifecycle-v1"]),
+    lambda x: x["introduced_state_contracts"].remove("subscription-cap-provenance-v1"),
+    lambda x: x["introduced_state_contracts"].remove("stripe-period-end-cancellation-v1"),
     lambda x: x.update(supported_state_contracts=["catalog-publication-v1"]),
     lambda x: x["supported_state_contracts"].append("catalog-publication-v1"),
     lambda x: x["supported_state_contracts"].reverse(),
@@ -101,7 +103,7 @@ def test_missing_nonfile_and_symlink_provenance_are_refused(tmp_path):
         packaged_source_sha(link)
 
 
-def test_activated_source_enables_only_both_catalog_contracts(monkeypatch):
+def test_activated_source_retains_both_catalog_contracts_with_financial_activation(monkeypatch):
     for name in ("ENABLE_NEW_CATALOG_PUBLICATION_STATE", "GUARDOATH_ENABLE_NEW_CATALOG_PUBLICATION_STATE",
                  "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE",
                  "GUARDOATH_ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE",
@@ -111,11 +113,12 @@ def test_activated_source_enables_only_both_catalog_contracts(monkeypatch):
     assert state_contracts.ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE is True
     assert state_contracts.new_catalog_publication_state_enabled() is True
     assert state_contracts.new_catalog_publication_lifecycle_state_enabled() is True
-    assert state_contracts.ENABLE_NEW_SUBSCRIPTION_STATE is False
-    assert state_contracts.ENABLE_NEW_CANCELLATION_STATE is False
-    assert state_contracts.new_subscription_state_enabled() is False
-    assert state_contracts.new_cancellation_state_enabled() is False
+    assert state_contracts.ENABLE_NEW_SUBSCRIPTION_STATE is True
+    assert state_contracts.ENABLE_NEW_CANCELLATION_STATE is True
+    assert state_contracts.new_subscription_state_enabled() is True
+    assert state_contracts.new_cancellation_state_enabled() is True
     assert manifest()["introduced_state_contracts"] == [
+        "subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1",
         "catalog-publication-v1", "catalog-publication-lifecycle-v1"]
 
 
@@ -127,7 +130,8 @@ def test_explicit_catalog_reader_phase_cannot_be_enabled_by_environment(monkeypa
                  "GUARDOATH_CATALOG_PUBLICATION_ENABLED", "GUARDOATH_ADMIN_TEST_WRITER_PHASE"):
         monkeypatch.setenv(name, "1")
     assert state_contracts.new_catalog_publication_state_enabled() is False
-    assert manifest()["introduced_state_contracts"] == []
+    assert manifest()["introduced_state_contracts"] == [
+        "subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1"]
     assert "catalog-publication-v1" in manifest()["supported_state_contracts"]
 
 

@@ -50,15 +50,14 @@ from guardoath.tenant_sessions import CognitoSessions
 from guardoath import state_contracts
 
 # Production has no environment phase switch. The source phase preserves every
-# source-controlled gate. The compatibility fixture explicitly disables catalog
-# writes; the financial writer fixture changes only the two financial gates.
+# source-controlled gate. The compatibility fixture explicitly disables all
+# writers; the retained financial writer fixture changes only financial gates.
 phase = os.environ.get("GUARDOATH_ADMIN_TEST_WRITER_PHASE", "source")
 if phase not in ("0", "1", "source"):
     raise RuntimeError("Invalid synthetic browser phase")
-if (state_contracts.new_subscription_state_enabled()
-        or state_contracts.new_cancellation_state_enabled()):
-    raise RuntimeError("Catalog activation must preserve the financial source gates")
 if phase == "0":
+    state_contracts.ENABLE_NEW_SUBSCRIPTION_STATE = False
+    state_contracts.ENABLE_NEW_CANCELLATION_STATE = False
     state_contracts.ENABLE_NEW_CATALOG_PUBLICATION_STATE = False
     state_contracts.ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE = False
 elif not (state_contracts.new_catalog_publication_state_enabled()
@@ -67,6 +66,9 @@ elif not (state_contracts.new_catalog_publication_state_enabled()
 if phase == "1":
     state_contracts.ENABLE_NEW_SUBSCRIPTION_STATE = True
     state_contracts.ENABLE_NEW_CANCELLATION_STATE = True
+if phase == "source" and not (state_contracts.new_subscription_state_enabled()
+        and state_contracts.new_cancellation_state_enabled()):
+    raise RuntimeError("Financial acceptance requires activated source defaults")
 
 POOL, CLIENT = "us-east-1_Example", "syntheticownerclient"
 DOMAIN = "operators.auth.us-east-1.amazoncognito.com"
@@ -178,12 +180,12 @@ if path.exists(): raise RuntimeError("Browser acceptance requires a new isolated
 db = AdminTestDynamo(path)
 month = datetime.now(timezone.utc).strftime("%Y-%m")
 for suffix in ("alpha","beta"):
-    baseline_active = phase != "1" and suffix == "alpha"
+    baseline_active = phase == "0" and suffix == "alpha"
     db.seed("tenant_table",to_item(TenantRecord(tenant_id="usr-admin-" + suffix,
         display_name="Synthetic " + suffix, demo=False, status="active", revision=7,
         subscription_status="active" if baseline_active else "inactive",billing_mode="stripe",payer_id="cus_" + suffix,
         stripe_subscription_id="sub_" + suffix if baseline_active else None,
-        monthly_allowance=10000 if phase != "1" else 0,overage="block",key_hashes=("a" * 64,),usage={month:10},
+        monthly_allowance=10000 if phase == "0" else 0,overage="block",key_hashes=("a" * 64,),usage={month:10},
         input_check_pii="block",output_check_pii="block",input_check_text_security="block",
         input_rule_actions={"pii.email_address":"off"},input_attachment_csv_mode="off")))
 store = DynamoDBTenantStore("tenant_table",db)
@@ -192,7 +194,11 @@ tenants = TenantService(store,checkers)
 app = create_app(engine=demo_engine(enable_pii=True,checkers=checkers),credentials={},tenants=tenants)
 
 
+subscription_reads = []
+
+
 def stripe_snapshot(tenant_id, customer_id, subscription_id):
+    subscription_reads.append((tenant_id, customer_id, subscription_id))
     suffix = tenant_id.removeprefix("usr-admin-")
     assert suffix in ("alpha","beta") and customer_id == "cus_" + suffix and subscription_id == "sub_" + suffix
     if suffix == "alpha":
@@ -270,6 +276,8 @@ mount_admin_console(app,sessions=sessions,tenants=tenants,cognito=CognitoBoundar
     catalog_drafts=catalog_drafts,catalog_publications=catalog_publications,require_persistent_read_audit=True,
     billing_reporter=reporter,
     billing_cancellation=cancellation,
+    billing_configuration={"signed_audit":True, "stripe_read":True,
+        "plan_allowance":True, "cancellation_provider":True},
     billing_invoices=AdminInvoiceHistory(stripe_invoices, reporter, cursor_key=CURSOR_KEY),
     billing_downgrade=AdminBillingDowngrade(db,"tenant_table","audit_table",signing_key=ADMIN_BROWSER_AUDIT_KEY,
         reporter=reporter,validate_record=TenantRecord.model_validate),

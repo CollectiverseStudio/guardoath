@@ -9,7 +9,7 @@ import hmac
 import json
 
 from guardoath.admin_actions import TENANT, REASON, IDEMPOTENCY
-from guardoath.admin_audit import AdminAuditReader
+from guardoath.admin_audit import AdminAuditReader, SUBJECT
 from guardoath.admin_audit_integrity import seal_audit, verify_audit
 from guardoath.admin_billing import AdminSubscriptionReporter
 from guardoath.admin_directory import _strict_record_json
@@ -77,7 +77,7 @@ class AdminSubscriptionReconciliation:
                 or type(expected_revision) is not int or not 1 <= expected_revision < (1 << 53) - 1
                 or confirmation != "RECONCILE " + tenant_id
                 or not isinstance(reason, str) or not REASON.fullmatch(reason)
-                or not isinstance(actor, str) or not 12 <= len(actor) <= 128
+                or not isinstance(actor, str) or not SUBJECT.fullmatch(actor)
                 or not isinstance(idempotency_key, str) or not IDEMPOTENCY.fullmatch(idempotency_key)):
             raise ValueError("Invalid or unconfirmed subscription reconciliation")
         event_id = hmac.new(self.key, ("billing-reconcile\0" + actor + "\0" + tenant_id +

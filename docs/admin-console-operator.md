@@ -16,9 +16,9 @@ offline acceptance are not evidence of AWS deployment or live financial data.
 | Owner access | Separate Cognito client, signed tokens, fresh independent owner membership/account checks, recent MFA, same-origin mutations, memory-only browser tokens | Actual configured production login and all live acceptance |
 | User management | Bounded masked directory/exact lookup; confirmed Cognito enable/disable with signed intent and independently verified outcome, recoverable ambiguity | Live provider acceptance; no owner role grants or self-disable |
 | Tenant management | Existing tenant store, suspend/reactivate, key revocation, stage-specific rule actions, downward request caps, revision checks and signed atomic audit | Deployed customer safeguards and source parity |
-| Subscriptions | Provider inspection and protective delinquency downgrade; compatibility baseline preserves existing caps and receipts; complete owner reconciliation implementation retained for the subsequent writer release | Deploy/accept the baseline before enabling new provenance and full owner reconciliation; live Stripe acceptance and provider subscription changes |
-| Billing and costs | Bounded verified invoice history, saved usage/allowance history and clearly labeled request-cap signals | Refunds/credits, verified infrastructure cost/revenue allocation and financial operations remain unavailable |
-| Catalog | Shared registry, signed description drafts/reviews, reversible metadata source plans and a retained publication/CI/deployment/history workflow | Lifecycle compatibility activation, operator execution and live publication remain open; general behavior/schema authoring is unfinished |
+| Subscriptions | Provider inspection, cap-preserving full owner reconciliation and protective delinquency downgrade; source enables provenance creation with explicit trusted plan configuration | Live Stripe acceptance, cap restoration and provider plan changes remain open |
+| Billing and costs | Bounded invoice history, usage/allowance history, request-cap signals and confirmed period-end cancellation with signed recovery; cancellation requires dedicated server credentials/account binding | Refunds/credits, verified infrastructure cost/revenue allocation and lifecycle/risk-event processing remain open |
+| Catalog | Shared registry, signed description drafts/reviews, reversible metadata source plans and an enabled publication/CI/deployment/history workflow | An operator must run a requested release; live publication and general behavior/schema authoring remain open |
 
 `GUARDOATH_ADMIN_AUDIT_TABLE` is required in production for protected reads and
 mutations. The separate audit table and scoped permissions must already be
@@ -65,13 +65,13 @@ leaves current-source CI and live deployment unverified, and reports an unknown
 detector version as unavailable. Catalog publication/rollback and behavior/schema
 authoring remain separate unfinished capabilities under #42.
 
-### Retained provider-verified subscription reconciliation
+### Provider-verified subscription reconciliation
 
-The current source is the compatibility baseline described below. It does not
-mount the full owner reconciliation action or create `billing.reconcile` events.
-The following complete implementation remains under test for the subsequent
-writer release; its capability is not enabled merely by setting Stripe or admin
-environment variables.
+This source enables full owner reconciliation and cap/plan provenance through
+`ENABLE_NEW_SUBSCRIPTION_STATE=True`. Runtime availability also requires the
+existing signed audit store, Stripe reader/price and an explicit positive paid
+plan allowance. The Billing workspace identifies missing prerequisites without
+revealing credentials or treating configuration status as write authority.
 
 The owner **Reconcile subscription** action calls
 `POST /v1/admin/subscriptions/{tenant_id}/reconcile`. The backend accepts only
@@ -93,8 +93,7 @@ and [collection methods](https://docs.stripe.com/billing/collection-method).
 This is entitlement reconciliation, not a receipt proving money was collected.
 
 `GUARDOATH_PAID_MONTHLY_ALLOWANCE` must explicitly configure a positive plan
-allowance, and a later source release must enable provenance creation, before
-the runtime exposes full owner reconciliation. Saved
+allowance before the runtime exposes full owner reconciliation. Saved
 `admin_monthly_allowance_cap` and `stripe_plan_monthly_allowance` separate an
 operator restriction from the nominal provider plan. Both are server-controlled,
 not customer-editable. Delinquency sets effective allowance to zero without
@@ -126,8 +125,10 @@ records with neither field omit the absent fields; populated values, including
 zero, are always preserved.
 
 Lambda builds declare supported and introduced persistent-state contracts
-in their generated source manifest. The current source **supports but does not
-introduce** `subscription-cap-provenance-v1`. Before any Lambda update,
+in their generated source manifest. This source supports and introduces
+`subscription-cap-provenance-v1`, `stripe-period-end-cancellation-v1`,
+`catalog-publication-v1` and `catalog-publication-lifecycle-v1`. The deployed
+762e7b6 reader supports all four. Before any Lambda update,
 `Deploy-Verified.ps1` verifies the downloaded rollback archive against the
 actual deployed `CodeSha256`, checks the candidate's exact source SHA, requires
 the rollback image to support every introduced contract, and refuses loss of
@@ -159,7 +160,8 @@ updates, ambiguous responses, incomplete updates, digest/revision mismatch,
 restore verification and archive tampering. It does not execute AWS actions or
 establish that a production rollback has occurred.
 
-The current baseline sets source-controlled `ENABLE_NEW_SUBSCRIPTION_STATE=False`.
+The preceding compatibility baseline set source-controlled
+`ENABLE_NEW_SUBSCRIPTION_STATE=False`; explicit rollback tests retain that phase.
 That same phase controls generated artifact metadata and all producers: owner
 full reconciliation, request-cap actions, both tenant stores' subscription updates
 and creation of records carrying provenance. There is no production environment
@@ -177,21 +179,20 @@ the existing **Suspend** control. Bound zero caps and existing explicit zero cap
 remain supported. Historical unbound zero records cannot reveal whether an old
 operator cap existed; this source does not claim to reconstruct that history.
 
-**Deploy and accept the baseline before enabling the writer source.** Once its
-actual deployed archive is the verified compatible backup, a separate source
-commit can enable new state and the full owner reconciliation action. The later
-artifact then declares the contract introduced, and the same gate rejects a
-legacy rollback. Do not fabricate a manifest, strip saved provenance, use the
-candidate as its own rollback, or bypass the gate. Baseline implementation and
-offline tests are not evidence that it has been deployed or accepted live.
+The compatible reader is already deployed as 762e7b6. This separate activation
+source enables new state and full owner reconciliation. The actual downloaded
+archive must be the digest-verified compatible backup before the update, and the
+same gate rejects a legacy rollback. Do not fabricate a manifest, strip saved
+provenance, use the candidate as its own rollback or bypass the gate. Offline
+fixtures do not establish the identity of the production backup.
 
 ### Offline acceptance
 
-`playwright.admin-baseline.config.js` exercises the current source phase with
+`playwright.admin-baseline.config.js` exercises the explicit disabled-reader phase with
 real owner login, persisted legacy-shaped request caps, explicit unbound-zero
 refusal/suspension, unavailable future-writer route and mobile navigation.
-`playwright.admin.config.js` retains every full-reconciliation scenario under an
-explicit test-only future-phase override in the isolated test application.
+`playwright.admin.config.js` exercises full reconciliation and cancellation under
+the untouched source defaults in the isolated test application.
 Both run actual browser HTML/JS against the mounted
 GuardOath application, RSA-signed Cognito token validation, owner/MFA verifier,
 tenant adapter, mutation services and signed audit readers. SQLite persists the
@@ -1399,13 +1400,13 @@ Refunds, credits and plan changes remain separate capabilities.
 
 ## Owner period-end cancellation review and recovery (2026-11-24)
 
-The existing Billing workspace now supports a cancellation review and signed
-historical receipt lookup. **The current source is a support-only compatibility
-release.** `ENABLE_NEW_CANCELLATION_STATE=False` keeps the scheduling route
-unmounted and independently refuses state writes and the provider POST. Its
-retained writer is tested through an isolated harness. The real compatible
-reader release must be deployed and accepted before a later source commit can
-enable scheduling; no environment variable can bypass this phase.
+The existing Billing workspace supports cancellation review, confirmed
+period-end scheduling and signed historical receipt lookup. This source sets
+`ENABLE_NEW_CANCELLATION_STATE=True` after the compatible reader was deployed
+in 762e7b6. Scheduling remains unavailable without the dedicated provider/account
+and signed audit configuration. The explicit disabled-reader tests still require
+an unmounted scheduling route and refusal at every write boundary. No
+environment variable can bypass the source phase.
 
 ### Explicit configuration and narrow admission
 
@@ -1436,7 +1437,7 @@ reference lasts at most 180 seconds and binds the exact owner, tenant document,
 revision, provider state and prior target control. Refresh or selection changes
 withdraw the review; a changed provider state requires a fresh review.
 
-### Confirmed scheduling in the later enabled release
+### Confirmed scheduling
 
 The writer requires the displayed `SCHEDULE CANCELLATION <tenant_id>` text,
 bounded reason and action reference. It never accepts arbitrary Stripe fields,

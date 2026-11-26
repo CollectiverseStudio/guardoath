@@ -24,18 +24,6 @@ ACTOR = "12345678-1234-1234-1234-123456789012"
 TENANT = "usr-reconcile"
 
 
-@pytest.fixture(autouse=True)
-def future_writer_phase(monkeypatch):
-    """Retain every writer assertion while the production source is baseline.
-
-    This override exists only inside tests. The deployed application has no
-    phase override; test_subscription_compatibility_baseline exercises its
-    actual no-introduction behavior and rollback support separately.
-    """
-    from guardoath import state_contracts
-    monkeypatch.setattr(state_contracts, "ENABLE_NEW_SUBSCRIPTION_STATE", True)
-
-
 def tenant(**changes):
     return TenantRecord.model_validate({"tenant_id": TENANT, "display_name": "Synthetic account", "revision": 7,
         "demo": False, "status": "active", "billing_mode": "stripe", "payer_id": "cus_reconcile",
@@ -105,6 +93,17 @@ def test_first_activation_persists_verified_binding_and_signed_audit_without_pol
     assert audit["integrity_status"] == "signed_verified" and audit["operation"] == "billing.reconcile"
     assert audit["change"]["before"] == "inactive" and audit["change"]["after"] == "active"
     assert "cus_reconcile" not in str(db.audit_items()) and "sub_reconcile" not in str(db.audit_items())
+
+
+@pytest.mark.parametrize("actor", ["owner with spaces", "owner/other-user", ACTOR + "\n", "é" * 12])
+def test_invalid_signed_audit_subject_is_rejected_before_any_read_or_write(db, monkeypatch, actor):
+    def no_read(**_kwargs):
+        pytest.fail("Invalid signed-audit subject must not reach persistent or provider reads")
+    monkeypatch.setattr(db, "get_item", no_read)
+    actions = service(db, resolver=lambda _: pytest.fail("Invalid owner must not call Stripe"))
+    with pytest.raises(ValueError, match="Invalid or unconfirmed"):
+        actions.apply(**request(actor=actor))
+    assert db.transactions == 0 and not db.audit_items()
 
 
 @pytest.mark.parametrize("state,expected", [("past_due", "past_due"), ("canceled", "canceled"),

@@ -94,6 +94,30 @@ def test_memory_store_cannot_substitute_for_bounded_dynamodb():
     with pytest.raises(AdminConfigurationError):
         mount_admin_console(FastAPI(),sessions=Sessions(),tenants=Tenants(MemoryStore()),cognito=Cognito(),cursor_signing_key=KEY)
 
+
+@pytest.mark.parametrize("mismatch", ["table", "database"])
+def test_reconciliation_must_use_the_actual_mounted_tenant_store(mismatch):
+    from admin_test_support import AdminTestDynamo, ADMIN_BROWSER_AUDIT_KEY
+    from guardoath.admin_subscription_reconcile import AdminSubscriptionReconciliation
+    from guardoath.dynamodb_store import DynamoDBTenantStore
+    database, other_database = AdminTestDynamo(), AdminTestDynamo()
+    try:
+        store = DynamoDBTenantStore("tenant_table", database)
+        reconciler = AdminSubscriptionReconciliation(
+            other_database if mismatch == "database" else database,
+            "other_tenants" if mismatch == "table" else "tenant_table", "audit_table",
+            signing_key=ADMIN_BROWSER_AUDIT_KEY, resolve_snapshot=lambda _: pytest.fail("No provider read while mounting"),
+            expected_price_id="price_plan", expected_livemode=False, plan_monthly_allowance=10000)
+        app = FastAPI()
+        with pytest.raises(AdminConfigurationError, match="authoritative tenant store"):
+            mount_admin_console(app, sessions=Sessions(), tenants=Tenants(store), cognito=Cognito(),
+                cursor_signing_key=KEY, billing_reconciler=reconciler)
+        assert not getattr(app.state, "guardoath_admin_mounted", False)
+        assert not database.audit_items() and not other_database.audit_items()
+    finally:
+        database.close()
+        other_database.close()
+
 def test_weak_cursor_secret_and_double_mount_rejected():
     app=FastAPI();params=dict(sessions=Sessions(),tenants=Tenants(Store()),cognito=Cognito(),cursor_signing_key=KEY)
     with pytest.raises(AdminConfigurationError): mount_admin_console(app,**{**params,"cursor_signing_key":b"short"})

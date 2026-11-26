@@ -52,6 +52,7 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
                         require_persistent_read_audit: bool = False,
                         billing_reporter=None, billing_downgrade=None, billing_reconciler=None, billing_invoices=None,
                         billing_cancellation=None,
+                        billing_configuration=None,
                         record_validator=None, rule_exists=None) -> None:
     """Register the guarded read-only admin routes on an existing GuardOath app.
 
@@ -111,6 +112,10 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
             raise AdminConfigurationError("Admin browser login has already been mounted")
 
     directory = DynamoAdminDirectory(store._client, store.table_name, cursor_signing_key)
+    if billing_reconciler is not None and (
+            getattr(billing_reconciler, "tenant_table", None) != store.table_name
+            or getattr(billing_reconciler, "ddb", None) is not store._client):
+        raise AdminConfigurationError("Subscription reconciliation must use the authoritative tenant store")
     if billing_cancellation is not None and (
             getattr(billing_cancellation, "tenant_table", None) != store.table_name
             or getattr(getattr(billing_cancellation, "state", None), "client", None) is not store._client):
@@ -140,6 +145,7 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
         billing_reconciler=billing_reconciler,
         billing_invoices=billing_invoices,
         billing_cancellation=billing_cancellation,
+        billing_configuration=billing_configuration,
         record_validator=record_validator,
         rule_exists=rule_exists,
         browser_entry_enabled=browser_config is not None,

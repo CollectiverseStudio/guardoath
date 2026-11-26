@@ -54,8 +54,12 @@ test("baseline owner browser enforces request caps without introducing future st
   const features = await request.get("/v1/admin/features",{headers});
   expect(features.status()).toBe(200);
   expect(await features.json()).toMatchObject({billing_reconcile:false,billing_verify:true,
-    billing_downgrade:true,cognito_user_status_changes:true,monthly_cost_caps:true});
-  await page.locator("#nav-tenants").click();
+    billing_downgrade:true,cognito_user_status_changes:true,monthly_cost_caps:true,
+    billing_configuration:{subscription_writer_enabled:false,cancellation_writer_enabled:false}});
+  await page.locator("#nav-billing").click();
+  await expect(page.locator("#billing-reconcile-capability")).toContainText("Unavailable in this release");
+  await expect(page.locator("#billing-cancellation-capability")).toContainText("Provider review remains available");
+  await page.locator("#billing-choose-tenant").click();
   const row = page.locator("#tenant-rows tr").filter({hasText:TENANT});
   await expect(row).toHaveCount(1);
   await expect(page.getByRole("button",{name:"Reconcile subscription",exact:true})).toHaveCount(0);

@@ -66,8 +66,8 @@ def main():
     assert features["catalog_publication_history"] is True
     assert features["catalog_publication_requests"] is writer
     assert features["rule_publishing"] is False
-    assert features["billing_reconcile"] is (mounted.phase == "1")
-    assert features["billing_cancellation_schedule"] is (mounted.phase == "1")
+    assert features["billing_reconcile"] is (mounted.phase != "0")
+    assert features["billing_cancellation_schedule"] is (mounted.phase != "0")
 
     reads = []
     get_item = mounted.db.get_item

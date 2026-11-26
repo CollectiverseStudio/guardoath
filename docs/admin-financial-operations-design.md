@@ -1,14 +1,19 @@
 # Owner financial operations: implementation and continuation record
 
-Recorded November 23, 2026 (America/New_York); implementation updated November
-24, 2026 (UTC). This preserves the decisions and remaining work for #41 and
+Recorded November 23, 2026; implementation updated November 25, 2026
+(America/New_York). This preserves the decisions and remaining work for #41 and
 CORE-04 of the [product roadmap](product-roadmap.md). Cancellation review,
-historical recovery and the independently gated writer are now implemented in
-the actual owner UI/API. The current source is a **support-only compatibility
-release**, with `ENABLE_NEW_CANCELLATION_STATE=False`; scheduling is unmounted
-and refused at every write boundary. The future writer is exercised only in an
-isolated test harness. No deployment, live financial action or authorization to
-operate on real customer subscriptions during development is implied.
+historical recovery and the independently gated writer are implemented in the
+actual owner UI/API. This source enables both `ENABLE_NEW_CANCELLATION_STATE`
+and `ENABLE_NEW_SUBSCRIPTION_STATE`, using the already deployed compatible
+reader in `762e7b66be029f07d245d9d11dc8a08aed32fd67` as the release baseline.
+Scheduling and full reconciliation still require their explicit runtime
+prerequisites. The owner workspace explains missing configuration using
+nonsecret readiness values; those values cannot grant route or write authority.
+Untouched source defaults are exercised through the actual mounted application;
+explicit disabled-reader coverage remains. Deployment evidence is recorded in
+the [handoff](admin-console-handoff.md). No live financial action or authorization
+to operate on real customer subscriptions during development is implied.
 
 Existing reconciliation refreshes entitlement and invoice inspection reads
 provider information. Refunds, credits and plan changes remain future work.
@@ -33,7 +38,7 @@ through `admin_runtime.py`, `mount_admin_console()` and `create_admin_router()`.
 | Endpoint | Purpose and current availability |
 | --- | --- |
 | `POST /v1/admin/subscriptions/{tenant_id}/cancellation/preview` | Inspect the exact saved binding and encrypt a 180-second review; requires explicit provider configuration and signed audit |
-| `POST /v1/admin/subscriptions/{tenant_id}/cancel-at-period-end` | Claim, dispatch once and verify the confirmed review; unmounted in the support-only release |
+| `POST /v1/admin/subscriptions/{tenant_id}/cancel-at-period-end` | Claim, dispatch once and verify the confirmed review; enabled by source and available only with the explicit provider/audit prerequisites |
 | `POST /v1/admin/subscriptions/{tenant_id}/cancellation/receipt` | Read signed historical intent/outcome without any provider request; works with the audit store and no write credential |
 
 The browser supplies tenant ID, expected revision, opaque preview reference,
@@ -75,7 +80,7 @@ domain-separated signed envelopes. Mutable control documents are separate from
 immutable signed intent/outcome receipts. All shapes, links, generations,
 timestamps and signatures are validated when reopened. Ordinary read auditing
 reuses `stripe.subscription` and `audit.receipt`, preserving the preceding
-shared audit schema in this support-only release.
+shared audit schema.
 
 An action key only prevents replay of that key. Two owners or tabs can generate
 different keys for the same subscription, so also require a durable
@@ -184,12 +189,16 @@ service or real customer mutation is part of offline acceptance.
 
 `state_contracts.release_metadata()` now computes introductions independently
 for `subscription-cap-provenance-v1` and `stripe-period-end-cancellation-v1`.
-Both source-controlled writer flags remain false. There is no environment or
-deployment-argument override. Cancellation cannot enable cap-provenance writers
-or vice versa. Deploy and accept a real
-support-only compatibility release before introducing the new operation's
-durable state. Keep the actual rollback gate, source parity and all 15 live checks.
-Do not infer compatibility from a manifest declaration alone.
+Both source-controlled financial writer flags are true in this activation
+source, alongside the two already enabled catalog flags. Its actual build
+manifest therefore introduces all four supported contracts. There is no
+environment or deployment-argument override. Cancellation cannot enable
+cap-provenance writers or vice versa. The deployed 762e7b6 reader already
+supports all four contracts. The release gate must still inspect the actual
+downloaded, digest-bound rollback archive before upload; a synthetic compatible
+fixture is not production backup evidence. Keep source parity and the remaining
+live acceptance requirements; do not repeat a healthy-release audit on every
+continuation.
 
 ## Implementation acceptance and outstanding release evidence
 
@@ -203,7 +212,8 @@ usage state. The mounted owner browser harness uses real routes and signed-token
 verification with synthetic external transports and no HTTP interception.
 Focused fault/race browser tests complement that harness.
 
-Actually executed locally: 1,590 broad Python 3.12 tests; 254 focused Python 3.13
+Historical compatibility acceptance executed locally: 1,590 broad Python 3.12
+tests; 254 focused Python 3.13
 tests including budget-during-dispatch and trusted Lambda remaining-time cases;
 baseline ASGI review with two GETs, scheduling 404 and no financial state;
 writer ASGI preview/schedule/recovery with one POST, six GETs, three independently

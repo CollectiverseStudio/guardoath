@@ -1,8 +1,8 @@
-"""Actual baseline writers stay legacy-compatible and enforce future state.
+"""Activated writers and the retained reader phase preserve financial safeguards.
 
-The retained writer implementation has its complete separate regression suite.
-Here only seeding a future release uses a scoped source-phase test override;
-all operations under test run with the actual baseline production phase.
+The source defaults introduce provenance only through trusted existing writers.
+Explicitly disabled financial phases model the deployed compatible rollback;
+they must continue to enforce and preserve already-created state and receipts.
 """
 import json
 
@@ -19,12 +19,19 @@ from guardoath.admin_billing_reconcile import AdminBillingDowngrade
 from guardoath.admin_console import VerifiedAdmin, create_admin_router
 from guardoath.admin_subscription_reconcile import SubscriptionUnavailable
 from guardoath.dynamodb_store import DynamoDBTenantStore, record_json, to_item
-from guardoath.tenant_record import TenantRecord
+from guardoath.tenant_record import EDITABLE_FIELDS, TenantRecord
 from guardoath.tenant_store import MemoryTenantStore, UsageLimitReached
 from test_admin_subscription_reconcile import ACTOR, KEY, TENANT, provider, request, service, tenant
 from test_dynamodb_store import FakeDynamoDB
 
 FIELDS = ("admin_monthly_allowance_cap", "stripe_plan_monthly_allowance")
+
+
+@pytest.fixture
+def financial_reader_phase(monkeypatch):
+    """Model the deployed reader release without changing the source default."""
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_SUBSCRIPTION_STATE", False)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CANCELLATION_STATE", False)
 
 
 @pytest.fixture
@@ -56,7 +63,7 @@ def action_args(current, key):
         "reason":"Verify compatibility release safeguards","actor":ACTOR,"idempotency_key":key}
 
 
-def test_source_phase_and_manifest_cannot_be_enabled_by_environment(monkeypatch):
+def test_explicit_reader_phase_and_manifest_cannot_be_enabled_by_environment(monkeypatch, financial_reader_phase):
     assert state_contracts.ENABLE_NEW_SUBSCRIPTION_STATE is False
     for name in ("ENABLE_NEW_SUBSCRIPTION_STATE", "GUARDOATH_ENABLE_NEW_SUBSCRIPTION_STATE",
                  "GUARDOATH_SUBSCRIPTION_WRITER_ENABLED", "GUARDOATH_ADMIN_TEST_WRITER_PHASE"):
@@ -69,10 +76,59 @@ def test_source_phase_and_manifest_cannot_be_enabled_by_environment(monkeypatch)
         "catalog-publication-v1", "catalog-publication-lifecycle-v1"]
 
 
+def test_source_default_introduces_all_supported_contracts_despite_environment(monkeypatch):
+    for name in ("ENABLE_NEW_SUBSCRIPTION_STATE", "GUARDOATH_ENABLE_NEW_SUBSCRIPTION_STATE",
+                 "GUARDOATH_SUBSCRIPTION_WRITER_ENABLED", "GUARDOATH_ADMIN_TEST_WRITER_PHASE"):
+        monkeypatch.setenv(name, "0")
+    assert state_contracts.ENABLE_NEW_SUBSCRIPTION_STATE is True
+    assert state_contracts.new_subscription_state_enabled() is True
+    assert state_contracts.new_cancellation_state_enabled() is True
+    assert state_contracts.new_catalog_publication_state_enabled() is True
+    assert state_contracts.new_catalog_publication_lifecycle_state_enabled() is True
+    manifest = state_contracts.release_metadata("a" * 40)
+    assert manifest["introduced_state_contracts"] == manifest["supported_state_contracts"] == [
+        "subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1",
+        "catalog-publication-v1", "catalog-publication-lifecycle-v1"]
+
+
+@pytest.mark.parametrize("kind", ["memory", "dynamo"])
+@pytest.mark.parametrize("cap", [0, 4000])
+def test_source_default_cap_before_binding_survives_activation_recovery_and_plan_changes(db, kind, cap):
+    assert state_contracts.new_subscription_state_enabled() is True
+    original = tenant(billing_mode="internal", payer_id=None, monthly_allowance=10000,
+        overage="allow_and_record", status="disabled")
+    db.seed("tenant_table", to_item(original))
+    source = DynamoDBTenantStore("tenant_table", db)
+    result = AdminTenantActions(db, "tenant_table", "audit_table", audit_key=KEY).cap_monthly_allowance(
+        **action_args(source.get(TENANT), "source-default-unbound-cap"), new_limit=cap,
+        validate_record=TenantRecord.model_validate)
+    capped = source.get(TENANT)
+    assert capped.admin_monthly_allowance_cap == cap and capped.monthly_allowance == cap
+    assert capped.stripe_subscription_id is None and capped.stripe_plan_monthly_allowance is None
+    receipt = AdminAuditReader(db, "audit_table", verify_key=KEY).read(result["audit_event_id"])
+    assert receipt["integrity_status"] == "signed_verified"
+    assert receipt["operation"] == "tenant.allowance_cap"
+    store = source if kind == "dynamo" else MemoryTenantStore((capped,))
+    store.bind_stripe_customer(TENANT, "cus_reconcile", store.get(TENANT).revision)
+    for state, plan in (("active", 10000), ("past_due", 10000), ("active", 2000),
+                        ("active", 10000), ("canceled", 10000), ("active", 10000)):
+        current = reconcile(store, state, plan)
+        assert current.admin_monthly_allowance_cap == cap and current.stripe_plan_monthly_allowance == plan
+        assert current.monthly_allowance == (min(plan, cap) if state == "active" else 0)
+        assert current.overage == "block" and current.stripe_subscription_id == "sub_reconcile"
+        for name in (*EDITABLE_FIELDS, "usage", "key_hashes", "status"):
+            assert getattr(current, name) == getattr(original, name)
+        assert saved_document(store, db)["admin_monthly_allowance_cap"] == cap
+        if cap == 0:
+            with pytest.raises(UsageLimitReached):
+                store.count_check(TENANT, "2026-12")
+    assert len(db.audit_items()) == 1
+
+
 @pytest.mark.parametrize("kind", ["memory", "dynamo"])
 @pytest.mark.parametrize("provenance", [{"admin_monthly_allowance_cap":0},
     {"admin_monthly_allowance_cap":4000}, {"stripe_plan_monthly_allowance":10000}])
-def test_baseline_rejects_new_provenance_records_before_persistence(db,kind,provenance):
+def test_baseline_rejects_new_provenance_records_before_persistence(db,kind,provenance,financial_reader_phase):
     store = make_store(kind, db)
     with pytest.raises(ValueError,match="compatibility release"):
         store.create(tenant(**provenance))
@@ -80,7 +136,7 @@ def test_baseline_rejects_new_provenance_records_before_persistence(db,kind,prov
 
 
 @pytest.mark.parametrize("kind", ["memory", "dynamo"])
-def test_legacy_customer_activation_caps_delinquency_and_recovery_never_add_provenance(db,kind):
+def test_legacy_customer_activation_caps_delinquency_and_recovery_never_add_provenance(db,kind,financial_reader_phase):
     store = make_store(kind, db)
     before = store.create(tenant())
     for state,plan,expected in [("active",10000,10000),("active",5000,5000),
@@ -95,7 +151,7 @@ def test_legacy_customer_activation_caps_delinquency_and_recovery_never_add_prov
     assert not db.audit_items()
 
 
-def test_legacy_owner_cap_and_every_existing_tenant_action_keep_legacy_record_shape(db):
+def test_legacy_owner_cap_and_every_existing_tenant_action_keep_legacy_record_shape(db,financial_reader_phase):
     db.seed("tenant_table",to_item(tenant(subscription_status="active",stripe_subscription_id="sub_reconcile",
         monthly_allowance=10000)))
     store = DynamoDBTenantStore("tenant_table",db)
@@ -147,7 +203,7 @@ def test_owner_positive_cap_survives_customer_binding_and_first_activation(db,mo
 
 
 @pytest.mark.parametrize("allowance,overage", [(10000,"block"),(0,"allow_and_record")])
-def test_baseline_refuses_ambiguous_unbound_zero_cap_without_audit_or_tenant_write(db,allowance,overage):
+def test_baseline_refuses_ambiguous_unbound_zero_cap_without_audit_or_tenant_write(db,allowance,overage,financial_reader_phase):
     original = tenant(monthly_allowance=allowance,overage=overage)
     db.seed("tenant_table",to_item(original))
     store = DynamoDBTenantStore("tenant_table",db)
@@ -160,7 +216,7 @@ def test_baseline_refuses_ambiguous_unbound_zero_cap_without_audit_or_tenant_wri
 
 @pytest.mark.parametrize("changes", [{"stripe_subscription_id":"sub_reconcile"},
     {"stripe_plan_monthly_allowance":10000}, {"admin_monthly_allowance_cap":10000}])
-def test_baseline_zero_caps_remain_supported_when_binding_or_provenance_disambiguates_them(db,changes):
+def test_baseline_zero_caps_remain_supported_when_binding_or_provenance_disambiguates_them(db,changes,financial_reader_phase):
     original = tenant(monthly_allowance=10000,**changes)
     db.seed("tenant_table",to_item(original))
     store = DynamoDBTenantStore("tenant_table",db)
@@ -169,7 +225,7 @@ def test_baseline_zero_caps_remain_supported_when_binding_or_provenance_disambig
     assert reconcile(store).monthly_allowance == 0
 
 
-def test_unbound_zero_cap_api_gives_actionable_release_limitation(db):
+def test_unbound_zero_cap_api_gives_actionable_release_limitation(db,financial_reader_phase):
     original = tenant(monthly_allowance=10000)
     db.seed("tenant_table",to_item(original))
     app = FastAPI()
@@ -191,17 +247,19 @@ def test_unbound_zero_cap_api_gives_actionable_release_limitation(db):
 @pytest.mark.parametrize("kind", ["memory", "dynamo"])
 @pytest.mark.parametrize("cap", [0,4000])
 def test_rollback_to_baseline_preserves_existing_future_caps_across_recovery_and_other_writes(db,monkeypatch,kind,cap):
+    assert state_contracts.new_subscription_state_enabled() is True
     store = make_store(kind,db)
-    with monkeypatch.context() as writer:
-        writer.setattr(state_contracts,"ENABLE_NEW_SUBSCRIPTION_STATE",True)
-        before = store.create(tenant(subscription_status="active",stripe_subscription_id="sub_reconcile",
-            monthly_allowance=cap,admin_monthly_allowance_cap=cap,stripe_plan_monthly_allowance=10000))
+    before = store.create(tenant(subscription_status="active",stripe_subscription_id="sub_reconcile",
+        monthly_allowance=cap,admin_monthly_allowance_cap=cap,stripe_plan_monthly_allowance=10000))
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_SUBSCRIPTION_STATE", False)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CANCELLATION_STATE", False)
     assert state_contracts.new_subscription_state_enabled() is False
     for state,plan in (("active",10000),("past_due",10000),("active",5000),("active",10000)):
         current = reconcile(store,state,plan)
         assert current.admin_monthly_allowance_cap == cap and current.stripe_plan_monthly_allowance == plan
         assert current.monthly_allowance == (min(plan,cap) if state=="active" else 0)
-        assert current.usage == before.usage and current.input_rule_actions == before.input_rule_actions
+        for name in (*EDITABLE_FIELDS, "usage", "key_hashes", "status"):
+            assert getattr(current, name) == getattr(before, name)
         assert saved_document(store,db)["admin_monthly_allowance_cap"] == cap
     current = store.get(TENANT)
     store.update_checks(TENANT,{"input_check_pii":"flag"},current.revision)
@@ -215,16 +273,17 @@ def test_rollback_to_baseline_preserves_existing_future_caps_across_recovery_and
 @pytest.mark.parametrize("kind", ["memory", "dynamo"])
 @pytest.mark.parametrize("cap", [0,2])
 def test_existing_cap_actually_blocks_usage_after_rollback(monkeypatch,kind,cap):
+    assert state_contracts.new_subscription_state_enabled() is True
     record = tenant(monthly_allowance=cap,admin_monthly_allowance_cap=cap,
         stripe_plan_monthly_allowance=10000,subscription_status="active",usage={})
     if kind == "memory":
-        with monkeypatch.context() as writer:
-            writer.setattr(state_contracts,"ENABLE_NEW_SUBSCRIPTION_STATE",True)
-            store = MemoryTenantStore((record,))
+        store = MemoryTenantStore((record,))
     else:
         boundary = FakeDynamoDB()
         boundary.items[TENANT] = to_item(record)
         store = DynamoDBTenantStore("guardoath-tenants",boundary)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_SUBSCRIPTION_STATE", False)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CANCELLATION_STATE", False)
     assert state_contracts.new_subscription_state_enabled() is False
     for expected in range(1,cap+1):
         assert store.count_check(TENANT,"2026-11") == (expected,False)
@@ -235,7 +294,7 @@ def test_existing_cap_actually_blocks_usage_after_rollback(monkeypatch,kind,cap)
 
 @pytest.mark.parametrize("existing", [{"stripe_plan_monthly_allowance":10000},
     {"stripe_plan_monthly_allowance":10000,"admin_monthly_allowance_cap":10000}])
-def test_baseline_owner_can_lower_cap_on_existing_future_contract(db,existing):
+def test_baseline_owner_can_lower_cap_on_existing_future_contract(db,existing,financial_reader_phase):
     db.seed("tenant_table",to_item(tenant(monthly_allowance=10000,subscription_status="active",
         stripe_subscription_id="sub_reconcile",**existing)))
     store = DynamoDBTenantStore("tenant_table",db)
@@ -248,12 +307,18 @@ def test_baseline_owner_can_lower_cap_on_existing_future_contract(db,existing):
         assert current.monthly_allowance == (4000 if state=="active" else 0)
 
 
-def test_baseline_replays_existing_signed_receipt_but_cannot_create_a_new_one(db,monkeypatch):
-    db.seed("tenant_table",to_item(tenant()))
-    with monkeypatch.context() as writer:
-        writer.setattr(state_contracts,"ENABLE_NEW_SUBSCRIPTION_STATE",True)
-        original = service(db).apply(**request())
+def test_default_source_reconciliation_replays_signed_receipt_after_reader_rollback(db,monkeypatch):
+    assert state_contracts.new_subscription_state_enabled() is True
+    initial = tenant()
+    db.seed("tenant_table",to_item(initial))
+    original = service(db).apply(**request())
     before = DynamoDBTenantStore("tenant_table",db).get(TENANT)
+    assert before.subscription_status == "active" and before.monthly_allowance == 10000
+    assert before.stripe_plan_monthly_allowance == 10000 and before.admin_monthly_allowance_cap is None
+    for name in (*EDITABLE_FIELDS, "usage", "key_hashes", "status"):
+        assert getattr(before, name) == getattr(initial, name)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_SUBSCRIPTION_STATE", False)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CANCELLATION_STATE", False)
     prior_transactions = db.transactions
     reads = []
     reconciler = service(db,reads=reads)
@@ -270,7 +335,7 @@ def test_baseline_replays_existing_signed_receipt_but_cannot_create_a_new_one(db
     assert db.transactions == prior_transactions
 
 
-def test_baseline_router_keeps_verified_reads_and_downgrade_but_never_mounts_full_writer(db):
+def test_baseline_router_keeps_verified_reads_and_downgrade_but_never_mounts_full_writer(db,financial_reader_phase):
     db.seed("tenant_table",to_item(tenant(monthly_allowance=10000,subscription_status="active",
         stripe_subscription_id="sub_reconcile")))
     store = DynamoDBTenantStore("tenant_table",db)

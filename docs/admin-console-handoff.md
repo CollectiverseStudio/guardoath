@@ -5,6 +5,55 @@ record for a new chat. The append-only engineering history remains in
 [director-agent-coordination.md](director-agent-coordination.md); the complete
 47-target product discussion is preserved in [product-roadmap.md](product-roadmap.md).
 
+## Current implementation: owner financial controls activated in source
+
+The next coherent batch enables `ENABLE_NEW_SUBSCRIPTION_STATE` and
+`ENABLE_NEW_CANCELLATION_STATE`; both catalog flags remain true. It provides
+full owner entitlement reconciliation with durable request-cap provenance and
+reviewed period-end cancellation, using the already deployed 762e7b6 compatible
+reader as the release baseline. The generated artifact introduces all four
+supported state contracts. This source batch still requires its own exact-source
+CI and guarded deployment; the completed production release below remains the
+last established live source.
+
+The Billing page identifies whether reconciliation, request caps, cancellation
+and historical recovery are available, including missing signed audit, Stripe
+reader, plan allowance or dedicated cancellation setup. Only nonsecret booleans
+reach the browser. Actual mounted services, owner/MFA authority, same origin and
+signed audit remain authoritative. Reconciliation must share the real tenant
+client/table and its exact audit client/table/signing key. Canonical actor
+validation now precedes all reconciliation I/O, matching its signed reader.
+
+Cancellation displays pending provider confirmation, provider-confirmed
+historical success, ambiguous provider outcome and recovered signed history
+distinctly. Unknown durable claims remain held and never trigger a new POST.
+Confirmed scheduling preserves current tenant access, caps, keys, policies and
+usage. Refunds, credits, provider plan changes, cap restoration and durable
+lifecycle/risk processing remain unfinished; this does not complete CORE-04.
+
+Focused local acceptance passed 203 backend/runtime cases, 216 source/rollback
+contract cases and 158 UI/API/mounted cases. These are separate, potentially
+overlapping groups, not a summed full-suite count. The three new fresh-process
+financial scenarios exercise explicit disabled compatibility, untouched-source
+confirmed scheduling and a lost provider reply. They verify actual signed owner
+JWT/MFA/origin/audit denials, authoritative provider bindings, exact confirmation,
+lost reconciliation-response recovery, durable 4,000-request caps and independent
+signed-state reopen with exactly one synthetic provider POST. Runtime tests also
+reopen financial history after removing the write credential.
+
+The actual owner JavaScript and edited specifications parse. Browser discovery
+finds 9 mounted source-default journeys, 11 explicit compatibility journeys and
+55 cancellation/reconciliation fault cases. Local Chrome was not executed; its
+required final-source CI remains authoritative. A bounded integration review
+found no remaining source-default assumption or route-authority blocker.
+
+The existing authorized AWS session is retained. A necessary read of the new
+feature's runtime prerequisites timed out through both SDK and the existing CLI;
+no authentication rejection was returned, no configuration was changed and no
+new login was requested. Production prerequisite presence is therefore unknown,
+not inferred from source activation. Do not discard the signed-in session or
+repeat health audits while finishing this batch.
+
 ## Current production: confirmed catalog publication requests enabled
 
 **Deployed source: `762e7b66be029f07d245d9d11dc8a08aed32fd67`.** The accepted
@@ -45,7 +94,7 @@ The implementation and earlier CI failures below are retained historical
 records. Their pending-activation or sign-in statements are superseded by this
 completed deployment.
 
-## Implementation record: activate confirmed metadata publication
+## Historical implementation record: activate confirmed metadata publication
 
 Greg continued after the completed lifecycle deployment. The new source enables
 both `ENABLE_NEW_CATALOG_PUBLICATION_STATE` and
@@ -865,9 +914,9 @@ one. No AWS resource or paid provider was purchased or provisioned.
 
 ## Remaining work and completion boundaries
 
-1. Complete CORE-04/#41 financial controls: activate the separately gated
-   cancellation writer in a later tested source release with compatible rollback,
-   then implement refunds, credits, configured plan changes and durable lifecycle/risk
+1. Complete CORE-04/#41 financial controls: finish this source activation's
+   exact-source CI, guarded release and explicit runtime prerequisites, then
+   implement refunds, credits, configured plan changes and durable lifecycle/risk
    event processing. The implemented scheduled-cancellation operation does not
    supply these capabilities; existing reconciliation is an entitlement refresh.
    Preserve the actual target/intent transaction and conservative ambiguity

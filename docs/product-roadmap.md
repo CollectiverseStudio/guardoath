@@ -29,12 +29,14 @@ These remain open until their actual acceptance criteria are met.
 
 The concise [admin handoff](admin-console-handoff.md) records implementation and
 exact-source evidence. The [financial-operation record](admin-financial-operations-design.md)
-now covers the implemented cancellation review/recovery compatibility baseline
-and its retained, tested, source-disabled scheduling writer for CORE-04. It also
-preserves the remaining refund, credit and plan-change requirements. This does
-not mark CORE-04 delivered: compatible deployment, writer activation and live
-acceptance remain open. Keep all original targets and acceptance boundaries
-below until implementation and verification establish completion.
+now covers source-enabled subscription/cap reconciliation and reviewed
+period-end cancellation for CORE-04, following the deployed compatible reader
+in 762e7b6. Runtime prerequisites remain explicit and visible in the owner
+workspace. The record preserves the remaining refund, credit, plan-change and
+durable lifecycle/risk-event requirements. This does not mark CORE-04 delivered;
+the handoff records exact-source release evidence and remaining live acceptance.
+Keep all original targets and acceptance boundaries below until implementation
+and verification establish completion.
 
 For CORE-06, the [catalog publication record](admin-catalog-publication-design.md)
 preserves actual full-registry forward/reversal app and Engine acceptance and
@@ -42,10 +44,11 @@ now records owner review/history, confirmed requests and the external
 source-preparation/release worker. The retained complete lifecycle adds
 bounded current-request selection, fixed-main remote publication, complete
 exact-candidate CI, guarded deployment receipts, owner progress/recovery and
-verified terminal control replacement. The accepted deployed d81db4d reader
-baseline supports both catalog contracts. The next tested source release enables
-both catalog gates together and adds in-memory operator configuration from the
-existing AWS setup; its exact-source CI and deployment remain separate evidence.
+verified terminal control replacement. Release 762e7b6 enabled both catalog gates
+and added in-memory operator configuration from the existing AWS setup after
+all seven exact-source workflows/25 jobs passed. Its completed deployment
+verified the exact backend and all 13 dashboard assets; d81db4d is its preserved
+compatible rollback. These facts are recorded in the handoff.
 An operator must invoke the worker;
 browser requests do not provision or start a background service. General
 category/check/rule authoring and live publication remain open; all original

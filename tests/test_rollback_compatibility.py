@@ -19,7 +19,7 @@ SHA = "a" * 40
 OLD = "b" * 40
 CONTRACT = "subscription-cap-provenance-v1"
 CATALOG_CONTRACTS = ("catalog-publication-v1", "catalog-publication-lifecycle-v1")
-DEPLOYED_READER_SHA = "d81db4d9c418cd198fc8f1e48df42a5ca3822a5f"
+DEPLOYED_READER_SHA = "762e7b66be029f07d245d9d11dc8a08aed32fd67"
 DEPLOYED_READER_SUPPORT = (CONTRACT, "stripe-period-end-cancellation-v1", *CATALOG_CONTRACTS)
 
 
@@ -55,23 +55,27 @@ def test_legacy_can_accept_reader_baseline_but_never_new_provenance_writers(tmp_
     assert verify(writer,baseline)["status"] == "compatible"
 
 
-def test_activated_build_accepts_deployed_d81_reader_and_rejects_unsupported_backups(tmp_path):
+def test_activated_financial_build_accepts_catalog_release_reader_and_rejects_unsupported_backups(tmp_path):
     spec = importlib.util.spec_from_file_location("build_lambda",ROOT / "deploy/aws/build_lambda.py")
     build = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(build)
     actual = build.release_metadata(SHA)
     assert actual == release_metadata(SHA)
     assert actual["supported_state_contracts"] == list(DEPLOYED_READER_SUPPORT)
-    assert actual["introduced_state_contracts"] == list(CATALOG_CONTRACTS)
+    assert actual["introduced_state_contracts"] == list(DEPLOYED_READER_SUPPORT)
     candidate = archive(tmp_path / "activated.zip", actual)
-    backup = archive(tmp_path / "deployed-d81-reader.zip", metadata(
-        DEPLOYED_READER_SHA, support=DEPLOYED_READER_SUPPORT, writes=()))
+    # Exercise the declared deployed release shape offline. Deployment must
+    # independently download and digest-verify the real current backup archive.
+    backup = archive(tmp_path / "deployed-catalog-release.zip", metadata(
+        DEPLOYED_READER_SHA, support=DEPLOYED_READER_SUPPORT, writes=CATALOG_CONTRACTS))
     result = verify(candidate, backup)
     assert result == {"status": "compatible", "candidate_source_sha": SHA,
                       "rollback_source_sha": DEPLOYED_READER_SHA,
                       "rollback_code_sha256": gate.archive_digest(backup),
                       "state_contracts": sorted(DEPLOYED_READER_SUPPORT)}
-    for index, support in enumerate(((), DEPLOYED_READER_SUPPORT[:-2], DEPLOYED_READER_SUPPORT[:-1])):
+    missing_contracts = [tuple(contract for contract in DEPLOYED_READER_SUPPORT if contract != missing)
+                         for missing in DEPLOYED_READER_SUPPORT]
+    for index, support in enumerate(((), *missing_contracts)):
         unsupported = archive(tmp_path / f"unsupported-{index}.zip", metadata(OLD, support=support, writes=()))
         with pytest.raises(ValueError, match="compatibility baseline"):
             verify(candidate, unsupported)
@@ -81,6 +85,8 @@ def test_activated_build_accepts_deployed_d81_reader_and_rejects_unsupported_bac
 
 
 def test_explicit_reader_phase_remains_compatible_with_legacy_backup(tmp_path, monkeypatch):
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_SUBSCRIPTION_STATE", False)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CANCELLATION_STATE", False)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_STATE", False)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE", False)
     actual = release_metadata(SHA)
@@ -93,6 +99,7 @@ def test_explicit_reader_phase_remains_compatible_with_legacy_backup(tmp_path, m
 
 
 def test_enabling_actual_writer_code_also_declares_incompatible_new_writes(tmp_path,monkeypatch):
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CANCELLATION_STATE", False)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_STATE", False)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE", False)
     monkeypatch.setattr(state_contracts,"ENABLE_NEW_SUBSCRIPTION_STATE",True)
@@ -177,6 +184,8 @@ def test_real_cli_refuses_unsafe_pair_and_can_reverify_only_accepted_backup(tmp_
     assert not (tmp_path / "index.py").exists()
 
 def test_cancellation_writer_requires_its_own_supported_backup_and_never_enables_cap_writers(tmp_path,monkeypatch):
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_SUBSCRIPTION_STATE", False)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CANCELLATION_STATE", False)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_STATE", False)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE", False)
     financial = "stripe-period-end-cancellation-v1"
@@ -198,6 +207,8 @@ def test_cancellation_writer_requires_its_own_supported_backup_and_never_enables
 
 
 def test_catalog_lifecycle_has_explicit_reader_baseline_before_any_new_shapes(tmp_path, monkeypatch):
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_SUBSCRIPTION_STATE", False)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CANCELLATION_STATE", False)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_STATE", False)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE", False)
     lifecycle = "catalog-publication-lifecycle-v1"

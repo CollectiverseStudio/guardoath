@@ -116,8 +116,8 @@ def next_fields(*, actor=ACTOR, reference="another-reviewed-release-123"):
 def test_source_default_lifecycle_reopens_and_atomically_admits_next_reviewed_generation(tmp_path):
     assert state_contracts.new_catalog_publication_state_enabled() is True
     assert state_contracts.new_catalog_publication_lifecycle_state_enabled() is True
-    assert state_contracts.new_subscription_state_enabled() is False
-    assert state_contracts.new_cancellation_state_enabled() is False
+    assert state_contracts.new_subscription_state_enabled() is True
+    assert state_contracts.new_cancellation_state_enabled() is True
     path = tmp_path / "signed.sqlite"
     state, db = make_state(AdminTestDynamo(path))
     request_id = advance(state)
@@ -492,4 +492,5 @@ def test_lifecycle_source_gate_cannot_be_enabled_by_environment(monkeypatch):
                  "GUARDOATH_ADMIN_TEST_WRITER_PHASE"):
         monkeypatch.setenv(name, "1")
     assert state_contracts.new_catalog_publication_lifecycle_state_enabled() is False
-    assert state_contracts.release_metadata("a" * 40)["introduced_state_contracts"] == []
+    assert state_contracts.release_metadata("a" * 40)["introduced_state_contracts"] == [
+        "subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1"]

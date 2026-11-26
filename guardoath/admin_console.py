@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import hmac
 import re
 from typing import Callable, Protocol
 
@@ -305,6 +306,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                         billing_reconciler: AdminSubscriptionReconciliation | None = None,
                         billing_invoices: AdminInvoiceHistory | None = None,
                         billing_cancellation: AdminSubscriptionCancellation | None = None,
+                        billing_configuration: dict[str, bool] | None = None,
                         catalog_drafts: AdminCatalogDrafts | None = None,
                         catalog_publications: AdminCatalogPublications | None = None,
                         record_validator=None, rule_exists=None) -> APIRouter:
@@ -317,8 +319,23 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
     if type(require_persistent_read_audit) is not bool:
         raise ValueError("Persistent audit enforcement must be an explicit boolean")
     from guardoath.state_contracts import new_subscription_state_enabled, new_cancellation_state_enabled
+    if billing_configuration is not None and (
+            not isinstance(billing_configuration, dict)
+            or set(billing_configuration) != {"signed_audit", "stripe_read", "plan_allowance", "cancellation_provider"}
+            or any(type(value) is not bool for value in billing_configuration.values())):
+        raise ValueError("Billing configuration must contain only explicit prerequisite booleans")
+    # This reports setup only. Actual mounted services remain the authority for
+    # each capability; configuration is never proof of a verified subscription.
+    billing_configuration = dict(billing_configuration or {})
     if not new_subscription_state_enabled():
         billing_reconciler = None
+    if billing_reconciler is not None and (
+            not isinstance(billing_reconciler, AdminSubscriptionReconciliation)
+            or not isinstance(read_auditor, AdminSensitiveReadAuditor)
+            or read_auditor.ddb is not billing_reconciler.ddb
+            or read_auditor.audit_table != billing_reconciler.audit_table
+            or not hmac.compare_digest(read_auditor.signing_key, billing_reconciler.key)):
+        raise ValueError("Subscription reconciliation requires its bound persistent read auditor")
     if billing_cancellation is not None and (not isinstance(billing_cancellation, AdminSubscriptionCancellation)
             or not isinstance(read_auditor, AdminSensitiveReadAuditor)
             or read_auditor.ddb is not billing_cancellation.state.client
@@ -425,6 +442,9 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            "billing_cancellation_preview": billing_cancellation is not None and billing_cancellation.provider is not None,
                            "billing_cancellation_schedule": billing_cancellation is not None and billing_cancellation.provider is not None and new_cancellation_state_enabled(),
                            "billing_cancellation_receipts": billing_cancellation is not None,
+                           "billing_configuration": {**billing_configuration,
+                               "subscription_writer_enabled": new_subscription_state_enabled(),
+                               "cancellation_writer_enabled": new_cancellation_state_enabled()},
                            "tenant_rule_changes": admin_mutator is not None and callable(record_validator) and callable(rule_exists),
                            "monthly_cost_caps": admin_mutator is not None and callable(record_validator),
                            "tenant_key_revocation": admin_mutator is not None and callable(record_validator),

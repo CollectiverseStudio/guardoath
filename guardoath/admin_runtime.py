@@ -136,6 +136,16 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
     billing_reporter = None
     billing_invoices = None
     cancellation_provider = None
+    # The owner capability report describes validated server prerequisites,
+    # independently of whether this source is allowed to introduce new state.
+    # Configuration is never a claim that Stripe has verified a subscription.
+    raw_allowance = os.getenv("GUARDOATH_PAID_MONTHLY_ALLOWANCE", "")
+    plan_allowance = None
+    if raw_allowance:
+        if (not raw_allowance.isascii() or not raw_allowance.isdecimal()
+                or len(raw_allowance) > 10 or not 1 <= int(raw_allowance) <= 1_000_000_000):
+            raise AdminConfigurationError("Admin reconciliation requires a valid server plan allowance")
+        plan_allowance = int(raw_allowance)
     if os.getenv("GUARDOATH_STRIPE_SECRET_KEY", ""):
         secret = os.environ["GUARDOATH_STRIPE_SECRET_KEY"]
         price = os.getenv("GUARDOATH_STRIPE_PRICE_ID", "")
@@ -191,11 +201,7 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
             tenants.store._client, tenants.store.table_name, audit_table,
             signing_key=audit_signing_key, reporter=billing_reporter,
             validate_record=record_validator)
-        raw_allowance = os.getenv("GUARDOATH_PAID_MONTHLY_ALLOWANCE", "")
-        if raw_allowance:
-            if (not raw_allowance.isascii() or not raw_allowance.isdecimal()
-                    or len(raw_allowance) > 10 or not 1 <= int(raw_allowance) <= 1_000_000_000):
-                raise AdminConfigurationError("Admin reconciliation requires a valid server plan allowance")
+        if plan_allowance is not None:
             def resolve_snapshot(record):
                 from guardoath.stripe_provider import fetch_subscription_snapshot, verified_subscription_snapshot
                 if record.stripe_subscription_id is not None:
@@ -209,7 +215,7 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
                     tenants.store._client, tenants.store.table_name, audit_table,
                     signing_key=audit_signing_key, resolve_snapshot=resolve_snapshot,
                     expected_price_id=price, expected_livemode=secret.startswith("sk_live_"),
-                    plan_monthly_allowance=int(raw_allowance))
+                    plan_monthly_allowance=plan_allowance)
     mount_admin_console(app, sessions=admin_sessions, tenants=tenants, cognito=cognito_client,
                         cursor_signing_key=bytes.fromhex(key_hex), browser_config=config,
                         browser_exchange=BoundExchange(config), native_auth=native_auth,
@@ -223,5 +229,11 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
                         billing_reconciler=billing_reconciler,
                         billing_invoices=billing_invoices,
                         billing_cancellation=billing_cancellation,
+                        billing_configuration={
+                            "signed_audit": read_auditor is not None,
+                            "stripe_read": billing_reporter is not None,
+                            "plan_allowance": plan_allowance is not None,
+                            "cancellation_provider": cancellation_provider is not None,
+                        },
                         record_validator=record_validator,rule_exists=rule_exists)
     return True
