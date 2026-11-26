@@ -1,11 +1,51 @@
 # Owner admin console implementation handoff
 
-Updated November 25, 2026 (UTC). This is the concise continuation
+Updated November 25, 2026 (America/New_York; November 26 UTC). This is the concise continuation
 record for a new chat. The append-only engineering history remains in
 [director-agent-coordination.md](director-agent-coordination.md); the complete
 47-target product discussion is preserved in [product-roadmap.md](product-roadmap.md).
 
-## Current implementation: activate confirmed metadata publication
+## Current production: confirmed catalog publication requests enabled
+
+**Deployed source: `762e7b66be029f07d245d9d11dc8a08aed32fd67`.** The accepted
+`Deploy-Verified.ps1 -Deploy` runner completed with exit 0 and AWS `Successful`.
+The deployment evidence records `2026-11-26T00:22:35Z` (November 25, 7:22 p.m.
+Eastern). All seven required workflows and **25 individual jobs** passed for
+this exact source; the deployment verified the exact backend source and
+**13/13 dashboard assets**.
+
+The shared AWS access-portal sign-in succeeded. The AWS console browser returned
+HTTP 403, but the standard CLI deployment succeeded using the already-authorized
+temporary `AdministratorAccess` role credentials obtained through the portal's
+**Access keys** flow. That browser error and the earlier device-authorization
+timeout did not prevent this completed release.
+
+| Recorded deployment evidence | Value |
+| --- | --- |
+| Deployed archive SHA-256 (base64) | `Jiuzcc81AQolQvmX9GB/ZSQfxwMzhokGP98UHGTr6fU=` |
+| Actual preserved rollback source | `d81db4d9c418cd198fc8f1e48df42a5ca3822a5f` |
+| Actual preserved rollback archive SHA-256 (base64) | `ZllvLTKAOGLgiUwszWJTKhi0jwakY0GSJ4aEWzpc73o=` |
+
+Both catalog writer gates are now live; the subscription-cap and cancellation
+writer gates remain false. Owner-confirmed requests support only an existing
+rule's `title` and `use_case`. An operator must start the release worker; the
+browser does not start a background service. **No live catalog write was
+submitted during this deployment.**
+
+`production_live_acceptance` remains **false**: these release results do not
+establish all 15 live acceptance areas, resolve issue #30, finish broader owner
+or financial administration, or supply general category/check/rule authoring.
+Continue the unfinished roadmap work from this deployed baseline. Revisit this
+deployment for a new change, an observed failure, or a specific new operation
+requiring AWS access; do not reopen login or repeat a healthy-deployment audit
+solely because a new chat starts. The hourly **GuardOath Deployment Readiness**
+automation was paused at Greg's direction.
+
+The implementation and earlier CI failures below are retained historical
+records. Their pending-activation or sign-in statements are superseded by this
+completed deployment.
+
+## Implementation record: activate confirmed metadata publication
 
 Greg continued after the completed lifecycle deployment. The new source enables
 both `ENABLE_NEW_CATALOG_PUBLICATION_STATE` and
@@ -825,39 +865,39 @@ one. No AWS resource or paid provider was purchased or provisioned.
 
 ## Remaining work and completion boundaries
 
-1. Obtain the new commit's exact-SHA CI results, including actual Chrome and
-   PowerShell execution. Diagnose and repair any failure before further release
-   work. Do not count review or syntax checks as browser acceptance.
-2. Deploy and accept the implemented compatible rollback baseline, establish real source parity,
-   verified backup and all 15 live acceptance results when authenticated release
-   access is available. Issue #30 remains an unresolved disclosed latency risk.
-3. Accept the cancellation support-only release and compatible rollback before
-   enabling its separately gated writer in a later source release. Continue
-   #41 with refunds, credits, configured plan changes and durable lifecycle/risk
+1. Complete CORE-04/#41 financial controls: activate the separately gated
+   cancellation writer in a later tested source release with compatible rollback,
+   then implement refunds, credits, configured plan changes and durable lifecycle/risk
    event processing. The implemented scheduled-cancellation operation does not
    supply these capabilities; existing reconciliation is an entitlement refresh.
    Preserve the actual target/intent transaction and conservative ambiguity
    recovery in [the financial-operation record](admin-financial-operations-design.md).
-4. Complete verified infrastructure cost ingestion, freshness/currency and
+2. Complete CORE-06/#42 authoring, versioned category/check/rule publishing and
+   rollback through the shared runtime. Deliver usable owner controls for behavior
+   and schema authoring beyond the current metadata-only scope, with executed-test
+   receipts attached to publication. Preserve stable identifiers and saved tenant
+   Off states, and finish the actual owner-request-to-deployment workflow.
+3. Complete CORE-05 verified infrastructure cost ingestion, freshness/currency and
    defensible tenant attribution. Request counts and request caps are not AWS
    billing data or tenant profitability. Do not fill missing money values with
    zero or claim a live financial dashboard from synthetic tests. The overview
    currently returns unavailable metrics; actual failure counts, 500-ms tail
    events, margins and health evidence still need trustworthy sources.
-5. Complete #42's versioned category/check/rule publishing and rollback through
-   the shared runtime. Existing signed draft/review/manifests and offline source
-   application are not proof that an owner can safely publish a deployed catalog
-   change end to end. Preserve stable identifiers and all saved tenant Off states.
-   Current authoring is metadata-only. The new schema/example inspector has
-   exact-SHA browser acceptance at `276a1871`; actual executed-test receipts
-   attached to publication and behavior authoring remain unfinished.
-6. Review remaining user-management and authentication acceptance directly
-   against #39–#42 and the operator guide. Existing Cognito account operations
-   require actual signed audit, authorization and deployed MFA evidence.
-7. Keep all four issues open until their actual requirements are verified. Then
-   progress the preserved product roadmap in its recorded priority order. Stop
-   recurring implementation only after the console is implemented, verified and
-   deployed.
+4. Finish remaining user-management and authentication implementation required by
+   #39–#42 and the operator guide, with actual signed audit, authorization and
+   deployed MFA evidence for the completed Cognito account workflows.
+5. Fix the concrete issue #30 latency defect without weakening the 500-ms deadline
+   or fail-closed behavior. Its status remains unresolved.
+
+Complete the outstanding LIVE-01 through LIVE-15 evidence alongside the relevant
+implemented owner and customer workflows, recording each result against the
+actual deployed source and configuration. Full production acceptance remains
+false until all required areas pass. This is not a separate recurring general
+audit: exact-source CI, deployment, compatible backup and backend/dashboard parity
+for `762e7b6` are already recorded above. Revisit that completed evidence only for
+a new change or concrete failure; every later release retains its required gates.
+Keep #39–#42 open until their actual requirements are met, then continue the
+preserved roadmap in its recorded priority order.
 
 ## Useful source and evidence locations
 

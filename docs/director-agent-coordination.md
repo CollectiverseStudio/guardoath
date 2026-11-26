@@ -19,6 +19,24 @@ Greg explicitly removed the November 13 release-stabilization reservation and au
 - Greg's November 23 product discussion and direction to preserve/implement its additions are recorded in [the product roadmap](product-roadmap.md). Its 47 targets and priority order remain durable work items; finish #39–#42 and verified production acceptance first, then update roadmap evidence as work is implemented. Proposed packaging is not a launched-product claim or spending authorization.
 - Greg requested meaningful progress updates and durable new-chat continuity. Maintain [the owner admin handoff](admin-console-handoff.md) alongside substantive implementation; it records actual verification, open work and blockers and does not replace fresh main/CI/ownership checks.
 
+## Current production — November 25, 2026 (America/New_York)
+
+Source **`762e7b66be029f07d245d9d11dc8a08aed32fd67` is deployed**, with AWS
+`Successful`, all seven required workflows/25 individual jobs passed, and exact
+backend source plus 13/13 dashboard assets verified. The deployment evidence
+records `2026-11-26T00:22:35Z` (November 25, 7:22 p.m. Eastern). Both catalog
+writer gates are live; subscription-cap and cancellation writers remain false.
+No live catalog write was submitted. The [current handoff](admin-console-handoff.md)
+records the deployed and preserved d81 rollback archive digests.
+
+Continue unfinished roadmap implementation from this completed release. Do not
+repeat AWS login, deployment or healthy-state audits solely because a new chat
+starts; revisit them for a new change, observed failure or specific operation
+requiring access. The hourly GuardOath Deployment Readiness automation is paused
+at Greg's direction. Full acceptance across all 15 live areas remains unestablished
+(`production_live_acceptance=false`), issue #30 remains unresolved, and broader
+admin/financial operations and general catalog authoring remain unfinished.
+
 ## Atlas work log
 - 2026-11-09: Recreated this file after GitHub returned an empty coordination file. Greg explicitly approved this restoration.
 - Authentication implementation commits: dc91106, 5463187, eedc4e8, e0d04ef, ca6f191, c4b46ac, 4bf055c, b17f50f, e574daa, 163d005.
@@ -2353,3 +2371,12 @@ FIRST re-read this file's governing Atlas-only #28/#31 override, then AGENTS.md,
 - Separate first-attempt CodeQL/Push on main45650189705 failed all three analysis jobs139333123459/139333123743/139333123745 at result upload after extraction/SARIF export. Logs contain no exception/HTTP diagnostic; check outputs are null with zero annotations. No source-analysis defect or infrastructure root cause is established. Failed-only and single-job connector retry controls returned internal errors without acknowledgements; latest observed attempt remains1. No successful retry is claimed. Five other workflows passed; no older success authorizes this source.
 - Root acknowledges publication_worker_finish to correct only tests/test_catalog_release_worker.py's optional-SDK boundary with scoped explicit synthetic SDK modules/transport fixtures, retaining every case and assertion. Root owns the exact minimal [test,pii] test environment and shared handoff/history. No dependency expansion, production flag/schema change, skip, timeout relaxation or unrelated correction is authorized by this bounded fix. The corrected source will receive all normal exact-source release gates.
 - Completed correction: a function-scoped explicit boto3/botocore.config fixture supplies only the SDK import/configuration boundary for the existing synthetic transports. All17original cases and assertions remain; one additional case proves missing optional SDK refuses bootstrap/CLI before state/provider access. Root's clean Python3.13 [test,pii] environment independently has neither boto3 nor botocore. The exact18affected cases passed in1.26s; root read the bounded diff and whitespace passed. Only the worker test file plus this preserved failure history/handoff change. Application, source flags, dependencies, workflow and timeouts are unchanged; no successful old-source rerun is claimed.
+
+
+### 2026-11-25 — Catalog activation deployed to production
+
+- Deployed `762e7b66be029f07d245d9d11dc8a08aed32fd67` with the accepted `Deploy-Verified.ps1 -Deploy` runner, exit 0 and AWS `Successful`. The deployment evidence records `2026-11-26T00:22:35Z` (November 25, 7:22 p.m. Eastern). All seven exact-source release workflows and all 25 individual jobs passed before the update.
+- Actual deployed archive digest: `Jiuzcc81AQolQvmX9GB/ZSQfxwMzhokGP98UHGTr6fU=`. The preserved compatible rollback ZIP is source `d81db4d9c418cd198fc8f1e48df42a5ca3822a5f`, digest `ZllvLTKAOGLgiUwszWJTKhi0jwakY0GSJ4aEWzpc73o=`. The final deployment result verified the exact backend source and 13/13 dashboard assets.
+- Both catalog writer gates are now live. Supported requests remain signed, owner/MFA-confirmed changes to one existing rule's title/use_case; an operator starts the bounded release worker. No live catalog write was submitted. Subscription-cap and cancellation writer gates remain false.
+- `production_live_acceptance=false`: complete acceptance across all 15 live areas is not established, #30 remains unresolved, and broader admin/financial operations and general category/check/rule authoring remain unfinished. No overall admin-completion claim is made.
+- Updated `docs/admin-console-handoff.md` and this coordination record so continuation starts with the completed deployment and unfinished roadmap work. Existing implementation and first-attempt b09 CI failure history remain intact. The hourly GuardOath Deployment Readiness automation was paused at Greg's direction; no recurring healthy-deployment audit is requested. This documentation update introduces no application/source behavior change.
