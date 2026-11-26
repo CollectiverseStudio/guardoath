@@ -7,26 +7,29 @@ record for a new chat. The append-only engineering history remains in
 
 ## Current implementation: source activation for owner invoice refunds
 
-This source enables `ENABLE_NEW_REFUND_STATE=True` and declares all five
-persistent-state contracts as introduced. The four existing writer settings are
-unchanged. The separate refund provider configuration remains required: source
-activation alone cannot dispatch a refund. The dedicated cancellation key is not
-reused or broadened; the refund credential remains pending separate explicit
-creation approval.
+Deployed writer source `83298d309c49ede4640c70320489c5d21306d40b` enables
+`ENABLE_NEW_REFUND_STATE=True` and declares all five persistent-state contracts
+as introduced. The four existing writer settings are unchanged. Exact-source
+CI and deployment evidence are recorded in the current production entry below.
 
-The accepted reader source `26724c3049db679ded77bfe8ff176e87551835c7` is now
-actually deployed, as recorded below. Writer deployment must preserve that real,
-digest-bound reader archive as its compatible backup. A source-disabled rollback
-still reads every saved refund phase
-and preserves all claims while refusing new refund writes.
+The actual preserved rollback archive is identified by
+`26724c3049db679ded77bfe8ff176e87551835c7` and digest `h1uXmC3BpJzw1EZNJcHd4BsDqNPzT6kMFstDyO2gWuI=` in the
+deployment receipt. The required compatible reader is
+`26724c3049db679ded77bfe8ff176e87551835c7`. That source-disabled reader preserves
+every saved refund phase and permanent claim while refusing new refund writes.
+
+The dedicated test-mode refund key remains uncreated and unconfigured.
+Fresh action-time confirmation is still pending. The existing cancellation
+key is neither reused nor broadened; source activation alone cannot dispatch
+a refund without the independent provider configuration.
 
 The activation's affected compatibility/runtime modules exercised 289 unique
 cases successfully across the focused run and one corrected fixture retest.
 The corrected fixture proves the artifact builder reloads trusted source rather
 than accepting a process-local flag override. Six affected mounted scenarios
 passed with actual source-default refund writing and explicit disabled-reader
-compatibility. The real mounted Chrome scenario now uses unchanged source flags;
-its CI acceptance is required for this activation source. Changed JavaScript
+compatibility. The real mounted Chrome scenario uses unchanged source flags;
+its exact-source acceptance is recorded in the current production entry below. Changed JavaScript
 syntax/discovery and scoped whitespace passed. All provider actions were
 synthetic; no customer refund or credential creation occurred.
 
@@ -54,10 +57,11 @@ checks. Application behavior is unchanged. Focused Python 3.13 acceptance passed
 all 35 invocation-service tests and all 6 bundled-suite tests; workflow structure
 validation confirms exactly this process partition with unchanged job membership
 and matrix. These local passes do not establish the original failures' causes
-or resolve issue #30. This source requires its own seven-workflow/25-job gate
-before deployment with the actual 26724c3 compatible reader backup.
+or resolve issue #30. The separate exact-source gate and deployment evidence
+for `83298d309c49ede4640c70320489c5d21306d40b` are recorded below. Even accepted
+CI does not establish the cause of the earlier unlogged invocation response.
 
-## Reader baseline implementation: bounded owner invoice refunds
+## Historical reader baseline implementation: bounded owner invoice refunds
 
 The next CORE-04/#41 slice implements reviewed full refunds of eligible paid
 subscription creation/renewal invoices with exactly one settled, fully captured,
@@ -79,10 +83,10 @@ original account/mode and financial bindings.
 
 **Source 26724c3 is the refund reader compatibility baseline.** It supports all
 five contracts but `ENABLE_NEW_REFUND_STATE=False` means only the existing four
-are introduced. Deploy this accepted reader with the current 908fd4c archive as
-the actual backup, then publish and accept a separate source-controlled writer
-activation. That later deployment must preserve this actual compatible reader
-archive. No environment variable overrides the source gate.
+are introduced. That reader was accepted and deployed with the actual 908fd4c
+archive as its backup. The current writer deployment records the actual
+preserved compatible reader archive separately below. No environment variable
+overrides the source gate.
 
 The independent refund provider requires `GUARDOATH_ADMIN_STRIPE_REFUND_KEY` and
 `GUARDOATH_ADMIN_STRIPE_REFUND_ACCOUNT_ID`, matching the existing reader's mode
@@ -123,7 +127,73 @@ customer refund, new resource, credential creation or production deployment is
 claimed by this implementation entry; record exact-source CI and deployment
 evidence here when those release steps finish.
 
-## Current production: refund reader baseline deployed
+## Current production: owner invoice-refund writer deployed
+
+**Deployed source: `83298d309c49ede4640c70320489c5d21306d40b`.** The unchanged
+`Deploy-Verified.ps1 -Deploy` runner completed with exit
+`0` and AWS `Successful` at
+`2026-11-26T17:54:50Z` (November 26, 12:54 p.m. Eastern).
+Backend source parity and dashboard asset results:
+**backend matches 83298d3; all 13/13 dashboard assets match**.
+
+Required exact-source CI outcome: **all seven required workflows succeeded**.
+Final accepted attempts and all 25 individual job results:
+all seven runs succeeded on attempt 1: Tests 13/13, CodeQL 3/3, Field Comparisons 2/2, Trusted Reference 1/1, PII 3/3, Stripe 2/2 and Deploy Script 1/1. All 25 required jobs succeeded, including both Windows versions, the source-default refund browser/API journey and the full dashboard suite; no required job failed, was cancelled or was skipped.
+These are the new source's own seven required runs, initially started on attempt 1:
+[Tests](https://github.com/CollectiverseStudio/guardoath/actions/runs/45869654833),
+[CodeQL](https://github.com/CollectiverseStudio/guardoath/actions/runs/45869653767),
+[Field Comparisons](https://github.com/CollectiverseStudio/guardoath/actions/runs/45869654709),
+[Trusted Reference](https://github.com/CollectiverseStudio/guardoath/actions/runs/45869654854),
+[PII Reliability](https://github.com/CollectiverseStudio/guardoath/actions/runs/45869654832),
+[Stripe Reconciliation](https://github.com/CollectiverseStudio/guardoath/actions/runs/45869654822),
+[Deploy Script](https://github.com/CollectiverseStudio/guardoath/actions/runs/45869654857).
+
+The failed `9e6492d` source was never deployed. Its two distinct Tests failures
+remain recorded above: the 539.12-ms privacy checker exceeded the unchanged
+500-ms deadline, and the targeted retry encountered a first invocation response
+without `receipt` whose HTTP status/body were not logged. Its six successful
+other workflows and 23 successful jobs remain historical evidence for that
+source only. The underlying invocation error cause remains unestablished;
+neither the workflow isolation nor later CI success resolves issue #30.
+
+| Recorded writer deployment evidence | Value |
+| --- | --- |
+| Deployed archive SHA-256 (base64) | `+wDgTc8/A1YLqMHkVwlh+CXujN1c6awLPdiEcF6wIiI=` |
+| Actual preserved rollback source | `26724c3049db679ded77bfe8ff176e87551835c7` |
+| Actual preserved rollback archive SHA-256 (base64) | `h1uXmC3BpJzw1EZNJcHd4BsDqNPzT6kMFstDyO2gWuI=` |
+| Actual rollback compatibility result | `digest-verified reader accepted for all five introduced writer contracts` |
+| Original configuration revision | `52e3d674-57ec-40b3-904e-8322e5ff9cf9` |
+| Upload acknowledgement revision | `5091b0d6-6adc-4774-a5f8-40aa94ff9fd8` |
+| Observed completed revision | `09a4370e-74de-4496-a60c-171c803e598c` |
+| Preserved configuration SHA-256 | `a97934d614897b039cb8a9fc7ecdd8fbb3e1349658f760da1ebd8f74e2ca77a4` |
+| Configuration preservation result | `unchanged; matches the accepted reader configuration hash` |
+| Automatic rollback ownership from receipt | `false` |
+| Deployment receipt | private `writer-deployment.json`, invocation `a699ac633d9adc8f7a87c55b11d455fb69bdcff8f17a96e3fe959f9b85beabec`; nonsecret evidence transcribed here |
+
+The deployed writer introduces all five contracts and retains the four existing
+writer settings. The required compatible reader is
+`26724c3049db679ded77bfe8ff176e87551835c7`; the backup values above come from the
+actual downloaded, digest-verified archive. Completed revisions are observations,
+not independently acquired rollback authority.
+
+**The dedicated refund key remains uncreated and unconfigured.** Fresh
+action-time confirmation is still pending for `GuardOath owner invoice refunds`
+in existing Stripe test-mode account `acct_1TehmJCcAkYW08dP`, with exactly
+**Accounts Read, Invoices Read, Payment Intents Read, and Charges and Refunds
+Write**. All other and connected-account permissions remain None. Stripe's
+combined charge/refund scope is broader than the application's sole refund
+mutation endpoint. The completed cancellation setup remains separate. No key
+creation or customer refund is claimed by this deployment entry.
+
+`production_live_acceptance=false`: all 15 live acceptance areas remain required,
+issue #30 remains unresolved, and the invocation response's underlying cause
+remains unestablished. The complete 47-target roadmap and unfinished financial,
+owner and catalog work remain preserved. The readiness automation stays paused.
+Continue with the separately approved refund configuration and the recorded
+roadmap; revisit completed release evidence only for a new change or concrete
+failure.
+
+## Previous production: refund-compatible reader deployed
 
 **Deployed source: `26724c3049db679ded77bfe8ff176e87551835c7`.** The unchanged
 `Deploy-Verified.ps1 -Deploy` runner completed with exit 0 and AWS `Successful`
@@ -140,10 +210,10 @@ actual refund Chrome journey and the full dashboard browser suite.
 | Upload acknowledgement revision | `c8f3884d-3ccd-46d4-9aa9-358a35876b0d` |
 | Observed completed revision | `52e3d674-57ec-40b3-904e-8322e5ff9cf9` |
 
-This deployed baseline supports all five contracts but introduces only the four
-existing ones. Refund writes remain source-disabled in 26724c3. The new source
-activation above can now use this actual deployed reader as its compatible
-rollback, after its own exact-source CI. Existing runtime settings, including
+This reader release supports all five contracts but introduces only the four
+existing ones. Refund writes remain source-disabled in 26724c3. The writer
+production entry above records its actual preserved reader backup and its
+separate exact-source CI acceptance. Existing runtime settings, including
 the completed cancellation setup, were preserved. No refund credential or
 customer refund was created. The differing completed revision is an observation,
 not new automatic rollback authority; `automatic_rollback_owned=false` remains
@@ -158,8 +228,9 @@ Reader CI runs: [Tests](https://github.com/CollectiverseStudio/guardoath/actions
 [Deploy Script](https://github.com/CollectiverseStudio/guardoath/actions/runs/45862068875).
 
 Full 15-area production acceptance remains false, and issue #30 remains
-unresolved. Stop observing this completed reader release; finish the prepared
-writer release and then request the separate refund-key creation approval.
+unresolved. This reader release is complete; its retained receipt remains
+historical evidence. The current writer entry records the separate pending
+refund-key action-time confirmation.
 
 ## Previous production: owner financial controls release deployed
 
@@ -1113,15 +1184,18 @@ one. No AWS resource or paid provider was purchased or provisioned.
 ## Remaining work and completion boundaries
 
 1. Complete CORE-04/#41 financial controls: dedicated cancellation setup for the
-   existing Stripe test-mode account is complete, alongside the accepted 908fd4c
-   source activation and deployment. The bounded owner invoice-refund workflow
-   is implemented above with writer activation prepared; finish its accepted
-   reader/writer deployment sequence and separately approved
-   dedicated provider configuration, then credits, configured plan changes, cap restoration and
-   durable lifecycle/risk event processing. The implemented scheduled-cancellation operation does not
-   supply these capabilities; existing reconciliation is an entitlement refresh.
-   Preserve the actual target/intent transaction and conservative ambiguity
-   recovery in [the financial-operation record](admin-financial-operations-design.md).
+   existing Stripe test-mode account is complete. The bounded owner
+   invoice-refund workflow and source activation are deployed in `83298d3`
+   with the actual compatible reader backup recorded above. The dedicated
+   refund key remains uncreated and unconfigured, pending fresh action-time
+   confirmation for exactly Accounts Read, Invoices Read, Payment Intents
+   Read, and Charges and Refunds Write; all other and connected-account
+   permissions remain None. Complete that separate setup, then credits,
+   configured plan changes, cap restoration and durable lifecycle/risk event
+   processing. Source deployment does not establish a customer refund or
+   complete CORE-04. Preserve the actual target/intent transaction and
+   conservative ambiguity recovery in
+   [the financial-operation record](admin-financial-operations-design.md).
 2. Complete CORE-06/#42 authoring, versioned category/check/rule publishing and
    rollback through the shared runtime. Deliver usable owner controls for behavior
    and schema authoring beyond the current metadata-only scope, with executed-test
@@ -1144,7 +1218,7 @@ implemented owner and customer workflows, recording each result against the
 actual deployed source and configuration. Full production acceptance remains
 false until all required areas pass. This is not a separate recurring general
 audit: exact-source CI, deployment, compatible backup and backend/dashboard parity
-for `908fd4c` are already recorded above. Revisit that completed evidence only for
+for `83298d3` are recorded above. Revisit that completed evidence only for
 a new change or concrete failure; every later release retains its required gates.
 Keep #39–#42 open until their actual requirements are met, then continue the
 preserved roadmap in its recorded priority order.

@@ -21,25 +21,43 @@ Greg explicitly removed the November 13 release-stabilization reservation and au
 
 ## Current production — November 26, 2026 (America/New_York)
 
-Source **`908fd4cbfd56b4e7b10724a0f332d027fffcc9a5` is deployed**, with AWS
-`Successful`, all seven required workflows/25 individual jobs passed, and exact
-backend source plus 13/13 dashboard assets verified. The deployment evidence
-records `2026-11-26T01:09:45Z` (November 25, 8:09 p.m. Eastern). Both financial
-source writer gates and both catalog gates are true. Production has the explicit
-reconciliation prerequisites and the dedicated cancellation credential/account
-pair for the existing Stripe test-mode account `acct_1TehmJCcAkYW08dP`. The
-configuration update completed at `2026-11-26T16:06:26Z` with AWS `Successful`;
-no customer financial action or live catalog write was submitted. The
-[current handoff](admin-console-handoff.md) records the deployed and actual
-preserved 762e7b6 rollback archive digests and the completed cancellation setup.
+Deployed writer source **`83298d309c49ede4640c70320489c5d21306d40b`** has
+exact-source CI outcome **all seven required workflows succeeded**, with final accepted attempts and
+all 25 required job results recorded as
+all seven runs succeeded on attempt 1: Tests 13/13, CodeQL 3/3, Field Comparisons 2/2, Trusted Reference 1/1, PII 3/3, Stripe 2/2 and Deploy Script 1/1. All 25 required jobs succeeded, including both Windows versions, the source-default refund browser/API journey and the full dashboard suite; no required job failed, was cancelled or was skipped.
+The deployment receipt reports exit `0`, AWS
+`Successful` and completion `2026-11-26T17:54:50Z`;
+backend/dashboard source parity is **backend matches 83298d3; all 13/13 dashboard assets match**.
 
-Continue unfinished roadmap implementation from this completed release. Do not
-repeat AWS login, deployment or healthy-state audits solely because a new chat
-starts; revisit them for a new change, observed failure or specific operation
-requiring access. The hourly GuardOath Deployment Readiness automation is paused
-at Greg's direction. Full acceptance across all 15 live areas remains unestablished
-(`production_live_acceptance=false`), issue #30 remains unresolved, and broader
-admin/financial operations and general catalog authoring remain unfinished.
+Writer archive digest: `+wDgTc8/A1YLqMHkVwlh+CXujN1c6awLPdiEcF6wIiI=`. Actual preserved backup:
+source `26724c3049db679ded77bfe8ff176e87551835c7`, digest `h1uXmC3BpJzw1EZNJcHd4BsDqNPzT6kMFstDyO2gWuI=`,
+compatibility `digest-verified reader accepted for all five introduced writer contracts`. The required compatible
+reader is `26724c3049db679ded77bfe8ff176e87551835c7`. Configuration preservation:
+`unchanged; matches the accepted reader configuration hash`, hash `a97934d614897b039cb8a9fc7ecdd8fbb3e1349658f760da1ebd8f74e2ca77a4`.
+Automatic rollback ownership remains exactly
+`false` from the receipt; a completed revision alone
+supplies no new rollback authority. The [current handoff](admin-console-handoff.md)
+and final entry below retain the exact CI and deployment evidence.
+
+The deployed source introduces all five contracts while retaining the four
+existing writer settings. The dedicated cancellation setup remains separate.
+The new refund key is **uncreated and unconfigured**, pending fresh action-time
+confirmation for `GuardOath owner invoice refunds` in existing Stripe
+test-mode account `acct_1TehmJCcAkYW08dP`, with exactly Accounts Read, Invoices
+Read, Payment Intents Read, and Charges and Refunds Write. All other and
+connected-account permissions remain None. Source deployment alone cannot
+dispatch a refund without that provider configuration; no customer refund is
+claimed.
+
+Failed writer `9e6492d` was never deployed. Its 539.12-ms privacy deadline
+failure and distinct unlogged invocation response are retained in the
+history below; the invocation error cause remains unestablished. Issue #30
+remains unresolved and the 500-ms deadline is unchanged.
+`production_live_acceptance=false`: all 15 live areas and all 47 roadmap
+targets retain their actual completion boundaries. The hourly readiness
+automation stays paused. Continue unfinished work; do not repeat healthy
+release/login checks without a new change, observed failure or specific
+operation requiring access.
 
 ## Atlas work log
 - 2026-11-09: Recreated this file after GitHub returned an empty coordination file. Greg explicitly approved this restoration.
@@ -2466,3 +2484,12 @@ The new runtime tests found a concrete route-introspection compatibility issue: 
 - The six other required workflows and 23 successful jobs remain historical successes for 9e6492d, including the actual source-default refund Chrome journey and full dashboard. The corrective source needs its own unchanged seven-workflow/25-job release gate. Keep every test assertion and deadline, issue #30 unresolved, the complete 47-target roadmap, separate refund-key approval and full-production acceptance false.
 - Changed only the Windows workflow partition and the failing invocation test's diagnostics, plus these shared handoff records. Windows now runs all of `tests/test_evaluate_all.py` in its own required process, matching Linux, and excludes exactly that already-executed module from the remaining full-suite command. Every assertion and original deadline still applies; job names/matrix and release membership are unchanged. The invocation test asserts the first HTTP status and receipt presence with the response body available on failure, then retains its completed-result, changed-request conflicts and one-provider-call assertions. No application behavior was changed and no invocation cause is claimed without the missing HTTP evidence.
 - Focused Python 3.13 results: `tests/test_invocation_service.py` 35 passed in 2.60 s; isolated `tests/test_evaluate_all.py` 6 passed in 1.98 s. Structured YAML comparison confirms the complete workflow differs only by the added full-module step and its exact remaining-suite exclusion; scoped whitespace is clean. These passes do not resolve the prior timeout or explain the unlogged invocation rejection. Publish this coherent corrective source once and accept its own required CI; do not rerun the failed 9e6492d source or re-audit the completed reader deployment.
+
+
+### November 26, 2026 — Corrected refund writer accepted and deployed; dedicated key pending
+
+- Writer source `83298d309c49ede4640c70320489c5d21306d40b` completed its own required exact-source gate with outcome **all seven required workflows succeeded**. Final accepted attempts and all 25 job results: all seven runs succeeded on attempt 1: Tests 13/13, CodeQL 3/3, Field Comparisons 2/2, Trusted Reference 1/1, PII 3/3, Stripe 2/2 and Deploy Script 1/1. All 25 required jobs succeeded, including both Windows versions, the source-default refund browser/API journey and the full dashboard suite; no required job failed, was cancelled or was skipped. Required runs, initially started on attempt 1: Tests 45869654833 (13), CodeQL 45869653767 (3), Field Comparisons 45869654709 (2), Trusted Reference 45869654854 (1), PII Reliability 45869654832 (3), Stripe Reconciliation 45869654822 (2), Deploy Script 45869654857 (1). This source's gate is independent of the earlier writer's historical successful jobs.
+- Prior writer `9e6492d9951f8a4120994e2cf3c62be6c5a4ce3f` was not deployed. Tests run 45864845981 attempt 1 failed Windows 3.12 on `json.health_plan_id.input` at 539.12 ms against the unchanged 500-ms deadline, with dependent assertions. One targeted retry failed Windows 3.13 on a distinct first invocation response without `receipt`; the original test did not log HTTP status/body, and the other Windows job was cancelled by fail-fast. Its six other workflows and 23 successful jobs remain historical successes only. The Windows fresh-process partition and diagnostic assertion preserve all tests, original deadlines, job membership and application behavior. The underlying invocation error remains unestablished; no latency fix or resolution of #30 is inferred from later acceptance.
+- The unchanged `Deploy-Verified.ps1 -Deploy` runner completed exit `0`, AWS `Successful`, at `2026-11-26T17:54:50Z` (November 26, 12:54 p.m. Eastern). Actual backend/dashboard parity: backend matches 83298d3; all 13/13 dashboard assets match. Writer digest `+wDgTc8/A1YLqMHkVwlh+CXujN1c6awLPdiEcF6wIiI=`; actual preserved backup source `26724c3049db679ded77bfe8ff176e87551835c7` and digest `h1uXmC3BpJzw1EZNJcHd4BsDqNPzT6kMFstDyO2gWuI=`; actual backup compatibility `digest-verified reader accepted for all five introduced writer contracts`. The required compatible reader is `26724c3049db679ded77bfe8ff176e87551835c7`. Original revision `52e3d674-57ec-40b3-904e-8322e5ff9cf9`, acknowledged revision `5091b0d6-6adc-4774-a5f8-40aa94ff9fd8`, completed observation `09a4370e-74de-4496-a60c-171c803e598c`. Configuration preservation `unchanged; matches the accepted reader configuration hash` and hash `a97934d614897b039cb8a9fc7ecdd8fbb3e1349658f760da1ebd8f74e2ca77a4`. Automatic rollback ownership `false` is copied from the receipt, with no new authority inferred from the completed revision. Receipt: private `writer-deployment.json`, invocation `a699ac633d9adc8f7a87c55b11d455fb69bdcff8f17a96e3fe959f9b85beabec`; nonsecret evidence transcribed here.
+- All five source-controlled state contracts are introduced; the four existing writer settings and completed cancellation setup remain separate. The dedicated test-mode refund key `GuardOath owner invoice refunds` remains uncreated and unconfigured. Fresh action-time confirmation is still pending for existing account `acct_1TehmJCcAkYW08dP` and exactly Accounts Read, Invoices Read, Payment Intents Read, and Charges and Refunds Write; all other and connected-account permissions remain None. The combined charge/refund permission is broader than the application's sole refund mutation endpoint. No key creation, customer refund, or general CORE-04 completion is claimed.
+- Root updated the current handoff/production summaries and next steps while retaining the prior deployment records and both failed writer attempts. The complete 47-target roadmap, unresolved issue #30, unestablished invocation-error cause, `production_live_acceptance=false` across all 15 required live areas, and paused readiness automation remain intact. Continue separately approved refund configuration and unfinished roadmap work; no recurring healthy-release audit is introduced.
