@@ -20,11 +20,15 @@ Existing reconciliation refreshes entitlement and invoice inspection reads
 provider information. Full refunds of narrowly supported paid invoices now have
 their own service, provider, signed-state and owner UI/API implementation,
 described below. This writer source sets `ENABLE_NEW_REFUND_STATE=True`.
-Publication requires acceptance and actual deployment of the committed reader
-`26724c3049db679ded77bfe8ff176e87551835c7` first. The dedicated refund provider
-remains unconfigured and requires separate approval. This record does not
-establish reader or writer deployment, operational refund availability or
-customer financial acceptance. Credits and plan changes remain future work.
+Writer source `83298d309c49ede4640c70320489c5d21306d40b` passed its required
+seven-workflow/25-job gate and was deployed with the actual compatible reader
+`26724c3049db679ded77bfe8ff176e87551835c7` backup. On November 26 at
+2:08 p.m. Eastern, the separately approved dedicated test-mode refund key and
+expected account were configured successfully in the existing Lambda. Exact
+release/configuration evidence is in the [handoff](admin-console-handoff.md).
+This establishes the deployed implementation and test-mode setup, not a customer
+refund or full financial acceptance. Saved-cap restoration, credits and plan
+changes remain future implementation work.
 
 ## First coherent operation: schedule cancellation at period end
 

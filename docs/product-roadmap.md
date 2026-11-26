@@ -32,13 +32,13 @@ exact-source evidence. The [financial-operation record](admin-financial-operatio
 now covers source-enabled subscription/cap reconciliation and reviewed
 period-end cancellation for CORE-04, following the deployed compatible reader
 in 762e7b6. Runtime prerequisites remain explicit and visible in the owner
-workspace. The next implemented slice adds reviewed full invoice refunds,
-permanent per-charge claims, signed history and explicit provider-read-only
-recovery. Source 26724c3 supplies the refund reader compatibility baseline; the
-subsequent source enables the refund writer with an actual compatible rollback
-required. The dedicated refund credential remains a separate prerequisite, and
-the handoff records actual release/configuration evidence. The record preserves the remaining credit,
-plan-change and durable lifecycle/risk-event requirements. This does not mark CORE-04 delivered;
+workspace. Reviewed full invoice refunds, permanent per-charge claims, signed
+history and explicit provider-read-only recovery are now deployed in source
+83298d3, with the actual compatible reader 26724c3 preserved as rollback. The
+separately approved dedicated test-mode refund configuration completed on
+November 26; the handoff records the actual release and configuration evidence.
+The record preserves saved-cap restoration, credit, plan-change and durable
+lifecycle/risk-event requirements. This does not mark CORE-04 delivered;
 the handoff records exact-source release evidence and remaining live acceptance.
 Keep all original targets and acceptance boundaries below until implementation
 and verification establish completion.

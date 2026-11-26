@@ -18,10 +18,11 @@ deployment receipt. The required compatible reader is
 `26724c3049db679ded77bfe8ff176e87551835c7`. That source-disabled reader preserves
 every saved refund phase and permanent claim while refusing new refund writes.
 
-The dedicated test-mode refund key remains uncreated and unconfigured.
-Fresh action-time confirmation is still pending. The existing cancellation
-key is neither reused nor broadened; source activation alone cannot dispatch
-a refund without the independent provider configuration.
+The dedicated test-mode refund key is now created and configured. Greg's
+"Yes continue" confirmation authorized the exact four prepared permissions and
+saving the key to the existing Lambda. AWS completed that configuration on
+November 26 at 2:08 p.m. Eastern; the code deployment is unchanged. The
+independent cancellation key remains separate. No customer refund was submitted.
 
 The activation's affected compatibility/runtime modules exercised 289 unique
 cases successfully across the focused run and one corrected fixture retest.
@@ -176,22 +177,40 @@ writer settings. The required compatible reader is
 actual downloaded, digest-verified archive. Completed revisions are observations,
 not independently acquired rollback authority.
 
-**The dedicated refund key remains uncreated and unconfigured.** Fresh
-action-time confirmation is still pending for `GuardOath owner invoice refunds`
-in existing Stripe test-mode account `acct_1TehmJCcAkYW08dP`, with exactly
-**Accounts Read, Invoices Read, Payment Intents Read, and Charges and Refunds
-Write**. All other and connected-account permissions remain None. Stripe's
-combined charge/refund scope is broader than the application's sole refund
-mutation endpoint. The completed cancellation setup remains separate. No key
-creation or customer refund is claimed by this deployment entry.
+### Completed setup: dedicated test-mode refund credential
+
+Greg confirmed "Yes continue" for creating and saving **GuardOath owner invoice
+refunds** in the existing Stripe test-mode account `acct_1TehmJCcAkYW08dP`.
+The key was created with exactly **Accounts Read, Invoices Read, Payment Intents
+Read, and Charges and Refunds Write**; all other and connected-account
+permissions remain None. Stripe's combined charge/refund scope is broader than
+the application's sole refund mutation endpoint. The cancellation key remains
+separate. Both the existing reader and new key independently returned the
+expected account from `GET /v1/account`.
+
+The existing `guardoath-site` Lambda received
+`GUARDOATH_ADMIN_STRIPE_REFUND_KEY` and
+`GUARDOATH_ADMIN_STRIPE_REFUND_ACCOUNT_ID` together through one
+revision-conditioned configuration update. AWS reported `Successful`, with
+`LastModified=2026-11-26T19:08:05Z` (November 26, 2:08 p.m. Eastern). Original
+revision `09a4370e-74de-4496-a60c-171c803e598c`; acknowledged revision
+`3fa722f0-d127-45d9-8fd7-503d6ead00d3`; completed revision
+`4901cb10-1346-4b84-b4a4-09ff02e5bd4c`. The exact previous environment plus
+those two fields was verified (1,498 bytes; SHA-256
+`90e88519f7f8ae1274684f78ee0ff7f26510b7064a62fa7415a4a1b259a12993`).
+Deployed source `83298d3` and archive digest
+`+wDgTc8/A1YLqMHkVwlh+CXujN1c6awLPdiEcF6wIiI=` were preserved. The private
+staging key was removed after success. This completes the test-mode refund
+configuration; no customer refund was submitted and no new code deployment
+occurred during setup.
 
 `production_live_acceptance=false`: all 15 live acceptance areas remain required,
 issue #30 remains unresolved, and the invocation response's underlying cause
 remains unestablished. The complete 47-target roadmap and unfinished financial,
 owner and catalog work remain preserved. The readiness automation stays paused.
-Continue with the separately approved refund configuration and the recorded
-roadmap; revisit completed release evidence only for a new change or concrete
-failure.
+Continue the recorded roadmap with reviewed restoration of a saved local request
+cap, then the remaining financial controls. Revisit completed release evidence
+only for a new change or concrete failure.
 
 ## Previous production: refund-compatible reader deployed
 
@@ -229,8 +248,8 @@ Reader CI runs: [Tests](https://github.com/CollectiverseStudio/guardoath/actions
 
 Full 15-area production acceptance remains false, and issue #30 remains
 unresolved. This reader release is complete; its retained receipt remains
-historical evidence. The current writer entry records the separate pending
-refund-key action-time confirmation.
+historical evidence. The current writer entry records the completed, separately
+authorized test-mode refund configuration.
 
 ## Previous production: owner financial controls release deployed
 
@@ -1186,13 +1205,11 @@ one. No AWS resource or paid provider was purchased or provisioned.
 1. Complete CORE-04/#41 financial controls: dedicated cancellation setup for the
    existing Stripe test-mode account is complete. The bounded owner
    invoice-refund workflow and source activation are deployed in `83298d3`
-   with the actual compatible reader backup recorded above. The dedicated
-   refund key remains uncreated and unconfigured, pending fresh action-time
-   confirmation for exactly Accounts Read, Invoices Read, Payment Intents
-   Read, and Charges and Refunds Write; all other and connected-account
-   permissions remain None. Complete that separate setup, then credits,
-   configured plan changes, cap restoration and durable lifecycle/risk event
-   processing. Source deployment does not establish a customer refund or
+   with the actual compatible reader backup recorded above. Its separately
+   approved dedicated test-mode refund configuration is complete. Next implement
+   reviewed restoration of a saved local request cap to the independently
+   verified configured plan allowance, followed by credits, configured plan
+   changes and durable lifecycle/risk event processing. Source deployment does not establish a customer refund or
    complete CORE-04. Preserve the actual target/intent transaction and
    conservative ambiguity recovery in
    [the financial-operation record](admin-financial-operations-design.md).
