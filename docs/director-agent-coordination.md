@@ -19,18 +19,19 @@ Greg explicitly removed the November 13 release-stabilization reservation and au
 - Greg's November 23 product discussion and direction to preserve/implement its additions are recorded in [the product roadmap](product-roadmap.md). Its 47 targets and priority order remain durable work items; finish #39–#42 and verified production acceptance first, then update roadmap evidence as work is implemented. Proposed packaging is not a launched-product claim or spending authorization.
 - Greg requested meaningful progress updates and durable new-chat continuity. Maintain [the owner admin handoff](admin-console-handoff.md) alongside substantive implementation; it records actual verification, open work and blockers and does not replace fresh main/CI/ownership checks.
 
-## Current production — November 25, 2026 (America/New_York)
+## Current production — November 26, 2026 (America/New_York)
 
 Source **`908fd4cbfd56b4e7b10724a0f332d027fffcc9a5` is deployed**, with AWS
 `Successful`, all seven required workflows/25 individual jobs passed, and exact
 backend source plus 13/13 dashboard assets verified. The deployment evidence
 records `2026-11-26T01:09:45Z` (November 25, 8:09 p.m. Eastern). Both financial
 source writer gates and both catalog gates are true. Production has the explicit
-reconciliation prerequisites; cancellation remains unavailable because its
-dedicated Stripe write credential and expected account are absent. No customer
-financial action or live catalog write was submitted. The
+reconciliation prerequisites and the dedicated cancellation credential/account
+pair for the existing Stripe test-mode account `acct_1TehmJCcAkYW08dP`. The
+configuration update completed at `2026-11-26T16:06:26Z` with AWS `Successful`;
+no customer financial action or live catalog write was submitted. The
 [current handoff](admin-console-handoff.md) records the deployed and actual
-preserved 762e7b6 rollback archive digests and the remaining Stripe setup.
+preserved 762e7b6 rollback archive digests and the completed cancellation setup.
 
 Continue unfinished roadmap implementation from this completed release. Do not
 repeat AWS login, deployment or healthy-state audits solely because a new chat
@@ -2408,3 +2409,11 @@ FIRST re-read this file's governing Atlas-only #28/#31 override, then AGENTS.md,
 - The existing AWS role session remained usable. Earlier ARN-addressed reads timed out; an ordinary CLI configuration read using the existing function name succeeded. Nonsecret presence: admin enabled, independent audit, Stripe reader, configured price and paid allowance present; dedicated cancellation write key and expected Stripe account absent. Deployment did not change runtime configuration. Reconciliation is enabled with existing prerequisites; cancellation source is deployed but cannot dispatch without its dedicated setup.
 - Stripe plugin authentication succeeded and lists the company accounts, but its discovered operations do not create the required restricted key. The API-keys Dashboard requires sign-in and is preserved for secure continuation. Exact existing billing account/mode matching is not yet established; no Stripe credential was created, configured, exposed or inferred from an account label. Finish this specific setup after sign-in; do not reopen AWS login or perform a general healthy-release audit. No real customer financial action, new resource, paid provider, role grant or live catalog mutation occurred.
 - Root updated the current production summaries and remaining-work order in admin-console-handoff.md and this append-only record. Full 15-area production acceptance remains false and #30 remains unresolved; refunds, credits, plan changes, cap restoration, durable lifecycle/risk processing, true financial attribution and general rule/schema authoring remain unfinished. The 47-target roadmap is preserved, and the deployment-readiness automation remains paused.
+
+
+### 2026-11-26 — Dedicated test-mode cancellation setup completed
+
+- Greg explicitly authorized "Yes, create and save the key." Created the restricted key GuardOath owner cancellation in the existing Stripe test-mode account acct_1TehmJCcAkYW08dP. Permissions: Accounts Read and Subscriptions Write; all other and connected-account permissions None. The existing reader and new restricted key each returned the same account from GET /v1/account; both use test mode. No secret value is recorded.
+- Applied GUARDOATH_ADMIN_STRIPE_WRITE_KEY and GUARDOATH_ADMIN_STRIPE_ACCOUNT_ID together to the existing guardoath-site Lambda in account 839000214942, using original RevisionId a647792d-253d-4aa2-b452-18218c7172c0. AWS acknowledged submission revision b102f3b4-000c-4a24-a7d2-d25e4bc92c57 and completed with Successful at 2026-11-26T16:06:26Z (November 26, 11:06 a.m. Eastern), observed revision 933c7561-90d0-4955-83a0-ab8581ab07b7. The complete environment equals the previous map plus exactly the dedicated pair (1,297 bytes); deployed code digest 3ELllmPDFrUbQkGJzh5BgFghXEvqDeDMvezoHMyp6Mg= and source 908fd4cbfd56b4e7b10724a0f332d027fffcc9a5 are unchanged. No code deployment occurred.
+- Root updated docs/admin-console-handoff.md and this coordination record in one documentation batch. No customer cancellation, refund, catalog write, new resource or role grant occurred. Accepted release CI/source/assets evidence was not rerun; this configuration-only operation was checked by the exact account/mode match and AWS's completed merged environment. Prior absent-prerequisite entries remain historical.
+- Next implementation: bounded owner invoice-refund workflow under CORE-04/#41. Refunds, credits, plan changes, cap restoration, lifecycle/risk processing and broader owner/catalog work remain unfinished. Full 15-area acceptance remains false, issue #30 remains unresolved, and deployment-readiness automation stays paused. Do not recreate the completed credential or resume recurring healthy-release checks.

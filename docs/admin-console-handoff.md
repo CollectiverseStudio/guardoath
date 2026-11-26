@@ -1,6 +1,6 @@
 # Owner admin console implementation handoff
 
-Updated November 25, 2026 (America/New_York; November 26 UTC). This is the concise continuation
+Updated November 26, 2026 (America/New_York). This is the concise continuation
 record for a new chat. The append-only engineering history remains in
 [director-agent-coordination.md](director-agent-coordination.md); the complete
 47-target product discussion is preserved in [product-roadmap.md](product-roadmap.md).
@@ -27,8 +27,9 @@ reader as the release baseline. The generated artifact introduces all four
 supported state contracts, and the actual digest-bound backup passed the release
 compatibility gate. **Production has the admin, signed audit, Stripe reader,
 price and paid allowance settings for reconciliation. The dedicated cancellation
-write credential and expected Stripe account are absent, so cancellation remains
-unavailable until those explicit prerequisites are configured.** Source activation
+credential and expected account are now configured for the existing Stripe
+test-mode billing account `acct_1TehmJCcAkYW08dP`. This completes the missing
+cancellation setup; no customer cancellation was submitted.** Source activation
 does not override missing credentials or grant a provider action.
 
 The Billing page identifies whether reconciliation, request caps, cancellation
@@ -63,20 +64,23 @@ passed both mounted owner phases, authenticated billing acceptance and the full
 dashboard suite. A bounded integration review found no remaining source-default
 assumption or route-authority blocker.
 
-The existing authorized AWS session worked for this deployment. Earlier
-ARN-addressed configuration reads timed out; the standard CLI read using the
-existing function name succeeded and established the prerequisite presence above.
-No AWS configuration, resource, role or customer financial state was changed.
-Do not reopen AWS login or repeat the completed release audit on continuation.
+On November 26 at 11:06 a.m. Eastern (`2026-11-26T16:06:26Z`), Greg's explicit
+"Yes, create and save the key" authorization was completed. The restricted key
+**GuardOath owner cancellation** was created in the existing Stripe test-mode
+account `acct_1TehmJCcAkYW08dP`, with **Accounts Read** and **Subscriptions Write**
+only; all other and connected-account permissions remain None. A read-only
+`GET /v1/account` with the new key matched the account established using the
+existing billing reader, and both credentials use test mode.
 
-The Stripe connection is available, but its supported API operations do not
-create the needed restricted credential. The Stripe Dashboard API-keys page
-requires sign-in and is preserved for that setup. Continue through secure Stripe
-sign-in, establish the exact account and mode matching the existing billing
-configuration, and prepare only the account/subscription-read and subscription-
-update credential needed by the existing adapter. Do not infer that binding from
-an account label, reuse the broad reader credential as a fallback, expose a key
-in chat/source/logs or submit a real customer cancellation to prove setup.
+The existing `guardoath-site` Lambda received `GUARDOATH_ADMIN_STRIPE_WRITE_KEY`
+and `GUARDOATH_ADMIN_STRIPE_ACCOUNT_ID` together through one revision-conditioned
+configuration update. AWS reported `Successful`; the observed completion revision
+is `933c7561-90d0-4955-83a0-ab8581ab07b7`. All existing environment values and the
+deployed code digest were preserved; the complete environment occupies 1,297
+bytes. No code deployment occurred and no credential value is recorded here.
+This completes the test-mode cancellation prerequisites; it does not establish
+a provider cancellation or complete live financial acceptance. Continue from this
+completed setup without recreating the key or repeating a healthy-release audit.
 
 Exact-source CI runs: [Tests](https://github.com/CollectiverseStudio/guardoath/actions/runs/45731939613),
 [CodeQL](https://github.com/CollectiverseStudio/guardoath/actions/runs/45731938906),
@@ -88,8 +92,9 @@ Exact-source CI runs: [Tests](https://github.com/CollectiverseStudio/guardoath/a
 
 Full production acceptance remains false: all 15 live areas and issue #30 are
 not established as complete. No actual cancellation or live catalog write was
-submitted. Continue unfinished roadmap implementation and the specific Stripe
-setup; the hourly deployment-readiness automation remains paused.
+submitted. Continue CORE-04/#41 with the bounded owner invoice-refund workflow
+and the remaining financial capabilities; the hourly deployment-readiness
+automation remains paused.
 
 ## Previous production: confirmed catalog publication requests enabled
 
@@ -951,11 +956,11 @@ one. No AWS resource or paid provider was purchased or provisioned.
 
 ## Remaining work and completion boundaries
 
-1. Complete CORE-04/#41 financial controls: finish the dedicated cancellation
-   credential/account setup; source activation, exact-source CI and guarded
-   deployment of 908fd4c are complete. Then implement refunds, credits,
-   configured plan changes and durable lifecycle/risk
-   event processing. The implemented scheduled-cancellation operation does not
+1. Complete CORE-04/#41 financial controls: dedicated cancellation setup for the
+   existing Stripe test-mode account is complete, alongside the accepted 908fd4c
+   source activation and deployment. Next implement the bounded owner invoice-
+   refund workflow, then credits, configured plan changes, cap restoration and
+   durable lifecycle/risk event processing. The implemented scheduled-cancellation operation does not
    supply these capabilities; existing reconciliation is an entitlement refresh.
    Preserve the actual target/intent transaction and conservative ambiguity
    recovery in [the financial-operation record](admin-financial-operations-design.md).
