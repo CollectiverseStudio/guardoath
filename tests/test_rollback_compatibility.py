@@ -61,7 +61,7 @@ def test_activated_financial_build_accepts_catalog_release_reader_and_rejects_un
     spec.loader.exec_module(build)
     actual = build.release_metadata(SHA)
     assert actual == release_metadata(SHA)
-    assert actual["supported_state_contracts"] == list(DEPLOYED_READER_SUPPORT)
+    assert actual["supported_state_contracts"] == [*DEPLOYED_READER_SUPPORT, "stripe-invoice-refund-v1"]
     assert actual["introduced_state_contracts"] == list(DEPLOYED_READER_SUPPORT)
     candidate = archive(tmp_path / "activated.zip", actual)
     # Exercise the declared deployed release shape offline. Deployment must
@@ -72,7 +72,7 @@ def test_activated_financial_build_accepts_catalog_release_reader_and_rejects_un
     assert result == {"status": "compatible", "candidate_source_sha": SHA,
                       "rollback_source_sha": DEPLOYED_READER_SHA,
                       "rollback_code_sha256": gate.archive_digest(backup),
-                      "state_contracts": sorted(DEPLOYED_READER_SUPPORT)}
+                      "state_contracts": sorted((*DEPLOYED_READER_SUPPORT, "stripe-invoice-refund-v1"))}
     missing_contracts = [tuple(contract for contract in DEPLOYED_READER_SUPPORT if contract != missing)
                          for missing in DEPLOYED_READER_SUPPORT]
     for index, support in enumerate(((), *missing_contracts)):

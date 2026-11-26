@@ -60,6 +60,7 @@ if phase == "0":
     state_contracts.ENABLE_NEW_CANCELLATION_STATE = False
     state_contracts.ENABLE_NEW_CATALOG_PUBLICATION_STATE = False
     state_contracts.ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE = False
+    state_contracts.ENABLE_NEW_REFUND_STATE = False
 elif not (state_contracts.new_catalog_publication_state_enabled()
           and state_contracts.new_catalog_publication_lifecycle_state_enabled()):
     raise RuntimeError("Catalog acceptance requires activated source defaults")
@@ -70,10 +71,18 @@ if phase == "source" and not (state_contracts.new_subscription_state_enabled()
         and state_contracts.new_cancellation_state_enabled()):
     raise RuntimeError("Financial acceptance requires activated source defaults")
 
+# This isolated fixture can exercise the future refund writer without changing
+# its reader-first source default or existing financial compatibility phases.
+refund_phase = os.environ.get("GUARDOATH_ADMIN_TEST_REFUND_WRITER_PHASE", "source")
+if refund_phase not in ("source", "enabled", "disabled"):
+    raise RuntimeError("Invalid synthetic refund phase")
+if refund_phase != "source":
+    state_contracts.ENABLE_NEW_REFUND_STATE = refund_phase == "enabled"
+
 POOL, CLIENT = "us-east-1_Example", "syntheticownerclient"
 DOMAIN = "operators.auth.us-east-1.amazoncognito.com"
 ORIGIN = os.environ.get("GUARDOATH_ADMIN_TEST_ORIGIN", "http://127.0.0.1:8780")
-if ORIGIN not in ("http://127.0.0.1:8780", "http://127.0.0.1:8781"):
+if ORIGIN not in ("http://127.0.0.1:8780", "http://127.0.0.1:8781", "http://127.0.0.1:8782"):
     raise RuntimeError("Browser acceptance must stay on its isolated loopback origin")
 OWNER = "12345678-1234-1234-1234-123456789012"
 CUSTOMER = "87654321-4321-4321-4321-210987654321"
@@ -264,6 +273,51 @@ cancellation = AdminSubscriptionCancellation(
     provider=StripePeriodEndCancellation(api_key="rk_test_synthetic_cancel_0123456789",
         expected_account_id="acct_owner",expected_price_id="price_starter",expected_livemode=False,
         opener=cancellation_boundary.open))
+
+from admin_refund_support import ProviderBoundary as RefundBoundary, NOW as REFUND_NOW
+from guardoath.admin_invoice_refund import AdminInvoiceRefund
+from guardoath.admin_refund_provider import StripeInvoiceRefund
+from guardoath.admin_refund_state import DynamoRefundState
+
+refund_boundary = RefundBoundary()
+refund_clock = int(time.time())
+def refund_graph(value):
+    if isinstance(value, dict):
+        return {key:refund_graph(item) for key,item in value.items()}
+    if isinstance(value, list):
+        return [refund_graph(item) for item in value]
+    if isinstance(value, str):
+        return {"cus_refund":"cus_alpha", "sub_refund":"sub_alpha", "in_refund":"in_alpha_0",
+            "price_plan":"price_starter"}.get(value, value)
+    if type(value) is int and value == 1299:
+        return 700
+    if type(value) is int and REFUND_NOW - 1000 <= value <= REFUND_NOW:
+        return refund_clock + value - REFUND_NOW
+    return value
+
+for name in ("invoice", "payment_intent", "charge", "refund"):
+    setattr(refund_boundary, name, refund_graph(getattr(refund_boundary, name)))
+
+def refund_evidence(request):
+    if request.get_method() == "POST":
+        refund_boundary.refund["created"] = int(time.time())
+    status_path = path.with_suffix(".refund-status")
+    if status_path.exists():
+        status = status_path.read_text(encoding="utf-8").strip()
+        assert status in ("pending", "requires_action", "succeeded", "failed", "canceled")
+        refund_boundary.status = status
+    with path.with_suffix(".refund-requests.jsonl").open("a", encoding="utf-8") as evidence:
+        evidence.write(json.dumps({"method":request.get_method(), "url":request.full_url,
+            "body":request.data.decode() if request.data else None,
+            "idempotency_key":request.get_header("Idempotency-key")}) + "\n")
+
+refund_boundary.before = refund_evidence
+invoice_history = AdminInvoiceHistory(stripe_invoices, reporter, cursor_key=CURSOR_KEY)
+refunds = AdminInvoiceRefund(state=DynamoRefundState(db, "audit_table", ADMIN_BROWSER_AUDIT_KEY),
+    tenant_table="tenant_table", preview_key=CURSOR_KEY, invoice_references=invoice_history.refund_references,
+    provider=StripeInvoiceRefund(api_key="rk_test_synthetic_refund_0123456789",
+        expected_account_id="acct_owner", expected_price_id="price_starter", expected_livemode=False,
+        opener=refund_boundary.open))
 catalog_drafts = AdminCatalogDrafts(db,"audit_table",ADMIN_BROWSER_AUDIT_KEY)
 catalog_publications = AdminCatalogPublications(
     state=DynamoCatalogPublicationState(db,"audit_table",ADMIN_BROWSER_AUDIT_KEY),
@@ -276,9 +330,10 @@ mount_admin_console(app,sessions=sessions,tenants=tenants,cognito=CognitoBoundar
     catalog_drafts=catalog_drafts,catalog_publications=catalog_publications,require_persistent_read_audit=True,
     billing_reporter=reporter,
     billing_cancellation=cancellation,
+    billing_refunds=refunds,
     billing_configuration={"signed_audit":True, "stripe_read":True,
-        "plan_allowance":True, "cancellation_provider":True},
-    billing_invoices=AdminInvoiceHistory(stripe_invoices, reporter, cursor_key=CURSOR_KEY),
+        "plan_allowance":True, "cancellation_provider":True, "refund_provider":True},
+    billing_invoices=invoice_history,
     billing_downgrade=AdminBillingDowngrade(db,"tenant_table","audit_table",signing_key=ADMIN_BROWSER_AUDIT_KEY,
         reporter=reporter,validate_record=TenantRecord.model_validate),
     billing_reconciler=AdminSubscriptionReconciliation(db,"tenant_table","audit_table",signing_key=ADMIN_BROWSER_AUDIT_KEY,

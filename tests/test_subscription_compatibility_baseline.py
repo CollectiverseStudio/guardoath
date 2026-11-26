@@ -71,12 +71,13 @@ def test_explicit_reader_phase_and_manifest_cannot_be_enabled_by_environment(mon
     assert state_contracts.new_subscription_state_enabled() is False
     manifest = state_contracts.release_metadata("a" * 40)
     assert manifest["supported_state_contracts"] == ["subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1",
-                                                   "catalog-publication-v1", "catalog-publication-lifecycle-v1"]
+                                                   "catalog-publication-v1", "catalog-publication-lifecycle-v1",
+                                                   "stripe-invoice-refund-v1"]
     assert manifest["introduced_state_contracts"] == [
         "catalog-publication-v1", "catalog-publication-lifecycle-v1"]
 
 
-def test_source_default_introduces_all_supported_contracts_despite_environment(monkeypatch):
+def test_source_default_introduces_existing_writer_contracts_despite_environment(monkeypatch):
     for name in ("ENABLE_NEW_SUBSCRIPTION_STATE", "GUARDOATH_ENABLE_NEW_SUBSCRIPTION_STATE",
                  "GUARDOATH_SUBSCRIPTION_WRITER_ENABLED", "GUARDOATH_ADMIN_TEST_WRITER_PHASE"):
         monkeypatch.setenv(name, "0")
@@ -86,9 +87,11 @@ def test_source_default_introduces_all_supported_contracts_despite_environment(m
     assert state_contracts.new_catalog_publication_state_enabled() is True
     assert state_contracts.new_catalog_publication_lifecycle_state_enabled() is True
     manifest = state_contracts.release_metadata("a" * 40)
-    assert manifest["introduced_state_contracts"] == manifest["supported_state_contracts"] == [
+    assert manifest["introduced_state_contracts"] == [
         "subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1",
         "catalog-publication-v1", "catalog-publication-lifecycle-v1"]
+    assert manifest["supported_state_contracts"] == [
+        *manifest["introduced_state_contracts"], "stripe-invoice-refund-v1"]
 
 
 @pytest.mark.parametrize("kind", ["memory", "dynamo"])

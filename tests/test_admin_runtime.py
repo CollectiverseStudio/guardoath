@@ -317,6 +317,7 @@ def test_financial_configuration_reports_validated_prerequisites_without_provide
             "stripe_read": stripe,
             "plan_allowance": allowance is not None,
             "cancellation_provider": cancellation,
+            "refund_provider": False,
         }
         assert (mounted[0]["billing_reconciler"] is not None) is (audit and stripe and allowance is not None)
         assert (mounted[0]["billing_cancellation"] is not None) is audit
@@ -390,7 +391,9 @@ def test_source_default_runtime_reconciles_and_recovers_one_cancellation_without
         configure_admin_from_environment(FastAPI(), tenants=Tenants(store),
             admin_sessions=AdminSessions(), cognito_client=Cognito())
         runtime = mounted[0]
-        assert all(runtime["billing_configuration"].values())
+        assert all(value for key, value in runtime["billing_configuration"].items()
+                   if key != "refund_provider")
+        assert runtime["billing_configuration"]["refund_provider"] is False
         assert not read_requests and not boundary.calls and database.transactions == 0
 
         payload = {"tenant_id": TENANT, "expected_revision": initial.revision,
@@ -443,7 +446,7 @@ def test_source_default_runtime_reconciles_and_recovers_one_cancellation_without
             assert recovery.provider is None and mounted[1]["billing_reconciler"] is None
             assert mounted[1]["billing_configuration"] == {
                 "signed_audit": True, "stripe_read": True,
-                "plan_allowance": False, "cancellation_provider": False}
+                "plan_allowance": False, "cancellation_provider": False, "refund_provider": False}
             assert recovery.receipt(actor=ACTOR, tenant_id=TENANT,
                 idempotency_key=command["idempotency_key"]) == scheduled
             assert DynamoDBTenantStore("tenant_table", reopened).get(TENANT) == saved

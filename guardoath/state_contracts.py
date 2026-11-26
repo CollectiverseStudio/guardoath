@@ -8,7 +8,8 @@ import re
 
 RELEASE_CONTRACT_VERSION = 1
 SUPPORTED_STATE_CONTRACTS = ("subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1",
-                             "catalog-publication-v1", "catalog-publication-lifecycle-v1")
+                             "catalog-publication-v1", "catalog-publication-lifecycle-v1",
+                             "stripe-invoice-refund-v1")
 # This later writer release follows the deployed reader compatibility baseline.
 # Deployment must still verify the actual, digest-bound rollback archive supports
 # every introduced contract. There is deliberately no environment or deployment-
@@ -25,6 +26,10 @@ ENABLE_NEW_CATALOG_PUBLICATION_STATE = True
 # their own signed records. A rollback image must understand this complete
 # lifecycle. Deployment still verifies the digest-bound rollback archive.
 ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE = True
+# The first refund release reads and preserves permanent charge claims and the
+# bounded signed observation chain. Writers require a later source release with
+# an actually deployed compatible reader as its digest-bound rollback baseline.
+ENABLE_NEW_REFUND_STATE = False
 
 
 def new_subscription_state_enabled() -> bool:
@@ -51,6 +56,12 @@ def new_catalog_publication_lifecycle_state_enabled() -> bool:
     return ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE
 
 
+def new_refund_state_enabled() -> bool:
+    if type(ENABLE_NEW_REFUND_STATE) is not bool:
+        raise ValueError("Refund release phase must be source controlled")
+    return ENABLE_NEW_REFUND_STATE
+
+
 def release_metadata(source_sha: str) -> dict:
     if not isinstance(source_sha, str) or not re.fullmatch(r"[a-f0-9]{40}", source_sha):
         raise ValueError("An exact committed source SHA is required")
@@ -63,6 +74,8 @@ def release_metadata(source_sha: str) -> dict:
         introduced.append("catalog-publication-v1")
     if new_catalog_publication_lifecycle_state_enabled():
         introduced.append("catalog-publication-lifecycle-v1")
+    if new_refund_state_enabled():
+        introduced.append("stripe-invoice-refund-v1")
     return {"source_sha":source_sha,"release_contract_version":RELEASE_CONTRACT_VERSION,
             "supported_state_contracts":list(SUPPORTED_STATE_CONTRACTS),
             "introduced_state_contracts":introduced}

@@ -298,9 +298,10 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <p id="billing-configuration-status" role="status">Sign in to read the available owner controls.</p>
 <p id="billing-reconcile-capability"></p><p id="billing-cap-capability"></p>
 <p id="billing-cancellation-capability"></p><p id="billing-history-capability"></p>
+<p id="billing-refund-capability"></p><p id="billing-refund-history-capability"></p>
 <button id="billing-choose-tenant" type="button">Choose a tenant</button>
-<p class="muted">Availability reports server configuration, not a verified customer subscription or payment. Each action requires fresh owner MFA, the saved tenant binding and a signed audit receipt. Refunds, credits and plan changes are unavailable.</p></section>
-<section class="panel"><h2>Verified invoices</h2><p class="muted">Five Stripe invoice summaries per page for an independently verified customer subscription. Each page is a separate provider observation. Amounts are in minor currency units, not a revenue total or forecast.</p><label for="invoice-status-filter">Invoice status</label> <select id="invoice-status-filter" disabled><option value="">All statuses</option><option value="open">Open</option><option value="uncollectible">Uncollectible</option><option value="paid">Paid</option><option value="draft">Draft</option><option value="void">Void</option></select> <button id="invoice-restart" type="button" disabled>Restart invoice history</button> <button id="invoice-next" type="button" disabled>Older invoices</button><p id="invoice-page-status" class="muted"></p><p id="invoice-details" role="status">No invoice history selected.</p></section>
+<p class="muted">Availability reports server configuration, not a verified customer subscription or payment. Each action requires fresh owner MFA, the saved tenant binding and a signed audit receipt. Invoice refunds require their own review and confirmation. Credits and plan changes are unavailable.</p></section>
+<section class="panel"><h2>Verified invoices</h2><p class="muted">Five Stripe invoice summaries per page for an independently verified customer subscription. Each page is a separate provider observation. Amounts are in minor currency units, not a revenue total or forecast.</p><label for="invoice-status-filter">Invoice status</label> <select id="invoice-status-filter" disabled><option value="">All statuses</option><option value="open">Open</option><option value="uncollectible">Uncollectible</option><option value="paid">Paid</option><option value="draft">Draft</option><option value="void">Void</option></select> <button id="invoice-restart" type="button" disabled>Restart invoice history</button> <button id="invoice-next" type="button" disabled>Older invoices</button><p id="invoice-page-status" class="muted"></p><p id="invoice-details" role="status">No invoice history selected.</p><div id="invoice-refund-actions"></div></section>
 <section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Verify Stripe compares provider state with saved entitlement. Reconcile subscription independently reads Stripe again and saves the verified entitlement with an audit receipt. Saved request caps and suspended accounts remain enforced. Reconciliation does not collect a payment or issue a refund.</p><p id="billing-details" role="status">No subscription selected.</p><p id="billing-action-result" role="status"></p><button id="billing-retry" type="button" hidden disabled>Retry same reconciliation</button></section>
 <section class="panel"><h2>Schedule cancellation at period end</h2><p class="muted">Review the exact saved subscription before confirming. Scheduling preserves current tenant access and does not promise that no additional invoice can exist. Refunds and credits are separate operations.</p>
 <p id="cancellation-review" role="status">Choose Review cancellation beside a tenant.</p>
@@ -313,6 +314,16 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <label for="cancellation-receipt-tenant">Tenant ID</label><p><input id="cancellation-receipt-tenant" maxlength="40" autocomplete="off"></p>
 <label for="cancellation-receipt-reference">Action reference from this owner</label><p><input id="cancellation-receipt-reference" maxlength="96" autocomplete="off"></p>
 <button id="cancellation-receipt" type="button" disabled>Inspect cancellation history</button><p id="cancellation-receipt-result" role="status"></p></section>
+<section class="panel"><h2>Refund a paid invoice</h2><p class="muted">Choose Review refund beside a paid invoice. This workflow supports the full payment on one settled, undisputed charge with no previous refund. The server verifies the invoice and exact amount before confirmation. A refund does not cancel the subscription or change tenant access, request caps, usage, keys or rules.</p>
+<p id="refund-review" role="status">Choose Invoices beside a tenant, then Review refund.</p>
+<label for="refund-confirm">Exact confirmation shown in the review</label><p><input id="refund-confirm" maxlength="100" autocomplete="off" disabled></p>
+<label for="refund-reason">Reason (10–240 characters; no personal data)</label><p><input id="refund-reason" maxlength="240" autocomplete="off" disabled></p>
+<button id="refund-submit" type="button" disabled>Refund reviewed full amount</button>
+<label for="refund-reference">Retain this action reference</label><p><input id="refund-reference" readonly autocomplete="off"></p><p id="refund-result" role="status"></p>
+<h3>Refund history and status</h3><p class="muted">Inspect history to recover the saved result. Refresh refund status reads Stripe and records its current result when a retained refund can be identified. Neither action sends another refund; uncertain charges remain held.</p>
+<label for="refund-receipt-tenant">Tenant ID</label><p><input id="refund-receipt-tenant" maxlength="40" autocomplete="off"></p>
+<label for="refund-receipt-reference">Action reference from this owner</label><p><input id="refund-receipt-reference" maxlength="96" autocomplete="off"></p>
+<button id="refund-receipt" type="button" disabled>Inspect refund history</button> <button id="refund-refresh" type="button" disabled>Refresh refund status</button><p id="refund-receipt-result" role="status"></p></section>
 </section><section id="section-usage" data-admin-section class="panel" hidden tabindex="-1" aria-label="Usage"><h2>Usage and costs</h2><p id="usage-details" role="status">Choose Usage beside a tenant to view authoritative request counts. AWS cost and Stripe invoice amounts are unavailable without verified provider data.</p></section>
 <section id="section-audit" data-admin-section class="panel" hidden tabindex="-1" aria-label="Audit"><h2>Audit receipt lookup</h2><p class="muted">Read one stored administrative event by its exact event ID. No exports or audit enumeration.</p><label for="audit-id">Audit event ID</label> <input id="audit-id" maxlength="64" autocomplete="off" spellcheck="false"> <button type="button" id="audit-go">Verify receipt</button><p id="audit-result" role="status"></p></section>
 <section id="section-catalog" data-admin-section class="panel" hidden tabindex="-1" aria-label="Catalog"><h2>Categories and checks</h2><p id="catalog-summary"></p>
@@ -382,6 +393,9 @@ _JS = r'''"use strict";
   let cancellationSelection = 0, cancellationReceiptSelection = 0;
   let cancellationPreview = null, cancellationExpiryTimer = null;
   let activeCancellation = null, pendingCancellation = null;
+  let refundSelection = 0, refundReceiptSelection = 0;
+  let refundPreview = null, refundExpiryTimer = null;
+  let activeRefund = null, pendingRefund = null, activeRefundRefresh = null;
   let previewSelection = null;
   let previewReady = null;
   let draftReadyForReview = null;
@@ -507,6 +521,11 @@ _JS = r'''"use strict";
     clearCancellationReview();
     ++cancellationReceiptSelection;
     pendingCancellation = null;
+    clearRefundReview();
+    ++refundReceiptSelection;
+    pendingRefund = null;
+    for (const id of ["refund-reference", "refund-receipt-tenant", "refund-receipt-reference"]) el(id).value = "";
+    for (const id of ["refund-receipt", "refund-refresh"]) el(id).disabled = true;
     // An old session's HTTP dispatch may still be running. Keep its local
     // single-flight guard until completion; durable target control is primary.
     for (const id of ["cancellation-reference", "cancellation-receipt-tenant", "cancellation-receipt-reference"]) el(id).value = "";
@@ -525,7 +544,7 @@ _JS = r'''"use strict";
     el("user-rows").replaceChildren();
     el("categories").replaceChildren();
     el("catalog-release-entries").replaceChildren();
-    for (const id of ["catalog-release-summary", "status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "user-action-result", "usage-details", "billing-details", "invoice-details", "audit-result", "proposal-result", "draft-result", "review-manifest-result", "cancellation-result", "cancellation-receipt-result", "publication-result", "publication-recovery-result", "publication-next-result", "billing-configuration-status", "billing-reconcile-capability", "billing-cap-capability", "billing-cancellation-capability", "billing-history-capability"]) say(id, "");
+    for (const id of ["catalog-release-summary", "status", "tenant-status", "user-status", "user-inspect-result", "user-change-result", "catalog-summary", "user-action-result", "usage-details", "billing-details", "invoice-details", "audit-result", "proposal-result", "draft-result", "review-manifest-result", "cancellation-result", "cancellation-receipt-result", "refund-result", "refund-receipt-result", "publication-result", "publication-recovery-result", "publication-next-result", "billing-configuration-status", "billing-reconcile-capability", "billing-cap-capability", "billing-cancellation-capability", "billing-history-capability", "billing-refund-capability", "billing-refund-history-capability"]) say(id, "");
     for (const id of ["publication-result-evidence", "publication-recovery-result-evidence"]) el(id).replaceChildren();
     previewSelection = null;
     previewReady = null;
@@ -580,6 +599,11 @@ _JS = r'''"use strict";
     ++cancellationReceiptSelection;
     say("cancellation-receipt-result", "");
     el("cancellation-receipt").disabled = true;
+    clearRefundReview();
+    ++refundReceiptSelection;
+    say("refund-receipt-result", "");
+    el("refund-receipt").disabled = true;
+    el("refund-refresh").disabled = true;
     // A failed core read must not leave yesterday's account or rule metadata
     // looking current. Do not clear activeUserStatus: an independent Cognito
     // mutation may still be in progress and must remain single-flight.
@@ -593,7 +617,7 @@ _JS = r'''"use strict";
     el("next").disabled = true;
     el("user-next").disabled = true;
     features = {tenant_status_changes:false};
-    for (const id of ["billing-reconcile-capability", "billing-cap-capability", "billing-cancellation-capability", "billing-history-capability"]) say(id, "");
+    for (const id of ["billing-reconcile-capability", "billing-cap-capability", "billing-cancellation-capability", "billing-history-capability", "billing-refund-capability", "billing-refund-history-capability"]) say(id, "");
     say("billing-configuration-status", message);
     el("user-change").disabled = true;
     el("user-action-inspect").disabled = true;
@@ -759,6 +783,7 @@ _JS = r'''"use strict";
     showBillingCapabilities();
     updatePublicationControls();
     updateCancellationControls();
+    updateRefundControls();
     catalogInspectionVersion = features.catalog_inspection === true &&
       typeof catalog.registry_version === "string" && /^[1-9][0-9]{0,8}$/.test(catalog.registry_version)
       ? catalog.registry_version : null;
@@ -2147,10 +2172,11 @@ _JS = r'''"use strict";
   function showBillingCapabilities() {
     const config = features.billing_configuration;
     const details = config && typeof config === "object" &&
-      ["signed_audit", "stripe_read", "plan_allowance", "cancellation_provider",
-       "subscription_writer_enabled", "cancellation_writer_enabled"].every(key => typeof config[key] === "boolean");
+      ["signed_audit", "stripe_read", "plan_allowance", "cancellation_provider", "refund_provider",
+       "subscription_writer_enabled", "cancellation_writer_enabled", "refund_writer_enabled"].every(key => typeof config[key] === "boolean");
     const labels = {signed_audit:"signed audit setup", stripe_read:"Stripe read setup",
-      plan_allowance:"a configured request allowance", cancellation_provider:"the account-bound cancellation provider"};
+      plan_allowance:"a configured request allowance", cancellation_provider:"the account-bound cancellation provider",
+      refund_provider:"the dedicated account-bound refund provider"};
     const unavailable = (gate, prerequisites) => {
       if (config && config[gate] === false) return "Unavailable in this release.";
       if (!details) return "Unavailable; configuration details could not be verified.";
@@ -2175,6 +2201,15 @@ _JS = r'''"use strict";
         (features.billing_cancellation_preview === true ? " Provider review remains available without scheduling." : "")));
     say("billing-history-capability", "Cancellation history · " + (features.billing_cancellation_receipts === true ?
       "Available. Inspect the retained action reference below; recovery never resends a provider action." :
+      "Unavailable. Signed history requires the independent audit store."));
+    say("billing-refund-capability", "Invoice refunds · " +
+      (features.billing_refund_submit === true && features.billing_refund_preview === true ?
+        "Available after a fresh invoice review and exact amount confirmation. Choose Invoices beside a tenant, then Review refund." :
+        unavailable("refund_writer_enabled", ["signed_audit", "stripe_read", "refund_provider"]) +
+        (features.billing_refund_preview === true ? " Invoice review remains available without submission." : "")));
+    say("billing-refund-history-capability", "Refund history · " + (features.billing_refund_receipts === true ?
+      "Available. Inspect the retained action reference below." +
+        (features.billing_refund_refresh === true ? " Explicit status refresh reads Stripe without sending another refund." : "") :
       "Unavailable. Signed history requires the independent audit store."));
   }
 
@@ -2371,6 +2406,229 @@ _JS = r'''"use strict";
         say("cancellation-receipt-result", "Signed cancellation history unavailable or unverified. Retain the reference; no action was retried.");
     } finally { updateCancellationControls(); }
   }
+  const refundContract = "stripe-invoice-refund-v1";
+  function validRefundAmount(value) {
+    return value && Number.isSafeInteger(value.amount_minor) && value.amount_minor > 0 &&
+      value.amount_minor <= 1000000000000 && typeof value.currency === "string" &&
+      /^[a-z]{3}$/.test(value.currency) && Number.isInteger(value.currency_exponent) &&
+      value.currency_exponent >= 0 && value.currency_exponent <= 3;
+  }
+  function refundAmount(value) {
+    if (!validRefundAmount(value)) throw new Error("Refund amount is unverified");
+    const digits = String(value.amount_minor).padStart(value.currency_exponent + 1, "0");
+    const whole = value.currency_exponent ? digits.slice(0,-value.currency_exponent) : digits;
+    const decimal = value.currency_exponent ? "." + digits.slice(-value.currency_exponent) : "";
+    return value.currency.toUpperCase() + " " + whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + decimal +
+      " (" + value.amount_minor + " minor units)";
+  }
+  function updateRefundControls() {
+    const busy = !!activeRefund || !!activeRefundRefresh;
+    const ready = token && refundPreview && !busy && !pendingRefund &&
+      features.billing_refund_submit === true && refundPreview.refund_available === true &&
+      Date.now() < cancellationUtc(refundPreview.expires_at_utc);
+    el("refund-confirm").disabled = !ready;
+    el("refund-reason").disabled = !ready;
+    el("refund-submit").disabled = !(ready &&
+      el("refund-confirm").value === refundPreview.confirmation &&
+      /^[A-Za-z0-9][A-Za-z0-9 .,;:_()/#-]{9,239}$/.test(el("refund-reason").value));
+    el("refund-receipt").disabled = !token || features.billing_refund_receipts !== true || busy;
+    el("refund-refresh").disabled = !token || features.billing_refund_refresh !== true || busy;
+    for (const button of el("invoice-refund-actions").querySelectorAll("button"))
+      button.disabled = !token || busy || !!pendingRefund || features.billing_refund_preview !== true;
+  }
+  function clearRefundReview() {
+    ++refundSelection;
+    refundPreview = null;
+    if (refundExpiryTimer !== null) clearTimeout(refundExpiryTimer);
+    refundExpiryTimer = null;
+    el("refund-confirm").value = "";
+    el("refund-reason").value = "";
+    for (const id of ["refund-confirm","refund-reason","refund-submit"]) el(id).disabled = true;
+    say("refund-review", "Choose Invoices beside a tenant, then Review refund.");
+  }
+  async function reviewRefund(tenant, invoice) {
+    if (!token || features.billing_refund_preview !== true) return;
+    showSection("billing", true);
+    if (activeRefund || activeRefundRefresh || pendingRefund) {
+      say("refund-result", "Retain the previous action reference and inspect its signed history before another refund.");
+      return;
+    }
+    clearRefundReview();
+    clearCancellationReview();
+    const epoch = authEpoch, selection = refundSelection;
+    say("refund-review", "Reviewing the selected paid invoice for " + tenant.tenant_id + "...");
+    say("refund-result", "");
+    try {
+      const response = await request("/v1/admin/subscriptions/" + encodeURIComponent(tenant.tenant_id) + "/refund/preview", {
+        method:"POST", body:JSON.stringify({expected_revision:tenant.revision, invoice_reference:invoice.invoice_reference})});
+      if (!token || epoch !== authEpoch || selection !== refundSelection) return;
+      const value = response?.refund, observed = cancellationUtc(value?.observed_at_utc),
+        expires = cancellationUtc(value?.expires_at_utc);
+      if (!value || value.status !== "reviewed" || value.operation !== refundContract ||
+          value.tenant_id !== tenant.tenant_id || value.expected_revision !== tenant.revision ||
+          !Number.isSafeInteger(value.expected_revision) || value.expected_revision < 1 ||
+          !validRefundAmount(value) || value.amount_minor !== invoice.amount_paid_minor || value.currency !== invoice.currency ||
+          observed === null || expires === null || observed >= expires || expires > observed + 180000 ||
+          expires <= Date.now() || observed > Date.now() + 30000 || !cancellationHash(value.target_fingerprint) ||
+          !cancellationHash(value.invoice_fingerprint) || typeof value.livemode !== "boolean" ||
+          typeof value.preview_reference !== "string" || !/^rf1\.[A-Za-z0-9_-]{40,4092}$/.test(value.preview_reference) ||
+          value.confirmation !== "REFUND " + tenant.tenant_id + " " + value.amount_minor + " " + value.currency.toUpperCase() + " MINOR UNITS" ||
+          typeof value.refund_available !== "boolean" || value.tenant_mutated !== false)
+        throw new Error("Invoice refund review is unverified");
+      refundPreview = {...value};
+      say("refund-review", tenant.tenant_id + " · Invoice UTC " + invoice.created_utc +
+        " · " + (value.livemode ? "Live mode" : "Test mode") +
+        " · Full refund " + refundAmount(value) + " · Reviewed UTC " + value.observed_at_utc +
+        " · Review expires UTC " + value.expires_at_utc + " · Type exactly: " + value.confirmation +
+        (value.refund_available && features.billing_refund_submit === true ? "" :
+          " · Refund submission is unavailable in this release; the review makes no payment change.") + readAuditLabel(response));
+      refundExpiryTimer = setTimeout(() => {
+        if (token && epoch === authEpoch && selection === refundSelection) {
+          clearRefundReview();
+          say("refund-review", "Refund review expired. Select the invoice again for a fresh review.");
+        }
+      }, Math.max(0, expires - Date.now()));
+      updateRefundControls();
+    } catch (_err) {
+      if (token && epoch === authEpoch && selection === refundSelection) {
+        clearRefundReview();
+        say("refund-review", "This invoice is unavailable, changed or not eligible for this full-refund workflow. No refund was submitted.");
+      }
+    }
+  }
+  function refundReceipt(value, tenantId, reference, expected = null, refreshed = false) {
+    if (!value || value.operation !== refundContract || value.tenant_id !== tenantId ||
+        value.action_reference !== reference || value.tenant_mutated !== false ||
+        typeof value.provider_state_refreshed !== "boolean" || (!refreshed && value.provider_state_refreshed !== false) ||
+        !["not_found","indeterminate","pending","verified","failed"].includes(value.status))
+      throw new Error("Refund history is unverified");
+    const intent = value.intent, outcome = value.outcome;
+    if (value.status === "not_found") {
+      if (intent !== null || outcome !== null || value.integrity_status !== "not_found" || value.provider_state_refreshed !== false)
+        throw new Error("Refund history is unverified");
+      return value;
+    }
+    if (value.integrity_status !== "signed_verified" || !intent || intent.tenant_id !== tenantId ||
+        ![intent.action_id,intent.intent_hash,intent.target_fingerprint,intent.invoice_fingerprint].every(cancellationHash) ||
+        typeof intent.actor_sub !== "string" || !/^[A-Za-z0-9_-]{12,128}$/.test(intent.actor_sub) ||
+        !Number.isSafeInteger(intent.expected_revision) || intent.expected_revision < 1 ||
+        !Number.isSafeInteger(intent.generation) || intent.generation < 1 || intent.generation > 1000000000 ||
+        typeof intent.reason !== "string" || !/^[A-Za-z0-9][A-Za-z0-9 .,;:_()/#-]{9,239}$/.test(intent.reason) ||
+        cancellationUtc(intent.created_at_utc) === null || !validRefundAmount(intent) ||
+        typeof intent.livemode !== "boolean" || intent.before !== 0 || intent.after !== intent.amount_minor ||
+        (expected && (intent.expected_revision !== expected.expected_revision || intent.reason !== expected.reason ||
+          intent.amount_minor !== expected.amount_minor || intent.currency !== expected.currency ||
+          intent.currency_exponent !== expected.currency_exponent || intent.target_fingerprint !== expected.target_fingerprint ||
+          intent.invoice_fingerprint !== expected.invoice_fingerprint || intent.livemode !== expected.livemode)))
+      throw new Error("Refund intent is unverified");
+    const providerStatuses = {verified:["succeeded"],pending:["pending","requires_action"],failed:["failed","canceled"],indeterminate:[null]};
+    if (outcome !== null && (!outcome || outcome.action_id !== intent.action_id || outcome.intent_hash !== intent.intent_hash ||
+        outcome.status !== value.status || !providerStatuses[value.status].includes(outcome.provider_status) ||
+        cancellationUtc(outcome.recorded_at_utc) === null || cancellationUtc(outcome.recorded_at_utc) < cancellationUtc(intent.created_at_utc)))
+      throw new Error("Refund outcome is unverified");
+    if (value.status !== "indeterminate" && outcome === null) throw new Error("Refund outcome is missing");
+    return value;
+  }
+  function refundMessage(value) {
+    if (value.status === "not_found") return "No signed refund intent found. This does not establish Stripe's current state.";
+    const detail = value.tenant_id + " · " + (value.intent.livemode ? "Live mode" : "Test mode") +
+      " · Full amount " + refundAmount(value.intent) +
+      " · Action " + value.action_reference + " · Intent " + value.intent.action_id;
+    const recorded = value.outcome ? " · Recorded UTC " + value.outcome.recorded_at_utc : "";
+    if (value.status === "verified") return "Verified refund · Stripe confirmed success at the recorded time · " +
+      detail + recorded + ". Subscription, tenant access, request caps, keys, rules and usage were preserved.";
+    if (value.status === "pending") return "Refund pending at Stripe · " + detail + recorded +
+      ". Retain the reference and explicitly refresh its status. No refund will be resubmitted.";
+    if (value.status === "failed") return "Stripe reported that the refund failed or was canceled · " + detail + recorded +
+      ". The charge remains held for review; no replacement refund is sent by this workflow.";
+    return "Refund outcome indeterminate · " + detail +
+      ". The charge remains held. Inspect history or explicitly refresh status; no automatic retry.";
+  }
+  async function submitRefund() {
+    updateRefundControls();
+    if (el("refund-submit").disabled) return;
+    const preview = {...refundPreview}, epoch = authEpoch, selection = refundSelection;
+    const reference = crypto.randomUUID().replaceAll("-", "");
+    const pending = {tenant_id:preview.tenant_id, reference, epoch, selection,
+      expected:{expected_revision:preview.expected_revision, reason:el("refund-reason").value,
+        amount_minor:preview.amount_minor, currency:preview.currency, currency_exponent:preview.currency_exponent,
+        target_fingerprint:preview.target_fingerprint, invoice_fingerprint:preview.invoice_fingerprint,
+        livemode:preview.livemode}};
+    const payload = {expected_revision:preview.expected_revision, preview_reference:preview.preview_reference,
+      confirmation:el("refund-confirm").value, reason:pending.expected.reason, idempotency_key:reference};
+    activeRefund = pending;
+    pendingRefund = pending;
+    if (refundExpiryTimer !== null) clearTimeout(refundExpiryTimer);
+    refundExpiryTimer = null;
+    ++refundReceiptSelection;
+    say("refund-receipt-result", "");
+    el("refund-reference").value = reference;
+    el("refund-receipt-tenant").value = pending.tenant_id;
+    el("refund-receipt-reference").value = reference;
+    say("refund-result", "Submitting the reviewed refund once · " + refundAmount(preview) +
+      " · Retain action " + reference + " for " + pending.tenant_id + ".");
+    updateRefundControls();
+    try {
+      const response = await request("/v1/admin/subscriptions/" + encodeURIComponent(pending.tenant_id) + "/refund", {
+        method:"POST",body:JSON.stringify(payload)});
+      if (!token || epoch !== authEpoch || selection !== refundSelection) return;
+      const initial = refundReceipt(response?.refund, pending.tenant_id, reference, pending.expected);
+      const recovered = await request("/v1/admin/subscriptions/" + encodeURIComponent(pending.tenant_id) + "/refund/receipt", {
+        method:"POST",body:JSON.stringify({idempotency_key:reference})});
+      if (!token || epoch !== authEpoch || selection !== refundSelection) return;
+      const verified = refundReceipt(recovered?.refund, pending.tenant_id, reference, pending.expected);
+      const progress = {not_found:["not_found"],indeterminate:["indeterminate","pending","verified","failed"],
+        pending:["pending","verified","failed"],verified:["verified"],failed:["failed"]};
+      if (!progress[initial.status].includes(verified.status) || verified.intent?.action_id !== initial.intent?.action_id ||
+          verified.intent?.intent_hash !== initial.intent?.intent_hash)
+        throw new Error("Refund history changed");
+      if (["verified","failed"].includes(verified.status)) pendingRefund = null;
+      say("refund-result", refundMessage(verified) + readAuditLabel(recovered));
+      clearRefundReview();
+      say("refund-review", "Review consumed. Another invoice requires a fresh provider review.");
+    } catch (_err) {
+      if (token && epoch === authEpoch && selection === refundSelection) {
+        clearRefundReview();
+        say("refund-result", "Refund outcome unverified. Retain action " + reference + " for " + pending.tenant_id +
+          " and inspect signed history. The refund will not be sent again.");
+      }
+    } finally {
+      if (activeRefund === pending) activeRefund = null;
+      updateRefundControls();
+    }
+  }
+  async function inspectRefundHistory(refresh = false) {
+    if (!token || features.billing_refund_receipts !== true || activeRefund || activeRefundRefresh ||
+        (refresh && features.billing_refund_refresh !== true)) return;
+    const tenantId = el("refund-receipt-tenant").value, reference = el("refund-receipt-reference").value;
+    if (!/^[a-z][a-z0-9-]{1,39}$/.test(tenantId) || !/^[A-Za-z0-9_-]{16,96}$/.test(reference)) {
+      say("refund-receipt-result", "Enter the exact tenant ID and retained action reference."); return;
+    }
+    const epoch = authEpoch, selection = ++refundReceiptSelection;
+    const attempt = {epoch,selection};
+    if (refresh) activeRefundRefresh = attempt;
+    say("refund-receipt-result", refresh ? "Reading Stripe's refund status; no refund will be resubmitted..." :
+      "Reading signed refund history...");
+    updateRefundControls();
+    try {
+      const response = await request("/v1/admin/subscriptions/" + encodeURIComponent(tenantId) +
+        (refresh ? "/refund/refresh" : "/refund/receipt"), {
+        method:"POST",body:JSON.stringify({idempotency_key:reference})});
+      if (!token || epoch !== authEpoch || selection !== refundReceiptSelection) return;
+      const pending = pendingRefund && pendingRefund.tenant_id === tenantId && pendingRefund.reference === reference ? pendingRefund : null;
+      const value = refundReceipt(response?.refund, tenantId, reference, pending?.expected, refresh);
+      say("refund-receipt-result", (value.status === "not_found" ? "" :
+        value.provider_state_refreshed ? "Provider status refreshed · " : "Recovered signed history · ") +
+        refundMessage(value) + readAuditLabel(response));
+      if (["verified","failed"].includes(value.status) && pending) pendingRefund = null;
+    } catch (_err) {
+      if (token && epoch === authEpoch && selection === refundReceiptSelection)
+        say("refund-receipt-result", "Refund history or status unavailable or unverified. Retain the reference; no refund was resubmitted.");
+    } finally {
+      if (activeRefundRefresh === attempt) activeRefundRefresh = null;
+      updateRefundControls();
+    }
+  }
   async function verifyBilling(tenant) {
     if (!token || !features.billing_verify) return;
     const epoch = authEpoch;
@@ -2434,6 +2692,7 @@ _JS = r'''"use strict";
     }}
   }
   function clearInvoiceBrowser() {
+    clearRefundReview();
     invoiceTenant = null; invoiceCursor = null; invoicePage = 0; invoiceFilter = null;
     invoicePending = false;
     el("invoice-status-filter").value = "";
@@ -2442,6 +2701,7 @@ _JS = r'''"use strict";
     el("invoice-restart").disabled = true;
     say("invoice-page-status", "");
     say("invoice-details", "No invoice history selected.");
+    el("invoice-refund-actions").replaceChildren();
   }
   async function inspectInvoices(tenant, {cursor = null, status = null, pageNumber = 1} = {}) {
     if (!token || !features.billing_invoices) return;
@@ -2451,8 +2711,10 @@ _JS = r'''"use strict";
     }
     const epoch = authEpoch;
     clearCancellationReview();
+    clearRefundReview();
+    el("invoice-refund-actions").replaceChildren();
     const selection = ++billingSelection;
-    invoiceTenant = {tenant_id:tenant.tenant_id};
+    invoiceTenant = {tenant_id:tenant.tenant_id,revision:tenant.revision};
     invoiceCursor = null; invoicePage = 0; invoiceFilter = status; invoicePending = true;
     el("invoice-status-filter").value = status || "";
     el("invoice-status-filter").disabled = true;
@@ -2471,6 +2733,11 @@ _JS = r'''"use strict";
       if (!token || epoch !== authEpoch || selection !== billingSelection) return;
       requireTenantSource(result?.tenant_id, tenant.tenant_id);
       const history = result.history || {};
+      if (features.billing_refund_preview === true &&
+          (!Number.isSafeInteger(history.expected_revision) || history.expected_revision < 1))
+        throw new Error("Invoice revision unavailable");
+      if (Number.isSafeInteger(history.expected_revision) && history.expected_revision >= 1)
+        invoiceTenant.revision = history.expected_revision;
       if (history.page_number !== pageNumber || history.status_filter !== status ||
           !(history.next_cursor === null || (typeof history.next_cursor === "string" &&
             /^ic1\.[A-Za-z0-9_-]{40,2044}$/.test(history.next_cursor) && history.next_cursor !== cursor)))
@@ -2567,8 +2834,32 @@ _JS = r'''"use strict";
         reviewLabel +
         " · Direct Stripe, not revenue or overdue determination · UTC " + (history.read_at_utc || "unknown") +
         readAuditLabel(result));
+      if (features.billing_refund_preview === true) {
+        const actions = document.createElement("ul");
+        for (const row of history.invoices) {
+          if (row.invoice_reference === null || row.invoice_reference === undefined) continue;
+          if (row.status !== "paid" || row.amount_paid_minor <= 0 || row.amount_remaining_minor !== 0 ||
+              cancellationUtc(row.created_utc) === null ||
+              typeof row.invoice_reference !== "string" || !/^ir1\.[A-Za-z0-9_-]{40,4092}$/.test(row.invoice_reference))
+            throw new Error("Invoice refund selection is unverified");
+          const item = document.createElement("li"), button = document.createElement("button");
+          const selected = {...invoiceTenant}, selectedInvoice = {...row};
+          item.append(textNode("span", row.created_utc + " · " + row.currency.toUpperCase() + " " +
+            row.amount_paid_minor + " minor units paid · "));
+          button.type = "button";
+          button.textContent = "Review refund";
+          button.setAttribute("aria-label", "Review refund for invoice " + row.created_utc + " " +
+            row.currency.toUpperCase() + " " + row.amount_paid_minor + " minor units");
+          button.addEventListener("click", () => reviewRefund(selected, selectedInvoice));
+          item.append(button);
+          actions.append(item);
+        }
+        el("invoice-refund-actions").replaceChildren(actions);
+        updateRefundControls();
+      }
     } catch (err) {
       if (token && epoch === authEpoch && selection === billingSelection) {
+        el("invoice-refund-actions").replaceChildren();
         invoiceCursor = null;
         say("invoice-page-status", err.status === 400
           ? "Invoice page expired or selection changed. Restart invoice history."
@@ -3229,6 +3520,15 @@ _JS = r'''"use strict";
   el("cancellation-reason").addEventListener("input", updateCancellationControls);
   el("cancellation-schedule").addEventListener("click", scheduleCancellation);
   el("cancellation-receipt").addEventListener("click", inspectCancellationHistory);
+  el("refund-confirm").addEventListener("input", updateRefundControls);
+  el("refund-reason").addEventListener("input", updateRefundControls);
+  el("refund-submit").addEventListener("click", submitRefund);
+  el("refund-receipt").addEventListener("click", () => inspectRefundHistory(false));
+  el("refund-refresh").addEventListener("click", () => inspectRefundHistory(true));
+  for (const id of ["refund-receipt-tenant","refund-receipt-reference"]) el(id).addEventListener("input", () => {
+    ++refundReceiptSelection;
+    say("refund-receipt-result", "");
+  });
   el("billing-choose-tenant").addEventListener("click", () => showSection("tenants", true));
   for (const id of ["cancellation-receipt-tenant","cancellation-receipt-reference"]) el(id).addEventListener("input", () => {
     ++cancellationReceiptSelection; say("cancellation-receipt-result", "");

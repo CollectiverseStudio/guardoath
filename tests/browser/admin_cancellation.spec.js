@@ -276,8 +276,8 @@ for (const scenario of [
 ]) {
   test("financial controls explain "+scenario.name+" without claiming provider verification",async ({page})=>{
     const fixture=await setup(page,{features:{...scenario.features,billing_configuration:{
-      signed_audit:true,stripe_read:true,plan_allowance:true,cancellation_provider:true,
-      subscription_writer_enabled:true,cancellation_writer_enabled:true,...scenario.configuration}}});
+      signed_audit:true,stripe_read:true,plan_allowance:true,cancellation_provider:true,refund_provider:false,
+      subscription_writer_enabled:true,cancellation_writer_enabled:true,refund_writer_enabled:false,...scenario.configuration}}});
     await page.locator("#nav-billing").click();
     await expect(page.locator("#billing-configuration-status")).toContainText("Review a tenant to verify its provider state");
     await expect(page.locator(scenario.target)).toContainText(scenario.message);
@@ -291,7 +291,8 @@ for (const scenario of [
 
 test("capability details are withdrawn after a failed authenticated refresh",async ({page})=>{
   const fixture=await setup(page,{features:{billing_configuration:{signed_audit:true,stripe_read:true,
-    plan_allowance:true,cancellation_provider:true,subscription_writer_enabled:true,cancellation_writer_enabled:true}}});
+    plan_allowance:true,cancellation_provider:true,refund_provider:false,subscription_writer_enabled:true,
+    cancellation_writer_enabled:true,refund_writer_enabled:false}}});
   await page.locator("#nav-billing").click();
   await expect(page.locator("#billing-cancellation-capability")).toContainText("Available");
   const resolve=fixture.override;

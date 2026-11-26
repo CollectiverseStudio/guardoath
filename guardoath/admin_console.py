@@ -23,6 +23,8 @@ from guardoath.admin_subscription_reconcile import (
 from guardoath.admin_invoices import AdminInvoiceHistory, InvalidInvoiceCursor, InvoiceReadRateLimited
 from guardoath.admin_subscription_cancellation import (
     AdminSubscriptionCancellation, CancellationConflict, CancellationUnavailable, CancellationRateLimited)
+from guardoath.admin_invoice_refund import (
+    AdminInvoiceRefund, RefundConflict, RefundUnavailable, RefundRateLimited)
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from guardoath.admin_catalog import CatalogProvider, read_catalog
 from guardoath.admin_catalog_inspection import (
@@ -119,6 +121,21 @@ class CancellationRequest(CancellationPreviewRequest):
 class CancellationReceiptRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     idempotency_key: str = Field(pattern=r"^[A-Za-z0-9_-]{16,96}$", max_length=96)
+
+
+class RefundPreviewRequest(CancellationPreviewRequest):
+    invoice_reference: str = Field(min_length=44, max_length=4096, pattern=r"^ir1\.[A-Za-z0-9_-]+$")
+
+
+class RefundRequest(CancellationPreviewRequest):
+    preview_reference: str = Field(min_length=44, max_length=4096, pattern=r"^rf1\.[A-Za-z0-9_-]+$")
+    confirmation: str = Field(min_length=20, max_length=100)
+    reason: str = Field(min_length=10, max_length=240)
+    idempotency_key: str = Field(pattern=r"^[A-Za-z0-9_-]{16,96}$", max_length=96)
+
+
+class RefundReceiptRequest(CancellationReceiptRequest):
+    pass
 
 
 class CatalogRuleDescriptionPreview(BaseModel):
@@ -306,6 +323,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                         billing_reconciler: AdminSubscriptionReconciliation | None = None,
                         billing_invoices: AdminInvoiceHistory | None = None,
                         billing_cancellation: AdminSubscriptionCancellation | None = None,
+                        billing_refunds: AdminInvoiceRefund | None = None,
                         billing_configuration: dict[str, bool] | None = None,
                         catalog_drafts: AdminCatalogDrafts | None = None,
                         catalog_publications: AdminCatalogPublications | None = None,
@@ -318,10 +336,11 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
     """
     if type(require_persistent_read_audit) is not bool:
         raise ValueError("Persistent audit enforcement must be an explicit boolean")
-    from guardoath.state_contracts import new_subscription_state_enabled, new_cancellation_state_enabled
+    from guardoath.state_contracts import (
+        new_subscription_state_enabled, new_cancellation_state_enabled, new_refund_state_enabled)
     if billing_configuration is not None and (
             not isinstance(billing_configuration, dict)
-            or set(billing_configuration) != {"signed_audit", "stripe_read", "plan_allowance", "cancellation_provider"}
+            or set(billing_configuration) != {"signed_audit", "stripe_read", "plan_allowance", "cancellation_provider", "refund_provider"}
             or any(type(value) is not bool for value in billing_configuration.values())):
         raise ValueError("Billing configuration must contain only explicit prerequisite booleans")
     # This reports setup only. Actual mounted services remain the authority for
@@ -341,6 +360,13 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             or read_auditor.ddb is not billing_cancellation.state.client
             or read_auditor.audit_table != billing_cancellation.state.table_name):
         raise ValueError("Cancellation requires its bound persistent read auditor")
+    if billing_refunds is not None and (
+            not isinstance(billing_refunds, AdminInvoiceRefund)
+            or not isinstance(read_auditor, AdminSensitiveReadAuditor)
+            or read_auditor.ddb is not billing_refunds.state.client
+            or read_auditor.audit_table != billing_refunds.state.table_name
+            or not hmac.compare_digest(read_auditor.signing_key, billing_refunds.state.audit_key)):
+        raise ValueError("Refunds require their bound persistent read auditor")
     if catalog_publications is not None and (
             not isinstance(catalog_publications, AdminCatalogPublications)
             or not isinstance(read_auditor, AdminSensitiveReadAuditor)
@@ -442,9 +468,14 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            "billing_cancellation_preview": billing_cancellation is not None and billing_cancellation.provider is not None,
                            "billing_cancellation_schedule": billing_cancellation is not None and billing_cancellation.provider is not None and new_cancellation_state_enabled(),
                            "billing_cancellation_receipts": billing_cancellation is not None,
+                           "billing_refund_preview": billing_refunds is not None and billing_refunds.provider is not None,
+                           "billing_refund_submit": billing_refunds is not None and billing_refunds.provider is not None and new_refund_state_enabled(),
+                           "billing_refund_receipts": billing_refunds is not None,
+                           "billing_refund_refresh": billing_refunds is not None and billing_refunds.provider is not None and new_refund_state_enabled(),
                            "billing_configuration": {**billing_configuration,
                                "subscription_writer_enabled": new_subscription_state_enabled(),
-                               "cancellation_writer_enabled": new_cancellation_state_enabled()},
+                               "cancellation_writer_enabled": new_cancellation_state_enabled(),
+                               "refund_writer_enabled": new_refund_state_enabled()},
                            "tenant_rule_changes": admin_mutator is not None and callable(record_validator) and callable(rule_exists),
                            "monthly_cost_caps": admin_mutator is not None and callable(record_validator),
                            "tenant_key_revocation": admin_mutator is not None and callable(record_validator),
@@ -795,6 +826,59 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                                       principal: VerifiedAdmin = Depends(require_admin)):
                 return cancellation_call(tenant_id, principal, request, billing_cancellation.apply,
                                          **payload.model_dump())
+
+    if billing_refunds is not None:
+        def refund_call(tenant_id, principal, request, operation, **payload):
+            _require_admin_origin(request)
+            if not TENANT_ID.fullmatch(tenant_id):
+                raise HTTPException(status_code=404, detail="Tenant not found")
+            resource = "audit.receipt" if operation == billing_refunds.receipt else "stripe.invoices"
+            read_event = audit_sensitive_read(principal, resource, tenant_id)
+            try:
+                if operation in (billing_refunds.apply, billing_refunds.refresh):
+                    context = request.scope.get("aws.context")
+                    budget = 8.0
+                    if context is not None:
+                        remaining = context.get_remaining_time_in_millis()
+                        if type(remaining) is not int or remaining <= 0:
+                            raise RefundUnavailable()
+                        budget = min(8.0, remaining / 1000 - 1)
+                    payload["execution_budget_seconds"] = budget
+                result = operation(actor=principal.subject, tenant_id=tenant_id, **payload)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail="Invalid refund request") from exc
+            except RefundConflict as exc:
+                raise HTTPException(status_code=409, detail="Refund review or target changed; inspect the retained action reference") from exc
+            except RefundRateLimited as exc:
+                raise HTTPException(status_code=429, detail="Refund inspections temporarily limited") from exc
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="Refund not verified; retain the action reference and inspect signed history") from exc
+            return admin_json({"refund": result, "read_audit_event_id": read_event})
+
+        @router.post("/v1/admin/subscriptions/{tenant_id}/refund/preview")
+        def preview_refund(tenant_id: str, payload: RefundPreviewRequest, request: Request,
+                           principal: VerifiedAdmin = Depends(require_admin)):
+            return refund_call(tenant_id, principal, request, billing_refunds.preview,
+                               **payload.model_dump())
+
+        @router.post("/v1/admin/subscriptions/{tenant_id}/refund/receipt")
+        def refund_receipt(tenant_id: str, payload: RefundReceiptRequest, request: Request,
+                           principal: VerifiedAdmin = Depends(require_admin)):
+            return refund_call(tenant_id, principal, request, billing_refunds.receipt,
+                               **payload.model_dump())
+
+        if new_refund_state_enabled() and billing_refunds.provider is not None:
+            @router.post("/v1/admin/subscriptions/{tenant_id}/refund")
+            def submit_refund(tenant_id: str, payload: RefundRequest, request: Request,
+                              principal: VerifiedAdmin = Depends(require_admin)):
+                return refund_call(tenant_id, principal, request, billing_refunds.apply,
+                                   **payload.model_dump())
+
+            @router.post("/v1/admin/subscriptions/{tenant_id}/refund/refresh")
+            def refresh_refund(tenant_id: str, payload: RefundReceiptRequest, request: Request,
+                               principal: VerifiedAdmin = Depends(require_admin)):
+                return refund_call(tenant_id, principal, request, billing_refunds.refresh,
+                                   **payload.model_dump())
 
     if billing_reconciler is not None:
         @router.post("/v1/admin/subscriptions/{tenant_id}/reconcile")

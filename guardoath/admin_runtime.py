@@ -136,6 +136,7 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
     billing_reporter = None
     billing_invoices = None
     cancellation_provider = None
+    refund_provider = None
     # The owner capability report describes validated server prerequisites,
     # independently of whether this source is allowed to introduce new state.
     # Configuration is never a claim that Stripe has verified a subscription.
@@ -188,6 +189,32 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
             state=DynamoCancellationState(tenants.store._client, audit_table, audit_signing_key),
             tenant_table=tenants.store.table_name, preview_key=bytes.fromhex(key_hex),
             provider=cancellation_provider)
+    refund_key = os.getenv("GUARDOATH_ADMIN_STRIPE_REFUND_KEY", "")
+    refund_account = os.getenv("GUARDOATH_ADMIN_STRIPE_REFUND_ACCOUNT_ID", "")
+    if refund_key or refund_account:
+        if (not refund_key or not refund_account or billing_reporter is None
+                or billing_invoices is None or not audit_table):
+            raise AdminConfigurationError("Refunds require explicit account, credential, Stripe plan and signed audit configuration")
+        if refund_key == secret or (cancellation_key and refund_key == cancellation_key):
+            raise AdminConfigurationError("Refunds require a dedicated credential")
+        from guardoath.admin_refund_provider import StripeInvoiceRefund
+        try:
+            refund_provider = StripeInvoiceRefund(api_key=refund_key,
+                expected_account_id=refund_account, expected_price_id=price,
+                expected_livemode=secret.startswith("sk_live_"))
+        except ValueError as exc:
+            raise AdminConfigurationError("Refund credential/account configuration unavailable") from exc
+    billing_refunds = None
+    if audit_table:
+        from guardoath.admin_refund_state import DynamoRefundState
+        from guardoath.admin_invoice_refund import AdminInvoiceRefund
+        # Signed historical readers survive removal of the provider credential
+        # and remain available in a source-disabled compatible rollback image.
+        billing_refunds = AdminInvoiceRefund(
+            state=DynamoRefundState(tenants.store._client, audit_table, audit_signing_key),
+            tenant_table=tenants.store.table_name, preview_key=bytes.fromhex(key_hex),
+            invoice_references=billing_invoices.refund_references if billing_invoices else None,
+            provider=refund_provider)
     record_validator = rule_exists = None
     if mutator is not None:
         from guardoath.tenant_record import TenantRecord
@@ -229,11 +256,13 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
                         billing_reconciler=billing_reconciler,
                         billing_invoices=billing_invoices,
                         billing_cancellation=billing_cancellation,
+                        billing_refunds=billing_refunds,
                         billing_configuration={
                             "signed_audit": read_auditor is not None,
                             "stripe_read": billing_reporter is not None,
                             "plan_allowance": plan_allowance is not None,
                             "cancellation_provider": cancellation_provider is not None,
+                            "refund_provider": refund_provider is not None,
                         },
                         record_validator=record_validator,rule_exists=rule_exists)
     return True

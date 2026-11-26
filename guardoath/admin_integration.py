@@ -8,6 +8,7 @@ accounts, tables, sessions, users, or payment entitlements.
 from __future__ import annotations
 
 from fastapi import FastAPI
+from starlette.routing import Mount
 
 from guardoath.admin_catalog import published_catalog
 from guardoath.catalog_metadata import load_release_history
@@ -23,22 +24,31 @@ class AdminConfigurationError(ValueError):
     """Refuse to mount admin endpoints with incomplete production safeguards."""
 
 
-def _all_route_paths(routes):
+def _all_route_paths(routes, prefix=""):
     """Handle FastAPI/Starlette versions that expose included router wrappers.
 
     Routing may be represented as APIRoute objects or nested _IncludedRouter
     objects. Inspect both so duplicate registration cannot be hidden by an
-    implementation-specific route wrapper.
+    implementation-specific route wrapper. Included-router context prefixes
+    and ASGI mount prefixes contribute to the actual request path.
     """
     for route in routes:
+        original_router = getattr(route, "original_router", None)
+        include_prefix = getattr(getattr(route, "include_context", None), "prefix", None)
+        if original_router is not None and isinstance(include_prefix, str):
+            # New FastAPI versions retain included routers instead of copying
+            # their routes. Each context prefix is relative to its parent.
+            yield from _all_route_paths(original_router.routes, prefix + include_prefix)
+            continue
         path = getattr(route, "path", None)
         if isinstance(path, str):
-            yield path
+            yield prefix + path
         children = getattr(route, "routes", None)
         if children is None:
             children = getattr(getattr(route, "router", None), "routes", ())
         if children:
-            yield from _all_route_paths(children)
+            child_prefix = prefix + path if isinstance(route, Mount) else prefix
+            yield from _all_route_paths(children, child_prefix)
 
 
 def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
@@ -52,6 +62,7 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
                         require_persistent_read_audit: bool = False,
                         billing_reporter=None, billing_downgrade=None, billing_reconciler=None, billing_invoices=None,
                         billing_cancellation=None,
+                        billing_refunds=None,
                         billing_configuration=None,
                         record_validator=None, rule_exists=None) -> None:
     """Register the guarded read-only admin routes on an existing GuardOath app.
@@ -120,6 +131,11 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
             getattr(billing_cancellation, "tenant_table", None) != store.table_name
             or getattr(getattr(billing_cancellation, "state", None), "client", None) is not store._client):
         raise AdminConfigurationError("Cancellation must use the authoritative tenant store")
+    if billing_refunds is not None and (
+            getattr(billing_refunds, "tenant_table", None) != store.table_name
+            or getattr(getattr(billing_refunds, "state", None), "client", None) is not store._client
+            or getattr(getattr(billing_refunds, "state", None), "table_name", None) == store.table_name):
+        raise AdminConfigurationError("Refunds must use the authoritative tenant store and independent audit state")
     if catalog_publications is not None and (
             getattr(getattr(catalog_publications, "state", None), "client", None) is not store._client
             or getattr(getattr(catalog_publications, "state", None), "table_name", None) == store.table_name
@@ -145,6 +161,7 @@ def mount_admin_console(app: FastAPI, *, sessions, tenants, cognito,
         billing_reconciler=billing_reconciler,
         billing_invoices=billing_invoices,
         billing_cancellation=billing_cancellation,
+        billing_refunds=billing_refunds,
         billing_configuration=billing_configuration,
         record_validator=record_validator,
         rule_exists=rule_exists,

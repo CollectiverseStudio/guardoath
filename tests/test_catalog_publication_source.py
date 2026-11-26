@@ -144,7 +144,7 @@ def test_all_writer_contracts_are_independently_declared(monkeypatch, caps, canc
     declaration = manifest()
     assert declaration["supported_state_contracts"] == [
         "subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1",
-        "catalog-publication-v1", "catalog-publication-lifecycle-v1"]
+        "catalog-publication-v1", "catalog-publication-lifecycle-v1", "stripe-invoice-refund-v1"]
     assert declaration["introduced_state_contracts"] == [contract for enabled, contract in (
         (caps, "subscription-cap-provenance-v1"),
         (cancellation, "stripe-period-end-cancellation-v1"),

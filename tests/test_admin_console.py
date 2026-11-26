@@ -112,7 +112,7 @@ def test_no_admin_write_routes():
 def test_financial_configuration_reports_prerequisites_without_granting_routes():
     from guardoath import state_contracts
     configuration = {"signed_audit": True, "stripe_read": True,
-        "plan_allowance": True, "cancellation_provider": True}
+        "plan_allowance": True, "cancellation_provider": True, "refund_provider": True}
     app = FastAPI()
     app.include_router(create_admin_router(verify_cognito_admin=verified,
         billing_configuration=configuration))
@@ -125,21 +125,26 @@ def test_financial_configuration_reports_prerequisites_without_granting_routes()
     assert response.status_code == 200 and response.headers["cache-control"] == "no-store"
     features = response.json()
     assert features["billing_configuration"] == {"signed_audit": True, "stripe_read": True,
-        "plan_allowance": True, "cancellation_provider": True,
+        "plan_allowance": True, "cancellation_provider": True, "refund_provider": True,
         "subscription_writer_enabled": state_contracts.new_subscription_state_enabled(),
-        "cancellation_writer_enabled": state_contracts.new_cancellation_state_enabled()}
+        "cancellation_writer_enabled": state_contracts.new_cancellation_state_enabled(),
+        "refund_writer_enabled": state_contracts.new_refund_state_enabled()}
     assert features["billing_reconcile"] is features["billing_cancellation_schedule"] is False
     assert features["billing_cancellation_preview"] is features["billing_cancellation_receipts"] is False
-    for operation in ("reconcile", "cancel-at-period-end", "cancellation/preview", "cancellation/receipt"):
+    assert features["billing_refund_preview"] is features["billing_refund_submit"] is False
+    assert features["billing_refund_receipts"] is features["billing_refund_refresh"] is False
+    for operation in ("reconcile", "cancel-at-period-end", "cancellation/preview", "cancellation/receipt",
+                      "refund/preview", "refund", "refund/receipt", "refund/refresh"):
         assert c.post("/v1/admin/subscriptions/alpha/" + operation,
             headers={**auth(), "Origin": "https://guardoath.com"}, json={}).status_code == 404
 
 
 @pytest.mark.parametrize("configuration", [True, {},
-    {"signed_audit": "true", "stripe_read": True, "plan_allowance": True, "cancellation_provider": True},
-    {"signed_audit": True, "stripe_read": 1, "plan_allowance": True, "cancellation_provider": True},
+    {"signed_audit": "true", "stripe_read": True, "plan_allowance": True, "cancellation_provider": True, "refund_provider": True},
+    {"signed_audit": True, "stripe_read": 1, "plan_allowance": True, "cancellation_provider": True, "refund_provider": True},
+    {"signed_audit": True, "stripe_read": True, "plan_allowance": True, "cancellation_provider": True, "refund_provider": "true"},
     {"signed_audit": True, "stripe_read": True, "plan_allowance": True,
-     "cancellation_provider": True, "api_key": "must-not-be-exposed"}])
+     "cancellation_provider": True, "refund_provider": True, "api_key": "must-not-be-exposed"}])
 def test_financial_configuration_accepts_only_fixed_nonsecret_boolean_fields(configuration):
     with pytest.raises(ValueError, match="explicit prerequisite booleans"):
         create_admin_router(verify_cognito_admin=verified, billing_configuration=configuration)

@@ -1,7 +1,7 @@
 """Production-shaped adapter tests: no fake admin mode or full-table scans."""
 from dataclasses import dataclass
 from time import time
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.testclient import TestClient
 import pytest
 
@@ -11,7 +11,9 @@ def all_routes(routes):
             yield route
         nested = getattr(route, "routes", None)
         if nested is None:
-            nested = getattr(getattr(route, "router", None), "routes", ())
+            nested = getattr(getattr(route, "router", None), "routes", None)
+        if nested is None:
+            nested = getattr(getattr(route, "original_router", None), "routes", ())
         if nested:
             yield from all_routes(nested)
 
@@ -124,11 +126,15 @@ def test_weak_cursor_secret_and_double_mount_rejected():
     mount_admin_console(app,**params)
     with pytest.raises(AdminConfigurationError): mount_admin_console(app,**params)
 
-def test_no_admin_write_routes_are_registered():
+def test_default_mount_registers_only_the_two_protected_post_reads():
     app=FastAPI()
     mount_admin_console(app,sessions=Sessions(),tenants=Tenants(Store()),cognito=Cognito(),cursor_signing_key=KEY)
-    assert all("POST" not in route.methods and "PUT" not in route.methods and "DELETE" not in route.methods
-               for route in all_routes(app.routes) if route.path.startswith("/v1/admin") or route.path=="/admin")
+    non_get = {(route.path, method) for route in all_routes(app.routes)
+               if route.path.startswith("/v1/admin") or route.path == "/admin"
+               for method in route.methods - {"GET", "HEAD", "OPTIONS"}}
+    assert non_get == {("/v1/admin/users/lookup", "POST"), ("/v1/admin/catalog/preview", "POST")}
+    client = TestClient(app)
+    assert all(client.post(path, json={}).status_code == 401 for path, _ in non_get)
 
 
 def test_browser_mount_refuses_client_mismatch_before_registering_routes():
@@ -197,6 +203,71 @@ def test_existing_admin_namespace_cannot_shadow_guarded_routes(reserved_path):
                             cognito=Cognito(), cursor_signing_key=KEY)
     assert tuple(all_routes(app.routes)) == before
     assert not getattr(app.state, "guardoath_admin_mounted", False)
+
+
+@pytest.mark.parametrize("leaf_prefix,leaf_path,include_prefixes,reserved_path", [
+    ("", "/v1/admin/refund", (), "/v1/admin/refund"),
+    ("/v1/admin", "/refund", (), "/v1/admin/refund"),
+    ("/admin", "/refund", ("/v1",), "/v1/admin/refund"),
+    ("", "/refund", ("/admin", "/v1"), "/v1/admin/refund"),
+    ("", "/login", ("/admin",), "/admin/login"),
+])
+def test_included_anonymous_router_refuses_guarded_mount_with_composed_prefix(
+        leaf_prefix, leaf_path, include_prefixes, reserved_path):
+    router = APIRouter(prefix=leaf_prefix)
+    router.add_api_route(leaf_path, lambda: {"unprotected": True}, methods=["GET"])
+    for prefix in include_prefixes:
+        parent = APIRouter()
+        parent.include_router(router, prefix=prefix)
+        router = parent
+    app = FastAPI()
+    app.include_router(router)
+    client = TestClient(app)
+    assert client.get(reserved_path).json() == {"unprotected": True}
+    before = tuple(app.routes)
+    store = Store()
+    with pytest.raises(AdminConfigurationError, match="administration route"):
+        mount_admin_console(app, sessions=Sessions(), tenants=Tenants(store),
+                            cognito=Cognito(), cursor_signing_key=KEY)
+    assert tuple(app.routes) == before
+    assert not getattr(app.state, "guardoath_admin_mounted", False)
+    assert not store._client.calls
+    assert client.get("/v1/admin/features").status_code == 404
+
+
+def test_asgi_mount_and_included_router_prefixes_reserve_the_effective_namespace():
+    child = FastAPI()
+    router = APIRouter()
+    router.add_api_route("/refund", lambda: {"unprotected": True}, methods=["GET"])
+    child.include_router(router, prefix="/admin")
+    app = FastAPI()
+    app.mount("/v1", child)
+    assert TestClient(app).get("/v1/admin/refund").json() == {"unprotected": True}
+    before = tuple(app.routes)
+    with pytest.raises(AdminConfigurationError, match="administration route"):
+        mount_admin_console(app, sessions=Sessions(), tenants=Tenants(Store()),
+                            cognito=Cognito(), cursor_signing_key=KEY)
+    assert tuple(app.routes) == before
+    assert not getattr(app.state, "guardoath_admin_mounted", False)
+
+
+@pytest.mark.parametrize("composition", ["include", "mount"])
+def test_nonreserved_effective_prefix_does_not_reserve_an_unrelated_namespace(composition):
+    router = APIRouter()
+    router.add_api_route("/v1/admin/refund", lambda: {"public": True}, methods=["GET"])
+    app = FastAPI()
+    if composition == "include":
+        app.include_router(router, prefix="/public")
+    else:
+        child = FastAPI()
+        child.include_router(router)
+        app.mount("/public", child)
+    mount_admin_console(app, sessions=Sessions(), tenants=Tenants(Store()),
+                        cognito=Cognito(), cursor_signing_key=KEY)
+    client = TestClient(app)
+    assert client.get("/public/v1/admin/refund").json() == {"public": True}
+    assert client.get("/v1/admin/tenants").status_code == 401
+    assert getattr(app.state, "guardoath_admin_mounted", False)
 
 
 def test_native_mfa_challenge_client_must_match_independent_admin_token_client():

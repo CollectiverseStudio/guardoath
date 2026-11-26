@@ -17,7 +17,7 @@ offline acceptance are not evidence of AWS deployment or live financial data.
 | User management | Bounded masked directory/exact lookup; confirmed Cognito enable/disable with signed intent and independently verified outcome, recoverable ambiguity | Live provider acceptance; no owner role grants or self-disable |
 | Tenant management | Existing tenant store, suspend/reactivate, key revocation, stage-specific rule actions, downward request caps, revision checks and signed atomic audit | Deployed customer safeguards and source parity |
 | Subscriptions | Provider inspection, cap-preserving full owner reconciliation and protective delinquency downgrade; source enables provenance creation with explicit trusted plan configuration | Live Stripe acceptance, cap restoration and provider plan changes remain open |
-| Billing and costs | Bounded invoice history, usage/allowance history, request-cap signals and confirmed period-end cancellation with signed recovery; cancellation requires dedicated server credentials/account binding | Refunds/credits, verified infrastructure cost/revenue allocation and lifecycle/risk-event processing remain open |
+| Billing and costs | Bounded invoice history, usage/allowance history, request-cap signals and confirmed period-end cancellation; full paid-invoice refund review/history and a separately gated submission/recovery implementation | Refund reader deployment, later writer activation and customer financial acceptance; credits, infrastructure cost/revenue allocation and lifecycle/risk-event processing remain open |
 | Catalog | Shared registry, signed description drafts/reviews, reversible metadata source plans and an enabled publication/CI/deployment/history workflow | An operator must run a requested release; live publication and general behavior/schema authoring remain open |
 
 `GUARDOATH_ADMIN_AUDIT_TABLE` is required in production for protected reads and
@@ -117,6 +117,135 @@ subsequent workspace refresh does not erase that verified outcome.
 The UI's **Request cap** is measured in validation requests. The legacy API
 feature name `monthly_cost_caps` does not mean dollars, AWS cost or provider spend.
 
+### Full paid-invoice refunds: source reader baseline
+
+The owner Billing workspace implements refund review, full-amount submission,
+signed history and explicit provider refresh. Current source sets
+`ENABLE_NEW_REFUND_STATE=False`: submission and provider-refresh routes are
+unmounted, with refusal also enforced by the state writer and provider adapter.
+Review requires explicit refund provider configuration; history remains available
+with the signed audit store. This source implementation is not evidence of
+deployment, activation, a configured refund key or customer financial acceptance.
+It does not complete CORE-04.
+
+The supported target is an existing non-demo tenant's paid subscription creation
+or renewal invoice, collected automatically, with one nonprorated configured
+recurring-price line at quantity one and one settled, undisputed charge. The
+server independently checks the invoice, PaymentIntent, charge and refund list.
+The full paid amount must match throughout. Previous refunds, including pending
+or failed attempts, customer-credit funding, credit notes, out-of-band payments,
+manual collection, multiple/ambiguous payments and Connect transfers/fees are
+excluded. There is no partial-amount entry or credit operation. Refunding an
+invoice preserves the subscription, tenant access, request caps, cap provenance,
+usage, keys and rules; cancellation is a separate control.
+
+**Owner workflow**
+
+1. Choose **Invoices** beside the tenant, then **Review refund** beside a paid
+   invoice. The selection is an opaque reference valid for 15 minutes; it grants
+   no refund permission. The server derives the exact account, mode, customer,
+   invoice, charge, amount and currency. An unsupported or changed payment is
+   refused before submission.
+2. Review the tenant, invoice date, test/live mode, full amount, integer minor
+   units and UTC expiry. The separate refund review lasts 180 seconds. When a
+   writer release and all prerequisites are available, enter the exact displayed
+   `REFUND <tenant_id> <amount_minor> <CURRENCY> MINOR UNITS` confirmation and a
+   10–240 character reason, then choose **Refund reviewed full amount**. The
+   reason is retained in signed history and is not sent to Stripe. The browser
+   cannot select another amount or send provider IDs or arbitrary Stripe fields.
+3. Retain the tenant ID and action reference shown before submission. The
+   service reserves a permanent charge claim and sends at most one refund POST
+   after fresh provider inspection and an acknowledged exact-tenant transaction.
+   The browser reopens signed history before reporting the recorded result.
+   Signing out or changing selection cannot cancel a server operation.
+4. For recovery, sign in as the original owner and enter that tenant ID and
+   reference under **Refund history and status**. **Inspect refund history**
+   reads stored signed evidence without contacting Stripe. In a writer release,
+   **Refresh refund status** explicitly reads Stripe for an unresolved retained
+   action and may append a signed observation. It uses only Stripe GET requests;
+   there is no polling or repeat refund POST.
+
+The API operations are preview, submit, receipt and refresh under
+`/v1/admin/subscriptions/{tenant_id}/refund`; the
+[financial operations design](admin-financial-operations-design.md#review-submission-and-recovery-routes)
+records their exact routes and boundaries. Each uses verified owner/MFA,
+same-origin admission and signed protected-read auditing. Financial provider
+identifiers remain private; the UI shows references and fingerprints.
+
+| Result | Meaning and next step |
+| --- | --- |
+| Verified | Stripe reported `succeeded` and an independent charge read confirmed the entire amount refunded. Signed history records that observation time. |
+| Pending | Stripe reported `pending` or `requires_action`. Retain the reference; use an explicit status refresh when available. |
+| Failed | Stripe reported `failed` or `canceled`. The permanent charge claim remains; this workflow sends no replacement refund. |
+| Indeterminate | The action has no authoritative final result. Retain the reference and inspect history or explicitly refresh; the held claim never expires automatically. |
+| Not found | No signed intent was found for this owner/reference. This does not establish Stripe's current state or authorize a refund retry. |
+
+Lost-response recovery requires one exact action-metadata match in a bounded
+charge-filtered refund list, followed by independent refund and charge reads.
+Missing, multiple or conflicting results cannot become verified success. A new
+action reference, owner or credential rotation cannot bypass the charge claim.
+No claim-release or automatic repair endpoint exists. Verified and failed
+terminal records return their signed history without another provider read.
+
+Historical receipts survive ordinary tenant revision changes, plan-price changes
+and removal of the refund provider, provided the signed audit store and original
+signing key remain available. Explicit refresh also accepts the original signed
+price after a plan change while requiring the same configured account/mode and
+exact payment binding. New review and submission still require the current plan
+price. Provider refresh requires a configured credential and the writer phase;
+receipt lookup requires neither.
+
+Amounts are bounded to 99,999,999 integer minor units and use this explicit
+display map. Other currencies refuse review; a currency's display exponent is
+never guessed.
+
+| Fractional digits for Stripe charge/refund units | Supported currencies |
+| --- | --- |
+| 0 | JPY, KRW |
+| 2 | AED, ARS, AUD, BRL, CAD, CHF, COP, CZK, DKK, EUR, GBP, HKD, HUF, IDR, ILS, INR, ISK, MXN, MYR, NOK, NZD, PHP, PLN, RON, RUB, SEK, SGD, THB, TWD, UGX, USD, ZAR |
+
+HUF, TWD, ISK and UGX use Stripe's charge/refund units. The exact integer remains
+visible beside the formatted amount. See [Stripe currency rules](https://docs.stripe.com/currencies#special-cases).
+
+**Dedicated refund configuration**
+
+Configure the server-only pair `GUARDOATH_ADMIN_STRIPE_REFUND_KEY` and
+`GUARDOATH_ADMIN_STRIPE_REFUND_ACCOUNT_ID` through the existing secure environment
+mechanism. Runtime also requires the existing Stripe reader, configured price
+and matching mode, and the independent signed audit store. A partial pair fails
+initialization. The refund key must differ from the reader key and from
+`GUARDOATH_ADMIN_STRIPE_WRITE_KEY`, which remains the separate cancellation key
+with its existing permissions. There is no fallback to either credential and no
+key is returned to the browser. Remove both refund variables when withdrawing
+refund provider access; keep the audit store/signing key for receipt recovery.
+
+Use a separate Stripe Dashboard restricted key with these minimum permissions:
+
+| Resource | Permission |
+| --- | --- |
+| Accounts | Read |
+| Invoices | Read |
+| Payment Intents | Read |
+| Charges and Refunds | Write |
+| All other resources and all Connect permissions | None |
+
+Stripe's combined **Charges and Refunds** Write permission includes reading and
+also permits charge mutations. It is not a provider-level refund-only key; the
+GuardOath adapter restricts its own writes to the exact full-refund endpoint and
+pins `2025-02-24.acacia`. Sources:
+[permission groups](https://docs.stripe.com/stripe-apps/reference/permissions),
+[restricted-key permissions](https://docs.stripe.com/keys/restricted-api-keys).
+
+Deploying the compatible reader is a separate step from enabling refund writes.
+A later source release may set `ENABLE_NEW_REFUND_STATE=True` only with an
+actually deployed refund-compatible reader as its verified rollback baseline.
+No environment variable bypasses this phase. Existing cancellation, subscription
+and catalog writer settings do not activate refunds. The existing eight-second
+coordination budget and trusted Lambda remaining-time checks limit admission;
+blocking calls or termination can still leave a permanent indeterminate claim.
+Source implementation and synthetic acceptance do not establish a deployed
+reader, enabled writer or accepted customer financial operation.
+
 ### Persistent-state rollback compatibility
 
 Non-null cap/plan provenance cannot be read by older application images that
@@ -127,8 +256,12 @@ zero, are always preserved.
 Lambda builds declare supported and introduced persistent-state contracts
 in their generated source manifest. This source supports and introduces
 `subscription-cap-provenance-v1`, `stripe-period-end-cancellation-v1`,
-`catalog-publication-v1` and `catalog-publication-lifecycle-v1`. The deployed
-762e7b6 reader supports all four. Before any Lambda update,
+`catalog-publication-v1` and `catalog-publication-lifecycle-v1`. It additionally
+supports `stripe-invoice-refund-v1` without introducing it while the refund
+source flag is false. The earlier deployed 762e7b6 reader supports the four
+existing contracts; that is not evidence of refund compatibility. A later
+refund writer needs the separately deployed refund reader baseline. Before any
+Lambda update,
 `Deploy-Verified.ps1` verifies the downloaded rollback archive against the
 actual deployed `CodeSha256`, checks the candidate's exact source SHA, requires
 the rollback image to support every introduced contract, and refuses loss of
@@ -179,9 +312,10 @@ the existing **Suspend** control. Bound zero caps and existing explicit zero cap
 remain supported. Historical unbound zero records cannot reveal whether an old
 operator cap existed; this source does not claim to reconstruct that history.
 
-The compatible reader is already deployed as 762e7b6. This separate activation
-source enables new state and full owner reconciliation. The actual downloaded
-archive must be the digest-verified compatible backup before the update, and the
+For the existing subscription/cancellation activation, the compatible reader
+was already deployed as 762e7b6. That activation enables the corresponding new
+state and full owner reconciliation independently of the refund phase. The
+actual downloaded archive must be the digest-verified compatible backup before the update, and the
 same gate rejects a legacy rollback. Do not fabricate a manifest, strip saved
 provenance, use the candidate as its own rollback or bypass the gate. Offline
 fixtures do not establish the identity of the production backup.

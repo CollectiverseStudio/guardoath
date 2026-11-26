@@ -5,6 +5,72 @@ record for a new chat. The append-only engineering history remains in
 [director-agent-coordination.md](director-agent-coordination.md); the complete
 47-target product discussion is preserved in [product-roadmap.md](product-roadmap.md).
 
+## Current implementation: bounded owner invoice refunds
+
+The next CORE-04/#41 slice implements reviewed full refunds of eligible paid
+subscription creation/renewal invoices with exactly one settled, fully captured,
+undisputed and previously unrefunded charge. The owner selects an opaque invoice
+reference, reviews the server-derived full amount, currency and test/live mode,
+then enters the exact confirmation and a reason. Fresh owner MFA, same origin,
+authoritative tenant revision/document and signed read audit remain required.
+Refunds preserve every tenant entitlement, cap, key, policy and usage field.
+
+The new `stripe-invoice-refund-v1` contract stores a signed intent and permanent
+per-charge claim before a single provider POST. An acknowledged dispatch
+transaction is required; replays and lost acknowledgements cannot recreate that
+authority. Independent provider reads establish the result. Pending, failed,
+verified and indeterminate receipts remain distinct. Explicit status refresh
+performs GETs only and can append a bounded signed observation; historical
+inspection has no provider I/O. Recovery survives provider credential removal,
+tenant revision changes and a newly configured plan price, while retaining the
+original account/mode and financial bindings.
+
+**This source is the refund reader compatibility baseline.** It supports all
+five contracts but `ENABLE_NEW_REFUND_STATE=False` means only the existing four
+are introduced. Deploy this accepted reader with the current 908fd4c archive as
+the actual backup, then publish and accept a separate source-controlled writer
+activation. That later deployment must preserve this actual compatible reader
+archive. No environment variable overrides the source gate.
+
+The independent refund provider requires `GUARDOATH_ADMIN_STRIPE_REFUND_KEY` and
+`GUARDOATH_ADMIN_STRIPE_REFUND_ACCOUNT_ID`, matching the existing reader's mode
+and configured plan. Its dedicated restricted-key scopes are Accounts Read,
+Invoices Read, Payment Intents Read, and Charges and Refunds Write; all other
+and connected-account permissions remain None. Stripe's combined charge/refund
+scope is broader than the application's sole refund mutation endpoint. The
+existing cancellation key must not be broadened or reused. A separate explicit
+credential-creation approval is still required after implementation and release.
+
+Focused service acceptance passed 40 cases, including competing owners, exact
+request replay, transaction acknowledgement loss, pending and lost-response
+recovery, provider proof rejection, disabled-writer signed reopen and historical
+price/revision changes. Invoice references and bounded currency display passed
+29 cases; the strict provider boundary passed 199. Durable state/refund
+compatibility passed 117 new cases and 139 affected existing contract cases.
+The UI/API/mounted regression group passed 236 cases, including four fresh
+mounted-app processes. Counts are separate groups, with overlap, not a summed
+full-suite claim. The 27 mocked-browser cases and one real-mounted Chrome journey
+are prepared for CI; 25 additional runtime cases passed, covering dedicated
+credential admission, lazy construction, actual service/store/auditor binding and
+fresh credential-free signed-history recovery. The local Chromium wrapper has no installed executable, so
+no local browser pass is claimed. All provider activity was synthetic.
+
+The new runtime acceptance exposed a real FastAPI 0.162.0 route-wrapper issue
+in the existing admin duplicate-namespace guard. The guard now follows
+`original_router` and `include_context.prefix`, preserving nested router and
+Starlette mount prefixes. Eight real reachability/refusal regressions were added;
+the complete 27-case integration group passed on Python 3.13 and 3.12. Its
+previously vacuous default-route check now allows exactly the two existing
+protected POST reads and refuses other write verbs/paths.
+
+Partial refunds, multiple-payment invoices, proration, credits/credit notes,
+Connect transfers, provider plan changes, cap restoration and durable general
+lifecycle/risk processing remain outside this slice. The full currency scope and
+operator recovery steps are in the financial design and operator guides. No
+customer refund, new resource, credential creation or production deployment is
+claimed by this implementation entry; record exact-source CI and deployment
+evidence here when those release steps finish.
+
 ## Current production: owner financial controls release deployed
 
 **Deployed source: `908fd4cbfd56b4e7b10724a0f332d027fffcc9a5`.** The accepted
@@ -958,8 +1024,9 @@ one. No AWS resource or paid provider was purchased or provisioned.
 
 1. Complete CORE-04/#41 financial controls: dedicated cancellation setup for the
    existing Stripe test-mode account is complete, alongside the accepted 908fd4c
-   source activation and deployment. Next implement the bounded owner invoice-
-   refund workflow, then credits, configured plan changes, cap restoration and
+   source activation and deployment. The bounded owner invoice-refund workflow
+   is implemented above; finish its reader/writer releases and separately approved
+   dedicated provider configuration, then credits, configured plan changes, cap restoration and
    durable lifecycle/risk event processing. The implemented scheduled-cancellation operation does not
    supply these capabilities; existing reconciliation is an entitlement refresh.
    Preserve the actual target/intent transaction and conservative ambiguity

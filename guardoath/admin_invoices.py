@@ -21,6 +21,7 @@ import urllib.request
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
+from guardoath.admin_audit import SUBJECT
 from guardoath.admin_billing import AdminSubscriptionReporter, BillingUnavailable
 from guardoath.subscription_reconciliation import StripeBinding
 
@@ -30,6 +31,8 @@ STATUSES = frozenset({"draft", "open", "paid", "uncollectible", "void"})
 PAGE_SIZE = 5
 CURSOR_TTL = 900
 _CURSOR_PURPOSE = b"guardoath-owner-invoice-cursor-v1"
+_REFUND_REFERENCE_PURPOSE = b"guardoath-owner-invoice-refund-reference-v1"
+MAX_REVISION = (1 << 53) - 1
 
 
 class InvalidInvoiceCursor(ValueError):
@@ -42,6 +45,80 @@ class InvoiceHistoryUnavailable(ValueError):
 
 class InvoiceReadRateLimited(InvoiceHistoryUnavailable):
     pass
+
+
+class InvalidInvoiceReference(ValueError):
+    """An invoice selection is expired or belongs to another saved authority."""
+
+
+class InvoiceRefundReferences:
+    """Opaque invoice selections, never a refund permission or amount source."""
+
+    TTL = 900
+
+    def __init__(self, key: bytes, *, expected_price_id: str, expected_livemode: bool):
+        if (not isinstance(key, bytes) or len(key) < 32
+                or not isinstance(expected_price_id, str)
+                or not re.fullmatch(r"price_[A-Za-z0-9_]{1,96}", expected_price_id)
+                or type(expected_livemode) is not bool):
+            raise ValueError("Independent invoice reference configuration required")
+        self.expected_price_id, self.expected_livemode = expected_price_id, expected_livemode
+        self._cipher = AESGCM(hmac.new(key, _REFUND_REFERENCE_PURPOSE, hashlib.sha256).digest())
+
+    def _context(self, record, actor: str) -> bytes:
+        values = [getattr(record, name, None) for name in
+                  ("tenant_id", "payer_id", "stripe_subscription_id", "revision")]
+        billing_mode = getattr(record, "billing_mode", None)
+        billing_mode = getattr(billing_mode, "value", billing_mode)
+        if (not isinstance(actor, str) or not SUBJECT.fullmatch(actor)
+                or not isinstance(values[0], str)
+                or not re.fullmatch(r"[a-z][a-z0-9-]{1,39}", values[0])
+                or not isinstance(values[1], str)
+                or not re.fullmatch(r"cus_[A-Za-z0-9_]{1,96}", values[1])
+                or not isinstance(values[2], str)
+                or not re.fullmatch(r"sub_[A-Za-z0-9_]{1,96}", values[2])
+                or type(values[3]) is not int or not 1 <= values[3] <= MAX_REVISION
+                or getattr(record, "demo", None) is not False or billing_mode != "stripe"):
+            raise InvalidInvoiceReference("Invoice selection authority unavailable")
+        return _REFUND_REFERENCE_PURPOSE + json.dumps(
+            [actor, *values, self.expected_price_id, self.expected_livemode],
+            ensure_ascii=True, separators=(",", ":")).encode("ascii")
+
+    def seal(self, record, *, actor: str, invoice_id: str, now: int) -> str:
+        context = self._context(record, actor)
+        if (not isinstance(invoice_id, str) or not INVOICE.fullmatch(invoice_id)
+                or type(now) is not int or not 946684800 <= now <= 4102444800 - self.TTL):
+            raise InvalidInvoiceReference("Invalid invoice selection")
+        payload = json.dumps({"v": 1, "invoice_id": invoice_id, "issued": now,
+                              "expires": now + self.TTL},
+                             sort_keys=True, separators=(",", ":")).encode("ascii")
+        nonce = secrets.token_bytes(12)
+        return "ir1." + base64.urlsafe_b64encode(
+            nonce + self._cipher.encrypt(nonce, payload, context)).decode("ascii").rstrip("=")
+
+    def open(self, token: str, record, *, actor: str, now: int) -> str:
+        try:
+            context = self._context(record, actor)
+            if (not isinstance(token, str) or not re.fullmatch(r"ir1\.[A-Za-z0-9_-]{40,2044}", token)
+                    or type(now) is not int or not 946684800 <= now <= 4102444800):
+                raise ValueError()
+            encoded = token[4:]
+            raw = base64.b64decode(encoded + "=" * (-len(encoded) % 4), altchars=b"-_", validate=True)
+            if base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=") != encoded:
+                raise ValueError()
+            from guardoath.stripe_provider import _strict_provider_json
+            payload = _strict_provider_json(self._cipher.decrypt(raw[:12], raw[12:], context))
+            if (set(payload) != {"v", "invoice_id", "issued", "expires"}
+                    or type(payload["v"]) is not int or payload["v"] != 1
+                    or not isinstance(payload["invoice_id"], str)
+                    or not INVOICE.fullmatch(payload["invoice_id"])
+                    or type(payload["issued"]) is not int or type(payload["expires"]) is not int
+                    or not 946684800 <= payload["issued"] <= now < payload["expires"] <= 4102444800
+                    or payload["expires"] != payload["issued"] + self.TTL):
+                raise ValueError()
+            return payload["invoice_id"]
+        except Exception:
+            raise InvalidInvoiceReference("Invalid or expired invoice selection") from None
 
 
 def _unique_provider_keys(pairs):
@@ -127,6 +204,9 @@ class AdminInvoiceHistory:
             raise ValueError("Independent subscription reporter required")
         self.fetch, self.reporter = fetch, reporter
         self._cipher = AESGCM(hmac.new(cursor_key, _CURSOR_PURPOSE, hashlib.sha256).digest())
+        self.refund_references = InvoiceRefundReferences(cursor_key,
+            expected_price_id=reporter.expected_price_id,
+            expected_livemode=reporter.expected_livemode)
         self.clock = clock
         self._read_lock = Lock()
         self._read_times: dict[str, deque] = {}
@@ -212,6 +292,9 @@ class AdminInvoiceHistory:
              status: str | None = None) -> dict:
         # Read and verify one immutable saved binding for the entire request.
         record = copy.deepcopy(record)
+        revision = getattr(record, "revision", None)
+        if type(revision) is not int or not 1 <= revision <= MAX_REVISION:
+            revision = None
         now = self._now()
         context = self._context(record, owner_sub, status)
         continuation = self._open_cursor(cursor, context, now) if cursor is not None else None
@@ -226,6 +309,7 @@ class AdminInvoiceHistory:
             if continuation is not None:
                 raise InvalidInvoiceCursor("Invoice binding no longer available")
             return {"status": "unbound", "verified": False, "invoices": [],
+                    "expected_revision": revision,
                     "count": None, "has_more": None, "payment_review": None,
                     "page_number": 1, "status_filter": status, "next_cursor": None,
                     "source": "unavailable: unverified subscription"}
@@ -287,6 +371,11 @@ class AdminInvoiceHistory:
                          "status": item["status"], "currency": item["currency"],
                          "amount_due_minor": values[0], "amount_paid_minor": values[1],
                          "amount_remaining_minor": values[2],
+                         "invoice_reference": (self.refund_references.seal(record,
+                             actor=owner_sub, invoice_id=invoice_id, now=now)
+                             if revision is not None and SUBJECT.fullmatch(owner_sub)
+                             and invoice_status == "paid" and values[0] == values[1] > 0
+                             and values[2] == 0 else None),
                          "collection_method": collection_method,
                          "attempted": attempted, "attempt_count": attempt_count,
                          "next_payment_attempt_utc": (
@@ -309,6 +398,7 @@ class AdminInvoiceHistory:
                        if snapshot["has_more"] else None)
         first_unfiltered = continuation is None and status is None
         return {"status": "verified", "verified": True, "invoices": rows, "count": len(rows),
+                "expected_revision": revision,
                 "has_more": snapshot["has_more"],
                 "page_number": page, "status_filter": status, "next_cursor": next_cursor,
                 "payment_review": {

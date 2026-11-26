@@ -1,12 +1,13 @@
 # Owner financial operations: implementation and continuation record
 
 Recorded November 23, 2026; implementation updated November 25, 2026
-(America/New_York). This preserves the decisions and remaining work for #41 and
+(America/New_York); refund source implementation added November 26, 2026.
+This preserves the decisions and remaining work for #41 and
 CORE-04 of the [product roadmap](product-roadmap.md). Cancellation review,
 historical recovery and the independently gated writer are implemented in the
-actual owner UI/API. This source enables both `ENABLE_NEW_CANCELLATION_STATE`
-and `ENABLE_NEW_SUBSCRIPTION_STATE`, using the already deployed compatible
-reader in `762e7b66be029f07d245d9d11dc8a08aed32fd67` as the release baseline.
+actual owner UI/API. This source keeps `ENABLE_NEW_CANCELLATION_STATE`
+and `ENABLE_NEW_SUBSCRIPTION_STATE` enabled. Their writer phase followed the
+compatible reader deployment in `762e7b66be029f07d245d9d11dc8a08aed32fd67`.
 Scheduling and full reconciliation still require their explicit runtime
 prerequisites. The owner workspace explains missing configuration using
 nonsecret readiness values; those values cannot grant route or write authority.
@@ -16,7 +17,11 @@ the [handoff](admin-console-handoff.md). No live financial action or authorizati
 to operate on real customer subscriptions during development is implied.
 
 Existing reconciliation refreshes entitlement and invoice inspection reads
-provider information. Refunds, credits and plan changes remain future work.
+provider information. Full refunds of narrowly supported paid invoices now have
+their own service, provider, signed-state and owner UI/API implementation,
+described below. The refund source flag remains false for the reader baseline;
+this record does not establish refund deployment, activation or customer
+financial acceptance. Credits and plan changes remain future work.
 
 ## First coherent operation: schedule cancellation at period end
 
@@ -189,18 +194,21 @@ service or real customer mutation is part of offline acceptance.
 
 `state_contracts.release_metadata()` now computes introductions independently
 for `subscription-cap-provenance-v1` and `stripe-period-end-cancellation-v1`.
-Both source-controlled financial writer flags are true in this activation
+The cancellation and subscription writer flags are true in this activation
 source, alongside the two already enabled catalog flags. Its actual build
-manifest therefore introduces all four supported contracts. There is no
+manifest therefore introduces those four contracts. Refund support adds
+`stripe-invoice-refund-v1` as a fifth supported contract without introducing it
+while `ENABLE_NEW_REFUND_STATE=False`. There is no
 environment or deployment-argument override. Cancellation cannot enable
-cap-provenance writers or vice versa. The deployed 762e7b6 reader already
-supports all four contracts. The release gate must still inspect the actual
+cap-provenance writers or vice versa. The earlier 762e7b6 deployment established
+reader support for those four contracts, not refund compatibility. The release
+gate must still inspect the actual
 downloaded, digest-bound rollback archive before upload; a synthetic compatible
 fixture is not production backup evidence. Keep source parity and the remaining
 live acceptance requirements; do not repeat a healthy-release audit on every
 continuation.
 
-## Implementation acceptance and outstanding release evidence
+## Cancellation implementation acceptance and outstanding release evidence
 
 The service, provider adapter, actual authenticated UI/API, durable reopen and
 recovery are integrated in one batch. Repository scenarios include two simultaneous
@@ -224,9 +232,163 @@ Discovery and ASGI execution do not establish Chrome acceptance. All new
 exact-SHA jobs, source parity, compatible deployed rollback, real owner/MFA and
 15 live acceptance checks remain required. No new test skip or relaxed deadline.
 
-Refunds, credits and plan changes need their own exact-object/amount/currency,
-preview, concurrency, reconciliation and recovery contracts; scheduling an end
-does not implement them. Provider lifecycle/risk events and a durable processing
-ledger also need implementation/evidence before reporting webhook health or
-calling financial management complete. Real infrastructure cost ingestion,
-freshness and defensible tenant allocation remain separate work.
+## Full paid-invoice refunds: source reader baseline
+
+The separate implementation uses `admin_invoice_refund.py`,
+`admin_refund_provider.py`, `admin_refund_state.py`, opaque selections from
+`admin_invoices.py`, and the actual owner Billing routes and browser. Its contract
+is `stripe-invoice-refund-v1`. Current source supports reading its signed records
+but sets `ENABLE_NEW_REFUND_STATE=False`. This section describes implemented
+behavior, including the separately gated writer; it does not claim that a refund
+release is deployed, a refund credential is configured, or a customer refund has
+been accepted.
+
+### Supported payment and authority
+
+The server starts with an existing non-demo tenant's saved Stripe customer and
+subscription binding. The selected invoice must be paid, collected automatically
+for subscription creation or renewal, and contain exactly one complete,
+nonprorated subscription line at quantity one and the configured recurring price.
+Invoice, PaymentIntent and captured charge must establish the same account,
+mode, customer, invoice, payment and currency. The PaymentIntent must have
+succeeded and identify that settled charge.
+
+The refundable amount is a positive integer derived from Stripe, at most
+99,999,999 minor units. Invoice amount due, amount paid and total, PaymentIntent
+amount and amount received, and charge amount and amount captured must agree.
+The invoice must have zero remaining amount, no customer-balance or credit-note
+funding, and no out-of-band payment. Any previous refund, including a pending or
+failed one, blocks a new review. Disputes, manual collection, prorations,
+multiple or ambiguous payment shapes, Connect transfers/fees and incomplete
+provider evidence are excluded. There is no partial-refund amount input,
+credit-note operation, plan change or subscription cancellation in this flow.
+
+Display uses an explicit currency map. Unsupported currencies refuse review
+before financial state is reserved; there is no inferred currency exponent.
+
+| Fractional digits for Stripe charge/refund units | Supported currencies |
+| --- | --- |
+| 0 | JPY, KRW |
+| 2 | AED, ARS, AUD, BRL, CAD, CHF, COP, CZK, DKK, EUR, GBP, HKD, HUF, IDR, ILS, INR, ISK, MXN, MYR, NOK, NZD, PHP, PLN, RON, RUB, SEK, SGD, THB, TWD, UGX, USD, ZAR |
+
+The integer minor-unit amount is displayed alongside the formatted amount and
+included in the exact confirmation. HUF, TWD, ISK and UGX follow the charge/refund
+units used by the implementation. Sources:
+[pinned invoice object](https://docs.stripe.com/api/invoices/object?api-version=2025-02-24.acacia),
+[pinned PaymentIntent object](https://docs.stripe.com/api/payment_intents/object?api-version=2025-02-24.acacia),
+[pinned charge object](https://docs.stripe.com/api/charges/object?api-version=2025-02-24.acacia),
+[Stripe currency rules](https://docs.stripe.com/currencies#special-cases).
+
+### Review, submission and recovery routes
+
+Every route requires verified owner/MFA authority, same-origin admission and a
+persisted protected-read audit attempt. Provider identifiers and raw responses
+remain private to the service and signed financial records. The browser receives
+opaque references, fingerprints, amount, currency, mode and bounded results.
+
+| Endpoint | Behavior and availability |
+| --- | --- |
+| `POST /v1/admin/subscriptions/{tenant_id}/refund/preview` | Open the actor/tenant/revision-bound opaque invoice selection, inspect the payment and issue an encrypted 180-second review; requires the dedicated provider configuration and signed audit store |
+| `POST /v1/admin/subscriptions/{tenant_id}/refund` | Reinspect the exact review, reserve the charge, dispatch once and independently verify; absent in the source reader phase |
+| `POST /v1/admin/subscriptions/{tenant_id}/refund/receipt` | Reopen signed historical intent/outcome without any Stripe request; requires the audit store and signing key, not the refund credential |
+| `POST /v1/admin/subscriptions/{tenant_id}/refund/refresh` | Explicitly read Stripe for a retained unresolved action and append a valid later observation; absent in the source reader phase and never issues a Stripe POST |
+
+Invoice selections expire after 900 seconds and grant no mutation authority.
+The separate review binds the actor, tenant, exact saved document/revision,
+provider snapshot, charge target, prior control hash and expiry. Submission
+requires that review, a bounded reason, action reference and exactly
+`REFUND <tenant_id> <amount_minor> <CURRENCY> MINOR UNITS`. The service derives all
+provider IDs, mode, amount and currency. The reason stays in the signed intent;
+it is not passed to Stripe as a refund reason or comment.
+
+### Permanent claim, one POST and independently proven outcome
+
+The target digest binds provider account, mode and charge, independently of
+owner, tenant alias, current plan price or credential rotation. Its claim is
+permanent: there is no successor generation after success, failure or an unknown
+outcome. The intent and initial control are inserted together. A second
+transaction compares the exact saved tenant document/revision while acquiring
+dispatch authority. Only an acknowledged transition to `DISPATCHING` permits the
+one provider request; observing that state later never permits another POST.
+
+The adapter pins `2025-02-24.acacia` and sends only `charge`, the full `amount`,
+and server-generated `metadata[guardoath_action]` to `POST /v1/refunds`, with
+`guardoath-ir1-<action_id>` as the idempotency key. It uses a fixed host, rejects
+redirects, bounds JSON and request timeouts, and never retries the POST. The
+service uses the existing maximum eight-second coordination budget, reduced by
+trusted Lambda remaining time. Expiry, lost acknowledgements, timeouts or
+termination after reservation retain the claim. Blocking external calls can
+still outlast the observed budget; this is not a guaranteed completion deadline.
+Source: [pinned refund creation](https://docs.stripe.com/api/refunds/create?api-version=2025-02-24.acacia).
+
+Independent account, refund and charge reads must confirm the same immutable
+binding, full amount, currency, action metadata and refund identity. `succeeded`
+is verified only when the independent charge also reports the entire amount
+refunded. `pending` and `requires_action` remain pending; `failed` and `canceled`
+remain failed. Unsupported, malformed or conflicting proof remains unavailable
+or indeterminate. The signed intent, outcome and bounded observation chain are
+revalidated on every reopen, including exact proof identity and monotonic
+progress. Repeated unchanged pending reads do not append duplicate observations.
+
+When a POST response is lost, explicit refresh uses a bounded charge-filtered
+refund list, requires one exact action-bound match, independently retrieves it,
+and verifies the charge. Missing, multiple or foreign matches cannot establish
+success. Provider calls during refresh are GET-only; appending a signed outcome
+is a separate audit-table write. There is no automatic polling, replacement
+refund, claim release or repair endpoint. Verified and failed terminal receipts
+are returned without another provider read.
+
+Receipt lookup survives removal of the refund provider and ordinary tenant
+revision or configured-price changes. It still needs the original owner and
+reference, retained signing key and intact signed records. Explicit provider
+refresh can also use the original canonical price after a plan-price change,
+provided account and mode still match; every historical payment field remains
+bound to the intent. New review and dispatch continue to require the current
+configured price. No refund changes tenant entitlement, access, allowances,
+cap provenance, usage, keys or customer rules.
+
+### Dedicated credential and separate release activation
+
+Runtime configuration is the pair `GUARDOATH_ADMIN_STRIPE_REFUND_KEY` and
+`GUARDOATH_ADMIN_STRIPE_REFUND_ACCOUNT_ID`, alongside the existing Stripe
+reader/price/mode and signed audit configuration. Partial configuration fails
+initialization. The refund credential must differ from both the reader secret
+and the cancellation credential; the cancellation key and its permissions remain
+unchanged. There is no credential fallback. To retain receipt-only operation
+after removing refund provider access, remove both refund variables and retain
+the audit store and its signing key.
+
+Use these minimal Stripe Dashboard restricted-key permissions:
+
+| Resource | Permission |
+| --- | --- |
+| Accounts | Read |
+| Invoices | Read |
+| Payment Intents | Read |
+| Charges and Refunds | Write |
+| All other resources and all Connect permissions | None |
+
+Stripe groups Charges and Refunds together. Write includes read access and also
+permits charge mutations at the provider-permission level; the key is not
+refund-only. GuardOath's adapter constrains its own mutation to the exact refund
+POST. Sources: [Stripe permission groups](https://docs.stripe.com/stripe-apps/reference/permissions),
+[restricted-key behavior](https://docs.stripe.com/keys/restricted-api-keys).
+
+The reader baseline supports `stripe-invoice-refund-v1` without introducing new
+refund state. Preview may be available with explicit provider configuration;
+submission and refresh are unmounted, and source gates also refuse financial
+state writes and provider POSTs. A separate writer release may set
+`ENABLE_NEW_REFUND_STATE=True` only after a compatible refund reader has actually
+been deployed and the real, digest-bound rollback archive is verified to support
+the refund contract. No environment variable or deployment argument overrides
+the phase. Existing cancellation/subscription/catalog writer settings do not
+activate refunds. Receipt readers preserve later signed claims after rollback
+or provider removal. This implementation is not deployment or customer financial
+acceptance evidence.
+
+Further refund scope, credits and plan changes remain separate work. Provider
+lifecycle/risk events and a durable processing ledger also need implementation
+and evidence before reporting webhook health or calling financial management
+complete. Real infrastructure cost ingestion, freshness and defensible tenant
+allocation remain separate work. This refund implementation does not complete
+CORE-04.
