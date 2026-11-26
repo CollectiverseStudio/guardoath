@@ -8,6 +8,7 @@ const path=require("node:path");
 // No HTTP interception. Owner JWT/MFA, invoice references, refund provider,
 // durable claims and signed history use the mounted production implementations.
 // Only the external identity, Stripe and DynamoDB boundaries are synthetic.
+// The fixture preserves source gates; an independent reader confirms the source default.
 const TENANT="usr-admin-alpha",ORIGIN="http://127.0.0.1:8782";
 const PREFIX="/v1/admin/subscriptions/"+TENANT;
 const database=process.env.GUARDOATH_ADMIN_TEST_DB;
@@ -23,11 +24,12 @@ function persisted() {
     "from admin_test_support import AdminTestDynamo, ADMIN_BROWSER_AUDIT_KEY",
     "from admin_refund_support import verified_refund_rows",
     "from guardoath.admin_audit import AdminAuditReader",
+    "from guardoath.state_contracts import new_refund_state_enabled",
     "db=AdminTestDynamo(sys.argv[1])",
     "reader=AdminAuditReader(db,'audit_table',verify_key=ADMIN_BROWSER_AUDIT_KEY)",
     "tenants={key:db.get_item(TableName='tenant_table',Key={'tenant_id':{'S':key}},ConsistentRead=True)['Item'] for key in ('usr-admin-alpha','usr-admin-beta')}",
     "receipts=[reader.read(row['event_id']['S']) for row in db.audit_items() if 'financial_operation' not in row and 'catalog_publication' not in row and not row['operation']['S'].startswith('catalog.') ]",
-    "print(json.dumps({'tenants':tenants,'receipts':receipts,'refunds':verified_refund_rows(db)}))",
+    "print(json.dumps({'tenants':tenants,'receipts':receipts,'refunds':verified_refund_rows(db),'source_refund_writer_enabled':new_refund_state_enabled()}))",
     "db.close()",
   ].join("\n");
   return JSON.parse(execFileSync(process.env.PYTHON || "python",["-c",program,database],{encoding:"utf8"}));
@@ -45,7 +47,7 @@ async function login(page) {
   return {"X-GuardOath-Admin-Session":result.access_token,Origin:ORIGIN};
 }
 
-test("real owner invoice review submits once, refreshes pending status and recovers signed history",async({page,request})=>{
+test("unchanged-source owner invoice review submits once, refreshes pending status and recovers signed history",async({page,request})=>{
   const headers=await login(page);
   const features=await request.get("/v1/admin/features",{headers});
   expect(features.status()).toBe(200);
@@ -56,7 +58,9 @@ test("real owner invoice review submits once, refreshes pending status and recov
     confirmation:"RECONCILE "+TENANT,reason:"Establish the mounted synthetic subscription",
     idempotency_key:"browser-refund-reconcile-123456789"}});
   expect(reconciled.status()).toBe(200);
-  const before=persisted().tenants;
+  const initial=persisted();
+  expect(initial.source_refund_writer_enabled).toBe(true);
+  const before=initial.tenants;
   expect(before[TENANT].revision.N).toBe("8");
   fs.writeFileSync(evidence(".refund-status"),"pending");
   await page.locator("#nav-tenants").click();

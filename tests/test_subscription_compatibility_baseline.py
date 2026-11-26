@@ -32,6 +32,7 @@ def financial_reader_phase(monkeypatch):
     """Model the deployed reader release without changing the source default."""
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_SUBSCRIPTION_STATE", False)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CANCELLATION_STATE", False)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_REFUND_STATE", False)
 
 
 @pytest.fixture
@@ -86,12 +87,12 @@ def test_source_default_introduces_existing_writer_contracts_despite_environment
     assert state_contracts.new_cancellation_state_enabled() is True
     assert state_contracts.new_catalog_publication_state_enabled() is True
     assert state_contracts.new_catalog_publication_lifecycle_state_enabled() is True
+    assert state_contracts.new_refund_state_enabled() is True
     manifest = state_contracts.release_metadata("a" * 40)
     assert manifest["introduced_state_contracts"] == [
         "subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1",
-        "catalog-publication-v1", "catalog-publication-lifecycle-v1"]
-    assert manifest["supported_state_contracts"] == [
-        *manifest["introduced_state_contracts"], "stripe-invoice-refund-v1"]
+        "catalog-publication-v1", "catalog-publication-lifecycle-v1", "stripe-invoice-refund-v1"]
+    assert manifest["supported_state_contracts"] == manifest["introduced_state_contracts"]
 
 
 @pytest.mark.parametrize("kind", ["memory", "dynamo"])

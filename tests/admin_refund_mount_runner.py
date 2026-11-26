@@ -21,11 +21,12 @@ def tenant_rows(database):
         ConsistentRead=True)["Item"] for name in (TENANT, "usr-admin-beta")}
 
 
-def main(scenario):
-    assert scenario in ("source", "disabled", "pending", "indeterminate")
-    writer = scenario in ("pending", "indeterminate")
+def main(refund_phase, scenario):
+    assert (refund_phase, scenario) in (
+        ("disabled", "disabled"), ("source", "pending"), ("source", "indeterminate"))
+    writer = refund_phase == "source"
+    assert mounted.phase == "source" and mounted.refund_phase == refund_phase
     assert state_contracts.new_refund_state_enabled() is writer
-    assert mounted.refund_phase == ("enabled" if writer else scenario)
     client = TestClient(mounted.app, base_url=mounted.ORIGIN)
     login = client.post("/v1/admin/auth/exchange", json={"code":"owner", "code_verifier":"v" * 43})
     assert login.status_code == 200, login.text
@@ -134,10 +135,11 @@ def main(scenario):
     assert tenant_rows(mounted.db) == before
     reader = AdminAuditReader(mounted.db, "audit_table", verify_key=ADMIN_BROWSER_AUDIT_KEY)
     assert all(reader.read(event)["integrity_status"] == "signed_verified" for event in read_receipts)
-    print(json.dumps({"scenario":scenario, "writer":writer, "status":final_status, "denied":denied,
+    print(json.dumps({"phase":mounted.phase, "refund_phase":mounted.refund_phase,
+        "scenario":scenario, "writer":writer, "status":final_status, "denied":denied,
         "provider_posts":len(mounted.refund_boundary.posts), "tenant_preserved":True,
         "signed_refund_documents":len(verified_refund_rows(mounted.db)), "signed_read_receipts":len(read_receipts)}))
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    main(sys.argv[1], sys.argv[2])

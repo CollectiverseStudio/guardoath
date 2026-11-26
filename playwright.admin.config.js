@@ -15,6 +15,7 @@ module.exports = defineConfig({
     command:"python -m uvicorn admin_browser_app:app --app-dir tests --host 127.0.0.1 --port 8780 --no-access-log",
     url:"http://127.0.0.1:8780/healthz",timeout:60000,
     env:{GUARDOATH_ADMIN_TEST_DB:process.env.GUARDOATH_ADMIN_TEST_DB,GUARDOATH_ADMIN_TEST_WRITER_PHASE:"source",
+      GUARDOATH_ADMIN_TEST_REFUND_WRITER_PHASE:"source",
       GUARDOATH_ADMIN_TEST_ORIGIN:"http://127.0.0.1:8780",
       GUARDOATH_ADMIN_ENABLED:"0",GUARDOATH_INVOCATIONS_ENABLED:"0",
       GUARDOATH_TENANT_STORE:"memory",GUARDOATH_DEMO_KEY_SECRET:"synthetic-admin-browser-demo-key-not-production-0123456789",

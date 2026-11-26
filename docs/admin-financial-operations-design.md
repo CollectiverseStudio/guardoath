@@ -19,9 +19,12 @@ to operate on real customer subscriptions during development is implied.
 Existing reconciliation refreshes entitlement and invoice inspection reads
 provider information. Full refunds of narrowly supported paid invoices now have
 their own service, provider, signed-state and owner UI/API implementation,
-described below. The refund source flag remains false for the reader baseline;
-this record does not establish refund deployment, activation or customer
-financial acceptance. Credits and plan changes remain future work.
+described below. This writer source sets `ENABLE_NEW_REFUND_STATE=True`.
+Publication requires acceptance and actual deployment of the committed reader
+`26724c3049db679ded77bfe8ff176e87551835c7` first. The dedicated refund provider
+remains unconfigured and requires separate approval. This record does not
+establish reader or writer deployment, operational refund availability or
+customer financial acceptance. Credits and plan changes remain future work.
 
 ## First coherent operation: schedule cancellation at period end
 
@@ -192,20 +195,24 @@ fallback to the existing Stripe key and no relaxation of the read adapter's
 credential validation. No key enters the browser or provider metadata. No paid
 service or real customer mutation is part of offline acceptance.
 
-`state_contracts.release_metadata()` now computes introductions independently
-for `subscription-cap-provenance-v1` and `stripe-period-end-cancellation-v1`.
-The cancellation and subscription writer flags are true in this activation
-source, alongside the two already enabled catalog flags. Its actual build
-manifest therefore introduces those four contracts. Refund support adds
-`stripe-invoice-refund-v1` as a fifth supported contract without introducing it
-while `ENABLE_NEW_REFUND_STATE=False`. There is no
-environment or deployment-argument override. Cancellation cannot enable
-cap-provenance writers or vice versa. The earlier 762e7b6 deployment established
-reader support for those four contracts, not refund compatibility. The release
-gate must still inspect the actual
-downloaded, digest-bound rollback archive before upload; a synthetic compatible
-fixture is not production backup evidence. Keep source parity and the remaining
-live acceptance requirements; do not repeat a healthy-release audit on every
+`state_contracts.release_metadata()` computes introductions from independent
+source flags. This writer source enables subscription, cancellation, both catalog
+phases and refunds, so its manifest supports and introduces all five contracts:
+`subscription-cap-provenance-v1`, `stripe-period-end-cancellation-v1`,
+`catalog-publication-v1`, `catalog-publication-lifecycle-v1` and
+`stripe-invoice-refund-v1`. There is no environment or deployment-argument
+override. One operation's flag cannot activate another operation's writer.
+
+The earlier 762e7b6 deployment established reader support for the four preceding
+contracts, not refund compatibility. Reader source
+`26724c3049db679ded77bfe8ff176e87551835c7` supports all five while introducing only
+those four, with its refund flag false. Its accepted CI and actual deployment
+are required before this writer is published. The release gate must inspect the
+real downloaded, digest-bound rollback archive before writer upload; a committed
+reader, synthetic compatible fixture or candidate used as its own backup is
+insufficient. Actual release evidence belongs in the
+[handoff](admin-console-handoff.md). Keep source parity and the remaining live
+acceptance requirements; do not repeat a healthy-release audit on every
 continuation.
 
 ## Cancellation implementation acceptance and outstanding release evidence
@@ -232,16 +239,19 @@ Discovery and ASGI execution do not establish Chrome acceptance. All new
 exact-SHA jobs, source parity, compatible deployed rollback, real owner/MFA and
 15 live acceptance checks remain required. No new test skip or relaxed deadline.
 
-## Full paid-invoice refunds: source reader baseline
+## Full paid-invoice refunds: writer source
 
 The separate implementation uses `admin_invoice_refund.py`,
 `admin_refund_provider.py`, `admin_refund_state.py`, opaque selections from
 `admin_invoices.py`, and the actual owner Billing routes and browser. Its contract
-is `stripe-invoice-refund-v1`. Current source supports reading its signed records
-but sets `ENABLE_NEW_REFUND_STATE=False`. This section describes implemented
-behavior, including the separately gated writer; it does not claim that a refund
-release is deployed, a refund credential is configured, or a customer refund has
-been accepted.
+is `stripe-invoice-refund-v1`. Current writer source sets
+`ENABLE_NEW_REFUND_STATE=True` and introduces that contract as well as supporting
+its signed readers. Explicit disabled-reader compatibility remains covered with
+the flag false. The dedicated refund provider is still absent: review,
+submission and provider refresh require its separately approved configuration.
+Signed history only needs the retained audit store and signing key. This section
+does not claim reader/writer deployment, a configured refund credential or
+customer financial acceptance.
 
 ### Supported payment and authority
 
@@ -289,9 +299,9 @@ opaque references, fingerprints, amount, currency, mode and bounded results.
 | Endpoint | Behavior and availability |
 | --- | --- |
 | `POST /v1/admin/subscriptions/{tenant_id}/refund/preview` | Open the actor/tenant/revision-bound opaque invoice selection, inspect the payment and issue an encrypted 180-second review; requires the dedicated provider configuration and signed audit store |
-| `POST /v1/admin/subscriptions/{tenant_id}/refund` | Reinspect the exact review, reserve the charge, dispatch once and independently verify; absent in the source reader phase |
+| `POST /v1/admin/subscriptions/{tenant_id}/refund` | Reinspect the exact review, reserve the charge, dispatch once and independently verify; source enabled, mounted only with explicit provider/audit prerequisites and absent in the disabled-reader phase |
 | `POST /v1/admin/subscriptions/{tenant_id}/refund/receipt` | Reopen signed historical intent/outcome without any Stripe request; requires the audit store and signing key, not the refund credential |
-| `POST /v1/admin/subscriptions/{tenant_id}/refund/refresh` | Explicitly read Stripe for a retained unresolved action and append a valid later observation; absent in the source reader phase and never issues a Stripe POST |
+| `POST /v1/admin/subscriptions/{tenant_id}/refund/refresh` | Explicitly read Stripe for a retained unresolved action and append a valid later observation; source enabled with provider/audit prerequisites, absent in the disabled-reader phase, and never issues a Stripe POST |
 
 Invoice selections expire after 900 seconds and grant no mutation authority.
 The separate review binds the actor, tenant, exact saved document/revision,
@@ -349,6 +359,10 @@ cap provenance, usage, keys or customer rules.
 
 ### Dedicated credential and separate release activation
 
+The dedicated refund provider is not configured. Provisioning and installing its
+credential require separate approval; the existing cancellation credential and
+its earlier authorization do not supply refund access.
+
 Runtime configuration is the pair `GUARDOATH_ADMIN_STRIPE_REFUND_KEY` and
 `GUARDOATH_ADMIN_STRIPE_REFUND_ACCOUNT_ID`, alongside the existing Stripe
 reader/price/mode and signed audit configuration. Partial configuration fails
@@ -374,17 +388,25 @@ refund-only. GuardOath's adapter constrains its own mutation to the exact refund
 POST. Sources: [Stripe permission groups](https://docs.stripe.com/stripe-apps/reference/permissions),
 [restricted-key behavior](https://docs.stripe.com/keys/restricted-api-keys).
 
-The reader baseline supports `stripe-invoice-refund-v1` without introducing new
-refund state. Preview may be available with explicit provider configuration;
-submission and refresh are unmounted, and source gates also refuse financial
-state writes and provider POSTs. A separate writer release may set
-`ENABLE_NEW_REFUND_STATE=True` only after a compatible refund reader has actually
-been deployed and the real, digest-bound rollback archive is verified to support
-the refund contract. No environment variable or deployment argument overrides
-the phase. Existing cancellation/subscription/catalog writer settings do not
-activate refunds. Receipt readers preserve later signed claims after rollback
-or provider removal. This implementation is not deployment or customer financial
-acceptance evidence.
+Reader source `26724c3049db679ded77bfe8ff176e87551835c7` is the required
+compatibility baseline. It supports `stripe-invoice-refund-v1` with
+`ENABLE_NEW_REFUND_STATE=False`, introduces no refund state, leaves submission
+and refresh unmounted, and refuses financial state writes and provider POSTs.
+Preview remains possible there with explicit provider configuration, and signed
+receipt readers preserve later claims after rollback. Keep this disabled-reader
+behavior in explicit compatibility acceptance alongside current writer defaults.
+
+This separate writer source sets `ENABLE_NEW_REFUND_STATE=True`, making all
+five contracts introduced. The reader's required acceptance and actual deployment
+completed on November 26 at 12:03 p.m. Eastern and are recorded in the handoff.
+Writer deployment requires the real, digest-bound rollback archive
+to support all five contracts. Neither reader commitment nor writer preparation
+establishes that deployed rollback evidence. No environment variable or
+deployment argument overrides the phase, and the other financial/catalog flags
+cannot substitute for the refund flag. The absent dedicated provider keeps
+refund operations unavailable even with the writer source enabled; configuring
+it remains a separate approved step. Source activation, deployment and customer
+financial acceptance are distinct evidence requirements.
 
 Further refund scope, credits and plan changes remain separate work. Provider
 lifecycle/risk events and a durable processing ledger also need implementation

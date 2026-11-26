@@ -26,10 +26,10 @@ ENABLE_NEW_CATALOG_PUBLICATION_STATE = True
 # their own signed records. A rollback image must understand this complete
 # lifecycle. Deployment still verifies the digest-bound rollback archive.
 ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE = True
-# The first refund release reads and preserves permanent charge claims and the
-# bounded signed observation chain. Writers require a later source release with
-# an actually deployed compatible reader as its digest-bound rollback baseline.
-ENABLE_NEW_REFUND_STATE = False
+# This refund writer phase is deployable only after the compatible reader has
+# been accepted and deployed. Deployment must verify that actual digest-bound
+# rollback archive preserves permanent claims and the bounded observation chain.
+ENABLE_NEW_REFUND_STATE = True
 
 
 def new_subscription_state_enabled() -> bool:

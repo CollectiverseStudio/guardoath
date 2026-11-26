@@ -5,7 +5,32 @@ record for a new chat. The append-only engineering history remains in
 [director-agent-coordination.md](director-agent-coordination.md); the complete
 47-target product discussion is preserved in [product-roadmap.md](product-roadmap.md).
 
-## Current implementation: bounded owner invoice refunds
+## Current implementation: source activation for owner invoice refunds
+
+This source enables `ENABLE_NEW_REFUND_STATE=True` and declares all five
+persistent-state contracts as introduced. The four existing writer settings are
+unchanged. The separate refund provider configuration remains required: source
+activation alone cannot dispatch a refund. The dedicated cancellation key is not
+reused or broadened; the refund credential remains pending separate explicit
+creation approval.
+
+The accepted reader source `26724c3049db679ded77bfe8ff176e87551835c7` is now
+actually deployed, as recorded below. Writer deployment must preserve that real,
+digest-bound reader archive as its compatible backup. A source-disabled rollback
+still reads every saved refund phase
+and preserves all claims while refusing new refund writes.
+
+The activation's affected compatibility/runtime modules exercised 289 unique
+cases successfully across the focused run and one corrected fixture retest.
+The corrected fixture proves the artifact builder reloads trusted source rather
+than accepting a process-local flag override. Six affected mounted scenarios
+passed with actual source-default refund writing and explicit disabled-reader
+compatibility. The real mounted Chrome scenario now uses unchanged source flags;
+its CI acceptance is required for this activation source. Changed JavaScript
+syntax/discovery and scoped whitespace passed. All provider actions were
+synthetic; no customer refund or credential creation occurred.
+
+## Reader baseline implementation: bounded owner invoice refunds
 
 The next CORE-04/#41 slice implements reviewed full refunds of eligible paid
 subscription creation/renewal invoices with exactly one settled, fully captured,
@@ -25,7 +50,7 @@ inspection has no provider I/O. Recovery survives provider credential removal,
 tenant revision changes and a newly configured plan price, while retaining the
 original account/mode and financial bindings.
 
-**This source is the refund reader compatibility baseline.** It supports all
+**Source 26724c3 is the refund reader compatibility baseline.** It supports all
 five contracts but `ENABLE_NEW_REFUND_STATE=False` means only the existing four
 are introduced. Deploy this accepted reader with the current 908fd4c archive as
 the actual backup, then publish and accept a separate source-controlled writer
@@ -71,7 +96,45 @@ customer refund, new resource, credential creation or production deployment is
 claimed by this implementation entry; record exact-source CI and deployment
 evidence here when those release steps finish.
 
-## Current production: owner financial controls release deployed
+## Current production: refund reader baseline deployed
+
+**Deployed source: `26724c3049db679ded77bfe8ff176e87551835c7`.** The unchanged
+`Deploy-Verified.ps1 -Deploy` runner completed with exit 0 and AWS `Successful`
+at `2026-11-26T17:03:53Z` (November 26, 12:03 p.m. Eastern). The actual backend
+and all **13/13 dashboard assets** match that source. All seven required
+workflows and **25 individual jobs** passed on attempt 1, including the new
+actual refund Chrome journey and the full dashboard browser suite.
+
+| Recorded reader deployment evidence | Value |
+| --- | --- |
+| Deployed archive SHA-256 (base64) | `h1uXmC3BpJzw1EZNJcHd4BsDqNPzT6kMFstDyO2gWuI=` |
+| Actual preserved rollback source | `908fd4cbfd56b4e7b10724a0f332d027fffcc9a5` |
+| Actual preserved rollback archive SHA-256 (base64) | `3ELllmPDFrUbQkGJzh5BgFghXEvqDeDMvezoHMyp6Mg=` |
+| Upload acknowledgement revision | `c8f3884d-3ccd-46d4-9aa9-358a35876b0d` |
+| Observed completed revision | `52e3d674-57ec-40b3-904e-8322e5ff9cf9` |
+
+This deployed baseline supports all five contracts but introduces only the four
+existing ones. Refund writes remain source-disabled in 26724c3. The new source
+activation above can now use this actual deployed reader as its compatible
+rollback, after its own exact-source CI. Existing runtime settings, including
+the completed cancellation setup, were preserved. No refund credential or
+customer refund was created. The differing completed revision is an observation,
+not new automatic rollback authority; `automatic_rollback_owned=false` remains
+accurately recorded.
+
+Reader CI runs: [Tests](https://github.com/CollectiverseStudio/guardoath/actions/runs/45862069079),
+[CodeQL](https://github.com/CollectiverseStudio/guardoath/actions/runs/45862068660),
+[Field Comparisons](https://github.com/CollectiverseStudio/guardoath/actions/runs/45862068793),
+[Trusted Reference](https://github.com/CollectiverseStudio/guardoath/actions/runs/45862068765),
+[PII Reliability](https://github.com/CollectiverseStudio/guardoath/actions/runs/45862068773),
+[Stripe Reconciliation](https://github.com/CollectiverseStudio/guardoath/actions/runs/45862068798),
+[Deploy Script](https://github.com/CollectiverseStudio/guardoath/actions/runs/45862068875).
+
+Full 15-area production acceptance remains false, and issue #30 remains
+unresolved. Stop observing this completed reader release; finish the prepared
+writer release and then request the separate refund-key creation approval.
+
+## Previous production: owner financial controls release deployed
 
 **Deployed source: `908fd4cbfd56b4e7b10724a0f332d027fffcc9a5`.** The accepted
 `Deploy-Verified.ps1 -Deploy` runner completed with exit 0 and AWS `Successful`.
@@ -1025,7 +1088,8 @@ one. No AWS resource or paid provider was purchased or provisioned.
 1. Complete CORE-04/#41 financial controls: dedicated cancellation setup for the
    existing Stripe test-mode account is complete, alongside the accepted 908fd4c
    source activation and deployment. The bounded owner invoice-refund workflow
-   is implemented above; finish its reader/writer releases and separately approved
+   is implemented above with writer activation prepared; finish its accepted
+   reader/writer deployment sequence and separately approved
    dedicated provider configuration, then credits, configured plan changes, cap restoration and
    durable lifecycle/risk event processing. The implemented scheduled-cancellation operation does not
    supply these capabilities; existing reconciliation is an entitlement refresh.

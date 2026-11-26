@@ -229,8 +229,9 @@ def test_runtime_binds_real_refund_service_codec_and_auditor_without_io(monkeypa
     assert not database.sdk_calls and not database.audit_items()
 
 
-def test_shipped_refund_gate_keeps_other_writers_and_admits_only_preview_and_receipts(
+def test_explicit_refund_reader_keeps_other_writers_and_admits_only_preview_and_receipts(
         monkeypatch, database):
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_REFUND_STATE", False)
     assert state_contracts.new_refund_state_enabled() is False
     assert state_contracts.new_subscription_state_enabled() is True
     assert state_contracts.new_cancellation_state_enabled() is True
@@ -299,11 +300,11 @@ def test_missing_refund_pair_retains_reader_and_never_admits_provider_actions(
 
 @pytest.mark.parametrize("lost_response", [False, True], ids=["verified", "indeterminate"])
 @pytest.mark.parametrize("retain_invoice_reader", [False, True], ids=["no-stripe", "invoice-reader"])
-def test_runtime_refund_and_reopened_receipt_survive_credential_removal(
+def test_source_default_runtime_refund_and_reopened_receipt_survive_credential_removal(
         monkeypatch, database, tmp_path, lost_response, retain_invoice_reader):
-    # Writer activation is local to this synthetic test; the shipped source
-    # baseline above remains false until its separate reader-first rollout.
-    monkeypatch.setattr(state_contracts, "ENABLE_NEW_REFUND_STATE", True)
+    # Exercise the untouched source writer with synthetic external boundaries;
+    # the explicit compatible reader below must preserve the exact receipt.
+    assert state_contracts.new_refund_state_enabled() is True
     boundary = ProviderBoundary()
     boundary.lose_post_response = lost_response
 
@@ -321,6 +322,12 @@ def test_runtime_refund_and_reopened_receipt_survive_credential_removal(
     actions._clock = lambda: NOW
     before = database.get_item(TableName="tenant_table", Key={"tenant_id": {"S": TENANT}})
     client = TestClient(app)
+    features_response = client.get("/v1/admin/features", headers=HEADERS)
+    assert features_response.status_code == 200, features_response.text
+    features = features_response.json()
+    assert all(features[name] is True for name in (
+        "billing_refund_preview", "billing_refund_submit", "billing_refund_receipts", "billing_refund_refresh"))
+    assert features["billing_configuration"]["refund_writer_enabled"] is True
     reviewed = client.post(PREFIX + "/preview", headers=HEADERS,
         json={"expected_revision": 3, "invoice_reference": invoice_reference(actions)})
     assert reviewed.status_code == 200, reviewed.text

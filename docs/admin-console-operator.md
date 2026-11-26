@@ -17,7 +17,7 @@ offline acceptance are not evidence of AWS deployment or live financial data.
 | User management | Bounded masked directory/exact lookup; confirmed Cognito enable/disable with signed intent and independently verified outcome, recoverable ambiguity | Live provider acceptance; no owner role grants or self-disable |
 | Tenant management | Existing tenant store, suspend/reactivate, key revocation, stage-specific rule actions, downward request caps, revision checks and signed atomic audit | Deployed customer safeguards and source parity |
 | Subscriptions | Provider inspection, cap-preserving full owner reconciliation and protective delinquency downgrade; source enables provenance creation with explicit trusted plan configuration | Live Stripe acceptance, cap restoration and provider plan changes remain open |
-| Billing and costs | Bounded invoice history, usage/allowance history, request-cap signals and confirmed period-end cancellation; full paid-invoice refund review/history and a separately gated submission/recovery implementation | Refund reader deployment, later writer activation and customer financial acceptance; credits, infrastructure cost/revenue allocation and lifecycle/risk-event processing remain open |
+| Billing and costs | Bounded invoice history, usage/allowance history, request-cap signals, confirmed period-end cancellation and source-enabled full paid-invoice refund submission/recovery; dedicated refund provider remains absent | Writer release acceptance/deployment, separate refund credential approval/configuration and customer financial acceptance; credits, infrastructure cost/revenue allocation and lifecycle/risk-event processing remain open |
 | Catalog | Shared registry, signed description drafts/reviews, reversible metadata source plans and an enabled publication/CI/deployment/history workflow | An operator must run a requested release; live publication and general behavior/schema authoring remain open |
 
 `GUARDOATH_ADMIN_AUDIT_TABLE` is required in production for protected reads and
@@ -117,16 +117,20 @@ subsequent workspace refresh does not erase that verified outcome.
 The UI's **Request cap** is measured in validation requests. The legacy API
 feature name `monthly_cost_caps` does not mean dollars, AWS cost or provider spend.
 
-### Full paid-invoice refunds: source reader baseline
+### Full paid-invoice refunds: writer source
 
 The owner Billing workspace implements refund review, full-amount submission,
-signed history and explicit provider refresh. Current source sets
-`ENABLE_NEW_REFUND_STATE=False`: submission and provider-refresh routes are
-unmounted, with refusal also enforced by the state writer and provider adapter.
-Review requires explicit refund provider configuration; history remains available
-with the signed audit store. This source implementation is not evidence of
-deployment, activation, a configured refund key or customer financial acceptance.
-It does not complete CORE-04.
+signed history and explicit provider refresh. Current writer source sets
+`ENABLE_NEW_REFUND_STATE=True`; it supports and introduces all five persistent
+contracts. Submission and refresh still require the dedicated refund provider,
+which remains unconfigured and needs separate approval. Review also requires
+that provider; history remains available with the signed audit store. The
+reader's required acceptance and actual deployment are recorded in the
+[handoff](admin-console-handoff.md). This writer source still requires its own
+release acceptance/deployment and does not establish operational refund availability
+or customer financial acceptance. It does not
+complete CORE-04. Explicit compatibility coverage retains the disabled-reader
+phase with `ENABLE_NEW_REFUND_STATE=False`.
 
 The supported target is an existing non-demo tenant's paid subscription creation
 or renewal invoice, collected automatically, with one nonprorated configured
@@ -147,8 +151,8 @@ usage, keys and rules; cancellation is a separate control.
    invoice, charge, amount and currency. An unsupported or changed payment is
    refused before submission.
 2. Review the tenant, invoice date, test/live mode, full amount, integer minor
-   units and UTC expiry. The separate refund review lasts 180 seconds. When a
-   writer release and all prerequisites are available, enter the exact displayed
+   units and UTC expiry. The separate refund review lasts 180 seconds. After
+   writer deployment and approved provider configuration, enter the exact displayed
    `REFUND <tenant_id> <amount_minor> <CURRENCY> MINOR UNITS` confirmation and a
    10–240 character reason, then choose **Refund reviewed full amount**. The
    reason is retained in signed history and is not sent to Stripe. The browser
@@ -160,8 +164,8 @@ usage, keys and rules; cancellation is a separate control.
    Signing out or changing selection cannot cancel a server operation.
 4. For recovery, sign in as the original owner and enter that tenant ID and
    reference under **Refund history and status**. **Inspect refund history**
-   reads stored signed evidence without contacting Stripe. In a writer release,
-   **Refresh refund status** explicitly reads Stripe for an unresolved retained
+   reads stored signed evidence without contacting Stripe. With the writer and
+   provider configured, **Refresh refund status** reads Stripe for an unresolved retained
    action and may append a signed observation. It uses only Stripe GET requests;
    there is no polling or repeat refund POST.
 
@@ -209,6 +213,10 @@ visible beside the formatted amount. See [Stripe currency rules](https://docs.st
 
 **Dedicated refund configuration**
 
+The dedicated refund provider is currently absent. Provisioning and installing
+its credential require separate approval; the prior cancellation-key setup
+does not authorize or configure this provider.
+
 Configure the server-only pair `GUARDOATH_ADMIN_STRIPE_REFUND_KEY` and
 `GUARDOATH_ADMIN_STRIPE_REFUND_ACCOUNT_ID` through the existing secure environment
 mechanism. Runtime also requires the existing Stripe reader, configured price
@@ -236,15 +244,24 @@ pins `2025-02-24.acacia`. Sources:
 [permission groups](https://docs.stripe.com/stripe-apps/reference/permissions),
 [restricted-key permissions](https://docs.stripe.com/keys/restricted-api-keys).
 
-Deploying the compatible reader is a separate step from enabling refund writes.
-A later source release may set `ENABLE_NEW_REFUND_STATE=True` only with an
-actually deployed refund-compatible reader as its verified rollback baseline.
-No environment variable bypasses this phase. Existing cancellation, subscription
-and catalog writer settings do not activate refunds. The existing eight-second
-coordination budget and trusted Lambda remaining-time checks limit admission;
-blocking calls or termination can still leave a permanent indeterminate claim.
-Source implementation and synthetic acceptance do not establish a deployed
-reader, enabled writer or accepted customer financial operation.
+This writer source enables `ENABLE_NEW_REFUND_STATE=True`. Reader
+`26724c3049db679ded77bfe8ff176e87551835c7` passed required acceptance and was
+actually deployed on November 26 at 12:03 p.m. Eastern. That reader supports all five
+contracts but introduces only the four preceding contracts, with refund writers
+disabled. The actual reader release receipt is in the
+[handoff](admin-console-handoff.md), and writer
+deployment must verify the real downloaded rollback archive against its deployed
+digest and all five required contracts.
+
+Retain explicit disabled-reader compatibility: with the refund flag false,
+submission/refresh routes remain unmounted, provider POSTs and financial state
+writes are refused, and later signed history remains readable. No environment
+variable bypasses the phase. Existing cancellation, subscription and catalog
+writer settings cannot substitute for the refund flag or the absent dedicated
+credential. The existing eight-second coordination budget and trusted Lambda
+remaining-time checks limit admission; blocking calls or termination can still
+leave a permanent indeterminate claim. Writer source, reader/writer deployment,
+credential configuration and customer financial acceptance remain distinct.
 
 ### Persistent-state rollback compatibility
 
@@ -254,14 +271,14 @@ records with neither field omit the absent fields; populated values, including
 zero, are always preserved.
 
 Lambda builds declare supported and introduced persistent-state contracts
-in their generated source manifest. This source supports and introduces
-`subscription-cap-provenance-v1`, `stripe-period-end-cancellation-v1`,
-`catalog-publication-v1` and `catalog-publication-lifecycle-v1`. It additionally
-supports `stripe-invoice-refund-v1` without introducing it while the refund
-source flag is false. The earlier deployed 762e7b6 reader supports the four
-existing contracts; that is not evidence of refund compatibility. A later
-refund writer needs the separately deployed refund reader baseline. Before any
-Lambda update,
+in their generated source manifest. This writer source supports and introduces
+all five: `subscription-cap-provenance-v1`,
+`stripe-period-end-cancellation-v1`, `catalog-publication-v1`,
+`catalog-publication-lifecycle-v1` and `stripe-invoice-refund-v1`.
+Reader `26724c3049db679ded77bfe8ff176e87551835c7` supports all five with its
+refund writer disabled; its required acceptance and actual deployment are
+recorded in the handoff. The earlier four-contract 762e7b6 reader
+alone cannot satisfy the refund writer's rollback requirement. Before any Lambda update,
 `Deploy-Verified.ps1` verifies the downloaded rollback archive against the
 actual deployed `CodeSha256`, checks the candidate's exact source SHA, requires
 the rollback image to support every introduced contract, and refuses loss of
@@ -335,6 +352,13 @@ Stripe and DynamoDB boundaries are explicitly synthetic. Separate browser
 failure tests cover ambiguous retries, altered receipts, rejected requests,
 session loss and post-success refresh failure. Existing browser tests remain in
 the CI gate. This evidence does not replace live AWS/Cognito/Stripe acceptance.
+
+Refund writer acceptance must exercise the untouched true source default with
+synthetic provider configuration, the absent-provider runtime, independently
+reopened signed outcomes and GET-only recovery. Explicit false-reader acceptance
+must continue to preserve later signed records while refusing submission,
+refresh observations and provider POSTs. These remain release requirements;
+writer preparation does not claim that acceptance or deployment has completed.
 
 ## Release gate
 Run full repo and browser tests plus exact-SHA Tests (13), CodeQL (3), Field Comparisons Evidence (2), Trusted Reference Acceptance (1), PII Reliability Gate (3), Stripe Reconciliation Acceptance (2), and Deploy Script Acceptance (1). All 25 individual jobs must succeed. Maintain the 500-ms checker limit, verified rollback compatibility and all 15 live acceptance checks. Unresolved issue #30 must be reported, never silently closed. A GitHub commit is not an AWS deployment.

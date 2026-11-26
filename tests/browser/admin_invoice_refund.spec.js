@@ -165,7 +165,7 @@ test("lost submission reply recovers signed success without resending the refund
   expect(dispatches(fixture)).toHaveLength(1);
 });
 
-test("source-disabled refunds retain review and signed history while refusing submission",async({page})=>{
+test("explicitly disabled refunds retain review and signed history while refusing submission",async({page})=>{
   const fixture=await setup(page,{features:{billing_refund_submit:false,billing_refund_refresh:false},
     configuration:{refund_writer_enabled:false}});
   await review(page);

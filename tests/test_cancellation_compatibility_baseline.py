@@ -16,6 +16,7 @@ def financial_reader_phase(monkeypatch):
     """Model the already-deployed reader without an application override."""
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_SUBSCRIPTION_STATE", False)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CANCELLATION_STATE", False)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_REFUND_STATE", False)
 
 
 def test_explicit_reader_phase_cannot_be_enabled_through_environment(monkeypatch, financial_reader_phase):
@@ -36,7 +37,7 @@ def test_source_default_cancellation_remains_enabled_despite_environment(monkeyp
     assert state_contracts.new_cancellation_state_enabled() is True
     assert state_contracts.release_metadata("a" * 40)["introduced_state_contracts"] == [
         "subscription-cap-provenance-v1", CONTRACT,
-        "catalog-publication-v1", "catalog-publication-lifecycle-v1"]
+        "catalog-publication-v1", "catalog-publication-lifecycle-v1", "stripe-invoice-refund-v1"]
 
 
 @pytest.mark.parametrize("caps,cancellation", [(False,False),(True,False),(False,True),(True,True)])
@@ -48,7 +49,7 @@ def test_writer_contract_introductions_are_independent(monkeypatch,caps,cancella
         "catalog-publication-v1", "catalog-publication-lifecycle-v1", "stripe-invoice-refund-v1"]
     assert metadata["introduced_state_contracts"] == (
         (["subscription-cap-provenance-v1"] if caps else []) + ([CONTRACT] if cancellation else [])
-        + ["catalog-publication-v1", "catalog-publication-lifecycle-v1"])
+        + ["catalog-publication-v1", "catalog-publication-lifecycle-v1", "stripe-invoice-refund-v1"])
 
 
 @pytest.mark.parametrize("invalid", [None,0,1,"true"])

@@ -71,13 +71,15 @@ if phase == "source" and not (state_contracts.new_subscription_state_enabled()
         and state_contracts.new_cancellation_state_enabled()):
     raise RuntimeError("Financial acceptance requires activated source defaults")
 
-# This isolated fixture can exercise the future refund writer without changing
-# its reader-first source default or existing financial compatibility phases.
+# Positive acceptance uses the unchanged refund source gate. Explicit phases
+# remain available for compatibility fixtures; they are not source evidence.
 refund_phase = os.environ.get("GUARDOATH_ADMIN_TEST_REFUND_WRITER_PHASE", "source")
 if refund_phase not in ("source", "enabled", "disabled"):
     raise RuntimeError("Invalid synthetic refund phase")
 if refund_phase != "source":
     state_contracts.ENABLE_NEW_REFUND_STATE = refund_phase == "enabled"
+if phase == "source" and refund_phase == "source" and not state_contracts.new_refund_state_enabled():
+    raise RuntimeError("Refund acceptance requires the activated source default")
 
 POOL, CLIENT = "us-east-1_Example", "syntheticownerclient"
 DOMAIN = "operators.auth.us-east-1.amazoncognito.com"
