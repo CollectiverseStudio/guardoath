@@ -5,16 +5,31 @@ record for a new chat. The append-only engineering history remains in
 [director-agent-coordination.md](director-agent-coordination.md); the complete
 47-target product discussion is preserved in [product-roadmap.md](product-roadmap.md).
 
-## Current implementation: owner financial controls activated in source
+## Current production: owner financial controls release deployed
 
-The next coherent batch enables `ENABLE_NEW_SUBSCRIPTION_STATE` and
+**Deployed source: `908fd4cbfd56b4e7b10724a0f332d027fffcc9a5`.** The accepted
+`Deploy-Verified.ps1 -Deploy` runner completed with exit 0 and AWS `Successful`.
+AWS records `2026-11-26T01:09:45Z` (November 25, 8:09 p.m. Eastern). All seven
+required workflows and **25 individual jobs** passed on their first attempt.
+The actual deployed backend and **13/13 dashboard assets** match this source.
+
+| Recorded deployment evidence | Value |
+| --- | --- |
+| Deployed archive SHA-256 (base64) | `3ELllmPDFrUbQkGJzh5BgFghXEvqDeDMvezoHMyp6Mg=` |
+| Actual preserved rollback source | `762e7b66be029f07d245d9d11dc8a08aed32fd67` |
+| Actual preserved rollback archive SHA-256 (base64) | `Jiuzcc81AQolQvmX9GB/ZSQfxwMzhokGP98UHGTr6fU=` |
+
+This release enables `ENABLE_NEW_SUBSCRIPTION_STATE` and
 `ENABLE_NEW_CANCELLATION_STATE`; both catalog flags remain true. It provides
 full owner entitlement reconciliation with durable request-cap provenance and
 reviewed period-end cancellation, using the already deployed 762e7b6 compatible
 reader as the release baseline. The generated artifact introduces all four
-supported state contracts. This source batch still requires its own exact-source
-CI and guarded deployment; the completed production release below remains the
-last established live source.
+supported state contracts, and the actual digest-bound backup passed the release
+compatibility gate. **Production has the admin, signed audit, Stripe reader,
+price and paid allowance settings for reconciliation. The dedicated cancellation
+write credential and expected Stripe account are absent, so cancellation remains
+unavailable until those explicit prerequisites are configured.** Source activation
+does not override missing credentials or grant a provider action.
 
 The Billing page identifies whether reconciliation, request caps, cancellation
 and historical recovery are available, including missing signed audit, Stripe
@@ -42,19 +57,41 @@ signed-state reopen with exactly one synthetic provider POST. Runtime tests also
 reopen financial history after removing the write credential.
 
 The actual owner JavaScript and edited specifications parse. Browser discovery
-finds 9 mounted source-default journeys, 11 explicit compatibility journeys and
-55 cancellation/reconciliation fault cases. Local Chrome was not executed; its
-required final-source CI remains authoritative. A bounded integration review
-found no remaining source-default assumption or route-authority blocker.
+found 9 mounted source-default journeys, 11 explicit compatibility journeys and
+55 cancellation/reconciliation fault cases. The new source's actual Chrome CI
+passed both mounted owner phases, authenticated billing acceptance and the full
+dashboard suite. A bounded integration review found no remaining source-default
+assumption or route-authority blocker.
 
-The existing authorized AWS session is retained. A necessary read of the new
-feature's runtime prerequisites timed out through both SDK and the existing CLI;
-no authentication rejection was returned, no configuration was changed and no
-new login was requested. Production prerequisite presence is therefore unknown,
-not inferred from source activation. Do not discard the signed-in session or
-repeat health audits while finishing this batch.
+The existing authorized AWS session worked for this deployment. Earlier
+ARN-addressed configuration reads timed out; the standard CLI read using the
+existing function name succeeded and established the prerequisite presence above.
+No AWS configuration, resource, role or customer financial state was changed.
+Do not reopen AWS login or repeat the completed release audit on continuation.
 
-## Current production: confirmed catalog publication requests enabled
+The Stripe connection is available, but its supported API operations do not
+create the needed restricted credential. The Stripe Dashboard API-keys page
+requires sign-in and is preserved for that setup. Continue through secure Stripe
+sign-in, establish the exact account and mode matching the existing billing
+configuration, and prepare only the account/subscription-read and subscription-
+update credential needed by the existing adapter. Do not infer that binding from
+an account label, reuse the broad reader credential as a fallback, expose a key
+in chat/source/logs or submit a real customer cancellation to prove setup.
+
+Exact-source CI runs: [Tests](https://github.com/CollectiverseStudio/guardoath/actions/runs/45731939613),
+[CodeQL](https://github.com/CollectiverseStudio/guardoath/actions/runs/45731938906),
+[Field Comparisons](https://github.com/CollectiverseStudio/guardoath/actions/runs/45731939535),
+[Trusted Reference](https://github.com/CollectiverseStudio/guardoath/actions/runs/45731939601),
+[PII Reliability](https://github.com/CollectiverseStudio/guardoath/actions/runs/45731939562),
+[Stripe Reconciliation](https://github.com/CollectiverseStudio/guardoath/actions/runs/45731939557),
+[Deploy Script](https://github.com/CollectiverseStudio/guardoath/actions/runs/45731939598).
+
+Full production acceptance remains false: all 15 live areas and issue #30 are
+not established as complete. No actual cancellation or live catalog write was
+submitted. Continue unfinished roadmap implementation and the specific Stripe
+setup; the hourly deployment-readiness automation remains paused.
+
+## Previous production: confirmed catalog publication requests enabled
 
 **Deployed source: `762e7b66be029f07d245d9d11dc8a08aed32fd67`.** The accepted
 `Deploy-Verified.ps1 -Deploy` runner completed with exit 0 and AWS `Successful`.
@@ -914,9 +951,10 @@ one. No AWS resource or paid provider was purchased or provisioned.
 
 ## Remaining work and completion boundaries
 
-1. Complete CORE-04/#41 financial controls: finish this source activation's
-   exact-source CI, guarded release and explicit runtime prerequisites, then
-   implement refunds, credits, configured plan changes and durable lifecycle/risk
+1. Complete CORE-04/#41 financial controls: finish the dedicated cancellation
+   credential/account setup; source activation, exact-source CI and guarded
+   deployment of 908fd4c are complete. Then implement refunds, credits,
+   configured plan changes and durable lifecycle/risk
    event processing. The implemented scheduled-cancellation operation does not
    supply these capabilities; existing reconciliation is an entitlement refresh.
    Preserve the actual target/intent transaction and conservative ambiguity
@@ -943,7 +981,7 @@ implemented owner and customer workflows, recording each result against the
 actual deployed source and configuration. Full production acceptance remains
 false until all required areas pass. This is not a separate recurring general
 audit: exact-source CI, deployment, compatible backup and backend/dashboard parity
-for `762e7b6` are already recorded above. Revisit that completed evidence only for
+for `908fd4c` are already recorded above. Revisit that completed evidence only for
 a new change or concrete failure; every later release retains its required gates.
 Keep #39–#42 open until their actual requirements are met, then continue the
 preserved roadmap in its recorded priority order.

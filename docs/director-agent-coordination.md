@@ -21,13 +21,16 @@ Greg explicitly removed the November 13 release-stabilization reservation and au
 
 ## Current production — November 25, 2026 (America/New_York)
 
-Source **`762e7b66be029f07d245d9d11dc8a08aed32fd67` is deployed**, with AWS
+Source **`908fd4cbfd56b4e7b10724a0f332d027fffcc9a5` is deployed**, with AWS
 `Successful`, all seven required workflows/25 individual jobs passed, and exact
 backend source plus 13/13 dashboard assets verified. The deployment evidence
-records `2026-11-26T00:22:35Z` (November 25, 7:22 p.m. Eastern). Both catalog
-writer gates are live; subscription-cap and cancellation writers remain false.
-No live catalog write was submitted. The [current handoff](admin-console-handoff.md)
-records the deployed and preserved d81 rollback archive digests.
+records `2026-11-26T01:09:45Z` (November 25, 8:09 p.m. Eastern). Both financial
+source writer gates and both catalog gates are true. Production has the explicit
+reconciliation prerequisites; cancellation remains unavailable because its
+dedicated Stripe write credential and expected account are absent. No customer
+financial action or live catalog write was submitted. The
+[current handoff](admin-console-handoff.md) records the deployed and actual
+preserved 762e7b6 rollback archive digests and the remaining Stripe setup.
 
 Continue unfinished roadmap implementation from this completed release. Do not
 repeat AWS login, deployment or healthy-state audits solely because a new chat
@@ -2395,3 +2398,13 @@ FIRST re-read this file's governing Atlas-only #28/#31 override, then AGENTS.md,
 - Owner Billing now reports financial-control availability/missing setup and links to tenant controls, with explicit pending, provider-confirmed historical, ambiguous and recovered states. API/integration require the real tenant store and matching signed read auditor before mounting reconciliation; all-true configuration metadata cannot create routes. Shared browser and mounted fixtures use untouched source defaults for the active phase and explicit all-disabled flags for compatibility. New fresh-process mounted financial scenarios cover actual signed owner JWT/MFA/origin/audit denials, target drift, exact confirmation, lost reconciliation response/replay, durable4000 cap and one-POST verified/ambiguous cancellation with independently reopened signed receipts. Catalog mount expectations were updated without changing catalog behavior.
 - Focused acceptance: backend/runtime203passed; source/rollback/contracts216passed; UI/API/mounted158passed. Groups overlap and are not a summed full-suite count. Source/rollback cases also ran without optional AWS SDK imports. Initial new memory-store fixture revision mistakes were corrected before the passing216run; no production defect or skip was concealed. JavaScript syntax and diff whitespace passed. Discovery found9mounted source-default,11explicit compatibility and55cancellation/reconciliation fault cases. No local Chrome pass is claimed; actual Chrome belongs to final-source CI. A bounded integration read found no concrete blocker or remaining implicit financial-source-False test assumption.
 - Root updated admin-console-handoff.md, admin-console-operator.md, admin-financial-operations-design.md and product-roadmap.md with actual source scope, preserved completed catalog deployment and remaining financial/authoring/live work. Necessary new-feature AWS configuration reads timed out through the SDK and existing CLI, without an authentication rejection. No runtime prerequisite presence or new deployment is inferred, and no configuration, customer subscription, resource or role was changed. The existing signed-in session is retained. This batch is ready for one non-forced main publication and its own seven-workflow/25-job gate; no status-only pre-release commit or healthy-deployment loop is requested.
+
+
+### 2026-11-25 — Financial activation deployed; dedicated cancellation setup remains
+
+- Published coherent implementation 908fd4cbfd56b4e7b10724a0f332d027fffcc9a5, tree 86500c182c31264ea7c45c267388ea205344cf1f, parent 889f46f6f89171e7c0c419593ee93575497d80fd, by a non-forced main update. All 29 published blobs and the tree matched the reviewed local bytes. The changed source/UI, source-default fixtures, focused tests and shared guides are recorded in the preceding batch.
+- Every required exact-source workflow and individual job passed on attempt 1: Tests 45731939613(13), CodeQL 45731938906(3), Field Comparisons 45731939535(2), Trusted Reference 45731939601(1), PII 45731939562(3), Stripe 45731939557(2), Deploy Script 45731939598(1). All 25 names/IDs/source bindings matched the accepted release contract; no required skip/cancellation/failure or rerun. Actual Chrome owner compatibility and source-default financial journeys, authenticated billing and full dashboard passed. CI observation stopped once terminal.
+- The unchanged accepted Deploy-Verified.ps1 -Deploy completed exit 0, AWS Successful, LastModified 2026-11-26T01:09:45Z (November 25, 8:09 p.m. Eastern), exact source 908fd4c and 13/13 dashboard assets. Candidate digest 3ELllmPDFrUbQkGJzh5BgFghXEvqDeDMvezoHMyp6Mg=; actual preserved compatible backup source 762e7b66be029f07d245d9d11dc8a08aed32fd67, digest Jiuzcc81AQolQvmX9GB/ZSQfxwMzhokGP98UHGTr6fU=. The final observed revision differs from the acknowledged upload revision, so automatic_rollback_owned=false remains accurately recorded. No newer revision was adopted as restoration authority.
+- The existing AWS role session remained usable. Earlier ARN-addressed reads timed out; an ordinary CLI configuration read using the existing function name succeeded. Nonsecret presence: admin enabled, independent audit, Stripe reader, configured price and paid allowance present; dedicated cancellation write key and expected Stripe account absent. Deployment did not change runtime configuration. Reconciliation is enabled with existing prerequisites; cancellation source is deployed but cannot dispatch without its dedicated setup.
+- Stripe plugin authentication succeeded and lists the company accounts, but its discovered operations do not create the required restricted key. The API-keys Dashboard requires sign-in and is preserved for secure continuation. Exact existing billing account/mode matching is not yet established; no Stripe credential was created, configured, exposed or inferred from an account label. Finish this specific setup after sign-in; do not reopen AWS login or perform a general healthy-release audit. No real customer financial action, new resource, paid provider, role grant or live catalog mutation occurred.
+- Root updated the current production summaries and remaining-work order in admin-console-handoff.md and this append-only record. Full 15-area production acceptance remains false and #30 remains unresolved; refunds, credits, plan changes, cap restoration, durable lifecycle/risk processing, true financial attribution and general rule/schema authoring remain unfinished. The 47-target roadmap is preserved, and the deployment-readiness automation remains paused.
