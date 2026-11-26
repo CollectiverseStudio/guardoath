@@ -134,7 +134,11 @@ def test_original_releases_checked_text_and_restart_replays_only_durable_receipt
 
 def test_same_id_changed_request_conflicts_without_second_provider_call(setup):
     client, _, provider, _, _, key, _ = setup()
-    assert post(client, key).json()["receipt"]["status"] == "completed"
+    response = post(client, key)
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert "receipt" in result, response.text
+    assert result["receipt"]["status"] == "completed"
     assert post(client, key, message="Different text").status_code == 409
     assert post(client, key, max_output_tokens=129).status_code == 409
     assert len(provider.calls) == 1

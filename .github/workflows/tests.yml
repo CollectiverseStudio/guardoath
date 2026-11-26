@@ -217,9 +217,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install -e ".[test,pii]"
+      # Match Linux: run every bundled-suite assertion in a fresh process.
+      # Preserve the original checker deadlines; any late verdict fails.
+      - name: All bundled suites with strict deadlines on Windows (isolated process)
+        run: python -m pytest -q tests/test_evaluate_all.py
       # Isolate the same strict data-quality deadlines from cumulative pytest
       # process state after ~22k parametrized cases on Windows 3.13. The full
-      # suite is still collected/executed exactly once across these two
+      # suite is still collected/executed exactly once across these
       # fail-fast steps: no timeout changes, xfails, skips or assertion removals.
       # A real >250ms checker result still fails the isolated test.
       - name: Strict data-quality deadlines on Windows
@@ -242,7 +246,7 @@ jobs:
       - name: Foundation schema formats (isolated strict deadlines)
         run: python -m pytest -q tests/test_foundations.py
       - name: Remaining full suite on Windows (includes launcher tests)
-        run: python -m pytest -q --ignore=tests/test_data_quality.py --ignore=tests/test_field_comparisons_inventory.py --ignore=tests/test_statistical_drift_tenant.py --ignore=tests/test_catalog_partial_boundaries.py --ignore=tests/test_catalog_partial_contracts.py --ignore=tests/test_additional_use_cases.py --ignore=tests/test_foundations.py
+        run: python -m pytest -q --ignore=tests/test_evaluate_all.py --ignore=tests/test_data_quality.py --ignore=tests/test_field_comparisons_inventory.py --ignore=tests/test_statistical_drift_tenant.py --ignore=tests/test_catalog_partial_boundaries.py --ignore=tests/test_catalog_partial_contracts.py --ignore=tests/test_additional_use_cases.py --ignore=tests/test_foundations.py
 
   optional-aws-adapter:
     runs-on: ubuntu-latest

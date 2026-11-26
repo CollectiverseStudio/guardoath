@@ -30,6 +30,33 @@ its CI acceptance is required for this activation source. Changed JavaScript
 syntax/discovery and scoped whitespace passed. All provider actions were
 synthetic; no customer refund or credential creation occurred.
 
+### Corrective Windows CI acceptance
+
+Writer source `9e6492d9951f8a4120994e2cf3c62be6c5a4ce3f` was published but was
+not deployed. Its six non-Tests workflows passed, and the successful Tests jobs
+included source-default refund Chrome and dashboard acceptance. The required
+Tests run `45864845981` still failed on both attempts. Attempt 1's
+Windows 3.12 privacy case `json.health_plan_id.input` took **539.12 ms against
+the unchanged 500-ms deadline**, producing two dependent assertions. The single
+targeted retry failed Windows 3.13 on a different invocation-service test: its
+first response had no `receipt`, and the original assertion hid the HTTP
+status/body. The other Windows job was cancelled by matrix fail-fast each time.
+These are distinct failures; no underlying invocation error or timeout is
+inferred from the missing field.
+
+This corrective source runs the complete `tests/test_evaluate_all.py` module in
+a fresh required Windows process, matching the existing Linux isolation, and
+excludes that already-executed module from the remaining suite. No test, deadline
+or assertion is omitted or weakened. The affected invocation test now asserts
+and reports the first response's HTTP status/body and receipt presence before
+its unchanged completed-result, changed-request conflict and single-provider-call
+checks. Application behavior is unchanged. Focused Python 3.13 acceptance passed
+all 35 invocation-service tests and all 6 bundled-suite tests; workflow structure
+validation confirms exactly this process partition with unchanged job membership
+and matrix. These local passes do not establish the original failures' causes
+or resolve issue #30. This source requires its own seven-workflow/25-job gate
+before deployment with the actual 26724c3 compatible reader backup.
+
 ## Reader baseline implementation: bounded owner invoice refunds
 
 The next CORE-04/#41 slice implements reviewed full refunds of eligible paid
