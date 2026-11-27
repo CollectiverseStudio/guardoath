@@ -19,15 +19,31 @@ Greg explicitly removed the November 13 release-stabilization reservation and au
 - Greg's November 23 product discussion and direction to preserve/implement its additions are recorded in [the product roadmap](product-roadmap.md). Its 47 targets and priority order remain durable work items; finish #39–#42 and verified production acceptance first, then update roadmap evidence as work is implemented. Proposed packaging is not a launched-product claim or spending authorization.
 - Greg requested meaningful progress updates and durable new-chat continuity. Maintain [the owner admin handoff](admin-console-handoff.md) alongside substantive implementation; it records actual verification, open work and blockers and does not replace fresh main/CI/ownership checks.
 
-## Open-invoice credit implementation
+## Open-invoice credits deployed in Stripe test mode
 
-Greg selected partial or full credits against an open invoice for CORE-04/#41.
-The owner workflow adds review, typed confirmation and read-only receipt lookup
-under **Tenants → Invoices** and **Billing**. The test-mode issuer requires a
-dedicated restricted Stripe key. No credit has been issued for a customer.
-See the [operator procedure](admin-console-operator.md#credit-an-open-invoice-in-stripe-test-mode)
-and [financial design](admin-financial-operations-design.md#owner-selected-open-invoice-credits).
-The release and runtime configuration are tracked separately.
+Owners can select **Tenants → Invoices → Open → Credit open invoice**. The
+review shows the selected invoice balance and the amount after the credit.
+The owner can issue a partial or full credit and inspect the matching Stripe
+credit note from Billing using the saved reference.
+
+Source `cc3f8f029d8f9cf04e02d2a7c0ddf2564ebaeb40` passed all seven required workflows and
+25 jobs. AWS reported a successful deployment at `2026-11-27T03:56:50.000+0000`.
+The backend and 13 dashboard assets matched the release. The deployment receipt
+records Lambda revision `1fa29037-6584-48d9-8a82-56d3bcf0ea7e`, archive digest
+`GDRfHKE6CBfoAdMmaNl1/xOZhyghtHah4+4IOw/lKSg=` and rollback source `9881ddb7f7ab024303f16aa2dceace19e0d03175`.
+
+Greg authorized the dedicated test-mode key. Stripe accepted an account read
+from both the billing reader and the new credit-note writer, and a credit-note
+list read with the writer. AWS verified the key and account were saved together
+at configuration revision `827d39c2-a5dd-4075-93e0-1268cd9f8c38`. Platform permission scopes are
+Accounts Read and Credit Notes Write. All Connect permissions use None.
+The mounted browser test issued a partial synthetic credit and recovered its
+receipt after signing in again. The production admin page served the credit and
+receipt controls. All three credit endpoints advertised POST via a read-only
+HTTP method check. No customer credit was issued during deployment.
+The broader fifteen-area live acceptance and issue #30 remain open.
+Live-mode billing, provider plan changes and lifecycle/risk-event processing
+remain open. [Release tests](https://github.com/CollectiverseStudio/guardoath/actions/runs/45935465153)
 
 ## Production release for saved request cap restoration
 
