@@ -30,6 +30,15 @@ window. A changed tenant binding invalidates the read. This adds a read-only
 view to CORE-04. Automatic webhook processing, durable local outcome tracking
 and provider plan changes remain open. See the [operator procedure](admin-console-operator.md#review-a-tenants-recent-billing-events).
 
+Production source `5d8d783ead9fb447704a01eb24349cfe47d4a76c` passed all 25 required CI jobs and deployed
+at `2026-11-27T04:37:03.000+0000`. The release verified the Lambda backend and
+13 of 13 dashboard assets. The public admin page served the event controls and
+the event endpoint rejected an anonymous request with HTTP 401. The test-mode
+Stripe reader accepted the scoped seven-day query. The authenticated owner
+journey ran against the mounted application with synthetic tenant events.
+No customer billing or access settings were changed. Full fifteen-area live
+acceptance and issue #30 remain open. [Release tests](https://github.com/CollectiverseStudio/guardoath/actions/runs/45939309144)
+
 ## Open-invoice credits deployed in Stripe test mode
 
 Owners can select **Tenants → Invoices → Open → Credit open invoice**. The
