@@ -25,6 +25,10 @@ REFUND_READER_SHA = "26724c3049db679ded77bfe8ff176e87551835c7"
 REFUND_READER_SUPPORT = (*PRE_REFUND_READER_SUPPORT, "stripe-invoice-refund-v1")
 
 
+RESTORE_READER_SHA = "9f44394f5d5e278e9fe879b9ed0c903c033632ce"
+RESTORE_READER_SUPPORT = (*REFUND_READER_SUPPORT, "subscription-cap-restoration-v1")
+
+
 def archive(path, metadata=None, *, raw=None, duplicate=False):
     with zipfile.ZipFile(path,"w",compression=zipfile.ZIP_DEFLATED) as bundle:
         # Must never be executed or extracted by compatibility inspection.
@@ -57,31 +61,31 @@ def test_legacy_can_accept_reader_baseline_but_never_new_provenance_writers(tmp_
     assert verify(writer,baseline)["status"] == "compatible"
 
 
-def test_activated_refund_build_requires_compatible_reader_source_and_rejects_unsupported_backups(tmp_path):
+def test_activated_restoration_build_requires_compatible_reader_source_and_rejects_unsupported_backups(tmp_path):
     spec = importlib.util.spec_from_file_location("build_lambda",ROOT / "deploy/aws/build_lambda.py")
     build = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(build)
     actual = build.release_metadata(SHA)
     assert actual == release_metadata(SHA)
     assert actual["supported_state_contracts"] == [*REFUND_READER_SUPPORT, "subscription-cap-restoration-v1"]
-    assert actual["introduced_state_contracts"] == list(REFUND_READER_SUPPORT)
+    assert actual["introduced_state_contracts"] == list(RESTORE_READER_SUPPORT)
     candidate = archive(tmp_path / "activated.zip", actual)
     # Exercise the committed reader source's declared shape offline. This is
     # not deployment evidence: deployment must accept that reader first, then
     # download and digest-verify its actual current rollback archive.
-    backup = archive(tmp_path / "refund-reader-source.zip", metadata(
-        REFUND_READER_SHA, support=REFUND_READER_SUPPORT, writes=PRE_REFUND_READER_SUPPORT))
+    backup = archive(tmp_path / "restoration-reader-source.zip", metadata(
+        RESTORE_READER_SHA, support=RESTORE_READER_SUPPORT, writes=REFUND_READER_SUPPORT))
     result = verify(candidate, backup)
     assert result == {"status": "compatible", "candidate_source_sha": SHA,
-                      "rollback_source_sha": REFUND_READER_SHA,
+                      "rollback_source_sha": RESTORE_READER_SHA,
                       "rollback_code_sha256": gate.archive_digest(backup),
                       "state_contracts": sorted((*REFUND_READER_SUPPORT, "subscription-cap-restoration-v1"))}
     previous = archive(tmp_path / "pre-refund-catalog-release.zip", metadata(
         PRE_REFUND_READER_SHA, support=PRE_REFUND_READER_SUPPORT, writes=CATALOG_CONTRACTS))
     with pytest.raises(ValueError, match="compatibility baseline"):
         verify(candidate, previous)
-    missing_contracts = [tuple(contract for contract in REFUND_READER_SUPPORT if contract != missing)
-                         for missing in REFUND_READER_SUPPORT]
+    missing_contracts = [tuple(contract for contract in RESTORE_READER_SUPPORT if contract != missing)
+                         for missing in RESTORE_READER_SUPPORT]
     for index, support in enumerate(((), *missing_contracts)):
         unsupported = archive(tmp_path / f"unsupported-{index}.zip", metadata(OLD, support=support, writes=()))
         with pytest.raises(ValueError, match="compatibility baseline"):
@@ -97,6 +101,7 @@ def test_explicit_reader_phase_remains_compatible_with_legacy_backup(tmp_path, m
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_STATE", False)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE", False)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_REFUND_STATE", False)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CAP_RESTORATION_STATE", False)
     actual = release_metadata(SHA)
     assert actual["introduced_state_contracts"] == [] and CONTRACT in actual["supported_state_contracts"]
     old = archive(tmp_path / "old.zip")
@@ -111,6 +116,7 @@ def test_enabling_actual_writer_code_also_declares_incompatible_new_writes(tmp_p
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_STATE", False)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE", False)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_REFUND_STATE", False)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CAP_RESTORATION_STATE", False)
     monkeypatch.setattr(state_contracts,"ENABLE_NEW_SUBSCRIPTION_STATE",True)
     actual = release_metadata(SHA)
     assert actual["introduced_state_contracts"] == [CONTRACT]
@@ -198,6 +204,7 @@ def test_cancellation_writer_requires_its_own_supported_backup_and_never_enables
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_STATE", False)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE", False)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_REFUND_STATE", False)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CAP_RESTORATION_STATE", False)
     financial = "stripe-period-end-cancellation-v1"
     support = (CONTRACT,financial)
     legacy = archive(tmp_path / "legacy-financial.zip",{"source_sha":OLD})
@@ -222,6 +229,7 @@ def test_catalog_lifecycle_has_explicit_reader_baseline_before_any_new_shapes(tm
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_STATE", False)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_LIFECYCLE_STATE", False)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_REFUND_STATE", False)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CAP_RESTORATION_STATE", False)
     lifecycle = "catalog-publication-lifecycle-v1"
     prior_support = ("subscription-cap-provenance-v1",
                      "stripe-period-end-cancellation-v1", "catalog-publication-v1")

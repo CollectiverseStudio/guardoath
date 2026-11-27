@@ -5,6 +5,20 @@ record for a new chat. The append-only engineering history remains in
 [director-agent-coordination.md](director-agent-coordination.md); the complete
 47-target product discussion is preserved in [product-roadmap.md](product-roadmap.md).
 
+## Saved request cap restoration release update
+
+The compatibility release `9f44394` passed all seven required workflows
+(25 jobs) and deployed successfully with backend and dashboard source parity.
+Its deployed archive SHA-256 in base64 is
+`sc1Mz7sC+jcAKUir6IsYrbx8iwpmHz6ACzAKuWHTJZQ=`.
+
+Activation commit `acc5e3c` passed 448 focused tests. Deploy Script Acceptance
+and Stripe Reconciliation Acceptance exposed older fixtures expecting the five
+previous writer contracts. The corrected compatibility regressions cover the
+sixth contract and retain historical reader-only phases. Production activation
+requires the corrected source's CI and deployment with the actual compatible
+backup. Full live acceptance and issue #30 remain open.
+
 ## Current implementation: reviewed saved-cap restoration compatibility reader
 
 The next CORE-04/#41 operation restores an explicit saved local monthly request

@@ -19,6 +19,20 @@ Greg explicitly removed the November 13 release-stabilization reservation and au
 - Greg's November 23 product discussion and direction to preserve/implement its additions are recorded in [the product roadmap](product-roadmap.md). Its 47 targets and priority order remain durable work items; finish #39–#42 and verified production acceptance first, then update roadmap evidence as work is implemented. Proposed packaging is not a launched-product claim or spending authorization.
 - Greg requested meaningful progress updates and durable new-chat continuity. Maintain [the owner admin handoff](admin-console-handoff.md) alongside substantive implementation; it records actual verification, open work and blockers and does not replace fresh main/CI/ownership checks.
 
+## Saved request cap restoration release update
+
+The compatibility release `9f44394` passed all seven required workflows
+(25 jobs) and deployed successfully with backend and dashboard source parity.
+Its deployed archive SHA-256 in base64 is
+`sc1Mz7sC+jcAKUir6IsYrbx8iwpmHz6ACzAKuWHTJZQ=`.
+
+Activation commit `acc5e3c` passed 448 focused tests. Deploy Script Acceptance
+and Stripe Reconciliation Acceptance exposed older fixtures expecting the five
+previous writer contracts. The corrected compatibility regressions cover the
+sixth contract and retain historical reader-only phases. Production activation
+requires the corrected source's CI and deployment with the actual compatible
+backup. Full live acceptance and issue #30 remain open.
+
 ## Current production — November 26, 2026 (America/New_York)
 
 Deployed writer source **`83298d309c49ede4640c70320489c5d21306d40b`** has

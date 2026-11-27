@@ -121,7 +121,7 @@ def test_activated_source_retains_both_catalog_contracts_with_financial_activati
     assert state_contracts.new_refund_state_enabled() is True
     assert manifest()["introduced_state_contracts"] == [
         "subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1",
-        "catalog-publication-v1", "catalog-publication-lifecycle-v1", "stripe-invoice-refund-v1"]
+        "catalog-publication-v1", "catalog-publication-lifecycle-v1", "stripe-invoice-refund-v1", "subscription-cap-restoration-v1"]
 
 
 def test_explicit_catalog_reader_phase_cannot_be_enabled_by_environment(monkeypatch):
@@ -133,7 +133,7 @@ def test_explicit_catalog_reader_phase_cannot_be_enabled_by_environment(monkeypa
         monkeypatch.setenv(name, "1")
     assert state_contracts.new_catalog_publication_state_enabled() is False
     assert manifest()["introduced_state_contracts"] == [
-        "subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1", "stripe-invoice-refund-v1"]
+        "subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1", "stripe-invoice-refund-v1", "subscription-cap-restoration-v1"]
     assert "catalog-publication-v1" in manifest()["supported_state_contracts"]
 
 
@@ -142,6 +142,7 @@ def test_existing_four_writer_contracts_are_independently_declared(monkeypatch, 
     # The refund compatibility suite covers all five flag combinations. Retain
     # this historical four-writer matrix in an explicit refund reader phase.
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_REFUND_STATE", False)
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CAP_RESTORATION_STATE", False)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_SUBSCRIPTION_STATE", caps)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CANCELLATION_STATE", cancellation)
     monkeypatch.setattr(state_contracts, "ENABLE_NEW_CATALOG_PUBLICATION_STATE", catalog)

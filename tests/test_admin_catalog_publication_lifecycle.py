@@ -493,4 +493,4 @@ def test_lifecycle_source_gate_cannot_be_enabled_by_environment(monkeypatch):
         monkeypatch.setenv(name, "1")
     assert state_contracts.new_catalog_publication_lifecycle_state_enabled() is False
     assert state_contracts.release_metadata("a" * 40)["introduced_state_contracts"] == [
-        "subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1", "stripe-invoice-refund-v1"]
+        "subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1", "stripe-invoice-refund-v1", "subscription-cap-restoration-v1"]

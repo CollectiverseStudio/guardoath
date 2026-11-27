@@ -10,7 +10,7 @@ from guardoath import state_contracts
 from guardoath.admin_cancellation_provider import digest
 from guardoath.admin_refund_state import CONTRACT, DynamoRefundState, RefundStateUnavailable
 from test_admin_refund_state import NOW, KEY, TENANT, fields, make, proof, reserved, dispatched, stored_tenant
-from test_rollback_compatibility import archive, gate, metadata, verify, SHA, OLD, REFUND_READER_SHA
+from test_rollback_compatibility import archive, gate, metadata, verify, SHA, OLD, RESTORE_READER_SHA
 
 PRIOR_CONTRACTS = (
     "subscription-cap-provenance-v1", "stripe-period-end-cancellation-v1",
@@ -31,7 +31,7 @@ def test_source_default_introduces_refund_writes_despite_environment(monkeypatch
     assert state_contracts.new_refund_state_enabled() is True
     declaration = state_contracts.release_metadata(SHA)
     assert declaration["supported_state_contracts"] == [*PRIOR_CONTRACTS, CONTRACT, "subscription-cap-restoration-v1"]
-    assert declaration["introduced_state_contracts"] == [*PRIOR_CONTRACTS, CONTRACT]
+    assert declaration["introduced_state_contracts"] == [*PRIOR_CONTRACTS, CONTRACT, "subscription-cap-restoration-v1"]
 
 
 def test_explicit_refund_reader_cannot_be_enabled_by_environment(monkeypatch):
@@ -43,7 +43,7 @@ def test_explicit_refund_reader_cannot_be_enabled_by_environment(monkeypatch):
     assert state_contracts.new_refund_state_enabled() is False
     declaration = state_contracts.release_metadata(SHA)
     assert declaration["supported_state_contracts"] == [*PRIOR_CONTRACTS, CONTRACT, "subscription-cap-restoration-v1"]
-    assert declaration["introduced_state_contracts"] == list(PRIOR_CONTRACTS)
+    assert declaration["introduced_state_contracts"] == [*PRIOR_CONTRACTS, "subscription-cap-restoration-v1"]
 
 
 @pytest.mark.parametrize("invalid", [None, 0, 1, "true", [], {}])
@@ -55,6 +55,7 @@ def test_refund_gate_requires_source_boolean(monkeypatch, invalid):
 
 @pytest.mark.parametrize("enabled", list(itertools.product([False, True], repeat=5)))
 def test_all_five_writer_introductions_remain_independent(monkeypatch, enabled):
+    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CAP_RESTORATION_STATE", False)
     for flag, value in zip(FLAGS, enabled):
         monkeypatch.setattr(state_contracts, flag, value)
     contracts = (*PRIOR_CONTRACTS, CONTRACT)
@@ -71,9 +72,10 @@ def test_actual_artifact_writer_requires_refund_reader_and_retains_prior_reader_
     assert state_contracts.new_refund_state_enabled() is True
     writer_declaration = build.release_metadata(SHA)
     assert writer_declaration == state_contracts.release_metadata(SHA)
-    assert writer_declaration["introduced_state_contracts"] == [*PRIOR_CONTRACTS, CONTRACT]
+    assert writer_declaration["introduced_state_contracts"] == [*PRIOR_CONTRACTS, CONTRACT, "subscription-cap-restoration-v1"]
     with monkeypatch.context() as reader_phase:
         reader_phase.setattr(state_contracts, "ENABLE_NEW_REFUND_STATE", False)
+        reader_phase.setattr(state_contracts, "ENABLE_NEW_CAP_RESTORATION_STATE", False)
         reader_declaration = state_contracts.release_metadata(SHA)
         assert reader_declaration["introduced_state_contracts"] == list(PRIOR_CONTRACTS)
         # Packaging reads the source file independently; a process-local test
@@ -88,7 +90,7 @@ def test_actual_artifact_writer_requires_refund_reader_and_retains_prior_reader_
     # This is the committed reader source's declared shape, not proof that its
     # deployment or the actual digest-bound rollback backup has been accepted.
     compatible_reader = archive(tmp_path / "refund-reader-source.zip",
-        {**reader_declaration, "source_sha": REFUND_READER_SHA})
+        metadata(RESTORE_READER_SHA, support=writer_declaration["supported_state_contracts"], writes=(*PRIOR_CONTRACTS, CONTRACT)))
     assert verify(writer, compatible_reader)["status"] == "compatible"
     dropped = archive(tmp_path / "dropped-refund-reader.zip", metadata(SHA, support=PRIOR_CONTRACTS, writes=PRIOR_CONTRACTS))
     with pytest.raises(ValueError, match="drops deployed"):
