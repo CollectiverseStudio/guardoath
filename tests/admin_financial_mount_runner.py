@@ -57,7 +57,7 @@ def main(scenario):
         "signed_audit": True, "stripe_read": True, "plan_allowance": True,
         "cancellation_provider": True, "refund_provider": True,
         "subscription_writer_enabled": writer, "cancellation_writer_enabled": writer,
-        "refund_writer_enabled": writer, "cap_restore_writer_enabled": False}
+        "refund_writer_enabled": writer, "cap_restore_writer_enabled": writer}
     body = {"expected_revision": 7, "confirmation": "RECONCILE " + TENANT,
         "reason": "Reconcile the mounted synthetic subscription",
         "idempotency_key": "mounted-financial-reconcile-001"}
