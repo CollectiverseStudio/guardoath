@@ -348,6 +348,26 @@ cap_restoration = AdminRequestCapRestoration(
     tenant_table="tenant_table", preview_key=CURSOR_KEY, fetch_snapshot=cap_restoration_snapshot,
     expected_price_id="price_starter", expected_livemode=False, plan_monthly_allowance=10000)
 invoice_history = AdminInvoiceHistory(stripe_invoices, reporter, cursor_key=CURSOR_KEY)
+from guardoath.admin_billing_events import AdminBillingEvents
+
+
+def stripe_event_page(*, since, until, after):
+    def snapshot(event_id, kind, obj, offset):
+        return {"object": "event", "id": event_id, "livemode": False, "created": until - offset,
+                "type": kind, "data": {"object": {**obj, "livemode": False}}}
+    subscription = {"object": "subscription", "id": "sub_beta", "customer": "cus_beta"}
+    invoice = {"object": "invoice", "id": "in_beta", "customer": "cus_beta",
+               "parent": {"type": "subscription_details", "subscription_details": {"subscription": "sub_beta"}}}
+    if after is None:
+        rows = [snapshot("evt_alpha", "customer.subscription.deleted",
+                         {"object": "subscription", "id": "sub_alpha", "customer": "cus_alpha"}, 0),
+                snapshot("evt_beta_payment", "invoice.payment_failed", invoice, 1)]
+        return {"object": "list", "data": rows, "has_more": True}
+    assert after == "evt_beta_payment"
+    return {"object": "list", "data": [snapshot("evt_beta_update", "customer.subscription.updated",
+                                                subscription, 2)], "has_more": False}
+
+
 refunds = AdminInvoiceRefund(state=DynamoRefundState(db, "audit_table", ADMIN_BROWSER_AUDIT_KEY),
     tenant_table="tenant_table", preview_key=CURSOR_KEY, invoice_references=invoice_history.refund_references,
     provider=StripeInvoiceRefund(api_key="rk_test_synthetic_refund_0123456789",
@@ -370,6 +390,7 @@ mount_admin_console(app,sessions=sessions,tenants=tenants,cognito=CognitoBoundar
     billing_configuration={"signed_audit":True, "stripe_read":True,
         "plan_allowance":True, "cancellation_provider":True, "refund_provider":True},
     billing_invoices=invoice_history,
+    billing_events=AdminBillingEvents(invoice_history, stripe_event_page, CURSOR_KEY),
     billing_credit=AdminInvoiceCredit(
         StripeInvoiceCredits("sk_test_synthetic_reader", "rk_test_synthetic_credit", credit_boundary.account,
                              opener=credit_boundary), invoice_history, ADMIN_BROWSER_AUDIT_KEY),

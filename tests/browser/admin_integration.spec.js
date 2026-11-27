@@ -366,3 +366,27 @@ test("owner reviews an open invoice, issues a partial credit and recovers its re
   await page.locator("#credit-receipt").click();
   await expect(page.locator("#credit-result")).toContainText("TEST-CN-1 · issued");
 });
+
+test("owner follows verified billing events for one tenant through older results", async ({page,request}) => {
+  const tenant = "usr-admin-beta", headers = await login(page);
+  const record = persisted().tenants[tenant];
+  if (!record.stripe_subscription_id) {
+    const response = await request.post("/v1/admin/subscriptions/" + tenant + "/reconcile", {headers, data:{
+      expected_revision:record.revision, confirmation:"RECONCILE " + tenant,
+      reason:"Bind synthetic customer for event history", idempotency_key:"event-history-setup-001"
+    }});
+    expect(response.status()).toBe(200);
+  }
+  await page.locator("#nav-tenants").click();
+  await page.locator("#tenant-rows tr").filter({hasText:tenant}).getByRole("button",{name:"Billing events",exact:true}).click();
+  const list = page.locator("#billing-events-list");
+  await expect(list.getByRole("listitem")).toHaveCount(1);
+  await expect(list).toContainText("Invoice payment failed");
+  await expect(list).not.toContainText("Subscription ended");
+  await page.getByRole("button",{name:"Older events",exact:true}).click();
+  await expect(list).toContainText("Subscription updated");
+  await expect(page.locator("#billing-events-status")).toContainText("End of the selected window");
+  await expect(page.locator("#billing-events-older")).toBeDisabled();
+  await page.getByRole("button",{name:"Refresh billing events",exact:true}).click();
+  await expect(list).toContainText("Invoice payment failed");
+});

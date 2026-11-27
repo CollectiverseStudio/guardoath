@@ -31,6 +31,19 @@ refund or full financial acceptance. Reviewed saved-cap restoration now has its
 own implementation and source-disabled compatibility reader, described below.
 Open-invoice credits are described below. Provider plan changes remain open.
 
+## Subscription and invoice events
+
+Owners can review the selected tenant's lifecycle and payment history through
+`GET /v1/admin/subscriptions/{tenant_id}/events`. GuardOath reads Stripe's
+Events API with a fixed time window and a fixed set of event types. It checks
+the saved customer and subscription against current provider state first,
+filters account-level results server-side and rechecks the saved binding before
+returning the sanitized page. Invoice snapshots support both legacy subscription
+fields and newer subscription parents. The encrypted cursor is tied to the
+owner, tenant revision, saved binding and configured price. The existing signed
+subscription-read audit records access. Event delivery, background processing,
+entitlement updates and a durable local processing ledger are separate work.
+
 ## Owner-selected open-invoice credits
 
 Greg selected an adjustment to the outstanding balance of one open invoice.

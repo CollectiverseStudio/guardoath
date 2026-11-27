@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from guardoath.admin_actions import AdminActionConflict, AdminActionUnavailable, AdminTenantActions, AdminUnboundZeroCap
 from guardoath.admin_audit import AdminAuditReader, AdminSensitiveReadAuditor, AdminAuditUnavailable, EVENT
 from guardoath.admin_billing import AdminSubscriptionReporter, BillingUnavailable
+from guardoath.admin_billing_events import AdminBillingEvents, EventCursorError
 from guardoath.admin_billing_reconcile import AdminBillingDowngrade, BillingDowngradeConflict, BillingDowngradeUnavailable
 from guardoath.admin_subscription_reconcile import (
     AdminSubscriptionReconciliation, SubscriptionConflict, SubscriptionUnavailable)
@@ -358,6 +359,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                         billing_downgrade: AdminBillingDowngrade | None = None,
                         billing_reconciler: AdminSubscriptionReconciliation | None = None,
                         billing_invoices: AdminInvoiceHistory | None = None,
+                        billing_events: AdminBillingEvents | None = None,
                         billing_cancellation: AdminSubscriptionCancellation | None = None,
                         billing_refunds: AdminInvoiceRefund | None = None,
                         billing_cap_restore: AdminRequestCapRestoration | None = None,
@@ -406,6 +408,10 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             or read_auditor.audit_table != billing_refunds.state.table_name
             or not hmac.compare_digest(read_auditor.signing_key, billing_refunds.state.audit_key)):
         raise ValueError("Refunds require their bound persistent read auditor")
+    if billing_events is not None and (
+            not isinstance(billing_events, AdminBillingEvents) or billing_events.history is not billing_invoices
+            or not isinstance(read_auditor, AdminSensitiveReadAuditor) or tenant_store is None):
+        raise ValueError("Billing events require bound invoice history, tenant store and signed read auditing")
     if billing_credit is not None and (
             not isinstance(billing_credit, AdminInvoiceCredit) or billing_credit.history is not billing_invoices
             or not isinstance(read_auditor, AdminSensitiveReadAuditor) or tenant_store is None
@@ -519,6 +525,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            "billing_cancellation_preview": billing_cancellation is not None and billing_cancellation.provider is not None,
                            "billing_cancellation_schedule": billing_cancellation is not None and billing_cancellation.provider is not None and new_cancellation_state_enabled(),
                            "billing_cancellation_receipts": billing_cancellation is not None,
+                           "billing_events": billing_events is not None,
                            "billing_credit_preview": billing_credit is not None,
                            "billing_credit_submit": billing_credit is not None and billing_credit.provider.can_issue,
                            "billing_refund_preview": billing_refunds is not None and billing_refunds.provider is not None,
@@ -831,6 +838,33 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             raise HTTPException(status_code=503, detail="Invoice history unavailable") from exc
         return admin_json({"tenant_id": tenant_id, "history": result,
                            **({"read_audit_event_id": read_event} if read_event else {})})
+
+    if billing_events is not None:
+        @router.get("/v1/admin/subscriptions/{tenant_id}/events")
+        def read_billing_events(tenant_id: str, cursor: str | None = Query(default=None, min_length=80, max_length=2048),
+                                principal: VerifiedAdmin = Depends(require_admin)):
+            if "owner" not in principal.roles:
+                raise HTTPException(status_code=403, detail="Owner access required")
+            if not TENANT_ID.fullmatch(tenant_id):
+                raise HTTPException(status_code=404, detail="Tenant not found")
+            audit = audit_sensitive_read(principal, "stripe.subscription", tenant_id)
+            try:
+                record = tenant_store.get(tenant_id)
+                if record is None or record.tenant_id != tenant_id:
+                    raise HTTPException(status_code=404, detail="Tenant not found")
+                activity = billing_events.read(record, principal.subject, cursor)
+                latest = tenant_store.get(tenant_id)
+                if latest is None or billing_events.binding(latest) != billing_events.binding(record):
+                    raise HTTPException(status_code=409, detail="Tenant changed. Restart billing events.")
+            except HTTPException:
+                raise
+            except EventCursorError:
+                raise HTTPException(status_code=400, detail="Restart billing events for this tenant.") from None
+            except InvoiceReadRateLimited:
+                raise HTTPException(status_code=429, detail="Billing reads temporarily limited.") from None
+            except Exception:
+                raise HTTPException(status_code=503, detail="Billing event history unavailable.") from None
+            return admin_json({"tenant_id": tenant_id, "activity": activity, "read_audit_event_id": audit})
 
     if billing_credit is not None:
         def credit_call(tenant_id, principal, request, operation, payload):

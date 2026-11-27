@@ -135,6 +135,7 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
                 enrollment_subject=enrollment_subject)
     billing_reporter = None
     billing_invoices = None
+    billing_events = None
     cancellation_provider = None
     refund_provider = None
     # The owner capability report describes validated server prerequisites,
@@ -167,6 +168,11 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
                                       starting_after=starting_after, status=status)
         billing_invoices = AdminInvoiceHistory(verified_invoices, billing_reporter,
                                                cursor_key=bytes.fromhex(key_hex))
+        if audit_table and secret.startswith("sk_test_"):
+            from functools import partial
+            from guardoath.admin_billing_events import AdminBillingEvents, fetch_event_page
+            billing_events = AdminBillingEvents(billing_invoices, partial(fetch_event_page, secret),
+                                               bytes.fromhex(key_hex))
     cancellation_key = os.getenv("GUARDOATH_ADMIN_STRIPE_WRITE_KEY", "")
     cancellation_account = os.getenv("GUARDOATH_ADMIN_STRIPE_ACCOUNT_ID", "")
     if cancellation_key or cancellation_account:
@@ -290,7 +296,7 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
                         require_persistent_read_audit=True,
                         billing_reporter=billing_reporter, billing_downgrade=billing_downgrade,
                         billing_reconciler=billing_reconciler,
-                        billing_invoices=billing_invoices,
+                        billing_invoices=billing_invoices, billing_events=billing_events,
                         billing_cancellation=billing_cancellation,
                         billing_refunds=billing_refunds,
                         billing_cap_restore=billing_cap_restore, billing_credit=billing_credit,

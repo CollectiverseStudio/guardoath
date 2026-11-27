@@ -5,6 +5,25 @@ The new `/admin` route redirects to `/admin/login` only when the admin feature i
 ## Authorization
 Set `GUARDOATH_ADMIN_ENABLED=1` only after establishing a separate public Cognito admin OAuth client with PKCE and callback `https://guardoath.com/admin/login`, in the existing trusted pool, and verifying independently fetched `GuardOathOwners` membership and signed current-login MFA evidence. Required: `GUARDOATH_ADMIN_CLIENT_ID`, `GUARDOATH_ADMIN_COGNITO_DOMAIN`, `GUARDOATH_ADMIN_CURSOR_HMAC_KEY` (independent 32–64 random bytes, hex). An invalid/missing configuration fails closed at startup. Each authorization request independently checks a complete Cognito group page: malformed, duplicate, oversized or paginated memberships (including an empty continuation token) deny owner access even if an owner group appears in the response. Distinct additional groups remain permitted. This changes no roles or enrollment. CloudFront forwards `X-GuardOath-Admin-Session`; `Authorization` is reserved for AWS origin signing.
 
+## Review a tenant's recent billing events
+
+In **Tenants**, choose **Billing events** on the customer's row. The view shows
+Stripe's UTC timestamps for subscription creation, updates, endings, pauses and
+resumptions. It also shows successful and failed invoice payments, requests for
+customer action, and invoices marked uncollectible. A payment failure describes
+what happened at that time. Use **Verify Stripe** to check the current state.
+
+The first page fixes a seven-day window. Select **Older events** until the end
+of that window, including when the current page has no matching events. Each
+request inspects up to three provider pages of ten events. **Refresh billing
+events** starts a new window. Older-page links expire after 15 minutes and
+are bound to the owner and the saved tenant billing configuration.
+
+This view uses the existing Stripe test-mode reader. A signed subscription-read
+audit precedes each retrieval. Only events for the selected customer and
+subscription are displayed. Historical observation does not change access,
+retry a payment, or attest webhook delivery. The event list is retained by Stripe.
+
 ## Credit an open invoice in Stripe test mode
 
 Open **Tenants → Invoices**, filter by **Open**, and select **Credit open invoice**

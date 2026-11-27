@@ -302,6 +302,12 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <p id="billing-cap-restore-capability"></p><p id="billing-cap-restore-history-capability"></p>
 <button id="billing-choose-tenant" type="button">Choose a tenant</button>
 <p class="muted">Availability reports server configuration, not a verified customer subscription or payment. Each action requires fresh owner MFA, the saved tenant binding and a signed audit receipt. Invoice refunds require their own review and confirmation. Open an eligible invoice to review a credit note.</p></section>
+<section class="panel" id="billing-events-panel" hidden><h2>Billing events</h2>
+<p class="muted">Subscription changes and invoice payment events reported by Stripe in test mode over the last seven days. Times are in UTC.</p>
+<p role="status" id="billing-events-status">Choose Billing events beside a tenant.</p>
+<ul id="billing-events-list"></ul>
+<button type="button" id="billing-events-older" disabled>Older events</button>
+<button type="button" id="billing-events-restart" disabled>Refresh billing events</button></section>
 <section class="panel"><h2>Verified invoices</h2><p class="muted">Five Stripe invoice summaries per page for an independently verified customer subscription. Each page is a separate provider observation. Amounts are in minor currency units, not a revenue total or forecast.</p><label for="invoice-status-filter">Invoice status</label> <select id="invoice-status-filter" disabled><option value="">All statuses</option><option value="open">Open</option><option value="uncollectible">Uncollectible</option><option value="paid">Paid</option><option value="draft">Draft</option><option value="void">Void</option></select> <button id="invoice-restart" type="button" disabled>Restart invoice history</button> <button id="invoice-next" type="button" disabled>Older invoices</button><p id="invoice-page-status" class="muted"></p><p id="invoice-details" role="status">No invoice history selected.</p><div id="invoice-refund-actions"></div><div id="invoice-credit-actions"></div></section>
 <section id="credit-panel" class="panel" hidden><h2>Credit an open invoice</h2>
 <p id="credit-target">Choose an open invoice with a remaining balance.</p>
@@ -431,6 +437,7 @@ _JS = r'''"use strict";
   // A late response from an earlier tenant must not replace the latest owner selection.
   let usageSelection = 0;
   let billingSelection = 0;
+  let eventTenant = null, eventCursor = null;
   let invoiceTenant = null, invoiceCursor = null, invoicePage = 0, invoiceFilter = null;
   let invoicePending = false;
   let features = {tenant_status_changes:false};
@@ -813,6 +820,7 @@ _JS = r'''"use strict";
       el("metrics").append(card);
     }
     features = available;
+    el("billing-events-panel").hidden = available.billing_events !== true;
     el("credit-panel").hidden = available.billing_credit_preview !== true;
     showBillingCapabilities();
     updatePublicationControls();
@@ -2048,6 +2056,12 @@ _JS = r'''"use strict";
         verify.addEventListener("click", () => verifyBilling(tenant));
         actions.append(verify);
       }
+      if (features.billing_events === true && tenant.demo === false) {
+        const events = textNode("button", "Billing events");
+        events.type = "button";
+        events.addEventListener("click", () => inspectBillingEvents(tenant));
+        actions.append(events);
+      }
       if (features.billing_invoices && tenant.demo === false) {
         const invoices = document.createElement("button");
         invoices.type = "button";
@@ -2722,6 +2736,7 @@ _JS = r'''"use strict";
   }
   async function reviewCapRestoration(tenant) {
     if (!token || features.billing_cap_restore_preview !== true) return;
+    clearBillingEvents();
     showSection("billing", true);
     if (activeCapRestore || activeCapRestoreHistory || pendingCapRestore) {
       say("cap-restore-result", "Retain the previous restoration reference and inspect its signed history before another restoration.");
@@ -3057,7 +3072,62 @@ _JS = r'''"use strict";
         say("credit-result", describeCredit(result.credit));
     } catch { if (epoch === authEpoch) say("credit-result", "Credit history unavailable. Keep the original reference."); }
   };
+  function clearBillingEvents() {
+    eventTenant = null;
+    eventCursor = null;
+    el("billing-events-list").replaceChildren();
+    el("billing-events-older").disabled = true;
+    el("billing-events-restart").disabled = true;
+    say("billing-events-status", "Choose Billing events beside a tenant.");
+  }
+  async function inspectBillingEvents(tenant, cursor = null) {
+    if (!token || !features.billing_events || !tenant) return;
+    const selection = ++billingSelection, epoch = authEpoch, id = tenant.tenant_id;
+    clearCapRestoreReview();
+    clearInvoiceBrowser();
+    clearCancellationReview();
+    eventTenant = tenant;
+    showSection("billing", true);
+    say("billing-events-status", "Reading Stripe events for " + id + "…");
+    try {
+      const query = cursor ? "?" + new URLSearchParams({cursor}) : "";
+      const result = await request("/v1/admin/subscriptions/" + encodeURIComponent(id) + "/events" + query);
+      if (epoch !== authEpoch || selection !== billingSelection || eventTenant !== tenant) return;
+      requireTenantSource(result.tenant_id, id);
+      const value = result.activity;
+      if (value?.verified === false) {
+        say("billing-events-status", id + " has no verified Stripe subscription binding.");
+        return;
+      }
+      if (value?.verified !== true || !Array.isArray(value.events) || value.events.length > 10 ||
+          typeof value.from_utc !== "string" || typeof value.through_utc !== "string" ||
+          !(value.next_cursor === null || (typeof value.next_cursor === "string" && value.next_cursor.length <= 2048)))
+        throw Error("Invalid billing events response");
+      const items = value.events.map(event => {
+        if (typeof event.label !== "string" || typeof event.occurred_utc !== "string") throw Error("Invalid billing event");
+        return textNode("li", event.occurred_utc + " · " + event.label);
+      });
+      el("billing-events-list").replaceChildren(...items);
+      eventCursor = value.next_cursor;
+      const count = items.length ? items.length + " matching event" + (items.length === 1 ? "" : "s") + " on this page." :
+        "No matching events on this page.";
+      say("billing-events-status", id + " · " + value.from_utc + " to " + value.through_utc + ". " + count +
+        (eventCursor ? " Older results are available." : " End of the selected window."));
+      el("billing-events-older").disabled = !eventCursor;
+    } catch {
+      if (epoch === authEpoch && selection === billingSelection && eventTenant === tenant)
+        say("billing-events-status", "Could not verify events for " + id + ". Refresh billing events to try again.");
+    } finally {
+      if (epoch === authEpoch && selection === billingSelection && eventTenant === tenant)
+        el("billing-events-restart").disabled = false;
+    }
+  }
+  el("billing-events-older").onclick = () => {
+    if (eventCursor) inspectBillingEvents(eventTenant, eventCursor);
+  };
+  el("billing-events-restart").onclick = () => inspectBillingEvents(eventTenant);
   function clearInvoiceBrowser() {
+    clearBillingEvents();
     clearCreditSelection();
     el("credit-tenant").value = "";
     el("credit-reference").value = "";
@@ -3080,6 +3150,7 @@ _JS = r'''"use strict";
       return;
     }
     const epoch = authEpoch;
+    clearBillingEvents();
     clearCreditSelection();
     clearCancellationReview();
     clearRefundReview();

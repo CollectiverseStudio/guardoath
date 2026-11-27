@@ -19,6 +19,17 @@ Greg explicitly removed the November 13 release-stabilization reservation and au
 - Greg's November 23 product discussion and direction to preserve/implement its additions are recorded in [the product roadmap](product-roadmap.md). Its 47 targets and priority order remain durable work items; finish #39–#42 and verified production acceptance first, then update roadmap evidence as work is implemented. Proposed packaging is not a launched-product claim or spending authorization.
 - Greg requested meaningful progress updates and durable new-chat continuity. Maintain [the owner admin handoff](admin-console-handoff.md) alongside substantive implementation; it records actual verification, open work and blockers and does not replace fresh main/CI/ownership checks.
 
+## Tenant billing event history
+
+**Tenants → Billing events** shows subscription lifecycle and invoice payment
+events for the selected Stripe test-mode customer and subscription. Owner
+authentication, MFA, a signed read audit and a current verified subscription
+binding precede event retrieval. The API returns timestamps and event types
+with display labels, plus an encrypted continuation for the same seven-day
+window. A changed tenant binding invalidates the read. This adds a read-only
+view to CORE-04. Automatic webhook processing, durable local outcome tracking
+and provider plan changes remain open. See the [operator procedure](admin-console-operator.md#review-a-tenants-recent-billing-events).
+
 ## Open-invoice credits deployed in Stripe test mode
 
 Owners can select **Tenants → Invoices → Open → Credit open invoice**. The
