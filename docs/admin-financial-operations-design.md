@@ -425,10 +425,9 @@ CORE-04.
 
 `admin_cap_restore.py`, `admin_cap_restore_provider.py` and
 `admin_cap_restore_state.py` implement a distinct `subscription-cap-restoration-v1`
-operation. This first source is its compatibility reader: support is declared,
-but `ENABLE_NEW_CAP_RESTORATION_STATE=False` introduces no restoration state.
-The five existing writer flags remain enabled. A later source activation must
-follow accepted reader deployment and retain its actual digest-bound archive.
+operation. Source `9f44394` deployed the compatibility reader. Source `9881ddb`
+enabled the writer after the deployment runner verified that reader as the
+rollback archive. The [handoff](admin-console-handoff.md) records the digests.
 
 The operation removes one explicit saved local request cap and restores exactly
 the configured plan allowance. It makes no provider mutation and creates no

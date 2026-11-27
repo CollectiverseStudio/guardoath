@@ -37,10 +37,9 @@ history and explicit provider-read-only recovery are now deployed in source
 83298d3, with the actual compatible reader 26724c3 preserved as rollback. The
 separately approved dedicated test-mode refund configuration completed on
 November 26; the handoff records the actual release and configuration evidence.
-Reviewed saved-cap restoration now has a distinct compatibility-reader
-implementation, owner review/receipt flow and atomic local update. Its new
-writer remains source-disabled until the reader is accepted and deployed;
-the handoff records that release sequence. Credit, provider plan-change and
+Reviewed saved-cap restoration is deployed in `9881ddb`. The owner sees the
+verified plan allowance before applying the change and can recover the signed
+receipt using the original action reference. Credit, provider plan-change and
 durable lifecycle/risk-event requirements remain. This does not mark CORE-04 delivered;
 the handoff records exact-source release evidence and remaining live acceptance.
 Keep all original targets and acceptance boundaries below until implementation

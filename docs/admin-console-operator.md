@@ -16,7 +16,7 @@ offline acceptance are not evidence of AWS deployment or live financial data.
 | Owner access | Separate Cognito client, signed tokens, fresh independent owner membership/account checks, recent MFA, same-origin mutations, memory-only browser tokens | Actual configured production login and all live acceptance |
 | User management | Bounded masked directory/exact lookup; confirmed Cognito enable/disable with signed intent and independently verified outcome, recoverable ambiguity | Live provider acceptance; no owner role grants or self-disable |
 | Tenant management | Existing tenant store, suspend/reactivate, key revocation, stage-specific rule actions, downward request caps, revision checks and signed atomic audit | Deployed customer safeguards and source parity |
-| Subscriptions | Provider inspection, cap-preserving reconciliation, protective delinquency downgrade and reviewed saved-cap restoration with signed history; restoration's new writer is source-disabled in this compatibility reader | Cap-restoration reader acceptance/deployment followed by separate writer activation; live Stripe acceptance and provider plan changes remain open |
+| Subscriptions | Provider inspection, cap-preserving reconciliation, protective delinquency downgrade and reviewed saved-cap restoration with signed history; eligible owners can restore the verified plan allowance | Live Stripe acceptance and provider plan changes remain open |
 | Billing and costs | Bounded invoice history, usage/allowance history, request-cap signals, confirmed period-end cancellation and deployed full paid-invoice refund submission/recovery; dedicated test-mode refund setup completed November 26 | Customer financial acceptance; credits, infrastructure cost/revenue allocation and lifecycle/risk-event processing remain open |
 | Catalog | Shared registry, signed description drafts/reviews, reversible metadata source plans and an enabled publication/CI/deployment/history workflow | An operator must run a requested release; live publication and general behavior/schema authoring remain open |
 
@@ -274,8 +274,7 @@ supported subscription. Missing provenance or a changed configured plan needs
 subscription during review and again before applying the change. It uses the
 existing read credential; no new Stripe key is required.
 
-This compatibility-reader source leaves new restoration writes disabled.
-After the separately accepted reader and writer release sequence, enter the
+Enter the
 exact displayed `RESTORE <tenant_id> TO <plan_allowance> REQUESTS PER MONTH`
 confirmation and a reason, then choose **Restore plan allowance**. The browser
 retains the original action reference before sending. The server restores only
@@ -310,15 +309,9 @@ records with neither field omit the absent fields; populated values, including
 zero, are always preserved.
 
 Lambda builds declare supported and introduced persistent-state contracts
-in their generated source manifest. This restoration compatibility reader
-supports six contracts and introduces the preceding five:
-`subscription-cap-provenance-v1`,
-`stripe-period-end-cancellation-v1`, `catalog-publication-v1`,
-`catalog-publication-lifecycle-v1` and `stripe-invoice-refund-v1`.
-The sixth, `subscription-cap-restoration-v1`, remains source-disabled for new
-writes until this reader has been accepted and deployed. Restoration activation
-must preserve its actual compatible reader archive; the older refund reader
-alone cannot provide restoration compatibility.
+in their generated source manifest. Source `9881ddb` supports and introduces all six contracts.
+The deployed reader `9f44394` supports all six and introduces the previous five,
+so it can read restoration receipts during rollback.
 Reader `26724c3049db679ded77bfe8ff176e87551835c7` supports all five with its
 refund writer disabled; its required acceptance and actual deployment are
 recorded in the handoff. The earlier four-contract 762e7b6 reader

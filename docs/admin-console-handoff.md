@@ -5,21 +5,34 @@ record for a new chat. The append-only engineering history remains in
 [director-agent-coordination.md](director-agent-coordination.md); the complete
 47-target product discussion is preserved in [product-roadmap.md](product-roadmap.md).
 
-## Saved request cap restoration release update
+## Production release for saved request cap restoration
 
-The compatibility release `9f44394` passed all seven required workflows
-(25 jobs) and deployed successfully with backend and dashboard source parity.
-Its deployed archive SHA-256 in base64 is
-`sc1Mz7sC+jcAKUir6IsYrbx8iwpmHz6ACzAKuWHTJZQ=`.
+Owners can use **Tenants → Review cap restoration** to restore an eligible
+tenant's monthly allowance to its verified plan limit. The release enabled the
+control. No customer allowance was changed during deployment.
 
-Activation commit `acc5e3c` passed 448 focused tests. Deploy Script Acceptance
-and Stripe Reconciliation Acceptance exposed older fixtures expecting the five
-previous writer contracts. The corrected compatibility regressions cover the
-sixth contract and retain historical reader-only phases. Production activation
-requires the corrected source's CI and deployment with the actual compatible
-backup. Full live acceptance and issue #30 remain open.
+Source `9881ddb7f7ab024303f16aa2dceace19e0d03175` passed all 25 required CI jobs.
+AWS reported success at `2026-11-27T02:41:18.000+0000`. The deployment verified
+the backend and 13 of 13 dashboard assets.
+Chromium opened Models, Policy, API access and Test at 1440 px and 390 px.
+Both layouts had zero page errors and fit the viewport. This public dashboard
+check used production GET responses fetched through the workspace TLS trust store.
+An authenticated owner restoration against a live tenant was not exercised.
+The deployed archive digest is `S+Au9DjT+RcZb94ITHojgfKWQGnalGGUOiXfhgbl9PE=`. The deployment
+verified the actual rollback archive for source `9f44394f5d5e278e9fe879b9ed0c903c033632ce`
+with digest `sc1Mz7sC+jcAKUir6IsYrbx8iwpmHz6ACzAKuWHTJZQ=` against all six writer contracts.
+The completed Lambda revision was `e73eb229-2949-43ba-acd0-2b82127ceb81`.
+The 15-area live acceptance and issue #30 remain open.
 
-## Current implementation: reviewed saved-cap restoration compatibility reader
+Earlier activation candidate `acc5e3c` failed billing and rollback tests that
+expected five active contracts. Candidate `924ab2e` passed those suites and
+exposed two mounted financial tests that expected restoration to be disabled.
+The deployed version corrected both assertions.
+
+Next in CORE-04/#41 are credits, configured plan changes and durable processing
+of subscription and risk events. [Release tests](https://github.com/CollectiverseStudio/guardoath/actions/runs/45926029744)
+
+## Previous implementation: saved-cap restoration compatibility reader
 
 The next CORE-04/#41 operation restores an explicit saved local monthly request
 cap to the independently verified configured plan allowance. It is implemented
@@ -190,7 +203,7 @@ customer refund, new resource, credential creation or production deployment is
 claimed by this implementation entry; record exact-source CI and deployment
 evidence here when those release steps finish.
 
-## Current production: owner invoice-refund writer deployed
+## Previous production: owner invoice-refund writer deployed
 
 **Deployed source: `83298d309c49ede4640c70320489c5d21306d40b`.** The unchanged
 `Deploy-Verified.ps1 -Deploy` runner completed with exit
@@ -1268,11 +1281,8 @@ one. No AWS resource or paid provider was purchased or provisioned.
    existing Stripe test-mode account is complete. The bounded owner
    invoice-refund workflow and source activation are deployed in `83298d3`
    with the actual compatible reader backup recorded above. Its separately
-   approved dedicated test-mode refund configuration is complete. Reviewed
-   restoration of a saved local request cap now has its compatibility-reader
-   implementation. Complete its reader deployment and separate writer activation,
-   then continue credits, configured plan
-   changes and durable lifecycle/risk event processing. Source deployment does not establish a customer refund or
+   approved dedicated test-mode refund configuration is complete. Saved-cap restoration is deployed.
+   Continue credits, configured plan changes and durable lifecycle/risk event processing. Source deployment does not establish a customer refund or
    complete CORE-04. Preserve the actual target/intent transaction and
    conservative ambiguity recovery in
    [the financial-operation record](admin-financial-operations-design.md).
