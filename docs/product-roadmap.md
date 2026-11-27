@@ -39,7 +39,9 @@ separately approved dedicated test-mode refund configuration completed on
 November 26; the handoff records the actual release and configuration evidence.
 Reviewed saved-cap restoration is deployed in `9881ddb`. The owner sees the
 verified plan allowance before applying the change and can recover the signed
-receipt using the original action reference. Credit, provider plan-change and
+receipt using the original action reference. Greg selected credits against open invoices next.
+The owner can review a partial or full test-mode invoice credit. Issuance requires
+a dedicated credit-note credential. Provider plan-change and
 durable lifecycle/risk-event requirements remain. This does not mark CORE-04 delivered;
 the handoff records exact-source release evidence and remaining live acceptance.
 Keep all original targets and acceptance boundaries below until implementation

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import hmac
 import re
-from typing import Callable, Protocol
+from typing import Callable, Protocol, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -25,6 +25,8 @@ from guardoath.admin_subscription_cancellation import (
     AdminSubscriptionCancellation, CancellationConflict, CancellationUnavailable, CancellationRateLimited)
 from guardoath.admin_invoice_refund import (
     AdminInvoiceRefund, RefundConflict, RefundUnavailable, RefundRateLimited)
+from guardoath.admin_invoice_credit import AdminInvoiceCredit, CreditConflict
+from guardoath.admin_invoices import InvalidInvoiceReference
 from guardoath.admin_cap_restore import (
     AdminRequestCapRestoration, CapRestoreConflict)
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -123,6 +125,22 @@ class CancellationRequest(CancellationPreviewRequest):
 class CancellationReceiptRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     idempotency_key: str = Field(pattern=r"^[A-Za-z0-9_-]{16,96}$", max_length=96)
+
+
+class InvoiceCreditPreviewRequest(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+    selection: str = Field(min_length=40, max_length=2049)
+    amount_minor: int = Field(ge=1, le=99_999_999)
+    reason: Literal["duplicate", "fraudulent", "order_change", "product_unsatisfactory"]
+
+
+class InvoiceCreditReference(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+    reference: str = Field(min_length=40, max_length=4054)
+
+
+class InvoiceCreditSubmit(InvoiceCreditReference):
+    confirmation: str = Field(min_length=10, max_length=100)
 
 
 class RefundPreviewRequest(CancellationPreviewRequest):
@@ -343,6 +361,7 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                         billing_cancellation: AdminSubscriptionCancellation | None = None,
                         billing_refunds: AdminInvoiceRefund | None = None,
                         billing_cap_restore: AdminRequestCapRestoration | None = None,
+                        billing_credit: AdminInvoiceCredit | None = None,
                         billing_configuration: dict[str, bool] | None = None,
                         catalog_drafts: AdminCatalogDrafts | None = None,
                         catalog_publications: AdminCatalogPublications | None = None,
@@ -387,6 +406,11 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             or read_auditor.audit_table != billing_refunds.state.table_name
             or not hmac.compare_digest(read_auditor.signing_key, billing_refunds.state.audit_key)):
         raise ValueError("Refunds require their bound persistent read auditor")
+    if billing_credit is not None and (
+            not isinstance(billing_credit, AdminInvoiceCredit) or billing_credit.history is not billing_invoices
+            or not isinstance(read_auditor, AdminSensitiveReadAuditor) or tenant_store is None
+            or not hmac.compare_digest(billing_credit.audit_key, read_auditor.signing_key)):
+        raise ValueError("Invoice credits require the bound invoice reader, tenant store and persistent auditor")
     if billing_cap_restore is not None and (
             not isinstance(billing_cap_restore, AdminRequestCapRestoration)
             or not isinstance(read_auditor, AdminSensitiveReadAuditor)
@@ -495,6 +519,8 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
                            "billing_cancellation_preview": billing_cancellation is not None and billing_cancellation.provider is not None,
                            "billing_cancellation_schedule": billing_cancellation is not None and billing_cancellation.provider is not None and new_cancellation_state_enabled(),
                            "billing_cancellation_receipts": billing_cancellation is not None,
+                           "billing_credit_preview": billing_credit is not None,
+                           "billing_credit_submit": billing_credit is not None and billing_credit.provider.can_issue,
                            "billing_refund_preview": billing_refunds is not None and billing_refunds.provider is not None,
                            "billing_refund_submit": billing_refunds is not None and billing_refunds.provider is not None and new_refund_state_enabled(),
                            "billing_refund_receipts": billing_refunds is not None,
@@ -805,6 +831,53 @@ def create_admin_router(*, verify_cognito_admin: Verifier | None = None,
             raise HTTPException(status_code=503, detail="Invoice history unavailable") from exc
         return admin_json({"tenant_id": tenant_id, "history": result,
                            **({"read_audit_event_id": read_event} if read_event else {})})
+
+    if billing_credit is not None:
+        def credit_call(tenant_id, principal, request, operation, payload):
+            _require_admin_origin(request)
+            if "owner" not in principal.roles:
+                raise HTTPException(status_code=403, detail="Owner access required")
+            if not TENANT_ID.fullmatch(tenant_id):
+                raise HTTPException(status_code=404, detail="Tenant not found")
+            audit = audit_sensitive_read(principal, "stripe.invoices", tenant_id)
+            try:
+                record = tenant_store.get(tenant_id)
+                if record is None or record.tenant_id != tenant_id:
+                    raise HTTPException(status_code=404, detail="Tenant not found")
+                billing_invoices._reserve_read(principal.subject, billing_invoices._now())
+                if operation == "preview":
+                    result = billing_credit.preview(record, principal.subject, payload.selection,
+                        payload.amount_minor, payload.reason, audit)
+                elif operation == "issue":
+                    result = billing_credit.apply(record, principal.subject, payload.reference,
+                        payload.confirmation, tenant_store.get)
+                else:
+                    result = billing_credit.receipt(record, principal.subject, payload.reference)
+            except HTTPException:
+                raise
+            except InvoiceReadRateLimited:
+                raise HTTPException(status_code=429, detail="Invoice reads temporarily limited") from None
+            except (CreditConflict, InvalidInvoiceReference):
+                raise HTTPException(status_code=409, detail="Invoice credit selection changed or review expired") from None
+            except Exception:
+                raise HTTPException(status_code=503, detail="Credit unverified. Inspect the original review reference.") from None
+            return admin_json({"tenant_id": tenant_id, "credit": result, "read_audit_event_id": audit})
+
+        @router.post("/v1/admin/subscriptions/{tenant_id}/invoice-credit/preview")
+        def preview_credit(tenant_id: str, payload: InvoiceCreditPreviewRequest, request: Request,
+                           principal: VerifiedAdmin = Depends(require_admin)):
+            return credit_call(tenant_id, principal, request, "preview", payload)
+
+        @router.post("/v1/admin/subscriptions/{tenant_id}/invoice-credit/receipt")
+        def credit_receipt(tenant_id: str, payload: InvoiceCreditReference, request: Request,
+                           principal: VerifiedAdmin = Depends(require_admin)):
+            return credit_call(tenant_id, principal, request, "receipt", payload)
+
+        if billing_credit.provider.can_issue:
+            @router.post("/v1/admin/subscriptions/{tenant_id}/invoice-credit")
+            def issue_credit(tenant_id: str, payload: InvoiceCreditSubmit, request: Request,
+                             principal: VerifiedAdmin = Depends(require_admin)):
+                return credit_call(tenant_id, principal, request, "issue", payload)
 
     if billing_cancellation is not None:
         def cancellation_call(tenant_id, principal, request, operation, **payload):

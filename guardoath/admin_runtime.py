@@ -204,6 +204,22 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
                 expected_livemode=secret.startswith("sk_live_"))
         except ValueError as exc:
             raise AdminConfigurationError("Refund credential/account configuration unavailable") from exc
+    billing_credit = None
+    credit_key = os.getenv("GUARDOATH_ADMIN_STRIPE_CREDIT_KEY", "")
+    credit_account = os.getenv("GUARDOATH_ADMIN_STRIPE_CREDIT_ACCOUNT_ID", "")
+    if credit_key and (not credit_account or credit_key in (cancellation_key, refund_key)):
+        raise AdminConfigurationError("Invoice credits require a dedicated restricted test key and account")
+    # An existing verified account configuration can enable owner previews.
+    preview_account = credit_account or refund_account
+    if credit_key and (not billing_invoices or not audit_table or not secret.startswith("sk_test_")):
+        raise AdminConfigurationError("Invoice credit writer requires a bound test-mode invoice reader and signed auditing")
+    if preview_account and billing_invoices and audit_table and secret.startswith("sk_test_"):
+        from guardoath.admin_invoice_credit import AdminInvoiceCredit, StripeInvoiceCredits
+        try:
+            provider = StripeInvoiceCredits(secret, credit_key, preview_account)
+            billing_credit = AdminInvoiceCredit(provider, billing_invoices, audit_signing_key)
+        except ValueError as exc:
+            raise AdminConfigurationError("Invoice credit configuration unavailable") from exc
     billing_refunds = None
     if audit_table:
         from guardoath.admin_refund_state import DynamoRefundState
@@ -277,7 +293,7 @@ def configure_admin_from_environment(app, *, tenants, customer_sessions=None,
                         billing_invoices=billing_invoices,
                         billing_cancellation=billing_cancellation,
                         billing_refunds=billing_refunds,
-                        billing_cap_restore=billing_cap_restore,
+                        billing_cap_restore=billing_cap_restore, billing_credit=billing_credit,
                         billing_configuration={
                             "signed_audit": read_auditor is not None,
                             "stripe_read": billing_reporter is not None,

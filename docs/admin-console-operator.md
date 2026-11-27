@@ -5,6 +5,30 @@ The new `/admin` route redirects to `/admin/login` only when the admin feature i
 ## Authorization
 Set `GUARDOATH_ADMIN_ENABLED=1` only after establishing a separate public Cognito admin OAuth client with PKCE and callback `https://guardoath.com/admin/login`, in the existing trusted pool, and verifying independently fetched `GuardOathOwners` membership and signed current-login MFA evidence. Required: `GUARDOATH_ADMIN_CLIENT_ID`, `GUARDOATH_ADMIN_COGNITO_DOMAIN`, `GUARDOATH_ADMIN_CURSOR_HMAC_KEY` (independent 32–64 random bytes, hex). An invalid/missing configuration fails closed at startup. Each authorization request independently checks a complete Cognito group page: malformed, duplicate, oversized or paginated memberships (including an empty continuation token) deny owner access even if an owner group appears in the response. Distinct additional groups remain permitted. This changes no roles or enrollment. CloudFront forwards `X-GuardOath-Admin-Session`; `Authorization` is reserved for AWS origin signing.
 
+## Credit an open invoice in Stripe test mode
+
+Open **Tenants → Invoices**, filter by **Open**, and select **Credit open invoice**
+for the correct tenant, invoice date and balance. Enter the amount in minor
+currency units and choose the reason. For a $10.00 credit on a $29.00 USD
+invoice, enter `1000`. The review shows $19.00 remaining. Save the tenant ID
+and review reference, then type the confirmation shown to issue the credit.
+A review expires after three minutes. If the selected balance changes before
+confirmation, refresh the invoice history and review the new balance.
+
+If the response is interrupted, open **Billing → Credit note receipt**. Enter
+the saved tenant ID and reference while signed in as the original owner.
+**Inspect credit note** reads the matching Stripe note, including a later void.
+An unconfirmed outcome warrants another receipt lookup before considering a
+new credit. Receipt lookup covers the most recent 125 notes on the invoice.
+
+Preview uses the existing signed audit configuration, test-mode invoice
+reader and configured Stripe account. To enable issuance, set
+`GUARDOATH_ADMIN_STRIPE_CREDIT_ACCOUNT_ID` to that account and
+`GUARDOATH_ADMIN_STRIPE_CREDIT_KEY` to a separate restricted test credential
+authorized to read its own account and create credit notes. Keep the credential
+in the runtime secret configuration. Each issue sends one provider request.
+Stripe retains the credit note and the linked GuardOath review audit ID.
+
 ## Capabilities
 
 This section describes current source capabilities. Historical implementation
@@ -17,7 +41,7 @@ offline acceptance are not evidence of AWS deployment or live financial data.
 | User management | Bounded masked directory/exact lookup; confirmed Cognito enable/disable with signed intent and independently verified outcome, recoverable ambiguity | Live provider acceptance; no owner role grants or self-disable |
 | Tenant management | Existing tenant store, suspend/reactivate, key revocation, stage-specific rule actions, downward request caps, revision checks and signed atomic audit | Deployed customer safeguards and source parity |
 | Subscriptions | Provider inspection, cap-preserving reconciliation, protective delinquency downgrade and reviewed saved-cap restoration with signed history; eligible owners can restore the verified plan allowance | Live Stripe acceptance and provider plan changes remain open |
-| Billing and costs | Bounded invoice history, usage/allowance history, request-cap signals, confirmed period-end cancellation and deployed full paid-invoice refund submission/recovery; dedicated test-mode refund setup completed November 26 | Customer financial acceptance; credits, infrastructure cost/revenue allocation and lifecycle/risk-event processing remain open |
+| Billing and costs | Bounded invoice history, usage/allowance history, request-cap signals, confirmed period-end cancellation and deployed full paid-invoice refund submission/recovery; dedicated test-mode refund setup completed November 26. Owners can review partial or full open-invoice credits and inspect credit note receipts | Dedicated credit-note writer configuration, customer financial acceptance, infrastructure cost/revenue allocation and lifecycle/risk-event processing remain open |
 | Catalog | Shared registry, signed description drafts/reviews, reversible metadata source plans and an enabled publication/CI/deployment/history workflow | An operator must run a requested release; live publication and general behavior/schema authoring remain open |
 
 `GUARDOATH_ADMIN_AUDIT_TABLE` is required in production for protected reads and

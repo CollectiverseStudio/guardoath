@@ -301,8 +301,18 @@ button{background:var(--teal);color:#fff;border:1px solid transparent;border-rad
 <p id="billing-refund-capability"></p><p id="billing-refund-history-capability"></p>
 <p id="billing-cap-restore-capability"></p><p id="billing-cap-restore-history-capability"></p>
 <button id="billing-choose-tenant" type="button">Choose a tenant</button>
-<p class="muted">Availability reports server configuration, not a verified customer subscription or payment. Each action requires fresh owner MFA, the saved tenant binding and a signed audit receipt. Invoice refunds require their own review and confirmation. Credits and plan changes are unavailable.</p></section>
-<section class="panel"><h2>Verified invoices</h2><p class="muted">Five Stripe invoice summaries per page for an independently verified customer subscription. Each page is a separate provider observation. Amounts are in minor currency units, not a revenue total or forecast.</p><label for="invoice-status-filter">Invoice status</label> <select id="invoice-status-filter" disabled><option value="">All statuses</option><option value="open">Open</option><option value="uncollectible">Uncollectible</option><option value="paid">Paid</option><option value="draft">Draft</option><option value="void">Void</option></select> <button id="invoice-restart" type="button" disabled>Restart invoice history</button> <button id="invoice-next" type="button" disabled>Older invoices</button><p id="invoice-page-status" class="muted"></p><p id="invoice-details" role="status">No invoice history selected.</p><div id="invoice-refund-actions"></div></section>
+<p class="muted">Availability reports server configuration, not a verified customer subscription or payment. Each action requires fresh owner MFA, the saved tenant binding and a signed audit receipt. Invoice refunds require their own review and confirmation. Open an eligible invoice to review a credit note.</p></section>
+<section class="panel"><h2>Verified invoices</h2><p class="muted">Five Stripe invoice summaries per page for an independently verified customer subscription. Each page is a separate provider observation. Amounts are in minor currency units, not a revenue total or forecast.</p><label for="invoice-status-filter">Invoice status</label> <select id="invoice-status-filter" disabled><option value="">All statuses</option><option value="open">Open</option><option value="uncollectible">Uncollectible</option><option value="paid">Paid</option><option value="draft">Draft</option><option value="void">Void</option></select> <button id="invoice-restart" type="button" disabled>Restart invoice history</button> <button id="invoice-next" type="button" disabled>Older invoices</button><p id="invoice-page-status" class="muted"></p><p id="invoice-details" role="status">No invoice history selected.</p><div id="invoice-refund-actions"></div><div id="invoice-credit-actions"></div></section>
+<section id="credit-panel" class="panel" hidden><h2>Credit an open invoice</h2>
+<p id="credit-target">Choose an open invoice with a remaining balance.</p>
+<label for="credit-amount">Credit amount in minor currency units (100 cents = $1.00 USD)</label><input type="number" id="credit-amount" min="1" step="1">
+<label for="credit-reason">Credit note reason</label><select id="credit-reason"><option value="order_change">Order change</option><option value="duplicate">Duplicate billing</option><option value="product_unsatisfactory">Service issue</option><option value="fraudulent">Fraudulent transaction</option></select>
+<button type="button" id="credit-preview" disabled>Review invoice credit</button>
+<p id="credit-review" role="status"></p><label for="credit-confirm">Type the confirmation shown above</label><input id="credit-confirm" autocomplete="off">
+<button type="button" id="credit-issue" disabled>Issue credit note</button>
+<h3>Credit note receipt</h3><label for="credit-tenant">Tenant ID</label><input id="credit-tenant" maxlength="40">
+<label for="credit-reference">Review reference (save before issuing)</label><input id="credit-reference" maxlength="4054" autocomplete="off">
+<button type="button" id="credit-receipt">Inspect credit note</button><p role="status" id="credit-result"></p></section>
 <section class="panel"><h2>Subscription reconciliation review</h2><p class="muted">Verify Stripe compares provider state with saved entitlement. Reconcile subscription independently reads Stripe again and saves the verified entitlement with an audit receipt. Saved request caps and suspended accounts remain enforced. Reconciliation does not collect a payment or issue a refund.</p><p id="billing-details" role="status">No subscription selected.</p><p id="billing-action-result" role="status"></p><button id="billing-retry" type="button" hidden disabled>Retry same reconciliation</button></section>
 <section class="panel"><h2>Restore plan allowance</h2><p class="muted">Review a saved local request cap against the configured plan and a fresh Stripe subscription observation. Restoration removes that cap and restores exactly the verified plan allowance. Overages remain blocked. Suspension, usage, keys, rules and subscription billing stay unchanged. A saved local cap may have been inferred during reconciliation.</p>
 <p id="cap-restore-review" role="status">Choose Review cap restoration beside a tenant.</p>
@@ -803,6 +813,7 @@ _JS = r'''"use strict";
       el("metrics").append(card);
     }
     features = available;
+    el("credit-panel").hidden = available.billing_credit_preview !== true;
     showBillingCapabilities();
     updatePublicationControls();
     updateCancellationControls();
@@ -2944,7 +2955,113 @@ _JS = r'''"use strict";
       say("status", err.message);
     }}
   }
+  let creditTarget = null, creditReview = null, creditGeneration = 0;
+  function invalidateCredit() {
+    ++creditGeneration;
+    creditReview = null;
+    el("credit-confirm").value = "";
+    el("credit-issue").disabled = true;
+    say("credit-review", "");
+  }
+  function clearCreditSelection() {
+    invalidateCredit();
+    creditTarget = null;
+    el("credit-amount").value = "";
+    el("credit-preview").disabled = true;
+    el("invoice-credit-actions").replaceChildren();
+    say("credit-target", "Choose an open invoice with a remaining balance.");
+  }
+  function showCreditChoices(rows, tenant) {
+    if (!features.billing_credit_preview) return;
+    for (const row of rows) {
+      if (row.status !== "open" || row.amount_remaining_minor <= 0 || !/^icr1\.[A-Za-z0-9_-]+$/.test(row.credit_reference || "")) continue;
+      const button = document.createElement("button");
+      button.type = "button";
+      const description = tenant.tenant_id + " · " + row.created_utc + " · " + row.amount_remaining_minor + " " + row.currency.toUpperCase() + " minor units remaining";
+      button.textContent = "Credit open invoice · " + description;
+      button.onclick = () => {
+        invalidateCredit();
+        creditTarget = {tenant:tenant.tenant_id, row};
+        el("credit-amount").value = "";
+        el("credit-preview").disabled = false;
+        say("credit-target", description);
+        el("credit-amount").focus();
+      };
+      el("invoice-credit-actions").append(button);
+    }
+  }
+  function creditPost(tenant, suffix, payload) {
+    return request("/v1/admin/subscriptions/" + encodeURIComponent(tenant) + "/invoice-credit" + suffix,
+      {method:"POST", body:JSON.stringify(payload)});
+  }
+  el("credit-amount").oninput = invalidateCredit;
+  el("credit-reason").onchange = invalidateCredit;
+  el("credit-confirm").oninput = () => {
+    el("credit-issue").disabled = !features.billing_credit_submit || !creditReview || el("credit-confirm").value !== creditReview.confirmation;
+  };
+  el("credit-preview").onclick = async () => {
+    invalidateCredit();
+    if (!creditTarget) return;
+    const {tenant,row} = creditTarget, amount = Number(el("credit-amount").value), generation = creditGeneration;
+    if (!Number.isSafeInteger(amount) || amount < 1 || amount > row.amount_remaining_minor) {
+      say("credit-review", "Enter a whole number from 1 through the remaining balance."); return;
+    }
+    try {
+      const result = await creditPost(tenant, "/preview", {selection:row.credit_reference,
+        amount_minor:amount, reason:el("credit-reason").value});
+      if (generation !== creditGeneration) return;
+      const credit = result.credit;
+      if (result.tenant_id !== tenant || credit.currency !== row.currency || credit.credit_minor !== amount ||
+          !Number.isSafeInteger(credit.before_minor) || credit.after_minor !== credit.before_minor - amount ||
+          credit.after_minor < 0 || !/^icv1\.[A-Za-z0-9_-]+$/.test(credit.reference) ||
+          credit.confirmation !== "CREDIT " + amount + " " + row.currency.toUpperCase() + " MINOR UNITS") throw Error();
+      creditReview = credit;
+      el("credit-tenant").value = tenant;
+      el("credit-reference").value = credit.reference;
+      say("credit-result", "");
+      const dollars = minor => (minor / 100).toLocaleString("en-US", {style:"currency", currency:"USD"});
+      const usd = credit.currency === "usd" ? "Credit " + dollars(amount) + " · " + dollars(credit.before_minor) + " → " + dollars(credit.after_minor) + ". " : "";
+      say("credit-review", "Test mode · " + usd + "Balance " + credit.before_minor + " → " + credit.after_minor +
+        " " + credit.currency.toUpperCase() + " minor units. " + (features.billing_credit_submit ?
+          "Save the reference and type " + credit.confirmation + " to issue." : "Issuing requires a configured credit-note key."));
+    } catch { if (generation === creditGeneration) say("credit-review", "Refresh invoice history and review the current open balance."); }
+  };
+  function describeCredit(receipt) {
+    if (receipt.status === "unconfirmed") return "No matching credit note confirmed. Keep this reference and inspect again.";
+    if (!["issued","void"].includes(receipt.status) || typeof receipt.number !== "string" ||
+        !Number.isSafeInteger(receipt.amount_minor) || !/^[a-z]{3}$/.test(receipt.currency)) throw Error();
+    return "Credit note " + receipt.number + " · " + receipt.status + " · " + receipt.amount_minor + " " + receipt.currency.toUpperCase() + " minor units.";
+  }
+  el("credit-issue").onclick = async () => {
+    const credit = creditReview, target = creditTarget, confirmation = el("credit-confirm").value;
+    if (!target || !credit || !features.billing_credit_submit || confirmation !== credit.confirmation) return;
+    invalidateCredit();
+    const generation = creditGeneration;
+    el("credit-tenant").value = target.tenant;
+    el("credit-reference").value = credit.reference;
+    el("credit-preview").disabled = true;
+    say("credit-result", "Submitting the reviewed credit note…");
+    try {
+      const result = await creditPost(target.tenant, "", {reference:credit.reference, confirmation});
+      if (generation === creditGeneration) say("credit-result", describeCredit(result.credit));
+    } catch { if (generation === creditGeneration) say("credit-result", "Outcome unconfirmed. Inspect the saved reference before another credit."); }
+  };
+  el("credit-receipt").onclick = async () => {
+    const epoch = authEpoch, input = el("credit-reference").value, tenant = el("credit-tenant").value;
+    if (!/^icv1\.[A-Za-z0-9_-]+$/.test(input) || !/^[a-z][a-z0-9-]{1,39}$/.test(tenant)) {
+      say("credit-result", "Enter the saved tenant ID and review reference."); return;
+    }
+    try {
+      const result = await creditPost(tenant, "/receipt", {reference:input});
+      if (epoch === authEpoch && el("credit-reference").value === input && el("credit-tenant").value === tenant)
+        say("credit-result", describeCredit(result.credit));
+    } catch { if (epoch === authEpoch) say("credit-result", "Credit history unavailable. Keep the original reference."); }
+  };
   function clearInvoiceBrowser() {
+    clearCreditSelection();
+    el("credit-tenant").value = "";
+    el("credit-reference").value = "";
+    say("credit-result", "");
     clearRefundReview();
     invoiceTenant = null; invoiceCursor = null; invoicePage = 0; invoiceFilter = null;
     invoicePending = false;
@@ -2963,6 +3080,7 @@ _JS = r'''"use strict";
       return;
     }
     const epoch = authEpoch;
+    clearCreditSelection();
     clearCancellationReview();
     clearRefundReview();
     el("invoice-refund-actions").replaceChildren();
@@ -3087,6 +3205,7 @@ _JS = r'''"use strict";
         reviewLabel +
         " · Direct Stripe, not revenue or overdue determination · UTC " + (history.read_at_utc || "unknown") +
         readAuditLabel(result));
+      showCreditChoices(history.invoices, tenant);
       if (features.billing_refund_preview === true) {
         const actions = document.createElement("ul");
         for (const row of history.invoices) {

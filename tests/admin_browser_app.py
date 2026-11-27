@@ -234,6 +234,12 @@ def resolve_subscription(record):
     return binding, stripe_snapshot(binding.tenant_id,binding.customer_id,binding.subscription_id)
 
 
+from admin_credit_support import CreditBoundary
+from guardoath.admin_invoice_credit import AdminInvoiceCredit, StripeInvoiceCredits
+
+credit_boundary = CreditBoundary(invoice="in_beta_6", customer="cus_beta", subscription="sub_beta", balance=706)
+
+
 def stripe_invoices(tenant_id, customer_id, subscription_id, *, starting_after=None, status=None):
     """Only external provider transport is synthetic; real cursor/API/audit run above it."""
     suffix = tenant_id.removeprefix("usr-admin-")
@@ -250,6 +256,9 @@ def stripe_invoices(tenant_id, customer_id, subscription_id, *, starting_after=N
         "collection_method":"charge_automatically", "attempted":True, "attempt_count":1,
         "next_payment_attempt":None, "customer_email":"private-invoice@example.invalid",
         "hosted_invoice_url":"https://private-invoice.example.invalid"} for index in range(8)]
+    if suffix == "beta":
+        rows[6].update(status=credit_boundary.invoice["status"],
+                       amount_remaining=credit_boundary.invoice["amount_remaining"])
     if status is not None:
         rows = [row for row in rows if row["status"] == status]
     if starting_after is not None:
@@ -361,6 +370,9 @@ mount_admin_console(app,sessions=sessions,tenants=tenants,cognito=CognitoBoundar
     billing_configuration={"signed_audit":True, "stripe_read":True,
         "plan_allowance":True, "cancellation_provider":True, "refund_provider":True},
     billing_invoices=invoice_history,
+    billing_credit=AdminInvoiceCredit(
+        StripeInvoiceCredits("sk_test_synthetic_reader", "rk_test_synthetic_credit", credit_boundary.account,
+                             opener=credit_boundary), invoice_history, ADMIN_BROWSER_AUDIT_KEY),
     billing_downgrade=AdminBillingDowngrade(db,"tenant_table","audit_table",signing_key=ADMIN_BROWSER_AUDIT_KEY,
         reporter=reporter,validate_record=TenantRecord.model_validate),
     billing_reconciler=AdminSubscriptionReconciliation(db,"tenant_table","audit_table",signing_key=ADMIN_BROWSER_AUDIT_KEY,

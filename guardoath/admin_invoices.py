@@ -55,6 +55,8 @@ class InvoiceRefundReferences:
     """Opaque invoice selections, never a refund permission or amount source."""
 
     TTL = 900
+    PURPOSE = _REFUND_REFERENCE_PURPOSE
+    PREFIX = "ir1."
 
     def __init__(self, key: bytes, *, expected_price_id: str, expected_livemode: bool):
         if (not isinstance(key, bytes) or len(key) < 32
@@ -63,7 +65,7 @@ class InvoiceRefundReferences:
                 or type(expected_livemode) is not bool):
             raise ValueError("Independent invoice reference configuration required")
         self.expected_price_id, self.expected_livemode = expected_price_id, expected_livemode
-        self._cipher = AESGCM(hmac.new(key, _REFUND_REFERENCE_PURPOSE, hashlib.sha256).digest())
+        self._cipher = AESGCM(hmac.new(key, self.PURPOSE, hashlib.sha256).digest())
 
     def _context(self, record, actor: str) -> bytes:
         values = [getattr(record, name, None) for name in
@@ -80,7 +82,7 @@ class InvoiceRefundReferences:
                 or type(values[3]) is not int or not 1 <= values[3] <= MAX_REVISION
                 or getattr(record, "demo", None) is not False or billing_mode != "stripe"):
             raise InvalidInvoiceReference("Invoice selection authority unavailable")
-        return _REFUND_REFERENCE_PURPOSE + json.dumps(
+        return self.PURPOSE + json.dumps(
             [actor, *values, self.expected_price_id, self.expected_livemode],
             ensure_ascii=True, separators=(",", ":")).encode("ascii")
 
@@ -93,16 +95,16 @@ class InvoiceRefundReferences:
                               "expires": now + self.TTL},
                              sort_keys=True, separators=(",", ":")).encode("ascii")
         nonce = secrets.token_bytes(12)
-        return "ir1." + base64.urlsafe_b64encode(
+        return self.PREFIX + base64.urlsafe_b64encode(
             nonce + self._cipher.encrypt(nonce, payload, context)).decode("ascii").rstrip("=")
 
     def open(self, token: str, record, *, actor: str, now: int) -> str:
         try:
             context = self._context(record, actor)
-            if (not isinstance(token, str) or not re.fullmatch(r"ir1\.[A-Za-z0-9_-]{40,2044}", token)
+            if (not isinstance(token, str) or not re.fullmatch(re.escape(self.PREFIX) + r"[A-Za-z0-9_-]{40,2044}", token)
                     or type(now) is not int or not 946684800 <= now <= 4102444800):
                 raise ValueError()
-            encoded = token[4:]
+            encoded = token[len(self.PREFIX):]
             raw = base64.b64decode(encoded + "=" * (-len(encoded) % 4), altchars=b"-_", validate=True)
             if base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=") != encoded:
                 raise ValueError()
@@ -119,6 +121,11 @@ class InvoiceRefundReferences:
             return payload["invoice_id"]
         except Exception:
             raise InvalidInvoiceReference("Invalid or expired invoice selection") from None
+
+
+class InvoiceCreditReferences(InvoiceRefundReferences):
+    PURPOSE = b"guardoath-owner-invoice-credit-reference-v1"
+    PREFIX = "icr1."
 
 
 def _unique_provider_keys(pairs):
@@ -207,6 +214,8 @@ class AdminInvoiceHistory:
         self.refund_references = InvoiceRefundReferences(cursor_key,
             expected_price_id=reporter.expected_price_id,
             expected_livemode=reporter.expected_livemode)
+        self.credit_references = InvoiceCreditReferences(cursor_key,
+            expected_price_id=reporter.expected_price_id, expected_livemode=reporter.expected_livemode)
         self.clock = clock
         self._read_lock = Lock()
         self._read_times: dict[str, deque] = {}
@@ -383,6 +392,10 @@ class AdminInvoiceHistory:
                              .isoformat(timespec="seconds").replace("+00:00", "Z")
                              if next_attempt is not None else None)})
             if item["status"] == "open" and values[2] > 0:
+                if (revision is not None and self.reporter.expected_livemode is False
+                        and SUBJECT.fullmatch(owner_sub) and record.demo is False and record.billing_mode == "stripe"):
+                    rows[-1]["credit_reference"] = self.credit_references.seal(
+                        record, actor=owner_sub, invoice_id=invoice_id, now=now)
                 open_count += 1
                 currency = item["currency"]
                 open_balances[currency] = open_balances.get(currency, 0) + values[2]

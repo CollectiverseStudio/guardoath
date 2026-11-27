@@ -386,3 +386,22 @@ def test_source_default_runtime_refund_and_reopened_receipt_survive_credential_r
         assert reopened.get_item(TableName="tenant_table", Key={"tenant_id": {"S": TENANT}}) == before
     finally:
         reopened.close()
+
+
+@pytest.mark.parametrize("issuer", ["preview", "test-key", "reused", "live-key"])
+def test_open_invoice_credit_runtime_requires_a_dedicated_test_key(monkeypatch, database, issuer):
+    key = {"preview": "", "test-key": "rk_test_dedicated_credit_notes",
+           "reused": REFUND_KEY, "live-key": "rk_live_dedicated_credit_notes"}[issuer]
+    monkeypatch.setenv("GUARDOATH_ADMIN_STRIPE_CREDIT_KEY", key)
+    monkeypatch.setenv("GUARDOATH_ADMIN_STRIPE_CREDIT_ACCOUNT_ID", "acct_owner")
+    if issuer in ("reused", "live-key"):
+        with pytest.raises(AdminConfigurationError):
+            mount_runtime(monkeypatch, database)
+        return
+    app, services = mount_runtime(monkeypatch, database)
+    assert services["billing_credit"].provider.can_issue is (issuer == "test-key")
+    base = "/v1/admin/subscriptions/{tenant_id}/invoice-credit"
+    # Use the actual runtime route table, including FastAPI's lazy routers.
+    paths = set(app.openapi()["paths"])
+    assert base + "/preview" in paths and base + "/receipt" in paths
+    assert (base in paths) is (issuer == "test-key")

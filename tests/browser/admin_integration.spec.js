@@ -333,3 +333,36 @@ test("activated catalog source lets the owner request operator processing and re
   await expect(page.locator("#publication-recover-reference")).toHaveValue("");
   await expect(page.locator("#publication-reference")).toHaveValue("");
 });
+
+test("owner reviews an open invoice, issues a partial credit and recovers its receipt", async ({page,request}) => {
+  const tenant = "usr-admin-beta";
+  const headers = await login(page);
+  const record = persisted().tenants[tenant];
+  if (!record.stripe_subscription_id) {
+    const response = await request.post("/v1/admin/subscriptions/" + tenant + "/reconcile", {headers, data:{
+      expected_revision:record.revision, confirmation:"RECONCILE " + tenant,
+      reason:"Bind synthetic account for open invoice credit", idempotency_key:"credit-setup-123456789"
+    }});
+    expect(response.status()).toBe(200);
+    await page.locator("#refresh").click();
+    await expect(page.locator("#status")).toContainText("Administration loaded");
+  }
+  await page.locator("#nav-tenants").click();
+  await page.locator("#tenant-rows tr").filter({hasText:tenant}).getByRole("button",{name:"Invoices",exact:true}).click();
+  await page.locator("#invoice-status-filter").selectOption("open");
+  await page.getByRole("button",{name:/Credit open invoice/}).click();
+  await page.locator("#credit-amount").fill("100");
+  await page.locator("#credit-preview").click();
+  await expect(page.locator("#credit-review")).toContainText("706 → 606");
+  await expect(page.locator("#credit-issue")).toBeDisabled();
+  const reference = await page.locator("#credit-reference").inputValue();
+  await page.locator("#credit-confirm").fill("CREDIT 100 USD MINOR UNITS");
+  await page.locator("#credit-issue").click();
+  await expect(page.locator("#credit-result")).toContainText("TEST-CN-1 · issued");
+  await login(page);
+  await page.locator("#nav-billing").click();
+  await page.locator("#credit-tenant").fill(tenant);
+  await page.locator("#credit-reference").fill(reference);
+  await page.locator("#credit-receipt").click();
+  await expect(page.locator("#credit-result")).toContainText("TEST-CN-1 · issued");
+});

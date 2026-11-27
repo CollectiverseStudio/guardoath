@@ -29,7 +29,26 @@ release/configuration evidence is in the [handoff](admin-console-handoff.md).
 This establishes the deployed implementation and test-mode setup, not a customer
 refund or full financial acceptance. Reviewed saved-cap restoration now has its
 own implementation and source-disabled compatibility reader, described below.
-Credits and provider plan changes remain future implementation work.
+Open-invoice credits are described below. Provider plan changes remain open.
+
+## Owner-selected open-invoice credits
+
+Greg selected an adjustment to the outstanding balance of one open invoice.
+The owner can enter a partial amount or credit the whole remainder. The API
+binds the encrypted review to the owner, tenant revision, Stripe account,
+invoice, customer, subscription, currency, balance and prior pre-payment credits.
+Before dispatch it observes the invoice again and checks the tenant binding.
+A Stripe idempotency key binds competing GuardOath submissions to the same
+observed balance. Payment can still race a provider request. The request
+specifies zero for all post-payment allocations and the receipt must attest
+a pre-payment credit for the exact reviewed amount.
+
+Preview, issue and receipt lookup are POSTs on
+`/v1/admin/subscriptions/{tenant_id}/invoice-credit`, with `/preview` and
+`/receipt` suffixes for the two reads. A signed sensitive-read audit precedes
+each operation. The Stripe credit note stores the preview audit ID. Confirmed
+outcomes come from the provider. Recovery uses the original encrypted reference
+and only reads Stripe. This operation uses the existing tenant and audit schemas.
 
 ## First coherent operation: schedule cancellation at period end
 

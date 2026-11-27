@@ -19,6 +19,16 @@ Greg explicitly removed the November 13 release-stabilization reservation and au
 - Greg's November 23 product discussion and direction to preserve/implement its additions are recorded in [the product roadmap](product-roadmap.md). Its 47 targets and priority order remain durable work items; finish #39–#42 and verified production acceptance first, then update roadmap evidence as work is implemented. Proposed packaging is not a launched-product claim or spending authorization.
 - Greg requested meaningful progress updates and durable new-chat continuity. Maintain [the owner admin handoff](admin-console-handoff.md) alongside substantive implementation; it records actual verification, open work and blockers and does not replace fresh main/CI/ownership checks.
 
+## Open-invoice credit implementation
+
+Greg selected partial or full credits against an open invoice for CORE-04/#41.
+The owner workflow adds review, typed confirmation and read-only receipt lookup
+under **Tenants → Invoices** and **Billing**. The test-mode issuer requires a
+dedicated restricted Stripe key. No credit has been issued for a customer.
+See the [operator procedure](admin-console-operator.md#credit-an-open-invoice-in-stripe-test-mode)
+and [financial design](admin-financial-operations-design.md#owner-selected-open-invoice-credits).
+The release and runtime configuration are tracked separately.
+
 ## Production release for saved request cap restoration
 
 Owners can use **Tenants → Review cap restoration** to restore an eligible

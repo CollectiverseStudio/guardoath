@@ -5,6 +5,16 @@ record for a new chat. The append-only engineering history remains in
 [director-agent-coordination.md](director-agent-coordination.md); the complete
 47-target product discussion is preserved in [product-roadmap.md](product-roadmap.md).
 
+## Open-invoice credit implementation
+
+Greg selected partial or full credits against an open invoice for CORE-04/#41.
+The owner workflow adds review, typed confirmation and read-only receipt lookup
+under **Tenants → Invoices** and **Billing**. The test-mode issuer requires a
+dedicated restricted Stripe key. No credit has been issued for a customer.
+See the [operator procedure](admin-console-operator.md#credit-an-open-invoice-in-stripe-test-mode)
+and [financial design](admin-financial-operations-design.md#owner-selected-open-invoice-credits).
+The release and runtime configuration are tracked separately.
+
 ## Production release for saved request cap restoration
 
 Owners can use **Tenants → Review cap restoration** to restore an eligible
