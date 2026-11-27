@@ -33,7 +33,7 @@ ENABLE_NEW_REFUND_STATE = True
 # This reader release understands signed local-cap restoration receipts. A later
 # source activation requires this reader's accepted, digest-bound rollback image.
 # Reading existing receipts never depends on the writer phase or environment.
-ENABLE_NEW_CAP_RESTORATION_STATE = False
+ENABLE_NEW_CAP_RESTORATION_STATE = True
 
 
 def new_subscription_state_enabled() -> bool:

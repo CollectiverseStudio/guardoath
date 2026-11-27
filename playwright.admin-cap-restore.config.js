@@ -12,7 +12,7 @@ module.exports = {...config,
   webServer:{...config.webServer,
     command:"python -m uvicorn admin_browser_app:app --app-dir tests --host 127.0.0.1 --port 8783 --no-access-log",
     url:"http://127.0.0.1:8783/healthz",
-    env:{...config.webServer.env,GUARDOATH_ADMIN_TEST_CAP_RESTORE_WRITER_PHASE:"enabled",
+    env:{...config.webServer.env,GUARDOATH_ADMIN_TEST_CAP_RESTORE_WRITER_PHASE:"source",
       GUARDOATH_ADMIN_TEST_ORIGIN:"http://127.0.0.1:8783"},
   },
 };

@@ -24,9 +24,9 @@ def tenant_rows(database):
 
 def main(cap_restore_phase, scenario):
     assert (cap_restore_phase, scenario) in (
-        ("source", "reader"), ("disabled", "reader"),
+        ("source", "applied"), ("disabled", "reader"),
         ("enabled", "applied"), ("enabled", "indeterminate"))
-    writer = cap_restore_phase == "enabled"
+    writer = cap_restore_phase != "disabled"
     assert mounted.phase == "source" and mounted.cap_restore_phase == cap_restore_phase
     assert state_contracts.new_cap_restoration_state_enabled() is writer
     client = TestClient(mounted.app, base_url=mounted.ORIGIN)

@@ -25,17 +25,17 @@ FLAGS = (
 )
 
 
-def test_source_reader_adds_support_without_enabling_new_writes_through_environment(monkeypatch):
+def test_source_writer_introduces_restoration_independently_of_environment(monkeypatch):
     for name in ("ENABLE_NEW_CAP_RESTORATION_STATE", "GUARDOATH_ENABLE_NEW_CAP_RESTORATION_STATE",
                  "ENABLE_NEW_CAP_RESTORE_STATE", "GUARDOATH_CAP_RESTORATION_WRITER_ENABLED",
                  "GUARDOATH_ADMIN_TEST_WRITER_PHASE"):
-        monkeypatch.setenv(name, "1")
-    assert state_contracts.ENABLE_NEW_CAP_RESTORATION_STATE is False
-    assert state_contracts.new_cap_restoration_state_enabled() is False
+        monkeypatch.setenv(name, "0")
+    assert state_contracts.ENABLE_NEW_CAP_RESTORATION_STATE is True
+    assert state_contracts.new_cap_restoration_state_enabled() is True
     assert all(getattr(state_contracts, name) is True for name in FLAGS[:-1])
     declaration = state_contracts.release_metadata(SHA)
     assert declaration["supported_state_contracts"] == [*PRIOR_CONTRACTS, CONTRACT]
-    assert declaration["introduced_state_contracts"] == list(PRIOR_CONTRACTS)
+    assert declaration["introduced_state_contracts"] == [*PRIOR_CONTRACTS, CONTRACT]
 
 
 @pytest.mark.parametrize("invalid", [None, 0, 1, "true", [], {}])
@@ -58,7 +58,7 @@ def test_six_contract_writer_phases_are_independent(monkeypatch, enabled):
         contract for contract, value in zip(contracts, enabled) if value]
 
 
-def test_actual_reader_artifact_precedes_future_writer_and_requires_compatible_digest_bound_backup(tmp_path, monkeypatch):
+def test_source_writer_requires_compatible_digest_bound_backup(tmp_path):
     root = Path(__file__).resolve().parents[1]
     spec = importlib.util.spec_from_file_location("cap_restoration_build", root / "deploy/aws/build_lambda.py")
     build = importlib.util.module_from_spec(spec)
@@ -66,21 +66,14 @@ def test_actual_reader_artifact_precedes_future_writer_and_requires_compatible_d
     actual = build.release_metadata(SHA)
     assert actual == state_contracts.release_metadata(SHA)
     assert actual["supported_state_contracts"] == [*PRIOR_CONTRACTS, CONTRACT]
-    assert actual["introduced_state_contracts"] == list(PRIOR_CONTRACTS)
+    assert actual["introduced_state_contracts"] == [*PRIOR_CONTRACTS, CONTRACT]
     previous = archive(tmp_path / "previous-five-contracts.zip",
         metadata(OLD, support=PRIOR_CONTRACTS, writes=PRIOR_CONTRACTS))
-    reader = archive(tmp_path / "restoration-reader.zip", actual)
-    assert verify(reader, previous)["status"] == "compatible"
-    # Synthetic future source activation is not evidence of an accepted reader
-    # deployment. The packager continues reading the unchanged source gate.
-    monkeypatch.setattr(state_contracts, "ENABLE_NEW_CAP_RESTORATION_STATE", True)
-    future = state_contracts.release_metadata(SHA)
-    assert future["introduced_state_contracts"] == [*PRIOR_CONTRACTS, CONTRACT]
-    assert build.release_metadata(SHA) == actual
-    writer = archive(tmp_path / "future-restoration-writer.zip", future)
+    reader_metadata = metadata(OLD, support=(*PRIOR_CONTRACTS, CONTRACT), writes=PRIOR_CONTRACTS)
+    writer = archive(tmp_path / "restoration-writer.zip", actual)
     with pytest.raises(ValueError, match="compatibility baseline"):
         verify(writer, previous)
-    compatible = archive(tmp_path / "synthetic-reader-backup.zip", {**actual, "source_sha": OLD})
+    compatible = archive(tmp_path / "synthetic-reader-backup.zip", reader_metadata)
     result = verify(writer, compatible)
     assert result["status"] == "compatible"
     assert result["rollback_code_sha256"] == gate.archive_digest(compatible)
@@ -90,7 +83,7 @@ def test_actual_reader_artifact_precedes_future_writer_and_requires_compatible_d
     with pytest.raises(ValueError, match="drops deployed"):
         verify(dropped, compatible)
     accepted_digest = gate.archive_digest(compatible)
-    archive(compatible, {**actual, "source_sha": "c" * 40})
+    archive(compatible, {**reader_metadata, "source_sha": "c" * 40})
     with pytest.raises(ValueError, match="CodeSha256"):
         gate.verify_rollback(writer, compatible, expected_sha=SHA, backup_code_sha256=accepted_digest)
 

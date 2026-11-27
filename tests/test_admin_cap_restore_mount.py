@@ -1,4 +1,4 @@
-"""Reader-first source, disabled compatibility, and isolated future restoration."""
+"""Source activation, disabled compatibility, and signed restoration recovery."""
 import json
 import os
 from pathlib import Path
@@ -9,9 +9,9 @@ import pytest
 
 
 @pytest.mark.parametrize("cap_restore_phase,scenario", [
-    ("source", "reader"), ("disabled", "reader"),
+    ("source", "applied"), ("disabled", "reader"),
     ("enabled", "applied"), ("enabled", "indeterminate")], ids=[
-    "unchanged-source-reader", "explicit-disabled-compatibility",
+    "source-writer-applied", "explicit-disabled-compatibility",
     "future-writer-applied", "future-writer-uncertain-then-recovered"])
 def test_mounted_cap_restoration_authorization_and_signed_recovery(tmp_path, cap_restore_phase, scenario):
     root = Path(__file__).resolve().parents[1]
@@ -27,7 +27,7 @@ def test_mounted_cap_restoration_authorization_and_signed_recovery(tmp_path, cap
         cap_restore_phase, scenario], cwd=root, env=environment, capture_output=True, text=True, timeout=60)
     assert result.returncode == 0, result.stdout + result.stderr
     evidence = json.loads(result.stdout)
-    writer = cap_restore_phase == "enabled"
+    writer = cap_restore_phase != "disabled"
     assert evidence["phase"] == "source" and evidence["cap_restore_phase"] == cap_restore_phase
     assert evidence["scenario"] == scenario and evidence["writer"] is writer
     assert evidence["status"] == ("applied" if writer else "reader")

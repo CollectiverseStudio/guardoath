@@ -8,8 +8,7 @@ const path=require("node:path");
 // No HTTP interception. The actual owner verifier, revision-bound review,
 // atomic tenant/audit writer and independent signed reader are mounted.
 // Identity, direct provider reads and the persistent database boundary are
-// synthetic. This isolated future-writer fixture explicitly enables the gate;
-// the independent source reader must still observe the reader-first default.
+// synthetic. The mounted app and independent reader use release defaults.
 const TENANT="usr-admin-alpha",ORIGIN="http://127.0.0.1:8783";
 const TENANT_PATH="/v1/admin/tenants/"+TENANT,PREFIX=TENANT_PATH+"/allowance-cap/restore";
 const database=process.env.GUARDOATH_ADMIN_TEST_DB;
@@ -48,7 +47,7 @@ async function login(page) {
   return {"X-GuardOath-Admin-Session":result.access_token,Origin:ORIGIN};
 }
 
-test("isolated future owner restoration removes the saved cap once, preserves suspension and recovers signed history",async({page,request})=>{
+test("source-enabled owner restoration removes the saved cap once, preserves suspension and recovers signed history",async({page,request})=>{
   const headers=await login(page);
   const flags=await request.get("/v1/admin/features",{headers});
   expect(flags.status()).toBe(200);
@@ -65,7 +64,7 @@ test("isolated future owner restoration removes the saved cap once, preserves su
     confirmation:TENANT,reason:"Preserve suspended access during restoration",idempotency_key:"browser-restore-suspend-123456789"}});
   expect(suspended.status()).toBe(200);
   const initial=persisted(),before=initial.tenants;
-  expect(initial.source_restore_writer_enabled).toBe(false);
+  expect(initial.source_restore_writer_enabled).toBe(true);
   expect(before[TENANT].revision.N).toBe("10");
   const refreshed=page.waitForResponse(r=>r.url().endsWith("/v1/admin/features"));
   await page.locator("#refresh").click();await refreshed;
